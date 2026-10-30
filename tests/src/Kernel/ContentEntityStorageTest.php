@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\StorageAdapter;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_entity\Storage\ContentEntityStorage;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\StorageAdapter;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface_examples_entity\Storage\ContentEntityStorage;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -28,11 +28,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the read tool reads, and the contract for one page carries its stored
  * values while the full schema reads none.
  *
- * @see \Drupal\data_surface_entity\Storage\ContentEntityStorage
+ * @see \Drupal\surface_examples_entity\Storage\ContentEntityStorage
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
+class ContentEntityStorageTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
   use UserCreationTrait;
@@ -45,7 +45,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'data_surface_entity_test', 'data_surface_react'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_entity_test', 'surface_react'];
 
   /**
    * {@inheritdoc}
@@ -67,11 +67,11 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
@@ -82,7 +82,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
    * @param array $arguments
    *   Its arguments.
    *
-   * @return array{0: \Drupal\data_surface\DataSurfaceInterface, 1: \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface}
+   * @return array{0: \Drupal\surface\SurfaceInterface, 1: \Drupal\surface\Pipeline\SurfaceStorageInterface}
    *   The built resource and its storage.
    */
   protected function operation(string $operation, array $arguments = []): array {
@@ -94,9 +94,9 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
   /**
    * Submits values through the pipeline.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built resource.
-   * @param \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface $storage
+   * @param \Drupal\surface\Pipeline\SurfaceStorageInterface $storage
    *   The storage.
    * @param array $values
    *   The values.
@@ -106,7 +106,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
    * @return array<string, string>
    *   The violations, by full path; empty when it was written.
    */
-  protected function submit(DataSurfaceInterface $surface, DataSurfaceStorageInterface $storage, array $values, bool $dry_run = FALSE): array {
+  protected function submit(SurfaceInterface $surface, SurfaceStorageInterface $storage, array $values, bool $dry_run = FALSE): array {
     $result = $this->pipeline()->submit($surface, $values, $storage, $dry_run);
     $violations = [];
     foreach ($result->violations as $violation) {
@@ -269,12 +269,12 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
   public function testTheDerivedToolsWriteAndRead(): void {
     $ids = array_keys($this->container->get('plugin.manager.tool')->getDefinitions());
     foreach (['create', 'update', 'update:read'] as $suffix) {
-      $this->assertContains('data_surface:' . self::RESOURCE . ':' . $suffix, $ids);
+      $this->assertContains('surface:' . self::RESOURCE . ':' . $suffix, $ids);
     }
     // A field item is no tool: its parent stores it.
-    $this->assertEmpty(preg_grep('/^data_surface:field\.item:/', $ids));
+    $this->assertEmpty(preg_grep('/^surface:field\.item:/', $ids));
 
-    $added = $this->runTool('data_surface:' . self::RESOURCE . ':create', [
+    $added = $this->runTool('surface:' . self::RESOURCE . ':create', [
       OperationInputs::VALUES => [
         'title' => ['value' => 'Made by a tool'],
         'field_description' => ['value' => 'By the tool.'],
@@ -285,7 +285,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Made by a tool', $node->label());
     $this->assertSame((int) $node->id(), $added['outputs']['id']);
 
-    $edited = $this->runTool('data_surface:' . self::RESOURCE . ':update', [
+    $edited = $this->runTool('surface:' . self::RESOURCE . ':update', [
       'id' => (string) $node->id(),
       OperationInputs::VALUES => [
         'title' => ['value' => 'Changed by a tool'],
@@ -295,14 +295,14 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($edited['success'], $edited['message']);
     $this->assertSame('Changed by a tool', $this->newest()->label());
 
-    $read = $this->runTool('data_surface:' . self::RESOURCE . ':update:read', ['id' => (string) $node->id()]);
+    $read = $this->runTool('surface:' . self::RESOURCE . ':update:read', ['id' => (string) $node->id()]);
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame(['value' => 'Changed by a tool'], $read['outputs'][OperationInputs::VALUES]['title']);
     $this->assertSame(['value' => 'By the tool.'], $read['outputs'][OperationInputs::VALUES]['field_description']);
     // The identity is the tool's input, not its values.
     $this->assertArrayNotHasKey('id', $read['outputs'][OperationInputs::VALUES]);
 
-    $refused = $this->runTool('data_surface:' . self::RESOURCE . ':update', [
+    $refused = $this->runTool('surface:' . self::RESOURCE . ':update', [
       'id' => (string) $node->id(),
       OperationInputs::VALUES => ['title' => ['value' => 'Forbidden'], 'field_description' => ['value' => 'x']],
     ]);
@@ -314,7 +314,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
    * Tests the React door: a page added there lives at edit, by its new id.
    */
   public function testTheServedAddSaysWhereThePageNowLives(): void {
-    $served = $this->container->get('data_surface_react.served_operations');
+    $served = $this->container->get('surface_react.served_operations');
     $operation = $served->resolve(self::RESOURCE, 'create', []);
     $this->assertNotNull($operation->storage);
     $values = ['title' => ['value' => 'Served'], 'field_description' => ['value' => 'x']];
@@ -333,7 +333,7 @@ class ContentEntityStorageTest extends DataSurfaceKernelTestBase {
    * Tests the contract for one page, and the full schema, which reads none.
    */
   public function testTheContractCarriesStoredValuesAndTheFullSchemaNone(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = [];
     foreach (['First', 'Second'] as $title) {
       $node = Node::create(['type' => 'page', 'title' => $title, 'field_description' => $title . ' description']);

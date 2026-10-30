@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableResponseInterface;
-use Drupal\data_surface\Contract\SiteListBudget;
-use Drupal\data_surface_react\Controller\ResourceApiController;
-use Drupal\data_surface_react\EventSubscriber\SchemaTagSubscriber;
-use Drupal\data_surface_react\ServedPaths;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface_resource_test\Keys\WorkshopBenches;
-use Drupal\data_surface_resource_test\Resource\Poster\PosterResource;
-use Drupal\data_surface_resource_test\Resource\Workshop\WorkshopResource;
-use Drupal\data_surface_resource_test\Variants\PosterLayouts;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationSchemaTool;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
-use Drupal\Tests\data_surface\Traits\SchemaRoundTripTrait;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\surface\Contract\SiteListBudget;
+use Drupal\surface_react\Controller\ResourceApiController;
+use Drupal\surface_react\EventSubscriber\SchemaTagSubscriber;
+use Drupal\surface_react\ServedPaths;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface_resource_test\Keys\WorkshopBenches;
+use Drupal\surface_resource_test\Resource\Poster\PosterResource;
+use Drupal\surface_resource_test\Resource\Workshop\WorkshopResource;
+use Drupal\surface_resource_test\Variants\PosterLayouts;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationSchemaTool;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\SchemaRoundTripTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolOperation;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -37,7 +37,7 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
  *
  * A list the site decides, variants from the site or keys from the site,
  * is spelled out in the full schema while it has at most
- * `data_surface.settings:site_list_limit` entries (20), and so is a map
+ * `surface.settings:site_list_limit` entries (20), and so is a map
  * of keys from the site in the tool listing. Past it the
  * full schema states the key open and `deferred`, an object holding a
  * `fetch` template, the deciding key keeps its options, and the keys from
@@ -54,10 +54,10 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
  * @see docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined
  * @see docs/served-contract.md#asking-again-at-the-tool-door
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class SiteListBudgetTest extends DataSurfaceKernelTestBase {
+class SiteListBudgetTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use SchemaRoundTripTrait;
@@ -72,16 +72,16 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_react',
+    'surface_resource_test',
   ];
 
   /**
    * The narrowing tool of the poster.
    */
-  protected const POSTER_SCHEMA = 'data_surface:resource_test.poster:configure:schema';
+  protected const POSTER_SCHEMA = 'surface:resource_test.poster:configure:schema';
 
   /**
    * {@inheritdoc}
@@ -89,7 +89,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface', 'data_surface_resource_test']);
+    $this->installConfig(['surface', 'surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
   }
 
@@ -140,11 +140,11 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
    * @param class-string $class
    *   The resource's class.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function built(string $class): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->buildOperation($class, 'configure');
+  protected function built(string $class): SurfaceInterface {
+    return $this->container->get('surface.resources')->buildOperation($class, 'configure');
   }
 
   /**
@@ -159,7 +159,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
    *   The schema.
    */
   protected function full(string $class, string $id): array {
-    return json_decode((string) json_encode($this->container->get('data_surface.contract_emitter')->emitFull($this->built($class), $id, 'configure')->document['schema']), TRUE);
+    return json_decode((string) json_encode($this->container->get('surface.contract_emitter')->emitFull($this->built($class), $id, 'configure')->document['schema']), TRUE);
   }
 
   /**
@@ -177,7 +177,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
    */
   protected function these(string $class, string $id, array $values): array {
     $built = $this->built($class);
-    return json_decode((string) json_encode($this->container->get('data_surface.contract_emitter')->emit($built, array_replace($built->getDefaultValues(), $values), $id, 'configure')->document), TRUE);
+    return json_decode((string) json_encode($this->container->get('surface.contract_emitter')->emit($built, array_replace($built->getDefaultValues(), $values), $id, 'configure')->document), TRUE);
   }
 
   /**
@@ -217,8 +217,8 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertCount(25, $full['properties']['layout']['oneOf']);
     $this->assertSame(['const' => 'extra_22', 'title' => 'Extra 22'], $full['properties']['layout']['oneOf'][24]);
     // Whether the list is spelled out is the setting's.
-    $emitted = $this->container->get('data_surface.contract_emitter')->emitFull($this->built(PosterResource::class), 'resource_test.poster');
-    $this->assertContains('config:data_surface.settings', $emitted->getCacheTags());
+    $emitted = $this->container->get('surface.contract_emitter')->emitFull($this->built(PosterResource::class), 'resource_test.poster');
+    $this->assertContains('config:surface.settings', $emitted->getCacheTags());
     // Wider than the pipeline, never stricter: another layout's panels are
     // accepted by the full schema and refused by the pipeline by name.
     $this->assertTrue($this->validates($full, ['layout' => 'strip', 'panels' => ['columns' => 3]]));
@@ -258,7 +258,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['resource_test.poster.panels.grid'], array_keys($schema['$defs']));
     $this->assertCount(1, $schema['allOf']);
     // The def is the one the variants spelled out state.
-    $listed = $this->container->get('data_surface.site_list_budget')->withLimit(100, fn (): array => $this->these(PosterResource::class, 'resource_test.poster', $values));
+    $listed = $this->container->get('surface.site_list_budget')->withLimit(100, fn (): array => $this->these(PosterResource::class, 'resource_test.poster', $values));
     $this->assertSame($listed['schema']['$defs']['resource_test.poster.panels.grid'], $schema['$defs']['resource_test.poster.panels.grid']);
     $this->assertSame($listed['values'], $these['values']);
     $this->assertTrue($this->validates($schema, $these['values']));
@@ -271,7 +271,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('anyOf', $none['schema']['properties']['panels']);
 
     // The pipeline refuses another variant's keys by name, as ever.
-    $tool = $this->tools()->createInstance('data_surface:resource_test.poster:configure');
+    $tool = $this->tools()->createInstance('surface:resource_test.poster:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['layout' => 'strip', 'panels' => ['columns' => 2]]);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
@@ -325,13 +325,13 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertSame('kind', $detail['x-surface']['by']);
     $this->assertArrayNotHasKey('anyOf', $detail);
     $this->assertCount(25, array_filter($full['$defs']['resource_test.poster.panels.nested']['properties']['kind']['oneOf'], static fn (array $choice): bool => isset($choice['const'])));
-    $this->assertTrue($this->container->get('data_surface.site_list_budget')->anyOver($this->built(PosterResource::class)));
+    $this->assertTrue($this->container->get('surface.site_list_budget')->anyOver($this->built(PosterResource::class)));
 
     $this->layouts(4, ['nested' => ['label' => 'Nested', 'schema' => static::nested(19)]]);
     $full = $this->full(PosterResource::class, 'resource_test.poster');
     $detail = $full['$defs']['resource_test.poster.panels.nested']['properties']['detail'];
     $this->assertCount(20, $detail['anyOf']);
-    $this->assertFalse($this->container->get('data_surface.site_list_budget')->anyOver($this->built(PosterResource::class)));
+    $this->assertFalse($this->container->get('surface.site_list_budget')->anyOver($this->built(PosterResource::class)));
   }
 
   /**
@@ -380,11 +380,11 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
    */
   public function testPastTheLimitReadsBackAsItsKind(): void {
     $this->layouts(25);
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($this->built(PosterResource::class), 'resource_test.poster', 'configure', 'Configure the poster')->document['schema'];
-    $read = $this->readBack($full, 'resource_test.poster', 'data_surface_resource_test', 'configure', 'configure', 'Configure the poster', []);
+    $full = $this->container->get('surface.contract_emitter')->emitFull($this->built(PosterResource::class), 'resource_test.poster', 'configure', 'Configure the poster')->document['schema'];
+    $read = $this->readBack($full, 'resource_test.poster', 'surface_resource_test', 'configure', 'configure', 'Configure the poster', []);
     $this->assertNotSame('error', $read['verdict'], (string) $read['error']);
     if ($read['verdict'] !== 'same') {
-      $definition = $this->container->get('data_surface.resource_registry')->getDefinition(PosterResource::class);
+      $definition = $this->container->get('surface.resource_registry')->getDefinition(PosterResource::class);
       $this->assertSame('site list', static::kindOf($full, $read['again'], $definition));
     }
   }
@@ -399,8 +399,8 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
   public function testTheNarrowingToolIsDerivedOnlyWhereSomeKeyIsOpen(): void {
     $manager = $this->tools();
     $this->assertTrue($manager->hasDefinition(self::POSTER_SCHEMA), 'Three layouts the site lists: a narrowing tool.');
-    $this->assertFalse($manager->hasDefinition('data_surface:resource_test.workshop:configure:schema'), 'Three benches: no narrowing tool.');
-    $lights = $manager->getDefinition('data_surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['lights'];
+    $this->assertFalse($manager->hasDefinition('surface:resource_test.workshop:configure:schema'), 'Three benches: no narrowing tool.');
+    $lights = $manager->getDefinition('surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['lights'];
     $this->assertNotSame([], $lights->getPropertyDefinitions());
 
     $this->layouts(25);
@@ -421,21 +421,21 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertSame([OperationInputs::SCHEMA, OperationInputs::VALUES], array_keys($definition->getOutputDefinitions()));
 
     // The write tool's listing states the panels open, naming the tool.
-    $panels = $manager->getDefinition('data_surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['panels'];
+    $panels = $manager->getDefinition('surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['panels'];
     $this->assertInstanceOf(MapInputDefinition::class, $panels);
     $this->assertSame([], $panels->getPropertyDefinitions());
-    $this->assertStringEndsWith("Its keys depend on layout and are not listed here: choose layout, then fetch GET /surface-api/resource_test.poster/schema?choose=/panels={layout} once per layout, or call data_surface:resource_test.poster:configure:schema with your values, to get this key's schema.", (string) $panels->getDescription());
+    $this->assertStringEndsWith("Its keys depend on layout and are not listed here: choose layout, then fetch GET /surface-api/resource_test.poster/schema?choose=/panels={layout} once per layout, or call surface:resource_test.poster:configure:schema with your values, to get this key's schema.", (string) $panels->getDescription());
     $this->assertStringContainsString('fetch GET /surface-api/resource_test.poster/schema?choose={key}={value} once per value and keep the answer', (string) $definition->getDescription());
     $this->assertStringContainsString('or send your values here', (string) $definition->getDescription());
-    $this->assertCount(25, $manager->getDefinition('data_surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['layout']->getConstraint('Choice')['choices'] ?? []);
+    $this->assertCount(25, $manager->getDefinition('surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['layout']->getConstraint('Choice')['choices'] ?? []);
 
     // Keys from the site past the limit name it too.
     $this->benches(25);
     $manager = $this->tools();
-    $this->assertTrue($manager->hasDefinition('data_surface:resource_test.workshop:configure:schema'));
-    $lights = $manager->getDefinition('data_surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['lights'];
+    $this->assertTrue($manager->hasDefinition('surface:resource_test.workshop:configure:schema'));
+    $lights = $manager->getDefinition('surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['lights'];
     $this->assertSame([], $lights->getPropertyDefinitions());
-    $this->assertStringContainsString("Too many to list: fetch GET /surface-api/resource_test.workshop/schema?choose=/lights={id} once per entry (GET /surface-api/resource_test.workshop/schema lists the ids under x-surface.deferred.entries), or call data_surface:resource_test.workshop:configure:schema with your values, to get this key's schema.", (string) $lights->getDescription());
+    $this->assertStringContainsString("Too many to list: fetch GET /surface-api/resource_test.workshop/schema?choose=/lights={id} once per entry (GET /surface-api/resource_test.workshop/schema lists the ids under x-surface.deferred.entries), or call surface:resource_test.workshop:configure:schema with your values, to get this key's schema.", (string) $lights->getDescription());
   }
 
   /**
@@ -496,7 +496,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertCount(1, $chosen['allOf']);
 
     // What the full schema states of it with every layout spelled out.
-    $listed = $this->container->get('data_surface.site_list_budget')->withLimit(100, fn (): array => $this->servedJson('GET', '/surface-api/resource_test.poster/schema'));
+    $listed = $this->container->get('surface.site_list_budget')->withLimit(100, fn (): array => $this->servedJson('GET', '/surface-api/resource_test.poster/schema'));
     $this->assertSame($listed['$defs']['resource_test.poster.panels.extra_5'], $chosen['$defs']['resource_test.poster.panels.extra_5']);
     $branch = array_values(array_filter($listed['allOf'], static fn (array $condition): bool => ($condition['if']['properties']['layout']['const'] ?? NULL) === 'extra_5'));
     $this->assertSame($branch, $chosen['allOf']);
@@ -516,7 +516,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $this->assertInstanceOf(CacheableResponseInterface::class, $response);
     $tags = $response->getCacheableMetadata()->getCacheTags();
     $this->assertContains(PosterLayouts::TAG, $tags);
-    $this->assertContains('config:data_surface.settings', $tags);
+    $this->assertContains('config:surface.settings', $tags);
     $this->assertContains('url.query_args', $response->getCacheableMetadata()->getCacheContexts());
 
     // An ETag of the bytes, and 304 to a request that holds them.
@@ -575,7 +575,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
       $this->assertCount(1, $kinds, $query);
       $this->assertSame('kind_7', $kinds[0]['if']['properties']['kind']['const'], $query);
     }
-    $listed = $this->container->get('data_surface.site_list_budget')->withLimit(100, fn (): array => $this->servedJson('GET', '/surface-api/resource_test.poster/schema'));
+    $listed = $this->container->get('surface.site_list_budget')->withLimit(100, fn (): array => $this->servedJson('GET', '/surface-api/resource_test.poster/schema'));
     $def = substr((string) $kinds[0]['then']['properties']['detail']['$ref'], strlen('#/$defs/'));
     $this->assertSame($listed['$defs'][$def], $chosen['$defs'][$def]);
     $branch = array_values(array_filter($listed['$defs']['resource_test.poster.panels.nested']['allOf'], static fn (array $condition): bool => ($condition['if']['properties']['kind']['const'] ?? NULL) === 'kind_7'));
@@ -621,7 +621,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
   public function testTheFetchOfOneEntry(): void {
     $this->benches(25);
     $chosen = $this->servedJson('GET', '/surface-api/resource_test.workshop/schema?choose=/lights=bench_7&choose=/benches=bench_3');
-    $listed = $this->container->get('data_surface.site_list_budget')->withLimit(100, fn (): array => $this->servedJson('GET', '/surface-api/resource_test.workshop/schema'));
+    $listed = $this->container->get('surface.site_list_budget')->withLimit(100, fn (): array => $this->servedJson('GET', '/surface-api/resource_test.workshop/schema'));
     $lights = $chosen['properties']['lights'];
     $this->assertSame(['bench_7'], array_keys($lights['properties']));
     $this->assertSame($listed['$defs']['resource_test.workshop.lights']['properties']['bench_7'], $lights['properties']['bench_7']);

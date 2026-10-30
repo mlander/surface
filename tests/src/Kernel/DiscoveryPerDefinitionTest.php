@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
-use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_tool\Resource\FieldInstanceResource;
+use Drupal\surface\ResourceBuild\ResourceCollectorPass;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_tool\Resource\FieldInstanceResource;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -26,9 +26,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DiscoveryPerDefinitionTest extends DataSurfaceKernelTestBase {
+class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
   use UserCreationTrait;
@@ -58,7 +58,7 @@ class DiscoveryPerDefinitionTest extends DataSurfaceKernelTestBase {
    */
   protected function cid(?string $name = NULL): string {
     $hash = hash('xxh3', serialize($this->container->getParameter(ResourceCollectorPass::PARAMETER)));
-    return 'data_surface:resources:' . ($name === NULL ? 'index:' . $hash : 'entry:' . $hash . ':' . $name);
+    return 'surface:resources:' . ($name === NULL ? 'index:' . $hash : 'entry:' . $hash . ':' . $name);
   }
 
   /**
@@ -92,14 +92,14 @@ class DiscoveryPerDefinitionTest extends DataSurfaceKernelTestBase {
   /**
    * A registry over the same bin, as a later request reads it.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceRegistry
+   * @return \Drupal\surface\ResourceBuild\ResourceRegistry
    *   A registry that has read nothing yet.
    */
   protected function nextRequest(): ResourceRegistry {
     return new ResourceRegistry(
       $this->container->getParameter(ResourceCollectorPass::PARAMETER),
       $this->container->get('cache.discovery'),
-      $this->container->get('data_surface.resource_plugins'),
+      $this->container->get('surface.resource_plugins'),
       $this->container->get('class_resolver'),
     );
   }
@@ -108,7 +108,7 @@ class DiscoveryPerDefinitionTest extends DataSurfaceKernelTestBase {
    * Tests each definition's entry and the tags each carries.
    */
   public function testEachDefinitionCarriesWhatItWasReadFrom(): void {
-    $this->container->get('data_surface.resource_registry')->getDefinitions();
+    $this->container->get('surface.resource_registry')->getDefinitions();
 
     $this->assertEqualsCanonicalizing(
       ['config:field.field.node.page.field_description', 'config:field.storage.node.field_description'],
@@ -157,7 +157,7 @@ class DiscoveryPerDefinitionTest extends DataSurfaceKernelTestBase {
    * bundle's resource.
    */
   public function testOneFieldSavedLeavesTheRestCached(): void {
-    $this->container->get('data_surface.resource_registry')->getDefinitions();
+    $this->container->get('surface.resource_registry')->getDefinitions();
     $field = FieldConfig::loadByName('node', 'page', 'field_description');
     assert($field !== NULL);
     $field->set('label', 'Summary')->save();
@@ -192,7 +192,7 @@ class DiscoveryPerDefinitionTest extends DataSurfaceKernelTestBase {
       assert($display !== NULL);
       $display->setComponent('field_shared', ['weight' => 50])->save();
     }
-    $this->container->get('data_surface.resource_registry')->getDefinitions();
+    $this->container->get('surface.resource_registry')->getDefinitions();
     $this->assertTrue($this->cached('field.item:node.kitchen.field_shared'));
 
     $storage = FieldStorageConfig::loadByName('node', 'field_shared');
@@ -212,7 +212,7 @@ class DiscoveryPerDefinitionTest extends DataSurfaceKernelTestBase {
       $this->assertTrue($this->cached($name), $name . ' is still cached.');
     }
     // What this request built from the storage sees the new setting.
-    $item = $this->container->get('data_surface.resources')->build('field.item:node.kitchen.field_shared', $this->container->get('data_surface.resources')->operation('field.item:node.kitchen.field_shared', 'create'));
+    $item = $this->container->get('surface.resources')->build('field.item:node.kitchen.field_shared', $this->container->get('surface.resources')->operation('field.item:node.kitchen.field_shared', 'create'));
     $this->assertSame(30, $item->getDefinition('value')?->getConstraint('Length')['max'] ?? NULL);
   }
 
@@ -220,7 +220,7 @@ class DiscoveryPerDefinitionTest extends DataSurfaceKernelTestBase {
    * Tests that a request asking for one resource reads its entry alone.
    */
   public function testOneResourceReadsTheIndexAndItsEntry(): void {
-    $this->container->get('data_surface.resource_registry')->getDefinitions();
+    $this->container->get('surface.resource_registry')->getDefinitions();
     $next = $this->nextRequest();
     $this->assertSame('entity.content:node.page', $next->getDefinition('entity.content:node.page')->id);
     $this->assertTrue($next->hasDefinition('field.item:node.page.body'));

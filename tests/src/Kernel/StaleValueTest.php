@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Render\Element\Select;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Pipeline\Storage\StateStorage;
-use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
+use Drupal\surface\Surface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Pipeline\Storage\StateStorage;
+use Drupal\surface\Widget\SurfaceWidgetBase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -48,14 +48,14 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/semantics.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class StaleValueTest extends DataSurfaceKernelTestBase {
+class StaleValueTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'data_surface'];
+  protected static $modules = ['system', 'surface'];
 
   /**
    * The value stored before the list stopped offering it.
@@ -65,7 +65,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   /**
    * The state key the payload path stores through.
    */
-  protected const STATE_KEY = 'data_surface_test.stale';
+  protected const STATE_KEY = 'surface_test.stale';
 
   /**
    * Builds the fixture: one select, and one text field beside it.
@@ -82,10 +82,10 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
    * @param string|null $default
    *   The value the select declares as its default, if any.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function surface(bool $required, array $choices = ['keep', 'other'], ?string $default = NULL): DataSurfaceInterface {
+  protected function surface(bool $required, array $choices = ['keep', 'other'], ?string $default = NULL): SurfaceInterface {
     $pick = DataDefinition::create('string')
       ->setLabel('Pick')
       ->setDescription('What to feature.')
@@ -97,7 +97,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     if ($default !== NULL) {
       DefinitionMetadata::setDefaultValue($pick, $default);
     }
-    return new DataSurface(DefinitionMap::fromArrays(definitions: [
+    return new Surface(DefinitionMap::fromArrays(definitions: [
       'pick' => $pick,
       'note' => DataDefinition::create('string')->setLabel('Note'),
     ]));
@@ -111,7 +111,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
    * string written into the test. That is the only honest simulation of
    * untouched, and it is the case the trap lives in.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface to build and extract against.
    * @param array $current
    *   The stored values the form is built from.
@@ -123,7 +123,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The accepted values.
    */
-  protected function extract(DataSurfaceInterface $surface, array $current, array $submitted = []): array {
+  protected function extract(SurfaceInterface $surface, array $current, array $submitted = []): array {
     $form = $this->formBuilder()->buildSurfaceForm($surface, $current, new FormState());
     $values = [];
     foreach (['pick', 'note'] as $key) {
@@ -177,7 +177,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   /**
    * The storage the payload path writes through.
    *
-   * @return \Drupal\data_surface\Pipeline\Storage\StateStorage
+   * @return \Drupal\surface\Pipeline\Storage\StateStorage
    *   The storage.
    */
   protected function storage(): StateStorage {
@@ -220,7 +220,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey(self::GONE, $element['#options']);
     // It travels on the element instead, which is how an untouched
     // select keeps it.
-    $this->assertSame(self::GONE, $element[DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame(self::GONE, $element[SurfaceWidgetBase::STALE_KEY]);
     // No note and no class: the stored value no longer being an option,
     // said on the empty option, is the whole of the presentational change.
     $this->assertSame('What to feature.', (string) $element['#description']);
@@ -264,7 +264,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
       ['' => $required ? '- Select -' : '- None -', 'keep' => 'Keep', 'other' => 'Other'],
       $this->shown($element),
     );
-    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $element);
+    $this->assertArrayNotHasKey(SurfaceWidgetBase::STALE_KEY, $element);
     $this->assertSame('What to feature.', (string) $element['#description']);
     $this->assertArrayNotHasKey('#attributes', $element);
     $this->assertSame($required, $element['#required']);
@@ -284,7 +284,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('#empty_option', $element);
     $this->assertArrayNotHasKey('#empty_value', $element);
     $this->assertSame(['keep' => 'Keep', 'other' => 'Other'], $this->shown($element));
-    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $element);
+    $this->assertArrayNotHasKey(SurfaceWidgetBase::STALE_KEY, $element);
   }
 
   /**
@@ -324,12 +324,12 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
    */
   public function testTheContainerPostsTheStalePaths(): void {
     $container = $this->formBuilder()->buildSurfaceForm($this->surface(TRUE), ['pick' => self::GONE], new FormState());
-    $this->assertSame('hidden', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#type']);
-    $this->assertSame('pick', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
+    $this->assertSame('hidden', $container[SurfaceFormBuilderInterface::STALE_MARKER_KEY]['#type']);
+    $this->assertSame('pick', $container[SurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
 
     // Nothing stale, no marker.
     $container = $this->formBuilder()->buildSurfaceForm($this->surface(TRUE), ['pick' => 'keep'], new FormState());
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STALE_MARKER_KEY, $container);
+    $this->assertArrayNotHasKey(SurfaceFormBuilderInterface::STALE_MARKER_KEY, $container);
   }
 
   /**
@@ -340,7 +340,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
     $element = $this->element($required, 'keep');
 
     $this->assertSame('keep', $element['#default_value']);
-    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $element);
+    $this->assertArrayNotHasKey(SurfaceWidgetBase::STALE_KEY, $element);
   }
 
   /**
@@ -507,7 +507,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
    * Tests that a refusal with no list behind it is never called stale.
    */
   public function testRefusalWithNoOptionListIsAnOrdinaryViolation(): void {
-    $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
       'pick' => DataDefinition::create('string')
         ->setLabel('Pick')
         ->addConstraint('Length', ['max' => 3]),
@@ -528,7 +528,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
   public function testListsAreNeverStale(): void {
     $item = DataDefinition::create('string')
       ->addConstraint('Choice', ['choices' => ['keep', 'other']]);
-    $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
       'picks' => ListDataDefinition::create('string')
         ->setItemDefinition($item)
         ->setLabel('Picks'),
@@ -551,7 +551,7 @@ class StaleValueTest extends DataSurfaceKernelTestBase {
 
     // The form cache rule, asserted rather than trusted: what a built
     // element carries is ids and values, never anything with behavior.
-    $this->assertSame(self::GONE, $element[DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame(self::GONE, $element[SurfaceWidgetBase::STALE_KEY]);
     // Equal, not identical: the messages are objects and come back as
     // new ones, which is the whole point of round-tripping them.
     $this->assertEquals($element, unserialize(serialize($element), [

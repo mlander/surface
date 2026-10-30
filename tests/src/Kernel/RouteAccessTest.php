@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
@@ -13,17 +13,17 @@ use Drupal\Core\Routing\RoutingEvents;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Url;
-use Drupal\data_surface\Access\OperationRouteSubscriber;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\ResourceBuild\NamesNothingException;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
-use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
-use Drupal\data_surface_react\Access\ServedOperationAccessCheck;
-use Drupal\data_surface_react\Controller\ResourceReactPage;
-use Drupal\data_surface_resource_test\Resource\RecipeResource;
+use Drupal\surface\Access\OperationRouteSubscriber;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\NamesNothingException;
+use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
+use Drupal\surface_react\Access\ServedOperationAccessCheck;
+use Drupal\surface_react\Controller\ResourceReactPage;
+use Drupal\surface_resource_test\Resource\RecipeResource;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
-use Drupal\Tests\data_surface\Kernel\Fixture\RefusedRoutes;
+use Drupal\Tests\surface\Kernel\Fixture\RefusedRoutes;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -51,14 +51,14 @@ use Symfony\Component\Routing\RouteCollection;
  * account before the URL's value is read, so a value that names nothing
  * there is refused to every account, saying nothing.
  *
- * @see \Drupal\data_surface\Access\OperationAccessCheck
- * @see \Drupal\data_surface\Access\OperationGate
- * @see \Drupal\data_surface\Access\OperationRouteSubscriber
+ * @see \Drupal\surface\Access\OperationAccessCheck
+ * @see \Drupal\surface\Access\OperationGate
+ * @see \Drupal\surface\Access\OperationRouteSubscriber
  * @see docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RouteAccessTest extends DataSurfaceKernelTestBase {
+class RouteAccessTest extends SurfaceKernelTestBase {
 
   use OperationRouteTrait;
   use UserCreationTrait;
@@ -75,13 +75,13 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
     'node',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_entity',
-    'data_surface_demo_node_type',
-    'data_surface_react',
-    'data_surface_resource_test',
-    'data_surface_route_test',
+    'surface',
+    'surface_tool',
+    'surface_examples_entity',
+    'surface_examples_node_type',
+    'surface_react',
+    'surface_resource_test',
+    'surface_route_test',
   ];
 
   /**
@@ -91,7 +91,7 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
-    $this->installConfig(['field', 'node', 'data_surface']);
+    $this->installConfig(['field', 'node', 'surface']);
     $this->setUpCurrentUser(admin: TRUE);
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
   }
@@ -109,7 +109,7 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
    *   The answer.
    */
   protected function formAccess(AccountInterface $account, bool $dispatch = TRUE): AccessResultInterface {
-    return $this->container->get('data_surface.operation_access')->access(
+    return $this->container->get('surface.operation_access')->access(
       $this->container->get('current_route_match'),
       $account,
       $dispatch ? $this->container->get('request_stack')->getCurrentRequest() : NULL,
@@ -146,7 +146,7 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
    */
   protected static function editTypeRoute(): Route {
     return new Route('/surface-test/types/{type}/edit', [
-      '_form' => DataSurfaceOperationForm::class,
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Edit content type',
       OperationRoute::RESOURCE => NodeTypeResource::class,
       OperationRoute::OPERATION => 'update',
@@ -167,15 +167,15 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
       $this->fail('A color the envelope does not come in was served.');
     }
     catch (NotFoundHttpException $e) {
-      $this->assertStringStartsWith('The data_surface_route_test.add_colored route reads "{color}" from its path, and the value names nothing here: ', $e->getMessage());
+      $this->assertStringStartsWith('The surface_route_test.add_colored route reads "{color}" from its path, and the value names nothing here: ', $e->getMessage());
     }
     // Asked about a link: refused, for this request alone, saying nothing.
     $this->assertSame(['forbidden', '', 0], static::answer($this->formAccess($admin, FALSE)));
     // A menu link and a local task ask Url::access(), which hands no
     // request in: no link to the page is drawn, and one to a color the
     // envelope comes in is.
-    $this->assertFalse(Url::fromRoute('data_surface_route_test.add_colored', ['color' => 'red'])->access($admin));
-    $this->assertTrue(Url::fromRoute('data_surface_route_test.add_colored', ['color' => 'cream'])->access($admin));
+    $this->assertFalse(Url::fromRoute('surface_route_test.add_colored', ['color' => 'red'])->access($admin));
+    $this->assertTrue(Url::fromRoute('surface_route_test.add_colored', ['color' => 'cream'])->access($admin));
   }
 
   /**
@@ -196,15 +196,15 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
     $foreign = $controlled('\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage');
     foreach ([
       'the operation form' => [$form, 'allowed'],
-      'a React page' => [$controlled('\Drupal\data_surface_react\Controller\ResourceReactPage::served'), 'allowed'],
+      'a React page' => [$controlled('\Drupal\surface_react\Controller\ResourceReactPage::served'), 'allowed'],
       'another controller' => [$foreign, 'forbidden'],
     ] as $door => [$route, $state]) {
-      $this->serveBuilt('data_surface_route_test.edit_type', $route, ['type' => 'ghost']);
+      $this->serveBuilt('surface_route_test.edit_type', $route, ['type' => 'ghost']);
       $this->assertSame([$state, '', 0], static::answer($this->formAccess($holder)), $door);
     }
     $answers = [];
     foreach (['form' => $form, 'foreign' => $foreign] as $door => $route) {
-      $this->serveBuilt('data_surface_route_test.edit_type', $route, ['type' => 'article']);
+      $this->serveBuilt('surface_route_test.edit_type', $route, ['type' => 'article']);
       $answers[$door] = static::answer($this->formAccess($holder));
     }
     $this->assertSame('allowed', $answers['form'][0]);
@@ -218,7 +218,7 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
       OperationRoute::RESOURCE => 'entity.content:{entity_type}.{bundle}',
       OperationRoute::OPERATION => 'create',
     ], ['entity_type' => '[a-z_]+', 'bundle' => '[a-z_]+']);
-    $this->serveBuilt('data_surface_route_test.add_any', $any, ['entity_type' => 'node', 'bundle' => 'article']);
+    $this->serveBuilt('surface_route_test.add_any', $any, ['entity_type' => 'node', 'bundle' => 'article']);
     $this->assertSame(['forbidden', '', 0], static::answer($this->formAccess($this->createUser([]))));
   }
 
@@ -251,7 +251,7 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
     $stranger = $this->createUser([]);
     $holder = $this->createUser([NodeTypeResource::PERMISSION]);
     foreach (['article', 'ghost'] as $type) {
-      $this->serveBuilt('data_surface_route_test.edit_type', static::editTypeRoute(), ['type' => $type]);
+      $this->serveBuilt('surface_route_test.edit_type', static::editTypeRoute(), ['type' => $type]);
       $this->assertSame(['forbidden', "The 'administer data surface node type demo' permission is required.", -1], static::answer($this->formAccess($stranger)), $type);
     }
     // The account the permission lets in hears that the id names nothing.
@@ -287,16 +287,16 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
       'anonymous' => new AnonymousUserSession(),
       'editor' => $this->createUser(['access content', 'edit any page content', 'edit any kitchen content']),
     ];
-    $react = $this->container->get('data_surface_react.access');
+    $react = $this->container->get('surface_react.access');
     $routes = $this->container->get('router.route_provider');
     $ids = ['resource' => 'entity.content:node.page', 'operation' => 'update'];
-    $page = new RouteMatch('data_surface_react.page', $routes->getRouteByName('data_surface_react.page'), $ids, $ids);
+    $page = new RouteMatch('surface_react.page', $routes->getRouteByName('surface_react.page'), $ids, $ids);
     foreach (['another bundle' => (string) $kitchen->id(), 'none' => '999'] as $case => $id) {
       if ($case === 'none') {
         // A converter answers 404 for it before access is asked; a route
         // no converter saw hands the raw id on.
-        $edit = $routes->getRouteByName('data_surface_route_test.edit_node');
-        $this->serveBuilt('data_surface_route_test.edit_node', $edit, ['node_type' => 'page', 'id' => $id]);
+        $edit = $routes->getRouteByName('surface_route_test.edit_node');
+        $this->serveBuilt('surface_route_test.edit_node', $edit, ['node_type' => 'page', 'id' => $id]);
       }
       else {
         $this->visit('/surface-test/node/page/' . $id . '/edit');
@@ -321,7 +321,7 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testPermissionNamingKeyIsFilledFromTheParameters(): void {
     $route = new Route('/surface-test/recipes/{kitchen}/{course}/add', [
-      '_form' => DataSurfaceOperationForm::class,
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Add a recipe',
       OperationRoute::RESOURCE => RecipeResource::class,
       OperationRoute::OPERATION => 'create',
@@ -329,11 +329,11 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
     ], ['kitchen' => '[a-z]+', 'course' => '[a-z]+']);
     $cook = $this->account(['cook in main']);
     $stranger = $this->account(['cook in pantry']);
-    $this->serveBuilt('data_surface_route_test.add_recipe', $route, ['kitchen' => 'main', 'course' => 'brunch']);
+    $this->serveBuilt('surface_route_test.add_recipe', $route, ['kitchen' => 'main', 'course' => 'brunch']);
     $this->assertSame(['allowed', '', 0], static::answer($this->formAccess($cook)));
     $this->assertSame(['forbidden', "The 'cook in main' permission is required.", -1], static::answer($this->formAccess($stranger)));
     // A course the recipe offers: the context fills it, as before.
-    $this->serveBuilt('data_surface_route_test.add_recipe', $route, ['kitchen' => 'main', 'course' => 'starter']);
+    $this->serveBuilt('surface_route_test.add_recipe', $route, ['kitchen' => 'main', 'course' => 'starter']);
     $this->assertTrue($this->formAccess($cook)->isAllowed());
     $this->assertFalse($this->formAccess($stranger)->isAllowed());
   }
@@ -347,22 +347,22 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testResourceIdThePathFillsNamingNothingIsNotFound(): void {
     $route = new Route('/surface-test/{entity_type}/{bundle}/add', [
-      '_form' => DataSurfaceOperationForm::class,
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Add content',
       OperationRoute::RESOURCE => 'entity.content:{entity_type}.{bundle}',
       OperationRoute::OPERATION => 'create',
     ], ['entity_type' => '[a-z_]+', 'bundle' => '[a-z_]+']);
-    $this->serveBuilt('data_surface_route_test.add_any', $route, ['entity_type' => 'node', 'bundle' => 'article']);
+    $this->serveBuilt('surface_route_test.add_any', $route, ['entity_type' => 'node', 'bundle' => 'article']);
     $stranger = $this->createUser([]);
     $this->assertSame(['allowed', '', 0], static::answer($this->formAccess($stranger)));
     $this->assertSame(['forbidden', '', 0], static::answer($this->formAccess($stranger, FALSE)));
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     foreach ([
       'bundle' => ['entity_type' => 'node'],
       'entity_type' => ['entity_type' => 'node', 'bundle' => 'article'],
     ] as $parameter => $raw) {
       try {
-        OperationRoute::named(new RouteMatch('data_surface_route_test.add_any', $route, $raw, $raw), $registry);
+        OperationRoute::named(new RouteMatch('surface_route_test.add_any', $route, $raw, $raw), $registry);
         $this->fail('A resource id no resource has was named.');
       }
       catch (NamesNothingException $e) {
@@ -383,11 +383,11 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
     // A variable only its type's converter bounds, which the rebuild
     // refuses while no converter is written (the rebuild test below), is
     // taken once core has written one.
-    [$unbounded] = RefusedRoutes::all()['data_surface_route_test.add_node_unbounded'];
+    [$unbounded] = RefusedRoutes::all()['surface_route_test.add_node_unbounded'];
     $collection = new RouteCollection();
-    $collection->add('data_surface_route_test.add_node_unbounded', $unbounded);
+    $collection->add('surface_route_test.add_node_unbounded', $unbounded);
     $this->container->get('paramconverter_subscriber')->onRoutingRouteAlterSetParameterConverters(new RouteBuildEvent($collection));
-    $this->container->get('data_surface.operation_route_subscriber')->onAlterRoutes(new RouteBuildEvent($collection));
+    $this->container->get('surface.operation_route_subscriber')->onAlterRoutes(new RouteBuildEvent($collection));
     $this->assertSame('TRUE', $unbounded->getRequirement(OperationRoute::ACCESS));
   }
 
@@ -399,7 +399,7 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
    * before the permission is asked, since it reads nothing of the URL.
    */
   public function testTheRebuildAndTheMatchRefuseAlike(): void {
-    $subscriber = $this->container->get('data_surface.operation_route_subscriber');
+    $subscriber = $this->container->get('surface.operation_route_subscriber');
     $visitor = $this->createUser([]);
     foreach (RefusedRoutes::all() as $name => [$route, $raw]) {
       $collection = new RouteCollection();
@@ -434,19 +434,19 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
     }
     $this->assertSame(array_keys(RefusedRoutes::all()), array_keys($refusals), 'Every one of them is refused.');
     $this->assertSame([
-      'data_surface_route_test.add_unbounded' => 'The data_surface_route_test.add_unbounded route fixes "envelope.color" to "{color}", and nothing bounds that variable of its path /surface-test/card/add-unbounded/{color}: give it a requirement (requirements.color) or a type a converter loads (options.parameters.color.type), so a reference reads only a value the route allows.',
-      'data_surface_route_test.add_copies_unbounded' => 'The data_surface_route_test.add_copies_unbounded route fills "copies" to "{copies}", and nothing bounds that variable of its path /surface-test/card/add-copies-unbounded/{copies}: give it a requirement (requirements.copies) or a type a converter loads (options.parameters.copies.type), so a reference reads only a value the route allows.',
-      'data_surface_route_test.add_node_misnamed' => 'The data_surface_route_test.add_node_misnamed route serves "entity.content:node.{bundle}", and its path /surface-test/node/{node_type}/add-misnamed has no "{bundle}" to fill it from: a resource\'s id names a variable of the route\'s own path.',
-      'data_surface_route_test.add_node_unbounded' => 'The data_surface_route_test.add_node_unbounded route serves "entity.content:node.{node_type}", and nothing bounds "{node_type}" in its path /surface-test/node/{node_type}/add-unbounded: give it a requirement (requirements.node_type) or a type a converter loads (options.parameters.node_type.type), so the id a URL fills is one the route allows.',
-      'data_surface_route_test.query_dotted' => 'The data_surface_route_test.query_dotted route starts "greeting.value" from the query parameter "greeting.value": PHP renames a "." or a space in a query parameter\'s name to "_" and reads "[" as the start of an array before the form reads it, so no link could start the key; a query name holds letters, digits, "_" and "-" alone. Name another query parameter.',
-      'data_surface_route_test.react_fixed' => 'The data_surface_route_test.react_fixed route carries "_data_surface_fixed", and ResourceReactPage::served serves it: the page writes through the operation\'s own API path, which holds a value to the operation\'s constraints alone, so a key the page stated fixed would take any value there. A React page starts keys and fixes none: start them under "_data_surface_defaults", or serve the route with the operation form.',
+      'surface_route_test.add_unbounded' => 'The surface_route_test.add_unbounded route fixes "envelope.color" to "{color}", and nothing bounds that variable of its path /surface-test/card/add-unbounded/{color}: give it a requirement (requirements.color) or a type a converter loads (options.parameters.color.type), so a reference reads only a value the route allows.',
+      'surface_route_test.add_copies_unbounded' => 'The surface_route_test.add_copies_unbounded route fills "copies" to "{copies}", and nothing bounds that variable of its path /surface-test/card/add-copies-unbounded/{copies}: give it a requirement (requirements.copies) or a type a converter loads (options.parameters.copies.type), so a reference reads only a value the route allows.',
+      'surface_route_test.add_node_misnamed' => 'The surface_route_test.add_node_misnamed route serves "entity.content:node.{bundle}", and its path /surface-test/node/{node_type}/add-misnamed has no "{bundle}" to fill it from: a resource\'s id names a variable of the route\'s own path.',
+      'surface_route_test.add_node_unbounded' => 'The surface_route_test.add_node_unbounded route serves "entity.content:node.{node_type}", and nothing bounds "{node_type}" in its path /surface-test/node/{node_type}/add-unbounded: give it a requirement (requirements.node_type) or a type a converter loads (options.parameters.node_type.type), so the id a URL fills is one the route allows.',
+      'surface_route_test.query_dotted' => 'The surface_route_test.query_dotted route starts "greeting.value" from the query parameter "greeting.value": PHP renames a "." or a space in a query parameter\'s name to "_" and reads "[" as the start of an array before the form reads it, so no link could start the key; a query name holds letters, digits, "_" and "-" alone. Name another query parameter.',
+      'surface_route_test.react_fixed' => 'The surface_route_test.react_fixed route carries "_surface_fixed", and ResourceReactPage::served serves it: the page writes through the operation\'s own API path, which holds a value to the operation\'s constraints alone, so a key the page stated fixed would take any value there. A React page starts keys and fixes none: start them under "_surface_defaults", or serve the route with the operation form.',
     ], array_intersect_key($refusals, array_flip([
-      'data_surface_route_test.add_unbounded',
-      'data_surface_route_test.add_copies_unbounded',
-      'data_surface_route_test.add_node_misnamed',
-      'data_surface_route_test.add_node_unbounded',
-      'data_surface_route_test.query_dotted',
-      'data_surface_route_test.react_fixed',
+      'surface_route_test.add_unbounded',
+      'surface_route_test.add_copies_unbounded',
+      'surface_route_test.add_node_misnamed',
+      'surface_route_test.add_node_unbounded',
+      'surface_route_test.query_dotted',
+      'surface_route_test.react_fixed',
     ])));
   }
 
@@ -462,13 +462,13 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
   public function testBothPageDoorsAnswerAlike(): void {
     $holder = $this->createUser([NodeTypeResource::PERMISSION]);
     $stranger = $this->createUser([]);
-    $react = $this->container->get('data_surface_react.access');
-    $page = $this->container->get('router.route_provider')->getRouteByName('data_surface_react.page');
+    $react = $this->container->get('surface_react.access');
+    $page = $this->container->get('router.route_provider')->getRouteByName('surface_react.page');
     $ids = ['resource' => 'node.type', 'operation' => 'update'];
-    $match = new RouteMatch('data_surface_react.page', $page, $ids, $ids);
+    $match = new RouteMatch('surface_react.page', $page, $ids, $ids);
     $request = Request::create('/surface-react/node.type/update', 'GET', ['type' => 'ghost']);
     $request->setSession($this->container->get('request_stack')->getSession());
-    $this->serveBuilt('data_surface_route_test.edit_type', static::editTypeRoute(), ['type' => 'ghost']);
+    $this->serveBuilt('surface_route_test.edit_type', static::editTypeRoute(), ['type' => 'ghost']);
     foreach ([['allowed', $holder], ['forbidden', $stranger]] as [$state, $account]) {
       $this->assertSame($state, static::answer($react->access($match, $account, $request))[0]);
       $this->assertSame($state, static::answer($this->formAccess($account))[0]);
@@ -504,7 +504,7 @@ class RouteAccessTest extends DataSurfaceKernelTestBase {
     ] as $why => [$resource, $operation]) {
       $ids = ['resource' => $resource, 'operation' => $operation];
       $there = Request::create('/surface-react/' . $resource . '/' . $operation);
-      $this->assertSame(['allowed', '', 0], static::answer($react->access(new RouteMatch('data_surface_react.page', $page, $ids, $ids), $stranger, $there)));
+      $this->assertSame(['allowed', '', 0], static::answer($react->access(new RouteMatch('surface_react.page', $page, $ids, $ids), $stranger, $there)));
       try {
         $controller->page($there, $resource, $operation);
         $this->fail('The React page was built.');

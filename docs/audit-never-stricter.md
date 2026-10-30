@@ -342,11 +342,11 @@ them a standard validator's.
 
 **Documents:** both. **Test:** `testConstraintsWithNoKeyword`.
 
-`UniqueField`, `DataSurfaceUnique`, `DataSurfaceDemoExtrasReviewDeadline`
+`UniqueField`, `SurfaceUnique`, `SurfaceExamplesExtrasReviewDeadline`
 and a constraint nobody declares: each is named under
 `x-surface.checkedOnServer` and otherwise leaves the property exactly as
 it is without it, in both documents. Never approximated.
-`DataSurfaceDemoExtrasUniqueItems` was listed here until 2026-10-26,
+`SurfaceExamplesExtrasUniqueItems` was listed here until 2026-10-26,
 when it became the stock `UniqueItems`, stated as `uniqueItems: true`:
 the schema and the pipeline refuse `["a", "b", "a"]` and accept
 `["a", "b"]` alike (tested).

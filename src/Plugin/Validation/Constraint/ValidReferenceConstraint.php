@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\Entity\Plugin\Validation\Constraint\ValidReferenceConstraint as CoreValidReferenceConstraint;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -23,11 +23,11 @@ use Symfony\Component\Validator\Attribute\HasNamedArguments;
  * are few enough to list; past that, the key takes any id and this
  * validator decides, which both documents name under `checkedOnServer`.
  *
- * @see \Drupal\data_surface\Reference\References
- * @see \Drupal\data_surface\Plugin\DataSurfaceOptionsResolver\ReferenceOptions
+ * @see \Drupal\surface\Reference\References
+ * @see \Drupal\surface\Plugin\SurfaceOptionsResolver\ReferenceOptions
  */
 #[Constraint(
-  id: 'DataSurfaceValidReference',
+  id: 'SurfaceValidReference',
   label: new TranslatableMarkup('Refers to an entity the account may reference', [], ['context' => 'Validation']),
   type: FALSE,
 )]

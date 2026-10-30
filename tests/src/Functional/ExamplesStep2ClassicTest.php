@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -17,10 +17,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * refused by both, in the same words, or written by both, to the same
  * config object, identically.
  *
- * @see \Drupal\Tests\data_surface\FunctionalJavascript\ExamplesStep2ClassicAjaxTest
+ * @see \Drupal\Tests\surface\FunctionalJavascript\ExamplesStep2ClassicAjaxTest
  *   For the twin's rebuild over AJAX.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesStep2ClassicTest extends BrowserTestBase {
 
@@ -28,7 +28,7 @@ class ExamplesStep2ClassicTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
+    'surface_examples',
   ];
 
   /**
@@ -39,7 +39,7 @@ class ExamplesStep2ClassicTest extends BrowserTestBase {
   /**
    * The config object both forms write.
    */
-  protected const CONFIG = 'data_surface_examples.registration_step2';
+  protected const CONFIG = 'surface_examples.registration_step2';
 
   /**
    * {@inheritdoc}

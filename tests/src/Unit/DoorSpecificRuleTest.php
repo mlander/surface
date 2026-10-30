@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\SiteList;
-use Drupal\data_surface\Resource\SiteListInterface;
-use Drupal\Tests\data_surface\PHPStan\DoorSpecificRule;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Resource\Attribute\RefinesInput;
+use Drupal\surface\Resource\SiteList;
+use Drupal\surface\Resource\SiteListInterface;
+use Drupal\Tests\surface\PHPStan\DoorSpecificRule;
 use PHPStan\Rules\Rule;
 use PHPStan\Testing\RuleTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -17,11 +17,11 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Tests the PHPStan rule that flags what an operation runs reading a door's.
  *
- * @extends \PHPStan\Testing\RuleTestCase<\Drupal\Tests\data_surface\PHPStan\DoorSpecificRule>
+ * @extends \PHPStan\Testing\RuleTestCase<\Drupal\Tests\surface\PHPStan\DoorSpecificRule>
  *
  * @see docs/resources.md#no-door-specific-context
  */
-#[Group('data_surface')]
+#[Group('surface')]
 final class DoorSpecificRuleTest extends RuleTestCase {
 
   /**
@@ -44,8 +44,8 @@ final class DoorSpecificRuleTest extends RuleTestCase {
     $tail = ': a door-specific service makes the doors disagree, since the form, the HTTP API and the tool each hand it something else. ';
     $account = 'Use the account the operation hands in: an access class\'s $account, a storage verb\'s $account, a runtime refiner\'s parameter typed AccountInterface.';
     $context = 'Everything an operation needs comes through it: the parameters and identity its context knows, the values, and site state through a service whose answer carries its cacheability.';
-    $refiner = 'Drupal\Tests\data_surface\Fixtures\DoorSpecificFixture';
-    $keys = 'Drupal\Tests\data_surface\Fixtures\DoorSpecificKeysFixture';
+    $refiner = 'Drupal\Tests\surface\Fixtures\DoorSpecificFixture';
+    $keys = 'Drupal\Tests\surface\Fixtures\DoorSpecificKeysFixture';
     $fixtures = dirname(__DIR__, 2) . '/fixtures/phpstan/';
     $files = [
       $fixtures . 'DoorSpecificFixture.php',

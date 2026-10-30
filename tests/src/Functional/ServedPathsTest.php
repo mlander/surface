@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
-use Drupal\Tests\data_surface\Traits\ServedApiTrait;
+use Drupal\Tests\surface\Traits\ServedApiTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * its replacement named, under the operation id it carried then (`create`,
  * `update`) as under the one it carries now.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ServedPathsTest extends BrowserTestBase {
 
@@ -30,9 +30,9 @@ class ServedPathsTest extends BrowserTestBase {
    */
   protected static $modules = [
     'node',
-    'data_surface_examples',
-    'data_surface_react',
-    'data_surface_demo_node_type',
+    'surface_examples',
+    'surface_react',
+    'surface_examples_node_type',
   ];
 
   /**
@@ -73,7 +73,7 @@ class ServedPathsTest extends BrowserTestBase {
     $this->assertSame(4, $narrowed['values']['sessions']);
 
     // A run of it checks and writes nothing at all, dry or not.
-    $before = $this->config('data_surface_examples.program')->get();
+    $before = $this->config('surface_examples.program')->get();
     $checked = $this->decoded($this->send('POST', 'surface-api/event.program:check', [
       'headline' => 'Checked',
       'sessions' => 4,
@@ -84,7 +84,7 @@ class ServedPathsTest extends BrowserTestBase {
     $refused = $this->problem($this->send('POST', 'surface-api/event.program:check', ['sessions' => 99]), 422);
     $this->assertSame(['/sessions'], array_column($refused['errors'], 'path'));
     $this->container->get('config.factory')->reset();
-    $this->assertSame($before, $this->config('data_surface_examples.program')->get());
+    $this->assertSame($before, $this->config('surface_examples.program')->get());
 
     // A custom method of an operation that is no update is GET and POST,
     // never PATCH.

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
-use Drupal\data_surface\ResourceBuild\Resources;
+use Drupal\surface\ResourceBuild\ResourceCollectorPass;
+use Drupal\surface\ResourceBuild\Resources;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -20,9 +20,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class PerformanceBudgetTest extends DataSurfaceKernelTestBase {
+class PerformanceBudgetTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
   use UserCreationTrait;
@@ -44,11 +44,11 @@ class PerformanceBudgetTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources
+   * @return \Drupal\surface\ResourceBuild\Resources
    *   The service.
    */
   protected function resources(): Resources {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     return $resources;
   }
@@ -67,7 +67,7 @@ class PerformanceBudgetTest extends DataSurfaceKernelTestBase {
     $before = $this->resources()->buildCounts()['built'];
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
     $built = $this->resources()->buildCounts()['built'] - $before;
-    $writes = array_filter(array_keys($definitions), static fn (string $id): bool => str_starts_with($id, 'data_surface:') && !str_ends_with($id, ':read') && !str_ends_with($id, ':schema'));
+    $writes = array_filter(array_keys($definitions), static fn (string $id): bool => str_starts_with($id, 'surface:') && !str_ends_with($id, ':read') && !str_ends_with($id, ':schema'));
     $this->assertCount(8, $writes);
     $this->assertLessThanOrEqual(count($writes) + 2, $built);
   }
@@ -82,16 +82,16 @@ class PerformanceBudgetTest extends DataSurfaceKernelTestBase {
    * definition) fails here.
    */
   public function testDiscoveryEntriesStayWithinBounds(): void {
-    $this->container->get('data_surface.resource_registry')->getDefinitions();
+    $this->container->get('surface.resource_registry')->getDefinitions();
     $hash = hash('xxh3', serialize($this->container->getParameter(ResourceCollectorPass::PARAMETER)));
     $bin = $this->container->get('cache.discovery');
-    $index = $bin->get('data_surface:resources:index:' . $hash);
+    $index = $bin->get('surface:resources:index:' . $hash);
     $this->assertNotFalse($index);
     $names = $index->data['names'];
     $this->assertLessThan(400 * count($names), strlen(serialize($index->data)), 'The index stays under 400 bytes a definition.');
     $bounds = ['class' => 8 * 1024, 'entity.content' => 12 * 1024, 'field.item' => 6 * 1024];
     foreach ($names as $name => $indexed) {
-      $entry = $bin->get('data_surface:resources:entry:' . $hash . ':' . $name);
+      $entry = $bin->get('surface:resources:entry:' . $hash . ':' . $name);
       $this->assertNotFalse($entry, $name . ' has an entry.');
       $bound = $bounds[$indexed['base'] ?? 'class'];
       $this->assertLessThan($bound, strlen(serialize($entry->data)), sprintf('%s stays under %d bytes.', $name, $bound));

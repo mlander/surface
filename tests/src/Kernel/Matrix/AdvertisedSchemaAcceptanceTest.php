@@ -2,37 +2,37 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel\Matrix;
+namespace Drupal\Tests\surface\Kernel\Matrix;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Pipeline\Storage\StateStorage;
-use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_resource_test\Access\ExhibitAccess;
-use Drupal\data_surface_resource_test\Alter\PlaqueAlter;
-use Drupal\data_surface_resource_test\Alter\WallAlter;
-use Drupal\data_surface_resource_test\Keys\WorkshopBenches;
-use Drupal\data_surface_resource_test\Resource\Cellar\CellarResource;
-use Drupal\data_surface_resource_test\Resource\Exhibit\ExhibitResource;
-use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
-use Drupal\data_surface_resource_test\Storage\CellarStorage;
-use Drupal\data_surface_resource_test\Variants\PosterLayouts;
-use Drupal\data_surface_resource_test\Structure\Notice\NoticeStructure;
-use Drupal\Tests\data_surface\Kernel\DataSurfaceKernelTestBase;
-use Drupal\Tests\data_surface\Traits\NeverStricterTrait;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Pipeline\Storage\StateStorage;
+use Drupal\surface_examples_compliance\Alter\RegistrationComplianceAlter;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_resource_test\Access\ExhibitAccess;
+use Drupal\surface_resource_test\Alter\PlaqueAlter;
+use Drupal\surface_resource_test\Alter\WallAlter;
+use Drupal\surface_resource_test\Keys\WorkshopBenches;
+use Drupal\surface_resource_test\Resource\Cellar\CellarResource;
+use Drupal\surface_resource_test\Resource\Exhibit\ExhibitResource;
+use Drupal\surface_resource_test\Resource\Gallery\GalleryResource;
+use Drupal\surface_resource_test\Storage\CellarStorage;
+use Drupal\surface_resource_test\Variants\PosterLayouts;
+use Drupal\surface_resource_test\Structure\Notice\NoticeStructure;
+use Drupal\Tests\surface\Kernel\SurfaceKernelTestBase;
+use Drupal\Tests\surface\Traits\NeverStricterTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
-use Drupal\data_surface_examples_references\Sponsorship;
-use Drupal\data_surface_examples_retitle\Retitle;
+use Drupal\surface_examples_references\Sponsorship;
+use Drupal\surface_examples_retitle\Retitle;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
@@ -73,10 +73,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * The audit's cases that are no row of a table are named tests below;
  * docs/audit-never-stricter.md ("Resolved") says what each became.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
+class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
 
   use NeverStricterTrait;
   use UserCreationTrait;
@@ -135,19 +135,19 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_react',
-    'data_surface_resource_test',
-    'data_surface_tool_test',
-    'data_surface_component_block',
-    'data_surface_block',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_react',
+    'surface_resource_test',
+    'surface_tool_test',
+    'surface_examples_component_block',
+    'surface_examples_block',
     'text',
     'filter',
     'node',
-    'data_surface_examples_references',
-    'data_surface_examples_retitle',
+    'surface_examples_references',
+    'surface_examples_retitle',
   ];
 
   /**
@@ -156,7 +156,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -183,11 +183,11 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @param array $arguments
    *   The operation's arguments.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function build(string $resource, string $operation = 'configure', array $arguments = []): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->buildOperation($resource, $operation, $arguments);
+  protected function build(string $resource, string $operation = 'configure', array $arguments = []): SurfaceInterface {
+    return $this->container->get('surface.resources')->buildOperation($resource, $operation, $arguments);
   }
 
   /**
@@ -200,7 +200,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    *   The stored values.
    */
   protected function stored(string $resource): array {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation($resource, 'configure');
     $surface = $resources->build($resource, $context);
     return $resources->storage($resource, $context, $surface)->load($surface);
@@ -212,11 +212,11 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface[] $definitions
    *   The definitions, by key.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function surface(array $definitions): DataSurfaceInterface {
-    $builder = new DataSurfaceBuilder();
+  protected function surface(array $definitions): SurfaceInterface {
+    $builder = new SurfaceBuilder();
     foreach ($definitions as $name => $definition) {
       $builder->setDefinition($name, $definition);
     }
@@ -237,7 +237,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   protected static function mounted(?string $license, int $stewards): array {
     return [
       'third_party_settings' => [
-        'data_surface_examples_compliance' => ['license' => $license, 'stewards' => $stewards],
+        'surface_examples_compliance' => ['license' => $license, 'stewards' => $stewards],
       ],
     ];
   }
@@ -374,7 +374,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * (`runtime`), in the schema for these answers.
    */
   public function testExampleFour(): void {
-    $this->enableModules(['data_surface_examples_compliance']);
+    $this->enableModules(['surface_examples_compliance']);
     $this->container->get('state')->set(RegistrationComplianceAlter::CLOSED_ROOMS, ['riverside_east']);
     $this->assertTable('registration.step3', $this->build('registration.step3'), $this->stored('registration.step3'), [
       'as stored' => [[], TRUE],
@@ -422,7 +422,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * (the schema for these answers), and require it only where it applies.
    */
   public function testBulletin(): void {
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->assertTable('resource_test.bulletin', $this->build('resource_test.bulletin'), $this->stored('resource_test.bulletin'), [
       'as stored' => [[], TRUE],
       'weekly, another day' => [['send_day' => 'monday'], TRUE],
@@ -448,7 +448,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#a-key-its-storage-always-holds
    */
   public function testOpeningHours(): void {
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->assertTable('resource_test.opening_hours', $this->build('resource_test.opening_hours'), $this->stored('resource_test.opening_hours'), [
       'as stored' => [[], TRUE],
       'another holiday answer' => [['holidays' => 'open'], TRUE],
@@ -478,9 +478,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * holds it to, both ways: nothing here is `dynamic`.
    */
   public function testParcel(): void {
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $customs = static fn (?string $code): array => [
-      'third_party_settings' => ['data_surface_resource_test' => ['customs' => $code]],
+      'third_party_settings' => ['surface_resource_test' => ['customs' => $code]],
     ];
     $freight = ['service' => 'freight', 'weight' => 40, 'note' => 'Ring twice', 'handling' => 'cold'];
     $dear = ['weight' => 2, 'declared_value' => 2000, 'reference' => 'R1'];
@@ -525,7 +525,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @see docs/resources.md#ports
    */
   public function testPorts(): void {
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $stored = ['rows' => 5, 'aisle' => 'centre', 'ushers' => 0];
     $seating = static fn (array $seating): array => ['seating' => $seating + $stored];
     $this->assertTable('resource_test.venue', $this->build('resource_test.venue'), $this->stored('resource_test.venue'), [
@@ -543,7 +543,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'no ushers said for eighty guests' => [$seating(['ushers' => NULL]), TRUE],
     ]);
     $mount = static fn (array $seating): array => [
-      'third_party_settings' => ['data_surface_resource_test' => $seating + $stored],
+      'third_party_settings' => ['surface_resource_test' => $seating + $stored],
     ];
     $chairs = static fn (array $chairs): array => ['chairs' => $chairs + ['rows' => 5]];
     $banquet = static fn (int $guests): array => ['style' => 'banquet', 'guests' => $guests];
@@ -575,7 +575,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @see docs/resources.md#mixins
    */
   public function testMixins(): void {
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
     $unseen = ['published' => FALSE, 'created' => NULL, 'changed' => NULL];
     $long = ['visibility' => 'public', 'owner' => str_repeat('a', 40), 'shared' => NULL];
@@ -617,7 +617,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @see docs/resources.md#keys-that-come-from-the-site
    */
   public function testKeysFromTheSite(): void {
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
     $benches = [
       'lathe' => ['enabled' => TRUE, 'hours' => 4],
@@ -657,7 +657,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#a-budget-for-what-the-site-decides
    */
   public function testListsPastTheSiteListLimit(): void {
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
     $layouts = [];
     for ($n = 1; $n <= 22; $n++) {
@@ -673,7 +673,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->container->get('state')->set(PosterLayouts::STATE, $layouts);
     Cache::invalidateTags([PosterLayouts::TAG]);
     $poster = $this->build('resource_test.poster');
-    $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($poster, 'resource_test.poster')->document);
+    $full = $this->decoded($this->container->get('surface.contract_emitter')->emitFull($poster, 'resource_test.poster')->document);
     $this->assertSame(['fetch' => '?choose=/panels={value}'], $full['schema']['properties']['panels']['x-surface']['deferred']);
     $this->assertTable('resource_test.poster', $poster, $this->stored('resource_test.poster'), [
       'as stored' => [[], TRUE],
@@ -719,7 +719,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * managed key is refused by the rule both state.
    */
   public function testExampleFourteen(): void {
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $pasted = ['credential' => ['api_key' => 'mk-1']];
     $managed = static fn (string $key, array $more = []): array => [
       'source' => 'managed',
@@ -734,7 +734,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a sender that is no address' => [['sender' => 'tickets'] + $pasted, FALSE, TRUE, TRUE],
     ]);
 
-    $this->container->get('module_installer')->install(['data_surface_examples_keys']);
+    $this->container->get('module_installer')->install(['surface_examples_keys']);
     $this->setUpCurrentUser(admin: TRUE);
     $this->assertTable('event.mailer', $this->build('event.mailer'), $this->stored('event.mailer'), [
       'a pasted key' => [['source' => 'pasted', 'credential' => ['api_key' => 'mk-1']], TRUE],
@@ -745,7 +745,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a source no variant is for' => [['source' => 'vault', 'credential' => ['api_key' => 'mk-1']], FALSE],
     ]);
     $mount = static fn (?string $key): array => [
-      'third_party_settings' => ['data_surface_examples_keys' => ['key_id' => $key]],
+      'third_party_settings' => ['surface_examples_keys' => ['key_id' => $key]],
     ];
     $this->assertTable('event.webhook', $this->build('event.webhook'), $this->stored('event.webhook'), [
       'as stored' => [[], TRUE],
@@ -771,18 +771,18 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * type.
    */
   public function testExampleTwelve(): void {
-    $hero = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors open at six']];
+    $hero = ['component' => 'surface_examples:hero', 'props' => ['title' => 'Doors open at six']];
     $cta = static fn (array $tags): array => [
-      'component' => 'data_surface_examples:call_to_action',
+      'component' => 'surface_examples:call_to_action',
       'props' => ['text' => 'Buy a ticket', 'url' => 'https://example.com/tickets', 'tags' => $tags],
     ];
     $actions = static fn (string $kind, array $held): array => [
       'slots' => ['actions' => ['kind' => $kind, $kind => $held]],
     ];
     $text = ['body' => ['kind' => 'text', 'text' => 'Bring your ticket.']];
-    $card = ['component' => 'data_surface_examples:card', 'props' => ['heading' => 'Talks']];
+    $card = ['component' => 'surface_examples:card', 'props' => ['heading' => 'Talks']];
     $section = static fn (array $held): array => [
-      'component' => 'data_surface_examples:section',
+      'component' => 'surface_examples:section',
       'props' => [],
       'slots' => ['content' => ['kind' => 'component', 'component' => $held]],
     ];
@@ -794,12 +794,12 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'the card with its link cleared' => [['props' => ['link' => NULL]], TRUE],
       'the call to action with four tags' => [$cta(['music', 'film', 'talks', 'food']), FALSE],
       'a hero too dark' => [['props' => ['overlay' => 140] + $hero['props']] + $hero, FALSE],
-      'a hero with no title' => [['component' => 'data_surface_examples:hero', 'props' => ['align' => 'start']], FALSE],
+      'a hero with no title' => [['component' => 'surface_examples:hero', 'props' => ['align' => 'start']], FALSE],
       'a heading too long' => [['props' => ['heading' => str_repeat('a', 81)]], FALSE],
       'a tone the card does not offer' => [['props' => ['tone' => 'loud']], FALSE],
       'a link with no address' => [['props' => ['link' => ['label' => 'Tickets']]], TRUE],
       'a hero\'s prop sent for the card' => [['props' => ['overlay' => 60]], FALSE],
-      'a component the site does not have' => [['component' => 'data_surface_examples:banner'], FALSE],
+      'a component the site does not have' => [['component' => 'surface_examples:banner'], FALSE],
       'the card with text in its slot' => [['slots' => $text], TRUE],
       'a component in the card\'s text slot' => [['slots' => ['body' => ['kind' => 'component']]], FALSE],
       'the hero with two calls to action' => [$actions('components', [$cta(['music']), $cta([])]) + $hero, TRUE],
@@ -832,8 +832,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $hero = [
       'label' => 'Doors',
       'id' => 'doors_hero',
-      'plugin' => 'data_surface_component',
-      'settings' => ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors open at six']],
+      'plugin' => 'surface_component',
+      'settings' => ['component' => 'surface_examples:hero', 'props' => ['title' => 'Doors open at six']],
       'theme' => 'stark',
       'region' => 'sidebar_first',
     ];
@@ -845,9 +845,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'region' => 'header',
     ];
     $administrators = ['visibility' => [['id' => 'user_role', 'settings' => ['roles' => ['administrator']]]]];
-    $dark = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Doors', 'overlay' => 140]];
+    $dark = ['component' => 'surface_examples:hero', 'props' => ['title' => 'Doors', 'overlay' => 140]];
     $cta = [
-      'component' => 'data_surface_examples:call_to_action',
+      'component' => 'surface_examples:call_to_action',
       'props' => ['text' => 'Buy a ticket', 'url' => 'https://example.com/tickets'],
     ];
     $holding = static fn (array $held): array => [
@@ -910,7 +910,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'an offset below none' => [['offset' => -1], FALSE],
       'a key the venue has, which the listing does not take' => [['capacity' => 3], FALSE],
     ]);
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation('event.venue', 'reorder');
     $surface = $resources->build('event.venue', $context);
     $this->assertTable('event.venue', $surface, $resources->storage('event.venue', $context, $surface)->load($surface), [
@@ -958,7 +958,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   public function testReferences(): void {
     $this->installEntitySchema('node');
     $this->installSchema('node', ['node_access']);
-    $this->installConfig(['node', 'filter', 'data_surface_examples_references']);
+    $this->installConfig(['node', 'filter', 'surface_examples_references']);
     $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->writeNodes();
     $nodes = $this->container->get('class_resolver')->getInstanceFromDefinition(Sponsorship::class)->ids();
     $rows = [
@@ -979,8 +979,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
 
     // Past the limit: an id of the key's type, which only the server
     // holds to what the account may reference.
-    $resources = $this->container->get('data_surface.resources');
-    $this->container->get('data_surface.references')->withLimit(1, function () use ($resources, $nodes): void {
+    $resources = $this->container->get('surface.resources');
+    $this->container->get('surface.references')->withLimit(1, function () use ($resources, $nodes): void {
       $resources->forgetBuilds();
       $this->assertTable('event.sponsorship', $this->build('event.sponsorship'), $this->stored('event.sponsorship'), [
         'a venue the site has' => [['venue' => 'library'], TRUE],
@@ -1012,7 +1012,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
   public function testRetitle(): void {
     $this->installEntitySchema('node');
     $this->installSchema('node', ['node_access']);
-    $this->installConfig(['node', 'filter', 'data_surface_examples_retitle']);
+    $this->installConfig(['node', 'filter', 'surface_examples_retitle']);
     $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->writeNodes();
     $pages = $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->ids();
     $this->container->get('state')->set(Retitle::LOCKED, TRUE);
@@ -1033,7 +1033,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       'a node the site does not have' => [['items' => [['node' => 999]]], FALSE],
       'a title too long' => [['items' => [['node' => $pages['one'], 'new_title' => str_repeat('a', 256)]]], FALSE],
       'a style not offered' => [['items' => $three, 'style' => 'shouting'], FALSE],
-    ], $this->container->get('data_surface.resources')->buildStatic('ai.retitle', $this->container->get('data_surface.resources')->operation('ai.retitle', 'retitle')));
+    ], $this->container->get('surface.resources')->buildStatic('ai.retitle', $this->container->get('surface.resources')->operation('ai.retitle', 'retitle')));
     $this->container->get('state')->delete(Retitle::LOCKED);
   }
 
@@ -1052,9 +1052,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
    */
   public function testStaticAndRuntimeAccess(): void {
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->createRole(['keep an exhibit'], ExhibitAccess::ARCHIVIST);
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(ExhibitResource::class, 'configure');
     $base = ['title' => 'Ammonite', 'status' => 'open', 'room' => 'east'];
     $table = function (array $rows) use ($resources, $context): void {
@@ -1077,14 +1077,14 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     ]);
     // A runtime lock: the exhibit sealed.
     $this->setUpCurrentUser([], ['keep an exhibit']);
-    $this->config('data_surface_resource_test.exhibit')->set('status', 'sealed')->save();
+    $this->config('surface_resource_test.exhibit')->set('status', 'sealed')->save();
     $table([
       'as stored' => [[], TRUE],
       'the provenance posted otherwise is kept' => [['source' => 'Dover'], TRUE],
       'the loan posted otherwise is kept' => [['loan' => ['lender' => 'Nobody']], TRUE],
     ]);
     // A runtime omission: the exhibit withdrawn.
-    $this->config('data_surface_resource_test.exhibit')->set('status', 'open')->save();
+    $this->config('surface_resource_test.exhibit')->set('status', 'open')->save();
     $this->container->get('state')->set(ExhibitAccess::WITHDRAWN, TRUE);
     $table([
       'as stored' => [[], TRUE],
@@ -1105,8 +1105,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands
    */
   public function testAnAltersAccess(): void {
-    $this->installConfig(['data_surface_resource_test']);
-    $resources = $this->container->get('data_surface.resources');
+    $this->installConfig(['surface_resource_test']);
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(GalleryResource::class, 'configure');
     $base = ['name' => 'The long gallery', 'medium' => 'oil'];
     $table = function (array $rows) use ($resources, $context): void {
@@ -1153,7 +1153,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#a-shape-is-a-named-definition
    */
   public function testShapes(): void {
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
     $this->assertTable('resource_test.depot', $this->build('resource_test.depot'), $this->stored('resource_test.depot'), [
       'as stored' => [[], TRUE],
@@ -1175,13 +1175,13 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * The notice: an attached child, variants and a mounted key, ruled out.
    */
   public function testNotice(): void {
-    $notice = $this->container->get('data_surface.resources')->build(NoticeStructure::class, new OperationContext('configure'));
+    $notice = $this->container->get('surface.resources')->build(NoticeStructure::class, new OperationContext('configure'));
     $stored = [
       'channel' => 'post',
       'cadence' => 'weekly',
       'address' => ['street' => 'Main street'],
       'schedule' => ['day' => 'friday'],
-      'third_party_settings' => ['data_surface_resource_test' => ['signature' => 'Ada', 'footer' => 'Sent by post']],
+      'third_party_settings' => ['surface_resource_test' => ['signature' => 'Ada', 'footer' => 'Sent by post']],
     ];
     $this->assertTable('resource_test.notice', $notice, $stored, [
       'by post, as stored' => [[], TRUE],
@@ -1205,7 +1205,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    *   The values.
    */
   protected static function signed(?string $signature): array {
-    return ['third_party_settings' => ['data_surface_resource_test' => ['signature' => $signature]]];
+    return ['third_party_settings' => ['surface_resource_test' => ['signature' => $signature]]];
   }
 
   /**
@@ -1221,7 +1221,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $this->actAsLarderKeeper('inspect spice rack');
     $cellar = $this->build(CellarResource::class, 'update', ['larder' => 'main']);
     $this->assertTrue($cellar->isLocked('racks'));
-    $document = $this->decoded($this->container->get('data_surface.contract_emitter')->emit($cellar, array_replace($cellar->getDefaultValues(), self::CELLAR), 'resource_test.cellar')->document);
+    $document = $this->decoded($this->container->get('surface.contract_emitter')->emit($cellar, array_replace($cellar->getDefaultValues(), self::CELLAR), 'resource_test.cellar')->document);
     $racks = $document['schema']['properties']['racks'];
     $this->assertTrue($racks['readOnly']);
     $items = SchemaResolver::inline($racks, $document['schema'])['items'];
@@ -1307,7 +1307,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     foreach ($translations as $regex => $pattern) {
       $constraint = ['pattern' => $regex, 'message' => 'As it says.'];
       $surface = $this->surface(['k' => DataDefinition::create('string')->setLabel('K')->addConstraint('Regex', $constraint)]);
-      $emitter = $this->container->get('data_surface.contract_emitter');
+      $emitter = $this->container->get('surface.contract_emitter');
       $property = $this->decoded($emitter->emitFull($surface, 'audit')->document['schema'])['properties']['k'];
       $this->assertSame($pattern, $property['pattern'] ?? NULL, $regex);
       $this->assertSame('As it says.', $property['x-surface']['patternMessage'] ?? NULL, $regex . ': the message is carried either way.');
@@ -1346,7 +1346,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       $label = $regex . ' ' . json_encode($value);
       $accepted = $this->pipeline()->accept($surface, ['k' => $value]);
       $this->assertSame($pipeline, $this->pipeline()->validate($surface, $accepted)->isEmpty(), $label . ': the pipeline.');
-      $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($surface, 'audit')->document['schema']);
+      $full = $this->decoded($this->container->get('surface.contract_emitter')->emitFull($surface, 'audit')->document['schema']);
       $this->assertSame($schema, $this->validates($full, $accepted), $label . ': the full schema.');
       if ($pipeline) {
         $this->assertTrue($schema, $label . ': never stricter.');
@@ -1355,12 +1355,12 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
 
     // Every shipped pattern ends in `$` and carries D: the license, with
     // example 4 on, through the pipeline and both documents.
-    $this->enableModules(['data_surface_examples_compliance']);
+    $this->enableModules(['surface_examples_compliance']);
     $step3 = $this->build('registration.step3');
     $licensed = ['capacity' => 150] + self::mounted("2048\n", 3) + self::EVENT;
     $accepted = $this->pipeline()->accept($step3, $licensed, $this->stored('registration.step3'));
     $this->assertTrue($this->pipeline()->validate($step3, $accepted)->has('third_party_settings'));
-    $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($step3, 'registration.step3')->document['schema']);
+    $full = $this->decoded($this->container->get('surface.contract_emitter')->emitFull($step3, 'registration.step3')->document['schema']);
     // The license is a shape, defined once, which the compliance
     // structure's key refers to.
     $this->assertSame('#/$defs/event.license', $full['$defs']['registration.compliance']['properties']['license']['$ref']);
@@ -1383,17 +1383,17 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $pick = DataDefinition::create('string')->setLabel('Pick')
       ->addConstraint('Choice', ['choices' => ['x', 'y']]);
     $surface = $this->surface(['pick' => $pick]);
-    $storage = new StateStorage($this->container->get('state'), 'data_surface_audit.pick');
-    $this->container->get('state')->set('data_surface_audit.pick', ['pick' => 'z']);
+    $storage = new StateStorage($this->container->get('state'), 'surface_audit.pick');
+    $this->container->get('state')->set('surface_audit.pick', ['pick' => 'z']);
     foreach ([[], ['pick' => 'z']] as $untouched) {
       $result = $this->pipeline()->submit($surface, $untouched, $storage);
       $this->assertTrue($result->committed, json_encode($untouched));
       $this->assertTrue($result->violations->hasStale(), json_encode($untouched));
-      $this->assertSame('z', $this->container->get('state')->get('data_surface_audit.pick')['pick']);
+      $this->assertSame('z', $this->container->get('state')->get('surface_audit.pick')['pick']);
     }
     // Null with no stale path is something said: it clears the key.
     $this->assertNull($this->pipeline()->accept($surface, ['pick' => NULL], ['pick' => 'z'])['pick']);
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $document = $this->decoded($emitter->emit($surface, ['pick' => 'z'], 'audit')->document);
     $this->assertSame(['/pick'], $document['stale']);
     $this->assertNull($document['values']['pick']);
@@ -1407,8 +1407,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     // Example 4 closes the East room after it was stored; the venue does
     // not move. The required room is stale: its null travels with the
     // path, which is what lets the pipeline read the stored room.
-    $this->enableModules(['data_surface_examples_compliance']);
-    $resources = $this->container->get('data_surface.resources');
+    $this->enableModules(['surface_examples_compliance']);
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation('registration.step3', 'configure');
     $step3 = $resources->build('registration.step3', $context);
     $step3_storage = $resources->storage('registration.step3', $context, $step3);
@@ -1419,7 +1419,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $stored = $this->stored('registration.step3');
     $served = $this->decoded($emitter->emit($step3, $stored, 'registration.step3')->document);
     $this->assertSame(['/room'], $served['stale']);
-    $back = $this->container->get('data_surface_react.served_operations')->keepStale($served['values'], $stored, $served['stale']);
+    $back = $this->container->get('surface_react.served_operations')->keepStale($served['values'], $stored, $served['stale']);
     $result = $this->pipeline()->submit($step3, $back, $resources->storage('registration.step3', $context, $step3));
     $this->assertTrue($result->committed, 'Untouched, the stale room is kept.');
     $this->assertSame('riverside_east', $this->stored('registration.step3')['room']);
@@ -1500,7 +1500,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       $token = DataDefinition::create('string')->setLabel('Token')->setRequired($required);
       DefinitionMetadata::setSecret($token);
       $vault = $this->surface(['token' => $token]);
-      $emitter = $this->container->get('data_surface.contract_emitter');
+      $emitter = $this->container->get('surface.contract_emitter');
       $full = $this->decoded($emitter->emitFull($vault, 'audit')->document['schema']);
       $label = $required ? 'required' : 'optional';
       $this->assertSame('string', $full['properties']['token']['type'], $label);
@@ -1542,8 +1542,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
    */
   public function testSecretInCollectionItemKeepsItsPlace(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $this->container->get('state')->set('data_surface_tool_test.vault', [
+    $resources = $this->container->get('surface.resources');
+    $this->container->get('state')->set('surface_tool_test.vault', [
       'mirrors' => [
         ['host' => 'east.example.com', 'password' => 'mirror-one'],
         ['host' => 'west.example.com', 'password' => 'mirror-two'],
@@ -1551,7 +1551,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     ]);
     $context = $resources->operation('tool_test.vault', 'configure');
     $vault = $resources->build('tool_test.vault', $context);
-    $full = $this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($vault, 'tool_test.vault')->document['schema']);
+    $full = $this->decoded($this->container->get('surface.contract_emitter')->emitFull($vault, 'tool_test.vault')->document['schema']);
     $east = ['host' => 'east.example.com'];
     $west = ['host' => 'west.example.com'];
     $rows = [
@@ -1588,13 +1588,13 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * as narrow as its validator.
    */
   public function testConstraintsWithNoKeyword(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $full = fn (DataSurfaceInterface $surface): array => $this->decoded($emitter->emitFull($surface, 'audit')->document['schema']);
+    $emitter = $this->container->get('surface.contract_emitter');
+    $full = fn (SurfaceInterface $surface): array => $this->decoded($emitter->emitFull($surface, 'audit')->document['schema']);
     $bare = $full($this->surface(['k' => DataDefinition::create('string')->setLabel('K')]))['properties']['k'];
     $names = [
       'UniqueField',
-      'DataSurfaceUnique',
-      'DataSurfaceDemoExtrasReviewDeadline',
+      'SurfaceUnique',
+      'SurfaceExamplesExtrasReviewDeadline',
       'AuditRuleNobodyDeclares',
     ];
     foreach ($names as $name) {
@@ -1657,7 +1657,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * dropped before the documents read the list (the rows above).
    */
   public function testListItemsAreNeverNull(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $parcel = $this->build('tool_test.specimen');
     $documents = [
       'the full schema' => $this->decoded($emitter->emitFull($parcel, 'tool_test.specimen')->document['schema']),
@@ -1668,7 +1668,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       $this->assertSame('string', $items['type'], $which);
       $this->assertFalse($this->validates($schema, ['tags' => ['a', NULL]]), $which . ': a null item is no item.');
     }
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $labels = $this->decoded($emitter->emitFull($this->build('resource_test.parcel'), 'resource_test.parcel')->document['schema'])['properties']['labels']['items'];
     $this->assertSame('string', $labels['type']);
     $this->assertNotContains(['const' => NULL], $labels['oneOf'], 'An item of a list of choices offers no null.');
@@ -1692,8 +1692,8 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#a-composite-is-its-parts
    */
   public function testCompositesAreTheirParts(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $name = fn (array $rules): DataSurfaceInterface => $this->surface([
+    $emitter = $this->container->get('surface.contract_emitter');
+    $name = fn (array $rules): SurfaceInterface => $this->surface([
       'element_name' => DataDefinition::create('string')->setLabel('Honeypot element name')->setRequired(TRUE)
         ->addConstraint('Sequentially', ['constraints' => $rules]),
     ]);
@@ -1788,9 +1788,9 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
       catch (UnknownKeysException $e) {
         $this->assertSame($path, $e->getPath(), $case);
       }
-      $this->assertFalse($this->validates($this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($step3, 'registration.step3')->document['schema']), $input), $case);
+      $this->assertFalse($this->validates($this->decoded($this->container->get('surface.contract_emitter')->emitFull($step3, 'registration.step3')->document['schema']), $input), $case);
     }
-    $this->enableModules(['data_surface_examples_compliance']);
+    $this->enableModules(['surface_examples_compliance']);
     $mounted = $this->build('registration.step3');
     $input = array_replace_recursive(self::EVENT + self::mounted(NULL, 1), ['third_party_settings' => ['other' => NULL]]);
     try {
@@ -1804,7 +1804,7 @@ class AdvertisedSchemaAcceptanceTest extends DataSurfaceKernelTestBase {
     $open = $this->surface(['bag' => MapDataDefinition::create()->setLabel('Bag')]);
     $accepted = $this->pipeline()->accept($open, ['bag' => ['anything' => 1]]);
     $this->assertSame(['anything' => 1], $accepted['bag']);
-    $this->assertTrue($this->validates($this->decoded($this->container->get('data_surface.contract_emitter')->emitFull($open, 'audit')->document['schema']), $accepted));
+    $this->assertTrue($this->validates($this->decoded($this->container->get('surface.contract_emitter')->emitFull($open, 'audit')->document['schema']), $accepted));
   }
 
 }

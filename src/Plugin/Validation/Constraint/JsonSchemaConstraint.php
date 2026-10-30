@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Validation\Attribute\Constraint;
@@ -29,7 +29,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  *
  * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
  *
- * @see \Drupal\data_surface\Contract\SchemaReader
+ * @see \Drupal\surface\Contract\SchemaReader
  */
 #[Constraint(
   id: 'JsonSchema',

@@ -21,7 +21,7 @@ and one coercion table, shared by `accept()`, `validate()` and
 `refine()`), so a form, a config action, a REST payload and an agent all
 get the same answer. The coercion table is the Tool API's, so a tool
 caller gets that answer too. The unit test
-`tests/src/Unit/DataSurfacePipelineCastingTest.php` states the same rules
+`tests/src/Unit/SurfacePipelineCastingTest.php` states the same rules
 as a table of cases, and the kernel test `InputCoercionMatrixTest` holds
 the form and the tool to the same accepted value row by row; if this
 page and those files ever disagree, the files are the ones that run.
@@ -126,7 +126,7 @@ send day survives a month of monthly sends
 (why: [decision](decisions.md#a-key-that-does-not-apply)). Inside a
 collection's item it is not put back: a list sent is written as sent.
 A map whose every key does not apply is an empty map, and its JSON
-document, `DataSurfacePipelineInterface::document()`, writes it `{}`.
+document, `SurfacePipelineInterface::document()`, writes it `{}`.
 
 A form posted without JavaScript keeps the stored value too. The form
 draws no element for a key that does not apply, and draws it again over
@@ -324,10 +324,10 @@ So for a secret key:
 | --- | --- |
 | absent | keeps the stored value (as for every key) |
 | `NULL`, `''` | **keeps the stored value**, required or not |
-| `DataSurfacePipelineInterface::CLEAR_SECRET` | `NULL`: the secret is gone |
+| `SurfacePipelineInterface::CLEAR_SECRET` | `NULL`: the secret is gone |
 | anything else | the new secret, coerced and validated like any string |
 
-`CLEAR_SECRET` is the literal `@data_surface:clear-secret`, in the same
+`CLEAR_SECRET` is the literal `@surface:clear-secret`, in the same
 reserved `@` namespace as the access violation key. Clearing a secret is
 an explicit act and has to be said out loud: a host renders a "remove
 the stored token" checkbox beside the box and sends the marker when it is
@@ -407,13 +407,13 @@ Four consequences worth stating:
   select whose value is missing picks the first option, and that is how
   an unrelated save used to silently rewrite the value.
 - **Untouched means keep.** The element carries the stored value
-  (`#data_surface_stale`), and an empty submission from an element that
+  (`#surface_stale`), and an empty submission from an element that
   carries one is read as that value on extraction, so an unrelated save
   cannot clear it. This is the trap, and it is the same one secrets
   have: an empty select otherwise means clear. A build made from the
   submission itself learns which selects stood for a stored value from
   a hidden input the container posts beside them
-  (`DataSurfaceFormBuilderInterface::STALE_MARKER_KEY`).
+  (`SurfaceFormBuilderInterface::STALE_MARKER_KEY`).
 - **Stale never blocks.** A run that found only stale entries is valid,
   commits, and carries the stale references on its result (see
   [the pipeline](pipeline.md#stale-never-blocks)). A new value outside
@@ -504,7 +504,7 @@ read alike to the person filling in the form.
 Every message in a violation is a `TranslatableMarkup` (the data
 surface's own required message, the pipeline's unknown-key and shape
 refusals, and the message a constraint or a config schema produced),
-and it stays one the whole way out: `DataSurfaceResult`, a form error
+and it stays one the whole way out: `SurfaceResult`, a form error
 through `FormStateInterface::setError()`, a caller's own report.
 Placeholders are still placeholders until something renders it, so a
 value that contains markup is escaped once, by whoever prints it, rather
@@ -587,7 +587,7 @@ does, with the same `path` and `code` as the tool.
 There are exactly three places a message becomes text, all of them
 exception messages, because PHP has nowhere to put an object in one:
 `UnknownKeysException`, `StorageViolationsException`, and the refusal
-`DataSurfaceConfigurationTrait::setConfiguration()` throws. All three
+`SurfaceConfigurationTrait::setConfiguration()` throws. All three
 render through `Pipeline\ViolationSummary`, which names the first five
 entries and counts the rest; the full list is still on the exception.
 
@@ -608,7 +608,7 @@ refusal of the whole call has an empty path.
 
 Every path a result carries, at every door, is a JSON Pointer
 (RFC 6901) into the values: `/contact/email`, `/shelves/1/unit`,
-`/third_party_settings/data_surface_examples_compliance/license`, a `~`
+`/third_party_settings/surface_examples_compliance/license`, a `~`
 or a `/` inside a key written `~0` and `~1`, and the whole call the
 empty pointer. So is each entry of `changes`. The write tool's result
 and its text lines, `drush tool:run --json`, the API's results and
@@ -638,7 +638,7 @@ key" is that key's pointer.
 | `locked` | empty | The resource may be seen and not changed, so nothing was written. |
 | `not_found` | empty | The call's parameters name nothing, or a read is asked of what an operation creates. |
 | `conflict` | empty | What storage holds changed since the caller read it: the API's `If-Match` no longer names it, a 412. |
-| `taken` | the key | A create names a thing that exists already: its identity is held, "A venue named riverside already exists." (the stock `DataSurfaceUnique`, and `ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
+| `taken` | the key | A create names a thing that exists already: its identity is held, "A venue named riverside already exists." (the stock `SurfaceUnique`, and `ConfigEntityStorage`), or a list holds a thing twice that may be held once (a placed block's condition). |
 | `locked` | the key | In `notes`: a value sent for a locked key, not taken. |
 | `computed` | the key | A value sent for a computed key other than the one it holds; in `notes`, the one it holds, sent and not taken ([Computed keys](declaring-a-resource.md#computed-keys)). A key computed unless sent takes the value sent, and is never refused with it. |
 | `stale` | the key | In `stale`: a stored value kept that the key no longer offers, with `stored`. |
@@ -663,7 +663,7 @@ for a locked key is ignored: it is not an error, just not a way to move
 the value. This is why editing an entity whose id is locked no longer
 resets it to the default. A value sent for it that is not what it holds
 is said, though, once per key and blocking nothing: the run's notes
-(`DataSurfaceResult::$notes`), which the tool puts after its message
+(`SurfaceResult::$notes`), which the tool puts after its message
 and the API answers as `notes`, say "Machine
 name is locked and kept as stored; the value sent was not taken." The
 form says nothing, since it draws the key disabled

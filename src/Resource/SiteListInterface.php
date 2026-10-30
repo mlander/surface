@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * Lists the things a site has, for a key whose list the site decides.
@@ -37,7 +37,7 @@ namespace Drupal\data_surface\Resource;
  * by the account: what the site has is the same for every account, and
  * who may change or choose an entry is access.
  *
- * @see \Drupal\data_surface\Resource\SiteList
+ * @see \Drupal\surface\Resource\SiteList
  * @see docs/resources.md#keys-that-come-from-the-site
  * @see docs/resources.md#variants-from-the-site
  */
@@ -46,7 +46,7 @@ interface SiteListInterface {
   /**
    * Lists the things, one entry each.
    *
-   * @return \Drupal\data_surface\Resource\SiteList
+   * @return \Drupal\surface\Resource\SiteList
    *   The entries, in order, with the cacheability of what they were read
    *   from.
    */

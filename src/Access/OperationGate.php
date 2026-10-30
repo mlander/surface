@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Access;
+namespace Drupal\surface\Access;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\DataSurfaceAccess;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\SurfaceAccess;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -26,7 +26,7 @@ use Symfony\Component\HttpFoundation\Request;
  * resource the path names that discovery does not have is not found to
  * any account, since nothing is there to hold a permission for. The
  * operation form's route (OperationAccessCheck) and the React page and
- * the API (data_surface_react's ServedOperationAccessCheck) ask both
+ * the API (surface_react's ServedOperationAccessCheck) ask both
  * answers here, so the two doors cannot give them differently; the order
  * they are asked in, and the permission asked again of the URL's values,
  * each door writes itself.
@@ -41,7 +41,7 @@ final class OperationGate {
   /**
    * Constructs an OperationGate.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which answers an operation's permission.
    */
   public function __construct(
@@ -82,7 +82,7 @@ final class OperationGate {
     if ($permission === NULL) {
       return AccessResult::neutral();
     }
-    return DataSurfaceAccess::decisive($permission, $permission instanceof AccessResultReasonInterface ? $permission->getReason() : NULL);
+    return SurfaceAccess::decisive($permission, $permission instanceof AccessResultReasonInterface ? $permission->getReason() : NULL);
   }
 
   /**

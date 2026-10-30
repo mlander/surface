@@ -13,15 +13,15 @@ client with no PHP can render a form from, re-narrow as answers change,
 rehearse a write against before anything is written, and then write
 through. The emitter is the main module's; the API, where the path is
 the resource and the method the operation, and a React app that renders
-from it are the experimental submodule `data_surface_react`.
+from it are the experimental submodule `surface_react`.
 
 This is the roadmap's "served contract": one operation at a time, read,
 rehearsed and written.
 
 ## Where the emitter lives
 
-`Drupal\data_surface\Contract\ContractEmitter`, the service
-`data_surface.contract_emitter`, is the module's canonical contract: it
+`Drupal\surface\Contract\ContractEmitter`, the service
+`surface.contract_emitter`, is the module's canonical contract: it
 reads any sealed data surface and nothing else, and `emit()` answers a
 `ServedContract` (the document, and its cacheability beside it). The
 contract names no widget. `x-surface.widget` (and `multiple`, its
@@ -29,7 +29,7 @@ qualifier on a list of allowed values) is presentation, the Form API
 mapping said out loud for a renderer, and so is `x-surface.arrangement`,
 how a key is laid out where it is drawn; the roadmap rejects widget
 vocabulary in the contract, so they are written only when a caller asks:
-`emit(..., widgets: TRUE)`. `data_surface_react` is that caller; its
+`emit(..., widgets: TRUE)`. `surface_react` is that caller; its
 endpoints serve the contract with the hints, for its app to draw from.
 Everything else under `x-surface` is the data surface's own reading of
 a key and is always there.
@@ -41,7 +41,7 @@ JSON Schema cannot say them. This one can.
 
 ## Where to see it
 
-- **Under an operation form.** `data_surface_tool`'s contract panel,
+- **Under an operation form.** `surface_tool`'s contract panel,
   which the examples show under each form, shows it collapsed as "The
   schema for these answers", emitted for the operation and the form's
   values as they stand, so it rebuilds with the form. Beside it, "The
@@ -51,9 +51,9 @@ JSON Schema cannot say them. This one can.
   panel under that one, "Without a resource: what config schema can
   say": the same settings described from config schema alone, set
   beside the full schema key by key
-  (`modules/data_surface_examples/README.md`).
+  (`modules/surface_examples/README.md`).
 - **Over HTTP.** `GET /surface-api/{resource}`, or
-  `/surface-api/{resource}/{id}` for one thing, with `data_surface_react`
+  `/surface-api/{resource}/{id}` for one thing, with `surface_react`
   enabled: the whole document, widget hints included. The full schema is
   `GET .../schema` beside it ([the API](#the-api)).
 - **Not `drush tool:info`.** That prints the Tool API's rendering of the
@@ -432,7 +432,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | a key with variants | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, no `type` beside it; each variant stated exactly by a conditional on the parent ([below](#variants-are-conditionals)) |
-| a key that refers to an entity, `entity:<type>[:<bundle>]` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `data_surface.settings:reference_list_limit`, and `DataSurfaceValidReference` under `checkedOnServer`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
+| a key that refers to an entity, `entity:<type>[:<bundle>]` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `surface.settings:reference_list_limit`, and `SurfaceValidReference` under `checkedOnServer`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
 | a key of any entity type, `entity` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string marked `reference: {by: "entity_type"}`, `enumerated`, its candidates per entity type one conditional on the def |
 | a deciding key that holds a value and whose variants offer one value, or a key its operation's context fixes to one (fixing makes it hold a value) | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter), [a route that fixes a key](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)) |
 | a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
@@ -451,7 +451,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | Keyword | Holds |
 | --- | --- |
 | `contract` | At the top always, first: the version of the wire format the document is written in, `4` ([Contract 4](#contract-4)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
-| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, or a key its operation's context fixes to one, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
+| `widget` | Only when the caller asks for widget hints (`surface_react` does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, or a key its operation's context fixes to one, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
 | `dependsOn` | Only where it names one: the sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Only when `true`, in the schema for these answers: the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | Only when `true`, in the schema for these answers: the stored value is no longer offered; the key is shown on its empty option, standing for it. |
@@ -464,7 +464,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `computed` | On a computed key, in both documents, beside `readOnly: true`: the keys it is computed from and when, `{"from": ["label"], "when": "create"}`, `create` for once, while storage holds nothing for it, `change` for again on every write that changes one of them. Nobody types it: a client shows it, narrows with `POST .../schema` when a key in `from` changes, which answers the value it would compute, and leaves it out of a write; a value sent equal to what it holds is noted, code `computed`, and any other refused. Additive in contract 3 (why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)). `unless_sent`, with no `readOnly`, for a key computed as `create` computes it only when a write leaves it out or sends it empty: a client shows the narrowing's value as a suggestion, sends it once the person typed over it, and a value sent is kept (why: [decision](decisions.md#a-machine-name-is-a-computed-identity)). |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
 | `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
-| `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `reason` where it was given one (the stock `DataSurfaceUnique`'s), else its own `message` (a Regex's), else its plugin's label, else the id: `[{"constraint": "DataSurfaceUnique", "message": "Refused when a venue named this already exists."}]`. A list of plugin ids in contract 1. A `JsonSchema` entry, what a structure read from a schema kept of it, carries the schema beside its message, `{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: contains.", "schema": {"contains": {"const": "news"}}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). |
+| `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `reason` where it was given one (the stock `SurfaceUnique`'s), else its own `message` (a Regex's), else its plugin's label, else the id: `[{"constraint": "SurfaceUnique", "message": "Refused when a venue named this already exists."}]`. A list of plugin ids in contract 1. A `JsonSchema` entry, what a structure read from a schema kept of it, carries the schema beside its message, `{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: contains.", "schema": {"contains": {"const": "news"}}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). |
 | `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `live` adds. |
 | `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower (why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
@@ -1026,7 +1026,7 @@ no round trip to `POST .../schema`.
 Variants from the site and keys from the site take their list from the
 site, not the code: a component per single-directory component a theme
 provides, a key per bench a configuration lists. Each is spelled out in
-the full schema while it has at most `data_surface.settings:site_list_limit`
+the full schema while it has at most `surface.settings:site_list_limit`
 entries (20 as shipped), and the tool listing spells it out the same
 way (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). Past it
 the key is `deferred`: static, and left out for its size
@@ -1062,7 +1062,7 @@ Example 12's props on a site with 312 components, in the full schema:
 A placed block's settings are variants per block plugin, and the
 component block's props are variants per component inside one of them,
 so the props' template names the plugin chosen on the way:
-`.../block.placement/schema?choose=/settings=data_surface_component&choose=/settings/props={value}`.
+`.../block.placement/schema?choose=/settings=surface_component&choose=/settings/props={value}`.
 In a document no route serves (a baseline, the contract panel, the
 narrowing tool's answer) the template is its query alone,
 `?choose=/props={value}`, read against the full schema's URL.
@@ -1141,7 +1141,7 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
 ## The widget mapping
 
 What the emitter's `widget`, when asked for, mirrors is
-`DataSurfaceWidgetManager`'s choice, in its weight order
+`SurfaceWidgetManager`'s choice, in its weight order
 ([Widgets](widgets.md)): the emitter asks the stock widgets' own rule
 for which element a list of choices is, so the hint and the form never
 disagree (why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)).
@@ -1190,7 +1190,7 @@ draw a declared key
 
 The path is the resource and the method is the operation
 (why: [decision](decisions.md#contract-3-the-operation-is-the-method)). One
-route, `data_surface_react.api`, answers every path below;
+route, `surface_react.api`, answers every path below;
 `ServedPaths` reads which operation a path and a method name.
 
 | Method and path | What it does |
@@ -1262,7 +1262,7 @@ is `POST /surface-api/field.instance/node/page/body:reuse`; example
 `entity.content:node.page`, is read whole first. A default may be named
 the same way.
 
-Every path is gated by `_data_surface_react_access`: the operation's
+Every path is gated by `_surface_react_access`: the operation's
 permission, then the access class the resource or structure names,
 through `Resources::access()`, with no opinion read as a refusal. The
 permission is asked first, from the two ids alone, before a parameter
@@ -1315,7 +1315,7 @@ The create's envelope moves to its custom method too,
 ### A lookup
 
 A key that refers to an entity lists its candidates while there are at
-most `data_surface.settings:reference_list_limit`; past that it lists
+most `surface.settings:reference_list_limit`; past that it lists
 none, and a client finds an id with the lookup, a custom read every
 resource path answers
 (why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
@@ -1434,7 +1434,7 @@ built for the account as the plain one is, with each choice stated in
 full at its key, as the full schema states it under the limit, and the
 rest as the plain full schema says it.
 
-- **A variant**, `choose=/props=data_surface_examples:card`: its def in
+- **A variant**, `choose=/props=surface_examples:card`: its def in
   `$defs` and its one conditional on the frame, nothing for the other
   variants. The key stays open and `deferred`, its `variants` naming the
   defs stated, so the answer accepts another component's props as the
@@ -1444,7 +1444,7 @@ rest as the plain full schema says it.
   `properties`, as the map's def states it under the limit.
 - **A key inside a variant** is named with the choice of each key with
   variants on the way, in any order:
-  `choose=/settings=data_surface_component&choose=/settings/props=data_surface_examples:card`.
+  `choose=/settings=surface_component&choose=/settings/props=surface_examples:card`.
   A choice at a key whose variants are spelled out only says which
   variant to pass through. Inside a collection, any item's index names
   the key in every item, which are one structure.
@@ -1453,7 +1453,7 @@ rest as the plain full schema says it.
   server reads the query string as it arrived.
 - **What it depends on**: what the plain full schema depends on, the
   provider that listed the variants (its tags) and
-  `config:data_surface.settings` among it, and `url.query_args`; its
+  `config:surface.settings` among it, and `url.query_args`; its
   `$id` is the path with the choices, and its `ETag` a hash of its
   bytes, so a client may hold the answer until a component changes.
 - **A choice that names nothing** is a 404 problem naming the pointer:
@@ -1464,19 +1464,19 @@ rest as the plain full schema says it.
   then a value, is a 400.
 
 ```
-GET /surface-api/event.spotlight/schema?choose=/props=data_surface_examples:card
+GET /surface-api/event.spotlight/schema?choose=/props=surface_examples:card
 
 200 Content-Type: application/schema+json
 Contract-Version: 3
 ETag: "0726633d342c2ec5df9f4a31e50e8746d3c2d6da4fac829e5a602937692ed27b"
 
-{"$id":"https://example.com/surface-api/event.spotlight/schema?choose=/props=data_surface_examples:card",
+{"$id":"https://example.com/surface-api/event.spotlight/schema?choose=/props=surface_examples:card",
  "properties":{"props":{"title":"Props","type":["object","null"],
-   "x-surface":{"by":"component","variants":{"data_surface_examples:card":"#/$defs/event.spotlight.props.data_surface_examples:card"},
+   "x-surface":{"by":"component","variants":{"surface_examples:card":"#/$defs/event.spotlight.props.surface_examples:card"},
                 "deferred":{"fetch":"https://example.com/surface-api/event.spotlight/schema?choose=/props={value}"},...}},...},
- "allOf":[{"if":{"properties":{"component":{"const":"data_surface_examples:card"}},"required":["component"]},
-           "then":{"properties":{"props":{"title":"Props","$ref":"#/$defs/event.spotlight.props.data_surface_examples:card"}}}}],
- "$defs":{"event.spotlight.props.data_surface_examples:card":{...}}, ...}
+ "allOf":[{"if":{"properties":{"component":{"const":"surface_examples:card"}},"required":["component"]},
+           "then":{"properties":{"props":{"title":"Props","$ref":"#/$defs/event.spotlight.props.surface_examples:card"}}}}],
+ "$defs":{"event.spotlight.props.surface_examples:card":{...}}, ...}
 
 GET /surface-api/event.spotlight/schema?choose=/props=nope:none
 
@@ -1633,7 +1633,7 @@ result's. Example 2's harbour sent with the library's garden room:
 
 ```json
 {
-  "type": "https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/docs/served-contract.md#refused",
+  "type": "https://git.drupalcode.org/project/surface/-/blob/1.0.x/docs/served-contract.md#refused",
   "title": "The values were refused",
   "status": 422,
   "detail": "One value was refused; nothing was written.",
@@ -1675,7 +1675,7 @@ the path:
 
 ```json
 {
-  "type": "https://git.drupalcode.org/project/data_surface/-/blob/1.0.x/docs/served-contract.md#gone",
+  "type": "https://git.drupalcode.org/project/surface/-/blob/1.0.x/docs/served-contract.md#gone",
   "title": "This path is gone",
   "status": 410,
   "detail": "Contract 2 addressed an operation by its path; contract 3 addresses the resource, and the method is the operation: PATCH /surface-api/registration.step2?dryRun=true.",
@@ -1757,7 +1757,7 @@ another account's labels
 
 ## An OpenAPI document
 
-With `data_surface_openapi` enabled, `GET /surface-api/openapi.json`
+With `surface_openapi` enabled, `GET /surface-api/openapi.json`
 (and `/surface-api/openapi.yaml`) answers an OpenAPI 3.1 document of the
 API above, for every operation that can be asked on its own, so an
 OpenAPI client, a code generator or a UI drives a resource from it
@@ -1767,7 +1767,7 @@ dialect both documents are written in. `GET /surface-api/docs` renders
 Swagger UI over it, whose "try it out" calls the API with the logged-in
 session, sending the token and, as `If-Match`, the last `ETag` it saw
 for the path; `GET /surface-api/redoc` renders Redoc, to read. Both
-pages need the permission `access data surface api docs`; the document
+pages need the permission `access surface api docs`; the document
 is open.
 
 - **Paths.** One path item per resource path, the methods on it as
@@ -1842,7 +1842,7 @@ The schema for these answers is still what a drawing client loads first:
 it carries the values and the stale paths, its `ETag` the fingerprint, and it is
 refined by the runtime refiners for those values. Beside it, once, the
 client may fetch the full schema, and from then on answer most changes
-itself. The rule, as `data_surface_react` applies it:
+itself. The rule, as `surface_react` applies it:
 
 - **Narrow from the full schema.** On a change of a key, collect every
   key that depends on it, transitively, through `dependsOn` in the frame
@@ -1899,8 +1899,8 @@ it, through the compliance structure's port, are `refine`, reading a
 number. The pricing is still narrowed
 here: the ticket's variants are stated whole. Example 12 past the site
 list limit fetches: choosing the hero fetches
-`.../schema?choose=/props=data_surface_examples%3Ahero`, then with
-`&choose=/slots=data_surface_examples%3Ahero` joined, and asks no
+`.../schema?choose=/props=surface_examples%3Ahero`, then with
+`&choose=/slots=surface_examples%3Ahero` joined, and asks no
 narrowing; choosing it again fetches nothing.
 
 ## Asking again at the tool door
@@ -1917,15 +1917,15 @@ other, where the listing reads what is stored (an operation that needs
 nothing to start from, or the refined `values` once the parameters
 arrive), and none where nothing chooses one, and its description names
 both ways to learn the keys of any other: "Its keys depend on component:
-listed here are those of data_surface_examples:card, the component
+listed here are those of surface_examples:card, the component
 stored. For another component, fetch GET
 /surface-api/event.spotlight/schema?choose=/props={component} once per
-component, or call data_surface:event.spotlight:configure:schema with
+component, or call surface:event.spotlight:configure:schema with
 your values, to get this key's schema." So changing a prop of the stored
 component is one call. A map of keys from the site past the limit is
 listed open too, its description naming the fetch of an entry and the
 narrowing tool. The fetch is named where the site serves the API
-(data_surface_react on), and answers
+(surface_react on), and answers
 [the fetch per choice](#the-fetch-per-choice), which an agent with an
 HTTP client keeps per component; under the limit it answers the full
 schema, which states every variant already. The narrowing tool is the
@@ -1935,7 +1935,7 @@ the operation's listing leaves such a key out
 
 | | |
 | --- | --- |
-| Id | `data_surface:<resource>:<operation>:schema` |
+| Id | `surface:<resource>:<operation>:schema` |
 | Kind | Read: read only and idempotent, never destructive |
 | Inputs | The operation's parameters, as the write tool declares them, and `values`, optional and open: what the caller has so far |
 | Outputs | `schema`, the schema for these answers with no widget hints, and `values`, the values settled so far, computed keys and defaults included |
@@ -1948,12 +1948,12 @@ schema emitted for that. So an agent makes two calls, the narrowing
 then the write:
 
 ```bash
-drush tool:run data_surface:event.spotlight:configure:schema --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action"}}'
-drush tool:run data_surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"data_surface_examples:call_to_action","props":{"text":"Buy a ticket","url":"https://example.com/tickets"}}}' --input=dry_run=true
+drush tool:run surface:event.spotlight:configure:schema --uid=1 --input='{"values":{"component":"surface_examples:call_to_action"}}'
+drush tool:run surface:event.spotlight:configure --uid=1 --input='{"values":{"component":"surface_examples:call_to_action","props":{"text":"Buy a ticket","url":"https://example.com/tickets"}}}' --input=dry_run=true
 ```
 
 The first answers the call to action's props under
-`schema.$defs["event.spotlight.props.data_surface_examples:call_to_action"]`
+`schema.$defs["event.spotlight.props.surface_examples:call_to_action"]`
 (its text, address, style, window and tags, the text and the address
 required) and the values it would start from; the second sends them.
 A choice changed asks again. The tool is no HTTP path, so the OpenAPI

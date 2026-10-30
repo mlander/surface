@@ -2,30 +2,30 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Pipeline\TypeMismatchException;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface\Collection;
-use Drupal\data_surface_resource_test\Structure\Broken\NarrowsListItemsStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\RefinesListItemKeyStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WatchesListStructure;
-use Drupal\data_surface_resource_test\Resource\Cellar\CellarResource;
-use Drupal\data_surface_resource_test\Resource\Larder\SpiceRackResource;
-use Drupal\data_surface_resource_test\Storage\CellarStorage;
-use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationTool;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\TypeMismatchException;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Collection;
+use Drupal\surface_resource_test\Structure\Broken\NarrowsListItemsStructure;
+use Drupal\surface_resource_test\Structure\Broken\RefinesListItemKeyStructure;
+use Drupal\surface_resource_test\Structure\Broken\WatchesListStructure;
+use Drupal\surface_resource_test\Resource\Cellar\CellarResource;
+use Drupal\surface_resource_test\Resource\Larder\SpiceRackResource;
+use Drupal\surface_resource_test\Storage\CellarStorage;
+use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationTool;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolInterface;
@@ -46,11 +46,11 @@ use Symfony\Component\HttpFoundation\Request;
  * shape, the build, refinement, the pipeline, both contracts, the write
  * and read tools, and the stale rule.
  *
- * @see \Drupal\data_surface_resource_test\Resource\Cellar\CellarResource
+ * @see \Drupal\surface_resource_test\Resource\Cellar\CellarResource
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class CollectionTest extends DataSurfaceKernelTestBase {
+class CollectionTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use UserCreationTrait;
@@ -58,12 +58,12 @@ class CollectionTest extends DataSurfaceKernelTestBase {
   /**
    * The write tool for the cellar's update operation.
    */
-  protected const TOOL = 'data_surface:resource_test.cellar:update';
+  protected const TOOL = 'surface:resource_test.cellar:update';
 
   /**
    * The read tool beside it.
    */
-  protected const READ_TOOL = 'data_surface:resource_test.cellar:update:read';
+  protected const READ_TOOL = 'surface:resource_test.cellar:update:read';
 
   /**
    * What the cellar holds before each test.
@@ -76,7 +76,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
       ['shelf' => 'top', 'spices' => 2, 'label' => 'Spare'],
     ],
     'shelves' => [
-      ['unit' => 'cm', 'height' => 120, 'third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]]],
+      ['unit' => 'cm', 'height' => 120, 'third_party_settings' => ['surface_resource_test' => ['sturdy' => TRUE]]],
     ],
   ];
 
@@ -89,9 +89,9 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_resource_test',
   ];
 
   /**
@@ -119,35 +119,35 @@ class CollectionTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
    * Builds the cellar being edited, for the current account.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The cellar.
    */
-  protected function edit(): DataSurfaceInterface {
+  protected function edit(): SurfaceInterface {
     return $this->resources()->buildOperation(CellarResource::class, 'update', ['larder' => 'main']);
   }
 
   /**
    * Gets the collection at a key.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The parent.
    * @param string $key
    *   The key.
    *
-   * @return \Drupal\data_surface\Collection
+   * @return \Drupal\surface\Collection
    *   The collection.
    */
-  protected static function collection(DataSurfaceInterface $surface, string $key): Collection {
+  protected static function collection(SurfaceInterface $surface, string $key): Collection {
     $list = $surface->getDefinitions()->entry($key)?->list;
     assert($list !== NULL);
     return $list;
@@ -397,7 +397,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
   /**
    * Emits the cellar's contract, as it stands or in full.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The cellar, built.
    * @param bool $full
    *   Whether to emit the full schema.
@@ -407,8 +407,8 @@ class CollectionTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The document.
    */
-  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'update'): array {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+  protected function contract(SurfaceInterface $surface, bool $full = FALSE, string $operation = 'update'): array {
+    $emitter = $this->container->get('surface.contract_emitter');
     if ($full) {
       return $emitter->emitFull($surface, 'resource_test.cellar', $operation)->document;
     }
@@ -618,17 +618,17 @@ class CollectionTest extends DataSurfaceKernelTestBase {
    *   The resource's part of the built form.
    */
   protected function form(array $input = []): array {
-    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_resource_test.cellar.update');
+    $route = $this->container->get('router.route_provider')->getRouteByName('surface_resource_test.cellar.update');
     $stack = $this->container->get('request_stack');
     $request = Request::create('/surface-test/cellar/main');
     $request->setSession($stack->getSession());
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_resource_test.cellar.update');
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_resource_test.cellar.update');
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $request->attributes->set('larder', 'main');
     $request->attributes->set('_raw_variables', new InputBag(['larder' => 'main']));
     $stack->push($request);
     $form_state = new FormState();
-    return $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state)[DataSurfaceOperationForm::SURFACE_KEY];
+    return $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $form_state)[SurfaceOperationForm::SURFACE_KEY];
   }
 
   /**
@@ -650,7 +650,7 @@ class CollectionTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($racks[0]['@remove']['#disabled']);
     $this->assertFalse($racks['@add']['#disabled']);
     $this->assertSame([], $racks['@add']['#limit_validation_errors']);
-    $this->assertSame(['racks'], $racks['@add']['#data_surface_trigger']['replaces']);
+    $this->assertSame(['racks'], $racks['@add']['#surface_trigger']['replaces']);
     // The shelf's own refiner reaches each shelf alone.
     $this->assertSame(200, $form['shelves'][0]['height']['#max']);
 

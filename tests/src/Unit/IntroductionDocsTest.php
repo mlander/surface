@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -30,11 +30,11 @@ use PHPUnit\Framework\Attributes\Group;
  *   file; one that does not is a run of lines of some file of the
  *   module, unless it is one of the few sketches named here. Only a
  *   comment saying a non-surface part is unchanged may stand for code.
- *   my_module and data_surface_intro_test hold the code the pages show of
+ *   my_module and surface_intro_test hold the code the pages show of
  *   a developer's own module; IntroductionExcerptsTest runs it and finds
  *   what the pages quote of its output.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 final class IntroductionDocsTest extends UnitTestCase {
 
   /**
@@ -137,7 +137,7 @@ final class IntroductionDocsTest extends UnitTestCase {
    */
   private const SKETCHES = [
     "\$inputs->narrow('end_date')",
-    "\$resources = \\Drupal::service('data_surface.resources');",
+    "\$resources = \\Drupal::service('surface.resources');",
     '// $block is the teaser block plugin.',
   ];
 
@@ -256,7 +256,7 @@ final class IntroductionDocsTest extends UnitTestCase {
             continue;
           }
           // The module's name is no use of the term.
-          $said = $term === 'data surface' ? str_replace('Data Surface', '', $words) : $words;
+          $said = $term === 'data surface' ? str_replace('Surface API', '', $words) : $words;
           if (preg_match(self::pattern($term), $said)) {
             $early[] = sprintf('%s uses "%s", defined in %s: %s', $name, $term, $defined, $sentence);
           }

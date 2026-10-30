@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use CommerceGuys\Addressing\AddressFormat\AddressField;
 use CommerceGuys\Addressing\AddressFormat\FieldOverride;
@@ -36,9 +36,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * entity type is scenery, and node cannot be installed in a functional
  * test on this checkout.
  *
- * @group data_surface
+ * @group surface
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class FieldUiAddressSettingsTest extends BrowserTestBase {
 
@@ -49,8 +49,8 @@ class FieldUiAddressSettingsTest extends BrowserTestBase {
     'entity_test',
     'field_ui',
     'address',
-    'data_surface',
-    'data_surface_address',
+    'surface',
+    'surface_examples_address',
   ];
 
   /**

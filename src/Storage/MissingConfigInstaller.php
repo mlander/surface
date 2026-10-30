@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 use Drupal\Component\Utility\Crypt;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -23,7 +23,7 @@ use Drupal\Core\Extension\ModuleExtensionList;
  *
  * @code
  * function my_module_post_update_new_settings(): void {
- *   data_surface_install_missing_config('my_module');
+ *   surface_install_missing_config('my_module');
  * }
  * @endcode
  *

@@ -5,12 +5,12 @@
  * @file
  * Regenerates the two generated COMPARISON.md documents.
  *
- * The data_surface_tool module's document puts two settings inputs for
+ * The surface_tool module's document puts two settings inputs for
  * one field type side by side: the one Tool Belt's field_add derives from
  * the field type's config schema, and the one
- * data_surface:field.instance:reuse, the tool generated from the field
+ * surface:field.instance:reuse, the tool generated from the field
  * instance resource's reuse operation, takes from the field type's
- * settings resource. The data_surface_demo_node_type_tool module's does
+ * settings resource. The surface_examples_node_type_tool module's does
  * the same for creating a content type that another module has extended,
  * and records what each tool, and core's own form, did with the same
  * cases. Every schema is produced the way an invoker produces it, by the
@@ -19,7 +19,7 @@
  *
  * Run it from anywhere inside the site:
  * @code
- *   ddev exec php web/modules/custom/data_surface/scripts/generate-comparison.php
+ *   ddev exec php web/modules/custom/surface/scripts/generate-comparison.php
  * @endcode
  *
  * The generator needs a Drupal kernel carrying modules that are not
@@ -37,15 +37,15 @@
  * fires only when the file is the entry point, so the renderer beside it
  * can be included from anywhere without starting a second PHPUnit.
  *
- * @see scripts/DataSurfaceComparisonDocument.php
- * @see scripts/DataSurfaceNodeTypeComparisonDocument.php
- * @see \Drupal\Tests\data_surface\Kernel\FieldToolsComparisonTest
- * @see \Drupal\Tests\data_surface\Kernel\NodeTypeToolComparisonTest
+ * @see scripts/SurfaceComparisonDocument.php
+ * @see scripts/SurfaceNodeTypeComparisonDocument.php
+ * @see \Drupal\Tests\surface\Kernel\FieldToolsComparisonTest
+ * @see \Drupal\Tests\surface\Kernel\NodeTypeToolComparisonTest
  */
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/DataSurfaceComparisonDocument.php';
+require_once __DIR__ . '/SurfaceComparisonDocument.php';
 
 // Everything below runs only when this file is the entry point.
 if (PHP_SAPI !== 'cli' || !isset($argv[0]) || realpath($argv[0]) !== realpath(__FILE__)) {
@@ -61,14 +61,14 @@ if (!is_file($phpunit)) {
 }
 
 $documents = [
-  'modules/data_surface_tool/COMPARISON.md' => 'FieldToolsComparisonTest',
-  'modules/data_surface_demo_node_type_tool/COMPARISON.md' => 'NodeTypeToolComparisonTest',
+  'modules/surface_tool/COMPARISON.md' => 'FieldToolsComparisonTest',
+  'modules/surface_examples_node_type_tool/COMPARISON.md' => 'NodeTypeToolComparisonTest',
 ];
 foreach ($documents as $document => $test) {
   $command = sprintf(
     'cd %s && %s=1 SIMPLETEST_DB=%s SIMPLETEST_BASE_URL=%s %s -c core --filter %s %s',
     escapeshellarg($web_root),
-    DataSurfaceComparisonDocument::WRITE_VARIABLE,
+    SurfaceComparisonDocument::WRITE_VARIABLE,
     escapeshellarg(getenv('SIMPLETEST_DB') ?: 'mysql://db:db@db/db'),
     escapeshellarg(getenv('SIMPLETEST_BASE_URL') ?: 'http://localhost'),
     escapeshellarg($phpunit),

@@ -24,7 +24,7 @@ each layer changes one thing about it and nothing else:
 | --- | --- | --- | --- |
 | Coercion, at the door | A raw value into the declared type, before validation: `'7'` becomes `7` for an integer, `'yes'` becomes `TRUE` for a boolean. Only when the intended value is unambiguous; anything else is left for a constraint to refuse. | Nobody: one table, the Tool API's, mirrored in `Pipeline\Coercion` and run by `accept()` for every door. | [The coercion table](semantics.md#the-coercion-table) (why: [decision](decisions.md#one-coercion-table-the-tool-apis)) |
 | Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface) (why: [decision](decisions.md#blueprints-and-layouts)) |
-| Wire representation | How a value travels at one door: an operation's entity parameter as its id at the tool door, an update's body as a merge patch over HTTP. | The door: the tool bridge's `OperationInputs`, the React submodule's API controller. | [The Tool API bridge](https://github.com/mlander/data_surface/blob/main/modules/data_surface_tool/README.md), [The write](served-contract.md#the-write) |
+| Wire representation | How a value travels at one door: an operation's entity parameter as its id at the tool door, an update's body as a merge patch over HTTP. | The door: the tool bridge's `OperationInputs`, the React submodule's API controller. | [The Tool API bridge](https://github.com/mlander/surface/blob/main/modules/surface_tool/README.md), [The write](served-contract.md#the-write) |
 
 The resource's keys, as declared, are the one document all three layers
 translate to and from. Coercion produces it from what a caller sent, a
@@ -66,7 +66,7 @@ the same way for a form, a tool, a config action and a test. The
 extras demo asks for a content type's review deadline as an amount and
 a unit, and stores seconds:
 
-<!-- excerpt: modules/data_surface_demo_extras/src/ReviewDeadlineLayout.php -->
+<!-- excerpt: modules/surface_examples_extras/src/ReviewDeadlineLayout.php -->
 
 ```php
 public function toStorage(array $values): array {
@@ -84,9 +84,9 @@ public function toStorage(array $values): array {
 
 The alter that adds the deadline does not own the content type's
 storage, so it hands the layout to the data surface for its own mount,
-`third_party_settings.data_surface_demo_extras`:
+`third_party_settings.surface_examples_extras`:
 
-<!-- excerpt: modules/data_surface_demo_extras/src/Alter/NodeTypeAlter.php -->
+<!-- excerpt: modules/surface_examples_extras/src/Alter/NodeTypeAlter.php -->
 
 ```php
 public function storageLayout(): StorageLayoutInterface {
@@ -101,7 +101,7 @@ content type's storage class never learns the alter exists. A resource
 that owns its storage translates in its own storage class instead, as
 the address field's settings storage does through `AddressStorageLayout`:
 
-<!-- excerpt: modules/data_surface_address/src/Storage/AddressFieldSettingsStorage.php -->
+<!-- excerpt: modules/surface_examples_address/src/Storage/AddressFieldSettingsStorage.php -->
 
 ```php
 public function load(OperationContext $context): array {
@@ -124,7 +124,7 @@ A key that refers to an entity holds the entity's id at every door
 (why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)).
 Example 16 declares two of its keys this way:
 
-<!-- excerpt: modules/data_surface_examples_references/src/Resource/SponsorshipResource.php -->
+<!-- excerpt: modules/surface_examples_references/src/Resource/SponsorshipResource.php -->
 
 ```php
 $inputs->add('page', 'entity:node:article', t('Announcement'))
@@ -133,7 +133,7 @@ $inputs->add('page', 'entity:node:article', t('Announcement'))
 // Of any type: an entity type, then an id of it.
 $inputs->add('thing', 'entity', t('Featured beside'))
   ->setDescription(t('Any content the sponsor is featured beside.'))
-  ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+  ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
 ```
 
 Its config object stores a content entity by its uuid, which names the
@@ -145,7 +145,7 @@ answers the id
 ([A reference is stored by uuid](storage.md#a-reference-is-stored-by-uuid)).
 The config schema, generated from the resource, says so:
 
-<!-- excerpt: modules/data_surface_examples_references/config/schema/data_surface_examples_references.schema.yml -->
+<!-- excerpt: modules/surface_examples_references/config/schema/surface_examples_references.schema.yml -->
 
 ```yaml
 page:
@@ -198,7 +198,7 @@ final class AnnouncementLayout implements StorageLayoutInterface {
 The key's constraint, its candidates and its lookup still judge the id
 as asked, before the layout runs. A content entity's own reference
 field is asked for as its item, `{target_id}`, by the field's structure
-(`data_surface_entity`), so today a reference key and a reference field
+(`surface_examples_entity`), so today a reference key and a reference field
 are two shapes for one idea; ROADMAP item 20 lists that as open.
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -218,7 +218,7 @@ takes an entity type and an id.
 The tool bridge declares no entity input. An operation's entity
 parameter is a string, the entity's id, for every connector:
 
-<!-- excerpt: modules/data_surface_tool/src/OperationInputs.php -->
+<!-- excerpt: modules/surface_tool/src/OperationInputs.php -->
 
 ```php
 if ($parameter->takesObject()) {
@@ -259,7 +259,7 @@ Over HTTP, an update's body is the values document itself, with RFC
 stored, `null` clears it), so `PATCH` takes a merge patch as well as
 plain JSON:
 
-<!-- excerpt: modules/data_surface_react/src/Controller/ResourceApiController.php -->
+<!-- excerpt: modules/surface_react/src/Controller/ResourceApiController.php -->
 
 ```php
 $this->assertMediaType($request, $method === 'PATCH' ? [self::MERGE_PATCH, 'application/json'] : ['application/json']);
@@ -329,7 +329,7 @@ plugin; ECA meets a resource at two points that already exist:
   which holds the stored values in storage's layout.
 - **As a caller.** The ECA Tool module (`eca_tool`) derives an ECA
   action per tool, so a model runs a derived tool,
-  `data_surface:<resource>:<operation>`, and a model that changes a
+  `surface:<resource>:<operation>`, and a model that changes a
   resource goes through the pipeline like any other door:
   access, coercion, validation, storage's checks, and the one result
   shape with its violations by path
@@ -364,7 +364,7 @@ changes no value and writes nothing.
   value after validation stores something the contract never described,
   and code that changes it before validation makes the contract describe
   something the pipeline does not judge. The roadmap rejects both
-  ([Rejected, on the record](https://github.com/mlander/data_surface/blob/main/ROADMAP.md#rejected-on-the-record)), and
+  ([Rejected, on the record](https://github.com/mlander/surface/blob/main/ROADMAP.md#rejected-on-the-record)), and
   the rework removed the build event and the output refiners that
   allowed them ([What it replaced](pattern.md#what-it-replaced)).
 - **Validation must be safe to run ahead.** A dry run, the served
@@ -383,7 +383,7 @@ An output is what an operation answers and no caller sends, declared
 with `defineOutputs()` on `DefinesOutputsInterface` ([Outputs](outputs.md)).
 Example 15's listing answers a page of the venues and how many matched:
 
-<!-- excerpt: modules/data_surface_examples/src/Structure/VenueListingStructure.php -->
+<!-- excerpt: modules/surface_examples/src/Structure/VenueListingStructure.php -->
 
 ```php
 $outputs->addList('items', $item, t('Venues'))
@@ -400,7 +400,7 @@ outputs are what its storage's `prepare()` answered
 (why: [decision](decisions.md#who-produces-outputs)). `VenueStorage`
 computes them there:
 
-<!-- excerpt: modules/data_surface_examples/src/Storage/VenueStorage.php -->
+<!-- excerpt: modules/surface_examples/src/Storage/VenueStorage.php -->
 
 ```php
 return [
@@ -446,7 +446,7 @@ A key whose value is computed from other keys, and that callers read, is
 declared with `compute()` ([Declaring a resource](declaring-a-resource.md#computed-keys)).
 Example 15's venue computes its slug from its name:
 
-<!-- excerpt: modules/data_surface_examples/src/Resource/VenueResource.php -->
+<!-- excerpt: modules/surface_examples/src/Resource/VenueResource.php -->
 
 ```php
 $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::class)
@@ -460,7 +460,7 @@ $inputs->compute('slug', 'string', t('Slug'), from: ['label'], using: Slugify::c
 
 The class is a pure function of the keys `from:` names:
 
-<!-- excerpt: modules/data_surface_examples/src/Slugify.php -->
+<!-- excerpt: modules/surface_examples/src/Slugify.php -->
 
 ```php
 public static function compute(array $from, ?DataDefinitionInterface $key = NULL): mixed {
@@ -510,7 +510,7 @@ is computed from the name when a call leaves it out, as Drupal's own
 forms suggest a machine name from a title, and kept as sent when a call
 gives one:
 
-<!-- excerpt: modules/data_surface_examples/src/Resource/VenueResource.php -->
+<!-- excerpt: modules/surface_examples/src/Resource/VenueResource.php -->
 
 ```php
 $inputs->compute('id', 'machine_name', t('Machine name'),
@@ -528,7 +528,7 @@ third `when:`: a value sent is judged by the key's own constraints and
 is never refused for being sent, so both documents state the key with
 `x-surface.computed: {"from": ["label"], "when": "unless_sent"}` and no
 `readOnly`, and the write tool offers it. Each create holds the identity
-to one no venue has, with the stock `DataSurfaceUnique` the build adds:
+to one no venue has, with the stock `SurfaceUnique` the build adds:
 "A venue named riverside already exists."
 (why: [decision](decisions.md#a-machine-name-is-a-computed-identity)).
 

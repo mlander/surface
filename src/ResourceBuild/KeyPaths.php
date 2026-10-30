@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\DefinitionTypedData;
-use Drupal\data_surface\Pipeline\Coercion;
-use Drupal\data_surface\Pipeline\DataSurfacePipeline;
-use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\surface\Computed;
+use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\DefinitionTypedData;
+use Drupal\surface\Pipeline\Coercion;
+use Drupal\surface\Pipeline\SurfacePipeline;
+use Drupal\surface\Pipeline\ValueState;
 
 /**
  * Finds the key a dotted path names in a frame, and holds a value to it.
  *
- * What a site default (`data_surface.defaults`), a context's default
+ * What a site default (`surface.defaults`), a context's default
  * (OperationContext::withDefaults()) and a context's fixed value (a
  * one-value Choice, OperationContext::withConstraint()) share: the same
  * reach and the same holding. A path is a key of the frame, a key of a map
@@ -67,7 +67,7 @@ final class KeyPaths {
   /**
    * Lists a frame's keys that hold no plain value, by key.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The frame's blueprint.
    *
    * @return array<string, string>
@@ -84,7 +84,7 @@ final class KeyPaths {
   /**
    * Writes one frame's defaults onto its keys.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The frame's builder, its keys and its alters' declared.
    * @param array{resource: string, at: string, source: string, noun: string, verb: string} $where
    *   Where the values come from, for the refusals.
@@ -101,7 +101,7 @@ final class KeyPaths {
    *   When a path names no key a default reaches, or a value does not fit
    *   its key.
    */
-  public function writeDefaults(DataSurfaceBuilderInterface $builder, array $where, array $values, array $kinds): array {
+  public function writeDefaults(SurfaceBuilderInterface $builder, array $where, array $values, array $kinds): array {
     $children = [];
     foreach ($values as $path => $raw) {
       $path = (string) $path;
@@ -159,7 +159,7 @@ final class KeyPaths {
   /**
    * Finds the definition a path names in a frame.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The frame's builder.
    * @param string[] $segments
    *   The path, split.
@@ -175,7 +175,7 @@ final class KeyPaths {
    * @throws \LogicException
    *   When the path names no key, or names an item of a list.
    */
-  public function resolve(DataSurfaceBuilderInterface $builder, array $segments, array $where, string $path): array {
+  public function resolve(SurfaceBuilderInterface $builder, array $segments, array $where, string $path): array {
     $definition = NULL;
     $rest = $segments;
     if ($segments[0] === 'third_party_settings' && count($segments) >= 3) {
@@ -266,7 +266,7 @@ final class KeyPaths {
    * @throws \LogicException
    *   When the key takes no such value: a secret, a computed key, or a
    *   list or a map fixed.
-   * @throws \Drupal\data_surface\ResourceBuild\ValueNotAcceptedException
+   * @throws \Drupal\surface\ResourceBuild\ValueNotAcceptedException
    *   When the value does not fit the key.
    */
   public function held(DataDefinitionInterface $definition, mixed $raw, array $where, string $path): mixed {
@@ -311,7 +311,7 @@ final class KeyPaths {
    * Finds the key a path names on a built resource, for a door's own value.
    *
    * What a form starts a key from that no build was handed: a value a link
-   * starts (a route's `_data_surface_query`), or one the code building the
+   * starts (a route's `_surface_query`), or one the code building the
    * form hands it. The reach is a default's (assertReached()), read off the
    * sealed resource rather than its builder: a key the resource declares, a
    * key inside a map it declares, a key an alter mounts
@@ -325,7 +325,7 @@ final class KeyPaths {
    * the form is drawn with for each key inside it that the value leaves
    * out, a stored one among them.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built resource.
    * @param string $path
    *   The key's path.
@@ -343,7 +343,7 @@ final class KeyPaths {
    *   When the path names no key such a value reaches, naming where the
    *   value came from and the key.
    */
-  public function reachedOn(DataSurfaceInterface $surface, string $path, array $where, array $identity = []): ?DataDefinitionInterface {
+  public function reachedOn(SurfaceInterface $surface, string $path, array $where, array $identity = []): ?DataDefinitionInterface {
     $segments = explode('.', $path);
     $frame = $surface;
     $depth = 0;
@@ -433,7 +433,7 @@ final class KeyPaths {
    * string), and a value its key refuses are left out, so the key starts
    * from what is stored or declared, and nothing is said of it.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built resource.
    * @param array<string, mixed> $values
    *   Each value as given, NULL where none came, by key path.
@@ -448,7 +448,7 @@ final class KeyPaths {
    * @throws \LogicException
    *   When a path names no key such a value reaches.
    */
-  public function heldOn(DataSurfaceInterface $surface, array $values, array $where, array $identity = []): array {
+  public function heldOn(SurfaceInterface $surface, array $values, array $where, array $identity = []): array {
     $held = [];
     foreach ($values as $path => $raw) {
       $path = (string) $path;
@@ -476,7 +476,7 @@ final class KeyPaths {
    * key nothing declares, and a structure or a map given anything but an
    * array, is named as it is given, for reachedOn() to refuse.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built resource, or a structure attached in it.
    * @param array $values
    *   The values.
@@ -486,7 +486,7 @@ final class KeyPaths {
    * @return array<string, mixed>
    *   Each value, by key path.
    */
-  public static function pathsOf(DataSurfaceInterface $surface, array $values, string $prefix = ''): array {
+  public static function pathsOf(SurfaceInterface $surface, array $values, string $prefix = ''): array {
     $paths = [];
     foreach ($values as $key => $value) {
       $key = (string) $key;
@@ -559,7 +559,7 @@ final class KeyPaths {
     }
     $properties = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinitions() : [];
     if ($properties === []) {
-      if (is_array($raw) && in_array($definition->getDataType(), DataSurfacePipeline::SCALAR_TYPES, TRUE)) {
+      if (is_array($raw) && in_array($definition->getDataType(), SurfacePipeline::SCALAR_TYPES, TRUE)) {
         // Refused before any constraint reads it, as the pipeline refuses
         // it (Accepting::coerce()): a validator that reads one value
         // throws for an array rather than saying it does not fit.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Refinement;
+namespace Drupal\surface\Refinement;
 
 /**
  * A refiner link that can say, before running, where it may rule out.

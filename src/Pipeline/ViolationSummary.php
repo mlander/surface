@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 /**
  * The one place a violation set becomes a line of exception text.
@@ -33,9 +33,9 @@ namespace Drupal\data_surface\Pipeline;
  * a reason to read a constraint before putting it on a secret key rather
  * than a reason to render messages differently.
  *
- * @see \Drupal\data_surface\Pipeline\UnknownKeysException
- * @see \Drupal\data_surface\Pipeline\StorageViolationsException
- * @see \Drupal\data_surface\DataSurfaceConfigurationTrait
+ * @see \Drupal\surface\Pipeline\UnknownKeysException
+ * @see \Drupal\surface\Pipeline\StorageViolationsException
+ * @see \Drupal\surface\SurfaceConfigurationTrait
  */
 final class ViolationSummary {
 
@@ -61,7 +61,7 @@ final class ViolationSummary {
   /**
    * Summarizes violations keyed by top level key.
    *
-   * @param \Drupal\data_surface\Pipeline\ViolationSet $violations
+   * @param \Drupal\surface\Pipeline\ViolationSet $violations
    *   The violations, as the pipeline passes them.
    *
    * @return string

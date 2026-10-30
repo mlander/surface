@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
-use Drupal\data_surface\Pipeline\StorageViolationsException;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_storage_test\Resource\ConfigTestResource;
-use Drupal\data_surface_storage_test\Storage\ConfigTestStorage;
+use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_storage_test\Resource\ConfigTestResource;
+use Drupal\surface_storage_test\Storage\ConfigTestStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -24,9 +24,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * property that needs one, a dry run that leaves the stored entity and
  * the one a caller holds alone, and removed.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
+class ConfigEntityStorageTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -34,8 +34,8 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'config_test',
-    'data_surface',
-    'data_surface_storage_test',
+    'surface',
+    'surface_storage_test',
   ];
 
   /**
@@ -58,11 +58,11 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
    * @param bool $dry_run
    *   Whether to stop after prepare.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   * @return \Drupal\surface\Pipeline\SurfaceResult
    *   The result.
    */
   protected function submit(string $operation, array $values, array $parameters = [], bool $dry_run = FALSE) {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(ConfigTestResource::class, $operation, $parameters);
     $built = $resources->build(ConfigTestResource::class, $context);
     return $this->pipeline()->submit($built, $values, $resources->storage(ConfigTestResource::class, $context, $built), $dry_run);
@@ -129,7 +129,7 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($again->isValid());
     $this->assertSame('id', $again->violations->keys()[0]);
     $this->assertSame(Violation::TAKEN, $again->violations->byKey('id')[0]->code);
-    // The stock DataSurfaceUnique the build adds to a create's identity,
+    // The stock SurfaceUnique the build adds to a create's identity,
     // asking the storage; the storage's own check says it in the same
     // words for a caller of prepare() that skips validation.
     $this->assertSame('A test configuration named one already exists.', (string) $again->violations->byKey('id')[0]->message);
@@ -178,17 +178,17 @@ class ConfigEntityStorageTest extends DataSurfaceKernelTestBase {
     $context = new OperationContext('update', known: ['id' => 'four']);
     $prepared = $storage->prepare($context, [
       'label' => 'Mounted',
-      'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Written by a third party']],
+      'third_party_settings' => ['surface_storage_test' => ['note' => 'Written by a third party']],
     ], new AnonymousUserSession());
-    $this->assertSame(['data_surface_storage_test' => ['note' => 'Written by a third party']], $prepared['third_party_settings']);
-    $this->assertSame(['module' => ['data_surface_storage_test']], $prepared['dependencies'], 'The dependencies a save would calculate.');
+    $this->assertSame(['surface_storage_test' => ['note' => 'Written by a third party']], $prepared['third_party_settings']);
+    $this->assertSame(['module' => ['surface_storage_test']], $prepared['dependencies'], 'The dependencies a save would calculate.');
     $storage->commit($context, $prepared, new AnonymousUserSession());
-    $this->assertSame('Written by a third party', $this->stored('four')->getThirdPartySetting('data_surface_storage_test', 'note'));
-    $this->assertSame(['data_surface_storage_test' => ['note' => 'Written by a third party']], $storage->load($context)['third_party_settings']);
+    $this->assertSame('Written by a third party', $this->stored('four')->getThirdPartySetting('surface_storage_test', 'note'));
+    $this->assertSame(['surface_storage_test' => ['note' => 'Written by a third party']], $storage->load($context)['third_party_settings']);
 
     // A setting no schema describes is refused under the mount.
     try {
-      $storage->prepare($context, ['third_party_settings' => ['data_surface_storage_test' => ['note' => ['not' => 'a string']]]], new AnonymousUserSession());
+      $storage->prepare($context, ['third_party_settings' => ['surface_storage_test' => ['note' => ['not' => 'a string']]]], new AnonymousUserSession());
       $this->fail('A setting of the wrong type is refused.');
     }
     catch (StorageViolationsException $e) {

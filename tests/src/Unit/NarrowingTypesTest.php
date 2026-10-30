@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\TypedData\DataDefinition;
@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\Refinement\Narrowing;
+use Drupal\surface\Refinement\Narrowing;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -26,10 +26,10 @@ use PHPUnit\Framework\Attributes\Group;
  * not, because that accepts every value the item refused. Each row is
  * one transition.
  *
- * @see \Drupal\data_surface\Refinement\Narrowing
+ * @see \Drupal\surface\Refinement\Narrowing
  * @see \Drupal\tool\TypedInputsTrait::assertRefinementNarrows()
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class NarrowingTypesTest extends UnitTestCase {
 
   /**

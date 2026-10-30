@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -115,7 +115,7 @@ final class SerializedMaps {
       static::walk($value->wired, $maps, $seen);
       return;
     }
-    if (in_array($value::class, self::WALKED, TRUE) || str_starts_with($value::class, 'Drupal\\data_surface\\Refinement\\')) {
+    if (in_array($value::class, self::WALKED, TRUE) || str_starts_with($value::class, 'Drupal\\surface\\Refinement\\')) {
       // Every property, whatever its visibility.
       static::walk((array) $value, $maps, $seen);
     }

@@ -12,7 +12,7 @@ A resource or structure is declared in one place: a class in a module's
 `src/Resource/` or `src/Structure/` carrying `#[Resource]` or
 `#[Structure]`. The attribute decides the kind, not the directory.
 Discovery finds the class the way core finds one in `src/Hook`, the
-build step (`data_surface.resources`) builds it in a context and seals
+build step (`surface.resources`) builds it in a context and seals
 it, and nothing ever constructs one: its declaration and its refiners are
 static, asked of the class. A plugin whose configuration a structure is
 only names it, with `#[UsesStructure]`, or is it, with `#[UsesStructure]`
@@ -28,7 +28,7 @@ from them.
 ## The class
 
 ```php
-#[Structure('block.data_surface_demo')]
+#[Structure('block.surface_examples_plugins')]
 final class DemoBlockStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
@@ -62,7 +62,7 @@ final class DemoBlockStructure implements StructureInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-That is `DemoBlockStructure` in `data_surface_demo`, shortened: a
+That is `DemoBlockStructure` in `surface_examples_plugins`, shortened: a
 structure, since the block that names it holds it and stores it. Each
 part of a resource or structure has one home:
 
@@ -78,7 +78,7 @@ part of a resource or structure has one home:
 | Its parts | `attach()` and `attachVariants()` in `defineInputs()`, and `#[Variant]` on each variant |
 | Which version of its stored values it describes | `version:` on either attribute, 1 until a breaking change is made after values are stored ([Evolving a resource](evolution.md#the-version)) |
 
-`FieldInstanceResource` in `data_surface_tool` uses every row but the
+`FieldInstanceResource` in `surface_tool` uses every row but the
 version, which nothing raises yet, and outputs, which the demo formatter
 declares; the test module's `TestBlockStructure`, a structure, uses two.
 
@@ -217,7 +217,7 @@ as a literal constraint, and so is `EntityBundleExists`, handed the
 entity type by a refiner. A refiner points; the resolver fetches. Look
 for a stock constraint or a reference type string (`entity:<type>`)
 first; only when none names the list does a module add one with its
-resolver, as the demo does with `DataSurfaceDemoBundleField`; see
+resolver, as the demo does with `SurfaceExamplesBundleField`; see
 [Which constraint to write](options.md#which-constraint-to-write).
 
 A blueprint whose keys do depend on site state (a key offered only while a
@@ -265,11 +265,11 @@ a class of its own:
 
 ```php
 #[Block(
-  id: 'data_surface_demo',
+  id: 'surface_examples_plugins',
   admin_label: new TranslatableMarkup('Data surface demo'),
 )]
 #[UsesStructure(DemoBlockStructure::class)]
-final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
+final class ExampleBlock extends TypedBlockBase {
 
   public function build(): array {
     $configuration = $this->getConfiguration();
@@ -283,13 +283,13 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 Nothing else is needed. The block has no `defaultConfiguration()`, no
 `blockForm()`, no `blockValidate()` and no `blockSubmit()`:
-`DataSurfaceBlockBase` builds the structure the definition names, in the
+`TypedBlockBase` builds the structure the definition names, in the
 host's context, and stores what the pipeline accepts in the block's
-configuration. The same holds for a condition (`DataSurfaceConditionBase`,
-writing `evaluate()` and `summary()`), an action (`DataSurfaceActionBase`,
+configuration. The same holds for a condition (`TypedConditionPluginBase`,
+writing `evaluate()` and `summary()`), an action (`TypedConfigurableActionBase`,
 writing `execute()` and `access()`) and a formatter
-(`DataSurfaceFormatterBase`, writing `formatValue()`). Any configurable
-plugin with no base class of this module's lists `DataSurfacePluginForm`
+(`TypedFormatterBase`, writing `formatValue()`). Any configurable
+plugin with no base class of this module's lists `SurfacePluginForm`
 under its `forms` key. [Generated forms](forms.md) has the table.
 
 Or the plugin is its own structure: `#[UsesStructure]` with no
@@ -298,12 +298,12 @@ static methods a structure class has, beside the plugin's own code:
 
 ```php
 #[FieldFormatter(
-  id: 'data_surface_demo_string',
+  id: 'surface_examples_plugins_string',
   label: new TranslatableMarkup('Data surface demo formatter'),
   field_types: ['string'],
 )]
 #[UsesStructure]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, DefinesOutputsInterface {
+final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('prefix', 'string', t('Prefix'))
@@ -322,7 +322,7 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
 ```
 
 Discovery finds it through the plugin definition, not a directory. Its
-id is `<host type>:<plugin id>`, `field_formatter:data_surface_demo_string`,
+id is `<host type>:<plugin id>`, `field_formatter:surface_examples_plugins_string`,
 unless the class also carries `#[Structure]`; the catalog lists it as
 used by that same plugin; an alter names it by the plugin class. The
 demo module keeps both spellings side by side: its block names
@@ -333,15 +333,15 @@ plugin whose settings are only ever its own, because the settings sit
 beside the code that reads them.
 
 A field type implements `FieldSurfaceProviderInterface` and uses
-`DataSurfaceFieldTypeTrait`. Its static defaults are one line, because
+`SurfaceFieldTypeTrait`. Its static defaults are one line, because
 `defaultFieldSettings()` is asked of the class:
 
 ```php
-#[FieldType(id: 'data_surface_gated', /* ... */)]
+#[FieldType(id: 'surface_gated', /* ... */)]
 #[UsesStructure(GatedFieldSettingsStructure::class)]
 class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterface {
 
-  use DataSurfaceFieldTypeTrait;
+  use SurfaceFieldTypeTrait;
 
   public static function defaultFieldSettings(): array {
     return static::surfaceDefaultFieldSettings(static::class) + parent::defaultFieldSettings();
@@ -351,7 +351,7 @@ class SurfaceGatedItem extends StringItem implements FieldSurfaceProviderInterfa
 ```
 
 A field type whose storage layout differs from how a caller is asked
-for its settings overrides `getDataSurfaceStorage()` and hands
+for its settings overrides `getSurfaceStorage()` and hands
 `FieldSettingsStorage` a layout, as `SurfaceAddressItem` does.
 
 What a host supplies, and why the structure does not:
@@ -363,7 +363,7 @@ What a host supplies, and why the structure does not:
 - **The storage.** Only the host holds the instance: the plugin's
   configuration array, or the field config Field UI is editing. A
   formatter's settings are stored by the display, so its
-  `getDataSurfaceStorage()` throws.
+  `getSurfaceStorage()` throws.
 - **Static defaults.** `defaultSettings()` and `defaultFieldSettings()`
   read `#[UsesStructure]` off the class and take
   `ResourcesInterface::defaults()`: the structure's own declaration alone,
@@ -386,7 +386,7 @@ which of them it knows. An identity key the context knows is locked to
 that value; one it does not know stays open. That is the whole
 difference between add and edit, and it is why an operation, a route and
 a tool address a resource the same way: by its id and an operation id,
-`data_surface:node.type:update`, with the operation's parameters saying
+`surface:node.type:update`, with the operation's parameters saying
 which content type.
 
 A parameter is identity the caller already knows before the call; the
@@ -421,7 +421,7 @@ of the story.
 **A resource class ends in `Resource`, a structure class in
 `Structure`, and the id is dotted.** `NodeTypeResource` is `node.type`,
 `FieldInstanceResource` is `field.instance`, `DemoBlockStructure` is
-`block.data_surface_demo`. A plugin that is its own structure keeps its
+`block.surface_examples_plugins`. A plugin that is its own structure keeps its
 plugin's class name, and its id is its plugin's,
 `<host type>:<plugin id>`, unless it carries `#[Structure]`. An alter
 ends in `Alter`, a storage class in `Storage`, an access class in
@@ -443,7 +443,7 @@ no explanation. `AddressResourceHooks::fieldInfoAlter()` is the pattern
 to copy.
 
 **The catalog names a plugin `<host type>:<plugin id>`**:
-`block:data_surface_demo`, `field_formatter:data_surface_demo_string`,
+`block:surface_examples_plugins`, `field_formatter:surface_examples_plugins_string`,
 `field_type:address`. The host type keeps two plugins of different
 kinds that share an id apart.
 
@@ -515,7 +515,7 @@ So the split is by context, and can fall inside one file: the demo
 formatter's static `defineInputs()` calls `t()`, its plugin attribute
 constructs `new TranslatableMarkup`, and `DemoFormatterAlter`, an alter
 of it, calls `$this->t()` in `alterInputs()`; the compliance alter of
-example 3 calls `$this->t()` there and `t()` in its static refiners. `DataSurfaceBuilder`, the engine under the
+example 3 calls `$this->t()` there and `t()` in its static refiners. `SurfaceBuilder`, the engine under the
 build step, is a value object made with `new`, so its one labeling
 method is static and calls `t()`.
 
@@ -592,17 +592,17 @@ list rather than falling back to its default. Both rules, and why, are in
 ### A site's own defaults
 
 A declared default is the module's. A site that wants a key to start
-from another value sets it in configuration, `data_surface.defaults`,
+from another value sets it in configuration, `surface.defaults`,
 not in an alter: an alter may not change an owner's default. Each entry
 names the resource (or a plugin's structure, by the id the catalog
 lists), a key path from it, and the value as a form posts it:
 
 ```
-drush config:set data_surface.defaults defaults.0 \
+drush config:set surface.defaults defaults.0 \
   '{resource: registration.step3, key: capacity, value: "40"}' --input-format=yaml
-drush config:set data_surface.defaults defaults.1 \
+drush config:set surface.defaults defaults.1 \
   '{resource: registration.step3, key: contact.phone, value: "+1 555 0100"}' --input-format=yaml
-drush config:delete data_surface.defaults defaults.1
+drush config:delete surface.defaults defaults.1
 ```
 
 The value is text. The build reads it through [the coercion table](semantics.md#the-coercion-table), as a form's values are read:
@@ -619,7 +619,7 @@ builds, so the form, both documents and the tool listing of a create
 start from it. A key that holds a stored value keeps it: a default is
 what a key with nothing stored starts from, and the read tool answers
 what is stored. The declaration a config schema and an install file are
-written from keeps the module's, so `drush data_surface:config-schema
+written from keeps the module's, so `drush surface:config-schema
 --write` never writes a site's value into a module, and so do a
 plugin's static defaults (`defaultConfiguration()`, `defaultSettings()`),
 which its host asks of the class with no build.
@@ -627,9 +627,9 @@ which its host asks of the class with no build.
 An entry the resource cannot honor refuses the build, naming the key,
 and the catalog lists the refusal:
 
-- a path that names no key: "data_surface.defaults: registration.step3
+- a path that names no key: "surface.defaults: registration.step3
   has no key "contact.fax". ...";
-- a value the key does not accept, in the key's own rule: "data_surface.defaults
+- a value the key does not accept, in the key's own rule: "surface.defaults
   sets "venue" on registration.step3 to "nowhere", which the key does
   not accept: The value you selected is not a valid choice.";
 - a key inside variants, a collection or a map of keys from the site,
@@ -637,15 +637,15 @@ and the catalog lists the refusal:
   each of its keys); a secret; and a computed key.
 
 Every build carries the config object's cache tag,
-`config:data_surface.defaults`, so a change reaches every door at the
+`config:surface.defaults`, so a change reaches every door at the
 next request (why: [decision](decisions.md#a-site-sets-a-default-in-configuration)).
 
 One page can start a key from a value of its own: a route's
-`_data_surface_defaults`, an operation context's `withDefaults()`, is
+`_surface_defaults`, an operation context's `withDefaults()`, is
 written over the site's for that page alone, with the same reach and the
 same refusals ([A route that fixes or fills keys](forms.md#a-route-that-fixes-or-fills-keys)).
 A value a link sends for a key its route lists under
-`_data_surface_query`, or one the code building the form hands it, is
+`_surface_query`, or one the code building the form hands it, is
 no default: it is what the element starts from on that page's first
 draw, and no document states it
 ([Keys a link or the code starts](forms.md#keys-a-link-or-the-code-starts)).
@@ -659,7 +659,7 @@ the context knows, and stays locked whatever is submitted for it.
 
 A locked key stays advertised. It renders disabled in a generated form,
 and submitted input for it is ignored: not an error, just not a way to
-move the value. `DataSurfaceInterface::isLocked()` answers it.
+move the value. `SurfaceInterface::isLocked()` answers it.
 
 Locking is context rather than an intrinsic property of a definition,
 which is why it lives on the data surface rather than on the
@@ -814,7 +814,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **Held once.** Where the key is the identity a create names and the
   storage can say whether a thing is stored under it
   (`DeletableStorageInterface::exists()`, which `ConfigEntityStorage`
-  answers), the build adds the stock `DataSurfaceUnique` to it: "A venue
+  answers), the build adds the stock `SurfaceUnique` to it: "A venue
   named riverside already exists.", code `taken`, named under
   `checkedOnServer`. No resource writes a uniqueness rule of its own.
 - **Drawn as core's element.** The form draws it as a `machine_name`
@@ -841,7 +841,7 @@ This module's resources and structures follow that rule throughout, so
 a `setRequired()` anywhere in one is a `TRUE`. The one place the
 opposite is written down is a definition that did not start optional: the
 Tool API's `InputDefinition` defaults to *required*, so
-`data_surface_tool` turns the flag off explicitly when it derives one
+`surface_tool` turns the flag off explicitly when it derives one
 from config schema, and there the call is saying something.
 
 What "required" means here is that the key must be *configured*, which is

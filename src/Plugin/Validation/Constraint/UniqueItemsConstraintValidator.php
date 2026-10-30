@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\TypedData\TypedDataInterface;
 use Symfony\Component\Validator\Constraint;

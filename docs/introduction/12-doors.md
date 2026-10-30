@@ -10,35 +10,35 @@ operations into it.
 
 | Door | What it is in Drupal | Opened by |
 | --- | --- | --- |
-| The form | A Form API form on a route, built by `DataSurfaceOperationForm` from the operation. A plugin's settings form is made the same way. | this module |
-| A Tool API tool | A plugin of the [Tool](https://www.drupal.org/project/tool) module: a named action with a typed input. One tool per operation, `data_surface:<resource>:<operation>`. One tool made from an operation can be run by everything that runs Tool API tools: the command line, ECA, FlowDrop, Maestro, MCP servers and AI agents. | `data_surface_tool` |
-| The command line | `drush tool:run <tool id>`, the Tool module's Drush command, runs a tool from a shell with its input as JSON. | `data_surface_tool` with the Tool module's Drush command |
-| MCP | The Model Context Protocol, which an AI agent outside the site uses to list and call tools. An MCP server module such as MCP Server Tool Bridge (`mcp_server_tool_bridge`) offers the Tool API tools over it. | `data_surface_tool` and an MCP server module |
-| ECA | Events, Conditions, Actions: automation a site builder configures. The ECA Tool module (`eca_tool`) makes one ECA action per tool, so an ECA model can run an operation. | `data_surface_tool` and `eca_tool` |
-| HTTP with an OpenAPI document | A JSON endpoint per resource at `/surface-api/{resource}`, where the HTTP method picks the operation: `GET` reads, `PATCH` updates, `POST` creates, `DELETE` removes. The OpenAPI 3.1 document lists every operation's paths for any OpenAPI client or code generator. | `data_surface_react`; the document, `data_surface_openapi` |
-| A React page | A React app that draws the form from the JSON Schema the HTTP door serves. | `data_surface_react` |
+| The form | A Form API form on a route, built by `SurfaceOperationForm` from the operation. A plugin's settings form is made the same way. | this module |
+| A Tool API tool | A plugin of the [Tool](https://www.drupal.org/project/tool) module: a named action with a typed input. One tool per operation, `surface:<resource>:<operation>`. One tool made from an operation can be run by everything that runs Tool API tools: the command line, ECA, FlowDrop, Maestro, MCP servers and AI agents. | `surface_tool` |
+| The command line | `drush tool:run <tool id>`, the Tool module's Drush command, runs a tool from a shell with its input as JSON. | `surface_tool` with the Tool module's Drush command |
+| MCP | The Model Context Protocol, which an AI agent outside the site uses to list and call tools. An MCP server module such as MCP Server Tool Bridge (`mcp_server_tool_bridge`) offers the Tool API tools over it. | `surface_tool` and an MCP server module |
+| ECA | Events, Conditions, Actions: automation a site builder configures. The ECA Tool module (`eca_tool`) makes one ECA action per tool, so an ECA model can run an operation. | `surface_tool` and `eca_tool` |
+| HTTP with an OpenAPI document | A JSON endpoint per resource at `/surface-api/{resource}`, where the HTTP method picks the operation: `GET` reads, `PATCH` updates, `POST` creates, `DELETE` removes. The OpenAPI 3.1 document lists every operation's paths for any OpenAPI client or code generator. | `surface_react`; the document, `surface_openapi` |
+| A React page | A React app that draws the form from the JSON Schema the HTTP door serves. | `surface_react` |
 
 The command line, MCP and ECA run the tool, so they ask for the same
 values the tool does. The React page reads and writes through the HTTP door, so one
-submodule, `data_surface_react`, serves both. None of these submodules is needed to read this series. To open
+submodule, `surface_react`, serves both. None of these submodules is needed to read this series. To open
 the tool, HTTP and React doors on a site:
 
 ```bash
 composer require drupal/tool
-drush pm:install data_surface_tool data_surface_react data_surface_openapi
+drush pm:install surface_tool surface_react surface_openapi
 ```
 
 ## One operation, every door
 
-The placed block, `block.placement` in the `data_surface_block`
+The placed block, `block.placement` in the `surface_examples_block`
 submodule, has a `create` operation. With no code added for any door,
 it is served at each of these:
 
 | Door | Where |
 | --- | --- |
 | The form | `/admin/structure/block/surface/add` |
-| A Tool API tool | `data_surface:block.placement:create` |
-| The command line | `drush tool:run data_surface:block.placement:create --uid=1`, with the input below as `--input` |
+| A Tool API tool | `surface:block.placement:create` |
+| The command line | `drush tool:run surface:block.placement:create --uid=1`, with the input below as `--input` |
 | HTTP | `POST /surface-api/block.placement` |
 | A React page | `/surface-react/block.placement/create` |
 

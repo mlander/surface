@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Generators\Resource;
+namespace Drupal\surface\Drush\Generators\Resource;
 
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -12,13 +12,13 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Reference\References;
-use Drupal\data_surface\Refinement\Condition;
-use Drupal\data_surface\Refinement\DeclaredRefiner;
-use Drupal\data_surface\Refinement\Rule;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entry;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Refinement\DeclaredRefiner;
+use Drupal\surface\Refinement\Rule;
 
 /**
  * Writes the defineInputs() of a built resource back out as PHP.
@@ -124,7 +124,7 @@ final class ResourceCode {
   /**
    * Writes a built resource's keys.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The resource, sealed as declared.
    *
    * @return array{constants: string, inputs: string, uses: string[], structures: list<array{class: string, id: string, label: string, constants: string, inputs: string, uses: string[]}>, always_held: string[], comments: int}
@@ -133,7 +133,7 @@ final class ResourceCode {
    *   same way, the keys its storage always holds, and how many comments
    *   name what is left to write.
    */
-  public function write(DataSurfaceInterface $built): array {
+  public function write(SurfaceInterface $built): array {
     $this->uses = [];
     $this->structures = [];
     $this->alwaysHeld = [];
@@ -152,7 +152,7 @@ final class ResourceCode {
   /**
    * Writes the statements of one frame.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The frame.
    * @param string $path
    *   Its dotted path in the resource, a dot at its end; empty at the top.
@@ -163,7 +163,7 @@ final class ResourceCode {
    *
    * @phpstan-impure
    */
-  protected function frame(DataSurfaceInterface $surface, string $path): array {
+  protected function frame(SurfaceInterface $surface, string $path): array {
     $map = $surface->getDefinitions();
     // A structure's frame is written while its parent's is: each names
     // its own keys.
@@ -196,7 +196,7 @@ final class ResourceCode {
     $keys = [];
     foreach ($map->entries() as $name => $entry) {
       $keys[] = $this->key($surface, $entry, $path);
-      foreach ($entry->refiners[DataSurfaceInterface::OWNER] ?? [] as $refiner) {
+      foreach ($entry->refiners[SurfaceInterface::OWNER] ?? [] as $refiner) {
         if ($refiner instanceof DeclaredRefiner && $refiner->module === NULL && $refiner->at === NULL) {
           foreach ($refiner->rules[(string) $name] ?? [] as $rule) {
             $rules[spl_object_id($rule)] = $rule;
@@ -299,9 +299,9 @@ final class ResourceCode {
   /**
    * Writes one key's statement, and the comments above it.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The frame.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param string $path
    *   The frame's dotted path, a dot at its end; empty at the top.
@@ -311,7 +311,7 @@ final class ResourceCode {
    *
    * @phpstan-impure
    */
-  protected function key(DataSurfaceInterface $surface, Entry $entry, string $path): string {
+  protected function key(SurfaceInterface $surface, Entry $entry, string $path): string {
     $name = $entry->name;
     $at = $path . $name;
     $definition = $entry->definition;
@@ -492,7 +492,7 @@ final class ResourceCode {
   /**
    * Writes a structure a key attaches, as a class of its own.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The structure, built.
    * @param string $source
    *   What it was built from: one class for one source.
@@ -504,7 +504,7 @@ final class ResourceCode {
    * @return string
    *   The class's short name.
    */
-  protected function structure(DataSurfaceInterface $child, string $source, string $name, string $label): string {
+  protected function structure(SurfaceInterface $child, string $source, string $name, string $label): string {
     if (!isset($this->structures[$source])) {
       $class = static::className($name) . 'Structure';
       $taken = array_column($this->structures, 'class');
@@ -655,7 +655,7 @@ final class ResourceCode {
   /**
    * Writes a declared rule.
    *
-   * @param \Drupal\data_surface\Refinement\Rule $rule
+   * @param \Drupal\surface\Refinement\Rule $rule
    *   The rule.
    *
    * @return string
@@ -687,7 +687,7 @@ final class ResourceCode {
   /**
    * Writes a condition.
    *
-   * @param \Drupal\data_surface\Refinement\Condition $condition
+   * @param \Drupal\surface\Refinement\Condition $condition
    *   The condition.
    *
    * @return string

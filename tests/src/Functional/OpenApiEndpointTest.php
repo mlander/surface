@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Component\Serialization\Json;
 use Drupal\Tests\BrowserTestBase;
@@ -21,12 +21,12 @@ use Drupal\Component\Serialization\Yaml;
  * route still refuses anonymous. `/surface-api/openapi.yaml` is the same
  * document as YAML. Swagger UI (`/surface-api/docs`) and Redoc
  * (`/surface-api/redoc`) are pages over it, under the permission
- * `access data surface api docs`, each script from a CDN pinned and held
+ * `access surface api docs`, each script from a CDN pinned and held
  * to its integrity hash.
  *
  * @see docs/decisions.md#an-openapi-document-is-one-more-door
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class OpenApiEndpointTest extends BrowserTestBase {
 
@@ -34,8 +34,8 @@ class OpenApiEndpointTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_first',
-    'data_surface_openapi',
+    'surface_examples_first',
+    'surface_openapi',
   ];
 
   /**
@@ -72,7 +72,7 @@ class OpenApiEndpointTest extends BrowserTestBase {
     $this->assertSame(['get', 'patch'], array_keys($document['paths']['/surface-api/first.newsletter']));
     $this->assertSame(403, $this->fetch('surface-api/first.newsletter/schema')->getStatusCode(), 'The per-request schema is still the account\'s.');
 
-    $this->drupalLogin($this->drupalCreateUser(['administer data_surface_first']));
+    $this->drupalLogin($this->drupalCreateUser(['administer surface_examples_first']));
     $account = $this->fetch('surface-api/openapi.json');
     $this->assertSame(200, $account->getStatusCode());
     $this->assertStringStartsWith('application/json', $account->getHeaderLine('Content-Type'));
@@ -96,20 +96,20 @@ class OpenApiEndpointTest extends BrowserTestBase {
     // Under a permission of their own: each runs a CDN's script.
     $this->assertSame(403, $this->fetch('surface-api/docs')->getStatusCode());
     $this->assertSame(403, $this->fetch('surface-api/redoc')->getStatusCode());
-    $this->drupalLogin($this->drupalCreateUser(['access data surface api docs']));
+    $this->drupalLogin($this->drupalCreateUser(['access surface api docs']));
 
     $this->drupalGet('surface-api/docs');
     $this->assertSession()->statusCodeEquals(200);
-    $this->assertSession()->elementExists('css', '#data-surface-openapi-docs');
+    $this->assertSession()->elementExists('css', '#surface-openapi-docs');
     $this->assertSession()->elementExists('css', 'script[src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.29.1/swagger-ui-bundle.min.js"][integrity^="sha512-"][crossorigin="anonymous"]');
     $this->assertSession()->elementExists('css', 'link[href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.29.1/swagger-ui.min.css"][integrity^="sha512-"]');
-    $settings = $this->getDrupalSettings()['dataSurfaceOpenApi'];
+    $settings = $this->getDrupalSettings()['surfaceOpenApi'];
     $this->assertStringEndsWith('/surface-api/openapi.json', $settings['document']);
     $this->assertStringEndsWith('/session/token', $settings['token']);
 
     $this->drupalGet('surface-api/redoc');
     $this->assertSession()->statusCodeEquals(200);
-    $this->assertSession()->elementExists('css', '#data-surface-openapi-reference');
+    $this->assertSession()->elementExists('css', '#surface-openapi-reference');
     $this->assertSession()->elementExists('css', 'script[src="https://cdn.jsdelivr.net/npm/redoc@2.5.1/bundles/redoc.standalone.js"][integrity^="sha256-"]');
   }
 

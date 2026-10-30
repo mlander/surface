@@ -1,6 +1,6 @@
 /**
  * @file
- * Highlights each code block the data_surface_code element renders.
+ * Highlights each code block the surface_code element renders.
  *
  * Once per block, so a block that arrives over AJAX is highlighted when
  * it arrives and a block already highlighted is left alone. When Prism
@@ -8,13 +8,13 @@
  * hash), the blocks stay plain text.
  */
 ((Drupal, once) => {
-  Drupal.behaviors.dataSurfaceHighlight = {
+  Drupal.behaviors.surfaceHighlight = {
     attach(context) {
       const { Prism } = window;
       if (!Prism || typeof Prism.highlightElement !== 'function') {
         return;
       }
-      once('data-surface-highlight', 'pre > code[class*="language-"]', context).forEach((code) => {
+      once('surface-highlight', 'pre > code[class*="language-"]', context).forEach((code) => {
         Prism.highlightElement(code);
       });
     },

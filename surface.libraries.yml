@@ -1,0 +1,98 @@
+# Prism, from a CDN, the version pinned and each file held to its
+# Subresource Integrity hash, which cdnjs publishes: the core and only the
+# languages the module's code blocks are in (markup and markup-templating
+# are what php and twig need). No autoloader: a language not listed here
+# is not fetched.
+# Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
+
+prism_theme:
+  remote: https://github.com/PrismJS/prism
+  version: 1.30.0
+  license:
+    name: MIT
+    url: https://github.com/PrismJS/prism/blob/v1.30.0/LICENSE
+    gpl-compatible: true
+  css:
+    base:
+      https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/themes/prism.min.css:
+        type: external
+        minified: true
+        attributes:
+          integrity: sha512-tN7Ec6zAFaVSG3TpNAKtk4DOHNpSwKHxxrsiw4GHKESGPs5njn/0sMCUMl2svV4wo4BK/rCP7juYz+zx+l6oeQ==
+          crossorigin: anonymous
+
+prism:
+  remote: https://github.com/PrismJS/prism
+  version: 1.30.0
+  license:
+    name: MIT
+    url: https://github.com/PrismJS/prism/blob/v1.30.0/LICENSE
+    gpl-compatible: true
+  js:
+    https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-core.min.js:
+      type: external
+      minified: true
+      attributes:
+        integrity: sha512-Uw06iFFf9hwoN77+kPl/1DZL66tKsvZg6EWm7n6QxInyptVuycfrO52hATXDRozk7KWeXnrSueiglILct8IkkA==
+        crossorigin: anonymous
+    https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-markup.min.js:
+      type: external
+      minified: true
+      attributes:
+        integrity: sha512-Ei5Vokmnc/f7vIt31aodVMuavT/xp2Lt5vGDYLgCzgBX/z5ghbZQfxt/9FkNs+RyG8IfBKAkdRsQQk4PZyHq5g==
+        crossorigin: anonymous
+    https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-markup-templating.min.js:
+      type: external
+      minified: true
+      attributes:
+        integrity: sha512-+8BiRfWso6waiFDv6tEmWF8yfPGgxAtOYLDUB0rRISLwtpxkJ9lpPNUhxwWlikn3qSO+4RQyzDppi62o3ON/AA==
+        crossorigin: anonymous
+    https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-php.min.js:
+      type: external
+      minified: true
+      attributes:
+        integrity: sha512-plzrTi61ltEMFf84gTVO9IkvIMfBu07bnDuahvdlIclmFWzXJ9VcRsny9d45sxFZRv3jJg/MHNyuxnUYEMxMEg==
+        crossorigin: anonymous
+    https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-twig.min.js:
+      type: external
+      minified: true
+      attributes:
+        integrity: sha512-Fq9lTEdyRVE+WLSjm4suDT/v7+fj9/ZiUadI4UjnP+N5L29XGbY4j3ADAQRbQt21eMgPCBFw90Uk7yi+bjnDCQ==
+        crossorigin: anonymous
+    https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-json.min.js:
+      type: external
+      minified: true
+      attributes:
+        integrity: sha512-QXFMVAusM85vUYDaNgcYeU3rzSlc+bTV4JvkfJhjxSHlQEo+ig53BtnGkvFTiNJh8D+wv6uWAQ2vJaVmxe8d3w==
+        crossorigin: anonymous
+    https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-yaml.min.js:
+      type: external
+      minified: true
+      attributes:
+        integrity: sha512-6O/PZimM3TD1NN3yrazePA4AbZrPcwt1QCGJrVY7WoHDJROZFc9TlBvIKMe+QfqgcslW4lQeBzNJEJvIMC8WhA==
+        crossorigin: anonymous
+    https://cdnjs.cloudflare.com/ajax/libs/prism/1.30.0/components/prism-bash.min.js:
+      type: external
+      minified: true
+      attributes:
+        integrity: sha512-whYhDwtTmlC/NpZlCr6PSsAaLOrfjVg/iXAnC4H/dtiHawpShhT2SlIMbpIhT/IL/NrpdMm+Hq2C13+VKpHTYw==
+        crossorigin: anonymous
+  dependencies:
+    - surface/prism_manual
+    - surface/prism_theme
+
+# Loaded before Prism's core, which reads Prism.manual as it loads, so
+# Prism highlights only when highlight.js asks.
+prism_manual:
+  js:
+    js/prism-manual.js: {}
+
+# What the surface_code element attaches: highlights each block once,
+# over AJAX too.
+highlight:
+  js:
+    js/highlight.js: {}
+  dependencies:
+    - core/drupal
+    - core/once
+    - surface/prism

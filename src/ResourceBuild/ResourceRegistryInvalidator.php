@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Cache\CacheTagsInvalidatorInterface;
-use Drupal\data_surface\Options\DataSurfaceOptions;
+use Drupal\surface\Options\SurfaceOptions;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -38,25 +38,25 @@ final class ResourceRegistryInvalidator implements CacheTagsInvalidatorInterface
    */
   public function invalidateTags(array $tags): void {
     $read_again = FALSE;
-    if ($this->container->initialized('data_surface.resource_registry')) {
-      $registry = $this->container->get('data_surface.resource_registry');
+    if ($this->container->initialized('surface.resource_registry')) {
+      $registry = $this->container->get('surface.resource_registry');
       assert($registry instanceof ResourceRegistry);
       $read_again = $registry->invalidateTags($tags);
     }
     // The builds this request kept: those that read a tag, or all of them
     // when what discovery read changed under them.
     // Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
-    if ($this->container->initialized('data_surface.resources')) {
-      $resources = $this->container->get('data_surface.resources');
+    if ($this->container->initialized('surface.resources')) {
+      $resources = $this->container->get('surface.resources');
       if ($resources instanceof Resources) {
         $read_again ? $resources->forgetBuilds() : $resources->invalidateTags($tags);
       }
     }
     // The option lists read from what changed, which a build kept for the
     // request would otherwise be answered again.
-    if ($this->container->initialized('data_surface.options')) {
-      $options = $this->container->get('data_surface.options');
-      if ($options instanceof DataSurfaceOptions) {
+    if ($this->container->initialized('surface.options')) {
+      $options = $this->container->get('surface.options');
+      if ($options instanceof SurfaceOptions) {
         $options->invalidateTags($tags);
       }
     }

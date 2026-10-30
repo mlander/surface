@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * Makes resources from facts a class cannot know: one per bundle, say.
@@ -22,8 +22,8 @@ namespace Drupal\data_surface\Resource;
  * derived tools treat it as they treat a class. What it does not have is
  * a class of its own; its inputs and operations are methods it names.
  *
- * @see \Drupal\data_surface\Resource\Attribute\DerivesResources
- * @see \Drupal\data_surface\Resource\DerivedResource
+ * @see \Drupal\surface\Resource\Attribute\DerivesResources
+ * @see \Drupal\surface\Resource\DerivedResource
  */
 interface ResourceDeriverInterface {
 
@@ -36,7 +36,7 @@ interface ResourceDeriverInterface {
    *   valued with their module: what replaces the derivation where one
    *   was written by hand. Empty when it names none.
    *
-   * @return array<string, \Drupal\data_surface\Resource\DerivedResource>
+   * @return array<string, \Drupal\surface\Resource\DerivedResource>
    *   The resources, keyed by derivative id, which holds no colon.
    */
   public function derivatives(array $overrides): array;

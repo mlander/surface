@@ -19,35 +19,35 @@
             },
             "version": 1,
             "within": {
-                "/allOf/0/then/properties/settings/allOf/1/properties/props": {
+                "/allOf/3/then/properties/settings/allOf/1/properties/props": {
                     "dependsOn": [
                         "component"
                     ],
                     "refined": true,
                     "by": "component",
                     "variants": {
-                        "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action",
-                        "data_surface_examples:card": "#/$defs/block.data_surface_component.props.data_surface_examples:card",
-                        "data_surface_examples:hero": "#/$defs/block.data_surface_component.props.data_surface_examples:hero",
-                        "data_surface_examples:section": "#/$defs/block.data_surface_component.props.data_surface_examples:section"
+                        "surface_examples:call_to_action": "#/$defs/block.surface_component.props.surface_examples:call_to_action",
+                        "surface_examples:card": "#/$defs/block.surface_component.props.surface_examples:card",
+                        "surface_examples:hero": "#/$defs/block.surface_component.props.surface_examples:hero",
+                        "surface_examples:section": "#/$defs/block.surface_component.props.surface_examples:section"
                     },
-                    "chosen": "data_surface_examples:card"
+                    "chosen": "surface_examples:card"
                 },
-                "/allOf/0/then/properties/settings/allOf/1/properties/slots": {
+                "/allOf/3/then/properties/settings/allOf/1/properties/slots": {
                     "dependsOn": [
                         "component"
                     ],
                     "refined": true,
                     "by": "component",
                     "variants": {
-                        "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action",
-                        "data_surface_examples:card": "#/$defs/block.data_surface_component.slots.data_surface_examples:card",
-                        "data_surface_examples:hero": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero",
-                        "data_surface_examples:section": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
+                        "surface_examples:call_to_action": "#/$defs/block.surface_component.slots.surface_examples:call_to_action",
+                        "surface_examples:card": "#/$defs/block.surface_component.slots.surface_examples:card",
+                        "surface_examples:hero": "#/$defs/block.surface_component.slots.surface_examples:hero",
+                        "surface_examples:section": "#/$defs/block.surface_component.slots.surface_examples:section"
                     },
-                    "chosen": "data_surface_examples:card"
+                    "chosen": "surface_examples:card"
                 },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/0/then/properties/slots/allOf/1/properties/actions/allOf/1": {
+                "/allOf/3/then/properties/settings/allOf/1/allOf/0/then/properties/slots/allOf/1/properties/actions/allOf/1": {
                     "doesNotApply": {
                         "component": [
                             "kind"
@@ -57,7 +57,7 @@
                         ]
                     }
                 },
-                "/allOf/0/then/properties/settings/allOf/1/allOf/1/then/properties/slots/allOf/1/properties/content/allOf/1": {
+                "/allOf/3/then/properties/settings/allOf/1/allOf/1/then/properties/slots/allOf/1/properties/content/allOf/1": {
                     "doesNotApply": {
                         "component": [
                             "kind"
@@ -119,10 +119,6 @@
                 "type": "string",
                 "oneOf": [
                     {
-                        "const": "data_surface_component",
-                        "title": "Component"
-                    },
-                    {
                         "const": "local_actions_block",
                         "title": "Primary admin actions"
                     },
@@ -133,6 +129,10 @@
                     {
                         "const": "page_title_block",
                         "title": "Page title"
+                    },
+                    {
+                        "const": "surface_component",
+                        "title": "Component"
                     },
                     {
                         "const": "system_branding_block",
@@ -195,9 +195,6 @@
                 "description": "The settings of the block chosen, as its plugin declares them.",
                 "anyOf": [
                     {
-                        "$ref": "#/$defs/block.data_surface_component"
-                    },
-                    {
                         "$ref": "#/$defs/block.placement.settings.local_actions_block"
                     },
                     {
@@ -205,6 +202,9 @@
                     },
                     {
                         "$ref": "#/$defs/block.placement.settings.page_title_block"
+                    },
+                    {
+                        "$ref": "#/$defs/block.surface_component"
                     },
                     {
                         "$ref": "#/$defs/block.placement.settings.system_branding_block"
@@ -253,10 +253,10 @@
                     "refined": true,
                     "by": "plugin",
                     "variants": {
-                        "data_surface_component": "#/$defs/block.data_surface_component",
                         "local_actions_block": "#/$defs/block.placement.settings.local_actions_block",
                         "local_tasks_block": "#/$defs/block.placement.settings.local_tasks_block",
                         "page_title_block": "#/$defs/block.placement.settings.page_title_block",
+                        "surface_component": "#/$defs/block.surface_component",
                         "system_branding_block": "#/$defs/block.placement.settings.system_branding_block",
                         "system_breadcrumb_block": "#/$defs/block.placement.settings.system_breadcrumb_block",
                         "system_clear_cache_block": "#/$defs/block.placement.settings.system_clear_cache_block",
@@ -270,7 +270,7 @@
                         "system_powered_by_block": "#/$defs/block.placement.settings.system_powered_by_block",
                         "user_login_block": "#/$defs/block.placement.settings.user_login_block"
                     },
-                    "chosen": "data_surface_component"
+                    "chosen": "surface_component"
                 }
             },
             "theme": {
@@ -353,11 +353,11 @@
                     },
                     "checkedOnServer": [
                         {
-                            "constraint": "DataSurfaceAnyThemeRegion",
+                            "constraint": "SurfaceAnyThemeRegion",
                             "message": "Region of an installed theme"
                         },
                         {
-                            "constraint": "DataSurfaceThemeRegion",
+                            "constraint": "SurfaceThemeRegion",
                             "message": "Region of a theme"
                         }
                     ]
@@ -401,125 +401,6 @@
             "region"
         ],
         "allOf": [
-            {
-                "if": {
-                    "properties": {
-                        "plugin": {
-                            "const": "data_surface_component"
-                        }
-                    },
-                    "required": [
-                        "plugin"
-                    ]
-                },
-                "then": {
-                    "properties": {
-                        "settings": {
-                            "title": "Settings",
-                            "description": "The settings of the block chosen, as its plugin declares them.",
-                            "allOf": [
-                                {
-                                    "$ref": "#/$defs/block.data_surface_component"
-                                },
-                                {
-                                    "allOf": [
-                                        {
-                                            "if": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "component": {
-                                                        "const": "data_surface_examples:hero"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "component"
-                                                ]
-                                            },
-                                            "then": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "slots": {
-                                                        "title": "Slots",
-                                                        "allOf": [
-                                                            {
-                                                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero"
-                                                            },
-                                                            {
-                                                                "type": "object",
-                                                                "properties": {
-                                                                    "actions": {
-                                                                        "allOf": [
-                                                                            {
-                                                                                "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1"
-                                                                            },
-                                                                            {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "component": false,
-                                                                                    "components": false
-                                                                                }
-                                                                            }
-                                                                        ]
-                                                                    }
-                                                                }
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "if": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "component": {
-                                                        "const": "data_surface_examples:section"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "component"
-                                                ]
-                                            },
-                                            "then": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "slots": {
-                                                        "title": "Slots",
-                                                        "allOf": [
-                                                            {
-                                                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
-                                                            },
-                                                            {
-                                                                "type": "object",
-                                                                "properties": {
-                                                                    "content": {
-                                                                        "allOf": [
-                                                                            {
-                                                                                "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1"
-                                                                            },
-                                                                            {
-                                                                                "type": "object",
-                                                                                "properties": {
-                                                                                    "component": false,
-                                                                                    "components": false
-                                                                                }
-                                                                            }
-                                                                        ]
-                                                                    }
-                                                                }
-                                                            }
-                                                        ]
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    ]
-                                }
-                            ]
-                        }
-                    }
-                }
-            },
             {
                 "if": {
                     "properties": {
@@ -579,6 +460,125 @@
                             "title": "Settings",
                             "description": "The settings of the block chosen, as its plugin declares them.",
                             "$ref": "#/$defs/block.placement.settings.page_title_block"
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "plugin": {
+                            "const": "surface_component"
+                        }
+                    },
+                    "required": [
+                        "plugin"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "settings": {
+                            "title": "Settings",
+                            "description": "The settings of the block chosen, as its plugin declares them.",
+                            "allOf": [
+                                {
+                                    "$ref": "#/$defs/block.surface_component"
+                                },
+                                {
+                                    "allOf": [
+                                        {
+                                            "if": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "component": {
+                                                        "const": "surface_examples:hero"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "component"
+                                                ]
+                                            },
+                                            "then": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "slots": {
+                                                        "title": "Slots",
+                                                        "allOf": [
+                                                            {
+                                                                "$ref": "#/$defs/block.surface_component.slots.surface_examples:hero"
+                                                            },
+                                                            {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "actions": {
+                                                                        "allOf": [
+                                                                            {
+                                                                                "$ref": "#/$defs/component.slot.surface_examples:hero.actions.1"
+                                                                            },
+                                                                            {
+                                                                                "type": "object",
+                                                                                "properties": {
+                                                                                    "component": false,
+                                                                                    "components": false
+                                                                                }
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "if": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "component": {
+                                                        "const": "surface_examples:section"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "component"
+                                                ]
+                                            },
+                                            "then": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "slots": {
+                                                        "title": "Slots",
+                                                        "allOf": [
+                                                            {
+                                                                "$ref": "#/$defs/block.surface_component.slots.surface_examples:section"
+                                                            },
+                                                            {
+                                                                "type": "object",
+                                                                "properties": {
+                                                                    "content": {
+                                                                        "allOf": [
+                                                                            {
+                                                                                "$ref": "#/$defs/component.slot.surface_examples:section.content.1"
+                                                                            },
+                                                                            {
+                                                                                "type": "object",
+                                                                                "properties": {
+                                                                                    "component": false,
+                                                                                    "components": false
+                                                                                }
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
                         }
                     }
                 }
@@ -837,8 +837,37 @@
             }
         ],
         "$defs": {
-            "block.data_surface_component.props.data_surface_examples:call_to_action": {
-                "title": "block.data_surface_component.props.data_surface_examples:call_to_action",
+            "block.placement.settings.local_actions_block": {
+                "title": "block.placement.settings.local_actions_block",
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+            },
+            "block.placement.settings.local_tasks_block": {
+                "title": "block.placement.settings.local_tasks_block",
+                "type": "object",
+                "properties": {
+                    "primary": {
+                        "title": "Whether primary tabs are shown",
+                        "type": "boolean",
+                        "default": true
+                    },
+                    "secondary": {
+                        "title": "Whether secondary tabs are shown",
+                        "type": "boolean",
+                        "default": true
+                    }
+                },
+                "additionalProperties": false
+            },
+            "block.placement.settings.page_title_block": {
+                "title": "block.placement.settings.page_title_block",
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+            },
+            "block.surface_component.props.surface_examples:call_to_action": {
+                "title": "block.surface_component.props.surface_examples:call_to_action",
                 "type": "object",
                 "properties": {
                     "text": {
@@ -896,8 +925,8 @@
                     "url"
                 ]
             },
-            "block.data_surface_component.props.data_surface_examples:card": {
-                "title": "block.data_surface_component.props.data_surface_examples:card",
+            "block.surface_component.props.surface_examples:card": {
+                "title": "block.surface_component.props.surface_examples:card",
                 "type": "object",
                 "properties": {
                     "heading": {
@@ -957,8 +986,8 @@
                     "heading"
                 ]
             },
-            "block.data_surface_component.props.data_surface_examples:hero": {
-                "title": "block.data_surface_component.props.data_surface_examples:hero",
+            "block.surface_component.props.surface_examples:hero": {
+                "title": "block.surface_component.props.surface_examples:hero",
                 "type": "object",
                 "properties": {
                     "title": {
@@ -1012,8 +1041,8 @@
                     "title"
                 ]
             },
-            "block.data_surface_component.props.data_surface_examples:section": {
-                "title": "block.data_surface_component.props.data_surface_examples:section",
+            "block.surface_component.props.surface_examples:section": {
+                "title": "block.surface_component.props.surface_examples:section",
                 "type": "object",
                 "properties": {
                     "heading": {
@@ -1026,8 +1055,8 @@
                 },
                 "additionalProperties": false
             },
-            "block.data_surface_component.slots.data_surface_examples:call_to_action": {
-                "title": "block.data_surface_component.slots.data_surface_examples:call_to_action",
+            "block.surface_component.slots.surface_examples:call_to_action": {
+                "title": "block.surface_component.slots.surface_examples:call_to_action",
                 "type": "object",
                 "properties": {},
                 "additionalProperties": false
@@ -1094,8 +1123,8 @@
                     ]
                 }
             },
-            "block.data_surface_component.slots.data_surface_examples:card": {
-                "title": "block.data_surface_component.slots.data_surface_examples:card",
+            "block.surface_component.slots.surface_examples:card": {
+                "title": "block.surface_component.slots.surface_examples:card",
                 "type": "object",
                 "properties": {
                     "body": {
@@ -1106,8 +1135,8 @@
                 },
                 "additionalProperties": false
             },
-            "component.props.data_surface_examples:call_to_action": {
-                "title": "component.props.data_surface_examples:call_to_action",
+            "component.props.surface_examples:call_to_action": {
+                "title": "component.props.surface_examples:call_to_action",
                 "type": "object",
                 "properties": {
                     "text": {
@@ -1165,14 +1194,14 @@
                     "url"
                 ]
             },
-            "component.slots.data_surface_examples:call_to_action.2": {
-                "title": "component.slots.data_surface_examples:call_to_action.2",
+            "component.slots.surface_examples:call_to_action.2": {
+                "title": "component.slots.surface_examples:call_to_action.2",
                 "type": "object",
                 "properties": {},
                 "additionalProperties": false
             },
-            "component.nested.data_surface_examples:call_to_action.1": {
-                "title": "component.nested.data_surface_examples:call_to_action.1",
+            "component.nested.surface_examples:call_to_action.1": {
+                "title": "component.nested.surface_examples:call_to_action.1",
                 "type": "object",
                 "properties": {
                     "component": {
@@ -1180,7 +1209,7 @@
                         "type": "string",
                         "oneOf": [
                             {
-                                "const": "data_surface_examples:call_to_action",
+                                "const": "surface_examples:call_to_action",
                                 "title": "Call to action"
                             }
                         ],
@@ -1195,7 +1224,7 @@
                         "title": "Props",
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                                "$ref": "#/$defs/component.props.surface_examples:call_to_action"
                             },
                             {
                                 "type": "null"
@@ -1207,7 +1236,7 @@
                             ],
                             "by": "component",
                             "variants": {
-                                "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
+                                "surface_examples:call_to_action": "#/$defs/component.props.surface_examples:call_to_action"
                             }
                         }
                     },
@@ -1215,7 +1244,7 @@
                         "title": "Slots",
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                                "$ref": "#/$defs/component.slots.surface_examples:call_to_action.2"
                             },
                             {
                                 "type": "null"
@@ -1227,7 +1256,7 @@
                             ],
                             "by": "component",
                             "variants": {
-                                "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                                "surface_examples:call_to_action": "#/$defs/component.slots.surface_examples:call_to_action.2"
                             }
                         }
                     }
@@ -1241,7 +1270,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:call_to_action"
+                                    "const": "surface_examples:call_to_action"
                                 }
                             },
                             "required": [
@@ -1252,7 +1281,7 @@
                             "properties": {
                                 "props": {
                                     "title": "Props",
-                                    "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                                    "$ref": "#/$defs/component.props.surface_examples:call_to_action"
                                 }
                             }
                         }
@@ -1261,7 +1290,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:call_to_action"
+                                    "const": "surface_examples:call_to_action"
                                 }
                             },
                             "required": [
@@ -1272,15 +1301,15 @@
                             "properties": {
                                 "slots": {
                                     "title": "Slots",
-                                    "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.2"
+                                    "$ref": "#/$defs/component.slots.surface_examples:call_to_action.2"
                                 }
                             }
                         }
                     }
                 ]
             },
-            "component.slot.data_surface_examples:hero.actions.1": {
-                "title": "component.slot.data_surface_examples:hero.actions.1",
+            "component.slot.surface_examples:hero.actions.1": {
+                "title": "component.slot.surface_examples:hero.actions.1",
                 "type": "object",
                 "properties": {
                     "kind": {
@@ -1322,7 +1351,7 @@
                     },
                     "component": {
                         "title": "Component",
-                        "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1",
+                        "$ref": "#/$defs/component.nested.surface_examples:call_to_action.1",
                         "x-surface": {
                             "dependsOn": [
                                 "kind"
@@ -1334,7 +1363,7 @@
                         "type": "array",
                         "maxItems": 2,
                         "items": {
-                            "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.1"
+                            "$ref": "#/$defs/component.nested.surface_examples:call_to_action.1"
                         },
                         "x-surface": {
                             "dependsOn": [
@@ -1412,20 +1441,20 @@
                     ]
                 }
             },
-            "block.data_surface_component.slots.data_surface_examples:hero": {
-                "title": "block.data_surface_component.slots.data_surface_examples:hero",
+            "block.surface_component.slots.surface_examples:hero": {
+                "title": "block.surface_component.slots.surface_examples:hero",
                 "type": "object",
                 "properties": {
                     "actions": {
                         "title": "Actions",
                         "description": "Up to two buttons under the title.",
-                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.1"
+                        "$ref": "#/$defs/component.slot.surface_examples:hero.actions.1"
                     }
                 },
                 "additionalProperties": false
             },
-            "component.props.data_surface_examples:card": {
-                "title": "component.props.data_surface_examples:card",
+            "component.props.surface_examples:card": {
+                "title": "component.props.surface_examples:card",
                 "type": "object",
                 "properties": {
                     "heading": {
@@ -1485,8 +1514,8 @@
                     "heading"
                 ]
             },
-            "component.props.data_surface_examples:hero": {
-                "title": "component.props.data_surface_examples:hero",
+            "component.props.surface_examples:hero": {
+                "title": "component.props.surface_examples:hero",
                 "type": "object",
                 "properties": {
                     "title": {
@@ -1540,8 +1569,8 @@
                     "title"
                 ]
             },
-            "component.slots.data_surface_examples:card.2": {
-                "title": "component.slots.data_surface_examples:card.2",
+            "component.slots.surface_examples:card.2": {
+                "title": "component.slots.surface_examples:card.2",
                 "type": "object",
                 "properties": {
                     "body": {
@@ -1552,14 +1581,14 @@
                 },
                 "additionalProperties": false
             },
-            "component.slots.data_surface_examples:call_to_action.3": {
-                "title": "component.slots.data_surface_examples:call_to_action.3",
+            "component.slots.surface_examples:call_to_action.3": {
+                "title": "component.slots.surface_examples:call_to_action.3",
                 "type": "object",
                 "properties": {},
                 "additionalProperties": false
             },
-            "component.nested.data_surface_examples:call_to_action.2": {
-                "title": "component.nested.data_surface_examples:call_to_action.2",
+            "component.nested.surface_examples:call_to_action.2": {
+                "title": "component.nested.surface_examples:call_to_action.2",
                 "type": "object",
                 "properties": {
                     "component": {
@@ -1567,7 +1596,7 @@
                         "type": "string",
                         "oneOf": [
                             {
-                                "const": "data_surface_examples:call_to_action",
+                                "const": "surface_examples:call_to_action",
                                 "title": "Call to action"
                             }
                         ],
@@ -1582,7 +1611,7 @@
                         "title": "Props",
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                                "$ref": "#/$defs/component.props.surface_examples:call_to_action"
                             },
                             {
                                 "type": "null"
@@ -1594,7 +1623,7 @@
                             ],
                             "by": "component",
                             "variants": {
-                                "data_surface_examples:call_to_action": "#/$defs/component.props.data_surface_examples:call_to_action"
+                                "surface_examples:call_to_action": "#/$defs/component.props.surface_examples:call_to_action"
                             }
                         }
                     },
@@ -1602,7 +1631,7 @@
                         "title": "Slots",
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.3"
+                                "$ref": "#/$defs/component.slots.surface_examples:call_to_action.3"
                             },
                             {
                                 "type": "null"
@@ -1614,7 +1643,7 @@
                             ],
                             "by": "component",
                             "variants": {
-                                "data_surface_examples:call_to_action": "#/$defs/component.slots.data_surface_examples:call_to_action.3"
+                                "surface_examples:call_to_action": "#/$defs/component.slots.surface_examples:call_to_action.3"
                             }
                         }
                     }
@@ -1628,7 +1657,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:call_to_action"
+                                    "const": "surface_examples:call_to_action"
                                 }
                             },
                             "required": [
@@ -1639,7 +1668,7 @@
                             "properties": {
                                 "props": {
                                     "title": "Props",
-                                    "$ref": "#/$defs/component.props.data_surface_examples:call_to_action"
+                                    "$ref": "#/$defs/component.props.surface_examples:call_to_action"
                                 }
                             }
                         }
@@ -1648,7 +1677,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:call_to_action"
+                                    "const": "surface_examples:call_to_action"
                                 }
                             },
                             "required": [
@@ -1659,15 +1688,15 @@
                             "properties": {
                                 "slots": {
                                     "title": "Slots",
-                                    "$ref": "#/$defs/component.slots.data_surface_examples:call_to_action.3"
+                                    "$ref": "#/$defs/component.slots.surface_examples:call_to_action.3"
                                 }
                             }
                         }
                     }
                 ]
             },
-            "component.slot.data_surface_examples:hero.actions.2": {
-                "title": "component.slot.data_surface_examples:hero.actions.2",
+            "component.slot.surface_examples:hero.actions.2": {
+                "title": "component.slot.surface_examples:hero.actions.2",
                 "type": "object",
                 "properties": {
                     "kind": {
@@ -1709,7 +1738,7 @@
                     },
                     "component": {
                         "title": "Component",
-                        "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.2",
+                        "$ref": "#/$defs/component.nested.surface_examples:call_to_action.2",
                         "x-surface": {
                             "dependsOn": [
                                 "kind"
@@ -1721,7 +1750,7 @@
                         "type": "array",
                         "maxItems": 2,
                         "items": {
-                            "$ref": "#/$defs/component.nested.data_surface_examples:call_to_action.2"
+                            "$ref": "#/$defs/component.nested.surface_examples:call_to_action.2"
                         },
                         "x-surface": {
                             "dependsOn": [
@@ -1799,14 +1828,14 @@
                     ]
                 }
             },
-            "component.slots.data_surface_examples:hero.2": {
-                "title": "component.slots.data_surface_examples:hero.2",
+            "component.slots.surface_examples:hero.2": {
+                "title": "component.slots.surface_examples:hero.2",
                 "type": "object",
                 "properties": {
                     "actions": {
                         "title": "Actions",
                         "description": "Up to two buttons under the title.",
-                        "$ref": "#/$defs/component.slot.data_surface_examples:hero.actions.2"
+                        "$ref": "#/$defs/component.slot.surface_examples:hero.actions.2"
                     }
                 },
                 "additionalProperties": false
@@ -1820,11 +1849,11 @@
                         "type": "string",
                         "oneOf": [
                             {
-                                "const": "data_surface_examples:card",
+                                "const": "surface_examples:card",
                                 "title": "Card"
                             },
                             {
-                                "const": "data_surface_examples:hero",
+                                "const": "surface_examples:hero",
                                 "title": "Hero"
                             }
                         ],
@@ -1839,10 +1868,10 @@
                         "title": "Props",
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/component.props.data_surface_examples:card"
+                                "$ref": "#/$defs/component.props.surface_examples:card"
                             },
                             {
-                                "$ref": "#/$defs/component.props.data_surface_examples:hero"
+                                "$ref": "#/$defs/component.props.surface_examples:hero"
                             },
                             {
                                 "type": "null"
@@ -1854,8 +1883,8 @@
                             ],
                             "by": "component",
                             "variants": {
-                                "data_surface_examples:card": "#/$defs/component.props.data_surface_examples:card",
-                                "data_surface_examples:hero": "#/$defs/component.props.data_surface_examples:hero"
+                                "surface_examples:card": "#/$defs/component.props.surface_examples:card",
+                                "surface_examples:hero": "#/$defs/component.props.surface_examples:hero"
                             }
                         }
                     },
@@ -1863,10 +1892,10 @@
                         "title": "Slots",
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/component.slots.data_surface_examples:card.2"
+                                "$ref": "#/$defs/component.slots.surface_examples:card.2"
                             },
                             {
-                                "$ref": "#/$defs/component.slots.data_surface_examples:hero.2"
+                                "$ref": "#/$defs/component.slots.surface_examples:hero.2"
                             },
                             {
                                 "type": "null"
@@ -1878,8 +1907,8 @@
                             ],
                             "by": "component",
                             "variants": {
-                                "data_surface_examples:card": "#/$defs/component.slots.data_surface_examples:card.2",
-                                "data_surface_examples:hero": "#/$defs/component.slots.data_surface_examples:hero.2"
+                                "surface_examples:card": "#/$defs/component.slots.surface_examples:card.2",
+                                "surface_examples:hero": "#/$defs/component.slots.surface_examples:hero.2"
                             }
                         }
                     }
@@ -1893,7 +1922,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:card"
+                                    "const": "surface_examples:card"
                                 }
                             },
                             "required": [
@@ -1904,7 +1933,7 @@
                             "properties": {
                                 "props": {
                                     "title": "Props",
-                                    "$ref": "#/$defs/component.props.data_surface_examples:card"
+                                    "$ref": "#/$defs/component.props.surface_examples:card"
                                 }
                             }
                         }
@@ -1913,7 +1942,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:hero"
+                                    "const": "surface_examples:hero"
                                 }
                             },
                             "required": [
@@ -1924,7 +1953,7 @@
                             "properties": {
                                 "props": {
                                     "title": "Props",
-                                    "$ref": "#/$defs/component.props.data_surface_examples:hero"
+                                    "$ref": "#/$defs/component.props.surface_examples:hero"
                                 }
                             }
                         }
@@ -1933,7 +1962,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:card"
+                                    "const": "surface_examples:card"
                                 }
                             },
                             "required": [
@@ -1944,7 +1973,7 @@
                             "properties": {
                                 "slots": {
                                     "title": "Slots",
-                                    "$ref": "#/$defs/component.slots.data_surface_examples:card.2"
+                                    "$ref": "#/$defs/component.slots.surface_examples:card.2"
                                 }
                             }
                         }
@@ -1953,7 +1982,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:hero"
+                                    "const": "surface_examples:hero"
                                 }
                             },
                             "required": [
@@ -1964,15 +1993,15 @@
                             "properties": {
                                 "slots": {
                                     "title": "Slots",
-                                    "$ref": "#/$defs/component.slots.data_surface_examples:hero.2"
+                                    "$ref": "#/$defs/component.slots.surface_examples:hero.2"
                                 }
                             }
                         }
                     }
                 ]
             },
-            "component.slot.data_surface_examples:section.content.1": {
-                "title": "component.slot.data_surface_examples:section.content.1",
+            "component.slot.surface_examples:section.content.1": {
+                "title": "component.slot.surface_examples:section.content.1",
                 "type": "object",
                 "properties": {
                     "kind": {
@@ -2103,20 +2132,20 @@
                     ]
                 }
             },
-            "block.data_surface_component.slots.data_surface_examples:section": {
-                "title": "block.data_surface_component.slots.data_surface_examples:section",
+            "block.surface_component.slots.surface_examples:section": {
+                "title": "block.surface_component.slots.surface_examples:section",
                 "type": "object",
                 "properties": {
                     "content": {
                         "title": "Content",
                         "description": "The components the section holds.",
-                        "$ref": "#/$defs/component.slot.data_surface_examples:section.content.1"
+                        "$ref": "#/$defs/component.slot.surface_examples:section.content.1"
                     }
                 },
                 "additionalProperties": false
             },
-            "block.data_surface_component": {
-                "title": "block.data_surface_component",
+            "block.surface_component": {
+                "title": "block.surface_component",
                 "type": "object",
                 "properties": {
                     "component": {
@@ -2127,19 +2156,19 @@
                         ],
                         "oneOf": [
                             {
-                                "const": "data_surface_examples:call_to_action",
+                                "const": "surface_examples:call_to_action",
                                 "title": "Call to action"
                             },
                             {
-                                "const": "data_surface_examples:card",
+                                "const": "surface_examples:card",
                                 "title": "Card"
                             },
                             {
-                                "const": "data_surface_examples:hero",
+                                "const": "surface_examples:hero",
                                 "title": "Hero"
                             },
                             {
-                                "const": "data_surface_examples:section",
+                                "const": "surface_examples:section",
                                 "title": "Section"
                             },
                             {
@@ -2157,16 +2186,16 @@
                         "title": "Props",
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action"
+                                "$ref": "#/$defs/block.surface_component.props.surface_examples:call_to_action"
                             },
                             {
-                                "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:card"
+                                "$ref": "#/$defs/block.surface_component.props.surface_examples:card"
                             },
                             {
-                                "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:hero"
+                                "$ref": "#/$defs/block.surface_component.props.surface_examples:hero"
                             },
                             {
-                                "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:section"
+                                "$ref": "#/$defs/block.surface_component.props.surface_examples:section"
                             },
                             {
                                 "type": "null"
@@ -2178,10 +2207,10 @@
                             ],
                             "by": "component",
                             "variants": {
-                                "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action",
-                                "data_surface_examples:card": "#/$defs/block.data_surface_component.props.data_surface_examples:card",
-                                "data_surface_examples:hero": "#/$defs/block.data_surface_component.props.data_surface_examples:hero",
-                                "data_surface_examples:section": "#/$defs/block.data_surface_component.props.data_surface_examples:section"
+                                "surface_examples:call_to_action": "#/$defs/block.surface_component.props.surface_examples:call_to_action",
+                                "surface_examples:card": "#/$defs/block.surface_component.props.surface_examples:card",
+                                "surface_examples:hero": "#/$defs/block.surface_component.props.surface_examples:hero",
+                                "surface_examples:section": "#/$defs/block.surface_component.props.surface_examples:section"
                             }
                         }
                     },
@@ -2189,16 +2218,16 @@
                         "title": "Slots",
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action"
+                                "$ref": "#/$defs/block.surface_component.slots.surface_examples:call_to_action"
                             },
                             {
-                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:card"
+                                "$ref": "#/$defs/block.surface_component.slots.surface_examples:card"
                             },
                             {
-                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero"
+                                "$ref": "#/$defs/block.surface_component.slots.surface_examples:hero"
                             },
                             {
-                                "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
+                                "$ref": "#/$defs/block.surface_component.slots.surface_examples:section"
                             },
                             {
                                 "type": "null"
@@ -2210,10 +2239,10 @@
                             ],
                             "by": "component",
                             "variants": {
-                                "data_surface_examples:call_to_action": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action",
-                                "data_surface_examples:card": "#/$defs/block.data_surface_component.slots.data_surface_examples:card",
-                                "data_surface_examples:hero": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero",
-                                "data_surface_examples:section": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
+                                "surface_examples:call_to_action": "#/$defs/block.surface_component.slots.surface_examples:call_to_action",
+                                "surface_examples:card": "#/$defs/block.surface_component.slots.surface_examples:card",
+                                "surface_examples:hero": "#/$defs/block.surface_component.slots.surface_examples:hero",
+                                "surface_examples:section": "#/$defs/block.surface_component.slots.surface_examples:section"
                             }
                         }
                     }
@@ -2224,7 +2253,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:call_to_action"
+                                    "const": "surface_examples:call_to_action"
                                 }
                             },
                             "required": [
@@ -2235,7 +2264,7 @@
                             "properties": {
                                 "props": {
                                     "title": "Props",
-                                    "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:call_to_action"
+                                    "$ref": "#/$defs/block.surface_component.props.surface_examples:call_to_action"
                                 }
                             }
                         }
@@ -2244,7 +2273,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:card"
+                                    "const": "surface_examples:card"
                                 }
                             },
                             "required": [
@@ -2255,7 +2284,7 @@
                             "properties": {
                                 "props": {
                                     "title": "Props",
-                                    "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:card"
+                                    "$ref": "#/$defs/block.surface_component.props.surface_examples:card"
                                 }
                             }
                         }
@@ -2264,7 +2293,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:hero"
+                                    "const": "surface_examples:hero"
                                 }
                             },
                             "required": [
@@ -2275,7 +2304,7 @@
                             "properties": {
                                 "props": {
                                     "title": "Props",
-                                    "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:hero"
+                                    "$ref": "#/$defs/block.surface_component.props.surface_examples:hero"
                                 }
                             }
                         }
@@ -2284,7 +2313,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:section"
+                                    "const": "surface_examples:section"
                                 }
                             },
                             "required": [
@@ -2295,7 +2324,7 @@
                             "properties": {
                                 "props": {
                                     "title": "Props",
-                                    "$ref": "#/$defs/block.data_surface_component.props.data_surface_examples:section"
+                                    "$ref": "#/$defs/block.surface_component.props.surface_examples:section"
                                 }
                             }
                         }
@@ -2304,7 +2333,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:call_to_action"
+                                    "const": "surface_examples:call_to_action"
                                 }
                             },
                             "required": [
@@ -2315,7 +2344,7 @@
                             "properties": {
                                 "slots": {
                                     "title": "Slots",
-                                    "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:call_to_action"
+                                    "$ref": "#/$defs/block.surface_component.slots.surface_examples:call_to_action"
                                 }
                             }
                         }
@@ -2324,7 +2353,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:card"
+                                    "const": "surface_examples:card"
                                 }
                             },
                             "required": [
@@ -2335,7 +2364,7 @@
                             "properties": {
                                 "slots": {
                                     "title": "Slots",
-                                    "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:card"
+                                    "$ref": "#/$defs/block.surface_component.slots.surface_examples:card"
                                 }
                             }
                         }
@@ -2344,7 +2373,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:hero"
+                                    "const": "surface_examples:hero"
                                 }
                             },
                             "required": [
@@ -2355,7 +2384,7 @@
                             "properties": {
                                 "slots": {
                                     "title": "Slots",
-                                    "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:hero"
+                                    "$ref": "#/$defs/block.surface_component.slots.surface_examples:hero"
                                 }
                             }
                         }
@@ -2364,7 +2393,7 @@
                         "if": {
                             "properties": {
                                 "component": {
-                                    "const": "data_surface_examples:section"
+                                    "const": "surface_examples:section"
                                 }
                             },
                             "required": [
@@ -2375,41 +2404,12 @@
                             "properties": {
                                 "slots": {
                                     "title": "Slots",
-                                    "$ref": "#/$defs/block.data_surface_component.slots.data_surface_examples:section"
+                                    "$ref": "#/$defs/block.surface_component.slots.surface_examples:section"
                                 }
                             }
                         }
                     }
                 ]
-            },
-            "block.placement.settings.local_actions_block": {
-                "title": "block.placement.settings.local_actions_block",
-                "type": "object",
-                "properties": {},
-                "additionalProperties": false
-            },
-            "block.placement.settings.local_tasks_block": {
-                "title": "block.placement.settings.local_tasks_block",
-                "type": "object",
-                "properties": {
-                    "primary": {
-                        "title": "Whether primary tabs are shown",
-                        "type": "boolean",
-                        "default": true
-                    },
-                    "secondary": {
-                        "title": "Whether secondary tabs are shown",
-                        "type": "boolean",
-                        "default": true
-                    }
-                },
-                "additionalProperties": false
-            },
-            "block.placement.settings.page_title_block": {
-                "title": "block.placement.settings.page_title_block",
-                "type": "object",
-                "properties": {},
-                "additionalProperties": false
             },
             "block.placement.settings.system_branding_block": {
                 "title": "block.placement.settings.system_branding_block",
@@ -2862,9 +2862,9 @@
         "label": "Spotlight",
         "id": "spotlight",
         "label_display": true,
-        "plugin": "data_surface_component",
+        "plugin": "surface_component",
         "settings": {
-            "component": "data_surface_examples:card",
+            "component": "surface_examples:card",
             "props": {
                 "heading": "Doors open at half past six",
                 "tone": "plain",

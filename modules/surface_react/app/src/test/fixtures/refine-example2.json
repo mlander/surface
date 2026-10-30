@@ -1,0 +1,1737 @@
+{
+    "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$id": "http://localhost/surface-api/registration.step2/schema",
+        "title": "Configure registration (step 2)",
+        "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+        "x-surface": {
+            "contract": 4,
+            "operation": {
+                "id": "configure",
+                "label": "Configure registration (step 2)",
+                "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                "kind": "update",
+                "creates": false,
+                "destructive": false,
+                "idempotent": true
+            },
+            "version": 1
+        },
+        "type": "object",
+        "properties": {
+            "title": {
+                "title": "Event title",
+                "type": "string",
+                "x-surface": {
+                    "widget": "text"
+                }
+            },
+            "open": {
+                "title": "Registration open",
+                "type": [
+                    "boolean",
+                    "null"
+                ],
+                "default": true,
+                "x-surface": {
+                    "widget": "checkbox"
+                }
+            },
+            "venue": {
+                "title": "Venue",
+                "type": "string",
+                "oneOf": [
+                    {
+                        "const": "harbour",
+                        "title": "Harbour Centre"
+                    },
+                    {
+                        "const": "library",
+                        "title": "Old Library"
+                    },
+                    {
+                        "const": "riverside",
+                        "title": "Riverside Hall"
+                    }
+                ],
+                "x-surface": {
+                    "widget": "select",
+                    "reference": {
+                        "entityType": "event_venue"
+                    },
+                    "checkedOnServer": [
+                        {
+                            "constraint": "SurfaceValidReference",
+                            "message": "Refers to an entity the account may reference"
+                        }
+                    ]
+                }
+            },
+            "room": {
+                "title": "Room",
+                "type": "string",
+                "oneOf": [
+                    {
+                        "const": "riverside_main",
+                        "title": "Main hall"
+                    },
+                    {
+                        "const": "riverside_east",
+                        "title": "East room"
+                    },
+                    {
+                        "const": "library_reading",
+                        "title": "Reading room"
+                    },
+                    {
+                        "const": "library_garden",
+                        "title": "Garden room"
+                    },
+                    {
+                        "const": "harbour_auditorium",
+                        "title": "Auditorium"
+                    },
+                    {
+                        "const": "harbour_deck",
+                        "title": "Upper deck"
+                    }
+                ],
+                "x-surface": {
+                    "widget": "select",
+                    "dependsOn": [
+                        "venue"
+                    ],
+                    "enumerated": true
+                }
+            },
+            "capacity": {
+                "title": "Capacity",
+                "type": [
+                    "integer",
+                    "null"
+                ],
+                "minimum": 1,
+                "default": 50,
+                "x-surface": {
+                    "widget": "number",
+                    "dependsOn": [
+                        "room"
+                    ],
+                    "enumerated": true
+                }
+            }
+        },
+        "additionalProperties": false,
+        "required": [
+            "title",
+            "venue",
+            "room"
+        ],
+        "allOf": [
+            {
+                "if": {
+                    "properties": {
+                        "venue": {
+                            "const": "harbour"
+                        }
+                    },
+                    "required": [
+                        "venue"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "room": {
+                            "oneOf": [
+                                {
+                                    "const": "harbour_auditorium",
+                                    "title": "Auditorium"
+                                },
+                                {
+                                    "const": "harbour_deck",
+                                    "title": "Upper deck"
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "venue": {
+                            "const": "library"
+                        }
+                    },
+                    "required": [
+                        "venue"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "room": {
+                            "oneOf": [
+                                {
+                                    "const": "library_reading",
+                                    "title": "Reading room"
+                                },
+                                {
+                                    "const": "library_garden",
+                                    "title": "Garden room"
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "venue": {
+                            "const": "riverside"
+                        }
+                    },
+                    "required": [
+                        "venue"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "room": {
+                            "oneOf": [
+                                {
+                                    "const": "riverside_main",
+                                    "title": "Main hall"
+                                },
+                                {
+                                    "const": "riverside_east",
+                                    "title": "East room"
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "room": {
+                            "const": "riverside_main"
+                        }
+                    },
+                    "required": [
+                        "room"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "capacity": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "description": "Up to 400 for the Main hall.",
+                            "maximum": 400
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "room": {
+                            "const": "riverside_east"
+                        }
+                    },
+                    "required": [
+                        "room"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "capacity": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "description": "Up to 120 for the East room.",
+                            "maximum": 120
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "room": {
+                            "const": "library_reading"
+                        }
+                    },
+                    "required": [
+                        "room"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "capacity": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "description": "Up to 60 for the Reading room.",
+                            "maximum": 60
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "room": {
+                            "const": "library_garden"
+                        }
+                    },
+                    "required": [
+                        "room"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "capacity": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "description": "Up to 30 for the Garden room.",
+                            "maximum": 30
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "room": {
+                            "const": "harbour_auditorium"
+                        }
+                    },
+                    "required": [
+                        "room"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "capacity": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "description": "Up to 800 for the Auditorium.",
+                            "maximum": 800
+                        }
+                    }
+                }
+            },
+            {
+                "if": {
+                    "properties": {
+                        "room": {
+                            "const": "harbour_deck"
+                        }
+                    },
+                    "required": [
+                        "room"
+                    ]
+                },
+                "then": {
+                    "properties": {
+                        "capacity": {
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "description": "Up to 150 for the Upper deck.",
+                            "maximum": 150
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "contract": {
+        "resource": "registration.step2",
+        "operation": "configure",
+        "label": "Configure registration (step 2)",
+        "schema": {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$id": "http://localhost/surface-api/registration.step2",
+            "title": "Configure registration (step 2)",
+            "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+            "x-surface": {
+                "contract": 4,
+                "operation": {
+                    "id": "configure",
+                    "label": "Configure registration (step 2)",
+                    "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                    "kind": "update",
+                    "creates": false,
+                    "destructive": false,
+                    "idempotent": true
+                },
+                "version": 1
+            },
+            "type": "object",
+            "properties": {
+                "title": {
+                    "title": "Event title",
+                    "type": "string",
+                    "x-surface": {
+                        "widget": "text"
+                    }
+                },
+                "open": {
+                    "title": "Registration open",
+                    "type": [
+                        "boolean",
+                        "null"
+                    ],
+                    "default": true,
+                    "x-surface": {
+                        "widget": "checkbox"
+                    }
+                },
+                "venue": {
+                    "title": "Venue",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "harbour",
+                            "title": "Harbour Centre"
+                        },
+                        {
+                            "const": "library",
+                            "title": "Old Library"
+                        },
+                        {
+                            "const": "riverside",
+                            "title": "Riverside Hall"
+                        }
+                    ],
+                    "x-surface": {
+                        "widget": "select",
+                        "reference": {
+                            "entityType": "event_venue"
+                        },
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        },
+                        "checkedOnServer": [
+                            {
+                                "constraint": "SurfaceValidReference",
+                                "message": "Refers to an entity the account may reference"
+                            }
+                        ]
+                    }
+                },
+                "room": {
+                    "title": "Room",
+                    "type": "string",
+                    "oneOf": [
+                        {
+                            "const": "riverside_main",
+                            "title": "Main hall"
+                        },
+                        {
+                            "const": "riverside_east",
+                            "title": "East room"
+                        }
+                    ],
+                    "x-surface": {
+                        "widget": "select",
+                        "dependsOn": [
+                            "venue"
+                        ],
+                        "refined": true,
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
+                    }
+                },
+                "capacity": {
+                    "title": "Capacity",
+                    "description": "Up to 400 for the Main hall.",
+                    "type": [
+                        "integer",
+                        "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 400,
+                    "default": 50,
+                    "x-surface": {
+                        "widget": "number",
+                        "dependsOn": [
+                            "room"
+                        ],
+                        "refined": true
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "title",
+                "venue",
+                "room"
+            ]
+        },
+        "values": {
+            "title": "Spring meetup",
+            "open": true,
+            "venue": "riverside",
+            "room": "riverside_main",
+            "capacity": 50
+        },
+        "stale": [],
+        "notes": []
+    },
+    "steps": [
+        {
+            "changes": [
+                {
+                    "path": "venue",
+                    "value": "library"
+                }
+            ],
+            "sent": {
+                "stale": []
+            },
+            "answer": {
+                "resource": "registration.step2",
+                "operation": "configure",
+                "label": "Configure registration (step 2)",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/registration.step2",
+                    "title": "Configure registration (step 2)",
+                    "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                    "x-surface": {
+                        "contract": 4,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure registration (step 2)",
+                            "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Event title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text"
+                            }
+                        },
+                        "open": {
+                            "title": "Registration open",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": true,
+                            "x-surface": {
+                                "widget": "checkbox"
+                            }
+                        },
+                        "venue": {
+                            "title": "Venue",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "harbour",
+                                    "title": "Harbour Centre"
+                                },
+                                {
+                                    "const": "library",
+                                    "title": "Old Library"
+                                },
+                                {
+                                    "const": "riverside",
+                                    "title": "Riverside Hall"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "reference": {
+                                    "entityType": "event_venue"
+                                },
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                },
+                                "checkedOnServer": [
+                                    {
+                                        "constraint": "SurfaceValidReference",
+                                        "message": "Refers to an entity the account may reference"
+                                    }
+                                ]
+                            }
+                        },
+                        "room": {
+                            "title": "Room",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "library_reading",
+                                    "title": "Reading room"
+                                },
+                                {
+                                    "const": "library_garden",
+                                    "title": "Garden room"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "dependsOn": [
+                                    "venue"
+                                ],
+                                "refined": true,
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- Select -"
+                                },
+                                "stale": true
+                            }
+                        },
+                        "capacity": {
+                            "title": "Capacity",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "default": 50,
+                            "x-surface": {
+                                "widget": "number",
+                                "dependsOn": [
+                                    "room"
+                                ],
+                                "enumerated": true
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "title",
+                        "venue",
+                        "room"
+                    ],
+                    "allOf": [
+                        {
+                            "if": {
+                                "properties": {
+                                    "room": {
+                                        "const": "library_reading"
+                                    }
+                                },
+                                "required": [
+                                    "room"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "capacity": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
+                                        "description": "Up to 60 for the Reading room.",
+                                        "maximum": 60
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "if": {
+                                "properties": {
+                                    "room": {
+                                        "const": "library_garden"
+                                    }
+                                },
+                                "required": [
+                                    "room"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "capacity": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
+                                        "description": "Up to 30 for the Garden room.",
+                                        "maximum": 30
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                "values": {
+                    "title": "Spring meetup",
+                    "open": true,
+                    "venue": "library",
+                    "room": null,
+                    "capacity": 50
+                },
+                "stale": [
+                    "/room"
+                ],
+                "notes": [
+                    {
+                        "path": "/room",
+                        "code": "stale",
+                        "message": "The value stored here is no longer available. It is kept until another is chosen: leave this key out, or send it empty with its path in X-Surface-Stale."
+                    }
+                ],
+                "discarded": [
+                    "/room",
+                    "/capacity"
+                ]
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "room",
+                    "value": "library_garden"
+                }
+            ],
+            "sent": {
+                "stale": []
+            },
+            "answer": {
+                "resource": "registration.step2",
+                "operation": "configure",
+                "label": "Configure registration (step 2)",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/registration.step2",
+                    "title": "Configure registration (step 2)",
+                    "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                    "x-surface": {
+                        "contract": 4,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure registration (step 2)",
+                            "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Event title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text"
+                            }
+                        },
+                        "open": {
+                            "title": "Registration open",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": true,
+                            "x-surface": {
+                                "widget": "checkbox"
+                            }
+                        },
+                        "venue": {
+                            "title": "Venue",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "harbour",
+                                    "title": "Harbour Centre"
+                                },
+                                {
+                                    "const": "library",
+                                    "title": "Old Library"
+                                },
+                                {
+                                    "const": "riverside",
+                                    "title": "Riverside Hall"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "reference": {
+                                    "entityType": "event_venue"
+                                },
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                },
+                                "checkedOnServer": [
+                                    {
+                                        "constraint": "SurfaceValidReference",
+                                        "message": "Refers to an entity the account may reference"
+                                    }
+                                ]
+                            }
+                        },
+                        "room": {
+                            "title": "Room",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "library_reading",
+                                    "title": "Reading room"
+                                },
+                                {
+                                    "const": "library_garden",
+                                    "title": "Garden room"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "dependsOn": [
+                                    "venue"
+                                ],
+                                "refined": true,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "capacity": {
+                            "title": "Capacity",
+                            "description": "Up to 30 for the Garden room.",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 30,
+                            "default": 50,
+                            "x-surface": {
+                                "widget": "number",
+                                "dependsOn": [
+                                    "room"
+                                ],
+                                "refined": true
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "title",
+                        "venue",
+                        "room"
+                    ]
+                },
+                "values": {
+                    "title": "Spring meetup",
+                    "open": true,
+                    "venue": "library",
+                    "room": "library_garden",
+                    "capacity": 50
+                },
+                "stale": [],
+                "notes": [],
+                "discarded": []
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "venue",
+                    "value": "harbour"
+                }
+            ],
+            "sent": {
+                "stale": []
+            },
+            "answer": {
+                "resource": "registration.step2",
+                "operation": "configure",
+                "label": "Configure registration (step 2)",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/registration.step2",
+                    "title": "Configure registration (step 2)",
+                    "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                    "x-surface": {
+                        "contract": 4,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure registration (step 2)",
+                            "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Event title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text"
+                            }
+                        },
+                        "open": {
+                            "title": "Registration open",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": true,
+                            "x-surface": {
+                                "widget": "checkbox"
+                            }
+                        },
+                        "venue": {
+                            "title": "Venue",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "harbour",
+                                    "title": "Harbour Centre"
+                                },
+                                {
+                                    "const": "library",
+                                    "title": "Old Library"
+                                },
+                                {
+                                    "const": "riverside",
+                                    "title": "Riverside Hall"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "reference": {
+                                    "entityType": "event_venue"
+                                },
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                },
+                                "checkedOnServer": [
+                                    {
+                                        "constraint": "SurfaceValidReference",
+                                        "message": "Refers to an entity the account may reference"
+                                    }
+                                ]
+                            }
+                        },
+                        "room": {
+                            "title": "Room",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "harbour_auditorium",
+                                    "title": "Auditorium"
+                                },
+                                {
+                                    "const": "harbour_deck",
+                                    "title": "Upper deck"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "dependsOn": [
+                                    "venue"
+                                ],
+                                "refined": true,
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- Select -"
+                                },
+                                "stale": true
+                            }
+                        },
+                        "capacity": {
+                            "title": "Capacity",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "default": 50,
+                            "x-surface": {
+                                "widget": "number",
+                                "dependsOn": [
+                                    "room"
+                                ],
+                                "enumerated": true
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "title",
+                        "venue",
+                        "room"
+                    ],
+                    "allOf": [
+                        {
+                            "if": {
+                                "properties": {
+                                    "room": {
+                                        "const": "harbour_auditorium"
+                                    }
+                                },
+                                "required": [
+                                    "room"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "capacity": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
+                                        "description": "Up to 800 for the Auditorium.",
+                                        "maximum": 800
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "if": {
+                                "properties": {
+                                    "room": {
+                                        "const": "harbour_deck"
+                                    }
+                                },
+                                "required": [
+                                    "room"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "capacity": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
+                                        "description": "Up to 150 for the Upper deck.",
+                                        "maximum": 150
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                "values": {
+                    "title": "Spring meetup",
+                    "open": true,
+                    "venue": "harbour",
+                    "room": null,
+                    "capacity": 50
+                },
+                "stale": [
+                    "/room"
+                ],
+                "notes": [
+                    {
+                        "path": "/room",
+                        "code": "stale",
+                        "message": "The value stored here is no longer available. It is kept until another is chosen: leave this key out, or send it empty with its path in X-Surface-Stale."
+                    }
+                ],
+                "discarded": [
+                    "/room",
+                    "/capacity"
+                ]
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "venue",
+                    "value": "riverside"
+                }
+            ],
+            "sent": {
+                "stale": [
+                    "/room"
+                ]
+            },
+            "answer": {
+                "resource": "registration.step2",
+                "operation": "configure",
+                "label": "Configure registration (step 2)",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/registration.step2",
+                    "title": "Configure registration (step 2)",
+                    "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                    "x-surface": {
+                        "contract": 4,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure registration (step 2)",
+                            "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Event title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text"
+                            }
+                        },
+                        "open": {
+                            "title": "Registration open",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": true,
+                            "x-surface": {
+                                "widget": "checkbox"
+                            }
+                        },
+                        "venue": {
+                            "title": "Venue",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "harbour",
+                                    "title": "Harbour Centre"
+                                },
+                                {
+                                    "const": "library",
+                                    "title": "Old Library"
+                                },
+                                {
+                                    "const": "riverside",
+                                    "title": "Riverside Hall"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "reference": {
+                                    "entityType": "event_venue"
+                                },
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                },
+                                "checkedOnServer": [
+                                    {
+                                        "constraint": "SurfaceValidReference",
+                                        "message": "Refers to an entity the account may reference"
+                                    }
+                                ]
+                            }
+                        },
+                        "room": {
+                            "title": "Room",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "riverside_main",
+                                    "title": "Main hall"
+                                },
+                                {
+                                    "const": "riverside_east",
+                                    "title": "East room"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "dependsOn": [
+                                    "venue"
+                                ],
+                                "refined": true,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "capacity": {
+                            "title": "Capacity",
+                            "description": "Up to 400 for the Main hall.",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 400,
+                            "default": 50,
+                            "x-surface": {
+                                "widget": "number",
+                                "dependsOn": [
+                                    "room"
+                                ],
+                                "refined": true
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "title",
+                        "venue",
+                        "room"
+                    ]
+                },
+                "values": {
+                    "title": "Spring meetup",
+                    "open": true,
+                    "venue": "riverside",
+                    "room": "riverside_main",
+                    "capacity": 50
+                },
+                "stale": [],
+                "notes": [],
+                "discarded": []
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "capacity",
+                    "value": 300
+                },
+                {
+                    "path": "room",
+                    "value": "riverside_east"
+                }
+            ],
+            "sent": {
+                "stale": []
+            },
+            "answer": {
+                "resource": "registration.step2",
+                "operation": "configure",
+                "label": "Configure registration (step 2)",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/registration.step2",
+                    "title": "Configure registration (step 2)",
+                    "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                    "x-surface": {
+                        "contract": 4,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure registration (step 2)",
+                            "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Event title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text"
+                            }
+                        },
+                        "open": {
+                            "title": "Registration open",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": true,
+                            "x-surface": {
+                                "widget": "checkbox"
+                            }
+                        },
+                        "venue": {
+                            "title": "Venue",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "harbour",
+                                    "title": "Harbour Centre"
+                                },
+                                {
+                                    "const": "library",
+                                    "title": "Old Library"
+                                },
+                                {
+                                    "const": "riverside",
+                                    "title": "Riverside Hall"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "reference": {
+                                    "entityType": "event_venue"
+                                },
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                },
+                                "checkedOnServer": [
+                                    {
+                                        "constraint": "SurfaceValidReference",
+                                        "message": "Refers to an entity the account may reference"
+                                    }
+                                ]
+                            }
+                        },
+                        "room": {
+                            "title": "Room",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "riverside_main",
+                                    "title": "Main hall"
+                                },
+                                {
+                                    "const": "riverside_east",
+                                    "title": "East room"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "dependsOn": [
+                                    "venue"
+                                ],
+                                "refined": true,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "capacity": {
+                            "title": "Capacity",
+                            "description": "Up to 120 for the East room.",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 120,
+                            "default": 50,
+                            "x-surface": {
+                                "widget": "number",
+                                "dependsOn": [
+                                    "room"
+                                ],
+                                "refined": true
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "title",
+                        "venue",
+                        "room"
+                    ]
+                },
+                "values": {
+                    "title": "Spring meetup",
+                    "open": true,
+                    "venue": "riverside",
+                    "room": "riverside_east",
+                    "capacity": 300
+                },
+                "stale": [],
+                "notes": [],
+                "discarded": []
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "capacity",
+                    "value": 70
+                },
+                {
+                    "path": "title",
+                    "value": "Autumn meetup"
+                },
+                {
+                    "path": "venue",
+                    "value": "library"
+                }
+            ],
+            "sent": {
+                "stale": []
+            },
+            "answer": {
+                "resource": "registration.step2",
+                "operation": "configure",
+                "label": "Configure registration (step 2)",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/registration.step2",
+                    "title": "Configure registration (step 2)",
+                    "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                    "x-surface": {
+                        "contract": 4,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure registration (step 2)",
+                            "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Event title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text"
+                            }
+                        },
+                        "open": {
+                            "title": "Registration open",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": true,
+                            "x-surface": {
+                                "widget": "checkbox"
+                            }
+                        },
+                        "venue": {
+                            "title": "Venue",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "harbour",
+                                    "title": "Harbour Centre"
+                                },
+                                {
+                                    "const": "library",
+                                    "title": "Old Library"
+                                },
+                                {
+                                    "const": "riverside",
+                                    "title": "Riverside Hall"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "reference": {
+                                    "entityType": "event_venue"
+                                },
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                },
+                                "checkedOnServer": [
+                                    {
+                                        "constraint": "SurfaceValidReference",
+                                        "message": "Refers to an entity the account may reference"
+                                    }
+                                ]
+                            }
+                        },
+                        "room": {
+                            "title": "Room",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "library_reading",
+                                    "title": "Reading room"
+                                },
+                                {
+                                    "const": "library_garden",
+                                    "title": "Garden room"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "dependsOn": [
+                                    "venue"
+                                ],
+                                "refined": true,
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- Select -"
+                                },
+                                "stale": true
+                            }
+                        },
+                        "capacity": {
+                            "title": "Capacity",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "default": 50,
+                            "x-surface": {
+                                "widget": "number",
+                                "dependsOn": [
+                                    "room"
+                                ],
+                                "enumerated": true
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "title",
+                        "venue",
+                        "room"
+                    ],
+                    "allOf": [
+                        {
+                            "if": {
+                                "properties": {
+                                    "room": {
+                                        "const": "library_reading"
+                                    }
+                                },
+                                "required": [
+                                    "room"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "capacity": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
+                                        "description": "Up to 60 for the Reading room.",
+                                        "maximum": 60
+                                    }
+                                }
+                            }
+                        },
+                        {
+                            "if": {
+                                "properties": {
+                                    "room": {
+                                        "const": "library_garden"
+                                    }
+                                },
+                                "required": [
+                                    "room"
+                                ]
+                            },
+                            "then": {
+                                "properties": {
+                                    "capacity": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ],
+                                        "description": "Up to 30 for the Garden room.",
+                                        "maximum": 30
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                },
+                "values": {
+                    "title": "Autumn meetup",
+                    "open": true,
+                    "venue": "library",
+                    "room": null,
+                    "capacity": 50
+                },
+                "stale": [
+                    "/room"
+                ],
+                "notes": [
+                    {
+                        "path": "/room",
+                        "code": "stale",
+                        "message": "The value stored here is no longer available. It is kept until another is chosen: leave this key out, or send it empty with its path in X-Surface-Stale."
+                    }
+                ],
+                "discarded": [
+                    "/room",
+                    "/capacity"
+                ]
+            }
+        },
+        {
+            "changes": [
+                {
+                    "path": "room",
+                    "value": "library_reading"
+                }
+            ],
+            "sent": {
+                "stale": []
+            },
+            "answer": {
+                "resource": "registration.step2",
+                "operation": "configure",
+                "label": "Configure registration (step 2)",
+                "schema": {
+                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$id": "http://localhost/surface-api/registration.step2",
+                    "title": "Configure registration (step 2)",
+                    "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                    "x-surface": {
+                        "contract": 4,
+                        "operation": {
+                            "id": "configure",
+                            "label": "Configure registration (step 2)",
+                            "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
+                            "kind": "update",
+                            "creates": false,
+                            "destructive": false,
+                            "idempotent": true
+                        },
+                        "version": 1
+                    },
+                    "type": "object",
+                    "properties": {
+                        "title": {
+                            "title": "Event title",
+                            "type": "string",
+                            "x-surface": {
+                                "widget": "text"
+                            }
+                        },
+                        "open": {
+                            "title": "Registration open",
+                            "type": [
+                                "boolean",
+                                "null"
+                            ],
+                            "default": true,
+                            "x-surface": {
+                                "widget": "checkbox"
+                            }
+                        },
+                        "venue": {
+                            "title": "Venue",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "harbour",
+                                    "title": "Harbour Centre"
+                                },
+                                {
+                                    "const": "library",
+                                    "title": "Old Library"
+                                },
+                                {
+                                    "const": "riverside",
+                                    "title": "Riverside Hall"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "reference": {
+                                    "entityType": "event_venue"
+                                },
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                },
+                                "checkedOnServer": [
+                                    {
+                                        "constraint": "SurfaceValidReference",
+                                        "message": "Refers to an entity the account may reference"
+                                    }
+                                ]
+                            }
+                        },
+                        "room": {
+                            "title": "Room",
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "library_reading",
+                                    "title": "Reading room"
+                                },
+                                {
+                                    "const": "library_garden",
+                                    "title": "Garden room"
+                                }
+                            ],
+                            "x-surface": {
+                                "widget": "select",
+                                "dependsOn": [
+                                    "venue"
+                                ],
+                                "refined": true,
+                                "emptyOption": {
+                                    "show": false,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "capacity": {
+                            "title": "Capacity",
+                            "description": "Up to 60 for the Reading room.",
+                            "type": [
+                                "integer",
+                                "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 60,
+                            "default": 50,
+                            "x-surface": {
+                                "widget": "number",
+                                "dependsOn": [
+                                    "room"
+                                ],
+                                "refined": true
+                            }
+                        }
+                    },
+                    "additionalProperties": false,
+                    "required": [
+                        "title",
+                        "venue",
+                        "room"
+                    ]
+                },
+                "values": {
+                    "title": "Autumn meetup",
+                    "open": true,
+                    "venue": "library",
+                    "room": "library_reading",
+                    "capacity": 50
+                },
+                "stale": [],
+                "notes": [],
+                "discarded": []
+            }
+        }
+    ]
+}

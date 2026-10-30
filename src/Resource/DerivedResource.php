@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * One resource or structure a deriver makes, from facts known at run time.
@@ -26,29 +26,29 @@ namespace Drupal\data_surface\Resource;
  *
  * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
  *
- * @see \Drupal\data_surface\Resource\ResourceDeriverInterface
+ * @see \Drupal\surface\Resource\ResourceDeriverInterface
  */
 final class DerivedResource {
 
   /**
    * Constructs a DerivedResource.
    *
-   * @param \Drupal\data_surface\Resource\ResourceCallable $inputs
+   * @param \Drupal\surface\Resource\ResourceCallable $inputs
    *   What fills the input blueprint: called with the BlueprintInterface first.
    * @param string[] $identity
    *   The identity keys, as on #[Resource(identity:)].
-   * @param \Drupal\data_surface\Resource\DerivedOperation[] $operations
+   * @param \Drupal\surface\Resource\DerivedOperation[] $operations
    *   The operations.
    * @param class-string[] $refiners
    *   Classes whose static #[RefinesInput] methods refine it,
    *   static or runtime as each declares.
-   * @param class-string<\Drupal\data_surface\Resource\ResourceStorageInterface>|null $storage
+   * @param class-string<\Drupal\surface\Resource\ResourceStorageInterface>|null $storage
    *   Where accepted values are written, or NULL when a parent stores
    *   them. Built by the class resolver: a service, a class implementing
    *   ContainerInjectionInterface, or one with no constructor arguments.
-   * @param class-string<\Drupal\data_surface\Resource\OperationAccessInterface>|null $access
+   * @param class-string<\Drupal\surface\Resource\OperationAccessInterface>|null $access
    *   The run-time part of access, built the same way, or NULL.
-   * @param \Drupal\data_surface\Resource\ResourceCallable|null $outputs
+   * @param \Drupal\surface\Resource\ResourceCallable|null $outputs
    *   What fills the output blueprint, or NULL for none.
    * @param string|\Stringable|null $label
    *   What it is, for people.

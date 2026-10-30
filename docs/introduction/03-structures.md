@@ -19,7 +19,7 @@ machine name, is saved as `block.block.<id>`, and can be added, edited
 and removed. The plugin's settings are saved inside the placement,
 under its `settings`.
 
-So the placement is the resource. The `data_surface_block` submodule
+So the placement is the resource. The `surface_examples_block` submodule
 makes core's block config entity the resource `block.placement`, and
 the teaser's settings are a structure that `block.placement` holds
 under `settings`. Any other place that uses a block holds its settings
@@ -52,18 +52,18 @@ final class TeaserBlockStructure implements StructureInterface {
 `block.` and the plugin id keep it beside the plugin it belongs to.
 
 The block plugin names the structure and extends the module's
-`DataSurfaceBlockBase` instead of `BlockBase`:
+`TypedBlockBase` instead of `BlockBase`:
 
 ```php
 #[Block(id: 'my_teaser', admin_label: new TranslatableMarkup('Teaser'))]
 #[UsesStructure(TeaserBlockStructure::class)]
-final class TeaserBlock extends DataSurfaceBlockBase {
+final class TeaserBlock extends TypedBlockBase {
   // build() is unchanged.
 }
 ```
 
 The block loses its `defaultConfiguration()`, `blockForm()`,
-`blockValidate()` and `blockSubmit()`: `DataSurfaceBlockBase` supplies
+`blockValidate()` and `blockSubmit()`: `TypedBlockBase` supplies
 them from the structure. Core's block form asks the plugin for its
 settings form with `buildConfigurationForm()`, which calls
 `blockForm()`, so wherever core asks, the form is made from the

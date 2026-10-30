@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Cache\RefinableCacheableDependencyTrait;
@@ -36,7 +36,7 @@ use Drupal\Core\Cache\RefinableCacheableDependencyTrait;
  * are declared, drawn and emitted in, and the order the deciding key
  * offers the variants.
  *
- * @see \Drupal\data_surface\Resource\SiteListInterface
+ * @see \Drupal\surface\Resource\SiteListInterface
  * @see docs/resources.md#keys-that-come-from-the-site
  * @see docs/resources.md#variants-from-the-site
  */
@@ -97,7 +97,7 @@ final class SiteList implements RefinableCacheableDependencyInterface {
    *   changed.
    * @param array|null $schema
    *   For a variant: the JSON Schema of its keys, an object.
-   * @param class-string<\Drupal\data_surface\Resource\DefinesInputsInterface>|null $structure
+   * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface>|null $structure
    *   For a variant: the structure's class, discovered as any is, built as
    *   declared.
    *

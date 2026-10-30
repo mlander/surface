@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Url;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\ResourceBuild\NamesNothingException;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
-use Drupal\data_surface\ResourceBuild\SiteCatalog;
-use Drupal\data_surface_react\Controller\ResourceReactPage;
-use Drupal\data_surface_route_test\Storage\CardStorage;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\NamesNothingException;
+use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface\ResourceBuild\SiteCatalog;
+use Drupal\surface_react\Controller\ResourceReactPage;
+use Drupal\surface_route_test\Storage\CardStorage;
 use Drupal\Tests\HttpKernelUiHelperTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -33,12 +33,12 @@ use Symfony\Component\Routing\Route;
  * it is titled by the operation's label. The catalog lists it under the
  * React door, beside the operation's own page, and not as a form.
  *
- * @see \Drupal\data_surface_react\Controller\ResourceReactPage::served()
+ * @see \Drupal\surface_react\Controller\ResourceReactPage::served()
  * @see docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ReactRoutePageTest extends DataSurfaceKernelTestBase {
+class ReactRoutePageTest extends SurfaceKernelTestBase {
 
   use HttpKernelUiHelperTrait;
   use OperationRouteTrait;
@@ -50,9 +50,9 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_react',
-    'data_surface_route_test',
+    'surface',
+    'surface_react',
+    'surface_route_test',
   ];
 
   /**
@@ -61,14 +61,14 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface']);
+    $this->installConfig(['surface']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Gets the page's controller.
    *
-   * @return \Drupal\data_surface_react\Controller\ResourceReactPage
+   * @return \Drupal\surface_react\Controller\ResourceReactPage
    *   The controller.
    */
   protected function controller(): ResourceReactPage {
@@ -95,10 +95,10 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
    *   The page's render array.
    *
    * @return array
-   *   Its drupalSettings.dataSurfaceReact.
+   *   Its drupalSettings.surfaceReact.
    */
   protected static function settings(array $page): array {
-    return $page['#attached']['drupalSettings']['dataSurfaceReact'];
+    return $page['#attached']['drupalSettings']['surfaceReact'];
   }
 
   /**
@@ -110,7 +110,7 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
    *   Its parameters, as the page's query string carries them.
    *
    * @return array
-   *   Its drupalSettings.dataSurfaceReact.
+   *   Its drupalSettings.surfaceReact.
    */
   protected function ownPage(string $operation, array $parameters = []): array {
     $request = Request::create('/surface-react/route_test.card/' . $operation, 'GET', $parameters);
@@ -165,17 +165,17 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
    */
   public function testEachDefaultIsNamedByItsKeysPath(): void {
     $page = [
-      '_controller' => '\Drupal\data_surface_react\Controller\ResourceReactPage::served',
+      '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
       '_title' => 'A card',
       OperationRoute::RESOURCE => 'route_test.card',
     ];
-    $this->serveBuilt('data_surface_route_test.react_greeting', new Route('/surface-test/card/react-greeting', [
+    $this->serveBuilt('surface_route_test.react_greeting', new Route('/surface-test/card/react-greeting', [
       OperationRoute::OPERATION => 'create',
       OperationRoute::DEFAULTS => ['greeting' => '{"value": "Hi"}'],
     ] + $page));
     $this->assertSame(['defaults' => ['greeting.format' => 'plain', 'greeting.value' => 'Hi']], static::settings($this->page())['seeds']);
 
-    $this->serveBuilt('data_surface_route_test.react_send_cream', new Route('/surface-test/card/react-send-cream', [
+    $this->serveBuilt('surface_route_test.react_send_cream', new Route('/surface-test/card/react-send-cream', [
       OperationRoute::OPERATION => 'send',
       OperationRoute::DEFAULTS => ['title' => 'Dear friends', 'envelope.color' => 'cream'],
     ] + $page));
@@ -192,7 +192,7 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
       $this->fail('Forty copies of a card were served.');
     }
     catch (NotFoundHttpException $e) {
-      $this->assertSame('The data_surface_route_test.react_add route reads "{copies}" from its path, and the value names nothing here: The "create" operation sets "copies" on route_test.card to "40", which the key does not accept: This value should be between 1 and 10.', $e->getMessage());
+      $this->assertSame('The surface_route_test.react_add route reads "{copies}" from its path, and the value names nothing here: The "create" operation sets "copies" on route_test.card to "40", which the key does not accept: This value should be between 1 and 10.', $e->getMessage());
       $this->assertInstanceOf(NamesNothingException::class, $e->getPrevious());
     }
   }
@@ -216,7 +216,7 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
     $this->assertSession()->elementExists('css', '#' . ResourceReactPage::MOUNT);
     $json = $this->getSession()->getPage()->find('css', 'script[data-drupal-selector="drupal-settings-json"]');
     $this->assertNotNull($json);
-    $settings = json_decode($json->getText(), TRUE)['dataSurfaceReact'];
+    $settings = json_decode($json->getText(), TRUE)['surfaceReact'];
     $this->assertSame(['defaults' => ['title' => 'Dear you', 'copies' => 4]], $settings['seeds']);
     $this->assertSame(['occasion' => 'wedding'], $settings['prefill']);
 
@@ -237,9 +237,9 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
    * included.
    */
   public function testThePageIsAnsweredAsTheFormsRouteIs(): void {
-    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_route_test.react_add');
+    $route = $this->container->get('router.route_provider')->getRouteByName('surface_route_test.react_add');
     $this->assertSame('TRUE', $route->getRequirement(OperationRoute::ACCESS));
-    $check = $this->container->get('data_surface.operation_access');
+    $check = $this->container->get('surface.operation_access');
     $accounts = [
       'admin' => $this->container->get('current_user'),
       'stranger' => $this->createUser([]),
@@ -267,8 +267,8 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
     ], $answers['react']['40']);
     $this->assertSame('allowed', $answers['react']['4']['admin'][0][0]);
     // No link to a page not found is drawn.
-    $this->assertTrue(Url::fromRoute('data_surface_route_test.react_add', ['copies' => 4])->access($accounts['admin']));
-    $this->assertFalse(Url::fromRoute('data_surface_route_test.react_add', ['copies' => 40])->access($accounts['admin']));
+    $this->assertTrue(Url::fromRoute('surface_route_test.react_add', ['copies' => 4])->access($accounts['admin']));
+    $this->assertFalse(Url::fromRoute('surface_route_test.react_add', ['copies' => 40])->access($accounts['admin']));
   }
 
   /**
@@ -280,11 +280,11 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
   public function testTheParametersAreTheRoutes(): void {
     \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored']);
     $page = [
-      '_controller' => '\Drupal\data_surface_react\Controller\ResourceReactPage::served',
+      '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
       '_title' => 'A card',
       OperationRoute::RESOURCE => 'route_test.card',
     ];
-    $this->serveBuilt('data_surface_route_test.react_edit', new Route('/surface-test/card/{card}/react', [
+    $this->serveBuilt('surface_route_test.react_edit', new Route('/surface-test/card/{card}/react', [
       OperationRoute::OPERATION => 'update',
       OperationRoute::QUERY => ['title' => 'subject'],
     ] + $page, ['card' => '[a-z]+']), ['card' => 'six'], ['subject' => 'Renamed']);
@@ -296,7 +296,7 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['defaults' => []], $settings['seeds']);
     $this->assertSame(['title' => 'Renamed'], $settings['prefill']);
 
-    $this->serveBuilt('data_surface_route_test.react_send', new Route('/surface-test/card/react-send', [
+    $this->serveBuilt('surface_route_test.react_send', new Route('/surface-test/card/react-send', [
       OperationRoute::OPERATION => 'send',
       'to' => 'friends',
     ] + $page));
@@ -315,27 +315,27 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
 
     // A resource id the path fills that no resource has names nothing.
     $kind = new Route('/surface-test/{kind}/react', [
-      '_controller' => '\Drupal\data_surface_react\Controller\ResourceReactPage::served',
-      '_title_callback' => '\Drupal\data_surface_react\Controller\ResourceReactPage::servedTitle',
+      '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
+      '_title_callback' => '\Drupal\surface_react\Controller\ResourceReactPage::servedTitle',
       OperationRoute::RESOURCE => 'route_test.{kind}',
       OperationRoute::OPERATION => 'create',
     ], ['kind' => '[a-z]+']);
     foreach (['card' => 'Add a card', 'nothing' => 'Page not found'] as $value => $title) {
-      $this->serveBuilt('data_surface_route_test.react_kind', $kind, ['kind' => $value]);
+      $this->serveBuilt('surface_route_test.react_kind', $kind, ['kind' => $value]);
       $this->assertSame($title, (string) $this->controller()->servedTitle($this->container->get('current_route_match')), $value);
     }
 
     // A route written wrong is no page not found, at the React page and at
     // the operation form's route alike.
-    $this->serveBuilt('data_surface_route_test.react_wrong', new Route('/surface-test/card/react-wrong', [
-      '_controller' => '\Drupal\data_surface_react\Controller\ResourceReactPage::served',
+    $this->serveBuilt('surface_route_test.react_wrong', new Route('/surface-test/card/react-wrong', [
+      '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
       OperationRoute::RESOURCE => 'route_test.card',
       OperationRoute::OPERATION => 'nothing',
     ]));
     $match = $this->container->get('current_route_match');
     foreach ([
       'react' => fn (): mixed => $this->controller()->servedTitle($match),
-      'form' => static fn (): mixed => DataSurfaceOperationForm::title($match),
+      'form' => static fn (): mixed => SurfaceOperationForm::title($match),
     ] as $door => $asked) {
       try {
         $asked();
@@ -352,28 +352,28 @@ class ReactRoutePageTest extends DataSurfaceKernelTestBase {
    * The catalog lists the page under the React door, and not as a form.
    */
   public function testTheCatalogListsThePageUnderTheReactDoor(): void {
-    $catalog = $this->container->get('data_surface.site_catalog');
+    $catalog = $this->container->get('surface.site_catalog');
     $doors = [];
     foreach ($catalog->describe()['route_test.card']['operations'] as $operation) {
       $doors[$operation['id']] = $operation['doors'];
     }
     // Beside the operation's own page, named as the form door names a
     // route: what it fills, and the keys a link may start.
-    $this->assertSame('/surface-react/route_test.card/create, /surface-test/card/react/{copies} (data_surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]', $doors['create'][SiteCatalog::REACT]);
-    $this->assertStringNotContainsString('data_surface_route_test.react_add', $doors['create'][SiteCatalog::FORM]);
+    $this->assertSame('/surface-react/route_test.card/create, /surface-test/card/react/{copies} (surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]', $doors['create'][SiteCatalog::REACT]);
+    $this->assertStringNotContainsString('surface_route_test.react_add', $doors['create'][SiteCatalog::FORM]);
     // An operation no module serves a page for has its own alone.
     $this->assertSame('/surface-react/route_test.card/update', $doors['update'][SiteCatalog::REACT]);
     // The operation's own page is the door's link.
-    $this->assertSame('data_surface_react.page', $catalog->links('route_test.card', 'create')[SiteCatalog::REACT]->getRouteName());
+    $this->assertSame('surface_react.page', $catalog->links('route_test.card', 'create')[SiteCatalog::REACT]->getRouteName());
 
     // An operation that cannot be asked on its own has no page of its own:
     // the pages modules serve it at are its React door, and one a URL needs
     // nothing more for would be its link.
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $card = $registry->getDefinition('route_test.card');
     $create = $registry->getOperation($card->name(), 'create');
-    $served = $this->container->get('data_surface_react.catalog_doors');
-    $this->assertSame([SiteCatalog::REACT => '/surface-test/card/react/{copies} (data_surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]'], $served->doors($card, $create, FALSE, FALSE));
+    $served = $this->container->get('surface_react.catalog_doors');
+    $this->assertSame([SiteCatalog::REACT => '/surface-test/card/react/{copies} (surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]'], $served->doors($card, $create, FALSE, FALSE));
     $this->assertSame([], $served->links($card, $create, FALSE, FALSE), 'Its one page needs the copies.');
   }
 

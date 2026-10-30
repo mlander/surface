@@ -2,47 +2,47 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\Attribute\UsesStructure;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
-use Drupal\data_surface_demo\Structure\DemoBlockStructure;
-use Drupal\data_surface_demo\Structure\GridPresentationStructure;
-use Drupal\data_surface_demo\Structure\ListPresentationStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\AttachingStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\NosyChildStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\NosyParentStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\RefinesAttachedStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\SelfAttachingStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\UnofferedVariantStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WatchesAttachedStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\ClashingOperationStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\InstanceAlterRefinerStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\InstanceRefinerStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\RefinesOutputStructure;
-use Drupal\data_surface_resource_test\Resource\Broken\UndeclaredIdentityResource;
-use Drupal\data_surface_resource_test\Structure\Broken\StrictMountWatcherStructure;
-use Drupal\data_surface_resource_test\Alter\InstanceRefinerAlter;
-use Drupal\data_surface_resource_test\Alter\StrictMountWatcherAlter;
-use Drupal\data_surface_resource_test\Structure\Broken\WatchesUndeclaredStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WideningRefinerStructure;
-use Drupal\data_surface_resource_test\Structure\DynamicChildStructure;
-use Drupal\data_surface_resource_test\Structure\MountWatcherStructure;
-use Drupal\data_surface_resource_test\Resource\RecipeResource;
-use Drupal\data_surface_resource_test\Storage\RecipeStorage;
-use Drupal\data_surface_test\Alter\ForeignMountWatcherAlter;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\Attribute\UsesStructure;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
+use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples_plugins\Structure\GridPresentationStructure;
+use Drupal\surface_examples_plugins\Structure\ListPresentationStructure;
+use Drupal\surface_resource_test\Structure\Broken\AttachingStructure;
+use Drupal\surface_resource_test\Structure\Broken\NosyChildStructure;
+use Drupal\surface_resource_test\Structure\Broken\NosyParentStructure;
+use Drupal\surface_resource_test\Structure\Broken\RefinesAttachedStructure;
+use Drupal\surface_resource_test\Structure\Broken\SelfAttachingStructure;
+use Drupal\surface_resource_test\Structure\Broken\UnofferedVariantStructure;
+use Drupal\surface_resource_test\Structure\Broken\WatchesAttachedStructure;
+use Drupal\surface_resource_test\Structure\Broken\ClashingOperationStructure;
+use Drupal\surface_resource_test\Structure\Broken\InstanceAlterRefinerStructure;
+use Drupal\surface_resource_test\Structure\Broken\InstanceRefinerStructure;
+use Drupal\surface_resource_test\Structure\Broken\RefinesOutputStructure;
+use Drupal\surface_resource_test\Resource\Broken\UndeclaredIdentityResource;
+use Drupal\surface_resource_test\Structure\Broken\StrictMountWatcherStructure;
+use Drupal\surface_resource_test\Alter\InstanceRefinerAlter;
+use Drupal\surface_resource_test\Alter\StrictMountWatcherAlter;
+use Drupal\surface_resource_test\Structure\Broken\WatchesUndeclaredStructure;
+use Drupal\surface_resource_test\Structure\Broken\WideningRefinerStructure;
+use Drupal\surface_resource_test\Structure\DynamicChildStructure;
+use Drupal\surface_resource_test\Structure\MountWatcherStructure;
+use Drupal\surface_resource_test\Resource\RecipeResource;
+use Drupal\surface_resource_test\Storage\RecipeStorage;
+use Drupal\surface_test\Alter\ForeignMountWatcherAlter;
 use Drupal\node\Entity\NodeType;
-use Drupal\Tests\data_surface\Kernel\Fixture\CountingResources;
+use Drupal\Tests\surface\Kernel\Fixture\CountingResources;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -55,9 +55,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * refiner dispatch, alters, access and the storage. The broken fixtures
  * each fail one seal-time check, by name.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ResourceBuildTest extends DataSurfaceKernelTestBase {
+class ResourceBuildTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -69,9 +69,9 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     'node',
     'field',
     'text',
-    'data_surface',
-    'data_surface_demo',
-    'data_surface_resource_test',
+    'surface',
+    'surface_examples_plugins',
+    'surface_resource_test',
   ];
 
   /**
@@ -88,20 +88,20 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The build step.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
    * Builds the demo block's structure.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built structure DemoBlockStructure produces.
    */
-  protected function demoStructure(): DataSurfaceInterface {
+  protected function demoStructure(): SurfaceInterface {
     return $this->resources()->build(DemoBlockStructure::class, new OperationContext('configure'));
   }
 
@@ -143,18 +143,18 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    */
   public function testBlockHostBuildsTheUsedStructure(): void {
     $counting = new CountingResources($this->resources());
-    $this->container->set('data_surface.resources', $counting);
-    $definition = $this->container->get('plugin.manager.block')->getDefinition('data_surface_demo');
+    $this->container->set('surface.resources', $counting);
+    $definition = $this->container->get('plugin.manager.block')->getDefinition('surface_examples_plugins');
     $this->assertSame(DemoBlockStructure::class, $definition[UsesStructure::DEFINITION_KEY]);
 
-    $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_demo');
-    $this->assertInstanceOf(DataSurfaceDemoBlock::class, $block);
+    $block = $this->container->get('plugin.manager.block')->createInstance('surface_examples_plugins');
+    $this->assertInstanceOf(ExampleBlock::class, $block);
     $this->assertSame([DemoBlockStructure::class], $counting->builds);
     $this->assertSame(
       array_keys($this->demoStructure()->getDefinitions()->toArray()),
-      array_keys($block->getDataSurface()->getDefinitions()->toArray()),
+      array_keys($block->getSurface()->getDefinitions()->toArray()),
     );
-    $variants = $block->getDataSurface()->getDefinitions()->entry('presentation_settings')?->variants;
+    $variants = $block->getSurface()->getDefinitions()->entry('presentation_settings')?->variants;
     $this->assertNotNull($variants);
     $this->assertSame(ListPresentationStructure::class, $variants->variant('list')->source);
     $this->assertSame(GridPresentationStructure::class, $variants->variant('grid')->source);
@@ -204,7 +204,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    */
   public function testRefinerDispatch(): void {
     $surface = $this->resources()->build(RecipeResource::class, RecipeResource::create('main'));
-    $choices = static fn (DataSurfaceInterface $refined): array => $refined->getDefinition('dish')->getConstraints()['Choice']['choices'];
+    $choices = static fn (SurfaceInterface $refined): array => $refined->getDefinition('dish')->getConstraints()['Choice']['choices'];
 
     // The dish is refined by the owner (watching course, by name) and by
     // the alter (watching vegetarian). The engine gates per key, so it
@@ -278,7 +278,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
       ],
       'two providers of one operation' => [
         ClashingOperationStructure::class,
-        'resource_test.broken.clashing_operation has two operations with the id "open", from #[Operation] on ' . ClashingOperationStructure::class . ' in data_surface_resource_test and from ' . ClashingOperationStructure::class . '::open() in data_surface_resource_test.',
+        'resource_test.broken.clashing_operation has two operations with the id "open", from #[Operation] on ' . ClashingOperationStructure::class . ' in surface_resource_test and from ' . ClashingOperationStructure::class . '::open() in surface_resource_test.',
       ],
       'a refiner that watches nothing widens' => [
         WideningRefinerStructure::class,
@@ -323,24 +323,24 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * watched by an alter of another module, is refused.
    */
   public function testAnAlterWatchesOnlyTheKeysItMounted(): void {
-    $kind = 'third_party_settings.data_surface_resource_test.kind';
+    $kind = 'third_party_settings.surface_resource_test.kind';
     $surface = $this->resources()->build(MountWatcherStructure::class, new OperationContext('configure'));
     $definitions = $surface->getDefinitions();
     $this->assertSame(['size' => [$kind], 'third_party_settings' => [$kind]], $definitions->refinements());
-    $this->assertSame(['size' => [$kind], 'third_party_settings.data_surface_resource_test.detail' => [$kind]], $definitions->refinementPaths());
+    $this->assertSame(['size' => [$kind], 'third_party_settings.surface_resource_test.detail' => [$kind]], $definitions->refinementPaths());
 
     // Unanswered, the kind holds nothing back: it is handed as NULL.
     $detail = fn (array $values): array => $this->mounted($surface->refine($values)->getDefinition('third_party_settings'))['detail']->getConstraints();
     $this->assertSame(['max' => 10], $detail([])['Length']);
-    $with = ['third_party_settings' => ['data_surface_resource_test' => ['kind' => 'large']]];
+    $with = ['third_party_settings' => ['surface_resource_test' => ['kind' => 'large']]];
     $this->assertArrayNotHasKey('Length', $detail($with));
     $this->assertSame(['max' => 100], $surface->refine($with)->getDefinition('size')->getConstraints()['Range']);
     $this->assertArrayNotHasKey('Range', $surface->refine([])->getDefinition('size')->getConstraints());
 
-    $this->enableModules(['data_surface_test']);
+    $this->enableModules(['surface_test']);
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage(ForeignMountWatcherAlter::class . '::noteOfKind() watches "kind", a key the data_surface_resource_test module mounted on resource_test.mount_watcher. An alter may watch the keys it mounted itself and the owner\'s, never another module\'s.');
-    $this->container->get('data_surface.resources')->build(MountWatcherStructure::class, new OperationContext('configure'));
+    $this->expectExceptionMessage(ForeignMountWatcherAlter::class . '::noteOfKind() watches "kind", a key the surface_resource_test module mounted on resource_test.mount_watcher. An alter may watch the keys it mounted itself and the owner\'s, never another module\'s.');
+    $this->container->get('surface.resources')->build(MountWatcherStructure::class, new OperationContext('configure'));
   }
 
   /**
@@ -363,7 +363,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * Tests that an alter attaches only at its own mount, an output nowhere.
    */
   public function testAnAlterAttachesOnlyAtItsOwnMount(): void {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $outputs = new ResourceBlueprint($builder, $this->container->get('typed_data_manager'), TRUE);
     try {
       $outputs->attach('storage', RecipeResource::class);
@@ -374,7 +374,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     }
     // An alter attaches at its own mount, and only there.
     // Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
-    $additions = new ResourceBlueprintAdditions($builder, $this->container->get('typed_data_manager'), 'data_surface_resource_test');
+    $additions = new ResourceBlueprintAdditions($builder, $this->container->get('typed_data_manager'), 'surface_resource_test');
     try {
       $additions->attachList('racks', RecipeResource::class);
       $this->fail('An alter attached a collection.');
@@ -382,8 +382,8 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     catch (\LogicException $e) {
       $this->assertStringContainsString('a collection under the mount is not built', $e->getMessage());
     }
-    $mount = $additions->attach('third_party_settings.data_surface_resource_test', RecipeResource::class);
-    $this->assertSame($mount, $builder->getThirdPartyMount('data_surface_resource_test'), 'The mount is held, for the alter to describe and place.');
+    $mount = $additions->attach('third_party_settings.surface_resource_test', RecipeResource::class);
+    $this->assertSame($mount, $builder->getThirdPartyMount('surface_resource_test'), 'The mount is held, for the alter to describe and place.');
     try {
       $additions->add('note', 'string', 'Note');
       $this->fail('An alter added a key beside the structure at its mount.');
@@ -392,15 +392,15 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
       $this->assertStringContainsString('A mount holding a structure holds its keys alone', $e->getMessage());
     }
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('An alter attaches under its own mount, and only at the mount itself, third_party_settings.data_surface_resource_test');
-    (new ResourceBlueprintAdditions(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'), 'data_surface_resource_test'))->attach('storage', RecipeResource::class);
+    $this->expectExceptionMessage('An alter attaches under its own mount, and only at the mount itself, third_party_settings.surface_resource_test');
+    (new ResourceBlueprintAdditions(new SurfaceBuilder(), $this->container->get('typed_data_manager'), 'surface_resource_test'))->attach('storage', RecipeResource::class);
   }
 
   /**
    * Tests that adding a key twice is refused rather than replacing it.
    */
   public function testAddingIsNeverReplacing(): void {
-    $blueprint = new ResourceBlueprint(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'));
+    $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
     $blueprint->add('name', 'string', 'Name');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The input "name" was already added to this blueprint.');
@@ -413,7 +413,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
   public function testAltersApply(): void {
     $add = $this->resources()->buildOperation(RecipeResource::class, 'create', ['main']);
     $this->assertSame(['garnish'], array_keys($this->mounted($add->getDefinition('third_party_settings'))));
-    $this->assertSame('parsley', $add->getDefaultValues()['third_party_settings']['data_surface_resource_test']['garnish']);
+    $this->assertSame('parsley', $add->getDefaultValues()['third_party_settings']['surface_resource_test']['garnish']);
     // Outputs are the operation's: no alter adds to them.
     $this->assertSame(['id'], array_keys($add->getOutputDefinitions()->toArray()));
 
@@ -427,9 +427,9 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    * Tests operation lookup and the contract an operation keeps.
    */
   public function testOperations(): void {
-    $operations = $this->container->get('data_surface.resource_registry')->getOperations(RecipeResource::class);
+    $operations = $this->container->get('surface.resource_registry')->getOperations(RecipeResource::class);
     $this->assertSame(['create', 'update', 'mislabeled'], array_keys($operations));
-    $this->assertSame('data_surface_resource_test', $operations['mislabeled']->module);
+    $this->assertSame('surface_resource_test', $operations['mislabeled']->module);
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('returned a context whose id is "create"');
@@ -485,7 +485,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
     $this->assertSame('risotto', $loaded['dish']);
 
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('block.data_surface_demo is a structure, which has no storage of its own');
+    $this->expectExceptionMessage('block.surface_examples_plugins is a structure, which has no storage of its own');
     $this->resources()->storage(DemoBlockStructure::class, new OperationContext('configure'));
   }
 
@@ -500,7 +500,7 @@ class ResourceBuildTest extends DataSurfaceKernelTestBase {
    */
   protected function mounted(?DataDefinitionInterface $map): array {
     $this->assertInstanceOf(MapDataDefinition::class, $map);
-    $provider = $map->getPropertyDefinition('data_surface_resource_test');
+    $provider = $map->getPropertyDefinition('surface_resource_test');
     $this->assertInstanceOf(MapDataDefinition::class, $provider);
     return $provider->getPropertyDefinitions();
   }

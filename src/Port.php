@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 /**
  * A value a structure reads from its container: a port.

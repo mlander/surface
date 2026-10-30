@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\data_surface\Reference\References;
+use Drupal\surface\Reference\References;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 
 /**
- * Validates the DataSurfaceValidReference constraint.
+ * Validates the SurfaceValidReference constraint.
  *
  * The selection handler is asked, as core's ValidReference asks a field's.
  * One message for an id that names nothing, one of another bundle and one
@@ -24,7 +24,7 @@ final class ValidReferenceConstraintValidator extends ConstraintValidator implem
   /**
    * Constructs a ValidReferenceConstraintValidator.
    *
-   * @param \Drupal\data_surface\Reference\References $references
+   * @param \Drupal\surface\Reference\References $references
    *   What reference keys are, and which entities they may name.
    */
   public function __construct(
@@ -35,7 +35,7 @@ final class ValidReferenceConstraintValidator extends ConstraintValidator implem
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('data_surface.references'));
+    return new static($container->get('surface.references'));
   }
 
   /**

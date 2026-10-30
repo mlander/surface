@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 /**
  * Translates between a data surface's input layout and a storage layout.
@@ -33,7 +33,7 @@ namespace Drupal\data_surface\Storage;
  * cannot (a storage layout that loses a distinction the data surface
  * makes), the implementation says so in its own documentation.
  *
- * @see \Drupal\data_surface\Pipeline\Storage\FieldSettingsStorage
+ * @see \Drupal\surface\Pipeline\Storage\FieldSettingsStorage
  * @see docs/storage.md
  */
 interface StorageLayoutInterface {

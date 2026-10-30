@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_examples\Entity\EventVenue;
-use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
-use Drupal\data_surface_examples\Resource\VenueResource;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples\Entity\EventVenue;
+use Drupal\surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\surface_examples\Resource\VenueResource;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\tool\Tool\ToolOperation;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -22,16 +22,16 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * schema; the resource builds for each of its five operations, two of
  * them taking the keys of a structure of their own; both documents of
  * add, edit, list and reorder are pinned whole under
- * tests/fixtures/venues/ (written again with DATA_SURFACE_VENUE_WRITE=1),
+ * tests/fixtures/venues/ (written again with SURFACE_VENUE_WRITE=1),
  * the listing's outputs inline; the tools page, filter and leave out what
  * an account may not read; the reorder writes in one commit and refuses an
  * unknown venue and one named twice; and example 2 offers a venue added.
  *
  * @see docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class VenueResourceTest extends DataSurfaceKernelTestBase {
+class VenueResourceTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -44,15 +44,15 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_tool',
+    'surface_examples',
   ];
 
   /**
    * The tools' prefix.
    */
-  protected const TOOL = 'data_surface:event.venue:';
+  protected const TOOL = 'surface:event.venue:';
 
   /**
    * Where both documents of each operation are pinned.
@@ -86,7 +86,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -134,8 +134,8 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
   public function testTheEntityTypeInstalls(): void {
     $type = $this->container->get('entity_type.manager')->getDefinition('event_venue');
     $this->assertInstanceOf(ConfigEntityTypeInterface::class, $type);
-    $this->assertSame('data_surface_examples', $type->getProvider());
-    $this->assertSame('data_surface_examples.event_venue', $type->getConfigPrefix());
+    $this->assertSame('surface_examples', $type->getProvider());
+    $this->assertSame('surface_examples.event_venue', $type->getConfigPrefix());
     $this->assertSame([], $type->getLinkTemplates(), 'No links: the resource\'s routes are the forms.');
     $this->assertFalse($type->hasListBuilderClass());
     $this->assertSame([], $type->getHandlerClasses()['form'] ?? []);
@@ -143,8 +143,8 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['riverside', 'library', 'harbour'], $this->order());
 
     // The schema is the generated one, and each shipped venue holds to it.
-    $described = $this->container->get('data_surface.config_schema')->describe($this->container->get('data_surface.resource_registry')->getDefinition(VenueResource::class));
-    $this->assertSame('data_surface_examples.event_venue.*', $described['config']);
+    $described = $this->container->get('surface.config_schema')->describe($this->container->get('surface.resource_registry')->getDefinition(VenueResource::class));
+    $this->assertSame('surface_examples.event_venue.*', $described['config']);
     $this->assertNull($described['install'], 'The things shipped are no resource\'s to describe: no install file.');
     $this->assertSame('config_entity', $described['entries'][0]['schema']['type']);
     $this->assertSame(['id', 'label', 'slug', 'capacity', 'address', 'rooms', 'weight', 'status'], array_keys($described['entries'][0]['schema']['mapping']));
@@ -154,7 +154,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('nullable', $described['entries'][0]['schema']['mapping']['weight'], 'Always held.');
     $typed = $this->container->get('config.typed');
     foreach (['riverside', 'library', 'harbour'] as $id) {
-      $name = 'data_surface_examples.event_venue.' . $id;
+      $name = 'surface_examples.event_venue.' . $id;
       $this->assertCount(0, $typed->createFromNameAndData($name, $this->config($name)->getRawData())->validate(), $name);
     }
   }
@@ -163,7 +163,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
    * Tests the resource builds for each operation, two with keys of their own.
    */
   public function testTheResourceBuildsForEachOperation(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $keys = static fn (string $operation, array $arguments = []): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation, $arguments))->getDefinitions()->names();
     $outputs = static fn (string $operation): array => $resources->build(VenueResource::class, $resources->operation(VenueResource::class, $operation))->getOutputDefinitions()->names();
     $this->assertSame(['label', 'id', 'slug', 'capacity', 'address', 'rooms', 'weight', 'status'], $keys('create'));
@@ -176,7 +176,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $edit = $resources->build(VenueResource::class, $resources->operation(VenueResource::class, 'update', ['id' => 'riverside']));
     $this->assertTrue($edit->isLocked('id'), 'Edit knows the venue.');
 
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $this->assertSame(['create', 'read', 'update', 'update', 'delete'], array_map(static fn ($operation): string => $operation->kind(), array_values($registry->getOperations(VenueResource::class))));
     $this->assertSame(['create', 'list', 'reorder', 'update', 'delete'], array_keys($registry->getOperations(VenueResource::class)));
   }
@@ -185,9 +185,9 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
    * Tests both documents of add, edit, list and reorder, whole.
    */
   public function testBothDocumentsOfEachOperation(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $registry = $this->container->get('data_surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
+    $registry = $this->container->get('surface.resource_registry');
     $asked = ['create' => [], 'update' => ['id' => 'library'], 'list' => [], 'reorder' => []];
     foreach ($asked as $id => $arguments) {
       $operation = $registry->getOperation(VenueResource::class, $id);
@@ -202,16 +202,16 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
       foreach ($documents as $kind => $document) {
         $json = json_encode($document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION) . "\n";
         $file = self::FIXTURES . $id . '.' . $kind . '.json';
-        if (getenv('DATA_SURFACE_VENUE_WRITE')) {
+        if (getenv('SURFACE_VENUE_WRITE')) {
           @mkdir(self::FIXTURES);
           file_put_contents($file, $json);
           continue;
         }
         $this->assertFileExists($file);
-        $this->assertSame(file_get_contents($file), $json, sprintf('The %s document of %s; written again with DATA_SURFACE_VENUE_WRITE=1.', $kind, $id));
+        $this->assertSame(file_get_contents($file), $json, sprintf('The %s document of %s; written again with SURFACE_VENUE_WRITE=1.', $kind, $id));
       }
     }
-    if (getenv('DATA_SURFACE_VENUE_WRITE')) {
+    if (getenv('SURFACE_VENUE_WRITE')) {
       $this->markTestSkipped('The venue documents were written.');
     }
 
@@ -235,9 +235,9 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
    * Tests the listing's outputs: the page of venues, and the total.
    */
   public function testTheListingDeclaresItsOutputs(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(VenueResource::class, 'list');
-    $outputs = $this->container->get('data_surface.contract_emitter')->emitFull($resources->buildStatic(VenueResource::class, $context), 'event.venue', 'list')->document['outputs'];
+    $outputs = $this->container->get('surface.contract_emitter')->emitFull($resources->buildStatic(VenueResource::class, $context), 'event.venue', 'list')->document['outputs'];
     $this->assertSame([
       '$schema' => 'https://json-schema.org/draft/2020-12/schema',
       'type' => 'object',
@@ -440,8 +440,8 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
     $slugs = array_map(static fn (string $id): ?string => EventVenue::load($id)->slug(), $shipped);
     $this->assertSame(['riverside-hall', 'old-library', 'harbour-centre'], $slugs, 'Each venue shipped holds its slug.');
     EventVenue::load('library')->set('slug', NULL)->save();
-    require_once dirname(__DIR__, 3) . '/modules/data_surface_examples/data_surface_examples.post_update.php';
-    data_surface_examples_post_update_venue_slugs();
+    require_once dirname(__DIR__, 3) . '/modules/surface_examples/surface_examples.post_update.php';
+    surface_examples_post_update_venue_slugs();
     $this->assertSame('old-library', EventVenue::load('library')->slug(), 'A venue saved without one is given what an add would have stored.');
   }
 
@@ -452,9 +452,9 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
    *   The venues, then the rooms.
    */
   protected function offered(): array {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $built = $resources->buildStatic(RegistrationStep2Resource::class, $resources->operation(RegistrationStep2Resource::class, 'configure'));
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($built, 'registration.step2', 'configure')->document['schema'];
+    $full = $this->container->get('surface.contract_emitter')->emitFull($built, 'registration.step2', 'configure')->document['schema'];
     return [
       array_column($full['properties']['venue']['oneOf'], 'const'),
       array_column($full['properties']['room']['oneOf'], 'const'),
@@ -465,7 +465,7 @@ class VenueResourceTest extends DataSurfaceKernelTestBase {
    * Tests example 2 offers a venue added, with no cache rebuild.
    */
   public function testExampleTwoOffersTheVenueAdded(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $rooms = [
       'riverside_main',
       'riverside_east',

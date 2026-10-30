@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Hook;
+namespace Drupal\surface\Hook;
 
 use Drupal\Core\Hook\Attribute\Hook;
 use Drupal\Core\Hook\Order\Order;
-use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\surface\Resource\Attribute\UsesStructure;
 
 /**
  * Copies #[UsesStructure] into the definitions of the plugin types it serves.

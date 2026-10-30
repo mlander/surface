@@ -1,0 +1,8 @@
+name: Surface API Paths Test
+type: module
+description: 'Test support for the default operation of each kind at a path: resources whose operations carry the standard ids, configure on a singleton and off one, and two of a kind with neither named.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

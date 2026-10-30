@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 /**
  * Renders the site catalog as markdown.
@@ -25,7 +25,7 @@ final class CatalogDocument {
   /**
    * The environment variable that writes the repository's document.
    */
-  public const WRITE_VARIABLE = 'DATA_SURFACE_WRITE_CATALOGUE';
+  public const WRITE_VARIABLE = 'SURFACE_WRITE_CATALOGUE';
 
   /**
    * Renders the catalog.
@@ -421,10 +421,10 @@ names storage and is no plugin's configuration, and every `%key`
 placeholder in its permission can be supplied by one of its parameters.
 Such an operation reaches the doors the installed modules open: a form
 route a module declares, the HTTP path and the React page
-(`data_surface_react`), the tool `data_surface:<id>:<operation>`
-(`data_surface_tool`) and the OpenAPI operation (`data_surface_openapi`).
+(`surface_react`), the tool `surface:<id>:<operation>`
+(`surface_tool`) and the OpenAPI operation (`surface_openapi`).
 One that changes a thing that exists, neither creating nor read only, is
-"read on its own" too, a read tool, `data_surface:<id>:<operation>:read`.
+"read on its own" too, a read tool, `surface:<id>:<operation>:read`.
 A structure a plugin uses is configured through the plugin's host. Every
 operation is built for no account, and what did not build, with every
 route written wrong for the operation it serves, is listed last, under

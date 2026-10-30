@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Resource\Compute;
+use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Resource\Compute;
 
 /**
  * What a computed key is computed from, by what, and when.
@@ -29,7 +29,7 @@ final class Computed {
    * @param string[] $from
    *   The sibling keys it is computed from, in the order $using is
    *   handed them.
-   * @param class-string<\Drupal\data_surface\Resource\ComputesValueInterface> $using
+   * @param class-string<\Drupal\surface\Resource\ComputesValueInterface> $using
    *   The class that computes it.
    * @param string $when
    *   Compute::ON_CREATE, Compute::ON_CHANGE or Compute::UNLESS_SENT.
@@ -159,7 +159,7 @@ final class Computed {
    * key computed unless sent keeps a value the values in progress hold
    * for it, as a write would keep it.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface describing the level.
    * @param array $values
    *   The values in progress, over what is stored.
@@ -169,7 +169,7 @@ final class Computed {
    * @return array
    *   The values, each computed key holding its value.
    */
-  public static function apply(DataSurfaceInterface $surface, array $values, array $stored): array {
+  public static function apply(SurfaceInterface $surface, array $values, array $stored): array {
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $computed = static::of($entry->definition);
       if ($computed !== NULL && !$entry->locked && !($computed->takesSent() && ValueState::isConfigured($values[$name] ?? NULL))) {

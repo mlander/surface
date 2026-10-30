@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Routing\RouteMatchInterface;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\surface\Resource\OperationContext;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
 
@@ -22,9 +22,9 @@ use Symfony\Component\Routing\Route;
  * example.edit:
  *   path: '/admin/structure/examples/{example}/surface-edit'
  *   defaults:
- *     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
- *     _data_surface_resource: 'Drupal\example\Resource\ExampleResource'
- *     _data_surface_operation: 'update'
+ *     _form: 'Drupal\surface\Form\SurfaceOperationForm'
+ *     _surface_resource: 'Drupal\example\Resource\ExampleResource'
+ *     _surface_operation: 'update'
  *   options:
  *     parameters:
  *       example:
@@ -40,10 +40,10 @@ use Symfony\Component\Routing\Route;
  * route serves every derivative its path names.
  *
  * A route may also fill or fix what the operation asks for, on this page
- * alone: `_data_surface_fixed` narrows each key it names to one value
+ * alone: `_surface_fixed` narrows each key it names to one value
  * (OperationContext::withConstraint() with a Choice of it that says it
  * fixes the key, Declaring::FIXED), and
- * `_data_surface_defaults` gives each key it names the value it starts
+ * `_surface_defaults` gives each key it names the value it starts
  * from (OperationContext::withDefaults(), on an operation that creates).
  * Both are maps of key paths to values, applied to the context the
  * operation built, and held to the resource here: a path that names no
@@ -52,7 +52,7 @@ use Symfony\Component\Routing\Route;
  * `'{name}'`, whole, is a reference: the raw value of the path's variable
  * of that name, left out when the URL carries none (an optional trailing
  * placeholder), and one its key refuses names nothing here
- * (NamesNothingException). `_data_surface_query` names the keys a link
+ * (NamesNothingException). `_surface_query` names the keys a link
  * may start, each from a query parameter, which the form lays as input
  * and never puts in the context.
  *
@@ -60,11 +60,11 @@ use Symfony\Component\Routing\Route;
  * example.add_welcome:
  *   path: '/admin/content/add-welcome'
  *   defaults:
- *     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
- *     _data_surface_resource: 'entity.content:node.page'
- *     _data_surface_operation: 'create'
- *     _data_surface_fixed: { 'title.value': 'Welcome' }
- *     _data_surface_defaults: { 'body.value': 'Start here.' }
+ *     _form: 'Drupal\surface\Form\SurfaceOperationForm'
+ *     _surface_resource: 'entity.content:node.page'
+ *     _surface_operation: 'create'
+ *     _surface_fixed: { 'title.value': 'Welcome' }
+ *     _surface_defaults: { 'body.value': 'Start here.' }
  * @endcode
  *
  * What the route alone shows to be written wrong is refused when the
@@ -83,12 +83,12 @@ final class OperationRoute {
   /**
    * The route default naming the resource class, or its id.
    */
-  public const RESOURCE = '_data_surface_resource';
+  public const RESOURCE = '_surface_resource';
 
   /**
    * The route default naming the operation.
    */
-  public const OPERATION = '_data_surface_operation';
+  public const OPERATION = '_surface_operation';
 
   /**
    * The route requirement that gates the route by the operation.
@@ -96,17 +96,17 @@ final class OperationRoute {
    * Added to every route naming a resource and an operation
    * (OperationRouteSubscriber); a routing file may still say it.
    */
-  public const ACCESS = '_data_surface_operation_access';
+  public const ACCESS = '_surface_operation_access';
 
   /**
    * The route default fixing keys to one value each: key path => value.
    */
-  public const FIXED = '_data_surface_fixed';
+  public const FIXED = '_surface_fixed';
 
   /**
    * The route default giving keys the value each starts from.
    */
-  public const DEFAULTS = '_data_surface_defaults';
+  public const DEFAULTS = '_surface_defaults';
 
   /**
    * The route default naming the keys a link may start: key path => name.
@@ -115,7 +115,7 @@ final class OperationRoute {
    * form starts the key from; the visitor may change it, and it never
    * enters the context.
    */
-  public const QUERY = '_data_surface_query';
+  public const QUERY = '_surface_query';
 
   /**
    * The query parameters a link may never start a key from.
@@ -157,7 +157,7 @@ final class OperationRoute {
    * What the controller of a React page served at a module's route ends in.
    *
    * Compared as text: the main module does not depend on
-   * data_surface_react, whose ResourceReactPage::served() it is.
+   * surface_react, whose ResourceReactPage::served() it is.
    */
   protected const REACT_PAGE = 'ResourceReactPage::served';
 
@@ -166,9 +166,9 @@ final class OperationRoute {
    *
    * @param string $resource
    *   The resource's class, or a derived resource's id.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context the operation built from the route's parameters, with
    *   what the route fixes and fills.
    * @param string|null $subject
@@ -228,7 +228,7 @@ final class OperationRoute {
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The route match.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation it serves.
    *
    * @return array<string, scalar>
@@ -256,7 +256,7 @@ final class OperationRoute {
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The route match.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found, which a filled id is looked up in.
    *
    * @return array{0: string, 1: string}
@@ -267,7 +267,7 @@ final class OperationRoute {
    * @throws \InvalidArgumentException
    *   When a `{name}` in the resource's id is no variable of the path, or
    *   one nothing bounds.
-   * @throws \Drupal\data_surface\ResourceBuild\NamesNothingException
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   When the id the path fills names no resource discovery found, naming
    *   the variable the URL left out when it left one out, else the id's
    *   first.
@@ -320,7 +320,7 @@ final class OperationRoute {
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The route match.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
    *
    * @return string|\Stringable
@@ -440,7 +440,7 @@ final class OperationRoute {
   /**
    * Refuses a reference that reads no bounded variable of the route's path.
    *
-   * A value under `_data_surface_fixed` or `_data_surface_defaults` that is
+   * A value under `_surface_fixed` or `_surface_defaults` that is
    * `'{name}'`, whole, reads the raw value of the path's variable of that
    * name: a name the path does not have would seed nothing on every URL,
    * so a misspelled one is refused rather than ignored, and a variable
@@ -528,8 +528,8 @@ final class OperationRoute {
    *   Its name, for the refusal.
    *
    * @throws \InvalidArgumentException
-   *   When a key path is under both `_data_surface_fixed` and
-   *   `_data_surface_defaults`.
+   *   When a key path is under both `_surface_fixed` and
+   *   `_surface_defaults`.
    */
   protected static function assertFixedOrFilled(Route $route, string $name): void {
     $fixed = $route->getDefault(self::FIXED);
@@ -549,7 +549,7 @@ final class OperationRoute {
    * The page writes through the operation's own API path, which holds a
    * value to the operation's constraints alone, so a key the page stated
    * fixed would take any value the operation takes. A React page starts
-   * keys, with `_data_surface_defaults` and `_data_surface_query`, and
+   * keys, with `_surface_defaults` and `_surface_query`, and
    * fixes none.
    *
    * @param \Symfony\Component\Routing\Route $route
@@ -558,7 +558,7 @@ final class OperationRoute {
    *   Its name, for the refusal.
    *
    * @throws \InvalidArgumentException
-   *   When the route carries `_data_surface_fixed` and its controller is
+   *   When the route carries `_surface_fixed` and its controller is
    *   ResourceReactPage::served().
    */
   protected static function assertFixedWhereHeld(Route $route, string $name): void {
@@ -579,11 +579,11 @@ final class OperationRoute {
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The route match.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
-   * @param \Drupal\data_surface\ResourceBuild\OperationArguments $arguments
+   * @param \Drupal\surface\ResourceBuild\OperationArguments $arguments
    *   What maps the route's parameters onto the operation's.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which invokes the operation.
    *
    * @return self
@@ -591,7 +591,7 @@ final class OperationRoute {
    *
    * @throws \LogicException
    *   When the route names no resource or no operation.
-   * @throws \Drupal\data_surface\ResourceBuild\NamesNothingException
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   When a value the path carries names nothing: an id no entity has, a
    *   thing the operation does not take, a resource id no resource has, a
    *   value a reference reads that its key refuses.
@@ -702,7 +702,7 @@ final class OperationRoute {
    *   The route.
    * @param string $name
    *   Its name, for the refusal.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation it serves.
    * @param string[] $variables
    *   Its path's variables.
@@ -824,7 +824,7 @@ final class OperationRoute {
    *   The route.
    * @param string $name
    *   Its name, for the refusal.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation it serves.
    *
    * @throws \InvalidArgumentException
@@ -870,17 +870,17 @@ final class OperationRoute {
    *   The route match.
    * @param string $class
    *   The resource's class, or a derived resource's id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context the operation built.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step.
    * @param bool $read
    *   Whether the operation was handed a value of the path.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The context, fixing and filling what the route says.
    *
-   * @throws \Drupal\data_surface\ResourceBuild\NamesNothingException
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   When a value a reference reads is one its key does not accept.
    * @throws \InvalidArgumentException
    *   When either default is not a map of key paths, a fixed value is not
@@ -971,12 +971,12 @@ final class OperationRoute {
   /**
    * Puts what a route fixes and fills on the context its operation built.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context the operation built.
-   * @param array{_data_surface_fixed: array<string, mixed>, _data_surface_defaults: array<string, mixed>} $seeds
+   * @param array{_surface_fixed: array<string, mixed>, _surface_defaults: array<string, mixed>} $seeds
    *   The values to fix and to fill, by key path.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The context fixing and filling them.
    */
   protected static function seeded(OperationContext $context, array $seeds): OperationContext {
@@ -989,11 +989,11 @@ final class OperationRoute {
   /**
    * Holds a context to the resource, answering what refused it.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step.
    * @param string $class
    *   The resource's class, or a derived resource's id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    * @param bool $keep
    *   Whether the build may be kept for the next request.

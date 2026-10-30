@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Options;
+namespace Drupal\surface\Options;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Session\AccountInterface;
@@ -32,7 +32,7 @@ use Drupal\Core\TypedData\OptionsProviderInterface;
  *
  * Decision: see docs/decisions.md#our-options-answer-cores-question.
  *
- * @see \Drupal\data_surface\Options\DataSurfaceOptions::provider()
+ * @see \Drupal\surface\Options\SurfaceOptions::provider()
  */
 final class OptionsProvider implements OptionsProviderInterface {
 
@@ -43,13 +43,13 @@ final class OptionsProvider implements OptionsProviderInterface {
    *   The key's definition as declared.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $refined
    *   The key's definition refined for a set of values, or NULL.
-   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
+   * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, which reads each definition's list.
    */
   public function __construct(
     private readonly DataDefinitionInterface $declared,
     private readonly ?DataDefinitionInterface $refined,
-    private readonly DataSurfaceOptions $options,
+    private readonly SurfaceOptions $options,
   ) {
   }
 
@@ -114,7 +114,7 @@ final class OptionsProvider implements OptionsProviderInterface {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    *
-   * @return \Drupal\data_surface\Options\OptionSet|null
+   * @return \Drupal\surface\Options\OptionSet|null
    *   The list, or NULL when no constraint names one.
    */
   private function set(DataDefinitionInterface $definition): ?OptionSet {

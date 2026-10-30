@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
+use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -25,9 +25,9 @@ use PHPUnit\Framework\Attributes\Group;
  * see it. This one exists to install as little as the block needs and no
  * more, which is the only configuration in which the bug is visible.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DemoBlockWithoutNodeTest extends DataSurfaceKernelTestBase {
+class DemoBlockWithoutNodeTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -37,8 +37,8 @@ class DemoBlockWithoutNodeTest extends DataSurfaceKernelTestBase {
     'user',
     'field',
     'block',
-    'data_surface',
-    'data_surface_demo',
+    'surface',
+    'surface_examples_plugins',
   ];
 
   /**
@@ -51,15 +51,15 @@ class DemoBlockWithoutNodeTest extends DataSurfaceKernelTestBase {
     );
 
     $block = $this->container->get('plugin.manager.block')
-      ->createInstance('data_surface_demo');
-    $this->assertInstanceOf(DataSurfaceDemoBlock::class, $block);
+      ->createInstance('surface_examples_plugins');
+    $this->assertInstanceOf(ExampleBlock::class, $block);
 
     // The declared default is a content entity type this site has, so
     // the configuration the constructor applied is configuration the
     // built structure itself accepts, which is the property a default
     // has to have on a plugin type that applies its defaults at
     // construction.
-    $surface = $block->getDataSurface();
+    $surface = $block->getSurface();
     $defaults = $surface->getDefaultValues();
     $this->assertSame('user', $defaults['entity_type']);
     $this->assertCount(0, $this->pipeline()->validate($surface, $defaults));
@@ -71,8 +71,8 @@ class DemoBlockWithoutNodeTest extends DataSurfaceKernelTestBase {
    */
   public function testTheSelectOffersOnlyInstalledEntityTypes(): void {
     $definition = $this->container->get('plugin.manager.block')
-      ->createInstance('data_surface_demo')
-      ->getDataSurface()
+      ->createInstance('surface_examples_plugins')
+      ->getSurface()
       ->getDefinition('entity_type');
 
     $options = $this->options()->resolve($definition)->options;

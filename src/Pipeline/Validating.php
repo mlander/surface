@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Component\Render\FormattableMarkup;
 use Drupal\Component\Utility\NestedArray;
@@ -15,22 +15,22 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\DefinitionTypedData;
-use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Collection;
-use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
-use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraintValidator;
+use Drupal\surface\Computed;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\DefinitionTypedData;
+use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Entry;
+use Drupal\surface\Collection;
+use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
+use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraintValidator;
 use Symfony\Component\Validator\Constraints\Choice;
 
 /**
  * The validate verb of the pipeline: accepted values held to the rules.
  *
- * What DataSurfacePipelineInterface::validate() does: each level refined
+ * What SurfacePipelineInterface::validate() does: each level refined
  * against its values and judged by typed data, each child, variant and
  * collection item in its own frame; each refusal filed under its key with
  * the path below it, naming what it depends on and what is allowed; a
@@ -45,7 +45,7 @@ use Symfony\Component\Validator\Constraints\Choice;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Pipeline\DataSurfacePipeline
+ * @see \Drupal\surface\Pipeline\SurfacePipeline
  * @see docs/semantics.md
  */
 final class Validating {
@@ -63,7 +63,7 @@ final class Validating {
    *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
-   * @var array{0: string, 1: array<string, string>, 2: array<string, \Drupal\data_surface\DataSurfaceInterface>}
+   * @var array{0: string, 1: array<string, string>, 2: array<string, \Drupal\surface\SurfaceInterface>}
    */
   protected array $frame = ['', [], []];
 
@@ -72,25 +72,25 @@ final class Validating {
    *
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, used to run the data surface's constraints.
-   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
+   * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, asked whether a refused value is among the
    *   ones its key offers (the stale rule), and for the values a refusal
    *   names: the list a generated select renders.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service, for the sentences a refusal says.
-   * @param \Drupal\data_surface\Pipeline\Accepting $accepting
+   * @param \Drupal\surface\Pipeline\Accepting $accepting
    *   The accept verb, which reads a computed key's value as accepted and
    *   names the keys it is computed from.
-   * @param \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface $pipeline
+   * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
    *   The pipeline, whose document() a schema read into a frame is held
    *   to.
    */
   public function __construct(
     protected readonly TypedDataManagerInterface $typedDataManager,
-    protected readonly DataSurfaceOptions $options,
+    protected readonly SurfaceOptions $options,
     TranslationInterface $string_translation,
     protected readonly Accepting $accepting,
-    protected readonly DataSurfacePipelineInterface $pipeline,
+    protected readonly SurfacePipelineInterface $pipeline,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -98,19 +98,19 @@ final class Validating {
   /**
    * Validates a data surface's values at the top.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface, as advertised.
    * @param array $values
    *   The accepted values.
    * @param array $current
    *   The stored values, in input layout.
    *
-   * @return \Drupal\data_surface\Pipeline\ViolationSet
+   * @return \Drupal\surface\Pipeline\ViolationSet
    *   The violations, any stale entries held to one side.
    *
-   * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::validate()
+   * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::validate()
    */
-  public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet {
+  public function validate(SurfaceInterface $surface, array $values, array $current = []): ViolationSet {
     $this->frame = ['', [], []];
     return new ViolationSet($this->validateLevel($surface, $values, $current));
   }
@@ -118,9 +118,9 @@ final class Validating {
   /**
    * Names the sources in what a storage refused of the values at the top.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation[] $violations
+   * @param \Drupal\surface\Pipeline\Violation[] $violations
    *   The storage's violations, filed under the top level's keys.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface describing the top level.
    * @param array $values
    *   The accepted values of the top level, which tell a key computed
@@ -128,10 +128,10 @@ final class Validating {
    * @param array $current
    *   What the top level holds in storage.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The same, each of a computed key naming its sources.
    */
-  public function namingSourcesAtTop(array $violations, DataSurfaceInterface $surface, array $values = [], array $current = []): array {
+  public function namingSourcesAtTop(array $violations, SurfaceInterface $surface, array $values = [], array $current = []): array {
     $this->frame = ['', [], []];
     return $this->namingSources($violations, $surface, $values, $current);
   }
@@ -139,7 +139,7 @@ final class Validating {
   /**
    * Validates a child's level in its own frame, then puts the frame back.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child.
    * @param array $values
    *   Its values.
@@ -151,13 +151,13 @@ final class Validating {
    * @param array<string, string> $reads
    *   Its ports, each mapped to the path in the current level's frame of
    *   the key it reads.
-   * @param \Drupal\data_surface\DataSurfaceInterface $level
+   * @param \Drupal\surface\SurfaceInterface $level
    *   The current level, refined, which holds the child.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The violations, filed under the child's own keys.
    */
-  protected function validateFramed(DataSurfaceInterface $child, array $values, array $current, string $at, array $reads, DataSurfaceInterface $level): array {
+  protected function validateFramed(SurfaceInterface $child, array $values, array $current, string $at, array $reads, SurfaceInterface $level): array {
     $outer = $this->frame;
     [$prefix, $ports, $levels] = $outer;
     $resolved = [];
@@ -180,17 +180,17 @@ final class Validating {
   /**
    * Validates one data surface's values, at the top or inside a child.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface describing this level.
    * @param array $values
    *   The accepted values of this level.
    * @param array $current
    *   What this level holds in storage, for the stale rule.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The violations, filed under this level's keys.
    */
-  protected function validateLevel(DataSurfaceInterface $surface, array $values, array $current): array {
+  protected function validateLevel(SurfaceInterface $surface, array $values, array $current): array {
     $refined = $surface->refine($values);
     $errors = [];
     foreach ($refined->getDefinitions()->entries() as $name => $entry) {
@@ -348,21 +348,21 @@ final class Validating {
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the key belongs to.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The computed key.
-   * @param \Drupal\data_surface\Computed $computed
+   * @param \Drupal\surface\Computed $computed
    *   What it is computed from.
    * @param array $values
    *   The accepted values of its level.
    * @param array $current
    *   What its level holds in storage.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation|null
+   * @return \Drupal\surface\Pipeline\Violation|null
    *   The refusal, or NULL when it holds the value computed.
    */
-  protected function notComputed(DataSurfaceInterface $surface, Entry $entry, Computed $computed, array $values, array $current): ?Violation {
+  protected function notComputed(SurfaceInterface $surface, Entry $entry, Computed $computed, array $values, array $current): ?Violation {
     $name = $entry->name;
     $held = $computed->value($name, $values, $current, $entry->definition);
     try {
@@ -393,19 +393,19 @@ final class Validating {
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation[] $violations
+   * @param \Drupal\surface\Pipeline\Violation[] $violations
    *   The violations of one level, filed under its keys.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface describing the level.
    * @param array $values
    *   The accepted values of the level.
    * @param array $current
    *   What the level holds in storage.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The same, each of a computed key naming its sources.
    */
-  protected function namingSources(array $violations, DataSurfaceInterface $surface, array $values = [], array $current = []): array {
+  protected function namingSources(array $violations, SurfaceInterface $surface, array $values = [], array $current = []): array {
     $refused = [];
     foreach ($violations as $violation) {
       $refused[$violation->key] = TRUE;
@@ -436,7 +436,7 @@ final class Validating {
    *   The key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   Its definition.
-   * @param \Drupal\data_surface\Computed $computed
+   * @param \Drupal\surface\Computed $computed
    *   What it is computed from.
    * @param array $values
    *   The accepted values of its level.
@@ -489,11 +489,11 @@ final class Validating {
    * Decision: see
    * docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation[] $refusals
+   * @param \Drupal\surface\Pipeline\Violation[] $refusals
    *   The key's refusals.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface as declared.
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The same, refined against the values.
    * @param string $name
    *   The key.
@@ -502,10 +502,10 @@ final class Validating {
    * @param array<int, true> $choices
    *   The refusals, by index, that a list of allowed values made.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The refusals, each saying what is allowed where that applies.
    */
-  protected function sayingWhatIsAllowed(array $refusals, DataSurfaceInterface $surface, DataSurfaceInterface $refined, string $name, array $values, array $choices): array {
+  protected function sayingWhatIsAllowed(array $refusals, SurfaceInterface $surface, SurfaceInterface $refined, string $name, array $values, array $choices): array {
     $entry = $refined->getDefinitions()->entry($name);
     if ($refusals === [] || $entry === NULL) {
       return $refusals;
@@ -568,14 +568,14 @@ final class Validating {
    * Decision: see
    * docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The data surface, refined against the values.
    * @param string[] $dependencies
    *   The watched keys, a mounted key by its dotted path, a port by its
    *   name.
    * @param array $values
    *   The values of the level.
-   * @param \Drupal\data_surface\Entry|null $entry
+   * @param \Drupal\surface\Entry|null $entry
    *   The refused key, whose declared rules say which watched keys are
    *   read for presence alone.
    *
@@ -584,11 +584,11 @@ final class Validating {
    *   label; "Email is set" for a key read for presence alone; "Event
    *   license is empty (EV-2048 was refused)" for a refused one.
    */
-  protected function conditions(DataSurfaceInterface $refined, array $dependencies, array $values, ?Entry $entry = NULL): array {
+  protected function conditions(SurfaceInterface $refined, array $dependencies, array $values, ?Entry $entry = NULL): array {
     $conditions = [];
     $presence = $entry?->presenceDependencies() ?? [];
     $withheld = $refined->withheldValues();
-    $context = ['context' => DataSurfacePipeline::REFUSAL_CONTEXT];
+    $context = ['context' => SurfacePipeline::REFUSAL_CONTEXT];
     foreach ($dependencies as $dependency) {
       $at = explode('.', $dependency);
       $watched = static::definitionAt($refined, $at);
@@ -635,7 +635,7 @@ final class Validating {
    *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The level, refined against the values.
    * @param string $dependency
    *   The key, by its dotted path in the level, or a port by its name.
@@ -643,7 +643,7 @@ final class Validating {
    * @return string|\Stringable
    *   Its name.
    */
-  protected function conditionKey(DataSurfaceInterface $refined, string $dependency): string|\Stringable {
+  protected function conditionKey(SurfaceInterface $refined, string $dependency): string|\Stringable {
     [$prefix, $ports] = $this->frame;
     $full = $ports[$dependency] ?? $prefix . $dependency;
     $label = static::labelOf(static::definitionAt($refined, explode('.', $dependency)));
@@ -663,7 +663,7 @@ final class Validating {
   /**
    * Reads the label of a key anywhere in the values, from its full path.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The current level, refined.
    * @param string $path
    *   The key's dotted path from the top.
@@ -671,7 +671,7 @@ final class Validating {
    * @return string|\Stringable|null
    *   Its label, or NULL where it has none or nothing declares it.
    */
-  protected function labelAt(DataSurfaceInterface $refined, string $path): string|\Stringable|null {
+  protected function labelAt(SurfaceInterface $refined, string $path): string|\Stringable|null {
     [$prefix, , $levels] = $this->frame;
     $levels[$prefix] = $refined;
     // The innermost level the path lies inside.
@@ -712,7 +712,7 @@ final class Validating {
    *   "This applies when Room is Main hall and Event license is empty."
    */
   protected function appliesWhen(array $conditions): TranslatableMarkup {
-    $context = ['context' => DataSurfacePipeline::REFUSAL_CONTEXT];
+    $context = ['context' => SurfacePipeline::REFUSAL_CONTEXT];
     $arguments = static::conditionArguments($conditions);
     return match (count($conditions)) {
       1 => $this->t('This applies when @condition.', $arguments, $context),
@@ -745,7 +745,7 @@ final class Validating {
   /**
    * Lists what a refused key may hold, as refined for the values sent.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The data surface, refined against the values.
    * @param string $name
    *   The key.
@@ -758,14 +758,14 @@ final class Validating {
    *   CHOICES_SHOWN of them and how many more; "Nothing may be
    *   chosen." for an empty list; NULL when the key offers no list.
    */
-  protected function choices(DataSurfaceInterface $refined, string $name, string $path): ?TranslatableMarkup {
+  protected function choices(SurfaceInterface $refined, string $name, string $path): ?TranslatableMarkup {
     $definition = $path === '' ? NULL : static::definitionAt($refined, [$name, ...explode('.', $path)]);
     $definition ??= $refined->getDefinition($name);
     $set = $definition === NULL ? NULL : $this->options->resolve($definition);
     if ($set === NULL) {
       return NULL;
     }
-    $context = ['context' => DataSurfacePipeline::REFUSAL_CONTEXT];
+    $context = ['context' => SurfacePipeline::REFUSAL_CONTEXT];
     if ($set->options === []) {
       return $this->t('Nothing may be chosen.', [], $context);
     }
@@ -775,7 +775,7 @@ final class Validating {
     foreach ($set->options as $value => $label) {
       $choices[] = Named::value($label, (string) $value);
     }
-    $shown = array_slice($choices, 0, DataSurfacePipeline::CHOICES_SHOWN);
+    $shown = array_slice($choices, 0, SurfacePipeline::CHOICES_SHOWN);
     $more = count($choices) - count($shown);
     if ($more > 0) {
       return $this->formatPlural($more, 'Choose @choices or 1 more.', 'Choose @choices or one of @count more.', ['@choices' => new NamedList(...$shown)], $context);
@@ -808,7 +808,7 @@ final class Validating {
     }
     $set = $this->options->resolve($definition);
     $value = is_bool($default) ? (int) $default : $default;
-    $context = ['context' => DataSurfacePipeline::REFUSAL_CONTEXT];
+    $context = ['context' => SurfacePipeline::REFUSAL_CONTEXT];
     if (is_bool($default) && !($set !== NULL && isset($set->options[$value]))) {
       return $default
         ? $this->t('@label cannot be cleared: it always holds a value, on by default. Leave it out to keep what it holds.', ['@label' => $label], $context)
@@ -835,9 +835,9 @@ final class Validating {
    * Decision: see
    * docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface as declared.
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The same, refined against the values.
    * @param string $name
    *   The key.
@@ -852,7 +852,7 @@ final class Validating {
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The refusal.
    */
-  protected function isRequired(DataSurfaceInterface $surface, DataSurfaceInterface $refined, string $name, string $path, string|\Stringable $label, array $values): TranslatableMarkup {
+  protected function isRequired(SurfaceInterface $surface, SurfaceInterface $refined, string $name, string $path, string|\Stringable $label, array $values): TranslatableMarkup {
     $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
     $declared = static::definitionAt($surface, $parents);
     $entry = $refined->getDefinitions()->entry($name);
@@ -880,7 +880,7 @@ final class Validating {
     if ($conditions === []) {
       return $this->t('@label is required.', ['@label' => $label]);
     }
-    $context = ['context' => DataSurfacePipeline::REFUSAL_CONTEXT];
+    $context = ['context' => SurfacePipeline::REFUSAL_CONTEXT];
     $arguments = ['@label' => $label] + static::conditionArguments($conditions);
     return match (count($conditions)) {
       1 => $this->t('@label is required when @condition.', $arguments, $context),
@@ -892,9 +892,9 @@ final class Validating {
   /**
    * Says that a key does not apply, and what it depends on.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface as declared.
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The same, refined against the values.
    * @param string $name
    *   The key.
@@ -907,7 +907,7 @@ final class Validating {
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   "Send day does not apply when Frequency is Monthly."
    */
-  protected function doesNotApply(DataSurfaceInterface $surface, DataSurfaceInterface $refined, string $name, string $path, array $values): TranslatableMarkup {
+  protected function doesNotApply(SurfaceInterface $surface, SurfaceInterface $refined, string $name, string $path, array $values): TranslatableMarkup {
     $parents = $path === '' ? [$name] : [$name, ...explode('.', $path)];
     $entry = $refined->getDefinitions()->entry($name);
     $dependencies = $path === '' ? ($entry->dependencies ?? []) : ($entry->paths[$path] ?? $entry->dependencies ?? []);
@@ -920,7 +920,7 @@ final class Validating {
     if ($conditions === []) {
       return $this->t('@label does not apply.', ['@label' => $label]);
     }
-    $context = ['context' => DataSurfacePipeline::REFUSAL_CONTEXT];
+    $context = ['context' => SurfacePipeline::REFUSAL_CONTEXT];
     $arguments = ['@label' => $label] + static::conditionArguments($conditions);
     return match (count($conditions)) {
       1 => $this->t('@label does not apply when @condition.', $arguments, $context),
@@ -974,7 +974,7 @@ final class Validating {
    * a list names its item, so a refused item's choices are its item's, as
    * a scalar's are its own.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param string[] $parents
    *   The key, then the property names or deltas below it; or a port.
@@ -982,7 +982,7 @@ final class Validating {
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition, or NULL when the path names none.
    */
-  public static function definitionAt(DataSurfaceInterface $surface, array $parents): ?DataDefinitionInterface {
+  public static function definitionAt(SurfaceInterface $surface, array $parents): ?DataDefinitionInterface {
     if (count($parents) === 1 && $surface->getDefinition((string) $parents[0]) === NULL) {
       // A port: the container's key it reads.
       return $surface->getPortDefinition((string) $parents[0]);
@@ -1048,9 +1048,9 @@ final class Validating {
    * whoever reads the set. Dotted paths into a child exist here and in
    * emitted schemas, and nowhere a refiner could name them.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The attached key or key with variants.
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child answering for it, as advertised.
    * @param mixed $value
    *   The key's value, configured.
@@ -1058,13 +1058,13 @@ final class Validating {
    *   What storage holds for the key.
    * @param array $values
    *   The values of the key's own level, for the variants' deciding key.
-   * @param \Drupal\data_surface\DataSurfaceInterface $level
+   * @param \Drupal\surface\SurfaceInterface $level
    *   The key's own level, refined.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The violations, filed under the key.
    */
-  protected function validateChild(Entry $entry, DataSurfaceInterface $child, mixed $value, mixed $current, array $values, DataSurfaceInterface $level): array {
+  protected function validateChild(Entry $entry, SurfaceInterface $child, mixed $value, mixed $current, array $values, SurfaceInterface $level): array {
     $name = $entry->name;
     if (!is_array($value)) {
       return [
@@ -1111,21 +1111,21 @@ final class Validating {
    *
    * Decision: see docs/decisions.md#count-is-the-parents.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The collection, refined.
-   * @param \Drupal\data_surface\Collection $list
+   * @param \Drupal\surface\Collection $list
    *   The child every item is.
    * @param mixed $value
    *   The list, configured.
    * @param mixed $current
    *   What storage holds for it.
-   * @param \Drupal\data_surface\DataSurfaceInterface $level
+   * @param \Drupal\surface\SurfaceInterface $level
    *   The key's own level, refined.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The violations, filed under the key.
    */
-  protected function validateCollection(Entry $entry, Collection $list, mixed $value, mixed $current, DataSurfaceInterface $level): array {
+  protected function validateCollection(Entry $entry, Collection $list, mixed $value, mixed $current, SurfaceInterface $level): array {
     $name = $entry->name;
     if (!is_array($value)) {
       return [
@@ -1240,7 +1240,7 @@ final class Validating {
    * @param string $name
    *   The key.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation
+   * @return \Drupal\surface\Pipeline\Violation
    *   The stale entry.
    */
   protected function staleViolation(DataDefinitionInterface $definition, mixed $value, string $name): Violation {

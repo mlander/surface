@@ -53,7 +53,7 @@ policy is a later concept, not a role here.
 An alter contributes in `alterInputs()`:
 
 ```php
-#[Alters(DataSurfaceDemoFormatter::class)]
+#[Alters(ExampleFormatter::class)]
 final class DemoFormatterAlter implements AltersInputsInterface {
 
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
@@ -98,7 +98,7 @@ is for freight alone. Such a rule is declared, in the blueprint, beside
 the keys it is about:
 
 ```php
-use Drupal\data_surface\Refinement\Condition;
+use Drupal\surface\Refinement\Condition;
 
 $inputs->narrow('capacity')
   ->when(Condition::absent('license'))
@@ -360,7 +360,7 @@ trust; three layers hold a static refiner to it
    it enumerates, and refuses a different answer ("the refiner ... is
    declared static but answered differently when run again"): a counter
    or a clock reads no service and still is not a function of what it
-   watches. And `Tests\data_surface\Traits\StaticRefinerAgreementTrait`
+   watches. And `Tests\surface\Traits\StaticRefinerAgreementTrait`
    holds a whole document to it: for every conditional the emitter
    wrote, a fresh `refine()` against the conditional's values, static
    refiners alone, answers the declared key with the conditional's
@@ -423,7 +423,7 @@ that goes out monthly. A refiner says so by answering
 `DoesNotApply::here()`, from a method whose return type names it:
 
 ```php
-use Drupal\data_surface\Refinement\DoesNotApply;
+use Drupal\surface\Refinement\DoesNotApply;
 
 #[RefinesInput('send_day')]
 public static function sendDayOnlyWhenWeekly(DataDefinitionInterface $send_day, string $frequency): DataDefinitionInterface|DoesNotApply {
@@ -535,7 +535,7 @@ be listed statically.
 A refusal is a `\LogicException` naming the key, the contributor and
 what widened:
 
-> Refining "variant" for the data_surface_demo_extras contribution
+> Refining "variant" for the surface_examples_extras contribution
 > widened what it was given: the LabeledChoice constraint gained the
 > values bold. Refinement may only narrow; widening is a build-time act,
 > and the build is over.
@@ -618,17 +618,17 @@ Anything else is only as reusable as its shortest-lived half.
 
 ## Worked example: the extras demo
 
-`data_surface_demo` ships a field formatter whose `variant` key
+`surface_examples_plugins` ships a field formatter whose `variant` key
 advertises four values (`bold`, `strong`, `quiet`, `muted`) and one
 refiner that narrows them to the ones the chosen casing offers. It knows
 nothing about any other module.
 
-`data_surface_demo_extras` is a separate module that owns neither the
+`surface_examples_extras` is a separate module that owns neither the
 formatter nor its form. Its alter of the formatter's structure contributes
 a fifth value, and a refiner of its own for it:
 
 ```php
-#[Alters(DataSurfaceDemoFormatter::class)]
+#[Alters(ExampleFormatter::class)]
 final class DemoFormatterAlter implements AltersInputsInterface {
 
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
@@ -646,7 +646,7 @@ final class DemoFormatterAlter implements AltersInputsInterface {
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 The method refines a key the alter offered more values on, so it is
-bound as the `data_surface_demo_extras` contribution's refiner, not in
+bound as the `surface_examples_extras` contribution's refiner, not in
 the owner's chain. It is a static method, as every static refiner is,
 though its class is a service: only a runtime refiner may be an
 instance method.

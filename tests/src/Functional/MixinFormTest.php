@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -15,10 +15,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * members are elements at the journal's top, posted, refused and saved
  * there, in no fieldset of their own; the archive is attached, and is.
  *
- * @see \Drupal\Tests\data_surface\Kernel\MixinsTest
+ * @see \Drupal\Tests\surface\Kernel\MixinsTest
  * @see docs/resources.md#mixins
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class MixinFormTest extends BrowserTestBase {
 
@@ -26,8 +26,8 @@ class MixinFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -51,7 +51,7 @@ class MixinFormTest extends BrowserTestBase {
    */
   protected function stored(): array {
     $this->container->get('config.factory')->reset();
-    return array_diff_key($this->config('data_surface_resource_test.journal')->getRawData(), ['_core' => TRUE]);
+    return array_diff_key($this->config('surface_resource_test.journal')->getRawData(), ['_core' => TRUE]);
   }
 
   /**

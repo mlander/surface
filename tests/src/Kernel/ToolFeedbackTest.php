@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Pipeline\ResultDocument;
+use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Component\Utility\NestedArray;
-use Drupal\data_surface\Pipeline\DataSurfacePipeline;
-use Drupal\data_surface_examples\ExampleCalls;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool_test\Resource\LogbookResource;
+use Drupal\surface\Pipeline\SurfacePipeline;
+use Drupal\surface_examples\ExampleCalls;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\surface_tool_test\Resource\LogbookResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
 use Drupal\tool\TypedData\MapOutputDefinition;
@@ -30,9 +30,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-refusal-names-what-it-depends-on
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ToolFeedbackTest extends DataSurfaceKernelTestBase {
+class ToolFeedbackTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -45,18 +45,18 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_resource_test',
-    'data_surface_tool_test',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_resource_test',
+    'surface_tool_test',
   ];
 
   /**
    * Where example 4's module mounts its keys on example 3.
    */
-  protected const COMPLIANCE = 'third_party_settings.data_surface_examples_compliance';
+  protected const COMPLIANCE = 'third_party_settings.surface_examples_compliance';
 
   /**
    * The venues, as a refusal lists them.
@@ -69,7 +69,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_resource_test']);
+    $this->installConfig(['surface_examples', 'surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -194,7 +194,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], self::saying($read, 'Depends on'), 'A read promises shape, and says nothing about what is sent.');
 
     // A key a refiner may rule out says what it depends on too.
-    $bulletin = $manager->getDefinition('data_surface:resource_test.bulletin:configure')->getInputDefinition(OperationInputs::VALUES);
+    $bulletin = $manager->getDefinition('surface:resource_test.bulletin:configure')->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $bulletin);
     $this->assertSame(['send_day' => 'Depends on frequency.'], self::saying($bulletin, 'Depends on'));
   }
@@ -231,7 +231,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
    *
    * One sentence per key: a value not on its list names the list, as
    * refined for the values sent, each label with its value, capped at
-   * DataSurfacePipeline::CHOICES_SHOWN; a key another narrows says what
+   * SurfacePipeline::CHOICES_SHOWN; a key another narrows says what
    * that holds; a bound and a pattern say themselves; a key that does not
    * apply says so, as before.
    */
@@ -243,7 +243,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       'capacity' => 50,
       'pricing' => 'free',
     ];
-    $compliance = static fn (array $keys): array => ['third_party_settings' => ['data_surface_examples_compliance' => $keys]];
+    $compliance = static fn (array $keys): array => ['third_party_settings' => ['surface_examples_compliance' => $keys]];
     $rooms = 'Choose riverside_main (Main hall) or riverside_east (East room)';
     $not_valid = 'The value you selected is not a valid choice';
     $refusals = [
@@ -280,23 +280,23 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       $this->assertSame([FALSE, "The values were refused:\n" . $expected], $this->call(ExampleCalls::TOOL, $values), $which);
     }
 
-    $shelves = array_slice(LogbookResource::SHELVES, 0, DataSurfacePipeline::CHOICES_SHOWN);
+    $shelves = array_slice(LogbookResource::SHELVES, 0, SurfacePipeline::CHOICES_SHOWN);
     $this->assertSame(
       [
         FALSE,
         "The values were refused:\n" . '/shelf: ' . $not_valid . '. Choose ' . implode(', ', $shelves) . ' or one of 2 more.',
       ],
-      $this->call('data_surface:tool_test.logbook:configure', ['shelf' => 'z9']),
+      $this->call('surface:tool_test.logbook:configure', ['shelf' => 'z9']),
       'A long list is capped, and says how many more.',
     );
     $this->assertSame(
       [FALSE, "The values were refused:\n" . '/pages: This value should be between 1 and 500.'],
-      $this->call('data_surface:tool_test.logbook:configure', ['pages' => 900]),
+      $this->call('surface:tool_test.logbook:configure', ['pages' => 900]),
       'A bound no sibling sets says itself.',
     );
     $this->assertSame(
       [FALSE, "The values were refused:\n" . '/send_day: Send day does not apply when Frequency is monthly (Monthly).'],
-      $this->call('data_surface:resource_test.bulletin:configure', ['frequency' => 'monthly', 'send_day' => 'monday']),
+      $this->call('surface:resource_test.bulletin:configure', ['frequency' => 'monthly', 'send_day' => 'monday']),
       'A key that does not apply says so, in the sentence it always said.',
     );
   }
@@ -344,7 +344,7 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       'room' => 'riverside_main',
       'capacity' => 120,
       'pricing' => 'free',
-      'third_party_settings' => ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]],
+      'third_party_settings' => ['surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]],
     ];
     $loop = [
       'the venue, by name' => [static fn (array $values): array => $values, 'Riverside Hall'],
@@ -381,11 +381,11 @@ class ToolFeedbackTest extends DataSurfaceKernelTestBase {
       $values['venue'],
       $values['room'],
       $values['capacity'],
-      $values['third_party_settings']['data_surface_examples_compliance']['stewards'],
+      $values['third_party_settings']['surface_examples_compliance']['stewards'],
     ]);
 
     // The examples' README quotes the three refusals.
-    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/data_surface_examples/README.md');
+    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/surface_examples/README.md');
     foreach ($said as [$path, , $sentence]) {
       $this->assertStringContainsString("Failed: The values were refused:\n" . $path . ': ' . $sentence, $readme);
     }

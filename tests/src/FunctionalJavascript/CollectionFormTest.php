@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
-use Drupal\data_surface_resource_test\Storage\CellarStorage;
+use Drupal\surface_resource_test\Storage\CellarStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -19,9 +19,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * that shelf's height and nothing else; and the save stores the items in
  * the order the page shows them, the blank row dropped.
  *
- * @see \Drupal\data_surface_resource_test\Resource\Cellar\CellarResource
+ * @see \Drupal\surface_resource_test\Resource\Cellar\CellarResource
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class CollectionFormTest extends WebDriverTestBase {
 
@@ -31,8 +31,8 @@ class CollectionFormTest extends WebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -56,7 +56,7 @@ class CollectionFormTest extends WebDriverTestBase {
         [
           'unit' => 'cm',
           'height' => 120,
-          'third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]],
+          'third_party_settings' => ['surface_resource_test' => ['sturdy' => TRUE]],
         ],
       ],
     ]);
@@ -78,7 +78,7 @@ class CollectionFormTest extends WebDriverTestBase {
     // Add another: a third, empty rack, over AJAX. The list is replaced;
     // nothing outside it is.
     $this->probe(['surface[size]', 'surface[shelves][0][height]', 'surface[racks][0][label]']);
-    $page->pressButton('data_surface_racks_add');
+    $page->pressButton('surface_racks_add');
     $assert_session->waitForField('surface[racks][2][label]');
     $assert_session->assertWaitOnAjaxRequest();
     $this->assertTrue($this->stillProbed('surface[size]'));
@@ -90,14 +90,14 @@ class CollectionFormTest extends WebDriverTestBase {
     $page->fillField('surface[racks][2][label]', 'Baking');
 
     // Remove the first: the others move up one.
-    $page->pressButton('data_surface_racks_0_remove');
+    $page->pressButton('surface_racks_0_remove');
     $assert_session->assertWaitOnAjaxRequest();
     $assert_session->fieldNotExists('surface[racks][2][label]');
     $assert_session->fieldValueEquals('surface[racks][0][label]', 'Spare');
     $assert_session->fieldValueEquals('surface[racks][1][label]', 'Baking');
 
     // A blank shelf, added and left empty but for its defaults' unit.
-    $page->pressButton('data_surface_shelves_add');
+    $page->pressButton('surface_shelves_add');
     $assert_session->waitForField('surface[shelves][1][unit]');
     $assert_session->assertWaitOnAjaxRequest();
 
@@ -140,10 +140,10 @@ class CollectionFormTest extends WebDriverTestBase {
     $this->drupalGet('surface-test/cellar/main');
     // A blank rack, then one too full: the blank is dropped, and the full
     // one is refused where it is drawn.
-    $page->pressButton('data_surface_racks_add');
+    $page->pressButton('surface_racks_add');
     $assert_session->waitForField('surface[racks][2][label]');
     $assert_session->assertWaitOnAjaxRequest();
-    $page->pressButton('data_surface_racks_add');
+    $page->pressButton('surface_racks_add');
     $assert_session->waitForField('surface[racks][3][label]');
     $assert_session->assertWaitOnAjaxRequest();
     $page->fillField('surface[racks][2][label]', '');

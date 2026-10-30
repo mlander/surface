@@ -1,0 +1,153 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\surface_examples\Form;
+
+use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Config\FileStorage;
+use Drupal\Core\Config\InstallStorage;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
+use Drupal\Core\Extension\ModuleExtensionList;
+use Drupal\Core\Form\ConfirmFormBase;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\State\StateInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\Url;
+use Drupal\surface_examples\Entity\EventVenue;
+use Symfony\Component\DependencyInjection\ContainerInterface;
+
+/**
+ * Puts every example's settings back to what the module ships.
+ *
+ * For a retake: whatever the examples were saved with, and whatever
+ * another module mounted on them — the compliance module's license under
+ * example 3's third party settings — each config object is replaced
+ * whole by its file in config/install. Read from the files rather than
+ * written down here, so a shipped value that changes is reset to the new
+ * one without touching this form. Example 15's venues are things, not
+ * settings: a venue shipped is put back, made again if it was removed, and
+ * a venue added since is removed. The rooms example 4 lets a site close,
+ * which it keeps in State rather than in any example's settings, are
+ * opened again too, and example 10's workflow state is cleared.
+ */
+final class ResetExamplesForm extends ConfirmFormBase {
+
+  /**
+   * The prefix every config object the examples ship shares.
+   *
+   * Every example's settings, and the ticket types example 9 reads its
+   * keys from.
+   */
+  public const PREFIX = 'surface_examples.';
+
+  /**
+   * The State keys an example reads, cleared whether or not it is on.
+   *
+   * Named here rather than read from the other modules' classes, which
+   * are not loaded while those modules are off: the rooms example 4 closes,
+   * and example 10's workflow state.
+   */
+  public const STATE = ['surface_examples_compliance.closed_rooms', 'surface_examples_workflow.state'];
+
+  /**
+   * Constructs the form.
+   *
+   * @param \Drupal\Core\Config\ConfigFactoryInterface $configs
+   *   The config factory, written through.
+   * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
+   *   The module list, which knows where this module's files are.
+   * @param \Drupal\Core\State\StateInterface $state
+   *   The State, where example 4 lists the rooms a site has closed and
+   *   example 10's workflow module keeps its state.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
+   *   The entity type manager, for example 15's venues.
+   */
+  public function __construct(
+    protected readonly ConfigFactoryInterface $configs,
+    protected readonly ModuleExtensionList $moduleList,
+    protected readonly StateInterface $state,
+    protected readonly EntityTypeManagerInterface $entityTypeManager,
+  ) {}
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container): static {
+    return new static($container->get('config.factory'), $container->get('extension.list.module'), $container->get('state'), $container->get('entity_type.manager'));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getFormId(): string {
+    return 'surface_examples_reset';
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getQuestion(): TranslatableMarkup {
+    return $this->t('Reset every example to the settings the module ships with?');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getDescription(): TranslatableMarkup {
+    return $this->t('Whatever the examples were saved with is replaced, including what another module stored on them. Use it to take the examples again from the start.');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getConfirmText(): TranslatableMarkup {
+    return $this->t('Reset to defaults');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getCancelUrl(): Url {
+    return Url::fromRoute('surface_examples.index');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function submitForm(array &$form, FormStateInterface $form_state): void {
+    $shipped = new FileStorage($this->moduleList->getPath('surface_examples') . '/' . InstallStorage::CONFIG_INSTALL_DIRECTORY);
+    // Example 15's venues: each shipped one as shipped, and none added.
+    $venues = $this->entityTypeManager->getStorage('event_venue');
+    $prefix = EventVenue::PREFIX . '.';
+    $names = $shipped->listAll($prefix);
+    foreach ($venues->loadMultiple() as $venue) {
+      if (!in_array($prefix . $venue->id(), $names, TRUE)) {
+        $venue->delete();
+      }
+    }
+    foreach ($shipped->readMultiple($names) as $data) {
+      $venue = $venues->load($data['id']);
+      if (!$venue instanceof EventVenue) {
+        $venues->create($data)->save();
+        continue;
+      }
+      foreach (array_diff_key($data, array_flip(['uuid', 'langcode', 'dependencies'])) as $property => $value) {
+        $venue->set((string) $property, $value);
+      }
+      $venue->save();
+    }
+    foreach (array_diff($shipped->listAll(self::PREFIX), $names) as $name) {
+      $config = $this->configs->getEditable($name);
+      // The installer's own bookkeeping stays: it says where the object
+      // came from, which a reset does not change; so does the language of
+      // a translatable value, which the storage keeps and no file says.
+      $kept = array_intersect_key($config->getRawData(), ['_core' => TRUE, 'langcode' => TRUE]);
+      $config->setData((array) $shipped->read($name) + $kept)->save();
+    }
+    $this->state->deleteMultiple(self::STATE);
+    $this->messenger()->addStatus($this->t('The examples are back to the settings the module ships with.'));
+    $form_state->setRedirectUrl($this->getCancelUrl());
+  }
+
+}

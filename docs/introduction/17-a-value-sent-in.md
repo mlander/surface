@@ -34,8 +34,8 @@ Range, 1 to 50. Code with no door at all calls the same service:
 
 ```php
 // $block is the teaser block plugin.
-$result = \Drupal::service('data_surface.pipeline')->submit(
-  $block->getDataSurface(),
+$result = \Drupal::service('surface.pipeline')->submit(
+  $block->getSurface(),
   ['headline' => 'Latest', 'limit' => '60'],
   new PluginConfigurationStorage($block),
 );

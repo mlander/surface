@@ -1,0 +1,188 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\surface\Kernel;
+
+use Drupal\Core\Form\FormState;
+use Drupal\surface_test\Plugin\Action\SurfaceTestAction;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PHPUnit\Framework\Attributes\Group;
+
+/**
+ * Tests progressive adoption on an action, the thinnest group A host.
+ *
+ * An action owns no configuration keys of its own and supplies neither a
+ * build nor a submit for the structure to compose with, so the base class
+ * is the two traits and nothing else. What that buys is asserted here:
+ * a plugin holding one declaration answers for its defaults, validates
+ * what it is constructed with, generates its whole form, stores what the
+ * form collected, and runs on the stored values.
+ */
+#[Group('surface')]
+#[RunTestsInSeparateProcesses]
+class TypedConfigurableActionBaseTest extends SurfaceKernelTestBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = [
+    'system',
+    'user',
+    'surface',
+    'surface_test',
+  ];
+
+  /**
+   * Creates the test action.
+   *
+   * @param array $configuration
+   *   Configuration to create it with.
+   *
+   * @return \Drupal\surface_test\Plugin\Action\SurfaceTestAction
+   *   The action instance.
+   */
+  protected function createAction(array $configuration = []): SurfaceTestAction {
+    $action = $this->container->get('plugin.manager.action')
+      ->createInstance('surface_test_action', $configuration);
+    $this->assertInstanceOf(SurfaceTestAction::class, $action);
+    return $action;
+  }
+
+  /**
+   * Tests that the structure, and nothing else, declares the defaults.
+   */
+  public function testDefaultsComeFromTheStructure(): void {
+    $action = $this->createAction();
+
+    $this->assertSame([
+      'message' => 'Done',
+      'level' => 'status',
+    ], $action->defaultConfiguration());
+    $this->assertSame([
+      'message' => 'Done',
+      'level' => 'status',
+    ], $action->getConfiguration());
+  }
+
+  /**
+   * Tests that the values an action is constructed with are validated.
+   *
+   * The host's constructor calls setConfiguration(), so an action built
+   * from stored configuration is held to the structure at the moment it
+   * comes into existence rather than at the moment it runs.
+   */
+  public function testConstructionValidatesConfiguration(): void {
+    $action = $this->createAction(['message' => 'Saved', 'level' => 'warning']);
+    $this->assertSame('Saved', $action->getConfiguration()['message']);
+    $this->assertSame('warning', $action->getConfiguration()['level']);
+
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/message/');
+    $this->createAction(['message' => str_repeat('x', 50)]);
+  }
+
+  /**
+   * Tests that a value outside the list is kept rather than fatal.
+   *
+   * The trade the stale model makes, at the one place it costs
+   * something. Construction is the load path: a host builds its plugin
+   * from whatever the site saved, so a value the list no longer offers
+   * arrives here through no fault of any caller — a deleted bundle, an
+   * uninstalled module — and throwing took down the only page that
+   * could have fixed it. This method has one array and no separate
+   * notion of what is stored, so it cannot tell that value from a bad
+   * one a caller just invented, and it keeps both. The write path still
+   * refuses the invented one, because there the stored value is a
+   * different thing from the submitted one.
+   *
+   * Everything else the structure refuses still throws here, which is
+   * what the oversized message above pins.
+   *
+   * @see \Drupal\surface\SurfaceConfigurationTrait::setConfiguration()
+   * @see \Drupal\Tests\surface\Kernel\StaleValueTest
+   */
+  public function testAnUndeclaredChoiceIsKeptRatherThanRefused(): void {
+    $action = $this->createAction(['level' => 'shouting']);
+
+    $this->assertSame('shouting', $action->getConfiguration()['level']);
+    // And it is reported as stale by anything that asks with the stored
+    // values in hand, so a form renders the placeholder and warns.
+    $configuration = $action->getConfiguration();
+    $violations = $this->pipeline()->validate($action->getSurface(), $configuration, $configuration);
+    $this->assertTrue($violations->isEmpty());
+    $this->assertCount(1, $violations->stale());
+  }
+
+  /**
+   * Tests that the whole form triple comes from the trait.
+   *
+   * @see \Drupal\Tests\surface\Kernel\SurfaceFormTest::testConstraintsMapToElementProperties
+   */
+  public function testFormTripleComesFromTheStructure(): void {
+    $action = $this->createAction(['message' => 'Saved']);
+    $form_state = new FormState();
+
+    $form = $action->buildConfigurationForm([], $form_state);
+    // Both declared keys reach the form carrying what is stored. What
+    // element a constraint maps to is pinned once, in SurfaceFormTest.
+    $this->assertArrayHasKey('message', $form);
+    $this->assertSame('Saved', $form['message']['#default_value']);
+    // Option labels are translatable markup, so they are compared as the
+    // text they render to.
+    $this->assertSame(
+      ['status' => 'Status', 'warning' => 'Warning'],
+      array_map('strval', $form['level']['#options']),
+    );
+
+    $form_state->setValues([
+      'message' => str_repeat('x', 50),
+      'level' => 'status',
+    ]);
+    $action->validateConfigurationForm($form, $form_state);
+    $this->assertArrayHasKey('message', $form_state->getErrors());
+  }
+
+  /**
+   * Tests that submit stores the accepted values through the pipeline.
+   */
+  public function testSubmitStoresAcceptedValues(): void {
+    $action = $this->createAction();
+    $form_state = new FormState();
+    $form = $action->buildConfigurationForm([], $form_state);
+
+    $form_state->setValues([
+      'message' => 'The article was published',
+      'level' => 'warning',
+    ]);
+    $action->submitConfigurationForm($form, $form_state);
+
+    $this->assertSame([
+      'message' => 'The article was published',
+      'level' => 'warning',
+    ], $action->getConfiguration());
+  }
+
+  /**
+   * Tests that execute() runs on what the configuration holds.
+   */
+  public function testExecuteUsesStoredConfiguration(): void {
+    $this->createAction(['message' => 'Saved', 'level' => 'warning'])->execute();
+    $this->createAction()->execute();
+
+    $messenger = $this->container->get('messenger');
+    $this->assertSame(['Saved'], array_map('strval', $messenger->messagesByType('warning')));
+    $this->assertSame(['Done'], array_map('strval', $messenger->messagesByType('status')));
+  }
+
+  /**
+   * Tests that the host's own remaining protocol is untouched.
+   */
+  public function testHostProtocolSurvives(): void {
+    $action = $this->createAction();
+
+    $this->assertSame([], $action->calculateDependencies());
+    $this->assertTrue($action->access(NULL));
+  }
+
+}

@@ -1,0 +1,35 @@
+services:
+  surface_tool.input_definitions:
+    class: Drupal\surface_tool\InputDefinitions
+    arguments: ['@surface.options', '@string_translation', '@surface.references', '@surface.site_list_budget']
+  # What a tool generated for one operation of one resource takes and
+  # answers with; the deriver writes it statically, the tool refines it.
+  surface_tool.operation_inputs:
+    class: Drupal\surface_tool\OperationInputs
+    arguments: ['@surface.resources', '@surface.operation_arguments', '@surface_tool.input_definitions', '@string_translation', '@module_handler', '@?surface_react.served_paths']
+  # The field instance resource's and the field storage resource's
+  # settings variants, one per UI field type, read from its config schema:
+  # providers their attachVariants(from:) names.
+  Drupal\surface_tool\FieldSettingsSchemaVariants:
+    arguments: ['@plugin.manager.field.field_type', '@surface.config_schema_document']
+  Drupal\surface_tool\FieldStorageSettingsSchemaVariants:
+    arguments: ['@plugin.manager.field.field_type', '@surface.config_schema_document']
+  # A read-only panel an operation route can name in _surface_panel:
+  # the contract the form's data surface emits, rebuilt with the form, and
+  # what the derived tool can advertise of it.
+  surface_tool.contract_panel:
+    class: Drupal\surface_tool\ContractPanel
+    arguments: ['@surface.resource_registry', '@surface.options', '@surface.contract_emitter', '@plugin.manager.tool', '@tool.definition_serializer', '@string_translation', '@surface.resources']
+  # The derived tools are kept by the Tool API until the next cache
+  # rebuild; this clears them when what they were derived from changes.
+  surface_tool.tool_definitions_invalidator:
+    class: Drupal\surface_tool\ToolDefinitionsInvalidator
+    arguments: ['@service_container']
+    tags:
+      - { name: cache_tags_invalidator }
+  # The tool and the read tool an operation reaches, for the site catalog.
+  surface_tool.catalog_doors:
+    class: Drupal\surface_tool\ToolDoors
+    arguments: ['@plugin.manager.tool']
+    tags:
+      - { name: surface.catalog_doors, priority: 20 }

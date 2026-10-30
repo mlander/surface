@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -21,9 +21,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ToolDefinitionsPerResourceTest extends DataSurfaceKernelTestBase {
+class ToolDefinitionsPerResourceTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
   use UserCreationTrait;
@@ -52,11 +52,11 @@ class ToolDefinitionsPerResourceTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step, whose counts say what was built.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources
+   * @return \Drupal\surface\ResourceBuild\Resources
    *   The service.
    */
   protected function resources(): Resources {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     return $resources;
   }
@@ -96,7 +96,7 @@ class ToolDefinitionsPerResourceTest extends DataSurfaceKernelTestBase {
     assert($field !== NULL);
     $field->set('label', 'Summary')->save();
     $this->assertSame(['entity.content:node.page' => $cold['entity.content:node.page']], $this->listInNewRequest());
-    $listing = $this->container->get('plugin.manager.tool')->getDefinition('data_surface:entity.content:node.page:create');
+    $listing = $this->container->get('plugin.manager.tool')->getDefinition('surface:entity.content:node.page:create');
     $this->assertArrayHasKey('field_description', $listing->getInputDefinition('values')->getPropertyDefinitions());
 
     // Nothing saved, nothing derived: every resource reads its entry.
@@ -126,7 +126,7 @@ class ToolDefinitionsPerResourceTest extends DataSurfaceKernelTestBase {
   public function testBurstWaitsForOneRebuild(): void {
     $tools = $this->container->get('plugin.manager.tool');
     $this->listInNewRequest();
-    $base = clone $tools->getDefinition('data_surface:entity.content:node.page:create');
+    $base = clone $tools->getDefinition('surface:entity.content:node.page:create');
     // A deploy: the bin emptied, every request after it cold.
     $this->container->get('cache.discovery')->deleteAll();
     $tools->clearCachedDefinitions();
@@ -136,7 +136,7 @@ class ToolDefinitionsPerResourceTest extends DataSurfaceKernelTestBase {
     $this->lock->whileWaiting = function () use ($base): void {
       $this->lock->whileWaiting = NULL;
       $this->lock->taken = FALSE;
-      ResourceOperationToolDeriver::create($this->container, 'data_surface')->getDerivativeDefinitions($base);
+      ResourceOperationToolDeriver::create($this->container, 'surface')->getDerivativeDefinitions($base);
     };
     $tools->getDefinitions();
     $this->assertSame([
@@ -146,8 +146,8 @@ class ToolDefinitionsPerResourceTest extends DataSurfaceKernelTestBase {
       ['acquire', ResourceOperationToolDeriver::LOCK],
       ['release', ResourceOperationToolDeriver::LOCK],
     ], $this->lock->asked, 'After the wait this request read what the other wrote, and derived nothing.');
-    $this->assertArrayHasKey('data_surface:entity.content:node.page:update', $tools->getDefinitions());
-    $this->assertArrayHasKey('data_surface:entity.content:node.kitchen:update:read', $tools->getDefinitions());
+    $this->assertArrayHasKey('surface:entity.content:node.page:update', $tools->getDefinitions());
+    $this->assertArrayHasKey('surface:entity.content:node.kitchen:update:read', $tools->getDefinitions());
   }
 
 }

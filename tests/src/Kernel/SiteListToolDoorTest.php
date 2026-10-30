@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\Cache;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface_resource_test\Resource\Poster\PosterResource;
-use Drupal\data_surface_resource_test\Storage\PosterStorage;
-use Drupal\data_surface_resource_test\Variants\PosterLayouts;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface_resource_test\Resource\Poster\PosterResource;
+use Drupal\surface_resource_test\Storage\PosterStorage;
+use Drupal\surface_resource_test\Variants\PosterLayouts;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -30,10 +30,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class SiteListToolDoorTest extends DataSurfaceKernelTestBase {
+class SiteListToolDoorTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
   use UserCreationTrait;
@@ -46,26 +46,26 @@ class SiteListToolDoorTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_react',
+    'surface_resource_test',
   ];
 
   /**
    * The poster's write tool.
    */
-  protected const WRITE = 'data_surface:resource_test.poster:configure';
+  protected const WRITE = 'surface:resource_test.poster:configure';
 
   /**
    * The note on a key of layouts nothing stored chooses.
    */
-  protected const NONE_STORED = "Its keys depend on layout and are not listed here: choose layout, then fetch GET /surface-api/resource_test.poster/schema?choose=/panels={layout} once per layout, or call data_surface:resource_test.poster:configure:schema with your values, to get this key's schema.";
+  protected const NONE_STORED = "Its keys depend on layout and are not listed here: choose layout, then fetch GET /surface-api/resource_test.poster/schema?choose=/panels={layout} once per layout, or call surface:resource_test.poster:configure:schema with your values, to get this key's schema.";
 
   /**
    * The note on a key of layouts the stored shelf_2 chooses.
    */
-  protected const SHELF_STORED = "Its keys depend on layout: listed here are those of shelf_2, the layout stored. For another layout, fetch GET /surface-api/resource_test.poster/schema?choose=/panels={layout} once per layout, or call data_surface:resource_test.poster:configure:schema with your values, to get this key's schema.";
+  protected const SHELF_STORED = "Its keys depend on layout: listed here are those of shelf_2, the layout stored. For another layout, fetch GET /surface-api/resource_test.poster/schema?choose=/panels={layout} once per layout, or call surface:resource_test.poster:configure:schema with your values, to get this key's schema.";
 
   /**
    * {@inheritdoc}
@@ -73,7 +73,7 @@ class SiteListToolDoorTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface', 'data_surface_resource_test']);
+    $this->installConfig(['surface', 'surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
     // Five shelves beside the three layouts always listed, each read when
     // asked: eight, under the limit of twenty.
@@ -102,11 +102,11 @@ class SiteListToolDoorTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources
+   * @return \Drupal\surface\ResourceBuild\Resources
    *   The service.
    */
   protected function resources(): Resources {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     return $resources;
   }
@@ -114,10 +114,10 @@ class SiteListToolDoorTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the poster for the current account.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The build.
    */
-  protected function poster(): DataSurfaceInterface {
+  protected function poster(): SurfaceInterface {
     return $this->resources()->buildOperation(PosterResource::class, 'configure');
   }
 
@@ -150,7 +150,7 @@ class SiteListToolDoorTest extends DataSurfaceKernelTestBase {
    * Tests both documents state every layout, and the tool none of them.
    */
   public function testUnderTheLimitOnlyTheDocumentsStateEveryLayout(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = $emitter->emitFull($this->poster(), 'resource_test.poster', 'configure', 'Configure the poster')->document['schema'];
     $this->assertCount(8, (array) $full['properties']['panels']['x-surface']['variants']);
     $this->assertArrayNotHasKey('deferred', $full['properties']['panels']['x-surface']);

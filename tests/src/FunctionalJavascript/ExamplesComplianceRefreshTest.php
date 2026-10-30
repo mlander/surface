@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use Behat\Mink\Driver\Selenium2Driver;
 use PHPUnit\Framework\Attributes\Group;
@@ -17,10 +17,10 @@ use WebDriver\Key;
  * trigger's own, held for the request while the rebuild goes ahead. A
  * room the site closed is left out by the alter's runtime refiner.
  *
- * @see \Drupal\Tests\data_surface\Kernel\ExamplesComplianceTest
+ * @see \Drupal\Tests\surface\Kernel\ExamplesComplianceTest
  *   For the same rules, asked of the resource and the form state.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
 
@@ -28,14 +28,14 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
-    'data_surface_examples_compliance',
+    'surface_examples',
+    'surface_examples_compliance',
   ];
 
   /**
    * The license element's name.
    */
-  protected const LICENSE = 'surface[third_party_settings][data_surface_examples_compliance][license]';
+  protected const LICENSE = 'surface[third_party_settings][surface_examples_compliance][license]';
 
   /**
    * The constraint message a malformed license earns.
@@ -45,12 +45,12 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   /**
    * The Compliance fieldset's data-drupal-selector.
    */
-  protected const COMPLIANCE = 'edit-surface-third-party-settings-data-surface-examples-compliance';
+  protected const COMPLIANCE = 'edit-surface-third-party-settings-surface-examples-compliance';
 
   /**
    * The stewards element's name.
    */
-  protected const STEWARDS = 'surface[third_party_settings][data_surface_examples_compliance][stewards]';
+  protected const STEWARDS = 'surface[third_party_settings][surface_examples_compliance][stewards]';
 
   /**
    * Tests the alter's keys sit in one fieldset, and the stewards follow.
@@ -93,7 +93,7 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
   public function testClosedRoomIsLeftOutAfterChoosingItsVenue(): void {
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
-    $this->container->get('state')->set('data_surface_examples_compliance.closed_rooms', ['riverside_east']);
+    $this->container->get('state')->set('surface_examples_compliance.closed_rooms', ['riverside_east']);
     $this->drupalGet('surface-examples/3');
     $page->selectFieldOption('surface[venue]', 'library');
     $assert->assertWaitOnAjaxRequest();
@@ -212,12 +212,12 @@ class ExamplesComplianceRefreshTest extends ExamplesWebDriverTestBase {
     $this->assertSession()->elementNotExists('css', '[data-drupal-selector="edit-surface-third-party-settings"]');
 
     $this->probeAll();
-    $this->getSession()->executeScript(sprintf('document.querySelector(%s).dataset.dataSurfaceProbe = "kept";', json_encode(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE))));
+    $this->getSession()->executeScript(sprintf('document.querySelector(%s).dataset.surfaceProbe = "kept";', json_encode(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE))));
     $this->typeInto(self::LICENSE, '2048' . Key::TAB);
     $this->assertSession()->assertWaitOnAjaxRequest();
     $this->assertStringContainsString('Up to 400 for the Main hall.', $this->formItemText('surface[capacity]'));
     $this->assertSame(['surface[capacity]', self::STEWARDS], $this->replacedSinceProbe());
-    $this->assertSame('kept', $this->getSession()->evaluateScript(sprintf('return document.querySelector(%s).dataset.dataSurfaceProbe;', json_encode(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE)))));
+    $this->assertSame('kept', $this->getSession()->evaluateScript(sprintf('return document.querySelector(%s).dataset.surfaceProbe;', json_encode(sprintf('details[data-drupal-selector="%s"]', self::COMPLIANCE)))));
     $this->assertComplianceAfterTheCapacity();
   }
 

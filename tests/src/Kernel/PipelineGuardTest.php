@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface_door_test\Resource\Broken\CurrentUserStorageResource;
-use Drupal\data_surface_door_test\Resource\Broken\RequestReadingStorageResource;
-use Drupal\data_surface_door_test\Resource\Broken\RouteReadingAccessResource;
-use Drupal\data_surface_door_test\Resource\Broken\StaticAccountRefinerResource;
-use Drupal\data_surface_door_test\Resource\Broken\ThemeReadingKeysResource;
-use Drupal\data_surface_door_test\Resource\Broken\UserReadingRefinerResource;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface_door_test\Resource\Broken\CurrentUserStorageResource;
+use Drupal\surface_door_test\Resource\Broken\RequestReadingStorageResource;
+use Drupal\surface_door_test\Resource\Broken\RouteReadingAccessResource;
+use Drupal\surface_door_test\Resource\Broken\StaticAccountRefinerResource;
+use Drupal\surface_door_test\Resource\Broken\ThemeReadingKeysResource;
+use Drupal\surface_door_test\Resource\Broken\UserReadingRefinerResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -28,16 +28,16 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#nothing-an-operation-runs-reads-the-request
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class PipelineGuardTest extends DataSurfaceKernelTestBase {
+class PipelineGuardTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'user', 'data_surface', 'data_surface_door_test'];
+  protected static $modules = ['system', 'user', 'surface', 'surface_door_test'];
 
   /**
    * {@inheritdoc}
@@ -62,7 +62,7 @@ class PipelineGuardTest extends DataSurfaceKernelTestBase {
    *   The values.
    */
   protected function dry(string $resource, array $values = []): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation($resource, 'configure');
     $surface = $resources->build($resource, $context);
     $this->pipeline()->submit($surface, $values, $resources->storage($resource, $context, $surface), TRUE, $resources->access($resource, $context));
@@ -114,7 +114,7 @@ class PipelineGuardTest extends DataSurfaceKernelTestBase {
    */
   public function testStorageIsRefusedTheRequest(): void {
     $this->assertRefused(fn () => $this->dry(RequestReadingStorageResource::class, ['note' => 'x']), [
-      'The storage Drupal\data_surface_door_test\Storage\Broken\RequestReadingStorage::prepare() asked for the service request_stack',
+      'The storage Drupal\surface_door_test\Storage\Broken\RequestReadingStorage::prepare() asked for the service request_stack',
       'the request a door is answering',
     ]);
   }
@@ -124,7 +124,7 @@ class PipelineGuardTest extends DataSurfaceKernelTestBase {
    */
   public function testStorageMayNotHoldTheCurrentUser(): void {
     $this->assertRefused(fn () => $this->dry(CurrentUserStorageResource::class, ['note' => 'x']), [
-      'The storage Drupal\data_surface_door_test\Storage\Broken\CurrentUserStorage holds the service current_user in $currentUser',
+      'The storage Drupal\surface_door_test\Storage\Broken\CurrentUserStorage holds the service current_user in $currentUser',
       'a storage verb\'s $account',
     ]);
   }
@@ -134,7 +134,7 @@ class PipelineGuardTest extends DataSurfaceKernelTestBase {
    */
   public function testAnAccessClassIsRefusedTheRoute(): void {
     $this->assertRefused(fn () => $this->dry(RouteReadingAccessResource::class), [
-      'The access class Drupal\data_surface_door_test\Access\Broken\RouteReadingAccess::access() asked for the service current_route_match',
+      'The access class Drupal\surface_door_test\Access\Broken\RouteReadingAccess::access() asked for the service current_route_match',
     ]);
   }
 
@@ -143,7 +143,7 @@ class PipelineGuardTest extends DataSurfaceKernelTestBase {
    */
   public function testProviderIsRefusedTheTheme(): void {
     $this->assertRefused(fn () => $this->dry(ThemeReadingKeysResource::class), [
-      'The provider Drupal\data_surface_door_test\Keys\Broken\ThemeReadingKeys::list() asked for the service theme.manager',
+      'The provider Drupal\surface_door_test\Keys\Broken\ThemeReadingKeys::list() asked for the service theme.manager',
       'the theme a page renders in',
     ]);
   }

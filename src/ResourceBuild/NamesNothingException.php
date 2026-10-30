@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 /**
  * A value a URL carries that names no thing: the page is not found.

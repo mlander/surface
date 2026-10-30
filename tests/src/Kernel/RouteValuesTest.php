@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\Declaring;
-use Drupal\data_surface\ResourceBuild\NamesNothingException;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_route_test\Storage\CardStorage;
-use Drupal\Tests\data_surface\Kernel\Fixture\RefusedRoutes;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\Declaring;
+use Drupal\surface\ResourceBuild\NamesNothingException;
+use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface_route_test\Storage\CardStorage;
+use Drupal\Tests\surface\Kernel\Fixture\RefusedRoutes;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -44,9 +44,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * @see docs/forms.md#a-route-that-fixes-or-fills-keys
  * @see docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RouteValuesTest extends DataSurfaceKernelTestBase {
+class RouteValuesTest extends SurfaceKernelTestBase {
 
   use OperationRouteTrait;
   use UserCreationTrait;
@@ -64,9 +64,9 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_route_test',
+    'surface',
+    'surface_tool',
+    'surface_route_test',
   ];
 
   /**
@@ -75,18 +75,18 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface']);
+    $this->installConfig(['surface']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
@@ -98,7 +98,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    *   The raw value of the card parameter, for a route that takes one.
    */
   protected function serveRoute(string $name, ?string $card = NULL): void {
-    $name = 'data_surface_route_test.' . $name;
+    $name = 'surface_route_test.' . $name;
     $route = $this->container->get('router.route_provider')->getRouteByName($name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -119,7 +119,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    *   The route, less the module's prefix (RefusedRoutes).
    */
   protected function serveRefused(string $name): void {
-    $name = 'data_surface_route_test.' . $name;
+    $name = 'surface_route_test.' . $name;
     [$route, $raw] = RefusedRoutes::all()[$name];
     $this->serveBuilt($name, $route, $raw);
   }
@@ -135,8 +135,8 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    */
   protected function submitForm(array $values): array {
     $form_state = new FormState();
-    $form_state->setValues([DataSurfaceOperationForm::SURFACE_KEY => $values]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $form_state->setValues([SurfaceOperationForm::SURFACE_KEY => $values]);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     return array_map(static fn ($error): string => PlainTextOutput::renderFromHtml((string) $error), $form_state->getErrors());
   }
 
@@ -148,7 +148,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    */
   protected function fullSchema(): array {
     $served = $this->served();
-    return $this->container->get('data_surface.contract_emitter')
+    return $this->container->get('surface.contract_emitter')
       ->emitFull($this->resources()->buildStatic($served->resource, $served->context), self::CARD, $served->operation->id)
       ->document['schema'];
   }
@@ -178,7 +178,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   /**
    * Submits values for the card's create through the pipeline.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The create's context, as the route made it.
    * @param array $values
    *   The values.
@@ -233,7 +233,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['white', 'cream'], array_column($item['properties']['color']['oneOf'], 'const'));
 
     // The contract panel beside the form states what the form draws.
-    $panel = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class)[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY];
+    $panel = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY];
     $this->assertStringContainsString('"const": "Welcome"', $panel['contract']['json']['#code']);
     $this->assertStringContainsString('"const": "cream"', $panel['full']['json']['#code']);
   }
@@ -278,13 +278,13 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
     $this->assertNotContains('occasion', $this->fullSchema()['required'] ?? []);
 
     $this->serveRoute('add_thanks');
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class)[DataSurfaceOperationForm::SURFACE_KEY];
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('item', $form['occasion']['#type']);
     $this->assertSame('thanks', $form['occasion']['#value']);
     $this->assertSame('thanks', $form['occasion']['#plain_text']);
     // The contract panel beside the form states it so, in both documents.
     foreach (['contract', 'full'] as $document) {
-      $schema = json_decode($form[DataSurfaceOperationForm::PANEL_KEY][$document]['json']['#code'], TRUE);
+      $schema = json_decode($form[SurfaceOperationForm::PANEL_KEY][$document]['json']['#code'], TRUE);
       $occasion = static::property($schema, 'occasion');
       $this->assertSame('thanks', $occasion['const'], $document);
       $this->assertSame('thanks', $occasion['default'], $document);
@@ -341,7 +341,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   public function testDefaultsOnAnUpdateAreRefused(): void {
     \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored', 'copies' => 5]);
     $this->serveRoute('edit_refilled', 'six');
-    $this->assertRouteRefused('The data_surface_route_test.edit_refilled route: The "update" operation on route_test.card does not create, and carries defaults for "copies": a default is what a new thing starts from, and on an update the stored value stands.');
+    $this->assertRouteRefused('The surface_route_test.edit_refilled route: The "update" operation on route_test.card does not create, and carries defaults for "copies": a default is what a new thing starts from, and on an update the stored value stands.');
 
     // The same said by an operation's own context, at the build.
     $this->expectException(\LogicException::class);
@@ -354,10 +354,10 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    */
   public function testRefusedValuesNameTheKey(): void {
     $this->serveRoute('add_too_many_stamps');
-    $this->assertRouteRefused('The data_surface_route_test.add_too_many_stamps route: The "create" operation sets "envelope.stamps" on route_test.card to 9, which the key does not accept: This value should be between 1 and 5.');
+    $this->assertRouteRefused('The surface_route_test.add_too_many_stamps route: The "create" operation sets "envelope.stamps" on route_test.card to 9, which the key does not accept: This value should be between 1 and 5.');
 
     $this->serveRoute('add_tucked');
-    $this->assertRouteRefused('The data_surface_route_test.add_tucked route: The "create" operation: route_test.card has no key "envelope.flap". A fixed value names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).');
+    $this->assertRouteRefused('The surface_route_test.add_tucked route: The "create" operation: route_test.card has no key "envelope.flap". A fixed value names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).');
 
     $create = $this->resources()->operation(self::CARD, 'create');
     $this->assertRefused(
@@ -416,7 +416,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    *
    * @param string $message
    *   The refusal.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    */
   protected function assertRefused(string $message, OperationContext $context): void {
@@ -435,7 +435,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   public function testTheRoutesDefaultIsLast(): void {
     $built = fn (?OperationContext $context = NULL): mixed => $this->resources()->build(self::CARD, $context ?? $this->resources()->operation(self::CARD, 'create'))->getDefault('copies');
     $this->assertSame(1, $built());
-    $this->config('data_surface.defaults')->set('defaults', [
+    $this->config('surface.defaults')->set('defaults', [
       ['resource' => self::CARD, 'key' => 'copies', 'value' => '4'],
       ['resource' => self::CARD, 'key' => 'envelope.stamps', 'value' => '4'],
     ])->save();
@@ -515,7 +515,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    * A value of the path the key refuses names nothing: the page is not found.
    */
   public function testPathValueTheKeyRefusesNamesNothing(): void {
-    $message = 'The data_surface_route_test.add_colored route reads "{color}" from its path, and the value names nothing here: The "create" operation fixes "envelope.color" on route_test.card to "red", which the key does not accept: The value you selected is not a valid choice.';
+    $message = 'The surface_route_test.add_colored route reads "{color}" from its path, and the value names nothing here: The "create" operation fixes "envelope.color" on route_test.card to "red", which the key does not accept: The value you selected is not a valid choice.';
     $this->visit('/surface-test/card/add/red');
     try {
       $this->served();
@@ -540,11 +540,11 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    */
   public function testReferenceWrittenWrongIsTheRoutes(): void {
     $this->serveRefused('add_misspelled');
-    $this->assertRouteRefused('The data_surface_route_test.add_misspelled route fixes "envelope.color" to "{hue}", which names no variable of its path /surface-test/card/add-misspelled/{color}: a reference reads a value of the route\'s own path.');
+    $this->assertRouteRefused('The surface_route_test.add_misspelled route fixes "envelope.color" to "{hue}", which names no variable of its path /surface-test/card/add-misspelled/{color}: a reference reads a value of the route\'s own path.');
 
     // Where it puts the value is wrong whatever the value, so a value
     // the key would refuse is no page not found either.
-    $refusal = 'The data_surface_route_test.add_misplaced route: The "create" operation: route_test.card has no key "envelope.hue". A fixed value names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).';
+    $refusal = 'The surface_route_test.add_misplaced route: The "create" operation: route_test.card has no key "envelope.hue". A fixed value names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).';
     foreach (['cream', 'red'] as $color) {
       $this->visit('/surface-test/card/add-misplaced/' . $color);
       $this->assertRouteRefused($refusal);
@@ -580,7 +580,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    */
   public function testPlainDefaultNothingReadsIsRefused(): void {
     $this->visit('/surface-test/card/send-misnamed');
-    $this->assertRouteRefused('The data_surface_route_test.send_misnamed route has the plain default "too", which nothing it serves reads: the "send" operation takes $to, $from. A default with no leading underscore is a route parameter, which the operation reads by its name.');
+    $this->assertRouteRefused('The surface_route_test.send_misnamed route has the plain default "too", which nothing it serves reads: the "send" operation takes $to, $from. A default with no leading underscore is a route parameter, which the operation reads by its name.');
   }
 
   /**
@@ -589,7 +589,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   public function testKnownIdentityKeyIsNeitherFixedNorFilled(): void {
     \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored']);
     $this->visit('/surface-test/card/six/rename');
-    $this->assertRouteRefused('The data_surface_route_test.edit_renamed route: The "update" operation fixes "card" on route_test.card, an identity key the context knows: identity is the operation\'s to say, from its parameters, so neither a route nor a parent may fix or fill it.');
+    $this->assertRouteRefused('The surface_route_test.edit_renamed route: The "update" operation fixes "card" on route_test.card, an identity key the context knows: identity is the operation\'s to say, from its parameters, so neither a route nor a parent may fix or fill it.');
 
     // The same refusal for a context any parent hands, at the build.
     $update = $this->resources()->operation(self::CARD, 'update', ['card' => 'six']);
@@ -608,7 +608,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    */
   public function testRouteMayNotFixWhatTheOperationNarrows(): void {
     $this->visit('/surface-test/card/send-cream');
-    $this->assertRouteRefused('The data_surface_route_test.send_cream route fixes "envelope.color", which the "send" operation already narrows with a Choice of its own: the route\'s would take its place. A key the operation narrows to a list is the operation\'s to fix.');
+    $this->assertRouteRefused('The surface_route_test.send_cream route fixes "envelope.color", which the "send" operation already narrows with a Choice of its own: the route\'s would take its place. A key the operation narrows to a list is the operation\'s to fix.');
   }
 
   /**
@@ -620,12 +620,12 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   public function testDeleteTakesNoRouteValues(): void {
     \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored']);
     $this->visit('/surface-test/card/six/delete');
-    $this->assertRouteRefused('The data_surface_route_test.delete_titled route carries "_data_surface_fixed", and the "delete" operation it serves deletes: a delete takes no values, so there is no key to fix, fill or start.');
+    $this->assertRouteRefused('The surface_route_test.delete_titled route carries "_surface_fixed", and the "delete" operation it serves deletes: a delete takes no values, so there is no key to fix, fill or start.');
 
-    $queried = clone $this->container->get('router.route_provider')->getRouteByName('data_surface_route_test.delete_titled');
+    $queried = clone $this->container->get('router.route_provider')->getRouteByName('surface_route_test.delete_titled');
     $queried->setDefaults([OperationRoute::QUERY => ['title' => 'title']] + array_diff_key($queried->getDefaults(), [OperationRoute::FIXED => TRUE]));
-    $this->serveBuilt('data_surface_route_test.delete_queried', $queried, ['card' => 'six']);
-    $this->assertRouteRefused('The data_surface_route_test.delete_queried route carries "_data_surface_query", and the "delete" operation it serves deletes: a delete takes no values, so there is no key to fix, fill or start.');
+    $this->serveBuilt('surface_route_test.delete_queried', $queried, ['card' => 'six']);
+    $this->assertRouteRefused('The surface_route_test.delete_queried route carries "_surface_query", and the "delete" operation it serves deletes: a delete takes no values, so there is no key to fix, fill or start.');
   }
 
   /**
@@ -633,7 +633,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    */
   public function testOneKeyIsFixedOrFilled(): void {
     $this->serveRefused('add_twice');
-    $this->assertRouteRefused('The data_surface_route_test.add_twice route both fixes and fills "title": a fixed value is also what its key starts from, so name it under "_data_surface_fixed" alone.');
+    $this->assertRouteRefused('The surface_route_test.add_twice route both fixes and fills "title": a fixed value is also what its key starts from, so name it under "_surface_fixed" alone.');
   }
 
   /**
@@ -646,11 +646,11 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $this->served()->context->defaults());
 
     foreach ([
-      'query_braced' => 'The data_surface_route_test.query_braced route starts "title" from the query parameter "{subject}": a query name is a plain name, never a reference, since what a link sends is input. Name another query parameter.',
-      'query_empty' => 'The data_surface_route_test.query_empty route\'s "_data_surface_query" is a map of key paths to query names, as { subject: subject }.',
-      'query_reserved' => 'The data_surface_route_test.query_reserved route starts "title" from the query parameter "destination": Drupal or this module reads that parameter for itself on a form page. Name another query parameter.',
-      'query_variable' => 'The data_surface_route_test.query_variable route starts "title" from the query parameter "color": that is a variable of the route\'s path too, and a link built for the route leaves it out of the query. Name another query parameter.',
-      'query_default' => 'The data_surface_route_test.query_default route starts "title" from the query parameter "to": that is a default of the route too, and a link built for the route leaves it out of the query. Name another query parameter.',
+      'query_braced' => 'The surface_route_test.query_braced route starts "title" from the query parameter "{subject}": a query name is a plain name, never a reference, since what a link sends is input. Name another query parameter.',
+      'query_empty' => 'The surface_route_test.query_empty route\'s "_surface_query" is a map of key paths to query names, as { subject: subject }.',
+      'query_reserved' => 'The surface_route_test.query_reserved route starts "title" from the query parameter "destination": Drupal or this module reads that parameter for itself on a form page. Name another query parameter.',
+      'query_variable' => 'The surface_route_test.query_variable route starts "title" from the query parameter "color": that is a variable of the route\'s path too, and a link built for the route leaves it out of the query. Name another query parameter.',
+      'query_default' => 'The surface_route_test.query_default route starts "title" from the query parameter "to": that is a default of the route too, and a link built for the route leaves it out of the query. Name another query parameter.',
     ] as $route => $refusal) {
       // The router's rebuild refuses each, so each is matched by hand.
       $this->serveRefused($route);
@@ -667,7 +667,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
    * reference, would be one more entry per value a URL carries.
    */
   public function testWhatThePathSuppliedIsNeverKept(): void {
-    $bin = $this->container->get('cache.data_surface_build');
+    $bin = $this->container->get('cache.surface_build');
     $kept = function () use ($bin): bool {
       $served = $this->served();
       $resources = $this->resources();
@@ -696,7 +696,7 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   public function testHeldBuildIsTheRequestsAlone(): void {
     $resources = $this->resources();
     assert($resources instanceof Resources);
-    $bin = $this->container->get('cache.data_surface_build');
+    $bin = $this->container->get('cache.surface_build');
     $bin->deleteAll();
     $context = $resources->operation(self::CARD, 'update', ['card' => 'nine'])
       ->withConstraint('envelope.color', 'Choice', ['choices' => ['cream'], Declaring::FIXED => TRUE]);

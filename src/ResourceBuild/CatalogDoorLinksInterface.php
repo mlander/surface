@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 /**
  * Gives the URL of each door one operation reaches, where it has one.
@@ -13,16 +13,16 @@ namespace Drupal\data_surface\ResourceBuild;
  * CatalogDoorsInterface answers for the doors it names; a door no
  * provider links, a tool id, is shown as text.
  *
- * @see \Drupal\data_surface\ResourceBuild\SiteCatalog::links()
+ * @see \Drupal\surface\ResourceBuild\SiteCatalog::links()
  */
 interface CatalogDoorLinksInterface extends CatalogDoorsInterface {
 
   /**
    * Gives the URL of each door this names for an operation.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   One of its operations.
    * @param bool $standalone
    *   Whether it can be asked on its own (ResourceCatalog::standalone()).

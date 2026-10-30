@@ -31,7 +31,7 @@ use Composer\Autoload\ClassLoader;
  * @return string|null
  *   The absolute path, or NULL when no ancestor holds it.
  */
-function data_surface_phpstan_find(string $relative): ?string {
+function surface_phpstan_find(string $relative): ?string {
   $directory = __DIR__;
   for ($depth = 0; $depth < 12; $depth++) {
     $candidate = $directory . '/' . $relative;
@@ -47,7 +47,7 @@ function data_surface_phpstan_find(string $relative): ?string {
   return NULL;
 }
 
-$autoload = data_surface_phpstan_find('vendor/autoload.php');
+$autoload = surface_phpstan_find('vendor/autoload.php');
 if ($autoload === NULL) {
   throw new RuntimeException('Could not find vendor/autoload.php.');
 }
@@ -60,7 +60,7 @@ if (!$loader instanceof ClassLoader) {
   throw new RuntimeException('Could not find the Composer class loader.');
 }
 
-$drupal_root = data_surface_phpstan_find('core/includes/bootstrap.inc');
+$drupal_root = surface_phpstan_find('core/includes/bootstrap.inc');
 if ($drupal_root === NULL) {
   throw new RuntimeException('Could not find the Drupal root.');
 }
@@ -76,7 +76,7 @@ $drupal_root = dirname($drupal_root, 3);
  * @param string $directory
  *   The directory holding the namespace.
  */
-function data_surface_phpstan_namespace(ClassLoader $loader, string $namespace, string $directory): void {
+function surface_phpstan_namespace(ClassLoader $loader, string $namespace, string $directory): void {
   if (is_dir($directory)) {
     $loader->addPsr4($namespace . '\\', $directory);
   }
@@ -85,7 +85,7 @@ function data_surface_phpstan_namespace(ClassLoader $loader, string $namespace, 
 // Core's test base classes live outside any module.
 $core_tests = $drupal_root . '/core/tests/Drupal';
 foreach (['BuildTests', 'FunctionalJavascriptTests', 'FunctionalTests', 'KernelTests', 'TestSite', 'TestTools', 'Tests'] as $suite) {
-  data_surface_phpstan_namespace($loader, 'Drupal\\' . $suite, $core_tests . '/' . $suite);
+  surface_phpstan_namespace($loader, 'Drupal\\' . $suite, $core_tests . '/' . $suite);
 }
 
 // Every extension this module may see: core's own modules and their
@@ -121,8 +121,8 @@ foreach ($patterns as $pattern) {
     if ($name !== basename($directory)) {
       continue;
     }
-    data_surface_phpstan_namespace($loader, 'Drupal\\' . $name, $directory . '/src');
-    data_surface_phpstan_namespace($loader, 'Drupal\\Tests\\' . $name, $directory . '/tests/src');
+    surface_phpstan_namespace($loader, 'Drupal\\' . $name, $directory . '/src');
+    surface_phpstan_namespace($loader, 'Drupal\\Tests\\' . $name, $directory . '/tests/src');
   }
 }
 

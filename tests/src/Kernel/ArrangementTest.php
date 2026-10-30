@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Render\Element;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Form\DataSurfaceFormBuilder;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Resource\Arrangement;
-use Drupal\data_surface\Resource\ArrangementGroup;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions;
-use Drupal\data_surface_resource_test\Resource\Studio\StudioResource;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Form\SurfaceFormBuilder;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Resource\Arrangement;
+use Drupal\surface\Resource\ArrangementGroup;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
+use Drupal\surface_resource_test\Resource\Studio\StudioResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -33,9 +33,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#arrangement-is-declared-once
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ArrangementTest extends DataSurfaceKernelTestBase {
+class ArrangementTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -46,8 +46,8 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
     'system',
     'user',
     'serialization',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -56,18 +56,18 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Builds the studio in its operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The studio, sealed.
    */
-  protected function studio(): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function studio(): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build(StudioResource::class, $resources->operation(StudioResource::class, 'configure'));
   }
 
@@ -111,7 +111,7 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
    */
   public function testTheContractStatesItWithTheWidgetHints(): void {
     $studio = $this->studio();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $values = $studio->getDefaultValues();
 
     $plain = $emitter->emit($studio, $values, 'resource_test.studio', 'configure')->document['schema'];
@@ -144,7 +144,7 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
    */
   public function testTheFormDrawsIt(): void {
     $studio = $this->studio();
-    $container = $this->container->get('data_surface.form_builder')->buildSurfaceForm($studio, $studio->getDefaultValues(), new FormState());
+    $container = $this->container->get('surface.form_builder')->buildSurfaceForm($studio, $studio->getDefaultValues(), new FormState());
     $children = array_values(array_filter(array_keys($container), static fn ($key): bool => !str_starts_with((string) $key, '#')));
     // Each group directly before its first key, which stays where its
     // value is posted.
@@ -162,7 +162,7 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['#type' => 'fieldset', '#title' => 'Opening hours'], array_map(static fn ($value) => is_object($value) ? (string) $value : $value, $container['@group.hours']));
     $this->assertSame('details', $container['@group.pricing']['#type']);
     $this->assertFalse($container['@group.pricing']['#open']);
-    $this->assertSame('hours', $container['opens'][DataSurfaceFormBuilderInterface::GROUP_KEY]['id']);
+    $this->assertSame('hours', $container['opens'][SurfaceFormBuilderInterface::GROUP_KEY]['id']);
     $this->assertSame(2, $container['opens']['#weight']);
     $this->assertSame(1, $container['closes']['#weight']);
     $this->assertSame(-10, $container['notes']['#weight']);
@@ -182,7 +182,7 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
    */
   public function testAnAlterThatWouldRemoveIsRefused(): void {
     $typed_data = $this->container->get('typed_data_manager');
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $typed_data);
     $title = $owner->add('title', 'string', 'Title');
     // The owner arranges its own key, found by its name once declared.
@@ -234,20 +234,20 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
    */
   public function testFieldsetPlacedAfterGroupedKeyIsDrawnInItsGroup(): void {
     $studio = $this->studio();
-    $container = $this->container->get('data_surface.form_builder')->buildSurfaceForm($studio, $studio->getDefaultValues(), new FormState());
-    $mount = $container['third_party_settings']['data_surface_resource_test'];
-    $this->assertSame('deposit', $mount[DataSurfaceFormBuilderInterface::PLACED_AFTER_KEY]);
+    $container = $this->container->get('surface.form_builder')->buildSurfaceForm($studio, $studio->getDefaultValues(), new FormState());
+    $mount = $container['third_party_settings']['surface_resource_test'];
+    $this->assertSame('deposit', $mount[SurfaceFormBuilderInterface::PLACED_AFTER_KEY]);
     $this->assertSame('Booking', (string) $mount['#title']);
 
-    $drawn = DataSurfaceFormBuilder::preRenderSurfaceContainer($container);
-    $placed = '@placed.third_party_settings.data_surface_resource_test';
+    $drawn = SurfaceFormBuilder::preRenderSurfaceContainer($container);
+    $placed = '@placed.third_party_settings.surface_resource_test';
     $this->assertArrayNotHasKey($placed, $drawn, 'Not after the group: inside it.');
     $this->assertSame(['deposit', $placed, 'rate'], Element::children($drawn['@group.pricing'], TRUE));
     $this->assertArrayHasKey('booking_fee', $drawn['@group.pricing'][$placed]);
     $this->assertFalse($drawn['third_party_settings']['#access']);
 
     // A key no group holds is still followed in the frame.
-    $this->assertSame(['booking_fee' => 0], $studio->getDefaultValues()['third_party_settings']['data_surface_resource_test']);
+    $this->assertSame(['booking_fee' => 0], $studio->getDefaultValues()['third_party_settings']['surface_resource_test']);
   }
 
   /**
@@ -255,7 +255,7 @@ class ArrangementTest extends DataSurfaceKernelTestBase {
    */
   public function testOneGroupIsDrawnOneWay(): void {
     $typed_data = $this->container->get('typed_data_manager');
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $typed_data);
     $owner->add('opens', 'string', 'Opens');
     $owner->describe('opens', group: ArrangementGroup::fieldset('hours', 'Hours'));

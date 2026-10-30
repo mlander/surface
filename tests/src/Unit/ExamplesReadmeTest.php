@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface_examples\CodeLines;
-use Drupal\data_surface_examples\ExampleCalls;
+use Drupal\surface_examples\CodeLines;
+use Drupal\surface_examples\ExampleCalls;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -22,13 +22,13 @@ use PHPUnit\Framework\Attributes\Group;
  * classic twin are counted here from the files, as the twin's page counts
  * them.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class ExamplesReadmeTest extends UnitTestCase {
 
   /**
    * The examples module.
    */
-  protected const MODULE = __DIR__ . '/../../../modules/data_surface_examples';
+  protected const MODULE = __DIR__ . '/../../../modules/surface_examples';
 
   /**
    * Reads the README.
@@ -70,9 +70,9 @@ class ExamplesReadmeTest extends UnitTestCase {
     $this->assertContains('src/Resource/RegistrationStep3Resource.php', $quoted);
     $this->assertContains('src/Form/RegistrationStep1ClassicForm.php', $quoted);
     $this->assertContains('src/Form/RegistrationStep2ClassicForm.php', $quoted);
-    $this->assertContains('../data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php', $quoted);
-    $this->assertContains('../data_surface_examples_workflow/src/Alter/FeesWorkflowAlter.php', $quoted);
-    $this->assertContains('../data_surface_examples_workflow/src/Alter/ProgramWorkflowAlter.php', $quoted);
+    $this->assertContains('../surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php', $quoted);
+    $this->assertContains('../surface_examples_workflow/src/Alter/FeesWorkflowAlter.php', $quoted);
+    $this->assertContains('../surface_examples_workflow/src/Alter/ProgramWorkflowAlter.php', $quoted);
     $concepts = [
       'Resource/BulletinResource',
       'Structure/PersonStructure',
@@ -89,8 +89,8 @@ class ExamplesReadmeTest extends UnitTestCase {
     // Example 12's provider is the main module's, and example 13 is the
     // component block's submodule.
     $this->assertContains('../../src/Variants/ComponentProps.php', $quoted);
-    $this->assertContains('../data_surface_component_block/src/Structure/ComponentBlockStructure.php', $quoted);
-    $this->assertContains('../data_surface_component_block/src/Plugin/Block/ComponentBlock.php', $quoted);
+    $this->assertContains('../surface_examples_component_block/src/Structure/ComponentBlockStructure.php', $quoted);
+    $this->assertContains('../surface_examples_component_block/src/Plugin/Block/ComponentBlock.php', $quoted);
     // Example 14: the owner's way whole, and the alter's way, whose alter
     // is the keys module's.
     $extension = [
@@ -103,7 +103,7 @@ class ExamplesReadmeTest extends UnitTestCase {
     foreach ($extension as $class) {
       $this->assertContains('src/' . $class . '.php', $quoted);
     }
-    $this->assertContains('../data_surface_examples_keys/src/Alter/WebhookKeyAlter.php', $quoted);
+    $this->assertContains('../surface_examples_keys/src/Alter/WebhookKeyAlter.php', $quoted);
     // Example 15: the entity type, the resource, the structures of its
     // two operations over the venues, the storage and the access class.
     $venues = [
@@ -119,10 +119,10 @@ class ExamplesReadmeTest extends UnitTestCase {
       $this->assertContains('src/' . $class . '.php', $quoted);
     }
     // Example 16: the resource, in its own module.
-    $this->assertContains('../data_surface_examples_references/src/Resource/SponsorshipResource.php', $quoted);
+    $this->assertContains('../surface_examples_references/src/Resource/SponsorshipResource.php', $quoted);
     // Example 17: the resource, its item and its storage, in its own module.
     foreach (['Resource/RetitleResource', 'Structure/RetitleItemStructure', 'Storage/RetitleStorage'] as $class) {
-      $this->assertContains('../data_surface_examples_retitle/src/' . $class . '.php', $quoted);
+      $this->assertContains('../surface_examples_retitle/src/' . $class . '.php', $quoted);
     }
     foreach ($blocks as [, $path, $code]) {
       $file = self::MODULE . '/' . $path;
@@ -147,9 +147,9 @@ class ExamplesReadmeTest extends UnitTestCase {
    */
   public function testTheSchemaEntriesMatchTheFile(): void {
     preg_match_all('/<!-- schema: (\S+) -->\n\n```yaml\n(.*?)\n```/s', self::readme(), $blocks, PREG_SET_ORDER);
-    $this->assertSame(['data_surface_examples.event_venue.*'], array_column($blocks, 1));
+    $this->assertSame(['surface_examples.event_venue.*'], array_column($blocks, 1));
     foreach ($blocks as [, $key, $yaml]) {
-      $this->assertSame(FirstResourceDocsTest::entry(self::MODULE . '/config/schema/data_surface_examples.schema.yml', $key), $yaml, sprintf('The README quotes the %s entry as it no longer is.', $key));
+      $this->assertSame(FirstResourceDocsTest::entry(self::MODULE . '/config/schema/surface_examples.schema.yml', $key), $yaml, sprintf('The README quotes the %s entry as it no longer is.', $key));
     }
   }
 

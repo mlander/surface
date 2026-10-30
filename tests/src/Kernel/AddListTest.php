@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions;
-use Drupal\data_surface\ResourceBuild\ShapeBlueprint;
-use Drupal\data_surface_resource_test\Resource\Library\OpeningHoursResource;
-use Drupal\data_surface_resource_test\Shape\Sku;
-use Drupal\data_surface_resource_test\Structure\Workshop\BenchStructure;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
+use Drupal\surface\ResourceBuild\ShapeBlueprint;
+use Drupal\surface_resource_test\Resource\Library\OpeningHoursResource;
+use Drupal\surface_resource_test\Shape\Sku;
+use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -24,9 +24,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * built around it, labeled and defaulted, and returned for the core
  * setters. The opening hours declare their three lists with it.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class AddListTest extends DataSurfaceKernelTestBase {
+class AddListTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -35,25 +35,25 @@ class AddListTest extends DataSurfaceKernelTestBase {
     'system',
     'user',
     'serialization',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
    * Gets a fresh owner's blueprint over a fresh builder.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceBlueprint
+   * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
    *   The blueprint.
    */
   protected function blueprint(): ResourceBlueprint {
-    return new ResourceBlueprint(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'));
+    return new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
   }
 
   /**
    * Tests each kind of item, and what the list carries.
    */
   public function testEachKindOfItem(): void {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $inputs = new ResourceBlueprint($builder, $this->container->get('typed_data_manager'));
 
     $keywords = $inputs->addList('keywords', 'string', 'Keywords', default: []);
@@ -80,7 +80,7 @@ class AddListTest extends DataSurfaceKernelTestBase {
    * Tests an alter's blueprint adds a list at its own mount.
    */
   public function testAlterAddsList(): void {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $alter = new ResourceBlueprintAdditions($builder, $this->container->get('typed_data_manager'), 'first_module');
     $tags = $alter->addList('tags', 'string', 'Tags', default: ['a']);
     $this->assertSame($tags, $builder->getThirdPartyDefinition('first_module', 'tags'));
@@ -130,7 +130,7 @@ class AddListTest extends DataSurfaceKernelTestBase {
    * declaration's, and RecipesTest holds the built resource to the page.
    */
   public function testTheRecipesLists(): void {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     OpeningHoursResource::defineInputs(new ResourceBlueprint($builder, $this->container->get('typed_data_manager')));
 
     $days = $builder->getDefinition('days');

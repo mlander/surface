@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 use Drupal\Core\Site\Settings;
 
@@ -19,7 +19,7 @@ use Drupal\Core\Site\Settings;
  * which lives in settings.php beside the database credentials, so an
  * attacker who can read settings.php can read the secrets, and rotating
  * the hash salt makes every stored secret unreadable. A site that needs
- * better replaces the data_surface.secret_codec service with one backed
+ * better replaces the surface.secret_codec service with one backed
  * by a key manager, an HSM or a cloud KMS, and nothing else changes: no
  * resource, no structure, no storage class, no form.
  *
@@ -34,7 +34,7 @@ use Drupal\Core\Site\Settings;
  *   so encrypting the same secret twice produces different ciphertext
  *   and storage reveals nothing by comparison.
  *
- * The envelope is `data_surface:sodium:v1:` followed by the base64 of
+ * The envelope is `surface:sodium:v1:` followed by the base64 of
  * the nonce and the ciphertext concatenated. The prefix carries the
  * scheme and a version because both will change: a site migrating to a
  * real key manager needs to tell its own ciphertext from this one, and a
@@ -42,15 +42,15 @@ use Drupal\Core\Site\Settings;
  * declared secret. The version number is this envelope's, not the
  * module's.
  *
- * @see \Drupal\data_surface\Storage\SecretCodecInterface
- * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
+ * @see \Drupal\surface\Storage\SecretCodecInterface
+ * @see \Drupal\surface\Storage\EncryptedStorageLayout
  */
 final class SodiumSecretCodec implements SecretCodecInterface {
 
   /**
    * The envelope prefix, naming the scheme and its version.
    */
-  public const PREFIX = 'data_surface:sodium:v1:';
+  public const PREFIX = 'surface:sodium:v1:';
 
   /**
    * The HKDF context, so this key is only ever this key.
@@ -60,7 +60,7 @@ final class SodiumSecretCodec implements SecretCodecInterface {
    * unrelated keys, so breaking one tells an attacker nothing about the
    * other.
    */
-  protected const KEY_CONTEXT = 'Drupal\\data_surface secret codec v1';
+  protected const KEY_CONTEXT = 'Drupal\\surface secret codec v1';
 
   /**
    * The derived key, once it has been derived.
@@ -148,7 +148,7 @@ final class SodiumSecretCodec implements SecretCodecInterface {
    * @return string
    *   The 32 byte key.
    *
-   * @throws \Drupal\data_surface\Storage\SecretCodecException
+   * @throws \Drupal\surface\Storage\SecretCodecException
    *   When the site has no hash salt to derive from.
    */
   private function key(): string {
@@ -161,11 +161,11 @@ final class SodiumSecretCodec implements SecretCodecInterface {
         $salt = Settings::getHashSalt();
       }
       catch (\RuntimeException $e) {
-        throw new SecretCodecException('This site has no hash salt, so the reference secret codec has no key to derive. Set $settings["hash_salt"] in settings.php, or replace the data_surface.secret_codec service with one that holds its own key.', 0, $e);
+        throw new SecretCodecException('This site has no hash salt, so the reference secret codec has no key to derive. Set $settings["hash_salt"] in settings.php, or replace the surface.secret_codec service with one that holds its own key.', 0, $e);
       }
     }
     if ($salt === '') {
-      throw new SecretCodecException('This site has no hash salt, so the reference secret codec has no key to derive. Set $settings["hash_salt"] in settings.php, or replace the data_surface.secret_codec service with one that holds its own key.');
+      throw new SecretCodecException('This site has no hash salt, so the reference secret codec has no key to derive. Set $settings["hash_salt"] in settings.php, or replace the surface.secret_codec service with one that holds its own key.');
     }
     return $this->key = hash_hkdf('sha256', $salt, SODIUM_CRYPTO_SECRETBOX_KEYBYTES, self::KEY_CONTEXT);
   }

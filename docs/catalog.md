@@ -19,10 +19,10 @@ names storage and is no plugin's configuration, and every `%key`
 placeholder in its permission can be supplied by one of its parameters.
 Such an operation reaches the doors the installed modules open: a form
 route a module declares, the HTTP path and the React page
-(`data_surface_react`), the tool `data_surface:<id>:<operation>`
-(`data_surface_tool`) and the OpenAPI operation (`data_surface_openapi`).
+(`surface_react`), the tool `surface:<id>:<operation>`
+(`surface_tool`) and the OpenAPI operation (`surface_openapi`).
 One that changes a thing that exists, neither creating nor read only, is
-"read on its own" too, a read tool, `data_surface:<id>:<operation>:read`.
+"read on its own" too, a read tool, `surface:<id>:<operation>:read`.
 A structure a plugin uses is configured through the plugin's host. Every
 operation is built for no account, and what did not build, with every
 route written wrong for the operation it serves, is listed last, under
@@ -30,12 +30,12 @@ Refused. `docs/resources.md` says how each part works.
 
 | Resource or structure | Class | Identity | Operations |
 | --- | --- | --- | --- |
-| [`block.data_surface_component`](#blockdata_surface_component) | `ComponentBlockStructure` | none | none |
-| [`block.data_surface_demo`](#blockdata_surface_demo) | `DemoBlockStructure` | none | none |
-| [`block.data_surface_demo.presentation.grid`](#blockdata_surface_demopresentationgrid) | `GridPresentationStructure` | none | none |
-| [`block.data_surface_demo.presentation.list`](#blockdata_surface_demopresentationlist) | `ListPresentationStructure` | none | none |
 | [`block.placement`](#blockplacement) | `BlockPlacementResource` | `id` | `create`, `update`, `delete` |
 | [`block.placement.condition`](#blockplacementcondition) | `VisibilityConditionStructure` | none | none |
+| [`block.surface_component`](#blocksurface_component) | `ComponentBlockStructure` | none | none |
+| [`block.surface_examples_plugins`](#blocksurface_examples_plugins) | `DemoBlockStructure` | none | none |
+| [`block.surface_examples_plugins.presentation.grid`](#blocksurface_examples_pluginspresentationgrid) | `GridPresentationStructure` | none | none |
+| [`block.surface_examples_plugins.presentation.list`](#blocksurface_examples_pluginspresentationlist) | `ListPresentationStructure` | none | none |
 | [`event.bulletin`](#eventbulletin) | `BulletinResource` | none | `configure` |
 | [`event.desk`](#eventdesk) | `InfoDeskResource` | none | `configure` |
 | [`event.doors`](#eventdoors) | `DoorsResource` | none | `configure` |
@@ -59,7 +59,7 @@ Refused. `docs/resources.md` says how each part works.
 | [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
 | [`field.storage`](#fieldstorage) | `FieldStorageResource` | `entity_type`, `field_name`, `field_type` | `create`, `update` |
-| [`field_formatter:data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DataSurfaceDemoFormatter` | none | none |
+| [`field_formatter:surface_examples_plugins_string`](#field_formattersurface_examples_plugins_string) | `ExampleFormatter` | none | none |
 | [`first.newsletter`](#firstnewsletter) | `NewsletterResource` | none | `configure` |
 | [`first.store`](#firststore) | `StoreResource` | none | `configure` |
 | [`node.type`](#nodetype) | `NodeTypeResource` | `type` | `create`, `update` |
@@ -72,70 +72,70 @@ Refused. `docs/resources.md` says how each part works.
 | [`registration.step3.ticket.paid`](#registrationstep3ticketpaid) | `PaidTicketStructure` | none | none |
 | [`system.performance`](#systemperformance) | `PerformanceResource` | none | `configure` |
 
-## block.data_surface_component
-
-`Drupal\data_surface_component_block\Structure\ComponentBlockStructure`, in `data_surface_component_block`.
-
-- Kind: structure
-- Identity: none
-- Storage: none; its host or its parent stores it
-- Access: the operation's permission alone
-- Used by: `block:data_surface_component`; configured through the plugin's host, never on its own.
-
-## block.data_surface_demo
-
-`Drupal\data_surface_demo\Structure\DemoBlockStructure`, in `data_surface_demo`.
-
-- Kind: structure
-- Identity: none
-- Storage: none; its host or its parent stores it
-- Access: the operation's permission alone
-- Used by: `block:data_surface_demo`; configured through the plugin's host, never on its own.
-
-- Altered by `Drupal\data_surface_demo_extras\Alter\DemoBlockAlter` (`data_surface_demo_extras`), in every operation; it refines `limit` (watching `presentation`).
-
-- Variants at `presentation_settings`: `grid` → `Drupal\data_surface_demo\Structure\GridPresentationStructure`, `list` → `Drupal\data_surface_demo\Structure\ListPresentationStructure`.
-
-## block.data_surface_demo.presentation.grid
-
-`Drupal\data_surface_demo\Structure\GridPresentationStructure`, in `data_surface_demo`.
-
-- Kind: structure
-- Identity: none
-- Storage: none; its host or its parent stores it
-- Access: the operation's permission alone
-
-## block.data_surface_demo.presentation.list
-
-`Drupal\data_surface_demo\Structure\ListPresentationStructure`, in `data_surface_demo`.
-
-- Kind: structure
-- Identity: none
-- Storage: none; its host or its parent stores it
-- Access: the operation's permission alone
-
 ## block.placement
 
-`Drupal\data_surface_block\Resource\BlockPlacementResource`, in `data_surface_block`.
+`Drupal\surface_examples_block\Resource\BlockPlacementResource`, in `surface_examples_block`.
 
 - Kind: resource
 - Identity: `id`
-- Storage: `Drupal\data_surface_block\Storage\BlockPlacementStorage`
+- Storage: `Drupal\surface_examples_block\Storage\BlockPlacementStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Place a block | nothing | yes | `administer blocks` | yes | no: it creates | `#[Operation] on BlockPlacementResource` (`data_surface_block`) |
-| `update` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | yes | `BlockPlacementResource::update()` (`data_surface_block`) |
-| `delete` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | no: it deletes | `BlockPlacementResource::delete()` (`data_surface_block`) |
+| `create` | Place a block | nothing | yes | `administer blocks` | yes | no: it creates | `#[Operation] on BlockPlacementResource` (`surface_examples_block`) |
+| `update` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | yes | `BlockPlacementResource::update()` (`surface_examples_block`) |
+| `delete` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | no: it deletes | `BlockPlacementResource::delete()` (`surface_examples_block`) |
 
-- `create` reaches form `/admin/structure/block/surface/add (data_surface_block.create)`, http `POST /surface-api/block.placement`, tool `data_surface:block.placement:create`, schema tool `data_surface:block.placement:create:schema`, openapi `block.placement:create:write`, react `/surface-react/block.placement/create`.
-- `update` reaches form `/admin/structure/block/surface/{id} (data_surface_block.update)`, http `PATCH /surface-api/block.placement/{id}`, tool `data_surface:block.placement:update`, read tool `data_surface:block.placement:update:read`, schema tool `data_surface:block.placement:update:schema`, openapi `block.placement:update:write`, react `/surface-react/block.placement/update`.
-- `delete` reaches form `/admin/structure/block/surface/{id}/delete (data_surface_block.delete)`, http `DELETE /surface-api/block.placement/{id}`, tool `data_surface:block.placement:delete`, openapi `block.placement:delete:write`, react `/surface-react/block.placement/delete`.
+- `create` reaches form `/admin/structure/block/surface/add (surface_examples_block.create)`, http `POST /surface-api/block.placement`, tool `surface:block.placement:create`, schema tool `surface:block.placement:create:schema`, openapi `block.placement:create:write`, react `/surface-react/block.placement/create`.
+- `update` reaches form `/admin/structure/block/surface/{id} (surface_examples_block.update)`, http `PATCH /surface-api/block.placement/{id}`, tool `surface:block.placement:update`, read tool `surface:block.placement:update:read`, schema tool `surface:block.placement:update:schema`, openapi `block.placement:update:write`, react `/surface-react/block.placement/update`.
+- `delete` reaches form `/admin/structure/block/surface/{id}/delete (surface_examples_block.delete)`, http `DELETE /surface-api/block.placement/{id}`, tool `surface:block.placement:delete`, openapi `block.placement:delete:write`, react `/surface-react/block.placement/delete`.
 
 ## block.placement.condition
 
-`Drupal\data_surface_block\Structure\VisibilityConditionStructure`, in `data_surface_block`.
+`Drupal\surface_examples_block\Structure\VisibilityConditionStructure`, in `surface_examples_block`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## block.surface_component
+
+`Drupal\surface_examples_component_block\Structure\ComponentBlockStructure`, in `surface_examples_component_block`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+- Used by: `block:surface_component`; configured through the plugin's host, never on its own.
+
+## block.surface_examples_plugins
+
+`Drupal\surface_examples_plugins\Structure\DemoBlockStructure`, in `surface_examples_plugins`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+- Used by: `block:surface_examples_plugins`; configured through the plugin's host, never on its own.
+
+- Altered by `Drupal\surface_examples_extras\Alter\DemoBlockAlter` (`surface_examples_extras`), in every operation; it refines `limit` (watching `presentation`).
+
+- Variants at `presentation_settings`: `grid` → `Drupal\surface_examples_plugins\Structure\GridPresentationStructure`, `list` → `Drupal\surface_examples_plugins\Structure\ListPresentationStructure`.
+
+## block.surface_examples_plugins.presentation.grid
+
+`Drupal\surface_examples_plugins\Structure\GridPresentationStructure`, in `surface_examples_plugins`.
+
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## block.surface_examples_plugins.presentation.list
+
+`Drupal\surface_examples_plugins\Structure\ListPresentationStructure`, in `surface_examples_plugins`.
 
 - Kind: structure
 - Identity: none
@@ -144,78 +144,78 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.bulletin
 
-`Drupal\data_surface_examples\Resource\BulletinResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\BulletinResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\BulletinStorage`
+- Storage: `Drupal\surface_examples\Storage\BulletinStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the bulletin | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on BulletinResource` (`data_surface_examples`) |
+| `configure` | Configure the bulletin | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on BulletinResource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/7 (data_surface_examples.step7)`, http `PATCH /surface-api/event.bulletin`, tool `data_surface:event.bulletin:configure`, read tool `data_surface:event.bulletin:configure:read`, openapi `event.bulletin:configure:write`, react `/surface-react/event.bulletin/configure`.
+- `configure` reaches form `/surface-examples/7 (surface_examples.step7)`, http `PATCH /surface-api/event.bulletin`, tool `surface:event.bulletin:configure`, read tool `surface:event.bulletin:configure:read`, openapi `event.bulletin:configure:write`, react `/surface-react/event.bulletin/configure`.
 
 ## event.desk
 
-`Drupal\data_surface_examples\Resource\InfoDeskResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\InfoDeskResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\InfoDeskStorage`
+- Storage: `Drupal\surface_examples\Storage\InfoDeskStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the information desk | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on InfoDeskResource` (`data_surface_examples`) |
+| `configure` | Configure the information desk | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on InfoDeskResource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/8/desk (data_surface_examples.step8_desk)`, http `PATCH /surface-api/event.desk`, tool `data_surface:event.desk:configure`, read tool `data_surface:event.desk:configure:read`, openapi `event.desk:configure:write`, react `/surface-react/event.desk/configure`.
+- `configure` reaches form `/surface-examples/8/desk (surface_examples.step8_desk)`, http `PATCH /surface-api/event.desk`, tool `surface:event.desk:configure`, read tool `surface:event.desk:configure:read`, openapi `event.desk:configure:write`, react `/surface-react/event.desk/configure`.
 
 ## event.doors
 
-`Drupal\data_surface_examples\Resource\DoorsResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\DoorsResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\DoorsStorage`
+- Storage: `Drupal\surface_examples\Storage\DoorsStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the doors | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on DoorsResource` (`data_surface_examples`) |
+| `configure` | Configure the doors | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on DoorsResource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/11 (data_surface_examples.step11)`, http `PATCH /surface-api/event.doors`, tool `data_surface:event.doors:configure`, read tool `data_surface:event.doors:configure:read`, openapi `event.doors:configure:write`, react `/surface-react/event.doors/configure`.
+- `configure` reaches form `/surface-examples/11 (surface_examples.step11)`, http `PATCH /surface-api/event.doors`, tool `surface:event.doors:configure`, read tool `surface:event.doors:configure:read`, openapi `event.doors:configure:write`, react `/surface-react/event.doors/configure`.
 
 ## event.fees
 
-`Drupal\data_surface_examples\Structure\FeesStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\FeesStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
-- Access: `Drupal\data_surface_examples\Access\FeesAccess`
+- Access: `Drupal\surface_examples\Access\FeesAccess`
 
-- Altered by `Drupal\data_surface_examples_workflow\Alter\FeesWorkflowAlter` (`data_surface_examples_workflow`), in every operation; it answers access.
+- Altered by `Drupal\surface_examples_workflow\Alter\FeesWorkflowAlter` (`surface_examples_workflow`), in every operation; it answers access.
 
 ## event.mailer
 
-`Drupal\data_surface_examples\Resource\MailerResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\MailerResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\MailerStorage`
+- Storage: `Drupal\surface_examples\Storage\MailerStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the mailer | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on MailerResource` (`data_surface_examples`) |
+| `configure` | Configure the mailer | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on MailerResource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/14 (data_surface_examples.step14)`, http `PATCH /surface-api/event.mailer`, tool `data_surface:event.mailer:configure`, read tool `data_surface:event.mailer:configure:read`, schema tool `data_surface:event.mailer:configure:schema`, openapi `event.mailer:configure:write`, react `/surface-react/event.mailer/configure`.
+- `configure` reaches form `/surface-examples/14 (surface_examples.step14)`, http `PATCH /surface-api/event.mailer`, tool `surface:event.mailer:configure`, read tool `surface:event.mailer:configure:read`, schema tool `surface:event.mailer:configure:schema`, openapi `event.mailer:configure:write`, react `/surface-react/event.mailer/configure`.
 
 ## event.mailer.credential.managed
 
-`Drupal\data_surface_examples\Structure\ManagedCredentialStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\ManagedCredentialStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -224,7 +224,7 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.mailer.credential.pasted
 
-`Drupal\data_surface_examples\Structure\PastedCredentialStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\PastedCredentialStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -233,7 +233,7 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.person
 
-`Drupal\data_surface_examples\Structure\PersonStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\PersonStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -242,41 +242,41 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.press
 
-`Drupal\data_surface_examples\Resource\PressResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\PressResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\PressStorage`
+- Storage: `Drupal\surface_examples\Storage\PressStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the press page | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on PressResource` (`data_surface_examples`) |
+| `configure` | Configure the press page | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on PressResource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/8 (data_surface_examples.step8)`, http `PATCH /surface-api/event.press`, tool `data_surface:event.press:configure`, read tool `data_surface:event.press:configure:read`, openapi `event.press:configure:write`, react `/surface-react/event.press/configure`.
+- `configure` reaches form `/surface-examples/8 (surface_examples.step8)`, http `PATCH /surface-api/event.press`, tool `surface:event.press:configure`, read tool `surface:event.press:configure:read`, openapi `event.press:configure:write`, react `/surface-react/event.press/configure`.
 
 ## event.program
 
-`Drupal\data_surface_examples\Resource\ProgramResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\ProgramResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\ProgramStorage`
+- Storage: `Drupal\surface_examples\Storage\ProgramStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the program | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on ProgramResource` (`data_surface_examples`) |
-| `check` | Check a program | nothing | no | `administer site configuration` | yes | no: it changes nothing | `#[Operation] on ProgramResource` (`data_surface_examples`) |
+| `configure` | Configure the program | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on ProgramResource` (`surface_examples`) |
+| `check` | Check a program | nothing | no | `administer site configuration` | yes | no: it changes nothing | `#[Operation] on ProgramResource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/10 (data_surface_examples.step10)`, http `PATCH /surface-api/event.program`, tool `data_surface:event.program:configure`, read tool `data_surface:event.program:configure:read`, openapi `event.program:configure:write`, react `/surface-react/event.program/configure`.
-- `check` reaches form `/surface-examples/10/check (data_surface_examples.step10_check)`, http `POST /surface-api/event.program:check`, tool `data_surface:event.program:check`, openapi `event.program:check:write`, react `/surface-react/event.program/check`.
+- `configure` reaches form `/surface-examples/10 (surface_examples.step10)`, http `PATCH /surface-api/event.program`, tool `surface:event.program:configure`, read tool `surface:event.program:configure:read`, openapi `event.program:configure:write`, react `/surface-react/event.program/configure`.
+- `check` reaches form `/surface-examples/10/check (surface_examples.step10_check)`, http `POST /surface-api/event.program:check`, tool `surface:event.program:check`, openapi `event.program:check:write`, react `/surface-react/event.program/check`.
 
-- Altered by `Drupal\data_surface_examples_workflow\Alter\ProgramWorkflowAlter` (`data_surface_examples_workflow`), in `configure`; it answers access.
+- Altered by `Drupal\surface_examples_workflow\Alter\ProgramWorkflowAlter` (`surface_examples_workflow`), in `configure`; it answers access.
 
 ## event.review
 
-`Drupal\data_surface_examples\Structure\ReviewStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\ReviewStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -285,37 +285,37 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.sales
 
-`Drupal\data_surface_examples\Resource\TicketSalesResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\TicketSalesResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\TicketSalesStorage`
+- Storage: `Drupal\surface_examples\Storage\TicketSalesStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure ticket sales | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on TicketSalesResource` (`data_surface_examples`) |
+| `configure` | Configure ticket sales | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on TicketSalesResource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/9 (data_surface_examples.step9)`, http `PATCH /surface-api/event.sales`, tool `data_surface:event.sales:configure`, read tool `data_surface:event.sales:configure:read`, openapi `event.sales:configure:write`, react `/surface-react/event.sales/configure`.
+- `configure` reaches form `/surface-examples/9 (surface_examples.step9)`, http `PATCH /surface-api/event.sales`, tool `surface:event.sales:configure`, read tool `surface:event.sales:configure:read`, openapi `event.sales:configure:write`, react `/surface-react/event.sales/configure`.
 
 ## event.spotlight
 
-`Drupal\data_surface_examples\Resource\SpotlightResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\SpotlightResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\SpotlightStorage`
+- Storage: `Drupal\surface_examples\Storage\SpotlightStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the spotlight | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on SpotlightResource` (`data_surface_examples`) |
+| `configure` | Configure the spotlight | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on SpotlightResource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/12 (data_surface_examples.step12)`, http `PATCH /surface-api/event.spotlight`, tool `data_surface:event.spotlight:configure`, read tool `data_surface:event.spotlight:configure:read`, schema tool `data_surface:event.spotlight:configure:schema`, openapi `event.spotlight:configure:write`, react `/surface-react/event.spotlight/configure`.
+- `configure` reaches form `/surface-examples/12 (surface_examples.step12)`, http `PATCH /surface-api/event.spotlight`, tool `surface:event.spotlight:configure`, read tool `surface:event.spotlight:configure:read`, schema tool `surface:event.spotlight:configure:schema`, openapi `event.spotlight:configure:write`, react `/surface-react/event.spotlight/configure`.
 
 ## event.ticket_limit
 
-`Drupal\data_surface_examples\Structure\TicketLimitStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\TicketLimitStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -324,30 +324,30 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.venue
 
-`Drupal\data_surface_examples\Resource\VenueResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\VenueResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: `id`
-- Storage: `Drupal\data_surface_examples\Storage\VenueStorage`
-- Access: `Drupal\data_surface_examples\Access\VenueAccess`
+- Storage: `Drupal\surface_examples\Storage\VenueStorage`
+- Access: `Drupal\surface_examples\Access\VenueAccess`
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a venue | nothing | yes | `administer event venues` | yes | no: it creates | `#[Operation] on VenueResource` (`data_surface_examples`) |
-| `list` | List the venues | nothing | no | `view event venues` | yes | no: it changes nothing | `#[Operation] on VenueResource` (`data_surface_examples`) |
-| `reorder` | Reorder the venues | nothing | no | `administer event venues` | yes | yes | `#[Operation] on VenueResource` (`data_surface_examples`) |
-| `update` | Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | yes | `VenueResource::update()` (`data_surface_examples`) |
-| `delete` | Remove a venue | `EventVenue $id` | no | `administer event venues` | yes | no: it deletes | `VenueResource::delete()` (`data_surface_examples`) |
+| `create` | Add a venue | nothing | yes | `administer event venues` | yes | no: it creates | `#[Operation] on VenueResource` (`surface_examples`) |
+| `list` | List the venues | nothing | no | `view event venues` | yes | no: it changes nothing | `#[Operation] on VenueResource` (`surface_examples`) |
+| `reorder` | Reorder the venues | nothing | no | `administer event venues` | yes | yes | `#[Operation] on VenueResource` (`surface_examples`) |
+| `update` | Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | yes | `VenueResource::update()` (`surface_examples`) |
+| `delete` | Remove a venue | `EventVenue $id` | no | `administer event venues` | yes | no: it deletes | `VenueResource::delete()` (`surface_examples`) |
 
-- `create` reaches form `/surface-examples/15/add (data_surface_examples.step15_create)`, http `POST /surface-api/event.venue`, tool `data_surface:event.venue:create`, openapi `event.venue:create:write`, react `/surface-react/event.venue/create`.
-- `list` reaches http `GET /surface-api/event.venue`, tool `data_surface:event.venue:list`, openapi `event.venue:list:list`, react `/surface-react/event.venue/list`.
-- `reorder` reaches http `PATCH /surface-api/event.venue:reorder`, tool `data_surface:event.venue:reorder`, read tool `data_surface:event.venue:reorder:read`, openapi `event.venue:reorder:write`, react `/surface-react/event.venue/reorder`.
-- `update` reaches form `/surface-examples/15/venue/{id} (data_surface_examples.step15_update)`, http `PATCH /surface-api/event.venue/{id}`, tool `data_surface:event.venue:update`, read tool `data_surface:event.venue:update:read`, openapi `event.venue:update:write`, react `/surface-react/event.venue/update`.
-- `delete` reaches form `/surface-examples/15/venue/{id}/delete (data_surface_examples.step15_delete)`, http `DELETE /surface-api/event.venue/{id}`, tool `data_surface:event.venue:delete`, openapi `event.venue:delete:write`, react `/surface-react/event.venue/delete`.
+- `create` reaches form `/surface-examples/15/add (surface_examples.step15_create)`, http `POST /surface-api/event.venue`, tool `surface:event.venue:create`, openapi `event.venue:create:write`, react `/surface-react/event.venue/create`.
+- `list` reaches http `GET /surface-api/event.venue`, tool `surface:event.venue:list`, openapi `event.venue:list:list`, react `/surface-react/event.venue/list`.
+- `reorder` reaches http `PATCH /surface-api/event.venue:reorder`, tool `surface:event.venue:reorder`, read tool `surface:event.venue:reorder:read`, openapi `event.venue:reorder:write`, react `/surface-react/event.venue/reorder`.
+- `update` reaches form `/surface-examples/15/venue/{id} (surface_examples.step15_update)`, http `PATCH /surface-api/event.venue/{id}`, tool `surface:event.venue:update`, read tool `surface:event.venue:update:read`, openapi `event.venue:update:write`, react `/surface-react/event.venue/update`.
+- `delete` reaches form `/surface-examples/15/venue/{id}/delete (surface_examples.step15_delete)`, http `DELETE /surface-api/event.venue/{id}`, tool `surface:event.venue:delete`, openapi `event.venue:delete:write`, react `/surface-react/event.venue/delete`.
 
 ## event.venue.listing
 
-`Drupal\data_surface_examples\Structure\VenueListingStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\VenueListingStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -356,7 +356,7 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.venue.order
 
-`Drupal\data_surface_examples\Structure\VenueOrderStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\VenueOrderStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -365,7 +365,7 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.venue.reorder
 
-`Drupal\data_surface_examples\Structure\VenueReorderStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\VenueReorderStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -374,7 +374,7 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.venue.room
 
-`Drupal\data_surface_examples\Structure\VenueRoomStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\VenueRoomStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -383,130 +383,130 @@ Refused. `docs/resources.md` says how each part works.
 
 ## event.webhook
 
-`Drupal\data_surface_examples\Resource\WebhookResource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\WebhookResource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\WebhookStorage`
+- Storage: `Drupal\surface_examples\Storage\WebhookStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the sales webhook | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on WebhookResource` (`data_surface_examples`) |
+| `configure` | Configure the sales webhook | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on WebhookResource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/14/webhook (data_surface_examples.step14_webhook)`, http `PATCH /surface-api/event.webhook`, tool `data_surface:event.webhook:configure`, read tool `data_surface:event.webhook:configure:read`, openapi `event.webhook:configure:write`, react `/surface-react/event.webhook/configure`.
+- `configure` reaches form `/surface-examples/14/webhook (surface_examples.step14_webhook)`, http `PATCH /surface-api/event.webhook`, tool `surface:event.webhook:configure`, read tool `surface:event.webhook:configure:read`, openapi `event.webhook:configure:write`, react `/surface-react/event.webhook/configure`.
 
 ## field.instance
 
-`Drupal\data_surface_tool\Resource\FieldInstanceResource`, in `data_surface_tool`.
+`Drupal\surface_tool\Resource\FieldInstanceResource`, in `surface_tool`.
 
 - Kind: resource
 - Identity: `entity_type`, `bundle`, `field_name`, `field_type`
-- Storage: `Drupal\data_surface_tool\Storage\FieldInstanceStorage`
-- Access: `Drupal\data_surface_tool\Access\FieldInstanceAccess`
+- Storage: `Drupal\surface_tool\Storage\FieldInstanceStorage`
+- Access: `Drupal\surface_tool\Access\FieldInstanceAccess`
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a field to a bundle | `string $entity_type`, `string $bundle` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::create()` (`data_surface_tool`) |
-| `reuse` | Add an existing field to another bundle | `string $entity_type`, `string $bundle`, `string $field_name` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`data_surface_tool`) |
-| `update` | Edit a field | `string $entity_type`, `string $bundle`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldInstanceResource::update()` (`data_surface_tool`) |
+| `create` | Add a field to a bundle | `string $entity_type`, `string $bundle` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::create()` (`surface_tool`) |
+| `reuse` | Add an existing field to another bundle | `string $entity_type`, `string $bundle`, `string $field_name` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`surface_tool`) |
+| `update` | Edit a field | `string $entity_type`, `string $bundle`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldInstanceResource::update()` (`surface_tool`) |
 
-- `create` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}`, tool `data_surface:field.instance:create`, schema tool `data_surface:field.instance:create:schema`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
-- `reuse` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}/{field_name}:reuse`, tool `data_surface:field.instance:reuse`, schema tool `data_surface:field.instance:reuse:schema`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
-- `update` reaches http `PATCH /surface-api/field.instance/{entity_type}/{bundle}/{field_name}`, tool `data_surface:field.instance:update`, read tool `data_surface:field.instance:update:read`, schema tool `data_surface:field.instance:update:schema`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
+- `create` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}`, tool `surface:field.instance:create`, schema tool `surface:field.instance:create:schema`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
+- `reuse` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}/{field_name}:reuse`, tool `surface:field.instance:reuse`, schema tool `surface:field.instance:reuse:schema`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
+- `update` reaches http `PATCH /surface-api/field.instance/{entity_type}/{bundle}/{field_name}`, tool `surface:field.instance:update`, read tool `surface:field.instance:update:read`, schema tool `surface:field.instance:update:schema`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
 
-- Variants at `settings`: `address` → `Drupal\data_surface_address\Resource\AddressFieldSettingsResource`.
+- Variants at `settings`: `address` → `Drupal\surface_examples_address\Resource\AddressFieldSettingsResource`.
 
 ## field.settings.address
 
-`Drupal\data_surface_address\Resource\AddressFieldSettingsResource`, in `data_surface_address`.
+`Drupal\surface_examples_address\Resource\AddressFieldSettingsResource`, in `surface_examples_address`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_address\Storage\AddressFieldSettingsStorage`
+- Storage: `Drupal\surface_examples_address\Storage\AddressFieldSettingsStorage`
 - Access: the operation's permission alone
 - Used by: `field_type:address`; configured through the plugin's host, never on its own.
 
 ## field.storage
 
-`Drupal\data_surface_tool\Resource\FieldStorageResource`, in `data_surface_tool`.
+`Drupal\surface_tool\Resource\FieldStorageResource`, in `surface_tool`.
 
 - Kind: resource
 - Identity: `entity_type`, `field_name`, `field_type`
-- Storage: `Drupal\data_surface_tool\Storage\FieldStorageStorage`
+- Storage: `Drupal\surface_tool\Storage\FieldStorageStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | New field storage | nothing | yes | `administer %entity_type fields` | no: nothing supplies `%entity_type` | no: not on its own | `FieldStorageResource::create()` (`data_surface_tool`) |
-| `update` | Edit a field storage | `string $entity_type`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldStorageResource::update()` (`data_surface_tool`) |
+| `create` | New field storage | nothing | yes | `administer %entity_type fields` | no: nothing supplies `%entity_type` | no: not on its own | `FieldStorageResource::create()` (`surface_tool`) |
+| `update` | Edit a field storage | `string $entity_type`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldStorageResource::update()` (`surface_tool`) |
 
-- `update` reaches http `PATCH /surface-api/field.storage/{entity_type}/{field_name}`, tool `data_surface:field.storage:update`, read tool `data_surface:field.storage:update:read`, schema tool `data_surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
+- `update` reaches http `PATCH /surface-api/field.storage/{entity_type}/{field_name}`, tool `surface:field.storage:update`, read tool `surface:field.storage:update:read`, schema tool `surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
 
-## field_formatter:data_surface_demo_string
+## field_formatter:surface_examples_plugins_string
 
-`Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter`, in `data_surface_demo`.
+`Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter`, in `surface_examples_plugins`.
 
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
 - Access: the operation's permission alone
-- Used by: `field_formatter:data_surface_demo_string`; configured through the plugin's host, never on its own.
+- Used by: `field_formatter:surface_examples_plugins_string`; configured through the plugin's host, never on its own.
 
-- Altered by `Drupal\data_surface_demo_extras\Alter\DemoFormatterAlter` (`data_surface_demo_extras`), in every operation; it refines `variant` (watching `casing`).
+- Altered by `Drupal\surface_examples_extras\Alter\DemoFormatterAlter` (`surface_examples_extras`), in every operation; it refines `variant` (watching `casing`).
 
 ## first.newsletter
 
-`Drupal\data_surface_first\Resource\NewsletterResource`, in `data_surface_first`.
+`Drupal\surface_examples_first\Resource\NewsletterResource`, in `surface_examples_first`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_first\Storage\NewsletterStorage`
+- Storage: `Drupal\surface_examples_first\Storage\NewsletterStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the newsletter | nothing | no | `administer data_surface_first` | yes | yes | `#[Operation] on NewsletterResource` (`data_surface_first`) |
+| `configure` | Configure the newsletter | nothing | no | `administer surface_examples_first` | yes | yes | `#[Operation] on NewsletterResource` (`surface_examples_first`) |
 
-- `configure` reaches form `/admin/config/services/surface-newsletter (data_surface_first.newsletter)`, http `PATCH /surface-api/first.newsletter`, tool `data_surface:first.newsletter:configure`, read tool `data_surface:first.newsletter:configure:read`, openapi `first.newsletter:configure:write`, react `/surface-react/first.newsletter/configure`.
+- `configure` reaches form `/admin/config/services/surface-newsletter (surface_examples_first.newsletter)`, http `PATCH /surface-api/first.newsletter`, tool `surface:first.newsletter:configure`, read tool `surface:first.newsletter:configure:read`, openapi `first.newsletter:configure:write`, react `/surface-react/first.newsletter/configure`.
 
 ## first.store
 
-`Drupal\data_surface_first\Resource\StoreResource`, in `data_surface_first`.
+`Drupal\surface_examples_first\Resource\StoreResource`, in `surface_examples_first`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_first\Storage\StoreStorage`
+- Storage: `Drupal\surface_examples_first\Storage\StoreStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the store location | nothing | no | `administer data_surface_first` | yes | yes | `#[Operation] on StoreResource` (`data_surface_first`) |
+| `configure` | Configure the store location | nothing | no | `administer surface_examples_first` | yes | yes | `#[Operation] on StoreResource` (`surface_examples_first`) |
 
-- `configure` reaches form `/admin/config/services/surface-store (data_surface_first.store)`, http `PATCH /surface-api/first.store`, tool `data_surface:first.store:configure`, read tool `data_surface:first.store:configure:read`, openapi `first.store:configure:write`, react `/surface-react/first.store/configure`.
+- `configure` reaches form `/admin/config/services/surface-store (surface_examples_first.store)`, http `PATCH /surface-api/first.store`, tool `surface:first.store:configure`, read tool `surface:first.store:configure:read`, openapi `first.store:configure:write`, react `/surface-react/first.store/configure`.
 
 ## node.type
 
-`Drupal\data_surface_demo_node_type\Resource\NodeTypeResource`, in `data_surface_demo_node_type`.
+`Drupal\surface_examples_node_type\Resource\NodeTypeResource`, in `surface_examples_node_type`.
 
 - Kind: resource
 - Identity: `type`
-- Storage: `Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage`
-- Access: `Drupal\data_surface_demo_node_type\Access\NodeTypeAccess`
+- Storage: `Drupal\surface_examples_node_type\Storage\NodeTypeStorage`
+- Access: `Drupal\surface_examples_node_type\Access\NodeTypeAccess`
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | no: it creates | `#[Operation] on NodeTypeResource` (`data_surface_demo_node_type`) |
-| `update` | Edit a content type | `NodeTypeInterface $type` | no | `administer data surface node type demo` | yes | yes | `NodeTypeResource::update()` (`data_surface_demo_node_type`) |
+| `create` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | no: it creates | `#[Operation] on NodeTypeResource` (`surface_examples_node_type`) |
+| `update` | Edit a content type | `NodeTypeInterface $type` | no | `administer data surface node type demo` | yes | yes | `NodeTypeResource::update()` (`surface_examples_node_type`) |
 
-- `create` reaches form `/admin/structure/types/surface-add (data_surface_demo_node_type.create)`, http `POST /surface-api/node.type`, tool `data_surface:node.type:create`, openapi `node.type:create:write`, react `/surface-react/node.type/create`.
-- `update` reaches form `/admin/structure/types/manage/{type}/surface-edit (data_surface_demo_node_type.update)`, http `PATCH /surface-api/node.type/{type}`, tool `data_surface:node.type:update`, read tool `data_surface:node.type:update:read`, openapi `node.type:update:write`, react `/surface-react/node.type/update`.
+- `create` reaches form `/admin/structure/types/surface-add (surface_examples_node_type.create)`, http `POST /surface-api/node.type`, tool `surface:node.type:create`, openapi `node.type:create:write`, react `/surface-react/node.type/create`.
+- `update` reaches form `/admin/structure/types/manage/{type}/surface-edit (surface_examples_node_type.update)`, http `PATCH /surface-api/node.type/{type}`, tool `surface:node.type:update`, read tool `surface:node.type:update:read`, openapi `node.type:update:write`, react `/surface-react/node.type/update`.
 
-- Altered by `Drupal\data_surface_demo_extras\Alter\NodeTypeAlter` (`data_surface_demo_extras`), in every operation.
+- Altered by `Drupal\surface_examples_extras\Alter\NodeTypeAlter` (`surface_examples_extras`), in every operation.
 
 ## registration.compliance
 
-`Drupal\data_surface_examples_compliance\Structure\ComplianceStructure`, in `data_surface_examples_compliance`.
+`Drupal\surface_examples_compliance\Structure\ComplianceStructure`, in `surface_examples_compliance`.
 
 - Kind: structure
 - Identity: none
@@ -515,7 +515,7 @@ Refused. `docs/resources.md` says how each part works.
 
 ## registration.contact
 
-`Drupal\data_surface_examples\Structure\ContactStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\ContactStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -524,56 +524,56 @@ Refused. `docs/resources.md` says how each part works.
 
 ## registration.step1
 
-`Drupal\data_surface_examples\Resource\RegistrationStep1Resource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\RegistrationStep1Resource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\RegistrationStep1Storage`
+- Storage: `Drupal\surface_examples\Storage\RegistrationStep1Storage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration (step 1) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep1Resource` (`data_surface_examples`) |
+| `configure` | Configure registration (step 1) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep1Resource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/1 (data_surface_examples.step1)`, http `PATCH /surface-api/registration.step1`, tool `data_surface:registration.step1:configure`, read tool `data_surface:registration.step1:configure:read`, openapi `registration.step1:configure:write`, react `/surface-react/registration.step1/configure`.
+- `configure` reaches form `/surface-examples/1 (surface_examples.step1)`, http `PATCH /surface-api/registration.step1`, tool `surface:registration.step1:configure`, read tool `surface:registration.step1:configure:read`, openapi `registration.step1:configure:write`, react `/surface-react/registration.step1/configure`.
 
 ## registration.step2
 
-`Drupal\data_surface_examples\Resource\RegistrationStep2Resource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\RegistrationStep2Resource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\RegistrationStep2Storage`
+- Storage: `Drupal\surface_examples\Storage\RegistrationStep2Storage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration (step 2) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep2Resource` (`data_surface_examples`) |
+| `configure` | Configure registration (step 2) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep2Resource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/2 (data_surface_examples.step2)`, http `PATCH /surface-api/registration.step2`, tool `data_surface:registration.step2:configure`, read tool `data_surface:registration.step2:configure:read`, openapi `registration.step2:configure:write`, react `/surface-react/registration.step2/configure`.
+- `configure` reaches form `/surface-examples/2 (surface_examples.step2)`, http `PATCH /surface-api/registration.step2`, tool `surface:registration.step2:configure`, read tool `surface:registration.step2:configure:read`, openapi `registration.step2:configure:write`, react `/surface-react/registration.step2/configure`.
 
 ## registration.step3
 
-`Drupal\data_surface_examples\Resource\RegistrationStep3Resource`, in `data_surface_examples`.
+`Drupal\surface_examples\Resource\RegistrationStep3Resource`, in `surface_examples`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_examples\Storage\RegistrationStep3Storage`
+- Storage: `Drupal\surface_examples\Storage\RegistrationStep3Storage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration (step 3) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep3Resource` (`data_surface_examples`) |
+| `configure` | Configure registration (step 3) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep3Resource` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/3 (data_surface_examples.step3)`, http `PATCH /surface-api/registration.step3`, tool `data_surface:registration.step3:configure`, read tool `data_surface:registration.step3:configure:read`, openapi `registration.step3:configure:write`, react `/surface-react/registration.step3/configure`.
+- `configure` reaches form `/surface-examples/3 (surface_examples.step3)`, http `PATCH /surface-api/registration.step3`, tool `surface:registration.step3:configure`, read tool `surface:registration.step3:configure:read`, openapi `registration.step3:configure:write`, react `/surface-react/registration.step3/configure`.
 
-- Altered by `Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter` (`data_surface_examples_compliance`), in every operation; it refines `room` (watching `venue`) at runtime.
+- Altered by `Drupal\surface_examples_compliance\Alter\RegistrationComplianceAlter` (`surface_examples_compliance`), in every operation; it refines `room` (watching `venue`) at runtime.
 
-- Variants at `ticket`: `free` → `Drupal\data_surface_examples\Structure\FreeTicketStructure`, `paid` → `Drupal\data_surface_examples\Structure\PaidTicketStructure`.
+- Variants at `ticket`: `free` → `Drupal\surface_examples\Structure\FreeTicketStructure`, `paid` → `Drupal\surface_examples\Structure\PaidTicketStructure`.
 
 ## registration.step3.ticket.free
 
-`Drupal\data_surface_examples\Structure\FreeTicketStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\FreeTicketStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -582,7 +582,7 @@ Refused. `docs/resources.md` says how each part works.
 
 ## registration.step3.ticket.paid
 
-`Drupal\data_surface_examples\Structure\PaidTicketStructure`, in `data_surface_examples`.
+`Drupal\surface_examples\Structure\PaidTicketStructure`, in `surface_examples`.
 
 - Kind: structure
 - Identity: none
@@ -591,18 +591,18 @@ Refused. `docs/resources.md` says how each part works.
 
 ## system.performance
 
-`Drupal\data_surface_performance\Resource\PerformanceResource`, in `data_surface_performance`.
+`Drupal\surface_examples_performance\Resource\PerformanceResource`, in `surface_examples_performance`.
 
 - Kind: resource
 - Identity: none
-- Storage: `Drupal\data_surface_performance\Storage\PerformanceStorage`
+- Storage: `Drupal\surface_examples_performance\Storage\PerformanceStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure performance | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on PerformanceResource` (`data_surface_performance`) |
+| `configure` | Configure performance | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on PerformanceResource` (`surface_examples_performance`) |
 
-- `configure` reaches form `/admin/config/development/surface-performance (data_surface_performance.configure)`, http `PATCH /surface-api/system.performance`, tool `data_surface:system.performance:configure`, read tool `data_surface:system.performance:configure:read`, openapi `system.performance:configure:write`, react `/surface-react/system.performance/configure`.
+- `configure` reaches form `/admin/config/development/surface-performance (surface_examples_performance.configure)`, http `PATCH /surface-api/system.performance`, tool `surface:system.performance:configure`, read tool `surface:system.performance:configure:read`, openapi `system.performance:configure:write`, react `/surface-react/system.performance/configure`.
 
 ## Derivers
 
@@ -614,8 +614,8 @@ and fields): each one this site has is listed above, its class
 
 | Base | Deriver | Module | Overridden by |
 | --- | --- | --- | --- |
-| `entity.content` | `Drupal\data_surface_entity\Resource\ContentEntityResources` | `data_surface_entity` | classes carrying `FieldItemStructure`, none here |
-| `field.item` | `Drupal\data_surface_entity\Resource\FieldItemStructures` | `data_surface_entity` | classes carrying `FieldItemStructure`, none here |
+| `entity.content` | `Drupal\surface_examples_entity\Resource\ContentEntityResources` | `surface_examples_entity` | classes carrying `FieldItemStructure`, none here |
+| `field.item` | `Drupal\surface_examples_entity\Resource\FieldItemStructures` | `surface_examples_entity` | classes carrying `FieldItemStructure`, none here |
 
 ## Read from a schema
 
@@ -628,19 +628,19 @@ operation here read, grouped by where they are read and counted;
 
 | Read at | Structures | Module |
 | --- | --- | --- |
-| `block.data_surface_component.props` | 4 | `data_surface_component_block` |
-| `block.data_surface_component.slots` | 4 | `data_surface_component_block` |
-| `block.placement.condition.settings` | 4 | `data_surface_block` |
-| `block.placement.settings` | 11 | `data_surface_block` |
-| `component.nested` | 2 | `data_surface_examples` |
-| `component.nested.block` | 1 | `data_surface_examples` |
-| `component.props` | 3 | `data_surface_examples` |
-| `component.slot` | 4 | `data_surface_examples` |
-| `component.slots` | 4 | `data_surface_examples` |
-| `event.spotlight.props` | 4 | `data_surface_examples` |
-| `event.spotlight.slots` | 4 | `data_surface_examples` |
-| `field.instance.settings` | 21 | `data_surface_tool` |
-| `field.storage.settings` | 22 | `data_surface_tool` |
+| `block.placement.condition.settings` | 4 | `surface_examples_block` |
+| `block.placement.settings` | 11 | `surface_examples_block` |
+| `block.surface_component.props` | 4 | `surface_examples_component_block` |
+| `block.surface_component.slots` | 4 | `surface_examples_component_block` |
+| `component.nested` | 2 | `surface_examples` |
+| `component.nested.block` | 1 | `surface_examples` |
+| `component.props` | 3 | `surface_examples` |
+| `component.slot` | 4 | `surface_examples` |
+| `component.slots` | 4 | `surface_examples` |
+| `event.spotlight.props` | 4 | `surface_examples` |
+| `event.spotlight.slots` | 4 | `surface_examples` |
+| `field.instance.settings` | 21 | `surface_tool` |
+| `field.storage.settings` | 22 | `surface_tool` |
 
 ## Refused
 

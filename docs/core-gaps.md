@@ -38,18 +38,18 @@ forms are built that way ([Generated forms](forms.md)).
 ## The module in brief
 
 Only what the "Here today" lines need. A
-[definition](https://github.com/mlander/data_surface/blob/main/README.md#glossary) is core's `DataDefinitionInterface`,
-unchanged. A [resource](https://github.com/mlander/data_surface/blob/main/README.md#glossary) is a PHP class that
+[definition](https://github.com/mlander/surface/blob/main/README.md#glossary) is core's `DataDefinitionInterface`,
+unchanged. A [resource](https://github.com/mlander/surface/blob/main/README.md#glossary) is a PHP class that
 declares a group of definitions for one thing with identity (the keys
 that say which one it is: a content type's machine name; a settings
 page has none, since there is one of it) and
-[storage](https://github.com/mlander/data_surface/blob/main/README.md#glossary), the class that loads and saves its
+[storage](https://github.com/mlander/surface/blob/main/README.md#glossary), the class that loads and saves its
 values, such as one simple config object. A
-[structure](https://github.com/mlander/data_surface/blob/main/README.md#glossary) is a group of definitions with no
+[structure](https://github.com/mlander/surface/blob/main/README.md#glossary) is a group of definitions with no
 storage of its own, such as a block's settings, which the block plugin
 stores in its configuration; the module calls that plugin the
-structure's [host](https://github.com/mlander/data_surface/blob/main/README.md#glossary). A resource is asked for
-through its [operations](https://github.com/mlander/data_surface/blob/main/README.md#glossary) (`configure`, `create`,
+structure's [host](https://github.com/mlander/surface/blob/main/README.md#glossary). A resource is asked for
+through its [operations](https://github.com/mlander/surface/blob/main/README.md#glossary) (`configure`, `create`,
 `update`), each carrying a permission, and from each operation the module
 generates a route with a form, a tool for the contributed Tool API
 (which agents, MCP clients and Drush call) and two JSON Schema
@@ -58,9 +58,9 @@ documents, written by the module's emitter
 own, `x-surface`. Each of these ways in (the form, the tool, an HTTP
 API, a test) the module calls a door.
 
-A [refiner](https://github.com/mlander/data_surface/blob/main/README.md#glossary) is a static method that returns a
+A [refiner](https://github.com/mlander/surface/blob/main/README.md#glossary) is a static method that returns a
 narrower definition for one key given the values of the siblings it
-reads. Another module's [alter](https://github.com/mlander/data_surface/blob/main/README.md#glossary) adds keys to a
+reads. Another module's [alter](https://github.com/mlander/surface/blob/main/README.md#glossary) adds keys to a
 resource it does not own and may narrow it, never widen it. Narrowing is
 checked on every call (`src/Refinement/Narrowing.php`), so every value
 later accepted is one the schema read before allowed. Every door's
@@ -91,7 +91,7 @@ goes through `DefinitionTypedData::create()`, which hands core a copy of
 the root carrying a digest of the definition in its settings, so the
 cache key names the definition (`src/DefinitionTypedData.php`; why: [decision](decisions.md#a-definition-is-validated-as-itself)).
 Field items are built from `FieldConfigBase::getItemDefinition()`
-instead (`Form\DataSurfaceFieldTypeTrait`). It was found when one tool
+instead (`Form\SurfaceFieldTypeTrait`). It was found when one tool
 call's narrowing leaked into the next call in the same process, and
 `RefinementIsolationTest` pins the fix. The contributed Tool API meets
 the same cache and clears it through reflection
@@ -219,7 +219,7 @@ list resolved through the language manager when asked, an `allowLocked`
 option as `PluginExists` has `allowFallback`, and a resolver offering
 the languages with their names
 (`src/Plugin/Validation/Constraint/LanguageExistsConstraint.php`,
-`src/Plugin/DataSurfaceOptionsResolver/LanguageExistsOptions.php`).
+`src/Plugin/SurfaceOptionsResolver/LanguageExistsOptions.php`).
 
 **The core change.** The same constraint in
 `core/lib/Drupal/Core/Validation/Plugin/Validation/Constraint/`; config
@@ -274,7 +274,7 @@ with two optional options, `labels` and `descriptions`, which play no
 part in validation, so code that recognizes a `Choice` with `instanceof`
 recognizes this one too; code that matches the plugin id `Choice` does
 not (`src/Plugin/Validation/Constraint/LabeledChoiceConstraint.php`,
-`LabeledChoiceTest`). A [resolver](https://github.com/mlander/data_surface/blob/main/README.md#glossary) reads one
+`LabeledChoiceTest`). A [resolver](https://github.com/mlander/surface/blob/main/README.md#glossary) reads one
 constraint, a `LabeledChoice` or the `LanguageExists` of 1.5, as a list
 of values with labels, so the list that validates is the list a form
 offers and the schema writes as `oneOf` of `const` and `title`
@@ -291,7 +291,7 @@ constraint type, `LanguageExists` among them. Core's constraints with a
 list (`Choice`, `PluginExists`, `EntityBundleExists`) could answer
 through the same `OptionsProviderInterface` field items implement; a
 resolver is what that looks like for a constraint, and this module's
-`DataSurfaceOptions::provider()` answers that interface from one
+`SurfaceOptions::provider()` answers that interface from one
 ([Core's question](options.md#cores-question)).
 
 **Carried by.** "Allow Choice constraints to carry option labels, so
@@ -431,8 +431,8 @@ throwaway entity, as `EntityForm` does.
 **Here today.** The content entity submodule asks field access of a
 throwaway entity of the bundle when adding, and states only literal
 defaults, naming a callback default in the field's notes instead
-(`modules/data_surface_entity/src/Access/FieldItemAccess.php`,
-`modules/data_surface_entity/src/FieldItemDerivation.php`; holes 1 and 2
+(`modules/surface_examples_entity/src/Access/FieldItemAccess.php`,
+`modules/surface_examples_entity/src/FieldItemDerivation.php`; holes 1 and 2
 in [Content entities](entities.md#holes)).
 
 **The core change.** A way to ask each question without an entity: a
@@ -497,10 +497,10 @@ the form.
 as a static method carrying `#[Operation(permission: ...)]`. A route that
 names the resource and the operation is a working form with no form
 class (`src/ResourceBuild/OperationRoute.php`,
-`Form\DataSurfaceOperationForm`), and one tool per operation is derived
+`Form\SurfaceOperationForm`), and one tool per operation is derived
 from it. One answer gates every door: the operation's permission, then
 an optional access class, asked through `ResourcesInterface::access()`
-by the route requirement `_data_surface_operation_access`, the form, the
+by the route requirement `_surface_operation_access`, the form, the
 tool and the pipeline ([Access](resources.md#access)). For the resource
 as a whole the answer is allowed or denied; for a group of keys inside
 it, the access class answers open, locked (shown and fixed) or omitted
@@ -533,7 +533,7 @@ types, constraints and nullability from the definition rather than from
 a mapping (`TypedConfigManager::buildDataDefinition()` builds the same
 definition from YAML today), config translation the translatable keys,
 and `FullyValidatable` which keys are always held, so the schema this
-module writes from a resource (`drush data_surface:config-schema`,
+module writes from a resource (`drush surface:config-schema`,
 [Storage](storage.md#a-schema-generated-from-the-resource)) would go.
 Core's cache rules already make the static and
 runtime split readable: an answer whose only cache contexts are
@@ -628,7 +628,7 @@ each example's accepted and refused documents through the pipeline and
 both schemas with a standard validator
 (`tests/src/Kernel/Matrix/AdvertisedSchemaAcceptanceTest.php`,
 `tests/src/Kernel/Matrix/InputCoercionMatrixTest.php`). A React app
-renders a form from these documents alone (`modules/data_surface_react`),
+renders a form from these documents alone (`modules/surface_react`),
 and committed baselines catch a breaking change to them ([Evolving a resource](evolution.md)).
 
 **The core change.** For an operation from step 2, compose a schema of
@@ -778,7 +778,7 @@ The contributed Tool API has gaps of its own: it reads `Choice` and
 `AllowedValues` by plugin id, so a subclass such as `LabeledChoice`
 does not reach its schema; a context definition carries no settings or
 examples; defaults reach its schema only for truthy scalars. They are
-listed in `modules/data_surface_tool/README.md` and belong to that
+listed in `modules/surface_tool/README.md` and belong to that
 project, not core.
 
 Facts about core this page relies on, each checked against core 11.4:

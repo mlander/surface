@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Form\FormState;
@@ -11,17 +11,17 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\Arrangement;
-use Drupal\data_surface\Form\DataSurfaceFormBuilder;
-use Drupal\data_surface\Pipeline\Sentences;
-use Drupal\data_surface_test\CacheableCasingRefiner;
-use Drupal\data_surface_test\CasingVariantRefiner;
-use Drupal\data_surface_test\ModeSubsetRefiner;
+use Drupal\surface\Surface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\Arrangement;
+use Drupal\surface\Form\SurfaceFormBuilder;
+use Drupal\surface\Pipeline\Sentences;
+use Drupal\surface_test\CacheableCasingRefiner;
+use Drupal\surface_test\CasingVariantRefiner;
+use Drupal\surface_test\ModeSubsetRefiner;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -35,14 +35,14 @@ use PHPUnit\Framework\Attributes\Group;
  * only a declared placeholder, locked rendering, and extraction that
  * casts through the definition.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class SurfaceFormTest extends DataSurfaceKernelTestBase {
+class SurfaceFormTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'data_surface'];
+  protected static $modules = ['system', 'surface'];
 
   /**
    * Builds a data surface exercising every stock widget.
@@ -52,7 +52,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    * @param bool $arranged
    *   Whether its keys declare a placeholder each.
    */
-  protected function surface(array $locked = [], bool $arranged = FALSE): DataSurfaceInterface {
+  protected function surface(array $locked = [], bool $arranged = FALSE): SurfaceInterface {
     $badge = DataDefinition::create('string')
       ->setLabel('Badge')
       ->addConstraint('Choice', ['choices' => ['star', 'flame']]);
@@ -102,7 +102,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
       }
     }
 
-    return new DataSurface(
+    return new Surface(
       DefinitionMap::fromArrays(
         definitions: $definitions,
         locked: $locked,
@@ -222,18 +222,18 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   public function testLockedAndAjax(): void {
     $kind = DataDefinition::create('string')->setLabel('Kind')->setRequired(TRUE);
     DefinitionMetadata::setDefaultValue($kind, 'fixed');
-    $surface = new DataSurface(
+    $surface = new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'kind' => $kind,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
-        refiners: ['detail' => [DataSurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
+        refiners: ['detail' => [SurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
         refinements: ['detail' => ['kind']],
         locked: ['kind'],
       ),
     );
-    // data_surface_test not installed here; the test class loader still
+    // surface_test not installed here; the test class loader still
     // finds the refiner class, and it never fires for these keys.
     $form = $this->formBuilder()->buildSurfaceForm($surface, $surface->getDefaultValues(), new FormState());
     $this->assertTrue($form['kind']['#disabled']);
@@ -341,10 +341,10 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    * @param string|null $widget
    *   The widget the list asks for, if any.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function tagsSurface(?string $widget = NULL): DataSurfaceInterface {
+  protected function tagsSurface(?string $widget = NULL): SurfaceInterface {
     $tags = ListDataDefinition::create('string')->setLabel('Tags');
     if ($widget !== NULL) {
       $tags->setSetting('widget', $widget);
@@ -353,7 +353,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
       'choices' => ['news', 'tips', 'events'],
       'labels' => ['news' => 'News', 'tips' => 'Tips', 'events' => 'Events'],
     ]);
-    return new DataSurface(DefinitionMap::fromArrays(definitions: ['tags' => $tags]));
+    return new Surface(DefinitionMap::fromArrays(definitions: ['tags' => $tags]));
   }
 
   /**
@@ -424,13 +424,13 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
         'choices' => [0, 1, 2],
         'labels' => [0 => 'Disabled', 1 => 'Optional', 2 => 'Required'],
       ]);
-    $surface = new DataSurface(
+    $surface = new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'scope' => DataDefinition::create('string')->setLabel('Scope'),
           'mode' => $mode,
         ],
-        refiners: ['mode' => [DataSurfaceInterface::OWNER => [new ModeSubsetRefiner()]]],
+        refiners: ['mode' => [SurfaceInterface::OWNER => [new ModeSubsetRefiner()]]],
         refinements: ['mode' => ['scope']],
       ),
     );
@@ -461,8 +461,8 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    */
   public function testMissingContainerThrows(): void {
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessageMatches('/#data_surface_wrapper/');
-    DataSurfaceFormBuilder::findSurfaceContainer(['nothing' => ['#type' => 'textfield']]);
+    $this->expectExceptionMessageMatches('/#surface_wrapper/');
+    SurfaceFormBuilder::findSurfaceContainer(['nothing' => ['#type' => 'textfield']]);
   }
 
   /**
@@ -475,14 +475,14 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     // Five levels down, where the old fixed depth of three gave up and
     // extraction silently collected nothing.
     $this->assertSame(
-      $container['#data_surface_wrapper'],
-      DataSurfaceFormBuilder::findSurfaceContainer($buried)['#data_surface_wrapper'],
+      $container['#surface_wrapper'],
+      SurfaceFormBuilder::findSurfaceContainer($buried)['#surface_wrapper'],
     );
     // The walk never descends into render keys, which are not elements
     // and may hold arrays of anything at all.
     $this->assertSame(
-      $container['#data_surface_wrapper'],
-      DataSurfaceFormBuilder::findSurfaceContainer(['#attached' => ['library' => ['x/y']], 'inner' => $container])['#data_surface_wrapper'],
+      $container['#surface_wrapper'],
+      SurfaceFormBuilder::findSurfaceContainer(['#attached' => ['library' => ['x/y']], 'inner' => $container])['#surface_wrapper'],
     );
   }
 
@@ -546,14 +546,14 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     // The wrapper key is derived from the host's plugin ID, so two
     // placements of one block — a Layout Builder page, a region with the
     // same block twice — ask for exactly this.
-    $first = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState(), 'data-surface-demo');
-    $second = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState(), 'data-surface-demo');
+    $first = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState(), 'surface-example');
+    $second = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState(), 'surface-example');
 
     $this->assertNotSame($first['#attributes']['id'], $second['#attributes']['id']);
     // The marker records the id in force, because that is what the AJAX
     // callback returns and what the rebuild replaces.
-    $this->assertSame($first['#attributes']['id'], $first['#data_surface_wrapper']);
-    $this->assertSame($second['#attributes']['id'], $second['#data_surface_wrapper']);
+    $this->assertSame($first['#attributes']['id'], $first['#surface_wrapper']);
+    $this->assertSame($second['#attributes']['id'], $second['#surface_wrapper']);
   }
 
   /**
@@ -561,11 +561,11 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    */
   public function testAjaxPointsAtItsOwnWrapper(): void {
     $surface = $this->dependencySurface();
-    $first = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState(), 'data-surface-demo');
-    $second = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState(), 'data-surface-demo');
+    $first = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState(), 'surface-example');
+    $second = $this->formBuilder()->buildSurfaceForm($surface, [], new FormState(), 'surface-example');
 
-    $this->assertSame($first['#data_surface_wrapper'], $first['kind']['#ajax']['wrapper']);
-    $this->assertSame($second['#data_surface_wrapper'], $second['kind']['#ajax']['wrapper']);
+    $this->assertSame($first['#surface_wrapper'], $first['kind']['#ajax']['wrapper']);
+    $this->assertSame($second['#surface_wrapper'], $second['kind']['#ajax']['wrapper']);
     $this->assertNotSame($first['kind']['#ajax']['wrapper'], $second['kind']['#ajax']['wrapper']);
   }
 
@@ -581,7 +581,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $container['#parents'] = ['settings'];
     $form_state = new FormState();
     $complete_form = [];
-    DataSurfaceFormBuilder::processSurfaceContainer($container, $form_state, $complete_form);
+    SurfaceFormBuilder::processSurfaceContainer($container, $form_state, $complete_form);
 
     // Scoped to the element, not to the container around it. Touching
     // one select says one thing about one key; every other key on the
@@ -608,7 +608,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     $container['#tree'] = FALSE;
     $form_state = new FormState();
     $complete_form = [];
-    DataSurfaceFormBuilder::processSurfaceContainer($container, $form_state, $complete_form);
+    SurfaceFormBuilder::processSurfaceContainer($container, $form_state, $complete_form);
 
     $this->assertSame([['kind']], $container['kind']['#limit_validation_errors']);
   }
@@ -619,13 +619,13 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   public function testMapDependencyCarriesNoAjax(): void {
     $map = MapDataDefinition::create()->setLabel('Extras')->setRequired(TRUE);
     $map->setPropertyDefinition('badge', DataDefinition::create('string')->setLabel('Badge'));
-    $surface = new DataSurface(
+    $surface = new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'extras' => $map,
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
-        refiners: ['detail' => [DataSurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
+        refiners: ['detail' => [SurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
         refinements: ['detail' => ['extras']],
       ),
     );
@@ -645,7 +645,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    * Tests that a locked element says why it cannot be changed.
    */
   public function testLockedElementSaysWhy(): void {
-    $surface = new DataSurface(
+    $surface = new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'plain' => DataDefinition::create('string')->setLabel('Plain'),
@@ -671,7 +671,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    */
   public function testEmptyOptionSetIsSelectOfNothing(): void {
-    $surface = new DataSurface(
+    $surface = new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'badge' => DataDefinition::create('string')
@@ -697,7 +697,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    * Tests that an unregistered constraint does not break the form.
    */
   public function testUnregisteredConstraintDoesNotBreakWidgetSelection(): void {
-    $surface = new DataSurface(
+    $surface = new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'badge' => DataDefinition::create('string')
@@ -717,7 +717,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    * Tests that the options widget carries the list's cacheability.
    */
   public function testOptionsCarryTheirCacheability(): void {
-    $surface = new DataSurface(
+    $surface = new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'badge' => DataDefinition::create('string')
@@ -744,7 +744,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
    * and cached as though it were static is the bug both halves close.
    */
   public function testSurfaceCacheabilityReachesTheContainer(): void {
-    $builder = new DataSurfaceBuilder(
+    $builder = new SurfaceBuilder(
       definitions: [
         'casing' => DataDefinition::create('string')->setLabel('Casing'),
         'variant' => DataDefinition::create('string')->setLabel('Variant'),
@@ -756,7 +756,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
 
     $form = $this->formBuilder()->buildSurfaceForm($surface, ['casing' => 'uppercase'], new FormState());
 
-    $this->assertSame(['data_surface_test:casing'], $form['#cache']['tags']);
+    $this->assertSame(['surface_test:casing'], $form['#cache']['tags']);
     $this->assertSame(['languages:language_interface'], $form['#cache']['contexts']);
     $this->assertSame(CacheableCasingRefiner::MAX_AGE, $form['#cache']['max-age']);
   }
@@ -784,7 +784,7 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
     // The data surface's children and its marker are added, and the AJAX now
     // replaces the element the host named rather than one that is not
     // in the document.
-    $this->assertSame('host-own-id', $merged['#data_surface_wrapper']);
+    $this->assertSame('host-own-id', $merged['#surface_wrapper']);
     $this->assertSame('host-own-id', $merged['kind']['#ajax']['wrapper']);
     $this->assertSame('textfield', $merged['detail']['#type']);
     // A host that says nothing gets the data surface's container.
@@ -830,17 +830,17 @@ class SurfaceFormTest extends DataSurfaceKernelTestBase {
   /**
    * Builds a two-key data surface whose second key refines against the first.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function dependencySurface(): DataSurfaceInterface {
-    return new DataSurface(
+  protected function dependencySurface(): SurfaceInterface {
+    return new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'kind' => DataDefinition::create('string')->setLabel('Kind'),
           'detail' => DataDefinition::create('string')->setLabel('Detail'),
         ],
-        refiners: ['detail' => [DataSurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
+        refiners: ['detail' => [SurfaceInterface::OWNER => [new CasingVariantRefiner()]]],
         refinements: ['detail' => ['kind']],
       ),
     );

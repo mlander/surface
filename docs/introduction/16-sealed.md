@@ -36,7 +36,7 @@ refuses writes, and no method adds a key or loosens a rule. It can only
 be read:
 
 ```php
-$resources = \Drupal::service('data_surface.resources');
+$resources = \Drupal::service('surface.resources');
 $context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $surface = $resources->build(NodeTypeResource::class, $context);
 

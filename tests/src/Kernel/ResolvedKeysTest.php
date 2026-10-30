@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\Resolve;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_resource_test\Compute\VaultToken;
-use Drupal\data_surface_resource_test\OutsideDiscovery\NorthVaultAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\RelayHubResource;
-use Drupal\data_surface_resource_test\OutsideDiscovery\RelayLinkStructure;
-use Drupal\data_surface_resource_test\OutsideDiscovery\SouthVaultAlter;
-use Drupal\data_surface_resource_test\Resource\Relay\PlainRelayResource;
-use Drupal\data_surface_resource_test\Resource\Relay\RelayResource;
-use Drupal\data_surface_resource_test\Storage\RelayHubStorage;
-use Drupal\data_surface_resource_test\Storage\RelayStorage;
-use Drupal\data_surface_resource_test\Structure\ThresholdStructure;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\Resolve;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_resource_test\Compute\VaultToken;
+use Drupal\surface_resource_test\OutsideDiscovery\NorthVaultAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\RelayHubResource;
+use Drupal\surface_resource_test\OutsideDiscovery\RelayLinkStructure;
+use Drupal\surface_resource_test\OutsideDiscovery\SouthVaultAlter;
+use Drupal\surface_resource_test\Resource\Relay\PlainRelayResource;
+use Drupal\surface_resource_test\Resource\Relay\RelayResource;
+use Drupal\surface_resource_test\Storage\RelayHubStorage;
+use Drupal\surface_resource_test\Storage\RelayStorage;
+use Drupal\surface_resource_test\Structure\ThresholdStructure;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -34,9 +34,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-key-may-stand-for-another-at-use
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ResolvedKeysTest extends DataSurfaceKernelTestBase {
+class ResolvedKeysTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -48,9 +48,9 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_resource_test',
   ];
 
   /**
@@ -79,7 +79,7 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
    *   The values, the resolve applied.
    */
   protected function resolved(): array {
-    return $this->container->get('data_surface.resources')->resolved(RelayResource::class);
+    return $this->container->get('surface.resources')->resolved(RelayResource::class);
   }
 
   /**
@@ -91,7 +91,7 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
     $this->assertSame('pasted-1', $this->container->get('state')->get(RelayStorage::KEY)['token'], 'What is resolved is never written back.');
 
     // A write reads what is stored, never what is resolved.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(RelayResource::class, 'configure');
     $built = $resources->build(RelayResource::class, $context);
     $this->assertSame(['token' => 'pasted-1', 'vault_id' => 'north'], $resources->storage(RelayResource::class, $context, $built)->load($built));
@@ -132,8 +132,8 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
    */
   public function testTheContractDoesNotCarryIt(): void {
     $this->store(['token' => 'pasted-1', 'vault_id' => 'north']);
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
     $documents = [];
     foreach ([RelayResource::class, PlainRelayResource::class] as $class) {
       $built = $resources->buildOperation($class, 'configure');
@@ -154,9 +154,9 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
 
     $tools = $this->container->get('plugin.manager.tool');
     $serializer = $this->container->get('tool.definition_serializer');
-    $input = static fn (string $id): array => $serializer->normalizeInputSchema($tools->createInstance('data_surface:' . $id . ':configure'))['properties'][OperationInputs::VALUES]['properties'];
+    $input = static fn (string $id): array => $serializer->normalizeInputSchema($tools->createInstance('surface:' . $id . ':configure'))['properties'][OperationInputs::VALUES]['properties'];
     $this->assertSame($input('resource_test.relay.plain'), $input('resource_test.relay'));
-    $read = $tools->createInstance('data_surface:resource_test.relay:configure:read');
+    $read = $tools->createInstance('surface:resource_test.relay:configure:read');
     $read->execute();
     $this->assertSame(['vault_id' => 'north'], (array) $read->getResult()->getContextValues()[OperationInputs::VALUES], 'The read answers what is stored, less the secret.');
   }
@@ -166,8 +166,8 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
    */
   public function testTheBlueprintRefusesWhatIsNoResolve(): void {
     $typed = $this->container->get('typed_data_manager');
-    $registry = $this->container->get('data_surface.resource_registry');
-    $blueprint = static fn (bool $outputs = FALSE, ?string $owner = NULL): ResourceBlueprint => new ResourceBlueprint(new DataSurfaceBuilder(), $typed, $outputs, $registry, $owner);
+    $registry = $this->container->get('surface.resource_registry');
+    $blueprint = static fn (bool $outputs = FALSE, ?string $owner = NULL): ResourceBlueprint => new ResourceBlueprint(new SurfaceBuilder(), $typed, $outputs, $registry, $owner);
     $refused = function (callable $declare, string $message): void {
       try {
         $declare();
@@ -209,12 +209,12 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
   public function testResolveInsideStructureIsWalked(): void {
     $registry = new ResourceRegistry([
       'resources' => [
-        RelayHubResource::class => 'data_surface_resource_test',
-        RelayLinkStructure::class => 'data_surface_resource_test',
+        RelayHubResource::class => 'surface_resource_test',
+        RelayLinkStructure::class => 'surface_resource_test',
       ],
-      'operations' => [RelayHubResource::class => 'data_surface_resource_test'],
+      'operations' => [RelayHubResource::class => 'surface_resource_test'],
     ], $this->container->get('cache.discovery'));
-    $resources = $this->container->get('data_surface.resources')->withRegistry($registry, $this->container->get('class_resolver'));
+    $resources = $this->container->get('surface.resources')->withRegistry($registry, $this->container->get('class_resolver'));
     $built = $resources->buildOperation(RelayHubResource::class, 'configure');
     $declared = Resolve::declared($built);
     $this->assertSame(['token', 'primary.token', 'backups.*.token'], array_keys($declared));
@@ -250,11 +250,11 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
    */
   public function testTwoAltersResolvingOneKeyAreRefused(): void {
     $registry = new ResourceRegistry([
-      'resources' => [PlainRelayResource::class => 'data_surface_resource_test'],
-      'operations' => [PlainRelayResource::class => 'data_surface_resource_test'],
+      'resources' => [PlainRelayResource::class => 'surface_resource_test'],
+      'operations' => [PlainRelayResource::class => 'surface_resource_test'],
       'alters' => [NorthVaultAlter::class => 'north_vault', SouthVaultAlter::class => 'south_vault'],
     ], $this->container->get('cache.discovery'));
-    $resources = $this->container->get('data_surface.resources')->withRegistry($registry, $this->container->get('class_resolver'));
+    $resources = $this->container->get('surface.resources')->withRegistry($registry, $this->container->get('class_resolver'));
     try {
       $resources->buildOperation(PlainRelayResource::class, 'configure');
       $this->fail('Two alters resolving one key were not refused.');
@@ -269,7 +269,7 @@ class ResolvedKeysTest extends DataSurfaceKernelTestBase {
    */
   public function testAnAltersKeysAreReadFromItsMount(): void {
     $typed = $this->container->get('typed_data_manager');
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     (new ResourceBlueprint($builder, $typed))->add('token', 'string', 'Token');
     $vault = new ResourceBlueprintAdditions($builder, $typed, 'vault');
     $vault->add('vault_id', 'string', 'Vault entry');

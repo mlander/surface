@@ -15,8 +15,8 @@ values depend on another key. A resource is a thing with identity and
 storage that operations read and write; a structure is a group of
 keys that something else holds. Other modules change either with
 classes of their own, and nothing is registered by hand. The build step,
-`data_surface.resources`, turns the class and a context into a sealed
-`DataSurfaceInterface`, which the pipeline, forms, widgets and storage
+`surface.resources`, turns the class and a context into a sealed
+`SurfaceInterface`, which the pipeline, forms, widgets and storage
 read.
 
 This page is the reference for each part. [The pattern](pattern.md) is
@@ -84,8 +84,8 @@ either kind (`access:` on `#[Resource]` or `#[Structure]`). Both are
 registered as autowired services when the class naming them is found.
 Their directory is a suggestion: `src/Storage/`, `src/Access/`.
 
-The API is in `Drupal\data_surface\Resource`; the attributes in
-`Drupal\data_surface\Resource\Attribute`.
+The API is in `Drupal\surface\Resource`; the attributes in
+`Drupal\surface\Resource\Attribute`.
 
 ## The pattern
 
@@ -99,7 +99,7 @@ is the first one written this way. It is a structure: the block holds
 it, and the block's host stores it.
 
 ```php
-#[Structure('block.data_surface_demo')]
+#[Structure('block.surface_examples_plugins')]
 final class DemoBlockStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
@@ -123,7 +123,7 @@ final class DemoBlockStructure implements StructureInterface {
 
   #[RefinesInput('field')]
   public static function fieldOfBundle(DataDefinitionInterface $field, string $entity_type, string $bundle): DataDefinitionInterface {
-    return $field->addConstraint('DataSurfaceDemoBundleField', [
+    return $field->addConstraint('SurfaceExamplesBundleField', [
       'entityTypeId' => $entity_type,
       'bundle' => $bundle,
     ]);
@@ -164,7 +164,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **A refiner never calls a service.** A list that depends on a value
   is a constraint whose options resolver fetches it, handed the value as
   an option. The refiner points; the resolver fetches. Core's
-  `EntityBundleExists` is one; the demo brings `DataSurfaceDemoBundleField`
+  `EntityBundleExists` is one; the demo brings `SurfaceExamplesBundleField`
   for a bundle's fields.
 - **The framework checks every refinement is narrower**, so a refiner
   cannot widen, retype, or turn off required. The two type changes it
@@ -226,7 +226,7 @@ already known, and that is a **context**, an `OperationContext`:
   on any other class is refused at discovery. Two declarations of one
   id are refused, naming both.
 - A context may also narrow a key (`withConstraint()`, checked
-  narrower); a Choice of one value with `'data_surface_fixed' => TRUE`
+  narrower); a Choice of one value with `'surface_fixed' => TRUE`
   fixes it: the key holds that value, made required where it was
   optional, drawn as it and stated `const`. It may give keys the values
   they start from in this build (`withDefaults()`), over the declared
@@ -304,7 +304,7 @@ final class NodeTypeResource implements ResourceInterface {
 The update is a method because its context needs more: it knows the
 machine name. The create needs nothing more, so it is the attribute
 alone on the class: the build holds the machine name it creates under
-to one no content type has, with the stock `DataSurfaceUnique`
+to one no content type has, with the stock `SurfaceUnique`
 ([A title and a machine name](recipes.md#a-title-and-a-machine-name)).
 A settings object's one `configure` is the attribute alone too, as on
 [the first resource](first-resource.md):
@@ -314,7 +314,7 @@ A settings object's one `configure` is the attribute alone too, as on
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the newsletter'),
   description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),
-  permission: 'administer data_surface_first',
+  permission: 'administer surface_examples_first',
 )]
 final class NewsletterResource implements ResourceInterface {
 ```
@@ -335,7 +335,7 @@ locks its settings to that type's.
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ```php
-$resources = \Drupal::service('data_surface.resources');
+$resources = \Drupal::service('surface.resources');
 // By parameter name or position; an entity parameter takes the entity
 // or its id, loaded by the entity type whose class satisfies the type.
 $context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
@@ -407,7 +407,7 @@ and its parameters are the operation method's, by name; an upcast entity
 parameter arrives as the entity. A route default whose name has no
 leading underscore is a route parameter too, as core counts it, so
 `to: 'friends'` pins the operation's `$to` on that page, and one that
-nothing the route serves reads is refused. `DataSurfaceOperationForm`
+nothing the route serves reads is refused. `SurfaceOperationForm`
 builds the context with the operation, renders the data surface, loads
 current values from the composed storage and submits through the
 pipeline to it. The route's
@@ -415,13 +415,13 @@ requirement is the operation's access, which a route naming a resource
 and an operation has without saying it:
 
 ```yaml
-data_surface_demo_node_type.update:
+surface_examples_node_type.update:
   path: '/admin/structure/types/manage/{type}/surface-edit'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
-    _data_surface_resource: 'Drupal\data_surface_demo_node_type\Resource\NodeTypeResource'
-    _data_surface_operation: 'update'
-    _data_surface_cosmetics: 'data_surface_demo_node_type.form_cosmetics'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _surface_resource: 'Drupal\surface_examples_node_type\Resource\NodeTypeResource'
+    _surface_operation: 'update'
+    _surface_cosmetics: 'surface_examples_node_type.form_cosmetics'
   options:
     parameters:
       type:
@@ -430,8 +430,8 @@ data_surface_demo_node_type.update:
 
 A locked identity key renders as a disabled element holding the value
 the operation knows, and extraction keeps that value whatever is
-posted. The cosmetic layer (`DataSurfaceFormCosmeticsInterface`), named
-by the route's optional `_data_surface_cosmetics`, is told the
+posted. The cosmetic layer (`SurfaceFormCosmeticsInterface`), named
+by the route's optional `_surface_cosmetics`, is told the
 operation id as its `$operation` and the raw value of the first of the
 operation's parameters that is a variable of the route's path. A route
 may fix, fill or start the operation's keys on its page alone, and a
@@ -457,8 +457,8 @@ may answer after both ([An alter's answer](#an-alters-answer)):
   module declares, such as `administer site configuration`); an
   operation names it and declares nothing. A route serving the operation
   asks for this answer with the requirement
-  `_data_surface_operation_access`, which every route naming
-  `_data_surface_resource` and `_data_surface_operation` has without
+  `_surface_operation_access`, which every route naming
+  `_surface_resource` and `_surface_operation` has without
   saying it (`OperationRouteSubscriber`), and the tool asks the same.
 - **The access class**, `access:` on `#[Resource]` or `#[Structure]`,
   an `OperationAccessInterface` that may hold services, asked only once
@@ -470,11 +470,11 @@ may answer after both ([An alter's answer](#an-alters-answer)):
   ([No door-specific context](#no-door-specific-context)).
 
 `ResourcesInterface::access()` is that answer, and every caller reads it:
-the route requirement `_data_surface_operation_access`, the form's
+the route requirement `_surface_operation_access`, the form's
 floor, the content type listing's operation link, and the generated
 tool. The answer is about the one operation asked for, so a caller that
 hands it to the pipeline makes it decisive
-(`DataSurfaceAccess::decisive()`): no opinion is a refusal, as it is on
+(`SurfaceAccess::decisive()`): no opinion is a refusal, as it is on
 a route.
 
 A structure has no permission of its own. A permission says who may
@@ -541,7 +541,7 @@ public function access(OperationContext $context, AccountInterface $account): Ac
     // Static: the account alone.
     return AccessAnswer::locked('May be inspected, not changed.')->addCacheableDependency($read);
   }
-  $exhibit = $this->configFactory->get('data_surface_resource_test.exhibit');
+  $exhibit = $this->configFactory->get('surface_resource_test.exhibit');
   $read->addCacheableDependency($exhibit);
   if ($exhibit->get('status') === 'sealed') {
     // Runtime: a stored value, under its config tag.
@@ -691,7 +691,7 @@ says on it that whether it may be changed is decided once the thing is
 known. The tool listing declares only the operation's own permission.
 
 The worked example is example 17, a bulk retitle of nodes
-([its README](https://github.com/mlander/data_surface/blob/main/modules/data_surface_examples/README.md#example-17-retitle-in-bulk-access-borrowed)),
+([its README](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-17-retitle-in-bulk-access-borrowed)),
 and the fixture the test module's notes (`GatesTest`).
 
 ## Storage
@@ -700,7 +700,7 @@ and the fixture the test module's notes (`GatesTest`).
 verbs: `load()`, `prepare()` and `commit()`. It loads by the identity
 the context knows, so the context never carries an entity, and creates
 or updates by the context's `creates`. `ResourcesInterface::storage()`
-adapts it to the pipeline's `DataSurfaceStorageInterface` and composes
+adapts it to the pipeline's `SurfaceStorageInterface` and composes
 it along the tree:
 
 - A child whose class names storage is loaded from, prepared for and
@@ -815,7 +815,7 @@ class, the method and why, and an instance built with one injected is
 refused when it is first used. Core's code it calls is core's. The
 module's PHPStan rule (`tests/src/PHPStan/DoorSpecificRule.php`) flags
 the same reads before anything runs. And
-`Tests\data_surface\Traits\DoorAgreementTrait` sends one document
+`Tests\surface\Traits\DoorAgreementTrait` sends one document
 through the pipeline, the tool, the HTTP API and the form and holds
 them to one answer, for an adopter's resources through
 `ResourceTestBase` ([Testing a resource](testing-a-resource.md)) and
@@ -823,18 +823,18 @@ for this repository's in `EveryDoorAgreesTest`.
 
 ## Tools
 
-With `data_surface_tool` enabled, an operation that can be asked on its
-own is a tool, `data_surface:<resource id>:<operation id>`, derived by
+With `surface_tool` enabled, an operation that can be asked on its
+own is a tool, `surface:<resource id>:<operation id>`, derived by
 `ResourceOperationToolDeriver` from the static layer alone:
 
 | Tool | Inputs |
 | --- | --- |
-| `data_surface:node.type:create` | `values` (every key, `type` unique), `dry_run` |
-| `data_surface:node.type:update` | `type` (the content type's id), `values` (every key but `type`), `dry_run` |
-| `data_surface:field.instance:create` | `entity_type`, `bundle`, `values`, `dry_run` |
-| `data_surface:field.instance:reuse` | `entity_type`, `bundle`, `field_name`, `values`, `dry_run` |
-| `data_surface:field.instance:update` | `entity_type`, `bundle`, `field_name`, `values`, `dry_run` |
-| `data_surface:field.storage:update` | `entity_type`, `field_name`, `values`, `dry_run` |
+| `surface:node.type:create` | `values` (every key, `type` unique), `dry_run` |
+| `surface:node.type:update` | `type` (the content type's id), `values` (every key but `type`), `dry_run` |
+| `surface:field.instance:create` | `entity_type`, `bundle`, `values`, `dry_run` |
+| `surface:field.instance:reuse` | `entity_type`, `bundle`, `field_name`, `values`, `dry_run` |
+| `surface:field.instance:update` | `entity_type`, `bundle`, `field_name`, `values`, `dry_run` |
+| `surface:field.storage:update` | `entity_type`, `field_name`, `values`, `dry_run` |
 
 - **Inputs** are the operation's parameters, by name (an entity
   parameter as the entity's id, resolved when the tool runs; a scalar
@@ -912,7 +912,7 @@ A resource or operation that cannot be described is left out and
 logged.
 
 Beside the write tool of an operation that changes a thing that exists
-is a read tool, `data_surface:<resource id>:<operation id>:read`
+is a read tool, `surface:<resource id>:<operation id>:read`
 (`ResourceOperationReadTool`, derived by the same deriver): a
 `ToolOperation::Read` whose inputs are the operation's parameters,
 exactly as the write tool declares them, and whose one output, `values`,
@@ -927,12 +927,12 @@ read, and `node.type:create`, `field.instance:create` and
 
 ## Catalog
 
-`data_surface.resource_catalog` (`ResourceCatalog::describe()`) lists
+`surface.resource_catalog` (`ResourceCatalog::describe()`) lists
 every discovered resource and structure with its id, kind, class (none
 for a derived one, whose `deriver` names the base), identity, storage,
 access class, the plugins whose configuration it is
 (`<host type>:<plugin id>`, from the plugin definitions, through
-`data_surface.resource_plugins`), operations (id, label, parameters,
+`surface.resource_plugins`), operations (id, label, parameters,
 whether it creates, permission, the placeholders nothing supplies,
 whether it can be asked on its own, and whether what it changes can be
 read on its own), alters and declared variants, without building anything, whether an
@@ -954,9 +954,9 @@ editing), because only it holds the instance. The structure is a class
 in `src/Structure/` the attribute names:
 
 ```php
-#[Block(id: 'data_surface_demo', admin_label: new TranslatableMarkup('Data surface demo'))]
+#[Block(id: 'surface_examples_plugins', admin_label: new TranslatableMarkup('Data surface demo'))]
 #[UsesStructure(DemoBlockStructure::class)]
-final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
+final class ExampleBlock extends TypedBlockBase {
 
   public function build(): array { /* ... */ }
 
@@ -967,9 +967,9 @@ or, with no argument, the plugin class itself, which implements
 `StructureInterface` with the same static methods a structure class has:
 
 ```php
-#[FieldFormatter(id: 'data_surface_demo_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
+#[FieldFormatter(id: 'surface_examples_plugins_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
 #[UsesStructure]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, DefinesOutputsInterface {
+final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void { /* ... */ }
 
@@ -989,7 +989,7 @@ A plugin that is its own structure is found through the plugin
 definitions (`ResourcePlugins::ownStructures()`), not a directory, and
 discovery holds it to the same rules: it implements
 `StructureInterface`, its declaration and refiners are static. Its id is
-`<host type>:<plugin id>`, `field_formatter:data_surface_demo_string`,
+`<host type>:<plugin id>`, `field_formatter:surface_examples_plugins_string`,
 unless the class also carries `#[Structure]`, whose id and access class
 then apply. The catalog lists it as used by that same plugin, and an
 alter names it by the plugin class. An access class it names is not
@@ -1005,16 +1005,16 @@ Every host reads it the same way:
 
 | Host | Base or trait | Context | Storage |
 | --- | --- | --- | --- |
-| Block | `DataSurfaceBlockBase` | `configure` | the block's configuration |
-| Formatter | `DataSurfaceFormatterBase` | `configure` | none: the display stores it |
-| Condition | `DataSurfaceConditionBase` | `configure` | the condition's configuration |
-| Action | `DataSurfaceActionBase` | `configure` | the action's configuration |
-| Field type | `DataSurfaceFieldTypeTrait` | `field_settings` | the field config's settings |
-| Any configurable plugin | `DataSurfacePluginForm` | the form's operation | its configuration |
+| Block | `TypedBlockBase` | `configure` | the block's configuration |
+| Formatter | `TypedFormatterBase` | `configure` | none: the display stores it |
+| Condition | `TypedConditionPluginBase` | `configure` | the condition's configuration |
+| Action | `TypedConfigurableActionBase` | `configure` | the action's configuration |
+| Field type | `SurfaceFieldTypeTrait` | `field_settings` | the field config's settings |
+| Any configurable plugin | `SurfacePluginForm` | the form's operation | its configuration |
 
 A host's methods take no arguments that say which structure or which
-thing: `getDataSurface()` builds the structure the plugin names,
-`getDataSurfaceStorage()` is the storage in the last column (a formatter
+thing: `getSurface()` builds the structure the plugin names,
+`getSurfaceStorage()` is the storage in the last column (a formatter
 throws), and `surfaceAccess(?AccountInterface $account, string
 $operation)` asks the structure's access class in the host's context,
 neutral when it names none. A field type's data surface is
@@ -1031,7 +1031,7 @@ by.
   data definition, which core derives from the field type's. So the
   catalog lists which plugins use a structure without instantiating
   one.
-- **The build.** `DataSurfaceHostTrait::hostedStructure()` builds the
+- **The build.** `SurfaceHostTrait::hostedStructure()` builds the
   structure the definition names, in `new OperationContext($operation)`:
   the host's own verb, which is no declared operation, and nothing
   known. A plugin naming no structure is refused by name.
@@ -1043,7 +1043,7 @@ by.
   the structure's access class, which may refuse. The gated test field
   type refuses that way, in Field UI and in the derived field tools
   alike.
-- **No base class needed.** `DataSurfacePluginForm` serves any
+- **No base class needed.** `SurfacePluginForm` serves any
   configurable plugin whose definition names a structure: it builds
   that structure in the form's operation and stores into the
   configuration array.
@@ -1053,7 +1053,7 @@ plugin in the test module are written this way; the demo formatter and
 the test module's sticky note block are their own structure. What a
 plugin holds is never a tool (see Tools).
 
-`data_surface_component_block` is the case of a plugin whose settings
+`surface_examples_component_block` is the case of a plugin whose settings
 are variants from the site: its block, "Component", names a structure of
 example 12's two lines, a component chosen from those the site has and
 its props read from the schema the component declares
@@ -1061,7 +1061,7 @@ its props read from the schema the component declares
 component with the props it holds. The component is not required, since
 the host builds the block from its defaults before anything is chosen.
 A placed block is a config entity with a machine name, and
-`data_surface_block` declares it as a resource, `block.placement`, whose
+`surface_examples_block` declares it as a resource, `block.placement`, whose
 plugin chooses its settings: for this plugin, the same structure, as
 declared ([Variants from the site](#variants-from-the-site)). The tool
 bridge derives its tools, which place, configure, read and remove a
@@ -1174,7 +1174,7 @@ after the key ([A placed fieldset](forms.md#a-placed-fieldset)). The
 examples' compliance alter ends with
 
 ```php
-$inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
+$inputs->describe('third_party_settings.surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
 ```
 
 so the license sits right under the capacity it lifts. Placement is
@@ -1226,7 +1226,7 @@ return hash_hmac('sha256', (string) json_encode($payload), $values['api_key']);
 ```
 
 What is stored: `api_key` as pasted, and `key_id` at the alter's mount,
-`third_party_settings.data_surface_examples_keys.key_id`. What is not: the
+`third_party_settings.surface_examples_keys.key_id`. What is not: the
 managed key's value, which is read each time `resolved()` is called and
 never written back. While a key in `from:` holds nothing (NULL, the empty
 string or no value) the resolve is skipped and the stored value stands;
@@ -1313,27 +1313,27 @@ type), `StringTranslationTrait` for `$this->t()`, the glue in
 refiner that may be an instance method. A test fails if this page and the
 module differ.
 
-<!-- code: modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php -->
+<!-- code: modules/surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php -->
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface_examples_compliance\Alter;
+namespace Drupal\surface_examples_compliance\Alter;
 
 use Drupal\Core\State\StateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Refinement\Condition;
-use Drupal\data_surface\Resource\Attribute\Alters;
-use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
-use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\data_surface_examples_compliance\Structure\ComplianceStructure;
+use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Resource\Attribute\Alters;
+use Drupal\surface\Resource\Attribute\RefinesInput;
+use Drupal\surface\Resource\BlueprintAdditionsInterface;
+use Drupal\surface\Resource\AltersInputsInterface;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\surface_examples_compliance\Structure\ComplianceStructure;
 
 /**
  * Example 4: others get a say.
@@ -1357,7 +1357,7 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
   /**
    * The State key listing the rooms that are closed, by room id.
    */
-  public const CLOSED_ROOMS = 'data_surface_examples_compliance.closed_rooms';
+  public const CLOSED_ROOMS = 'surface_examples_compliance.closed_rooms';
 
   /**
    * Constructs the alter, which the container builds as a service.
@@ -1376,9 +1376,9 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     // The structure's capacity is example 3's.
-    $inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
+    $inputs->attach('third_party_settings.surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
     $inputs->describe('title', label: $this->t('Public event title'));
-    $inputs->describe('third_party_settings.data_surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
+    $inputs->describe('third_party_settings.surface_examples_compliance', label: $this->t('Compliance'), after: 'capacity');
     // Without a license, no more than a hundred, whatever the room seats.
     // The license is the structure's, which this alter reads at its mount.
     // A license its own pattern refuses is no license: a rule never sees
@@ -1423,12 +1423,12 @@ final class RegistrationComplianceAlter implements AltersInputsInterface {
 
 Its keys are stored in example 3's config object, under its module's
 name, so two schemas describe them, and both are written from the
-resources by `drush data_surface:config-schema --write`
+resources by `drush surface:config-schema --write`
 ([Storage](storage.md#a-schema-generated-from-the-resource)). The owner's
 schema gains `third_party_settings`, a sequence typed by the module key,
-in `data_surface_examples.registration_step3`:
+in `surface_examples.registration_step3`:
 
-<!-- excerpt: modules/data_surface_examples/config/schema/data_surface_examples.schema.yml -->
+<!-- excerpt: modules/surface_examples/config/schema/surface_examples.schema.yml -->
 
 ```yaml
 third_party_settings:
@@ -1436,18 +1436,18 @@ third_party_settings:
   label: 'Third party settings'
   requiredKey: false
   sequence:
-    type: 'data_surface_examples.registration_step3.third_party.[%key]'
+    type: 'surface_examples.registration_step3.third_party.[%key]'
 ```
 
 and the mounting module's schema gains its part, the type that key
 names, each key of it free to be absent, since a mounted key is stored
 only once it is sent:
 
-<!-- code: modules/data_surface_examples_compliance/config/schema/data_surface_examples_compliance.schema.yml -->
+<!-- code: modules/surface_examples_compliance/config/schema/surface_examples_compliance.schema.yml -->
 
 ```yaml
-# Generated from the registration.step3 resource by drush data_surface:config-schema.
-data_surface_examples.registration_step3.third_party.data_surface_examples_compliance:
+# Generated from the registration.step3 resource by drush surface:config-schema.
+surface_examples.registration_step3.third_party.surface_examples_compliance:
   type: mapping
   label: 'Compliance'
   constraints:
@@ -1635,24 +1635,24 @@ $inputs->attachVariants('presentation_settings', by: 'presentation')
   ->setDescription(t('What the chosen presentation needs.'));
 
 // ListPresentationStructure and GridPresentationStructure, beside it
-#[Structure('block.data_surface_demo.presentation.list')]
+#[Structure('block.surface_examples_plugins.presentation.list')]
 #[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
 
-#[Structure('block.data_surface_demo.presentation.grid')]
+#[Structure('block.surface_examples_plugins.presentation.grid')]
 #[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 
-// FieldInstanceResource, in data_surface_tool
+// FieldInstanceResource, in surface_tool
 $inputs->attach('storage', FieldStorageResource::class)
   ->setLabel(t('Field storage'));
 
 $inputs->attachVariants('settings', by: 'field_type')
   ->setLabel(t('Field settings'));
 
-// FieldStorageResource, in data_surface_tool
+// FieldStorageResource, in surface_tool
 $inputs->attachVariants('settings', by: 'field_type')
   ->setLabel(t('Storage settings'));
 
-// AddressFieldSettingsResource, in data_surface_address
+// AddressFieldSettingsResource, in surface_examples_address
 #[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
 #[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]
 ```
@@ -1711,7 +1711,7 @@ and whatever attaches it says which of its own keys each port reads:
 $inputs->attach('compliance', ComplianceStructure::class, reads: ['capacity' => 'seats']);
 
 // An alter, at its own mount: the compliance alter on example 3.
-$inputs->attach('third_party_settings.data_surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
+$inputs->attach('third_party_settings.surface_examples_compliance', ComplianceStructure::class, reads: ['capacity' => 'capacity']);
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -1869,7 +1869,7 @@ its own module attaches it. The recipe:
    key the structure sits at, and at the mount for an alter, by the
    convention for keys another module mounts
    ([Storage](storage.md#keys-another-module-mounts)), when its schema is
-   generated (`drush data_surface:config-schema --write`). A schema
+   generated (`drush surface:config-schema --write`). A schema
    written by hand describes them the same way; a mapping type of the
    structure's keys, declared once, can serve every site.
 4. **That is all.** The structure brings its refiners, its declared
@@ -1978,7 +1978,7 @@ verb reads what it needs of an entry and refuses the rest:
 
 ```php
 // SpotlightResource, example 12
-$inputs->add('component', 'string', t('Component'), default: 'data_surface_examples:card')
+$inputs->add('component', 'string', t('Component'), default: 'surface_examples:card')
   ->setRequired(TRUE);
 $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
   ->setLabel(t('Props'));
@@ -2012,7 +2012,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   built resource's, a list with max-age 0 is refused, and so is one that
   varies by the account.
 - **Each variant is a structure read from its schema**, its id
-  `<owner>.<key>.<value>` (`event.spotlight.props.data_surface_examples:card`),
+  `<owner>.<key>.<value>` (`event.spotlight.props.surface_examples:card`),
   built by the build step as a class is: its keys, their constraints,
   its maps, children, variants and rules, what its schema says.
 - **Beside the classes.** Every `#[Variant]` at the key is a variant as
@@ -2023,10 +2023,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   def and the key as `anyOf` of them, with one conditional per value;
   the tool lists them, the form swaps the keys over AJAX, the React page
   narrows locally, and a payload carrying another variant's keys is
-  refused by name: `props.align belongs to the data_surface_examples:hero
-  variant, but component chose data_surface_examples:card.`
+  refused by name: `props.align belongs to the surface_examples:hero
+  variant, but component chose surface_examples:card.`
 - **Past the site list limit, deferred.** While the provider lists at
-  most `data_surface.settings:site_list_limit` variants (20 as shipped),
+  most `surface.settings:site_list_limit` variants (20 as shipped),
   both documents state each. Past it, the full schema states the key
   open, marked `deferred`, the deciding key still listing every value;
   the full schema fetched with a value chosen,
@@ -2037,11 +2037,11 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   tool listing states the keys of the variant the stored values choose
   and no other, the deciding key still listing every value, and names
   the fetch and the narrowing tool,
-  `data_surface:<resource>:<operation>:schema`, which answers the chosen
+  `surface:<resource>:<operation>:schema`, which answers the chosen
   variant to an agent that asks with values
   (why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
 - **Fewer components than the site has.** `ComponentProps` and
-  `ComponentSlots` list the components `data_surface.settings:components_offered`
+  `ComponentSlots` list the components `surface.settings:components_offered`
   allows: an entry with a colon is a component id (`provider:name`), one
   without a provider, meaning every component it provides; empty, as
   shipped, every component (`ComponentsOffered`). A slot that expects
@@ -2077,7 +2077,7 @@ lists two structures of its own, a credential pasted or a key the site
 manages, the second only while the module that manages keys is on
 (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
 
-A placed block is the case at scale. `data_surface_block`'s
+A placed block is the case at scale. `surface_examples_block`'s
 `block.placement` attaches its `settings` with
 `attachVariants('settings', by: 'plugin', from:
 BlockPluginStructures::class)`: one variant per block plugin the block
@@ -2092,7 +2092,7 @@ shows, its theme, region, weight and status) are the resource's own, and
 its visibility a collection of conditions chosen the same way
 (why: [decision](decisions.md#a-placed-block-is-a-resource)).
 
-A field type's settings are the case again, in `data_surface_tool`.
+A field type's settings are the case again, in `surface_tool`.
 `FieldInstanceResource` attaches its `settings` with
 `attachVariants('settings', by: 'field_type', from:
 FieldSettingsSchemaVariants::class)`, and `FieldStorageResource` its own
@@ -2288,14 +2288,14 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   a render array: the cache tags of the configuration or the entities it
   lists (`addCacheableDependency($config)` takes them from a config
   object). It becomes the built resource's, so the form, both documents
-  and the schema route are cached by it, and `data_surface_tool` clears
+  and the schema route are cached by it, and `surface_tool` clears
   the tool listing when one of those tags is invalidated: a node type
   added is a checkbox at the next request, at every door. A list with
   max-age 0 is refused when the resource is built, and so is one that
   varies by the account: which keys there are is the site's, and who may
   change one is access.
 - **Past the site list limit.** A map of more keys than
-  `data_surface.settings:site_list_limit` (20 as shipped) is stated open
+  `surface.settings:site_list_limit` (20 as shipped) is stated open
   in the full schema and the tool listing, marked `deferred`, its keys
   named under `x-surface.deferred.entries` by id and label; the full schema
   fetched with an entry chosen, `GET .../schema?choose=/limits=<id>`,
@@ -2449,7 +2449,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **It has no class.** `ResourceDefinition::$class` is NULL, and every
   caller asks for it by `name()`, its id (a class-based one's name is
   its class). The build step, the alters, the routes
-  (`_data_surface_resource: 'entity.content:node.page'`), the catalog,
+  (`_surface_resource: 'entity.content:node.page'`), the catalog,
   the derived tools and read tools, the React app and its API treat it
   as they treat a class (why: [decision](decisions.md#a-derived-resource-has-no-class)).
 - **Cacheability.** A derived resource names the cache tags of what it
@@ -2460,7 +2460,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   derivatives there are (a bundle created, any form display saved),
   which the index carries; reading the list again keeps every entry
   whose tags did not fire. `ResourceRegistryInvalidator` clears what the
-  registry already read in this request, and `data_surface_tool`
+  registry already read in this request, and `surface_tool`
   derives again the tools of the resources that read a tag. The tags
   belong in the build's cacheability too
   (`$inputs->addCacheableDependency()`), which is what the schema route
@@ -2472,10 +2472,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **Overrides.** `#[DerivesResources(overriddenBy:)]` names an attribute;
   the registry hands the deriver every class in an enabled module's
   `src/Resource` or `src/Structure` carrying it, as what replaces its
-  derivation where someone wrote one by hand. `data_surface_entity`'s
+  derivation where someone wrote one by hand. `surface_examples_entity`'s
   `#[FieldItemStructure(type:)]` is one.
 
-`data_surface_entity` derives a resource per content entity bundle and
+`surface_examples_entity` derives a resource per content entity bundle and
 a structure per field it carries; [Content entities](entities.md) says
 what is derived from what, and where core's APIs fell short.
 

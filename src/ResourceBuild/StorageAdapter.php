@@ -2,25 +2,25 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\CreatingStorageInterface;
-use Drupal\data_surface\Pipeline\DeletingStorageInterface;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Pipeline\PreparedValues;
-use Drupal\data_surface\Pipeline\StorageViolationsException;
-use Drupal\data_surface\Pipeline\ViolationSet;
-use Drupal\data_surface\Reference\ReferenceStorageLayout;
-use Drupal\data_surface\Reference\References;
-use Drupal\data_surface\Resource\DeletableStorageInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Resource\ResourceStorageInterface;
-use Drupal\data_surface\Storage\ConfigEntityStorage;
-use Drupal\data_surface\Entry;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\CreatingStorageInterface;
+use Drupal\surface\Pipeline\DeletingStorageInterface;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Pipeline\PreparedValues;
+use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\ViolationSet;
+use Drupal\surface\Reference\ReferenceStorageLayout;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Resource\DeletableStorageInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\ResourceStorageInterface;
+use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Entry;
 
 /**
  * A resource's storage, as the pipeline's storage, composed along a tree.
@@ -84,11 +84,11 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
   /**
    * Constructs a StorageAdapter.
    *
-   * @param \Drupal\data_surface\Resource\ResourceStorageInterface $storage
+   * @param \Drupal\surface\Resource\ResourceStorageInterface $storage
    *   The resource's storage.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it loads and commits by.
-   * @param array<string, array<string, \Drupal\data_surface\ResourceBuild\StorageAdapter>> $routes
+   * @param array<string, array<string, \Drupal\surface\ResourceBuild\StorageAdapter>> $routes
    *   The children with storage of their own, keyed by the key they sit
    *   at, then by variant id; an attached child under ATTACHED.
    * @param string[] $identity
@@ -106,10 +106,10 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account the write is made as, handed to each write verb; NULL
    *   for one that only loads.
-   * @param \Drupal\data_surface\ResourceBuild\ItemGates|null $gates
+   * @param \Drupal\surface\ResourceBuild\ItemGates|null $gates
    *   The gates the operation asks once per item of a collection, asked
    *   before the storage prepares anything; NULL for none.
-   * @param \Drupal\data_surface\Reference\References|null $references
+   * @param \Drupal\surface\Reference\References|null $references
    *   For a config storage, what stores its references to content
    *   entities by uuid (ReferenceStorageLayout); NULL for any other.
    *
@@ -149,7 +149,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
   /**
    * {@inheritdoc}
    */
-  public function load(DataSurfaceInterface $surface): array {
+  public function load(SurfaceInterface $surface): array {
     $values = self::applyThirdPartyLayouts($surface, array_intersect_key($this->loaded($this->context), $surface->getDefinitions()->toArray()), FALSE);
     $values = $this->referenceLayout($surface)?->fromStorage($values) ?? $values;
     foreach ($this->routes as $key => $routes) {
@@ -186,7 +186,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * collection: an item a gate refused is refused at its path, and the
    * storage is not asked, so it only ever sees items every gate allowed.
    */
-  public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+  public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
     if ($this->storage instanceof DeletableStorageInterface && $this->deletes) {
       // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
       $storage = $this->storage;
@@ -319,7 +319,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * child's under `children`, by the key it sits at, recursively: what
    * each storage would be handed, nothing of how the pipeline carried it.
    *
-   * @param \Drupal\data_surface\Pipeline\PreparedValues $prepared
+   * @param \Drupal\surface\Pipeline\PreparedValues $prepared
    *   What prepare() returned.
    *
    * @return array
@@ -373,12 +373,12 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    *
    * Decision: see docs/decisions.md#who-produces-outputs.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface, whose output definitions say which keys are
    *   outputs.
    * @param array $values
    *   The accepted values.
-   * @param \Drupal\data_surface\Pipeline\PreparedValues|null $prepared
+   * @param \Drupal\surface\Pipeline\PreparedValues|null $prepared
    *   What prepare() returned, for an operation that changes nothing or a
    *   dry run; NULL for one that was committed.
    *
@@ -386,7 +386,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    *   The outputs the storage could say, keyed by output name; empty for
    *   a data surface that declares none.
    */
-  public function outputs(DataSurfaceInterface $surface, array $values, ?PreparedValues $prepared = NULL): array {
+  public function outputs(SurfaceInterface $surface, array $values, ?PreparedValues $prepared = NULL): array {
     $outputs = $surface->getOutputDefinitions()->toArray();
     if ($outputs === []) {
       return [];
@@ -435,7 +435,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
   /**
    * Loads from the storage, guarded as everything an operation runs.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it loads by.
    *
    * @return array
@@ -489,7 +489,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
   /**
    * Gets the context this storage loads and commits by.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The context.
    */
   public function getContext(): OperationContext {
@@ -499,7 +499,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
   /**
    * Picks the route a child's value takes.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The child's key.
    * @param array $values
    *   The values of its level, where the variants' deciding key is read.
@@ -518,15 +518,15 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
   /**
    * Gets the child's data surface one route writes for.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The child's key.
    * @param string $id
    *   The route.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The child.
    */
-  protected static function childOf(Entry $entry, string $id): DataSurfaceInterface {
+  protected static function childOf(Entry $entry, string $id): SurfaceInterface {
     return $entry->attachment !== NULL ? $entry->attachment->child : $entry->variants->variant($id)->child;
   }
 
@@ -539,13 +539,13 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * Decision: see
    * docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    *
-   * @return \Drupal\data_surface\Reference\ReferenceStorageLayout|null
+   * @return \Drupal\surface\Reference\ReferenceStorageLayout|null
    *   The layout, or NULL when there is nothing to translate.
    */
-  protected function referenceLayout(DataSurfaceInterface $surface): ?ReferenceStorageLayout {
+  protected function referenceLayout(SurfaceInterface $surface): ?ReferenceStorageLayout {
     return $this->references === NULL ? NULL : ReferenceStorageLayout::forSurface($surface, $this->references, array_map('strval', array_keys($this->routes)));
   }
 
@@ -578,7 +578,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
   /**
    * Applies the data surface's storage layouts to mounted settings.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface, which carries each contributor's storage layout.
    * @param array $values
    *   Values of its level.
@@ -589,7 +589,7 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    *   The values, the settings of each module with a layout translated
    *   and nothing else touched.
    */
-  protected static function applyThirdPartyLayouts(DataSurfaceInterface $surface, array $values, bool $to_storage): array {
+  protected static function applyThirdPartyLayouts(SurfaceInterface $surface, array $values, bool $to_storage): array {
     if (!is_array($values[self::THIRD_PARTY] ?? NULL)) {
       return $values;
     }

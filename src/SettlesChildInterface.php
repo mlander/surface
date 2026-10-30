@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 /**
  * A child not built yet, which builds itself the first time it is read.
@@ -26,22 +26,22 @@ interface SettlesChildInterface {
   /**
    * Builds the child, once, and answers it.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed child, the same object on every call.
    *
    * @throws \LogicException
    *   When the child cannot be built: what the build would have refused
    *   had it built the child with its parent.
    */
-  public function settle(): DataSurfaceInterface;
+  public function settle(): SurfaceInterface;
 
   /**
    * Gets the child if it was built already.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   * @return \Drupal\surface\SurfaceInterface|null
    *   The child, or NULL when nothing has read it yet.
    */
-  public function settled(): ?DataSurfaceInterface;
+  public function settled(): ?SurfaceInterface;
 
   /**
    * Answers whether the child, built or not, holds no secret at any depth.

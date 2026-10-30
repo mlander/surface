@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * A structure: a group of keys with no identity or storage of its own.
@@ -15,8 +15,8 @@ namespace Drupal\data_surface\Resource;
  * operations, for its container to choose between, and refiners,
  * outputs and an access class, exactly as a resource does.
  *
- * @see \Drupal\data_surface\Resource\Attribute\Structure
- * @see \Drupal\data_surface\Resource\ResourceInterface
+ * @see \Drupal\surface\Resource\Attribute\Structure
+ * @see \Drupal\surface\Resource\ResourceInterface
  */
 interface StructureInterface extends DefinesInputsInterface {
 

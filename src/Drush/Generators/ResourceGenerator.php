@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Generators;
+namespace Drupal\surface\Drush\Generators;
 
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Extension\ModuleExtensionList;
-use Drupal\data_surface\Drush\Generators\Resource\BuiltSource;
-use Drupal\data_surface\Drush\Generators\Resource\KeyAnswers;
-use Drupal\data_surface\Drush\Generators\Resource\PhpLiteral;
-use Drupal\data_surface\Drush\Generators\Resource\ResourceCode;
-use Drupal\data_surface\Drush\Generators\Resource\ResourceSources;
-use Drupal\data_surface\Drush\Generators\Resource\RewriteResolver;
-use Drupal\data_surface\Drush\Generators\Resource\SchemaEntryResolver;
-use Drupal\data_surface\Drush\Generators\Resource\YamlEntryResolver;
-use Drupal\data_surface\Storage\ConfigSchemaGenerator;
+use Drupal\surface\Drush\Generators\Resource\BuiltSource;
+use Drupal\surface\Drush\Generators\Resource\KeyAnswers;
+use Drupal\surface\Drush\Generators\Resource\PhpLiteral;
+use Drupal\surface\Drush\Generators\Resource\ResourceCode;
+use Drupal\surface\Drush\Generators\Resource\ResourceSources;
+use Drupal\surface\Drush\Generators\Resource\RewriteResolver;
+use Drupal\surface\Drush\Generators\Resource\SchemaEntryResolver;
+use Drupal\surface\Drush\Generators\Resource\YamlEntryResolver;
+use Drupal\surface\Storage\ConfigSchemaGenerator;
 use DrupalCodeGenerator\Asset\AssetCollection;
 use DrupalCodeGenerator\Attribute\Generator;
 use DrupalCodeGenerator\Command\BaseGenerator;
@@ -54,7 +54,6 @@ use Symfony\Component\Console\Question\Question;
 #[Generator(
   name: 'surface:resource',
   description: 'Generates a settings page: a resource, its storage, config schema, install file, permission and route.',
-  aliases: ['data_surface:resource'],
   templatePath: __DIR__ . '/templates',
   type: GeneratorType::MODULE_COMPONENT,
 )]
@@ -93,9 +92,9 @@ final class ResourceGenerator extends BaseGenerator {
   /**
    * Constructs a ResourceGenerator.
    *
-   * @param \Drupal\data_surface\Drush\Generators\Resource\ResourceSources $sources
+   * @param \Drupal\surface\Drush\Generators\Resource\ResourceSources $sources
    *   Builds each source.
-   * @param \Drupal\data_surface\Storage\ConfigSchemaGenerator $schemas
+   * @param \Drupal\surface\Storage\ConfigSchemaGenerator $schemas
    *   The config schema generator, which writes the schema entry and the
    *   install file and reads the written class back.
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
@@ -130,15 +129,15 @@ final class ResourceGenerator extends BaseGenerator {
     $modules = $container->get('extension.list.module');
     return new static(
       new ResourceSources(
-        $container->get('data_surface.resource_registry'),
-        $container->get('data_surface.resources'),
-        $container->get('data_surface.schema_reader'),
-        $container->get('data_surface.config_schema_document'),
+        $container->get('surface.resource_registry'),
+        $container->get('surface.resources'),
+        $container->get('surface.schema_reader'),
+        $container->get('surface.config_schema_document'),
         $container->get('config.factory'),
         $modules,
         DRUPAL_ROOT,
       ),
-      $container->get('data_surface.config_schema'),
+      $container->get('surface.config_schema'),
       $modules,
       DRUPAL_ROOT,
       $container->has('input') ? $container->get('input') : NULL,
@@ -205,7 +204,7 @@ final class ResourceGenerator extends BaseGenerator {
     ], 'configure');
     if ($operation === 'identity') {
       $identity = $this->ask($ir, 'Identity key', 'id', static fn (mixed $value): string => (new RequiredMachineName())($value));
-      throw new RuntimeException(sprintf('A resource with identity (%s) is stored in a config entity type, which this generator does not write yet; only a config object is offered. Example 15 of data_surface_examples shows one written by hand, its identity a title and a machine name: $inputs->compute(\'%s\', \'machine_name\', t(\'Machine name\'), from: [\'label\'], using: MachineName::class, when: Compute::UNLESS_SENT) (docs/recipes.md#a-title-and-a-machine-name).', $identity, $identity));
+      throw new RuntimeException(sprintf('A resource with identity (%s) is stored in a config entity type, which this generator does not write yet; only a config object is offered. Example 15 of surface_examples shows one written by hand, its identity a title and a machine name: $inputs->compute(\'%s\', \'machine_name\', t(\'Machine name\'), from: [\'label\'], using: MachineName::class, when: Compute::UNLESS_SENT) (docs/recipes.md#a-title-and-a-machine-name).', $identity, $identity));
     }
     $operation_label = $this->ask($ir, 'Operation label', 'Configure the ' . lcfirst($label));
     $operation_description = $this->ask($ir, 'Operation description, the first thing an agent reads about the tool', NULL, static function (mixed $value): string {
@@ -258,10 +257,10 @@ final class ResourceGenerator extends BaseGenerator {
     $owned = ConfigSchemaGenerator::owns($module, $config);
     $uses = [
       'Drupal\Core\StringTranslation\TranslatableMarkup' => TRUE,
-      'Drupal\data_surface\Resource\Attribute\Operation' => TRUE,
-      'Drupal\data_surface\Resource\Attribute\Resource' => TRUE,
-      'Drupal\data_surface\Resource\BlueprintInterface' => TRUE,
-      'Drupal\data_surface\Resource\ResourceInterface' => TRUE,
+      'Drupal\surface\Resource\Attribute\Operation' => TRUE,
+      'Drupal\surface\Resource\Attribute\Resource' => TRUE,
+      'Drupal\surface\Resource\BlueprintInterface' => TRUE,
+      'Drupal\surface\Resource\ResourceInterface' => TRUE,
       'Drupal\\' . $module . '\Storage\\' . $class . 'Storage' => TRUE,
     ] + array_fill_keys($code['uses'], TRUE);
     $uses = array_keys($uses);
@@ -307,9 +306,9 @@ final class ResourceGenerator extends BaseGenerator {
     $assets->addFile('src/Storage/' . $class . 'Storage.php', 'storage.php.twig');
     foreach ($code['structures'] as $structure) {
       $structure_uses = [
-        'Drupal\data_surface\Resource\Attribute\Structure',
-        'Drupal\data_surface\Resource\BlueprintInterface',
-        'Drupal\data_surface\Resource\StructureInterface',
+        'Drupal\surface\Resource\Attribute\Structure',
+        'Drupal\surface\Resource\BlueprintInterface',
+        'Drupal\surface\Resource\StructureInterface',
         ...$structure['uses'],
       ];
       usort($structure_uses, 'strcmp');
@@ -352,7 +351,7 @@ final class ResourceGenerator extends BaseGenerator {
       ->content(ConfigSchemaGenerator::installFile($described['install']))
       ->resolver(new RewriteResolver($io));
     $this->written = ['module' => $module, 'schema' => $schema_path, 'install' => $install_path];
-    $this->io()->text(sprintf('Config schema entry and install file: written from a build of %s, by the mapping drush data_surface:config-schema uses.', $source->source));
+    $this->io()->text(sprintf('Config schema entry and install file: written from a build of %s, by the mapping drush surface:config-schema uses.', $source->source));
   }
 
   /**
@@ -378,7 +377,7 @@ final class ResourceGenerator extends BaseGenerator {
     $module = $written['module'];
     $directory = $this->root . '/' . $this->moduleList->getPath($module);
     if (realpath($destination) === FALSE || realpath($destination) !== realpath($directory)) {
-      $this->io()->text(sprintf('Not checked against the class: the files are not in %s\'s directory. Run drush data_surface:config-schema --module=%s once they are.', $module, $module));
+      $this->io()->text(sprintf('Not checked against the class: the files are not in %s\'s directory. Run drush surface:config-schema --module=%s once they are.', $module, $module));
       return $dumped;
     }
     try {
@@ -398,7 +397,7 @@ final class ResourceGenerator extends BaseGenerator {
       }
     }
     $this->io()->text($differ === []
-      ? sprintf('Checked against a build of the class just written (drush data_surface:config-schema --module=%s): the schema entry and install file agree.', $module)
+      ? sprintf('Checked against a build of the class just written (drush surface:config-schema --module=%s): the schema entry and install file agree.', $module)
       : sprintf('Checked against a build of the class just written: %s differed, and %s written from the class.', implode(' and ', $differ), count($differ) === 1 ? 'is' : 'are'));
     return $dumped;
   }
@@ -649,10 +648,10 @@ final class ResourceGenerator extends BaseGenerator {
   /**
    * Builds a source, as a refusal the generator prints.
    *
-   * @param callable(): \Drupal\data_surface\Drush\Generators\Resource\BuiltSource $build
+   * @param callable(): \Drupal\surface\Drush\Generators\Resource\BuiltSource $build
    *   What builds it.
    *
-   * @return \Drupal\data_surface\Drush\Generators\Resource\BuiltSource
+   * @return \Drupal\surface\Drush\Generators\Resource\BuiltSource
    *   What was built.
    */
   protected function build(callable $build): BuiltSource {

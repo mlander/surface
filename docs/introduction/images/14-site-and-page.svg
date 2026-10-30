@@ -31,12 +31,12 @@
   <!-- Where the values come from -->
   <rect class="source" x="24" y="40" width="236" height="64" rx="8"/>
   <text class="ink bold" x="40" y="64">The site</text>
-  <text class="muted code small" x="40" y="88">data_surface.defaults</text>
+  <text class="muted code small" x="40" y="88">surface.defaults</text>
 
   <rect class="source" x="24" y="152" width="236" height="88" rx="8"/>
   <text class="ink bold" x="40" y="176">The route, on its page</text>
-  <text class="muted code small" x="40" y="200">_data_surface_fixed</text>
-  <text class="muted code small" x="40" y="224">_data_surface_defaults</text>
+  <text class="muted code small" x="40" y="200">_surface_fixed</text>
+  <text class="muted code small" x="40" y="224">_surface_defaults</text>
 
   <!-- The resource and its keys -->
   <rect class="resource" x="340" y="24" width="356" height="232" rx="10"/>

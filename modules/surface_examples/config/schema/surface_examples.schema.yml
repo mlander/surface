@@ -1,0 +1,564 @@
+# One config object per example, so the examples never write over each other.
+# Each entry under a "Generated" line is written from its resource by
+# drush surface:config-schema --write, and a test fails when one drifts;
+# the storage classes hold every write to it in prepare(), before anything is
+# saved. The ticket types are the site's, not a resource's, and written here.
+
+# Generated from the registration.step1 resource by drush surface:config-schema.
+surface_examples.registration_step1:
+  type: config_object
+  label: 'Registration settings, example 1'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Event title'
+    capacity:
+      type: integer
+      label: 'Capacity'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+          max: 1000
+    open:
+      type: boolean
+      label: 'Registration open'
+      nullable: true
+
+# Generated from the registration.step2 resource by drush surface:config-schema.
+surface_examples.registration_step2:
+  type: config_object
+  label: 'Registration settings, example 2'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Event title'
+    open:
+      type: boolean
+      label: 'Registration open'
+      nullable: true
+    venue:
+      type: string
+      label: 'Venue'
+    room:
+      type: string
+      label: 'Room'
+    capacity:
+      type: integer
+      label: 'Capacity'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+
+# Generated from the registration.step3 resource by drush surface:config-schema.
+surface_examples.registration_step3:
+  type: config_object
+  label: 'Registration settings, example 3'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Event title'
+    open:
+      type: boolean
+      label: 'Registration open'
+      nullable: true
+    venue:
+      type: string
+      label: 'Venue'
+    room:
+      type: string
+      label: 'Room'
+    capacity:
+      type: integer
+      label: 'Capacity'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+    pricing:
+      type: string
+      label: 'Pricing'
+    ticket:
+      type: 'surface_examples.registration_step3.ticket.[%parent.pricing]'
+      label: 'Ticket'
+    contact:
+      type: mapping
+      label: 'Contact'
+      mapping:
+        email:
+          type: email
+          label: 'Email'
+        phone:
+          type: string
+          label: 'Phone'
+          nullable: true
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: 'surface_examples.registration_step3.third_party.[%key]'
+
+# Example 7: the bulletin. The send day is kept while it does not apply.
+# Generated from the event.bulletin resource by drush surface:config-schema.
+surface_examples.bulletin:
+  type: config_object
+  label: 'Bulletin settings, example 7'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    frequency:
+      type: string
+      label: 'Frequency'
+    send_day:
+      type: string
+      label: 'Send day'
+    items:
+      type: integer
+      label: 'Items per issue'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+          max: 20
+
+# Example 8: the press page, the review's two keys flat beside its own.
+# Generated from the event.press resource by drush surface:config-schema.
+surface_examples.press:
+  type: config_object
+  label: 'Press page settings, example 8'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    public:
+      type: boolean
+      label: 'Show on the press page'
+      nullable: true
+    contact:
+      type: mapping
+      label: 'Press contact'
+      mapping:
+        name:
+          type: string
+          label: 'Name'
+        email:
+          type: email
+          label: 'Email'
+          nullable: true
+        phone:
+          type: string
+          label: 'Phone'
+          nullable: true
+          constraints:
+            Regex:
+              pattern: '/^\+?[0-9 ]{7,20}$/D'
+    reviewed_on:
+      type: string
+      label: 'Reviewed on'
+      nullable: true
+      constraints:
+        Regex:
+          pattern: '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D'
+    reviewed_by:
+      type: string
+      label: 'Reviewed by'
+      nullable: true
+
+# Example 8: the information desk, its volunteers a list of persons.
+# Generated from the event.desk resource by drush surface:config-schema.
+surface_examples.desk:
+  type: config_object
+  label: 'Information desk settings, example 8'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    phone:
+      type: string
+      label: 'Desk phone'
+      constraints:
+        Regex:
+          pattern: '/^\+?[0-9 ]{7,20}$/D'
+    in_program:
+      type: boolean
+      label: 'Listed in the printed program'
+      nullable: true
+    lead:
+      type: mapping
+      label: 'Desk lead'
+      mapping:
+        name:
+          type: string
+          label: 'Name'
+        email:
+          type: email
+          label: 'Email'
+          nullable: true
+        phone:
+          type: string
+          label: 'Phone'
+          nullable: true
+          constraints:
+            Regex:
+              pattern: '/^\+?[0-9 ]{7,20}$/D'
+    volunteers:
+      type: sequence
+      label: 'Volunteers'
+      nullable: true
+      constraints:
+        Count:
+          max: 4
+      sequence:
+        type: mapping
+        label: 'Volunteers'
+        mapping:
+          name:
+            type: string
+            label: 'Name'
+          email:
+            type: email
+            label: 'Email'
+            nullable: true
+          phone:
+            type: string
+            label: 'Phone'
+            nullable: true
+            constraints:
+              Regex:
+                pattern: '/^\+?[0-9 ]{7,20}$/D'
+
+# Example 9: the ticket types the site sells, which example 9's keys come from.
+surface_examples.ticket_types:
+  type: config_object
+  label: 'Ticket types'
+  mapping:
+    types:
+      type: sequence
+      label: 'Types'
+      sequence:
+        type: mapping
+        label: 'Ticket type'
+        mapping:
+          label:
+            type: label
+            label: 'Label'
+          locked:
+            type: boolean
+            label: 'Locked'
+
+# Example 9: ticket sales, one entry per ticket type in each map.
+# Generated from the event.sales resource by drush surface:config-schema.
+surface_examples.sales:
+  type: config_object
+  label: 'Ticket sales settings, example 9'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    on_sale:
+      type: sequence
+      label: 'On sale'
+      sequence:
+        type: boolean
+        label: 'On sale'
+        nullable: true
+    limits:
+      type: sequence
+      label: 'Limits'
+      sequence:
+        type: mapping
+        label: 'Limits'
+        mapping:
+          per_order:
+            type: integer
+            label: 'Per order'
+            nullable: true
+            requiredKey: false
+          waiting_list:
+            type: boolean
+            label: 'Waiting list when sold out'
+            nullable: true
+            requiredKey: false
+
+# Example 10: the program, and its fees.
+# Generated from the event.program resource by drush surface:config-schema.
+surface_examples.program:
+  type: config_object
+  label: 'Program settings, example 10'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    headline:
+      type: string
+      label: 'Headline'
+    sessions:
+      type: integer
+      label: 'Sessions'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+          max: 30
+    published:
+      type: boolean
+      label: 'Published'
+      nullable: true
+    fees:
+      type: mapping
+      label: 'Fees'
+      mapping:
+        standard:
+          type: float
+          label: 'Standard fee'
+          nullable: true
+          constraints:
+            Range:
+              min: 0
+        concession:
+          type: float
+          label: 'Concession fee'
+          nullable: true
+          constraints:
+            Range:
+              min: 0
+
+# Example 11: fully validatable, so only the notes may hold nothing, and
+# every other key is always held.
+# Generated from the event.doors resource by drush surface:config-schema.
+surface_examples.doors:
+  type: config_object
+  label: 'Door settings, example 11'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    opens:
+      type: string
+      label: 'Doors open at'
+      constraints:
+        Regex:
+          pattern: '/^([01]\d|2[0-3]):[0-5]\d$/D'
+    days:
+      type: sequence
+      label: 'Days'
+      sequence:
+        type: string
+        label: 'Days'
+    badges:
+      type: string
+      label: 'Badges'
+    notes:
+      type: string
+      label: 'Notes for the door team'
+      nullable: true
+    greeters:
+      type: sequence
+      label: 'Greeters'
+      sequence:
+        type: string
+        label: 'Greeters'
+
+# Generated from the registration.step3 resource by drush surface:config-schema.
+surface_examples.registration_step3.ticket.free:
+  type: mapping
+  label: 'Free'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    note:
+      type: string
+      label: 'Note'
+      nullable: true
+
+# Generated from the registration.step3 resource by drush surface:config-schema.
+surface_examples.registration_step3.ticket.paid:
+  type: mapping
+  label: 'Paid'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    price:
+      type: float
+      label: 'Price'
+      constraints:
+        Range:
+          min: 0.01
+    currency:
+      type: string
+      label: 'Currency'
+
+# Generated from the event.spotlight resource by drush surface:config-schema.
+surface_examples.spotlight:
+  type: config_object
+  label: 'Spotlight, example 12'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    component:
+      type: string
+      label: 'Component'
+    props:
+      type: ignore
+      label: 'Props'
+    slots:
+      type: ignore
+      label: 'Slots'
+
+# Example 14, the owner's way: the credential is a variant its source chooses,
+# and both sources are written here, whichever the site offers.
+# Generated from the event.mailer resource by drush surface:config-schema.
+surface_examples.mailer:
+  type: config_object
+  label: 'Mailer, example 14'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    sender:
+      type: email
+      label: 'Sender'
+    endpoint:
+      type: uri
+      label: 'Mail service'
+    source:
+      type: string
+      label: 'Credential source'
+    credential:
+      type: 'surface_examples.mailer.credential.[%parent.source]'
+      label: 'Credential'
+
+# Example 14, the alter's way: a pasted key, and a mount for another module.
+# Generated from the event.webhook resource by drush surface:config-schema.
+surface_examples.webhook:
+  type: config_object
+  label: 'Sales webhook, example 14'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    endpoint:
+      type: uri
+      label: 'Endpoint'
+    api_key:
+      type: string
+      label: 'API key'
+      nullable: true
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: 'surface_examples.webhook.third_party.[%key]'
+
+# Generated from the event.mailer resource by drush surface:config-schema.
+surface_examples.mailer.credential.pasted:
+  type: mapping
+  label: 'Pasted here'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    api_key:
+      type: string
+      label: 'API key'
+      nullable: true
+
+# Generated from the event.mailer resource by drush surface:config-schema.
+surface_examples.mailer.credential.managed:
+  type: mapping
+  label: 'A managed key'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    key_id:
+      type: string
+      label: 'Key'
+    api_key:
+      type: string
+      label: 'API key'
+      requiredKey: false
+
+# Generated from the event.venue resource by drush surface:config-schema.
+surface_examples.event_venue.*:
+  type: config_entity
+  label: 'Venue'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    id:
+      type: machine_name
+      label: 'Machine name'
+      constraints:
+        Length:
+          max: 32
+    label:
+      type: string
+      label: 'Name'
+      constraints:
+        Length:
+          max: 128
+    slug:
+      type: string
+      label: 'Slug'
+      nullable: true
+      constraints:
+        Regex:
+          pattern: '/^[a-z0-9]+(-[a-z0-9]+)*$/D'
+        Length:
+          max: 128
+    capacity:
+      type: integer
+      label: 'Capacity'
+      constraints:
+        Range:
+          min: 1
+          max: 100000
+    address:
+      type: string
+      label: 'Address'
+      nullable: true
+      constraints:
+        Length:
+          max: 255
+    rooms:
+      type: sequence
+      label: 'Rooms'
+      constraints:
+        Count:
+          max: 20
+      sequence:
+        type: mapping
+        label: 'Rooms'
+        mapping:
+          id:
+            type: string
+            label: 'Room id'
+            constraints:
+              Regex:
+                pattern: '/^[a-z0-9_]+$/D'
+              Length:
+                max: 64
+          label:
+            type: string
+            label: 'Room name'
+            constraints:
+              Length:
+                max: 128
+          seats:
+            type: integer
+            label: 'Seats'
+            constraints:
+              Range:
+                min: 1
+                max: 10000
+    weight:
+      type: integer
+      label: 'Weight'
+      constraints:
+        Range:
+          min: -1000
+          max: 1000
+    status:
+      type: boolean
+      label: 'Enabled'

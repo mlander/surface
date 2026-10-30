@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Refinement\Narrowing;
-use Drupal\data_surface\Refinement\Rule;
-use Drupal\data_surface\Resource\ArrangementGroup;
-use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
+use Drupal\surface\Surface;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Refinement\Narrowing;
+use Drupal\surface\Refinement\Rule;
+use Drupal\surface\Resource\ArrangementGroup;
+use Drupal\surface\Resource\BlueprintAdditionsInterface;
 
 /**
  * What an alter of a shape is handed: the shape, to tighten.
@@ -34,7 +34,7 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   /**
    * The rules declared, in order.
    *
-   * @var \Drupal\data_surface\Refinement\Rule[]
+   * @var \Drupal\surface\Refinement\Rule[]
    */
   protected array $rules = [];
 
@@ -185,7 +185,7 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
           throw new \LogicException(sprintf('%s narrows the shape %s, whose type is %s, by %s, which it cannot take.', $this->alter, $this->shape, $definition->getDataType(), $constraint === 'Choice' ? 'a list of its values' : $constraint));
         }
       }
-      $written = $rule->applyAsWritten(DataSurface::deepClone($definition));
+      $written = $rule->applyAsWritten(Surface::deepClone($definition));
       $widened = Narrowing::narrowed($written, $definition);
       if ($widened !== NULL) {
         throw new \LogicException(sprintf('%s widens the shape %s: %s. An alter of a shape narrows it at every key that uses it, so it may only tighten.', $this->alter, $this->shape, $widened));

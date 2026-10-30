@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Pipeline\DataSurfaceResult;
-use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
-use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
-use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\SurfaceResult;
+use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -35,9 +35,9 @@ use Symfony\Component\HttpFoundation\Request;
  * offered, and a key flipped to another variant has nowhere for its
  * keys to arrive.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class FullSubmitTest extends DataSurfaceKernelTestBase {
+class FullSubmitTest extends SurfaceKernelTestBase {
 
   use ExamplesFormPostTrait;
   use UserCreationTrait;
@@ -51,9 +51,9 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_tool',
+    'surface_examples',
   ];
 
   /**
@@ -73,9 +73,9 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
-    $config = $this->config('data_surface_examples.registration_step2');
+    $config = $this->config('surface_examples.registration_step2');
     foreach (self::STORED as $key => $value) {
       $config->set($key, $value);
     }
@@ -88,11 +88,11 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    * @param class-string $class
    *   The resource class.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function surface(string $class): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function surface(string $class): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build($class, $resources->operation($class, 'configure'));
   }
 
@@ -104,11 +104,11 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    * @param array $input
    *   The raw input.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   * @return \Drupal\surface\Pipeline\SurfaceResult
    *   The result.
    */
-  protected function submit(string $class, array $input): DataSurfaceResult {
-    $resources = $this->container->get('data_surface.resources');
+  protected function submit(string $class, array $input): SurfaceResult {
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation($class, 'configure');
     $surface = $resources->build($class, $context);
     return $this->pipeline()->submit($surface, $input, $resources->storage($class, $context, $surface));
@@ -134,8 +134,8 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
     $form_state = new FormState();
-    $form_state->setValues([DataSurfaceOperationForm::SURFACE_KEY => $values]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $form_state->setValues([SurfaceOperationForm::SURFACE_KEY => $values]);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     return $form_state;
   }
 
@@ -162,7 +162,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    */
   protected function storedStepTwo(): array {
     $this->container->get('config.factory')->reset();
-    return array_diff_key($this->config('data_surface_examples.registration_step2')->getRawData(), ['_core' => TRUE]);
+    return array_diff_key($this->config('surface_examples.registration_step2')->getRawData(), ['_core' => TRUE]);
   }
 
   /**
@@ -173,7 +173,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    */
   protected function storedStepThree(): array {
     $this->container->get('config.factory')->reset();
-    return $this->config('data_surface_examples.registration_step3')->getRawData();
+    return $this->config('surface_examples.registration_step3')->getRawData();
   }
 
   /**
@@ -229,7 +229,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    * venue, so the refusal is about what the site did, and it is kept.
    */
   public function testTheRoomGoneUnderAnUnmovedVenueIsStillStale(): void {
-    $this->config('data_surface_examples.registration_step2')->set('room', 'harbour_gone')->save();
+    $this->config('surface_examples.registration_step2')->set('room', 'harbour_gone')->save();
 
     $result = $this->submit(RegistrationStep2Resource::class, ['venue' => 'harbour', 'title' => 'Renamed']);
 
@@ -249,7 +249,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    * Tests the generated form refuses it, on the element, and says so.
    */
   public function testTheFormRefusesTheRoomOrphanedByTheSameSubmission(): void {
-    $state = $this->submitTheForm('data_surface_examples.step2', [
+    $state = $this->submitTheForm('surface_examples.step2', [
       'title' => 'Spring meetup',
       'capacity' => '50',
       'open' => '1',
@@ -263,7 +263,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
 
     // The valid version of the same move is built for the new venue, so
     // its room is among the offered ones, and it is saved and said so.
-    $state = $this->submitTheForm('data_surface_examples.step2', [
+    $state = $this->submitTheForm('surface_examples.step2', [
       'title' => 'Spring meetup',
       'capacity' => '50',
       'open' => '1',
@@ -296,7 +296,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $this->assertSame('riverside_east', $this->storedStepTwo()['room']);
     $this->assertSame(['The changes have been saved.'], $this->messages('status'));
 
-    $config = $this->config('data_surface_examples.registration_step2');
+    $config = $this->config('surface_examples.registration_step2');
     foreach (self::STORED as $key => $value) {
       $config->set($key, $value);
     }
@@ -304,7 +304,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $state = $this->postStepTwo([
       'venue' => 'riverside',
       'room' => '',
-      DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'room',
+      SurfaceFormBuilderInterface::STALE_MARKER_KEY => 'room',
     ]);
     $errors = array_map('strval', $state->getErrors());
     $this->assertArrayHasKey('surface][room', $errors);
@@ -349,13 +349,13 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    */
   public function testAnUntouchedSaveKeepsTheStaleRoom(): void {
     $this->actAsAnonymousAdministrator();
-    $this->config('data_surface_examples.registration_step2')->set('room', 'harbour_gone')->save();
+    $this->config('surface_examples.registration_step2')->set('room', 'harbour_gone')->save();
 
     $state = $this->postStepTwo([
       'title' => 'Renamed',
       'venue' => 'harbour',
       'room' => '',
-      DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'room',
+      SurfaceFormBuilderInterface::STALE_MARKER_KEY => 'room',
     ]);
 
     $this->assertSame([], array_map('strval', $state->getErrors()));
@@ -373,14 +373,14 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    * refused in the resource's own words, with nothing to keep.
    */
   public function testRequiredSelectOnFirstEntryIsRefusedUntilChosen(): void {
-    $this->config('data_surface_examples.registration_step2')->clear('venue')->clear('room')->save();
+    $this->config('surface_examples.registration_step2')->clear('venue')->clear('room')->save();
     $this->actAsAnonymousAdministrator();
 
     $state = $this->postStepTwo(['venue' => '', 'room' => '']);
-    $venue = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY]['venue'];
+    $venue = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY]['venue'];
     $this->assertSame('', $venue['#value']);
     $this->assertSame('- Select -', (string) $venue['#options']['']);
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STALE_MARKER_KEY, $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY]);
+    $this->assertArrayNotHasKey(SurfaceFormBuilderInterface::STALE_MARKER_KEY, $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY]);
     $errors = array_map('strval', $state->getErrors());
     $this->assertSame('Venue is required.', $errors['surface][venue']);
     $this->assertSame([], $this->messages('status'));
@@ -408,26 +408,26 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    */
   public function testAjaxRebuildReadsStaleSelectLeftEmptyAsTheStoredValue(): void {
     $this->actAsAnonymousAdministrator();
-    $this->config('data_surface_examples.registration_step2')->set('venue', 'demolished')->save();
+    $this->config('surface_examples.registration_step2')->set('venue', 'demolished')->save();
 
     $state = $this->postStepTwo(
       [
         'venue' => '',
         'room' => 'harbour_deck',
-        DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'venue',
+        SurfaceFormBuilderInterface::STALE_MARKER_KEY => 'venue',
       ],
       ['_triggering_element_name' => 'surface[room]'],
     );
 
     $this->assertTrue($state->isRebuilding());
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $venue = $container['venue'];
     // Still the empty option, standing for the stored venue.
     $this->assertSame('', $venue['#value']);
-    $this->assertSame('demolished', $venue[DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame('demolished', $venue[SurfaceWidgetBase::STALE_KEY]);
     $this->assertArrayNotHasKey('demolished', $venue['#options']);
-    $this->assertSame('venue', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
+    $this->assertSame('venue', $container[SurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
     // A rebuild writes nothing.
     $this->assertSame('demolished', $this->storedStepTwo()['venue']);
   }
@@ -436,7 +436,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    * Tests the derived tool refuses it, the third door.
    */
   public function testTheToolRefusesTheRoomOrphanedByTheSameCall(): void {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:registration.step2:configure');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:registration.step2:configure');
     $tool->setInputValue(OperationInputs::VALUES, [
       'title' => 'Orphaned',
       'venue' => 'riverside',
@@ -477,7 +477,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['ticket'], $result->violations->keys());
 
     // ...and by the form, which writes nothing and says nothing went.
-    $state = $this->submitTheForm('data_surface_examples.step3', $base + [
+    $state = $this->submitTheForm('surface_examples.step3', $base + [
       'pricing' => 'paid',
       'ticket' => ['note' => 'Donations welcome'],
     ]);
@@ -487,7 +487,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
 
     // The paid ticket's keys under paid: the form is built as the paid
     // variant, so its keys have elements to arrive in, and it is saved.
-    $state = $this->submitTheForm('data_surface_examples.step3', $base + [
+    $state = $this->submitTheForm('surface_examples.step3', $base + [
       'pricing' => 'paid',
       'ticket' => ['price' => '25', 'currency' => 'USD'],
     ]);
@@ -517,13 +517,13 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     );
     $this->assertTrue($state->isRebuilding());
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $response = $this->ajaxResponse($state);
 
     $this->assertSame([
       $this->wrapperSelector($container['room']),
       $this->wrapperSelector($container['capacity']),
-      $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     // The venue has a wrapper, as every trigger does, but its value was
     // accepted and its options did not move, so neither it nor the
@@ -539,7 +539,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     // room's empty option for it, and the marker has to say so on the
     // page: taken out wherever it was, and put back as the rebuild left
     // it, inside the container.
-    $this->assertSame('room', $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
+    $this->assertSame('room', $container[SurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
     $wrapper = '#' . $container['#attributes']['id'];
     $this->assertSame([$wrapper . '__stale', $wrapper . '__absent', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
     $this->assertSame([$wrapper], $this->ajaxSelectors($response, 'append'));
@@ -561,18 +561,18 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
       [
         'venue' => 'harbour',
         'room' => '',
-        DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'room',
+        SurfaceFormBuilderInterface::STALE_MARKER_KEY => 'room',
       ],
       [
         '_triggering_element_name' => 'surface[venue]',
         'form_build_id' => $state->getCompleteForm()['#build_id'],
-        DataSurfaceFormBuilderInterface::WRAPPER_INPUT => substr($wrapper, 1),
+        SurfaceFormBuilderInterface::WRAPPER_INPUT => substr($wrapper, 1),
       ],
     );
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('harbour_deck', $container['room']['#value']);
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STALE_MARKER_KEY, $container);
+    $this->assertArrayNotHasKey(SurfaceFormBuilderInterface::STALE_MARKER_KEY, $container);
     $response = $this->ajaxResponse($state);
     // The same wrappers as the first response named: the ids on the page.
     $this->assertSame($replaced, $this->ajaxSelectors($response, 'replaceWith'));
@@ -594,13 +594,13 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
       ['_triggering_element_name' => 'surface[room]'],
     );
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $response = $this->ajaxResponse($state);
 
     $replaced = $this->ajaxSelectors($response, 'replaceWith');
     $this->assertSame([
       $this->wrapperSelector($container['capacity']),
-      $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
     ], $replaced);
     // The room has a wrapper, being a target of the venue, and it is the
     // trigger here, so it is the one wrapper that must not be named.
@@ -633,12 +633,12 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
       'contact' => ['email' => 'events@example.com', 'phone' => ''],
     ], ['_triggering_element_name' => 'surface[pricing]']);
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $response = $this->ajaxResponse($state);
 
     $this->assertSame([
       $this->wrapperSelector($container['ticket']),
-      $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertNotContains($this->wrapperSelector($container['pricing']), $this->ajaxSelectors($response, 'replaceWith'));
     // The paid variant's keys, and not the free one's.
@@ -658,11 +658,11 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
       'ticket' => ['note' => ''],
       'contact' => ['email' => 'events@example.com', 'phone' => ''],
     ], ['_triggering_element_name' => 'surface[venue]']);
-    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame([
       $this->wrapperSelector($container['room']),
       $this->wrapperSelector($container['capacity']),
-      $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
   }
 
@@ -683,7 +683,7 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
     );
     $this->assertFalse($state->isRebuilding());
     $this->assertNotSame([], $state->getErrors());
-    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $response = $this->ajaxResponse($state);
     $wrapper = '#' . $container['#attributes']['id'];
     $this->assertSame([$wrapper . '__stale', $wrapper . '__absent', $wrapper . '__messages'], $this->ajaxSelectors($response, 'remove'));
@@ -707,31 +707,31 @@ class FullSubmitTest extends DataSurfaceKernelTestBase {
    */
   public function testTheRebuildKeepsTheIdThePageHolds(): void {
     $this->actAsAnonymousAdministrator();
-    $held = 'data-surface-configure-wrapper--held-by-the-page';
+    $held = 'surface-configure-wrapper--held-by-the-page';
     $state = $this->postStepTwo(
       ['venue' => 'harbour', 'room' => 'harbour_auditorium'],
       [
         '_triggering_element_name' => 'surface[room]',
-        DataSurfaceFormBuilderInterface::WRAPPER_INPUT => $held,
+        SurfaceFormBuilderInterface::WRAPPER_INPUT => $held,
       ],
     );
-    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame($held, $container['#attributes']['id']);
-    $this->assertSame($held . '--capacity', $container['capacity'][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY]);
+    $this->assertSame($held . '--capacity', $container['capacity'][SurfaceFormBuilderInterface::REFRESH_ID_KEY]);
     // Every trigger sends it back on the next request too.
-    $this->assertSame($held, $container['venue']['#ajax']['submit'][DataSurfaceFormBuilderInterface::WRAPPER_INPUT]);
-    $this->assertSame(['#' . $held . '--capacity', '#' . $held . '--data-surface-panel'], $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
+    $this->assertSame($held, $container['venue']['#ajax']['submit'][SurfaceFormBuilderInterface::WRAPPER_INPUT]);
+    $this->assertSame(['#' . $held . '--capacity', '#' . $held . '--surface-panel'], $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
 
-    foreach (['other-form-wrapper', 'data-surface-configure-wrapper"><b>'] as $forged) {
+    foreach (['other-form-wrapper', 'surface-configure-wrapper"><b>'] as $forged) {
       $state = $this->postStepTwo(
         ['venue' => 'harbour', 'room' => 'harbour_auditorium'],
         [
           '_triggering_element_name' => 'surface[room]',
-          DataSurfaceFormBuilderInterface::WRAPPER_INPUT => $forged,
+          SurfaceFormBuilderInterface::WRAPPER_INPUT => $forged,
         ],
       );
-      $this->assertStringStartsWith('data-surface-configure-wrapper', $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY]['#attributes']['id']);
-      $this->assertNotSame($forged, $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY]['#attributes']['id']);
+      $this->assertStringStartsWith('surface-configure-wrapper', $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY]['#attributes']['id']);
+      $this->assertNotSame($forged, $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY]['#attributes']['id']);
     }
   }
 

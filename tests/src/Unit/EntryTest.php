@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DataSurfaceRefinerInterface;
-use Drupal\data_surface\Entry;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\SurfaceRefinerInterface;
+use Drupal\surface\Entry;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -21,9 +21,9 @@ use PHPUnit\Framework\Attributes\Group;
  * thing that changes an entry, and it changes exactly one of those
  * seven things.
  *
- * @see \Drupal\data_surface\Entry
+ * @see \Drupal\surface\Entry
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class EntryTest extends UnitTestCase {
 
   /**
@@ -35,7 +35,7 @@ class EntryTest extends UnitTestCase {
 
     $this->assertSame('title', $entry->name);
     $this->assertSame($definition, $entry->definition);
-    $this->assertSame(DataSurfaceInterface::OWNER, $entry->contributor);
+    $this->assertSame(SurfaceInterface::OWNER, $entry->contributor);
     $this->assertFalse($entry->locked);
     $this->assertSame([], $entry->dependencies);
     $this->assertSame([], $entry->refiners);
@@ -53,7 +53,7 @@ class EntryTest extends UnitTestCase {
       contributor: 'other_module',
       locked: TRUE,
       dependencies: ['casing'],
-      refiners: [DataSurfaceInterface::OWNER => [$refiner]],
+      refiners: [SurfaceInterface::OWNER => [$refiner]],
       contributions: ['other_module' => ['ribbon']],
     );
     $narrowed = DataDefinition::create('string')->setLabel('Narrowed');
@@ -66,7 +66,7 @@ class EntryTest extends UnitTestCase {
     $this->assertSame('other_module', $next->contributor);
     $this->assertTrue($next->locked);
     $this->assertSame(['casing'], $next->dependencies);
-    $this->assertSame([DataSurfaceInterface::OWNER => [$refiner]], $next->refiners);
+    $this->assertSame([SurfaceInterface::OWNER => [$refiner]], $next->refiners);
     $this->assertSame(['other_module' => ['ribbon']], $next->contributions);
     // The entry it came from is untouched.
     $this->assertNotSame($narrowed, $entry->definition);
@@ -77,7 +77,7 @@ class EntryTest extends UnitTestCase {
    */
   public function testTouchedBy(): void {
     $owned = new Entry('owned', DataDefinition::create('string'));
-    $this->assertTrue($owned->touchedBy(DataSurfaceInterface::OWNER));
+    $this->assertTrue($owned->touchedBy(SurfaceInterface::OWNER));
     $this->assertFalse($owned->touchedBy('other_module'));
 
     $mounted = new Entry('mounted', DataDefinition::create('string'), contributor: 'other_module');
@@ -104,11 +104,11 @@ class EntryTest extends UnitTestCase {
    * What an entry does with a refiner is carry it, so the only thing
    * asked of this one is that it is the right kind of object.
    *
-   * @return \Drupal\data_surface\DataSurfaceRefinerInterface
+   * @return \Drupal\surface\SurfaceRefinerInterface
    *   The refiner.
    */
-  protected static function refiner(): DataSurfaceRefinerInterface {
-    return new class() implements DataSurfaceRefinerInterface {
+  protected static function refiner(): SurfaceRefinerInterface {
+    return new class() implements SurfaceRefinerInterface {
 
       /**
        * {@inheritdoc}

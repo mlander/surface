@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Access;
+namespace Drupal\surface\Access;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\ResourceBuild\NamesNothingException;
-use Drupal\data_surface\ResourceBuild\OperationArguments;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\NamesNothingException;
+use Drupal\surface\ResourceBuild\OperationArguments;
+use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
 
@@ -27,7 +27,7 @@ use Symfony\Component\Routing\Route;
  * serves, the operation link that points at it and the tool for the same
  * operation all read one answer. Every route whose defaults name the
  * resource and the operation has it: OperationRouteSubscriber adds the
- * requirement `_data_surface_operation_access: 'TRUE'`, which a routing
+ * requirement `_surface_operation_access: 'TRUE'`, which a routing
  * file may still say itself.
  *
  * It asks in this order, and the first refusal is the answer:
@@ -60,21 +60,21 @@ use Symfony\Component\Routing\Route;
  * Decision: see
  * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
  *
- * @see \Drupal\data_surface\ResourceBuild\OperationRoute
- * @see \Drupal\data_surface\Access\OperationGate
+ * @see \Drupal\surface\ResourceBuild\OperationRoute
+ * @see \Drupal\surface\Access\OperationGate
  */
 final class OperationAccessCheck implements AccessInterface {
 
   /**
    * Constructs an OperationAccessCheck.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which answers access.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
-   * @param \Drupal\data_surface\ResourceBuild\OperationArguments $arguments
+   * @param \Drupal\surface\ResourceBuild\OperationArguments $arguments
    *   What maps the route's parameters onto the operation's.
-   * @param \Drupal\data_surface\Access\OperationGate $gate
+   * @param \Drupal\surface\Access\OperationGate $gate
    *   The answers every door serving an operation gives alike.
    */
   public function __construct(
@@ -175,7 +175,7 @@ final class OperationAccessCheck implements AccessInterface {
    */
   protected static function answersNotFound(?Route $route): bool {
     $form = $route?->getDefault('_form');
-    return (is_string($form) && is_a(ltrim($form, '\\'), DataSurfaceOperationForm::class, TRUE)) || OperationRoute::reactPage($route);
+    return (is_string($form) && is_a(ltrim($form, '\\'), SurfaceOperationForm::class, TRUE)) || OperationRoute::reactPage($route);
   }
 
   /**

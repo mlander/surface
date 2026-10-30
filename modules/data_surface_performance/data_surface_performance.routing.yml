@@ -1,9 +1,0 @@
-data_surface_performance.configure:
-  path: '/admin/config/development/surface-performance'
-  defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
-    _title: 'Performance settings'
-    _data_surface_resource: 'Drupal\data_surface_performance\Resource\PerformanceResource'
-    _data_surface_operation: 'configure'
-  requirements:
-    _permission: 'administer site configuration'

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Refinement;
+namespace Drupal\surface\Refinement;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DefinitionTypedData;
+use Drupal\surface\DefinitionTypedData;
 
 /**
  * The module's watched value check: the definition's own constraints.

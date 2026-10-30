@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\Compute\MachineName;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\Compute;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface\ResourceBuild\Shapes;
-use Drupal\data_surface_resource_test\Compute\Broken\TransliteratedCode;
+use Drupal\surface\Compute\MachineName;
+use Drupal\surface\Computed;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\Compute;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\ResourceBuild\Shapes;
+use Drupal\surface_resource_test\Compute\Broken\TransliteratedCode;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -27,9 +27,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-machine-name-is-a-computed-identity
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class MachineNameTest extends DataSurfaceKernelTestBase {
+class MachineNameTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -37,8 +37,8 @@ class MachineNameTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -98,8 +98,8 @@ class MachineNameTest extends DataSurfaceKernelTestBase {
    * Tests a key of the `machine_name` type holds the type's constraints.
    */
   public function testTheTypeIsCoresConfigSchemaType(): void {
-    $shapes = new Shapes($this->container->get('data_surface.resource_registry'), $this->container->get('class_resolver'), $this->container->get('config.typed'));
-    $blueprint = (new ResourceBlueprint(new DataSurfaceBuilder(), $this->container->get('typed_data_manager')))->useShapes($shapes);
+    $shapes = new Shapes($this->container->get('surface.resource_registry'), $this->container->get('class_resolver'), $this->container->get('config.typed'));
+    $blueprint = (new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager')))->useShapes($shapes);
     $blueprint->add('label', 'string', 'Name');
     $key = $blueprint->compute('id', 'machine_name', 'Machine name', from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT);
     $this->assertSame('string', $key->getDataType(), 'The string underneath.');

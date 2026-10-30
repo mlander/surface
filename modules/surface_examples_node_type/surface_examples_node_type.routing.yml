@@ -1,0 +1,40 @@
+# Each route is one operation of the content type resource.
+#
+# Neither route names a form class of this module's own. The generic
+# form builds both from the resource class and the operation; the route's
+# parameters are the operation method's, by name, so the update route's
+# {type} is upcast to the node type that NodeTypeResource::update() takes.
+#
+# One requirement, and it is the operation's, which a route naming a
+# resource and an operation has without saying it: its permission, this
+# module's own, then the resource's access class, which asks the node type
+# entity whether one may be created or this one updated. Both have to
+# allow. The entity answer is the one that decides whether these values
+# may be written at all (a content type is a content type however it is
+# edited, so this module never grants more than core's own forms grant),
+# and the permission decides whether this second, resource-driven way in
+# is open on this site. The form, the operation link and the tool for the
+# same operation read the same answer.
+#
+# What stays this module's is the cosmetic layer the last default names.
+surface_examples_node_type.create:
+  path: '/admin/structure/types/surface-add'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add content type (resource)'
+    _surface_resource: 'Drupal\surface_examples_node_type\Resource\NodeTypeResource'
+    _surface_operation: 'create'
+    _surface_cosmetics: 'surface_examples_node_type.form_cosmetics'
+
+surface_examples_node_type.update:
+  path: '/admin/structure/types/manage/{type}/surface-edit'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit content type (resource)'
+    _surface_resource: 'Drupal\surface_examples_node_type\Resource\NodeTypeResource'
+    _surface_operation: 'update'
+    _surface_cosmetics: 'surface_examples_node_type.form_cosmetics'
+  options:
+    parameters:
+      type:
+        type: 'entity:node_type'

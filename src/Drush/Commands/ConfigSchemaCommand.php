@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Commands;
+namespace Drupal\surface\Drush\Commands;
 
-use Drupal\data_surface\Storage\ConfigSchemaGenerator;
+use Drupal\surface\Storage\ConfigSchemaGenerator;
 use Drush\Commands\AutowireTrait;
 use Drush\Style\DrushStyle;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -20,7 +20,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * For every resource stored in a simple config object (a subclass of
  * ConfigObjectStorage), the schema entry of its object and the values it
  * is installed with are derived from the resource
- * (\Drupal\data_surface\Storage\ConfigSchemaGenerator). By default the
+ * (\Drupal\surface\Storage\ConfigSchemaGenerator). By default the
  * command writes nothing: it prints how each file of the named modules
  * differs from what it would write, and fails when any does, so a check
  * can run it. `--write` writes them. Without `--module`, every module
@@ -33,9 +33,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * Decision: see docs/decisions.md#a-config-object-is-described-by-its-resource.
  */
 #[AsCommand(
-  name: 'data_surface:config-schema',
+  name: 'surface:config-schema',
   description: 'Writes the config schema and install file of each resource stored in a simple config object, from the resource; prints the differences unless --write.',
-  aliases: ['ds-config-schema'],
 )]
 final class ConfigSchemaCommand extends Command {
 
@@ -49,13 +48,13 @@ final class ConfigSchemaCommand extends Command {
   /**
    * Constructs a ConfigSchemaCommand.
    *
-   * @param \Drupal\data_surface\Storage\ConfigSchemaGenerator $generator
+   * @param \Drupal\surface\Storage\ConfigSchemaGenerator $generator
    *   The generator.
    * @param string $root
    *   The Drupal root; the one Drush runs in by default.
    */
   public function __construct(
-    #[Autowire(service: 'data_surface.config_schema')]
+    #[Autowire(service: 'surface.config_schema')]
     private readonly ConfigSchemaGenerator $generator,
     private readonly string $root = DRUPAL_ROOT,
   ) {

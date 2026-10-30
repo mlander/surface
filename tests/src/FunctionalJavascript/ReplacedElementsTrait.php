@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 /**
  * Tells a replaced form element from one a refresh left in place.
@@ -23,7 +23,7 @@ trait ReplacedElementsTrait {
   protected function probe(array $names): void {
     foreach ($names as $name) {
       $this->getSession()->executeScript(sprintf(
-        'document.querySelector(%s).dataset.dataSurfaceProbe = "kept";',
+        'document.querySelector(%s).dataset.surfaceProbe = "kept";',
         json_encode('[name="' . $name . '"]'),
       ));
     }
@@ -33,7 +33,7 @@ trait ReplacedElementsTrait {
    * Marks every named element in the page.
    */
   protected function probeAll(): void {
-    $this->getSession()->executeScript('document.querySelectorAll("[name]").forEach((e) => { e.dataset.dataSurfaceProbe = "kept"; });');
+    $this->getSession()->executeScript('document.querySelectorAll("[name]").forEach((e) => { e.dataset.surfaceProbe = "kept"; });');
   }
 
   /**
@@ -47,7 +47,7 @@ trait ReplacedElementsTrait {
    */
   protected function stillProbed(string $name): bool {
     return $this->getSession()->evaluateScript(sprintf(
-      'return (document.querySelector(%s) || {dataset: {}}).dataset.dataSurfaceProbe === "kept";',
+      'return (document.querySelector(%s) || {dataset: {}}).dataset.surfaceProbe === "kept";',
       json_encode('[name="' . $name . '"]'),
     ));
   }
@@ -59,7 +59,7 @@ trait ReplacedElementsTrait {
    *   Their names, sorted: replaced elements and new ones alike.
    */
   protected function replacedSinceProbe(): array {
-    $names = $this->getSession()->evaluateScript('return Array.from(document.querySelectorAll("[name]")).filter((e) => e.dataset.dataSurfaceProbe !== "kept").map((e) => e.name);');
+    $names = $this->getSession()->evaluateScript('return Array.from(document.querySelectorAll("[name]")).filter((e) => e.dataset.surfaceProbe !== "kept").map((e) => e.name);');
     $names = array_values(array_unique($names));
     sort($names);
     return $names;

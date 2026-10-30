@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\ResourceBuild\Shapes;
-use Drupal\data_surface_examples_compliance\Shape\License;
-use Drupal\Tests\data_surface\Kernel\Fixture\FakeLanguageTranslator;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\ResourceBuild\Shapes;
+use Drupal\surface_examples_compliance\Shape\License;
+use Drupal\Tests\surface\Kernel\Fixture\FakeLanguageTranslator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -24,9 +24,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/semantics.md#violation-messages-are-objects
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ConstraintMessageTranslationTest extends DataSurfaceKernelTestBase {
+class ConstraintMessageTranslationTest extends SurfaceKernelTestBase {
 
   /**
    * The doors example's message for its opening time.
@@ -42,10 +42,10 @@ class ConstraintMessageTranslationTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_compliance',
   ];
 
   /**
@@ -54,7 +54,7 @@ class ConstraintMessageTranslationTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->container->get('string_translation')->addTranslator(new FakeLanguageTranslator('xx', [
       self::MESSAGE => 'XX ' . self::MESSAGE,
     ]), 100);
@@ -64,7 +64,7 @@ class ConstraintMessageTranslationTest extends DataSurfaceKernelTestBase {
    * Tests the build hands Symfony the source, and the refusal reads it.
    */
   public function testTheBuildHandsTheValidatorTheSource(): void {
-    $built = $this->container->get('data_surface.resources')->buildOperation('event.doors', 'configure');
+    $built = $this->container->get('surface.resources')->buildOperation('event.doors', 'configure');
     $this->assertSame(self::MESSAGE, $built->getDefinitions()->get('opens')->getConstraints()['Regex']['message'], 'The message written with t() is its source string.');
 
     $license = DefinitionMetadata::shapeDefinition(Shapes::unaltered(License::class));
@@ -85,8 +85,8 @@ class ConstraintMessageTranslationTest extends DataSurfaceKernelTestBase {
    * Tests the served contract says the message in the document's language.
    */
   public function testThePatternMessageIsTranslated(): void {
-    $built = $this->container->get('data_surface.resources')->buildOperation('event.doors', 'configure');
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $built = $this->container->get('surface.resources')->buildOperation('event.doors', 'configure');
+    $emitter = $this->container->get('surface.contract_emitter');
     $message = static fn (array $document): mixed => $document['schema']['properties']['opens']['x-surface']['patternMessage'] ?? NULL;
 
     $source = $message($emitter->emitFull($built, 'event.doors')->document);

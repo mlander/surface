@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Session\AccountInterface;
@@ -10,10 +10,10 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceRefinerInterface;
-use Drupal\data_surface\Refinement\ApplicabilityInterface;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Pipeline\PipelineGuard;
+use Drupal\surface\SurfaceRefinerInterface;
+use Drupal\surface\Refinement\ApplicabilityInterface;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Pipeline\PipelineGuard;
 
 /**
  * The engine's refiner, spoken by one class's #[RefinesInput] methods.
@@ -77,7 +77,7 @@ use Drupal\data_surface\Pipeline\PipelineGuard;
  *
  * @internal
  */
-final class RefinesInputRefiner implements DataSurfaceRefinerInterface, ApplicabilityInterface {
+final class RefinesInputRefiner implements SurfaceRefinerInterface, ApplicabilityInterface {
 
   use DependencySerializationTrait;
 
@@ -92,7 +92,7 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface, Applicab
    * @param object|class-string $instance
    *   The resource or structure class, or the alter instance, the
    *   methods are on.
-   * @param array<string, \Drupal\data_surface\ResourceBuild\RefinerDefinition[]> $bindings
+   * @param array<string, \Drupal\surface\ResourceBuild\RefinerDefinition[]> $bindings
    *   The methods, keyed by the input key they refine; an alter's methods
    *   on its own mounted keys under self::MOUNT.
    * @param string|null $module
@@ -212,7 +212,7 @@ final class RefinesInputRefiner implements DataSurfaceRefinerInterface, Applicab
   /**
    * Calls one method with the definition and the siblings it watches.
    *
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition $refiner
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to refine.

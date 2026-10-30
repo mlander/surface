@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Cache\Cache;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Resource\SiteList;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface_resource_test\Resource\Poster\PosterResource;
-use Drupal\data_surface_resource_test\Structure\Broken\AccountVariantsStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\UncacheableVariantsStructure;
-use Drupal\data_surface_resource_test\Structure\Poster\BannerPanelsStructure;
-use Drupal\data_surface_resource_test\Variants\Broken\BareLayouts;
-use Drupal\data_surface_resource_test\Variants\Broken\LockedLayouts;
-use Drupal\data_surface_resource_test\Variants\Broken\RestatingLayouts;
-use Drupal\data_surface_resource_test\Variants\Broken\UnnamedLayouts;
-use Drupal\data_surface_resource_test\Variants\PosterLayouts;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\SiteList;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface_resource_test\Resource\Poster\PosterResource;
+use Drupal\surface_resource_test\Structure\Broken\AccountVariantsStructure;
+use Drupal\surface_resource_test\Structure\Broken\UncacheableVariantsStructure;
+use Drupal\surface_resource_test\Structure\Poster\BannerPanelsStructure;
+use Drupal\surface_resource_test\Variants\Broken\BareLayouts;
+use Drupal\surface_resource_test\Variants\Broken\LockedLayouts;
+use Drupal\surface_resource_test\Variants\Broken\RestatingLayouts;
+use Drupal\surface_resource_test\Variants\Broken\UnnamedLayouts;
+use Drupal\surface_resource_test\Variants\PosterLayouts;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
@@ -42,10 +42,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/resources.md#variants-from-the-site
  * @see docs/decisions.md#a-schema-can-be-read-back-into-a-structure
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
+class VariantsFromSiteTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use UserCreationTrait;
@@ -58,9 +58,9 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_resource_test',
   ];
 
   /**
@@ -77,18 +77,18 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
   }
 
   /**
    * Builds the poster in its one operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built poster.
    */
-  protected function poster(): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->buildOperation(PosterResource::class, 'configure');
+  protected function poster(): SurfaceInterface {
+    return $this->container->get('surface.resources')->buildOperation(PosterResource::class, 'configure');
   }
 
   /**
@@ -165,7 +165,7 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
   public function testLayoutAddedBecomesVariant(): void {
     $poster = $this->poster();
     $this->assertContains(PosterLayouts::TAG, $poster->getCacheTags());
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $this->assertContains(PosterLayouts::TAG, $emitter->emitFull($poster, 'resource_test.poster')->getCacheTags());
 
     $this->container->get('state')->set(PosterLayouts::STATE, [
@@ -186,7 +186,7 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
    */
   public function testBothDocuments(): void {
     $poster = $this->poster();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = $this->decoded($emitter->emitFull($poster, 'resource_test.poster', 'configure', 'Configure the poster')->document);
     $this->assertSame($this->expected('poster.full.json'), $full);
     $these = $this->decoded($emitter->emit($poster, self::POSTER, 'resource_test.poster', 'configure', 'Configure the poster')->document);
@@ -210,7 +210,7 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
    */
   public function testTools(): void {
     $manager = $this->container->get('plugin.manager.tool');
-    $values = $manager->getDefinition('data_surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES);
+    $values = $manager->getDefinition('surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $properties = $values->getPropertyDefinitions();
     $this->assertSame(['layout', 'panels'], array_keys($properties));
@@ -220,20 +220,20 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
     // which reads nothing stored; the listing for the account states the
     // stored grid's panels, none required, as for a class's variants.
     $this->assertSame([], $panels->getPropertyDefinitions());
-    $listed = $manager->createInstance('data_surface:resource_test.poster:configure')->getInputDefinitions()[OperationInputs::VALUES];
+    $listed = $manager->createInstance('surface:resource_test.poster:configure')->getInputDefinitions()[OperationInputs::VALUES];
     $this->assertInstanceOf(MapInputDefinition::class, $listed);
     $panels = $listed->getPropertyDefinition('panels');
     $this->assertInstanceOf(MapInputDefinition::class, $panels);
     $this->assertSame(['columns', 'gap'], array_keys($panels->getPropertyDefinitions()));
-    $this->assertContains(PosterLayouts::TAG, $this->container->get('state')->get('data_surface_tool.listed_cache_tags'));
+    $this->assertContains(PosterLayouts::TAG, $this->container->get('state')->get('surface_tool.listed_cache_tags'));
 
-    $read = $manager->createInstance('data_surface:resource_test.poster:configure:read');
+    $read = $manager->createInstance('surface:resource_test.poster:configure:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::POSTER, $read->getResult()->getContextValues()[OperationInputs::VALUES] ?? NULL);
 
     // The grid's panels sent for the strip: refused, naming the layout.
-    $tool = $manager->createInstance('data_surface:resource_test.poster:configure');
+    $tool = $manager->createInstance('surface:resource_test.poster:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['layout' => 'strip', 'panels' => ['columns' => 2]]);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
@@ -241,7 +241,7 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
 
     // The strip's caption held to the schema it was read from, and its
     // tags to UniqueItems.
-    $tool = $manager->createInstance('data_surface:resource_test.poster:configure');
+    $tool = $manager->createInstance('surface:resource_test.poster:configure');
     $tool->setInputValue(OperationInputs::VALUES, [
       'layout' => 'strip',
       'panels' => ['caption' => 'Untitled', 'tags' => ['music', 'music']],
@@ -253,14 +253,14 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('/panels/tags: The item "music" is listed more than once.', $message);
 
     // And written.
-    $tool = $manager->createInstance('data_surface:resource_test.poster:configure');
+    $tool = $manager->createInstance('surface:resource_test.poster:configure');
     $tool->setInputValue(OperationInputs::VALUES, [
       'layout' => 'strip',
       'panels' => ['caption' => 'Spring', 'tags' => ['music', 'film']],
     ]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $this->assertSame(['layout' => 'strip', 'panels' => ['caption' => 'Spring', 'tags' => ['music', 'film']]], array_intersect_key($this->config('data_surface_resource_test.poster')->getRawData(), self::POSTER));
+    $this->assertSame(['layout' => 'strip', 'panels' => ['caption' => 'Spring', 'tags' => ['music', 'film']]], array_intersect_key($this->config('surface_resource_test.poster')->getRawData(), self::POSTER));
   }
 
   /**
@@ -268,8 +268,8 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
    */
   public function testUncacheableProviderIsRefused(): void {
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('Drupal\data_surface_resource_test\Variants\UncacheableLayouts lists the variants at "detail" on resource_test.broken.uncacheable_variants with max-age 0. Variants from the site must be cacheable');
-    $this->container->get('data_surface.resources')->build(UncacheableVariantsStructure::class, new OperationContext('configure'));
+    $this->expectExceptionMessage('Drupal\surface_resource_test\Variants\UncacheableLayouts lists the variants at "detail" on resource_test.broken.uncacheable_variants with max-age 0. Variants from the site must be cacheable');
+    $this->container->get('surface.resources')->build(UncacheableVariantsStructure::class, new OperationContext('configure'));
   }
 
   /**
@@ -278,20 +278,20 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
   public function testProviderVaryingByTheAccountIsRefused(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('varying by user.permissions. Which variants there are is the site\'s, the same for every account');
-    $this->container->get('data_surface.resources')->build(AccountVariantsStructure::class, new OperationContext('configure'));
+    $this->container->get('surface.resources')->build(AccountVariantsStructure::class, new OperationContext('configure'));
   }
 
   /**
    * Tests a provider that is none is refused, and a list's values are kept.
    */
   public function testWhatIsRefusedAsDeclared(): void {
-    $blueprint = new ResourceBlueprint(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'));
+    $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
     try {
       $blueprint->attachVariants('panels', by: 'layout', from: BannerPanelsStructure::class);
       $this->fail('A provider that is none is refused.');
     }
     catch (\LogicException $e) {
-      $this->assertSame('attachVariants("panels") names Drupal\data_surface_resource_test\Structure\Poster\BannerPanelsStructure as where its variants come from, which does not implement Drupal\data_surface\Resource\SiteListInterface: a provider lists the site\'s variants, each with its schema or structure, with list().', $e->getMessage());
+      $this->assertSame('attachVariants("panels") names Drupal\surface_resource_test\Structure\Poster\BannerPanelsStructure as where its variants come from, which does not implement Drupal\surface\Resource\SiteListInterface: a provider lists the site\'s variants, each with its schema or structure, with list().', $e->getMessage());
     }
     $list = new SiteList();
     $list->add('one', 'One', schema: ['type' => 'object']);
@@ -320,10 +320,10 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
    */
   public function testWhatVariantsDoNotReadIsRefused(): void {
     // The variants from the site are the attach phase's to read.
-    $build = $this->container->get('data_surface.resources');
+    $build = $this->container->get('surface.resources');
     $resources = (new \ReflectionProperty($build, 'attaching'))->getValue($build);
     $variantsFrom = new \ReflectionMethod($resources, 'variantsFrom');
-    $poster = $this->container->get('data_surface.resource_registry')->getDefinition(PosterResource::class);
+    $poster = $this->container->get('surface.resource_registry')->getDefinition(PosterResource::class);
     $refusals = [
       LockedLayouts::class => LockedLayouts::class . ' lists "wide" for the variants at "panels" on resource_test.poster with a lock, which a variant does not read: each entry is a value of the deciding key, its label, and the schema or structure it chooses.',
       BareLayouts::class => BareLayouts::class . ' lists "wide" for the variants at "panels" on resource_test.poster with no schema and no structure: each variant from the site is one of them, SiteList::add(..., schema: ...) or add(..., structure: ...).',

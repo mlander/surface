@@ -1,6 +1,6 @@
 {
     "resource": "registration.contact",
-    "module": "data_surface_examples",
+    "module": "surface_examples",
     "contract": 4,
     "documents": [
         {

@@ -5,8 +5,8 @@
  * @file
  * Calls step 3 of the examples as a tool, three times, and prints why.
  *
- * Step 5 of modules/data_surface_examples: the tool
- * data_surface:registration.step3:configure, derived from step 3's
+ * Step 5 of modules/surface_examples: the tool
+ * surface:registration.step3:configure, derived from step 3's
  * resource, called with valid values, then with a capacity above the
  * room's, then as a dry run. Discovery needs a booted kernel with the
  * examples enabled, and the one supported way to boot one is a kernel
@@ -17,11 +17,11 @@
  *
  * Run it from anywhere inside the site:
  * @code
- *   ddev exec php web/modules/custom/data_surface/scripts/examples-dry-run.php
+ *   ddev exec php web/modules/custom/surface/scripts/examples-dry-run.php
  * @endcode
  *
- * @see \Drupal\Tests\data_surface\Kernel\ExamplesToolTest
- * @see \Drupal\data_surface_examples\ExampleCalls
+ * @see \Drupal\Tests\surface\Kernel\ExamplesToolTest
+ * @see \Drupal\surface_examples\ExampleCalls
  */
 
 declare(strict_types=1);
@@ -39,9 +39,9 @@ if (!is_file($phpunit)) {
   exit(1);
 }
 
-$output = tempnam(sys_get_temp_dir(), 'data-surface-examples-');
+$output = tempnam(sys_get_temp_dir(), 'surface-examples-');
 $command = sprintf(
-  'cd %s && DATA_SURFACE_EXAMPLES_DRY_RUN_OUTPUT=%s SIMPLETEST_DB=%s SIMPLETEST_BASE_URL=%s %s -c core --filter %s %s',
+  'cd %s && SURFACE_EXAMPLES_DRY_RUN_OUTPUT=%s SIMPLETEST_DB=%s SIMPLETEST_BASE_URL=%s %s -c core --filter %s %s',
   escapeshellarg($web_root),
   escapeshellarg((string) $output),
   escapeshellarg(getenv('SIMPLETEST_DB') ?: 'mysql://db:db@db/db'),
@@ -50,7 +50,7 @@ $command = sprintf(
   escapeshellarg('testTheThreeCalls'),
   escapeshellarg($module . '/tests/src/Kernel/ExamplesToolTest.php'),
 );
-fwrite(STDOUT, "Calling data_surface:registration.step3:configure three times, in a kernel test ...\n");
+fwrite(STDOUT, "Calling surface:registration.step3:configure three times, in a kernel test ...\n");
 exec($command, $lines, $status);
 $results = json_decode((string) file_get_contents((string) $output), TRUE);
 @unlink((string) $output);

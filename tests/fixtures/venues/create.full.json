@@ -41,7 +41,7 @@
                     },
                     "checkedOnServer": [
                         {
-                            "constraint": "DataSurfaceUnique",
+                            "constraint": "SurfaceUnique",
                             "message": "Refused when a venue named this already exists."
                         }
                     ]

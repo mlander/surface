@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface_first\Resource\NewsletterResource;
-use Drupal\data_surface_first\Resource\StoreResource;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Unit\FirstResourceDocsTest;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface_examples_first\Resource\NewsletterResource;
+use Drupal\surface_examples_first\Resource\StoreResource;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Unit\FirstResourceDocsTest;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -21,16 +21,16 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Tests "Your first resource" and "Your second resource" work as written.
  *
- * FirstResourceDocsTest holds the pages' code to data_surface_first; this
+ * FirstResourceDocsTest holds the pages' code to surface_examples_first; this
  * holds what they say happens to what does: both forms render with the
  * elements the pages describe, the permission gates them, the operation
  * on the class is the tool's title and description and the schema's,
  * with no method behind it, and every `drush tool:run` line they quote
  * answers as quoted, in order, on one fresh site.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class FirstResourceTest extends DataSurfaceKernelTestBase {
+class FirstResourceTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -42,9 +42,9 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_first',
+    'surface',
+    'surface_tool',
+    'surface_examples_first',
   ];
 
   /**
@@ -53,7 +53,7 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_first']);
+    $this->installConfig(['surface_examples_first']);
     require_once dirname(__DIR__) . '/Unit/FirstResourceDocsTest.php';
   }
 
@@ -75,20 +75,20 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
     $form_state = new FormState();
-    return $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state)[DataSurfaceOperationForm::SURFACE_KEY];
+    return $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $form_state)[SurfaceOperationForm::SURFACE_KEY];
   }
 
   /**
    * Tests both forms render as the pages describe, behind the permission.
    */
   public function testTheFormsAreThePagesForms(): void {
-    $this->setUpCurrentUser(permissions: ['administer data_surface_first']);
-    $newsletter = $this->form('data_surface_first.newsletter');
+    $this->setUpCurrentUser(permissions: ['administer surface_examples_first']);
+    $newsletter = $this->form('surface_examples_first.newsletter');
     $this->assertSame('textfield', $newsletter['sender_name']['#type']);
     $this->assertSame(64, $newsletter['sender_name']['#attributes']['maxlength']);
     // Drawn required, and checked by the resource alone: Form API's own
     // check is off, its "field is required" never the message.
-    $this->assertTrue($newsletter['sender_name'][DataSurfaceFormBuilderInterface::REQUIRED_KEY]);
+    $this->assertTrue($newsletter['sender_name'][SurfaceFormBuilderInterface::REQUIRED_KEY]);
     $this->assertFalse($newsletter['sender_name']['#required']);
     $this->assertSame('email', $newsletter['sender_email']['#type']);
     $this->assertSame('select', $newsletter['frequency']['#type']);
@@ -97,14 +97,14 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
     $recipients = $newsletter['max_recipients'];
     $this->assertSame([1, 10000, 500], [$recipients['#min'], $recipients['#max'], $recipients['#default_value']]);
 
-    $store = $this->form('data_surface_first.store');
+    $store = $this->form('surface_examples_first.store');
     $this->assertSame(['CA-BC', 'CA-ON', 'CA-QC'], array_keys($store['region']['#options']), 'The stored country\'s regions.');
 
     $access = $this->container->get('access_manager');
-    $this->assertTrue($access->checkNamedRoute('data_surface_first.newsletter'));
+    $this->assertTrue($access->checkNamedRoute('surface_examples_first.newsletter'));
     $this->setUpCurrentUser();
-    $this->assertFalse($access->checkNamedRoute('data_surface_first.newsletter'), 'Without the permission.');
-    $this->assertFalse($access->checkNamedRoute('data_surface_first.store'));
+    $this->assertFalse($access->checkNamedRoute('surface_examples_first.newsletter'), 'Without the permission.');
+    $this->assertFalse($access->checkNamedRoute('surface_examples_first.store'));
   }
 
   /**
@@ -117,8 +117,8 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
    */
   public function testTheOperationIsTheAttribute(): void {
     $this->setUpCurrentUser(admin: TRUE);
-    $registry = $this->container->get('data_surface.resource_registry');
-    $resources = $this->container->get('data_surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
     $manager = $this->container->get('plugin.manager.tool');
     foreach ([NewsletterResource::class => 'first.newsletter', StoreResource::class => 'first.store'] as $class => $id) {
       $this->assertFalse(method_exists($class, 'configure'), $id . ': no method.');
@@ -128,7 +128,7 @@ class FirstResourceTest extends DataSurfaceKernelTestBase {
       $this->assertSame((string) $operation->label, (string) $tool->getLabel(), $id);
       $this->assertStringStartsWith((string) $operation->description . ' ', (string) $tool->getDescription(), $id);
       $context = $resources->operation($class, 'configure');
-      $full = $this->container->get('data_surface.contract_emitter')
+      $full = $this->container->get('surface.contract_emitter')
         ->emitFull($resources->buildStatic($class, $context), $id, 'configure', $operation->label, operation: $operation->facts())
         ->document['schema'];
       $this->assertSame((string) $operation->label, $full['title'], $id);

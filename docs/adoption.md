@@ -54,12 +54,12 @@ resource ids ([Testing a resource](testing-a-resource.md)).
 ```php
 use Drupal\Core\Condition\Attribute\Condition;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Plugin\Condition\DataSurfaceConditionBase;
-use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\surface\Plugin\Condition\TypedConditionPluginBase;
+use Drupal\surface\Resource\Attribute\UsesStructure;
 
-#[Condition(id: 'data_surface_test_condition', label: new TranslatableMarkup('Data surface test condition'))]
+#[Condition(id: 'surface_test_condition', label: new TranslatableMarkup('Data surface test condition'))]
 #[UsesStructure(TestConditionStructure::class)]
-final class DataSurfaceTestCondition extends DataSurfaceConditionBase {
+final class SurfaceTestCondition extends TypedConditionPluginBase {
 
   public function evaluate() { /* ... */ }
 
@@ -83,13 +83,13 @@ configuration array. Conditions, actions, image effects, layouts, search
 pages, display variants, entity reference selection, media sources,
 CKEditor 5 plugins, and blocks.
 
-**Built.** `DataSurfaceConfigurationTrait` for storage and
-`DataSurfacePluginFormTrait` for the triple, both over
+**Built.** `SurfaceConfigurationTrait` for storage and
+`SurfacePluginFormTrait` for the triple, both over
 `PluginConfigurationStorage`, with the three stages one level down in
-`DataSurfaceHostFormTrait` so a host that renames them reaches the same
+`SurfaceHostFormTrait` so a host that renames them reaches the same
 bodies. Blocks, conditions and actions are ported, as
-`DataSurfaceBlockBase`, `DataSurfaceConditionBase` and
-`DataSurfaceActionBase`. The evidence for the DRY claim is the count of
+`TypedBlockBase`, `TypedConditionPluginBase` and
+`TypedConfigurableActionBase`. The evidence for the DRY claim is the count of
 translation methods each needed: four for the block, five one-line ones
 for the condition, none at all for the action. The count tracks how much
 the host insists on doing, not what the data surface layer costs.
@@ -107,10 +107,10 @@ The host asks for a settings form and then harvests the raw value tree
 itself. Field formatters and field widgets; text filters and text editors
 are close relatives with their own defaults spellings.
 
-**Built.** `DataSurfaceFormatterTrait` runs the whole pipeline in an
+**Built.** `SurfaceFormatterTrait` runs the whole pipeline in an
 `#element_validate` on the container the data surface is built into, plus
 a static defaults shim reading the structure the class names.
-`DataSurfaceFormatterBase` is that trait and one line.
+`TypedFormatterBase` is that trait and one line.
 
 Two host realities it had to absorb. `defaultSettings()` is static and
 cannot consult an instance's data surface, so it is answered from the
@@ -139,8 +139,8 @@ input: lock what cannot change once data exists.
 This is the family the core issue calls out as "described by nothing more
 than the form".
 
-**Half built.** `DataSurfaceFieldTypeTrait` plus `FieldSettingsStorage`
-covers instance settings, and `data_surface_address` is the worked
+**Half built.** `SurfaceFieldTypeTrait` plus `FieldSettingsStorage`
+covers instance settings, and `surface_examples_address` is the worked
 example: the address field type's settings declared as a resource,
 `AddressFieldSettingsResource`, which the swapped item class builds for
 Field UI and which is the address variant of the field instance
@@ -148,12 +148,12 @@ resource's settings for the tool bridge, with the address module
 unmodified.
 
 Storage settings are described but have no Field UI host.
-`FieldStorageResource` in `data_surface_tool` attaches variants at
+`FieldStorageResource` in `surface_tool` attaches variants at
 `settings` by field type, from a `#[Variant]` or, for every other
 field type the UI offers, from `field.storage_settings.<type>` through
 `FieldStorageSettingsSchemaVariants`, so the field tools set and edit
 them: a string's `max_length` is `storage.settings.max_length` on
-`data_surface:field.instance:create`. `$has_data` is read where it bites:
+`surface:field.instance:create`. `$has_data` is read where it bites:
 `FieldStorageResource`'s update operation keeps cardinality from
 shrinking, and `FieldStorageStorage` refuses at prepare a settings change
 that alters the columns of a field with data. What is untouched is the
@@ -174,7 +174,7 @@ types (`configure`, `state`, `transition`), icon extractors, media
 sources.
 
 **Built.** The plugin names one structure with `#[UsesStructure]`, and
-one generic `DataSurfacePluginForm` any plugin can list under any
+one generic `SurfacePluginForm` any plugin can list under any
 operation builds it in a context whose id is the form's operation. No
 per-plugin form classes at all. The operation is a constructor argument,
 so an operation other than `configure` names a service id in the `forms`
@@ -192,15 +192,15 @@ entity properties or setter methods, named on a subclass, applies
 mounted third-party settings through `setThirdPartySetting()`, runs
 typed-config validation on the unsaved entity's export array, refuses an
 id in use on add, commits with `save()`, and deletes for an operation
-that deletes. Two resources use it. `data_surface_block` makes a placed
+that deletes. Two resources use it. `surface_examples_block` makes a placed
 block one, `block.placement`, its plugin choosing its settings
 (why: [decision](decisions.md#a-placed-block-is-a-resource)).
-`data_surface_demo_node_type` is the other: one resource,
+`surface_examples_node_type` is the other: one resource,
 `NodeTypeResource`, with a create and an update operation, the machine
 name locked on an update because the update operation knows it, and its storage,
 `NodeTypeStorage`, writing the node type entity plus its base field
 overrides (through the engine's `BaseFieldOverrideStorage`); two routes
-serve it through `DataSurfaceOperationForm`, with no form class.
+serve it through `SurfaceOperationForm`, with no form class.
 
 Two things that port settled, and both generalize. Ordering is part of a
 composite's contract: a bundle-scoped storage class must come after the
@@ -225,7 +225,7 @@ a form that is *generated* and a contract readable outside PHP.
 singleton resource's values in one simple config object, which a
 subclass names: prepare lays the values over what is stored and
 validates the whole object against its config schema, and commit writes
-it. `data_surface_first` and the examples use it
+it. `surface_examples_first` and the examples use it
 ([Storage](storage.md#a-simple-config-object)). An earlier engine class
 mirroring core's `ConfigTarget` was removed for want of an adopter; this
 one came back once every settings resource had written the same class.
@@ -256,7 +256,7 @@ payload, so a decoupled client gets the same rejection with the same
 message as the form.
 
 Scope boundary: refinement within one item. Cross-delta and cross-field
-rules need an entity-level resource, which `data_surface_entity` now
+rules need an entity-level resource, which `surface_examples_entity` now
 derives ([Content entities](entities.md)); no field refines another there
 yet.
 
@@ -277,7 +277,7 @@ prepare and commit is the callers that never render anything.
 
 - **Config actions and recipes.** Core validates config actions only
   after the write, and only when the schema is marked
-  `FullyValidatable`, whose validator is a no-op. A `dataSurface` config
+  `FullyValidatable`, whose validator is a no-op. A `surface` config
   action would run `submit()`, so validation happens before the write,
   with the same messages a form shows, and `${input}` placeholders flow
   through `accept()`.
@@ -289,10 +289,10 @@ prepare and commit is the callers that never render anything.
 
 ### The Tool API A/B
 
-`data_surface_tool` is the recorded experiment. Its field tools are
+`surface_tool` is the recorded experiment. Its field tools are
 generated from the field instance resource's operations
-(`data_surface:field.instance:create`, `:reuse` and `:update`), and
-`data_surface:field.instance:reuse` answers the question Tool Belt's
+(`surface:field.instance:create`, `:reuse` and `:update`), and
+`surface:field.instance:reuse` answers the question Tool Belt's
 `field_add` answers, adding an existing storage's field to a bundle; the
 difference is the answer to "what may the settings be?". A field type
 with its own settings class answers from it; every other field type offered
@@ -308,7 +308,7 @@ properties with `enum` and labels, a live country `enum`, a language
 `enum`, and no deprecated key at all.
 
 Both JSON Schema documents are printed side by side in
-`modules/data_surface_tool/COMPARISON.md`, generated by the comparison
+`modules/surface_tool/COMPARISON.md`, generated by the comparison
 test rather than written by hand. The same resource that generates the
 Field UI form generates the tool schema, with no second description.
 
@@ -318,11 +318,11 @@ in that submodule's README and summarized in [Core gaps](core-gaps.md).
 ### A setting another module added
 
 The field tools compare two descriptions of settings the tool's author
-knew about. `data_surface_demo_node_type_tool` compares what happens to
-settings nobody told the tool about. `data_surface_demo_extras` adds two
+knew about. `surface_examples_node_type_tool` compares what happens to
+settings nobody told the tool about. `surface_examples_extras` adds two
 review settings to every content type, once through an alter of the
 content type resource and once through an ordinary form alter on core's
-content type form. `data_surface:node.type:create`, a tool generated from
+content type form. `surface:node.type:create`, a tool generated from
 the content type resource's create operation that names no key of a content
 type at all, advertises both (the deadline as the amount and unit a
 person says, the tags with their pattern) and holds every caller to
@@ -345,7 +345,7 @@ through a storage layout the extras module hands it, and refuses
 forty-five days on the amount, in the caller's own units.
 
 The schemas and a table of outcomes, each cell observed rather than
-written, are in `modules/data_surface_demo_node_type_tool/COMPARISON.md`,
+written, are in `modules/surface_examples_node_type_tool/COMPARISON.md`,
 generated by the same script as the field tools' comparison and held to
 it by `NodeTypeToolComparisonTest`.
 

@@ -1,6 +1,6 @@
 # Introduction
 
-This series introduces Data Surface one idea at a time, for a Drupal
+This series introduces Surface API one idea at a time, for a Drupal
 developer who has not installed it. Each page defines one word in plain
 language, shows it in a picture and a short snippet, and uses only words
 an earlier page defined, or links forward to the page that defines one. Nothing needs to be installed to read it. After
@@ -9,7 +9,7 @@ pages then show how to write one. The series teaches the pattern; the
 classes behind it are the module's own, and not all of them are settled
 yet.
 
-1. [What Data Surface does](01-what-it-does.md): describe once what a
+1. [What Surface API does](01-what-it-does.md): describe once what a
    thing accepts, and the form, a Tool API tool, the command line, the
    HTTP API and the React page accept the same values.
 2. [Resources](02-resources.md): a thing your site keeps values for

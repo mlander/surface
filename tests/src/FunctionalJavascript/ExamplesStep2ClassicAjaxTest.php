@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -16,10 +16,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * venue moved back shows the stored room chosen again, and a save after
  * a move writes the new venue and room.
  *
- * @see \Drupal\Tests\data_surface\FunctionalJavascript\ExamplesAjaxRefreshTest
+ * @see \Drupal\Tests\surface\FunctionalJavascript\ExamplesAjaxRefreshTest
  *   For the same moves on example 2's own form.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesStep2ClassicAjaxTest extends ExamplesWebDriverTestBase {
 
@@ -55,7 +55,7 @@ class ExamplesStep2ClassicAjaxTest extends ExamplesWebDriverTestBase {
     $this->assertSame('', $page->findField('room')->getValue());
     $this->assertStringNotContainsString('Up to', $this->formItemText('capacity'));
     $assert->elementNotExists('css', '.messages');
-    $this->assertSame('riverside_main', $this->config('data_surface_examples.registration_step2')->get('room'));
+    $this->assertSame('riverside_main', $this->config('surface_examples.registration_step2')->get('room'));
 
     // A room of the new venue describes the capacity.
     $page->selectFieldOption('room', 'library_garden');
@@ -79,8 +79,8 @@ class ExamplesStep2ClassicAjaxTest extends ExamplesWebDriverTestBase {
     $page->fillField('capacity', '150');
     $page->pressButton('Save configuration');
     $this->assertNotNull($assert->waitForText('The configuration options have been saved.'));
-    $this->container->get('config.factory')->reset('data_surface_examples.registration_step2');
-    $stored = $this->config('data_surface_examples.registration_step2');
+    $this->container->get('config.factory')->reset('surface_examples.registration_step2');
+    $stored = $this->config('surface_examples.registration_step2');
     $this->assertSame('harbour', $stored->get('venue'));
     $this->assertSame('harbour_deck', $stored->get('room'));
     $this->assertSame(150, $stored->get('capacity'));

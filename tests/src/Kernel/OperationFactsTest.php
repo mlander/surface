@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Resource\Attribute\Operation;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\OperationDefinition;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\data_surface_resource_test\OutsideDiscovery\ContradictingCreatesStructure;
-use Drupal\data_surface_resource_test\OutsideDiscovery\MisnamedContextStructure;
-use Drupal\data_surface_resource_test\OutsideDiscovery\RetiredIdStructure;
-use Drupal\data_surface_resource_test\OutsideDiscovery\StampedStructure;
-use Drupal\data_surface_tool_test\Resource\LogbookResource;
-use Drupal\data_surface_tool_test\Resource\VaultResource;
+use Drupal\surface\Resource\Attribute\Operation;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\OperationDefinition;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\surface_resource_test\OutsideDiscovery\ContradictingCreatesStructure;
+use Drupal\surface_resource_test\OutsideDiscovery\MisnamedContextStructure;
+use Drupal\surface_resource_test\OutsideDiscovery\RetiredIdStructure;
+use Drupal\surface_resource_test\OutsideDiscovery\StampedStructure;
+use Drupal\surface_tool_test\Resource\LogbookResource;
+use Drupal\surface_tool_test\Resource\VaultResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolOperation;
@@ -38,9 +38,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#an-operation-states-how-it-behaves
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class OperationFactsTest extends DataSurfaceKernelTestBase {
+class OperationFactsTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -52,11 +52,11 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_resource_test',
-    'data_surface_tool_test',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_resource_test',
+    'surface_tool_test',
   ];
 
   /**
@@ -78,7 +78,7 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -101,8 +101,8 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
    * not, a read only one is, and a declaration wins over either.
    */
   public function testDiscoveryCarriesTheFacts(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $registry = $this->container->get('data_surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
     foreach (self::LOGBOOK as $id => [$creates, $read_only, $destructive, $idempotent]) {
       $operation = $registry->getOperation(LogbookResource::class, $id);
       $this->assertSame($creates, $operation->creates, $id . ': read off the attribute.');
@@ -137,8 +137,8 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
    * and answer about creating, knowing nothing.
    */
   public function testAnOperationOnTheClassHasNoMethod(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $registry = $this->container->get('data_surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
     $this->assertSame(array_keys(self::LOGBOOK), array_keys($registry->getOperations(LogbookResource::class)), 'In the order the class declares them.');
     foreach (self::LOGBOOK as $id => [$creates]) {
       $operation = $registry->getOperation(LogbookResource::class, $id);
@@ -179,7 +179,7 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('A context with no id was handed to build');
-    $this->container->get('data_surface.resources')->build(LogbookResource::class, new OperationContext());
+    $this->container->get('surface.resources')->build(LogbookResource::class, new OperationContext());
   }
 
   /**
@@ -192,8 +192,8 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
    */
   public function testContextThatSaysOtherwiseIsRefusedAtDiscovery(): void {
     $refused = [
-      MisnamedContextStructure::class => 'The "fill" operation, ' . MisnamedContextStructure::class . '::fill() in data_surface_resource_test, returned a context whose id is "pour".',
-      ContradictingCreatesStructure::class => 'The "fill" operation, ' . ContradictingCreatesStructure::class . '::fill() in data_surface_resource_test, returned a context that creates, and its #[Operation] does not say creates: TRUE.',
+      MisnamedContextStructure::class => 'The "fill" operation, ' . MisnamedContextStructure::class . '::fill() in surface_resource_test, returned a context whose id is "pour".',
+      ContradictingCreatesStructure::class => 'The "fill" operation, ' . ContradictingCreatesStructure::class . '::fill() in surface_resource_test, returned a context that creates, and its #[Operation] does not say creates: TRUE.',
     ];
     foreach ($refused as $class => $message) {
       $registry = $this->registryOf($class);
@@ -223,11 +223,11 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
       $this->fail('An operation named edit was not refused at discovery.');
     }
     catch (\LogicException $e) {
-      $this->assertSame('The "edit" operation, #[Operation] on ' . RetiredIdStructure::class . ' in data_surface_resource_test, is named with a word the module retired as an id. Name it "update", the standard id an agent and a client generator expect, and keep Drupal\'s word in its label, where people read it.', $e->getMessage());
+      $this->assertSame('The "edit" operation, #[Operation] on ' . RetiredIdStructure::class . ' in surface_resource_test, is named with a word the module retired as an id. Name it "update", the standard id an agent and a client generator expect, and keep Drupal\'s word in its label, where people read it.', $e->getMessage());
     }
     foreach (['add' => 'create', 'edit' => 'update', 'remove' => 'delete', 'get' => 'read'] as $retired => $standard) {
       try {
-        new OperationDefinition($retired, 'A label', 'example', self::class, '', NULL, 'data_surface');
+        new OperationDefinition($retired, 'A label', 'example', self::class, '', NULL, 'surface');
         $this->fail($retired . ' was not refused.');
       }
       catch (\LogicException $e) {
@@ -236,7 +236,7 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
     }
     // The standard ids, configure and any custom one are let through.
     foreach (['create', 'update', 'read', 'list', 'delete', 'configure', 'check'] as $id) {
-      $this->assertSame($id, (new OperationDefinition($id, 'A label', 'example', self::class, '', NULL, 'data_surface'))->id);
+      $this->assertSame($id, (new OperationDefinition($id, 'A label', 'example', self::class, '', NULL, 'surface'))->id);
     }
   }
 
@@ -246,11 +246,11 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
    * @param class-string $class
    *   The class: a structure carrying its operations.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceRegistry
+   * @return \Drupal\surface\ResourceBuild\ResourceRegistry
    *   The registry.
    */
   protected function registryOf(string $class): ResourceRegistry {
-    $module = 'data_surface_resource_test';
+    $module = 'surface_resource_test';
     return new ResourceRegistry(['resources' => [$class => $module], 'operations' => [$class => $module]], $this->container->get('cache.discovery'));
   }
 
@@ -259,8 +259,8 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
    */
   public function testFactsThatContradictAreRefused(): void {
     $contradictions = [
-      'destroys' => static fn (): OperationDefinition => new OperationDefinition('peek', 'Peek', 'example', self::class, 'peek', NULL, 'data_surface', readOnly: TRUE, destructive: TRUE),
-      'is not idempotent' => static fn (): OperationDefinition => new OperationDefinition('peek', 'Peek', 'example', self::class, 'peek', NULL, 'data_surface', readOnly: TRUE, idempotent: FALSE),
+      'destroys' => static fn (): OperationDefinition => new OperationDefinition('peek', 'Peek', 'example', self::class, 'peek', NULL, 'surface', readOnly: TRUE, destructive: TRUE),
+      'is not idempotent' => static fn (): OperationDefinition => new OperationDefinition('peek', 'Peek', 'example', self::class, 'peek', NULL, 'surface', readOnly: TRUE, idempotent: FALSE),
     ];
     foreach ($contradictions as $what => $make) {
       try {
@@ -299,7 +299,7 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
       'inspect' => [ToolOperation::Read, [TRUE, FALSE, TRUE]],
     ];
     foreach ($expected as $id => [$kind, $mcp]) {
-      $definition = $definitions['data_surface:tool_test.logbook:' . $id];
+      $definition = $definitions['surface:tool_test.logbook:' . $id];
       $this->assertInstanceOf(ToolDefinition::class, $definition);
       $this->assertSame($kind, $definition->getOperation(), $id);
       $this->assertSame($mcp, $annotations($definition), $id . ': read only, destructive, idempotent, as MCP reads them.');
@@ -307,15 +307,15 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
     // A read tool is read only by what it is; nothing beside an operation
     // that creates or one that changes nothing is read.
     foreach (['configure', 'append', 'clear'] as $id) {
-      $read = $definitions['data_surface:tool_test.logbook:' . $id . ':read'];
+      $read = $definitions['surface:tool_test.logbook:' . $id . ':read'];
       $this->assertInstanceOf(ToolDefinition::class, $read);
       $this->assertSame([TRUE, FALSE, TRUE], $annotations($read), $id . ':read');
     }
-    $this->assertArrayNotHasKey('data_surface:tool_test.logbook:start:read', $definitions);
-    $this->assertArrayNotHasKey('data_surface:tool_test.logbook:inspect:read', $definitions);
+    $this->assertArrayNotHasKey('surface:tool_test.logbook:start:read', $definitions);
+    $this->assertArrayNotHasKey('surface:tool_test.logbook:inspect:read', $definitions);
 
     // The examples state nothing, and their tools are what they were.
-    $example = $definitions['data_surface:registration.step3:configure'];
+    $example = $definitions['surface:registration.step3:configure'];
     $this->assertInstanceOf(ToolDefinition::class, $example);
     $this->assertSame(ToolOperation::Write, $example->getOperation());
     $this->assertFalse($example->isDestructive());
@@ -328,9 +328,9 @@ class OperationFactsTest extends DataSurfaceKernelTestBase {
    * operation's label; a document asked for in no operation states none.
    */
   public function testBothDocumentsStateTheFacts(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $registry = $this->container->get('data_surface.resource_registry');
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $resources = $this->container->get('surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
+    $emitter = $this->container->get('surface.contract_emitter');
     foreach ([RegistrationStep3Resource::class => 'configure', LogbookResource::class => 'start'] as $resource => $id) {
       $operation = $registry->getOperation($resource, $id);
       $context = $resources->operation($resource, $id);

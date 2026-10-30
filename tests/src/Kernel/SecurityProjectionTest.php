@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\PreparedValues;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_examples_workflow\Alter\FeesWorkflowAlter;
-use Drupal\data_surface_react\Access\ServedOperationAccessCheck;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationToolBase;
-use Drupal\data_surface_tool_test\Storage\VaultStorage;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Pipeline\SurfacePipelineInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\PreparedValues;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples_workflow\Alter\FeesWorkflowAlter;
+use Drupal\surface_react\Access\ServedOperationAccessCheck;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationToolBase;
+use Drupal\surface_tool_test\Storage\VaultStorage;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\NodeType;
@@ -48,9 +48,9 @@ use Symfony\Component\Routing\Route;
  *
  * @see docs/decisions.md#every-door-projects-what-the-read-tool-projects
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class SecurityProjectionTest extends DataSurfaceKernelTestBase {
+class SecurityProjectionTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
 
@@ -69,13 +69,13 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     'entity_test',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_demo_node_type',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_workflow',
-    'data_surface_react',
-    'data_surface_tool_test',
+    'surface',
+    'surface_examples_node_type',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_workflow',
+    'surface_react',
+    'surface_tool_test',
   ];
 
   /**
@@ -86,7 +86,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
     $this->installEntitySchema('entity_test');
-    $this->installConfig(['field', 'node', 'data_surface_examples']);
+    $this->installConfig(['field', 'node', 'surface_examples']);
     // The first account is the super user; every test acts as another.
     $this->setUpCurrentUser(admin: TRUE);
   }
@@ -150,10 +150,10 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
    *   Whether it is allowed, and the reason given.
    */
   protected function reactAccess(string $resource, string $operation, array $query, ?AccountInterface $account = NULL): array {
-    $check = $this->container->get('data_surface_react.access');
+    $check = $this->container->get('surface_react.access');
     assert($check instanceof ServedOperationAccessCheck);
     $ids = ['resource' => $resource, 'operation' => $operation];
-    $route_match = new RouteMatch('data_surface_react.page', new Route('/surface-react/{resource}/{operation}'), $ids, $ids);
+    $route_match = new RouteMatch('surface_react.page', new Route('/surface-react/{resource}/{operation}'), $ids, $ids);
     $result = $check->access($route_match, $account ?? User::getAnonymousUser(), Request::create('/surface-react/' . $resource . '/' . $operation, 'GET', $query));
     return [$result->isAllowed(), $result instanceof AccessResultReasonInterface ? (string) $result->getReason() : ''];
   }
@@ -169,7 +169,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $this->setUpCurrentUser([], ['administer site configuration']);
     $this->assertFalse($this->container->get('current_user')->hasPermission(FeesWorkflowAlter::PERMISSION));
 
-    $dry = $this->runTool('data_surface:event.program:configure', [
+    $dry = $this->runTool('surface:event.program:configure', [
       OperationInputs::VALUES => [],
       OperationInputs::DRY_RUN => TRUE,
     ]);
@@ -178,7 +178,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('fees', $dry['outputs'][OperationInputs::VALUES]);
     $this->assertStringNotContainsString('concession', (string) json_encode($dry['outputs']));
 
-    $read = $this->runTool('data_surface:event.program:configure:read', []);
+    $read = $this->runTool('surface:event.program:configure:read', []);
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $dry['outputs'][OperationInputs::VALUES], 'The dry run answers what the read answers.');
 
     $validated = $this->validate('event.program', 'configure', []);
@@ -188,10 +188,10 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $this->assertStringNotContainsString('concession', (string) json_encode($validated));
 
     // Written, as well: the fees are kept as stored, and not answered.
-    $written = $this->runTool('data_surface:event.program:configure', [OperationInputs::VALUES => ['sessions' => 9]]);
+    $written = $this->runTool('surface:event.program:configure', [OperationInputs::VALUES => ['sessions' => 9]]);
     $this->assertTrue($written['success'], $written['message']);
     $this->assertArrayNotHasKey('fees', $written['outputs'][OperationInputs::VALUES]);
-    $this->assertSame(['standard' => 20.0, 'concession' => 10.0], array_map('floatval', $this->config('data_surface_examples.program')->get('fees')));
+    $this->assertSame(['standard' => 20.0, 'concession' => 10.0], array_map('floatval', $this->config('surface_examples.program')->get('fees')));
   }
 
   /**
@@ -211,9 +211,9 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
         ['host' => 'west.example.com', 'password' => 'mirror-two'],
       ],
     ];
-    $written = $this->runTool('data_surface:tool_test.vault:configure', [OperationInputs::VALUES => $values]);
+    $written = $this->runTool('surface:tool_test.vault:configure', [OperationInputs::VALUES => $values]);
     $this->assertTrue($written['success'], $written['message']);
-    $dry = $this->runTool('data_surface:tool_test.vault:configure', [
+    $dry = $this->runTool('surface:tool_test.vault:configure', [
       OperationInputs::VALUES => ['endpoint' => 'https://other.example.com'],
       OperationInputs::DRY_RUN => TRUE,
     ]);
@@ -251,7 +251,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
    */
   public function testCollectionItemKeepsItsSecret(): void {
     $this->setUpCurrentUser([], ['administer site configuration']);
-    $this->runTool('data_surface:tool_test.vault:configure', [
+    $this->runTool('surface:tool_test.vault:configure', [
       OperationInputs::VALUES => [
         'mirrors' => [
           ['host' => 'east.example.com', 'password' => 'mirror-one'],
@@ -259,32 +259,32 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
         ],
       ],
     ]);
-    $read = $this->runTool('data_surface:tool_test.vault:configure:read', []);
+    $read = $this->runTool('surface:tool_test.vault:configure:read', []);
     $mirrors = $read['outputs'][OperationInputs::VALUES]['mirrors'];
     $mirrors[1]['host'] = 'west-2.example.com';
 
-    $edited = $this->runTool('data_surface:tool_test.vault:configure', [OperationInputs::VALUES => ['mirrors' => $mirrors]]);
+    $edited = $this->runTool('surface:tool_test.vault:configure', [OperationInputs::VALUES => ['mirrors' => $mirrors]]);
     $this->assertTrue($edited['success'], $edited['message']);
     $stored = $this->container->get('state')->get(VaultStorage::KEY)['mirrors'];
     $this->assertSame(['east.example.com', 'west-2.example.com'], array_column($stored, 'host'));
     $this->assertSame(['mirror-one', 'mirror-two'], array_column($stored, 'password'), 'Each item kept the secret stored at its position.');
 
     // The first removed: the second now sits where the first's secret is.
-    $removed = $this->runTool('data_surface:tool_test.vault:configure', [OperationInputs::VALUES => ['mirrors' => [['host' => 'west-2.example.com']]]]);
+    $removed = $this->runTool('surface:tool_test.vault:configure', [OperationInputs::VALUES => ['mirrors' => [['host' => 'west-2.example.com']]]]);
     $this->assertFalse($removed['success']);
     $this->assertStringContainsString('/mirrors/0/password: Password is stored for the item at this position', $removed['message']);
     $this->assertSame(['mirror-one', 'mirror-two'], array_column($this->container->get('state')->get(VaultStorage::KEY)['mirrors'], 'password'), 'Nothing was written.');
 
     // Sent again, or cleared, it is said.
-    $again = $this->runTool('data_surface:tool_test.vault:configure', [
+    $again = $this->runTool('surface:tool_test.vault:configure', [
       OperationInputs::VALUES => ['mirrors' => [['host' => 'west-2.example.com', 'password' => 'mirror-two']]],
     ]);
     $this->assertTrue($again['success'], $again['message']);
     $this->assertSame([['host' => 'west-2.example.com', 'password' => 'mirror-two']], $this->container->get('state')->get(VaultStorage::KEY)['mirrors']);
-    $added = $this->runTool('data_surface:tool_test.vault:configure', [
+    $added = $this->runTool('surface:tool_test.vault:configure', [
       OperationInputs::VALUES => [
         'mirrors' => [
-          ['host' => 'west-2.example.com', 'password' => DataSurfacePipelineInterface::CLEAR_SECRET],
+          ['host' => 'west-2.example.com', 'password' => SurfacePipelineInterface::CLEAR_SECRET],
           ['host' => 'north.example.com'],
         ],
       ],
@@ -304,7 +304,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
   public function testNoteSaysNothingOfSecret(): void {
     $token = DataDefinition::create('string')->setLabel('Token');
     DefinitionMetadata::setSecret($token);
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $builder->setDefinition('remote', MapDataDefinition::create()
       ->setLabel('Remote')
       ->setPropertyDefinition('host', DataDefinition::create('string')->setLabel('Host'))
@@ -312,7 +312,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $builder->lock('remote');
     $surface = $builder->seal();
     $stored = ['remote' => ['host' => 'a.example.com', 'token' => 'right']];
-    $storage = new class ($stored) implements DataSurfaceStorageInterface {
+    $storage = new class ($stored) implements SurfaceStorageInterface {
 
       /**
        * Constructs the storage, holding what it loads.
@@ -325,14 +325,14 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public function load(DataSurfaceInterface $surface): array {
+      public function load(SurfaceInterface $surface): array {
         return $this->stored;
       }
 
       /**
        * {@inheritdoc}
        */
-      public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+      public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
         return new PreparedValues($values, $values);
       }
 
@@ -381,7 +381,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     $tools = $this->container->get('plugin.manager.tool');
     $reasons = [];
     foreach (['field_note', 'field_none'] as $name) {
-      $tool = $tools->createInstance('data_surface:field.instance:update');
+      $tool = $tools->createInstance('surface:field.instance:update');
       $tool->setInputValue('entity_type', 'entity_test');
       $tool->setInputValue('bundle', 'entity_test');
       $tool->setInputValue('field_name', $name);
@@ -411,7 +411,7 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
    * listing may describe it; any other build leaves it out.
    */
   public function testChildPermissionNothingCanNameIsRefused(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $bare = new OperationContext('create');
     $this->assertFalse($resources->build('field.instance', $bare)->getDefinitions()->has('storage'));
     $this->assertTrue($resources->buildStatic('field.instance', $bare)->getDefinitions()->has('storage'), 'A static listing describes it as it may be.');
@@ -439,18 +439,18 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
     foreach (['seeing' => $seeing, 'blind' => $blind] as $who => $account) {
       $this->setCurrentUser($account);
       $tools->clearCachedDefinitions();
-      $values = $tools->getDefinition('data_surface:event.program:configure')->getInputDefinition(OperationInputs::VALUES);
+      $values = $tools->getDefinition('surface:event.program:configure')->getInputDefinition(OperationInputs::VALUES);
       $fees = $values->getPropertyDefinitions()['fees'] ?? NULL;
       $this->assertNotNull($fees, $who . ' discovered the fees, as declared.');
       $this->assertStringContainsString('left out', (string) $fees->getDescription());
-      $listed[$who] = serialize($tools->getDefinition('data_surface:event.program:configure')->getInputDefinitions());
+      $listed[$who] = serialize($tools->getDefinition('surface:event.program:configure')->getInputDefinitions());
     }
     $this->assertSame($listed['seeing'], $listed['blind'], 'The cached definition is the same whoever discovered it.');
 
     $schema = $this->container->get('tool.definition_serializer');
     foreach (['seeing' => TRUE, 'blind' => FALSE] as $who => $sees) {
       $this->setCurrentUser($who === 'seeing' ? $seeing : $blind);
-      $properties = $schema->normalizeInputSchema($tools->createInstance('data_surface:event.program:configure'))['properties'][OperationInputs::VALUES]['properties'];
+      $properties = $schema->normalizeInputSchema($tools->createInstance('surface:event.program:configure'))['properties'][OperationInputs::VALUES]['properties'];
       $this->assertSame($sees, isset($properties['fees']), $who . ': the listing is the account\'s.');
     }
   }

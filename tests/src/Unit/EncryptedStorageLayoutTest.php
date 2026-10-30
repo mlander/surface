@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Storage\EncryptedStorageLayout;
-use Drupal\data_surface\Storage\SecretCodecException;
-use Drupal\data_surface\Storage\StorageLayoutInterface;
-use Drupal\data_surface\Storage\SodiumSecretCodec;
+use Drupal\surface\Surface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Storage\EncryptedStorageLayout;
+use Drupal\surface\Storage\SecretCodecException;
+use Drupal\surface\Storage\StorageLayoutInterface;
+use Drupal\surface\Storage\SodiumSecretCodec;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -26,9 +26,9 @@ use PHPUnit\Framework\Attributes\Group;
  * enciphered on the next write rather than double-enciphered or
  * refused.
  *
- * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
+ * @see \Drupal\surface\Storage\EncryptedStorageLayout
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class EncryptedStorageLayoutTest extends UnitTestCase {
 
   /**
@@ -37,13 +37,13 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
    * One secret key, one ordinary one beside it, because "the ordinary
    * one is untouched" is half of what is being tested.
    *
-   * @return \Drupal\data_surface\DataSurface
+   * @return \Drupal\surface\Surface
    *   The data surface.
    */
-  protected function surface(): DataSurface {
+  protected function surface(): Surface {
     $token = DataDefinition::create('string')->setLabel('API key');
     DefinitionMetadata::setSecret($token);
-    return new DataSurface(DefinitionMap::fromArrays(definitions: [
+    return new Surface(DefinitionMap::fromArrays(definitions: [
       'endpoint' => DataDefinition::create('string')->setLabel('Endpoint'),
       'token' => $token,
     ]));
@@ -52,7 +52,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   /**
    * Builds the codec the layout encrypts with.
    *
-   * @return \Drupal\data_surface\Storage\SodiumSecretCodec
+   * @return \Drupal\surface\Storage\SodiumSecretCodec
    *   The codec.
    */
   protected function codec(): SodiumSecretCodec {
@@ -87,8 +87,8 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
    * The no-behavior-change rule, stated as a test: a site whose field
    * types declare no secret must not grow a layer that does nothing.
    */
-  public function testDataSurfaceWithoutSecretsIsNotWrapped(): void {
-    $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
+  public function testSurfaceWithoutSecretsIsNotWrapped(): void {
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
       'endpoint' => DataDefinition::create('string'),
     ]));
     $inner = $this->passThroughLayout();
@@ -181,7 +181,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
   /**
    * Builds a layout that translates nothing, to be identical by identity.
    *
-   * @return \Drupal\data_surface\Storage\StorageLayoutInterface
+   * @return \Drupal\surface\Storage\StorageLayoutInterface
    *   The layout.
    */
   protected function passThroughLayout(): StorageLayoutInterface {
@@ -211,7 +211,7 @@ class EncryptedStorageLayoutTest extends UnitTestCase {
    * single-key array each: a translation that moves values without
    * looking into them.
    *
-   * @return \Drupal\data_surface\Storage\StorageLayoutInterface
+   * @return \Drupal\surface\Storage\StorageLayoutInterface
    *   The layout.
    */
   protected function wrappingLayout(): StorageLayoutInterface {

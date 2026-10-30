@@ -16,7 +16,7 @@ for yours: one kernel test, three things to write.
 ```php
 namespace Drupal\Tests\my_module\Kernel;
 
-use Drupal\Tests\data_surface\Kernel\ResourceTestBase;
+use Drupal\Tests\surface\Kernel\ResourceTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -42,9 +42,9 @@ class MyResourcesTest extends ResourceTestBase {
 It lives in your module's `tests/src/Kernel/` and runs with the rest of
 your kernel tests. The base class is found the way core's test base
 classes are: every module's `tests/src` is autoloaded under
-`Drupal\Tests\<module>\` when tests run, so `data_surface` only has to
+`Drupal\Tests\<module>\` when tests run, so `surface` only has to
 be on the site, as it is for your module to work at all. It installs
-`data_surface`, `data_surface_tool` and `data_surface_react` (the tool
+`surface`, `surface_tool` and `surface_react` (the tool
 and HTTP doors it compares), which need the [Tool](installation.md#tool)
 module; `$modules` adds yours. The class attributes go on your class:
 core reads none from an abstract one.
@@ -91,12 +91,12 @@ once, and after every change you accept, with the write switch, then
 commit the files.
 
 ```
-DATA_SURFACE_BASELINES_WRITE=1 vendor/bin/phpunit -c web/core \
+SURFACE_BASELINES_WRITE=1 vendor/bin/phpunit -c web/core \
   --filter testContractBaseline web/modules/custom/my_module/tests/src/Kernel/MyResourcesTest.php
 ```
 
 A write keeps the allowances already recorded. To accept a breaking
-change with a reason instead, use `drush data_surface:contract-diff
+change with a reason instead, use `drush surface:contract-diff
 --module=my_module --write --allow="..."`, which writes the same files.
 The baselines are yours: they record what your clients were promised,
 and only your run reads or writes them.
@@ -110,7 +110,7 @@ process, as every kernel test here is.
 
 ## See also
 
-- `Drupal\Tests\data_surface\Kernel\FirstResourceInvariantsTest`, this
+- `Drupal\Tests\surface\Kernel\FirstResourceInvariantsTest`, this
   module's own use of it, for the [first](first-resource.md) and
   [second](second-resource.md) resources.
 - [The site's catalog](catalog-command.md), to find the ids, the doors

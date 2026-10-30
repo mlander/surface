@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Variants;
+namespace Drupal\surface\Variants;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
@@ -12,7 +12,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * The components the site offers to choose: all, or those it allows.
  *
- * `data_surface.settings:components_offered` is a list: an entry with a
+ * `surface.settings:components_offered` is a list: an entry with a
  * colon is a component id (`provider:name`), one without is a provider,
  * meaning every component it provides; an empty list offers every
  * component the site has. ComponentProps and ComponentSlots read the
@@ -31,7 +31,7 @@ final class ComponentsOffered implements ContainerInjectionInterface {
   /**
    * What the lists depend on: the extensions installed, and the setting.
    */
-  public const CACHE_TAGS = ['config:core.extension', 'config:data_surface.settings'];
+  public const CACHE_TAGS = ['config:core.extension', 'config:surface.settings'];
 
   /**
    * Constructs the components offered.
@@ -75,7 +75,7 @@ final class ComponentsOffered implements ContainerInjectionInterface {
    *   Each component's definition, by id, in the order of their ids.
    */
   public function offered(): array {
-    $entries = $this->configFactory->get('data_surface.settings')->get(self::SETTING);
+    $entries = $this->configFactory->get('surface.settings')->get(self::SETTING);
     $entries = is_array($entries) ? array_values(array_filter($entries, 'is_string')) : [];
     $all = $this->all();
     if ($entries === []) {

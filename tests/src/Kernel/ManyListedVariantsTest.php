@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\Cache;
-use Drupal\data_surface\Contract\SchemaReader;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\Outbound;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface_resource_test\Resource\Poster\PosterResource;
-use Drupal\data_surface_resource_test\Variants\PosterLayouts;
+use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\Outbound;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface_resource_test\Resource\Poster\PosterResource;
+use Drupal\surface_resource_test\Variants\PosterLayouts;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -27,9 +27,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Decision: see
  * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
+class ManyListedVariantsTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -41,9 +41,9 @@ class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_resource_test',
   ];
 
   /**
@@ -57,7 +57,7 @@ class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
   }
 
@@ -118,11 +118,11 @@ class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources
+   * @return \Drupal\surface\ResourceBuild\Resources
    *   The service.
    */
   protected function resources(): Resources {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     return $resources;
   }
@@ -130,23 +130,23 @@ class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the poster for the current account.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The build.
    */
-  protected function poster(): DataSurfaceInterface {
+  protected function poster(): SurfaceInterface {
     return $this->resources()->buildOperation(PosterResource::class, 'configure');
   }
 
   /**
    * Lists the layouts the site lists whose variant is built, by value.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The build.
    *
    * @return string[]
    *   The values.
    */
-  protected function settled(DataSurfaceInterface $built): array {
+  protected function settled(SurfaceInterface $built): array {
     $settled = [];
     foreach ($built->getDefinitions()->entry('panels')->variants->variants as $value => $variant) {
       if ($variant->isDeferred() && $variant->isSettled()) {
@@ -159,13 +159,13 @@ class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
   /**
    * Lists the shelves whose variant is built.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The build.
    *
    * @return string[]
    *   The values.
    */
-  protected function shelves(DataSurfaceInterface $built): array {
+  protected function shelves(SurfaceInterface $built): array {
     return array_values(array_filter($this->settled($built), static fn (string $value): bool => str_starts_with($value, 'shelf_')));
   }
 
@@ -191,7 +191,7 @@ class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
 
     // A submission choosing one layout builds that one.
     $sent = ['layout' => 'shelf_9', 'panels' => ['heading' => 'Sale', 'rows' => 1]];
-    $accepted = $this->container->get('data_surface.pipeline')->accept($built, $sent, $stored);
+    $accepted = $this->container->get('surface.pipeline')->accept($built, $sent, $stored);
     $this->assertSame('Sale', $accepted['panels']['heading']);
     $this->assertSame(['shelf_7', 'shelf_9'], $this->shelves($built));
   }
@@ -206,7 +206,7 @@ class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], PosterLayouts::$read, 'Building reads no entry.');
 
     // Past the site's list limit, the full schema names the values alone.
-    $this->container->get('data_surface.contract_emitter')->emitFull($built, 'resource_test.poster', 'configure', 'Configure the poster');
+    $this->container->get('surface.contract_emitter')->emitFull($built, 'resource_test.poster', 'configure', 'Configure the poster');
     $this->assertSame([], PosterLayouts::$read, 'The full schema reads no entry past the limit.');
 
     // The pipeline asks every variant for its secrets: it reads each
@@ -225,7 +225,7 @@ class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
    * Tests a list read an entry at a time states what the list given whole does.
    */
   public function testBothSpellingsStateTheSame(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $values = ['layout' => 'shelf_7', 'panels' => ['heading' => 'New in', 'rows' => 3]];
     $documents = [];
     foreach ([FALSE, TRUE] as $lazy) {
@@ -234,7 +234,7 @@ class ManyListedVariantsTest extends DataSurfaceKernelTestBase {
       $documents[$lazy ? 'lazy' : 'whole'] = [
         'emit' => $emitter->emit($built, $values, 'resource_test.poster', 'configure', 'Configure the poster')->document,
         'full' => $emitter->emitFull($built, 'resource_test.poster', 'configure', 'Configure the poster')->document,
-        'within' => $this->container->get('data_surface.site_list_budget')->withLimit(1000, static fn () => $emitter->emitFull($built, 'resource_test.poster', 'configure', 'Configure the poster')->document),
+        'within' => $this->container->get('surface.site_list_budget')->withLimit(1000, static fn () => $emitter->emitFull($built, 'resource_test.poster', 'configure', 'Configure the poster')->document),
       ];
     }
     $this->assertSame(json_encode($documents['whole']), json_encode($documents['lazy']));

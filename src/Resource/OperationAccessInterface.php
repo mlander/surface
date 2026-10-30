@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -48,12 +48,12 @@ interface OperationAccessInterface {
   /**
    * Answers whether an account may submit it in this context.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account to answer for.
    *
-   * @return \Drupal\Core\Access\AccessResultInterface|\Drupal\data_surface\Resource\AccessAnswer
+   * @return \Drupal\Core\Access\AccessResultInterface|\Drupal\surface\Resource\AccessAnswer
    *   The access answer. Core's result is read as AccessAnswer reads it:
    *   allowed is open, forbidden is omitted at a child and denied at the
    *   top. AccessAnswer::locked() is the one answer core's cannot say. An

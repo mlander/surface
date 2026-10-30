@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\PHPStan;
+namespace Drupal\Tests\surface\PHPStan;
 
 use PhpParser\Node;
 use PhpParser\Node\Expr\MethodCall;
@@ -29,7 +29,7 @@ use PHPStan\Rules\RuleErrorBuilder;
  * reads the request, its route, the session, the form being built, the
  * theme or the current user behaves one way at one door and another at
  * the next. The guarded container catches it when it runs, under assert()
- * (\Drupal\data_surface\Pipeline\PipelineGuard); this says it before it
+ * (\Drupal\surface\Pipeline\PipelineGuard); this says it before it
  * runs at all, where it can see it:
  *
  * - in a class that implements one of the interfaces the pipeline runs
@@ -54,7 +54,7 @@ final class DoorSpecificRule implements Rule {
   /**
    * The error's identifier.
    */
-  public const IDENTIFIER = 'dataSurface.doorSpecific';
+  public const IDENTIFIER = 'surface.doorSpecific';
 
   /**
    * The services refused, and why: PipelineGuard::DOOR_SPECIFIC.
@@ -111,28 +111,28 @@ final class DoorSpecificRule implements Rule {
    * The interfaces of what the pipeline runs, and what each is called.
    */
   public const INTERFACES = [
-    'Drupal\data_surface\Resource\ResourceStorageInterface' => 'storage',
-    'Drupal\data_surface\Resource\OperationAccessInterface' => 'access class',
-    'Drupal\data_surface\Resource\SiteListInterface' => 'provider',
-    'Drupal\data_surface\Resource\ResourceDeriverInterface' => 'derivative provider',
-    'Drupal\data_surface\Options\DataSurfaceOptionsResolverInterface' => 'options resolver',
-    'Drupal\data_surface\Resource\ComputesValueInterface' => 'computed key class',
+    'Drupal\surface\Resource\ResourceStorageInterface' => 'storage',
+    'Drupal\surface\Resource\OperationAccessInterface' => 'access class',
+    'Drupal\surface\Resource\SiteListInterface' => 'provider',
+    'Drupal\surface\Resource\ResourceDeriverInterface' => 'derivative provider',
+    'Drupal\surface\Options\SurfaceOptionsResolverInterface' => 'options resolver',
+    'Drupal\surface\Resource\ComputesValueInterface' => 'computed key class',
   ];
 
   /**
    * The attributes of what the pipeline runs, and what each is called.
    */
   public const ATTRIBUTES = [
-    'Drupal\data_surface\Resource\Attribute\Resource' => 'resource',
-    'Drupal\data_surface\Resource\Attribute\Structure' => 'structure',
-    'Drupal\data_surface\Resource\Attribute\Shape' => 'shape',
-    'Drupal\data_surface\Resource\Attribute\Alters' => 'alter',
+    'Drupal\surface\Resource\Attribute\Resource' => 'resource',
+    'Drupal\surface\Resource\Attribute\Structure' => 'structure',
+    'Drupal\surface\Resource\Attribute\Shape' => 'shape',
+    'Drupal\surface\Resource\Attribute\Alters' => 'alter',
   ];
 
   /**
    * The attribute that makes a method a refiner.
    */
-  public const REFINES = 'Drupal\data_surface\Resource\Attribute\RefinesInput';
+  public const REFINES = 'Drupal\surface\Resource\Attribute\RefinesInput';
 
   /**
    * {@inheritdoc}
@@ -187,7 +187,7 @@ final class DoorSpecificRule implements Rule {
   protected static function kindOf(ClassReflection $class): ?string {
     // An alter answering access implements the access class's interface;
     // #[Alters] says its role.
-    if ($class->getNativeReflection()->getAttributes('Drupal\data_surface\Resource\Attribute\Alters') !== []) {
+    if ($class->getNativeReflection()->getAttributes('Drupal\surface\Resource\Attribute\Alters') !== []) {
       return 'alter';
     }
     foreach (self::INTERFACES as $interface => $kind) {

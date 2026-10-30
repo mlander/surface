@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -13,22 +13,22 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Plugin\DataSurfaceWidget\AutocompleteWidget;
-use Drupal\data_surface\Plugin\DataSurfaceWidget\CheckboxesWidget;
-use Drupal\data_surface\Plugin\DataSurfaceWidget\DateWidget;
-use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
-use Drupal\data_surface\Plugin\DataSurfaceWidget\RadiosWidget;
-use Drupal\data_surface\Plugin\DataSurfaceWidget\TimeWidget;
-use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\Options\OptionSet;
-use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\Reference\EntityReferenceStructure;
-use Drupal\data_surface\Reference\References;
-use Drupal\data_surface\Resource\Arrangement;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
+use Drupal\surface\Computed;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Plugin\SurfaceWidget\AutocompleteWidget;
+use Drupal\surface\Plugin\SurfaceWidget\CheckboxesWidget;
+use Drupal\surface\Plugin\SurfaceWidget\DateWidget;
+use Drupal\surface\Plugin\SurfaceWidget\OptionsWidget;
+use Drupal\surface\Plugin\SurfaceWidget\RadiosWidget;
+use Drupal\surface\Plugin\SurfaceWidget\TimeWidget;
+use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Options\OptionSet;
+use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Reference\EntityReferenceStructure;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Resource\Arrangement;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Widget\SurfaceWidgetManager;
 
 /**
  * Describes one key as a JSON Schema property, with its `x-surface`.
@@ -50,7 +50,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Contract\ContractEmitter
+ * @see \Drupal\surface\Contract\ContractEmitter
  */
 final class PropertySchema {
 
@@ -81,7 +81,7 @@ final class PropertySchema {
    * `x-surface.checkedOnServer`, so a client knows the schema is not the
    * whole story for that key, unless the resolver reading it says its
    * list is the whole of it, which is its `oneOf`
-   * (DataSurfaceOptions::isStatedByList()).
+   * (SurfaceOptions::isStatedByList()).
    */
   protected const STATED = [
     'NotNull',
@@ -102,22 +102,22 @@ final class PropertySchema {
   /**
    * Constructs a PropertySchema.
    *
-   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
+   * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, the one place a constraint is read as a list.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service, for the empty option's labels.
    * @param \Drupal\Core\Validation\ConstraintManager|null $constraints
    *   The constraint plugin manager, for what a constraint only the server
    *   checks says it checks (its label); without it, its id.
-   * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager|null $widgets
+   * @param \Drupal\surface\Widget\SurfaceWidgetManager|null $widgets
    *   The widget manager, which says what a module's widget claims;
    *   without it, the stock rule alone names the widget.
    */
   public function __construct(
-    protected readonly DataSurfaceOptions $options,
+    protected readonly SurfaceOptions $options,
     TranslationInterface $string_translation,
     protected readonly ?ConstraintManager $constraints,
-    protected readonly ?DataSurfaceWidgetManager $widgets,
+    protected readonly ?SurfaceWidgetManager $widgets,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -157,7 +157,7 @@ final class PropertySchema {
    *   The def's key.
    * @param array|null $instance
    *   The child's schema at this site, or NULL to refer to the def alone.
-   * @param \Drupal\data_surface\Contract\Subschemas|null $subschemas
+   * @param \Drupal\surface\Contract\Subschemas|null $subschemas
    *   The document's defs, to compare the instance with.
    *
    * @return array
@@ -278,7 +278,7 @@ final class PropertySchema {
    * @param string[] $depends
    *   The sibling keys its refiners watch; a mounted one by its dotted
    *   path in the frame.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk: its cacheability collects what the description depends
    *   on, and its stale paths the dotted paths of stale values.
    *
@@ -366,7 +366,7 @@ final class PropertySchema {
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
       $claimed = $this->widgets?->claimed($definition);
       $widget = match (TRUE) {
-        $claimed !== NULL => DataSurfaceWidgetManager::wordOf($claimed),
+        $claimed !== NULL => SurfaceWidgetManager::wordOf($claimed),
         $fixed => 'fixed',
         $listed => $radios ? 'radios' : 'select',
         // A bare reference's id is drawn once its entity type is chosen:
@@ -923,7 +923,7 @@ final class PropertySchema {
    *
    * A client told only a plugin id learns nothing it can act on, so each
    * entry carries a sentence: the constraint's own reason where it was
-   * given one (DataSurfaceUnique's), else its own message (a Regex's is
+   * given one (SurfaceUnique's), else its own message (a Regex's is
    * how a person is told what it allows), else the label its plugin
    * declares, else the id again.
    * Decision: see docs/decisions.md#contract-2.
@@ -945,7 +945,7 @@ final class PropertySchema {
       // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
       return ContractEmitter::foreign(is_array($options['schema'] ?? NULL) ? $options['schema'] : [], $this->stringTranslation);
     }
-    // A constraint that refuses in a sentence of its own (DataSurfaceUnique)
+    // A constraint that refuses in a sentence of its own (SurfaceUnique)
     // says what it checks in its `reason`.
     $message = is_array($options) ? ($options['reason'] ?? $options['message'] ?? NULL) : NULL;
     if (is_string($message) && $message !== '') {
@@ -1010,7 +1010,7 @@ final class PropertySchema {
    *   The pattern without its delimiters, or NULL when it uses anything
    *   the two engines do not read alike.
    *
-   * @see \Drupal\data_surface\Contract\PatternTranslation
+   * @see \Drupal\surface\Contract\PatternTranslation
    */
   protected function pattern(array $options): ?string {
     $regex = $options['pattern'] ?? $options['value'] ?? NULL;
@@ -1024,7 +1024,7 @@ final class PropertySchema {
    * no title: the empty option is a presentation, said under
    * `x-surface.emptyOption`, and never an option with a label.
    *
-   * @param \Drupal\data_surface\Options\OptionSet $set
+   * @param \Drupal\surface\Options\OptionSet $set
    *   The values the key allows.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key.
@@ -1084,7 +1084,7 @@ final class PropertySchema {
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Collects the list's cacheability.
    *
-   * @return \Drupal\data_surface\Options\OptionSet|null
+   * @return \Drupal\surface\Options\OptionSet|null
    *   The set, or NULL when the definition names no list.
    */
   public function optionSet(DataDefinitionInterface $definition, CacheableMetadata $cacheability): ?OptionSet {

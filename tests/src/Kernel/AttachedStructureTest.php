@@ -2,30 +2,30 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Pipeline\PreparedValues;
-use Drupal\data_surface\Pipeline\VariantMismatchException;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Attachment;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_resource_test\Structure\Pantry\JarStructure;
-use Drupal\data_surface_resource_test\Resource\Pantry\LabelResource;
-use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
-use Drupal\data_surface_resource_test\Structure\Pantry\ShelfStructure;
-use Drupal\data_surface_resource_test\Resource\Pantry\TinResource;
-use Drupal\data_surface_resource_test\Storage\PantryLabelStorage;
-use Drupal\data_surface_resource_test\Storage\PantryStorage;
-use Drupal\data_surface_resource_test\Storage\PantryTinStorage;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Pipeline\PreparedValues;
+use Drupal\surface\Pipeline\VariantMismatchException;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Attachment;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface_resource_test\Structure\Pantry\JarStructure;
+use Drupal\surface_resource_test\Resource\Pantry\LabelResource;
+use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
+use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
+use Drupal\surface_resource_test\Resource\Pantry\TinResource;
+use Drupal\surface_resource_test\Storage\PantryLabelStorage;
+use Drupal\surface_resource_test\Storage\PantryStorage;
+use Drupal\surface_resource_test\Storage\PantryTinStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -40,11 +40,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * ResourceBuildTest; what passes through the one door, identity in the
  * child's context, is tested here with the storage classes.
  *
- * @see \Drupal\data_surface_resource_test\Resource\Pantry\PantryResource
+ * @see \Drupal\surface_resource_test\Resource\Pantry\PantryResource
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class AttachedStructureTest extends DataSurfaceKernelTestBase {
+class AttachedStructureTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -52,30 +52,30 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
    * Builds the pantry.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext|null $context
+   * @param \Drupal\surface\Resource\OperationContext|null $context
    *   The context, or NULL for the create operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The pantry.
    */
-  protected function pantry(?OperationContext $context = NULL): DataSurfaceInterface {
+  protected function pantry(?OperationContext $context = NULL): SurfaceInterface {
     return $this->resources()->build(PantryResource::class, $context ?? PantryResource::create());
   }
 
@@ -101,7 +101,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'unit' => 'cm',
       'height' => 30,
-      'third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]],
+      'third_party_settings' => ['surface_resource_test' => ['sturdy' => TRUE]],
     ], $surface->getDefault('shelf'));
     $this->assertSame(['text' => 'Pantry'], $surface->getDefault('label'));
   }
@@ -134,7 +134,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'unit' => 'in',
       'height' => 100,
-      'third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]],
+      'third_party_settings' => ['surface_resource_test' => ['sturdy' => TRUE]],
     ], $values['shelf']);
     $violations = $this->pipeline()->validate($surface, $values);
     $this->assertSame(['shelf.height'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($violations, FALSE)));
@@ -254,14 +254,14 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
    * Tests that a child's cacheability is its parent's.
    */
   public function testCacheabilityMerges(): void {
-    $child = new DataSurfaceBuilder();
+    $child = new SurfaceBuilder();
     $child->setDefinition('note', DataDefinition::create('string'));
     $child->addCacheableDependency((new CacheableMetadata())->setCacheTags(['child_list']));
-    $variant = new DataSurfaceBuilder();
+    $variant = new SurfaceBuilder();
     $variant->setDefinition('size', DataDefinition::create('integer'));
     $variant->addCacheableDependency((new CacheableMetadata())->setCacheContexts(['user.permissions']));
 
-    $parent = new DataSurfaceBuilder();
+    $parent = new SurfaceBuilder();
     $parent->setDefinition('kind', DataDefinition::create('string'));
     $parent->attach('child', new Attachment($child->seal()));
     $parent->attachVariants('variants', 'kind', ['big' => new Attachment($variant->seal())]);
@@ -275,7 +275,7 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
    * Tests describe(): the one change to an existing key anyone may make.
    */
   public function testDescribeRewordsAndNothingElse(): void {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $typed_data = $this->container->get('typed_data_manager');
     $builder->setDefinition('limit', DataDefinition::create('integer')
       ->setLabel('Limit')
@@ -316,10 +316,10 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
    * only answers once the module has added a key.
    */
   public function testDescribeTitlesEachModuleMount(): void {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $typed_data = $this->container->get('typed_data_manager');
     $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
-    $second = new ResourceBlueprintAdditions($builder, $typed_data, 'data_surface_resource_test');
+    $second = new ResourceBlueprintAdditions($builder, $typed_data, 'surface_resource_test');
     $first->add('badge', 'string', 'Badge');
     $second->add('ribbon', 'string', 'Ribbon');
     $first->describe('third_party_settings.first_module', label: 'Badges', description: 'How the title is decorated.');
@@ -336,9 +336,9 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['badge'], array_keys($badges->getPropertyDefinitions()));
     // Unnamed, a mount is titled with the module's human name, and no
     // more: no "settings" after it.
-    $this->assertSame('Data Surface Resource Test', (string) $mount->getPropertyDefinition('data_surface_resource_test')->getLabel());
+    $this->assertSame('Surface API Resource Test', (string) $mount->getPropertyDefinition('surface_resource_test')->getLabel());
 
-    $third = new ResourceBlueprintAdditions(new DataSurfaceBuilder(), $typed_data, 'third_module');
+    $third = new ResourceBlueprintAdditions(new SurfaceBuilder(), $typed_data, 'third_module');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('describe() was asked to reword the input "third_party_settings.third_module", which nothing has declared.');
     $third->describe('third_party_settings.third_module', label: 'Too soon');
@@ -353,13 +353,13 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
    */
   public function testDescribePlacesOnlyItsOwnMount(): void {
     $typed_data = $this->container->get('typed_data_manager');
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $owner = new ResourceBlueprint($builder, $typed_data);
     $owner->add('title', 'string', 'Title');
     $owner->add('capacity', 'integer', 'Capacity');
     $first = new ResourceBlueprintAdditions($builder, $typed_data, 'first_module');
     $second = new ResourceBlueprintAdditions($builder, $typed_data, 'second_module');
-    $outputs = new ResourceBlueprint(new DataSurfaceBuilder(), $typed_data, outputs: TRUE);
+    $outputs = new ResourceBlueprint(new SurfaceBuilder(), $typed_data, outputs: TRUE);
     $first->add('badge', 'string', 'Badge');
     $second->add('ribbon', 'string', 'Ribbon');
     $outputs->add('shown', 'string', 'Shown');
@@ -417,23 +417,23 @@ class AttachedStructureTest extends DataSurfaceKernelTestBase {
   /**
    * Gets storage that keeps nothing, for submissions that must fail.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface
+   * @return \Drupal\surface\Pipeline\SurfaceStorageInterface
    *   The storage.
    */
-  protected function nowhere(): DataSurfaceStorageInterface {
-    return new class() implements DataSurfaceStorageInterface {
+  protected function nowhere(): SurfaceStorageInterface {
+    return new class() implements SurfaceStorageInterface {
 
       /**
        * {@inheritdoc}
        */
-      public function load(DataSurfaceInterface $surface): array {
+      public function load(SurfaceInterface $surface): array {
         return [];
       }
 
       /**
        * {@inheritdoc}
        */
-      public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+      public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
         return new PreparedValues($values, $values);
       }
 

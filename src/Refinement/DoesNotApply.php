@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Refinement;
+namespace Drupal\surface\Refinement;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\surface\SurfaceInterface;
 
 /**
  * A refiner's answer that a key does not apply for the values it watches.
@@ -53,12 +53,12 @@ final class DoesNotApply {
   /**
    * The definition array key the engine marks a ruled-out key with.
    */
-  protected const MARK = 'data_surface_does_not_apply';
+  protected const MARK = 'surface_does_not_apply';
 
   /**
    * The one answer.
    *
-   * @var \Drupal\data_surface\Refinement\DoesNotApply|null
+   * @var \Drupal\surface\Refinement\DoesNotApply|null
    */
   private static ?self $here = NULL;
 
@@ -154,7 +154,7 @@ final class DoesNotApply {
    * values, as the schema for those values would describe them. Each
    * child is read in its own frame.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the values are for, as built.
    * @param array $values
    *   The values, keyed by key; a key left out reads as its default.
@@ -165,7 +165,7 @@ final class DoesNotApply {
    *
    * @internal
    */
-  public static function leftOut(DataSurfaceInterface $surface, array $values): array {
+  public static function leftOut(SurfaceInterface $surface, array $values): array {
     $all = array_replace($surface->getDefaultValues(), $values);
     $refined = $surface->refine($all);
     if ($refined === $surface) {

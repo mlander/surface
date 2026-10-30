@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Pipeline\ResultDocument;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface_examples\ConceptCalls;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\surface\Pipeline\ResultDocument;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface_examples\ConceptCalls;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolInterface;
 use PHPUnit\Framework\Attributes\Group;
@@ -27,9 +27,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#one-result-at-every-door
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ResultPointersTest extends DataSurfaceKernelTestBase {
+class ResultPointersTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
 
@@ -44,10 +44,10 @@ class ResultPointersTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_react',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_react',
   ];
 
   /**
@@ -56,7 +56,7 @@ class ResultPointersTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
     $this->setUpCurrentUser([], ['administer site configuration']);
   }
@@ -73,7 +73,7 @@ class ResultPointersTest extends DataSurfaceKernelTestBase {
    *   Its result's context, and its message.
    */
   protected function tool(string $resource, array $values): array {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:' . $resource . ':configure');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:' . $resource . ':configure');
     assert($tool instanceof ToolInterface);
     $tool->setInputValue(OperationInputs::VALUES, $values);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
@@ -132,7 +132,7 @@ class ResultPointersTest extends DataSurfaceKernelTestBase {
     }
 
     // A stored room the stored venue no longer offers: kept, stale.
-    $this->config('data_surface_examples.registration_step2')->set('venue', 'harbour')->set('room', 'library_garden')->save();
+    $this->config('surface_examples.registration_step2')->set('venue', 'harbour')->set('room', 'library_garden')->save();
     [$tool] = $this->tool('registration.step2', ['title' => 'Kept']);
     $this->assertSame(['/room' => Violation::STALE], array_column($tool['stale'], 'code', 'path'));
     $this->assertSame(['/title'], $tool['changes']);
@@ -144,7 +144,7 @@ class ResultPointersTest extends DataSurfaceKernelTestBase {
     $envelope = $this->servedJson('GET', '/surface-api/registration.step2');
     $this->assertSame(['/room'], $envelope['stale']);
     $this->assertSame(['/room' => Violation::STALE], array_column($envelope['notes'], 'code', 'path'));
-    $this->config('data_surface_examples.registration_step2')->set('venue', 'riverside')->set('room', 'riverside_main')->save();
+    $this->config('surface_examples.registration_step2')->set('venue', 'riverside')->set('room', 'riverside_main')->save();
     $narrowed = $this->servedJson('POST', '/surface-api/registration.step2/schema', [
       'venue' => 'library',
       'room' => 'riverside_main',

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -20,9 +20,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * TypeError". The tool's shape check refuses it first, `type_mismatch` by
  * pointer, in the pipeline's words, as the HTTP door does.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ArraySentForAScalarTest extends DataSurfaceKernelTestBase {
+class ArraySentForAScalarTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
   use UserCreationTrait;
@@ -36,10 +36,10 @@ class ArraySentForAScalarTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_examples',
+    'surface',
+    'surface_tool',
+    'surface_react',
+    'surface_examples',
   ];
 
   /**
@@ -57,7 +57,7 @@ class ArraySentForAScalarTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -65,7 +65,7 @@ class ArraySentForAScalarTest extends DataSurfaceKernelTestBase {
    * Tests the tool answers the refusal in the result shape.
    */
   public function testTheToolRefusesIt(): void {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:event.mailer:configure');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:event.mailer:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['endpoint' => ['x']]);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
@@ -75,7 +75,7 @@ class ArraySentForAScalarTest extends DataSurfaceKernelTestBase {
     $this->assertSame([self::REFUSED], $result->getContextValues()[OperationInputs::VIOLATIONS]);
 
     // A list item and a key inside a child, the same, each by its path.
-    $violations = $this->container->get('plugin.manager.tool')->createInstance('data_surface:event.mailer:configure')->validateInputValues([
+    $violations = $this->container->get('plugin.manager.tool')->createInstance('surface:event.mailer:configure')->validateInputValues([
       OperationInputs::VALUES => ['sender' => ['a' => 1], 'credential' => ['api_key' => ['k']]],
       OperationInputs::DRY_RUN => TRUE,
     ]);

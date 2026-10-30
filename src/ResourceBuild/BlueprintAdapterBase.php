@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -10,17 +10,17 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
+use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Reference\References;
-use Drupal\data_surface\Refinement\Rule;
-use Drupal\data_surface\Resolve;
-use Drupal\data_surface\Resource\Arrangement;
-use Drupal\data_surface\Resource\ArrangementGroup;
-use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
-use Drupal\data_surface\Resource\ComputesValueInterface;
-use Drupal\data_surface\Resource\DefinesInputsInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Refinement\Rule;
+use Drupal\surface\Resolve;
+use Drupal\surface\Resource\Arrangement;
+use Drupal\surface\Resource\ArrangementGroup;
+use Drupal\surface\Resource\BlueprintAdditionsInterface;
+use Drupal\surface\Resource\ComputesValueInterface;
+use Drupal\surface\Resource\DefinesInputsInterface;
 
 /**
  * What every blueprint does: add, over the engine's builder.
@@ -63,7 +63,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * The rules declared through this blueprint, in order.
    *
-   * @var \Drupal\data_surface\Refinement\Rule[]
+   * @var \Drupal\surface\Refinement\Rule[]
    */
   protected array $rules = [];
 
@@ -94,7 +94,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * Constructs a blueprint over a builder.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The engine's builder the blueprint fills.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, which turns a type name into the right
@@ -103,7 +103,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *   TRUE when this blueprint describes outputs rather than inputs.
    */
   public function __construct(
-    protected readonly DataSurfaceBuilderInterface $builder,
+    protected readonly SurfaceBuilderInterface $builder,
     protected readonly TypedDataManagerInterface $typedDataManager,
     protected readonly bool $outputs = FALSE,
   ) {
@@ -112,7 +112,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * Hands the blueprint what resolves shapes and their alters.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Shapes|null $shapes
+   * @param \Drupal\surface\ResourceBuild\Shapes|null $shapes
    *   The resolver; NULL declares a shape as it is, with no alter.
    *
    * @return $this
@@ -125,7 +125,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * Hands the blueprint what builds a key that refers to an entity.
    *
-   * @param \Drupal\data_surface\Reference\References|null $references
+   * @param \Drupal\surface\Reference\References|null $references
    *   The service; NULL refuses a reference key.
    *
    * @return $this
@@ -282,7 +282,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     if (!Shapes::isShape($type)) {
       throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)
         ? sprintf('%s("%s") was handed %s, a resource or structure, as a type: a group of keys is attached at the key, attach(\'%s\', ...), or mixed in, mixIn().', $verb, $key, $type, $key)
-        : sprintf('%s("%s") was handed %s, which is no typed data type and no shape: a shape implements %s and carries #[Shape].', $verb, $key, $type, 'Drupal\data_surface\Resource\ShapeInterface'));
+        : sprintf('%s("%s") was handed %s, which is no typed data type and no shape: a shape implements %s and carries #[Shape].', $verb, $key, $type, 'Drupal\surface\Resource\ShapeInterface'));
     }
     return $this->shapes?->forKey($type) ?? Shapes::unaltered($type);
   }
@@ -451,7 +451,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * Gets the rules declared through this blueprint, in order.
    *
-   * @return \Drupal\data_surface\Refinement\Rule[]
+   * @return \Drupal\surface\Refinement\Rule[]
    *   The rules.
    */
   public function rules(): array {
@@ -571,7 +571,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * Builds the arrangement describe() was given, or NULL for none.
    *
-   * @param \Drupal\data_surface\Resource\ArrangementGroup|null $group
+   * @param \Drupal\surface\Resource\ArrangementGroup|null $group
    *   The group the key is drawn in.
    * @param int|null $weight
    *   Its weight among its frame's keys.
@@ -584,7 +584,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * @param string|\Stringable|null $help
    *   A help text drawn after the key's description.
    *
-   * @return \Drupal\data_surface\Resource\Arrangement|null
+   * @return \Drupal\surface\Resource\Arrangement|null
    *   The arrangement, or NULL when all six are NULL.
    */
   protected static function arrangement(?ArrangementGroup $group, ?int $weight, string|\Stringable|null $placeholder, string|\Stringable|null $prefix, string|\Stringable|null $suffix, string|\Stringable|null $help): ?Arrangement {

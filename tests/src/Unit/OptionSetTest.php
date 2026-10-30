@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Cache\Context\CacheContextsManager;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
-use Drupal\data_surface\Options\OptionSet;
+use Drupal\surface\Options\OptionSet;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -25,9 +25,9 @@ use PHPUnit\Framework\Attributes\Group;
  * read from site state is not permanent, and saying otherwise is how a
  * form holding live options gets cached as though it were static.
  *
- * @see \Drupal\data_surface\Options\OptionSet
+ * @see \Drupal\surface\Options\OptionSet
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class OptionSetTest extends UnitTestCase {
 
   /**

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Form;
+namespace Drupal\surface\Form;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
 
 /**
  * A field item that hosts the structure its #[UsesStructure] names.
@@ -21,10 +21,10 @@ use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
  * storage of its own (SurfaceAddressItem hands the field settings
  * storage its storage layout).
  *
- * DataSurfaceFieldTypeTrait implements all three methods; a field item
+ * SurfaceFieldTypeTrait implements all three methods; a field item
  * using it declares that it implements this interface.
  *
- * @see \Drupal\data_surface\Form\DataSurfaceFieldTypeTrait
+ * @see \Drupal\surface\Form\SurfaceFieldTypeTrait
  */
 interface FieldSurfaceProviderInterface {
 
@@ -40,10 +40,10 @@ interface FieldSurfaceProviderInterface {
   /**
    * Builds the data surface for this field type's instance settings.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The structure #[UsesStructure] names, built in the host's context.
    */
-  public function getFieldSurface(): DataSurfaceInterface;
+  public function getFieldSurface(): SurfaceInterface;
 
   /**
    * Gets the storage the field settings are read from and written to.
@@ -53,10 +53,10 @@ interface FieldSurfaceProviderInterface {
    * instance being described. The host supplies it, since only the item
    * holds the field config Field UI is editing, unsaved changes and all.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface
+   * @return \Drupal\surface\Pipeline\SurfaceStorageInterface
    *   The storage.
    */
-  public function getDataSurfaceStorage(): DataSurfaceStorageInterface;
+  public function getSurfaceStorage(): SurfaceStorageInterface;
 
   /**
    * Answers whether an account may configure these settings.

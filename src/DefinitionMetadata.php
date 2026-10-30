@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\data_surface\Resource\Arrangement;
+use Drupal\surface\Resource\Arrangement;
 
 /**
  * Reads and writes definition metadata core cannot express yet.
@@ -64,17 +64,17 @@ final class DefinitionMetadata {
    * module's own, like 'secret': core has no union type, and this is the
    * smallest thing a definition can say about being one.
    */
-  protected const VARIANTS_BY_KEY = 'data_surface_variants_by';
+  protected const VARIANTS_BY_KEY = 'surface_variants_by';
 
   /**
    * The definition array key marking a map that only groups other maps.
    */
-  protected const GROUPING_KEY = 'data_surface_grouping';
+  protected const GROUPING_KEY = 'surface_grouping';
 
   /**
    * The definition array key holding where a module's mount is drawn.
    */
-  protected const PLACED_AFTER_KEY = 'data_surface_placed_after';
+  protected const PLACED_AFTER_KEY = 'surface_placed_after';
 
   /**
    * The definition array key naming the shape a key was declared with.
@@ -83,12 +83,12 @@ final class DefinitionMetadata {
    * is what the key may only narrow and what its def in the served
    * contract is written from.
    */
-  protected const SHAPE_KEY = 'data_surface_shape';
+  protected const SHAPE_KEY = 'surface_shape';
 
   /**
    * The definition array key holding the config schema type a key names.
    */
-  protected const CONFIG_TYPE_KEY = 'data_surface_config_type';
+  protected const CONFIG_TYPE_KEY = 'surface_config_type';
 
   /**
    * The definition array key marking a key its storage always holds.
@@ -97,7 +97,7 @@ final class DefinitionMetadata {
    * author: whether a key may hold nothing is a fact of where it is
    * stored, which the resource does not know.
    */
-  protected const ALWAYS_HELD_KEY = 'data_surface_always_held';
+  protected const ALWAYS_HELD_KEY = 'surface_always_held';
 
   /**
    * The definition array key holding what each entry from the site is.
@@ -106,12 +106,12 @@ final class DefinitionMetadata {
    * declared: the entries are the site's, so a reader that describes the
    * map whatever the site lists (its config schema) reads the entry here.
    */
-  protected const EACH_KEY = 'data_surface_each';
+  protected const EACH_KEY = 'surface_each';
 
   /**
    * The offset where a key's variants say the provider that lists them.
    */
-  protected const VARIANTS_FROM_KEY = 'data_surface_variants_from';
+  protected const VARIANTS_FROM_KEY = 'surface_variants_from';
 
   /**
    * The offset marking variants a schema read into a structure states.
@@ -121,7 +121,7 @@ final class DefinitionMetadata {
    * its id): the list is the document's, so the site's when a provider
    * wrote it, and the budget for what the site decides counts it.
    */
-  protected const READ_VARIANTS_KEY = 'data_surface_read_variants';
+  protected const READ_VARIANTS_KEY = 'surface_read_variants';
 
   /**
    * The offset marking a deciding key whose variants offer one value.
@@ -130,7 +130,7 @@ final class DefinitionMetadata {
    * its own and whose variants offer a single value: the key is a fixed
    * value then, drawn as one and stated as `const`.
    */
-  protected const ONE_VARIANT_KEY = 'data_surface_one_variant';
+  protected const ONE_VARIANT_KEY = 'surface_one_variant';
 
   /**
    * The offset marking a key its operation's context fixed to one value.
@@ -140,7 +140,7 @@ final class DefinitionMetadata {
    * `const` wherever the key holds a value, as a deciding key whose
    * variants offer one is.
    */
-  protected const FIXED_KEY = 'data_surface_fixed';
+  protected const FIXED_KEY = 'surface_fixed';
 
   /**
    * The definition array key holding the label the owner gave a key.
@@ -149,7 +149,7 @@ final class DefinitionMetadata {
    * describes the owner's own storage (its config schema) reads the
    * owner's words, not those of whichever modules were on.
    */
-  protected const OWN_LABEL_KEY = 'data_surface_own_label';
+  protected const OWN_LABEL_KEY = 'surface_own_label';
 
   /**
    * The definition array key holding how a key is arranged where drawn.
@@ -158,7 +158,7 @@ final class DefinitionMetadata {
    * and help. The module's own, like 'secret': core's form display says
    * the same for fields, and has nowhere on a data definition to say it.
    */
-  protected const ARRANGEMENT_KEY = 'data_surface_arrangement';
+  protected const ARRANGEMENT_KEY = 'surface_arrangement';
 
   /**
    * The definition array key holding what a computed key is computed from.
@@ -166,7 +166,7 @@ final class DefinitionMetadata {
    * Holds a Computed: the keys, the class computing it and when. Set by
    * BlueprintInterface::compute() alone.
    */
-  protected const COMPUTED_KEY = 'data_surface_computed';
+  protected const COMPUTED_KEY = 'surface_computed';
 
   /**
    * The definition array key holding what a key is resolved from at use.
@@ -175,7 +175,7 @@ final class DefinitionMetadata {
    * resolving it. Set by BlueprintAdditionsInterface::resolve() alone, and
    * read by Resources::resolved() alone: nothing emitted states it.
    */
-  protected const RESOLVE_KEY = 'data_surface_resolve';
+  protected const RESOLVE_KEY = 'surface_resolve';
 
   /**
    * Declares the value a definition starts from.
@@ -417,7 +417,7 @@ final class DefinitionMetadata {
    * @param string $by
    *   The sibling key whose value chooses the variant.
    *
-   * @see \Drupal\data_surface\Variants
+   * @see \Drupal\surface\Variants
    */
   public static function setVariantsBy(DataDefinitionInterface $definition, string $by): void {
     static::arrayAccess($definition)->offsetSet(static::VARIANTS_BY_KEY, $by);
@@ -711,7 +711,7 @@ final class DefinitionMetadata {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
-   * @param \Drupal\data_surface\Computed $computed
+   * @param \Drupal\surface\Computed $computed
    *   What it is computed from, by what, and when.
    *
    * @see docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources
@@ -726,7 +726,7 @@ final class DefinitionMetadata {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
    *
-   * @return \Drupal\data_surface\Computed|null
+   * @return \Drupal\surface\Computed|null
    *   What it is computed from, or NULL for a key a caller types.
    */
   public static function computedOf(DataDefinitionInterface $definition): ?Computed {
@@ -742,7 +742,7 @@ final class DefinitionMetadata {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
-   * @param \Drupal\data_surface\Resolve $resolve
+   * @param \Drupal\surface\Resolve $resolve
    *   What it is resolved from, and by what.
    *
    * @see docs/decisions.md#a-key-may-stand-for-another-at-use
@@ -757,7 +757,7 @@ final class DefinitionMetadata {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
    *
-   * @return \Drupal\data_surface\Resolve|null
+   * @return \Drupal\surface\Resolve|null
    *   What it is resolved from, or NULL for a key read as stored.
    */
   public static function resolveOf(DataDefinitionInterface $definition): ?Resolve {
@@ -911,7 +911,7 @@ final class DefinitionMetadata {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key's definition.
-   * @param \Drupal\data_surface\Resource\Arrangement $arrangement
+   * @param \Drupal\surface\Resource\Arrangement $arrangement
    *   Its arrangement.
    *
    * @see docs/decisions.md#arrangement-is-declared-once
@@ -926,7 +926,7 @@ final class DefinitionMetadata {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
    *
-   * @return \Drupal\data_surface\Resource\Arrangement|null
+   * @return \Drupal\surface\Resource\Arrangement|null
    *   Its arrangement, or NULL when it declares none.
    */
   public static function arrangementOf(DataDefinitionInterface $definition): ?Arrangement {

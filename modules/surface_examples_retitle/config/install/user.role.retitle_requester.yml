@@ -1,0 +1,13 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - surface_examples_retitle
+    - node
+id: retitle_requester
+label: 'Retitle requester'
+weight: 12
+is_admin: false
+permissions:
+  - 'access content'
+  - 'retitle nodes'

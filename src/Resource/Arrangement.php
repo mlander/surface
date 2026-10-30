@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * How a key is arranged where it is drawn, declared on its definition.
@@ -35,7 +35,7 @@ namespace Drupal\data_surface\Resource;
  * drawn as a placeholder, since an empty field showing a value reads as
  * filled.
  *
- * @see \Drupal\data_surface\DefinitionMetadata::setArrangement()
+ * @see \Drupal\surface\DefinitionMetadata::setArrangement()
  * @see docs/decisions.md#arrangement-is-declared-once
  */
 final class Arrangement {
@@ -48,7 +48,7 @@ final class Arrangement {
   /**
    * Constructs an Arrangement.
    *
-   * @param \Drupal\data_surface\Resource\ArrangementGroup|null $group
+   * @param \Drupal\surface\Resource\ArrangementGroup|null $group
    *   The group the key is drawn in, or NULL for none.
    * @param int|null $weight
    *   Its weight among its frame's keys (or its group's), lighter first;

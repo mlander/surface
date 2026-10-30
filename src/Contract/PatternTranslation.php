@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 /**
  * Translates a PHP regular expression to a JSON Schema `pattern`.

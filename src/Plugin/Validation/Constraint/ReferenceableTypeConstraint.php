@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Validation\Attribute\Constraint;
@@ -20,11 +20,11 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * and the account may reference at least one entity of it, of the
  * target's bundles. The options resolver beside it lists them.
  *
- * @see \Drupal\data_surface\Reference\References::entityTypes()
- * @see \Drupal\data_surface\Plugin\DataSurfaceOptionsResolver\ReferenceableTypeOptions
+ * @see \Drupal\surface\Reference\References::entityTypes()
+ * @see \Drupal\surface\Plugin\SurfaceOptionsResolver\ReferenceableTypeOptions
  */
 #[Constraint(
-  id: 'DataSurfaceReferenceableType',
+  id: 'SurfaceReferenceableType',
   label: new TranslatableMarkup('An entity type the account may reference', [], ['context' => 'Validation']),
   type: FALSE,
 )]

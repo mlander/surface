@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Component\Render\PlainTextOutput;
-use Drupal\data_surface\Pipeline\ResultDocument;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool_test\Storage\CabinetStorage;
+use Drupal\surface\Pipeline\ResultDocument;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\surface_tool_test\Storage\CabinetStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\ExecutableResult;
 use Drupal\tool\FailureCategory;
@@ -29,9 +29,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * door, exactly ResultDocument::KEYS, refused or not, at the tool and at
  * React, each entry with its code.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ToolResultShapeTest extends DataSurfaceKernelTestBase {
+class ToolResultShapeTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
 
@@ -45,11 +45,11 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_tool_test',
-    'data_surface_examples',
+    'surface',
+    'surface_tool',
+    'surface_react',
+    'surface_tool_test',
+    'surface_examples',
   ];
 
   /**
@@ -69,7 +69,7 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     // The first account is the super user; every test acts as another.
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
     $this->container->get('state')->set(CabinetStorage::KEY, self::STORED);
   }
@@ -86,7 +86,7 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
    *   The result.
    */
   protected function runTool(string $operation, array $values): ExecutableResult {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:tool_test.cabinet:' . $operation);
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:tool_test.cabinet:' . $operation);
     $tool->setInputValue(OperationInputs::VALUES, $values);
     $tool->execute();
     return $tool->getResult();
@@ -158,7 +158,7 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
    */
   public function testOutputsAreDeclared(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    $edit = $tools->createInstance('data_surface:tool_test.cabinet:update');
+    $edit = $tools->createInstance('surface:tool_test.cabinet:update');
     $outputs = $edit->getOutputDefinitions();
     $this->assertSame(ResultDocument::KEYS, array_keys($outputs), 'The result shape, in its order, and nothing else: the cabinet declares no outputs of its own.');
     foreach ($outputs as $name => $output) {
@@ -175,7 +175,7 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
 
     // A read only operation writes nothing at any door: no dry run, and
     // the same keys, nothing written and nothing changed.
-    $count = $tools->createInstance('data_surface:tool_test.cabinet:count');
+    $count = $tools->createInstance('surface:tool_test.cabinet:count');
     $this->assertArrayNotHasKey(OperationInputs::DRY_RUN, $count->getInputDefinitions());
     $outputs = $count->getOutputDefinitions();
     $this->assertSame(ResultDocument::KEYS, array_keys($outputs));
@@ -190,11 +190,11 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
    * Tests `values` is always sent: never null, and {} changes nothing.
    */
   public function testValuesIsRequiredAndNeverNull(): void {
-    $definition = $this->container->get('plugin.manager.tool')->createInstance('data_surface:tool_test.cabinet:update')->getInputDefinitions()[OperationInputs::VALUES];
+    $definition = $this->container->get('plugin.manager.tool')->createInstance('surface:tool_test.cabinet:update')->getInputDefinitions()[OperationInputs::VALUES];
     $this->assertTrue($definition->isRequired());
     $this->assertArrayHasKey('NotNull', $definition->getConstraints());
     $this->assertStringContainsString('never null', (string) $definition->getDescription());
-    $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($this->container->get('plugin.manager.tool')->createInstance('data_surface:tool_test.cabinet:update'));
+    $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($this->container->get('plugin.manager.tool')->createInstance('surface:tool_test.cabinet:update'));
     $this->assertContains(OperationInputs::VALUES, $schema['required']);
     $this->assertSame('object', $schema['properties'][OperationInputs::VALUES]['type']);
 
@@ -203,14 +203,14 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
     // before the tool runs, and nothing written.
     $runner = $this->container->get('tool.runner');
     foreach ([['values' => NULL], []] as $inputs) {
-      $result = $runner->run('data_surface:tool_test.cabinet:update', $inputs)->getResult();
+      $result = $runner->run('surface:tool_test.cabinet:update', $inputs)->getResult();
       $this->assertFalse($result->isSuccess());
       $this->assertSame("Invalid input:\nvalues: This value should not be null.", PlainTextOutput::renderFromHtml((string) $result->getMessage()));
     }
     $this->assertSame(self::STORED, $this->container->get('state')->get(CabinetStorage::KEY));
 
     // {} is an update with nothing to change: accepted, nothing written.
-    $result = $runner->run('data_surface:tool_test.cabinet:update', ['values' => []])->getResult();
+    $result = $runner->run('surface:tool_test.cabinet:update', ['values' => []])->getResult();
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());
     $answered = $result->getContextValues();
     $this->assertSame(['ok' => TRUE, 'committed' => TRUE, 'changed' => FALSE, 'changes' => []], array_slice($answered, 0, 4));
@@ -238,7 +238,7 @@ class ToolResultShapeTest extends DataSurfaceKernelTestBase {
     // paths and values as sent at the tool; the paths and codes are one.
     $this->setUpCurrentUser([], ['administer site configuration']);
     $sent = ['venue' => 'harbour', 'room' => 'library_garden'];
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:registration.step2:configure');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:registration.step2:configure');
     $tool->setInputValue(OperationInputs::VALUES, $sent);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();

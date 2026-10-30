@@ -1,0 +1,35 @@
+services:
+  # Resolves a resource id, an operation id and its parameters into the
+  # context, the built resource and its storage, and answers access.
+  surface_react.served_operations:
+    class: Drupal\surface_react\ServedOperations
+    arguments: ['@surface.resource_registry', '@surface.resources']
+  # Reads which operation a path and a method name, and writes the path of
+  # an operation: contract 3's paths.
+  surface_react.served_paths:
+    class: Drupal\surface_react\ServedPaths
+    arguments: ['@surface.resource_registry', '@string_translation']
+  # Gates the page and the API by the operation they name: its permission,
+  # then the resource's access class.
+  surface_react.access:
+    class: Drupal\surface_react\Access\ServedOperationAccessCheck
+    arguments: ['@surface_react.served_operations', '@surface_react.served_paths', '@request_stack', '@surface.operation_gate', '@logger.channel.surface']
+    tags:
+      - { name: access_check, applies_to: _surface_react_access }
+  # Answers every HTTP error of the API as problem details.
+  surface_react.problem_details:
+    class: Drupal\surface_react\EventSubscriber\ProblemDetailsSubscriber
+    tags:
+      - { name: event_subscriber }
+  # Tags the full schema by its bytes, and answers 304 to a tag that holds.
+  surface_react.schema_tag:
+    class: Drupal\surface_react\EventSubscriber\SchemaTagSubscriber
+    tags:
+      - { name: event_subscriber }
+  # The HTTP path and the React pages an operation reaches, its own and
+  # those modules serve it at, for the site catalog.
+  surface_react.catalog_doors:
+    class: Drupal\surface_react\ServedDoors
+    arguments: ['@surface_react.served_paths', '@surface.form_route_doors']
+    tags:
+      - { name: surface.catalog_doors, priority: 30 }

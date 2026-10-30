@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
-use Drupal\data_surface_resource_test\Storage\StoreroomStorage;
+use Drupal\surface_resource_test\Storage\StoreroomStorage;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -16,10 +16,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * own list of shelves, with its own controls, read back into the aisle it
  * belongs to, and a shelf's refusal is flagged on the shelf it is about.
  *
- * @see \Drupal\data_surface_resource_test\Resource\Storeroom\StoreroomResource
+ * @see \Drupal\surface_resource_test\Resource\Storeroom\StoreroomResource
  * @see docs/decisions.md#a-list-of-child-invocations
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class NestedCollectionFormTest extends BrowserTestBase {
 
@@ -27,9 +27,9 @@ class NestedCollectionFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_react',
-    'data_surface_resource_test',
+    'surface',
+    'surface_react',
+    'surface_resource_test',
   ];
 
   /**
@@ -79,10 +79,10 @@ class NestedCollectionFormTest extends BrowserTestBase {
     $assert->fieldValueEquals('surface[aisles][0][label]', 'North');
     $assert->fieldValueEquals('surface[aisles][0][shelves][0][height]', '40');
     $assert->fieldNotExists('surface[aisles][1][shelves][0][height]');
-    $assert->buttonExists('data_surface_aisles_1_shelves_add');
+    $assert->buttonExists('surface_aisles_1_shelves_add');
 
     // Another shelf in the second aisle, and only there.
-    $page->pressButton('data_surface_aisles_1_shelves_add');
+    $page->pressButton('surface_aisles_1_shelves_add');
     $assert->fieldExists('surface[aisles][1][shelves][0][height]');
     $assert->fieldNotExists('surface[aisles][0][shelves][1][height]');
     $page->fillField('surface[aisles][1][shelves][0][unit]', 'in');
@@ -90,7 +90,7 @@ class NestedCollectionFormTest extends BrowserTestBase {
     $page->pressButton('Save');
     $assert->pageTextContains('The changes have been saved.');
     // The shelf's alter mounts a key of its own, with its default.
-    $sturdy = ['third_party_settings' => ['data_surface_resource_test' => ['sturdy' => TRUE]]];
+    $sturdy = ['third_party_settings' => ['surface_resource_test' => ['sturdy' => TRUE]]];
     $this->assertSame([
       ['label' => 'North', 'shelves' => [['unit' => 'cm', 'height' => 40] + $sturdy]],
       ['label' => 'South', 'shelves' => [['unit' => 'in', 'height' => 12] + $sturdy]],
@@ -105,7 +105,7 @@ class NestedCollectionFormTest extends BrowserTestBase {
 
     // Removed, the shelf goes and the aisle stays.
     $this->drupalGet('surface-test/storeroom');
-    $page->pressButton('data_surface_aisles_0_shelves_0_remove');
+    $page->pressButton('surface_aisles_0_shelves_0_remove');
     $assert->fieldNotExists('surface[aisles][0][shelves][0][height]');
     $page->pressButton('Save');
     $this->assertSame([], $this->stored()['aisles'][0]['shelves']);

@@ -1,8 +1,8 @@
-# mkdocs configuration for the Data Surface module.
+# mkdocs configuration for the Surface API module.
 # Docs live under docs/, entry point docs/index.md.
 # Published to GitLab Pages at the site_url below.
-site_name: Data Surface
-site_url: https://project.pages.drupalcode.org/data_surface
+site_name: Surface API
+site_url: https://project.pages.drupalcode.org/surface
 
 theme:
   name: material

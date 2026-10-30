@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline\Storage;
+namespace Drupal\surface\Pipeline\Storage;
 
 use Drupal\Component\Plugin\ConfigurableInterface;
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Pipeline\PreparedValues;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Pipeline\PreparedValues;
 
 /**
  * Stores a data surface's values in a plugin's configuration array.
@@ -33,7 +33,7 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  * prepared artifact is already the complete configuration: accept() has
  * filled every data surface key and the host-owned keys are carried over
  * untouched, so there is nothing for the merge to add. The plugin host
- * base classes (DataSurfaceConfigurationTrait) set $this->configuration
+ * base classes (SurfaceConfigurationTrait) set $this->configuration
  * directly instead, which is why the pipeline's merge rule, not the
  * host's, is the one that decides what a data surface key ends up
  * holding.
@@ -47,7 +47,7 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  *
  * @see docs/storage.md
  */
-final class PluginConfigurationStorage implements DataSurfaceStorageInterface {
+final class PluginConfigurationStorage implements SurfaceStorageInterface {
 
   use DependencySerializationTrait;
 
@@ -65,14 +65,14 @@ final class PluginConfigurationStorage implements DataSurfaceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function load(DataSurfaceInterface $surface): array {
+  public function load(SurfaceInterface $surface): array {
     return array_intersect_key($this->plugin->getConfiguration(), $surface->getDefinitions()->toArray());
   }
 
   /**
    * {@inheritdoc}
    */
-  public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+  public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
     $host_keys = array_diff_key($this->plugin->getConfiguration(), $surface->getDefinitions()->toArray());
     // A plugin reads its configuration whole, so every key it declares is
     // there: a default the pipeline did not write, since the

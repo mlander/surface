@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline\Storage;
+namespace Drupal\surface\Pipeline\Storage;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Pipeline\PreparedValues;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Pipeline\PreparedValues;
 
 /**
  * Sends one data surface's values to several destinations in order.
@@ -40,14 +40,14 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  *
  * @see docs/storage.md
  */
-final class CompositeStorage implements DataSurfaceStorageInterface {
+final class CompositeStorage implements SurfaceStorageInterface {
 
   use DependencySerializationTrait;
 
   /**
    * The children, each as a storage and the keys it receives.
    *
-   * @var array<int, array{0: \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface, 1: string[]|null}>
+   * @var array<int, array{0: \Drupal\surface\Pipeline\SurfaceStorageInterface, 1: string[]|null}>
    */
   protected readonly array $children;
 
@@ -63,11 +63,11 @@ final class CompositeStorage implements DataSurfaceStorageInterface {
   public function __construct(array $children) {
     $pairs = [];
     foreach ($children as $child) {
-      if ($child instanceof DataSurfaceStorageInterface) {
+      if ($child instanceof SurfaceStorageInterface) {
         $pairs[] = [$child, NULL];
         continue;
       }
-      if (!is_array($child) || !($child[0] ?? NULL) instanceof DataSurfaceStorageInterface) {
+      if (!is_array($child) || !($child[0] ?? NULL) instanceof SurfaceStorageInterface) {
         throw new \InvalidArgumentException('A composite storage child must be a storage, or a storage and the data surface keys it receives.');
       }
       $keys = $child[1] ?? NULL;
@@ -79,7 +79,7 @@ final class CompositeStorage implements DataSurfaceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function load(DataSurfaceInterface $surface): array {
+  public function load(SurfaceInterface $surface): array {
     $this->checkClaims($surface);
     $values = [];
     foreach ($this->children as [$storage, $keys]) {
@@ -98,7 +98,7 @@ final class CompositeStorage implements DataSurfaceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+  public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
     $this->checkClaims($surface);
     $artifacts = [];
     $dependencies = [];
@@ -135,13 +135,13 @@ final class CompositeStorage implements DataSurfaceStorageInterface {
    * names the third party settings mount nothing has used yet. Only the
    * data surface's own keys have to be accounted for.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface whose keys the children divide between them.
    *
    * @throws \InvalidArgumentException
    *   When a key is claimed by no child, or by more than one.
    */
-  protected function checkClaims(DataSurfaceInterface $surface): void {
+  protected function checkClaims(SurfaceInterface $surface): void {
     $declared = $surface->getDefinitions()->names();
     $claims = array_fill_keys($declared, 0);
     foreach ($this->children as [, $keys]) {

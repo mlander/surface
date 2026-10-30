@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 
@@ -20,7 +20,7 @@ abstract class ExamplesWebDriverTestBase extends WebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
+    'surface_examples',
   ];
 
   /**

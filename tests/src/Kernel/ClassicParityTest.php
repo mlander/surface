@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
-use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
-use Drupal\data_surface_demo_classic\Plugin\Block\ClassicDemoBlock;
-use Drupal\data_surface_demo_classic\Plugin\Field\FieldFormatter\ClassicDemoFormatter;
+use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
+use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
+use Drupal\surface_examples_classic\Plugin\Block\ClassicDemoBlock;
+use Drupal\surface_examples_classic\Plugin\Field\FieldFormatter\ClassicDemoFormatter;
 use Drupal\entity_test\Entity\EntityTest;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -19,9 +19,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Holds the classic demo and the Data Surface demo to the same behavior.
+ * Holds the classic demo and the Surface API demo to the same behavior.
  *
- * The comparison in modules/data_surface_demo_classic/README.md counts
+ * The comparison in modules/surface_examples_classic/README.md counts
  * lines and concepts, and a count proves nothing unless the two versions
  * do the same thing. This is where that is enforced rather than claimed:
  * the same input into both blocks stores the same configuration, and the
@@ -30,11 +30,11 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * A failure here means the comparison has stopped being a comparison.
  *
- * @see modules/data_surface_demo_classic/README.md
+ * @see modules/surface_examples_classic/README.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ClassicParityTest extends DataSurfaceKernelTestBase {
+class ClassicParityTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -47,9 +47,9 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
     'field',
     'text',
     'entity_test',
-    'data_surface',
-    'data_surface_demo',
-    'data_surface_demo_classic',
+    'surface',
+    'surface_examples_plugins',
+    'surface_examples_classic',
   ];
 
   /**
@@ -79,8 +79,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
    * Tests that both blocks start from the same defaults.
    */
   public function testBlockDefaultsMatch(): void {
-    $surface = $this->createBlock('data_surface_demo')->defaultConfiguration();
-    $classic = $this->createBlock('data_surface_demo_classic')->defaultConfiguration();
+    $surface = $this->createBlock('surface_examples_plugins')->defaultConfiguration();
+    $classic = $this->createBlock('surface_examples_classic')->defaultConfiguration();
 
     $this->assertSame($this->settingsOf($classic), $this->settingsOf($surface));
     // And they are the defaults the demo documents, so a parity that
@@ -112,8 +112,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
    */
   #[DataProvider('blockSubmissions')]
   public function testBlocksStoreTheSameConfiguration(array $input, array $expected, array $start = []): void {
-    $surface = $this->submitBlock($this->createBlock('data_surface_demo', $start), $input);
-    $classic = $this->submitBlock($this->createBlock('data_surface_demo_classic', $start), $input);
+    $surface = $this->submitBlock($this->createBlock('surface_examples_plugins', $start), $input);
+    $classic = $this->submitBlock($this->createBlock('surface_examples_classic', $start), $input);
 
     $this->assertSame($expected, $surface);
     $this->assertSame($classic, $surface);
@@ -225,8 +225,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
       'presentation' => 'list',
       'presentation_settings' => ['show_summary' => FALSE],
     ];
-    $surface = $this->createBlock('data_surface_demo', $configuration)->build();
-    $classic = $this->createBlock('data_surface_demo_classic', $configuration)->build();
+    $surface = $this->createBlock('surface_examples_plugins', $configuration)->build();
+    $classic = $this->createBlock('surface_examples_classic', $configuration)->build();
 
     $this->assertSame(
       array_map('strval', $classic['#items']),
@@ -241,11 +241,11 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that both formatters declare the same static defaults.
    *
-   * The Data Surface one declares one key more, the namespace third parties
+   * The Surface API one declares one key more, the namespace third parties
    * mount settings into, which is a thing the classic one cannot have.
    */
   public function testFormatterDefaultsMatch(): void {
-    $surface = DataSurfaceDemoFormatter::defaultSettings();
+    $surface = ExampleFormatter::defaultSettings();
     $classic = ClassicDemoFormatter::defaultSettings();
 
     $this->assertSame([], $surface['third_party_settings']);
@@ -266,8 +266,8 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
     $entity = EntityTest::create(['field_demo' => $values]);
     $items = $entity->get('field_demo');
 
-    $surface = $this->createFormatter(DataSurfaceDemoFormatter::class, 'data_surface_demo_string', $settings);
-    $classic = $this->createFormatter(ClassicDemoFormatter::class, 'data_surface_demo_classic_string', $settings);
+    $surface = $this->createFormatter(ExampleFormatter::class, 'surface_examples_plugins_string', $settings);
+    $classic = $this->createFormatter(ClassicDemoFormatter::class, 'surface_examples_classic_string', $settings);
 
     $surface_elements = $surface->viewElements($items, 'en');
     $classic_elements = $classic->viewElements($items, 'en');
@@ -323,9 +323,9 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
     $this->installDemoField();
     foreach (['none', 'uppercase', 'lowercase'] as $casing) {
       $settings = ['casing' => $casing];
-      $surface = $this->createFormatter(DataSurfaceDemoFormatter::class, 'data_surface_demo_string', $settings)
+      $surface = $this->createFormatter(ExampleFormatter::class, 'surface_examples_plugins_string', $settings)
         ->settingsForm([], new FormState());
-      $classic = $this->createFormatter(ClassicDemoFormatter::class, 'data_surface_demo_classic_string', $settings)
+      $classic = $this->createFormatter(ClassicDemoFormatter::class, 'surface_examples_classic_string', $settings)
         ->settingsForm([], new FormState());
 
       foreach (['casing', 'variant'] as $key) {
@@ -352,7 +352,7 @@ class ClassicParityTest extends DataSurfaceKernelTestBase {
   protected function createBlock(string $plugin_id, array $configuration = []): BlockPluginInterface {
     $block = $this->container->get('plugin.manager.block')->createInstance($plugin_id, $configuration);
     $this->assertInstanceOf(
-      $plugin_id === 'data_surface_demo' ? DataSurfaceDemoBlock::class : ClassicDemoBlock::class,
+      $plugin_id === 'surface_examples_plugins' ? ExampleBlock::class : ClassicDemoBlock::class,
       $block,
     );
     return $block;

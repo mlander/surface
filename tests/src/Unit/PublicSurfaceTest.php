@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
-use Drupal\data_surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\BlueprintAdditionsInterface;
+use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -37,7 +37,7 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class PublicSurfaceTest extends UnitTestCase {
 
   /**
@@ -48,7 +48,7 @@ class PublicSurfaceTest extends UnitTestCase {
   /**
    * The namespace of the authoring API.
    */
-  protected const NAMESPACE = 'Drupal\\data_surface\\Resource\\';
+  protected const NAMESPACE = 'Drupal\\surface\\Resource\\';
 
   /**
    * What the surface holds, by kind.

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface_examples_retitle\Retitle;
+use Drupal\surface_examples_retitle\Retitle;
 use Drupal\node\Entity\Node;
 use Drupal\Tests\BrowserTestBase;
-use Drupal\Tests\data_surface\Traits\ServedApiTrait;
+use Drupal\Tests\surface\Traits\ServedApiTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -22,7 +22,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-gate-is-borrowed-never-copied
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class RetitleFormTest extends BrowserTestBase {
 
@@ -32,8 +32,8 @@ class RetitleFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples_retitle',
-    'data_surface_react',
+    'surface_examples_retitle',
+    'surface_react',
   ];
 
   /**

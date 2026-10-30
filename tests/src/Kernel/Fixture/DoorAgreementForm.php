@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel\Fixture;
+namespace Drupal\Tests\surface\Kernel\Fixture;
 
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\SurfacePipelineInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
 
 /**
  * The operation form, drawn with a document and submitted dry.
@@ -21,9 +21,9 @@ use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
  * written. Everything else is the form's own, its element naming
  * included.
  *
- * @see \Drupal\Tests\data_surface\Traits\DoorAgreementTrait::formDoor()
+ * @see \Drupal\Tests\surface\Traits\DoorAgreementTrait::formDoor()
  */
-final class DoorAgreementForm extends DataSurfaceOperationForm {
+final class DoorAgreementForm extends SurfaceOperationForm {
 
   /**
    * The document the form draws, or NULL for what is stored.
@@ -57,7 +57,7 @@ final class DoorAgreementForm extends DataSurfaceOperationForm {
   /**
    * Gets the last submit's result and the document it answers.
    *
-   * @return array{0: \Drupal\data_surface\Pipeline\DataSurfaceResult, 1: array}|null
+   * @return array{0: \Drupal\surface\Pipeline\SurfaceResult, 1: array}|null
    *   NULL when the form never submitted: it refused at validation.
    */
   public function submitted(): ?array {
@@ -83,7 +83,7 @@ final class DoorAgreementForm extends DataSurfaceOperationForm {
    * The document, while the form is drawn; what is stored, after, as the
    * form extracts against it.
    */
-  protected function storedSurfaceValues(DataSurfaceInterface $surface, DataSurfaceStorageInterface $storage): array {
+  protected function storedSurfaceValues(SurfaceInterface $surface, SurfaceStorageInterface $storage): array {
     $stored = parent::storedSurfaceValues($surface, $storage);
     return $this->drawing && $this->drawn !== NULL ? array_intersect_key($this->drawn, $surface->getDefinitions()->toArray()) : $stored;
   }
@@ -91,7 +91,7 @@ final class DoorAgreementForm extends DataSurfaceOperationForm {
   /**
    * {@inheritdoc}
    */
-  protected function surfacePipeline(): DataSurfacePipelineInterface {
+  protected function surfacePipeline(): SurfacePipelineInterface {
     return $this->dry ??= new DryRunPipeline(parent::surfacePipeline());
   }
 

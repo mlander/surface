@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\MarkupInterface;
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface_performance\Resource\PerformanceResource;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface_examples_performance\Resource\PerformanceResource;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -26,9 +26,9 @@ use Symfony\Component\HttpFoundation\Request;
  * storage holds it to core's config schema as core wrote it, writing each
  * key at core's path and keeping the settings it does not declare.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class PerformanceSurfaceTest extends DataSurfaceKernelTestBase {
+class PerformanceSurfaceTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -40,11 +40,11 @@ class PerformanceSurfaceTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_openapi',
-    'data_surface_performance',
+    'surface',
+    'surface_tool',
+    'surface_react',
+    'surface_openapi',
+    'surface_examples_performance',
   ];
 
   /**
@@ -97,7 +97,7 @@ class PerformanceSurfaceTest extends DataSurfaceKernelTestBase {
    * Tests the resource is held to core's schema, which refuses nothing.
    */
   public function testHeldToCoresSchema(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $built = $resources->build(self::ID, $resources->operation(self::ID, 'configure'));
     $this->assertSame([], $resources->storageInstance(self::ID)->widerThanSchema($built));
     $this->assertSame(PerformanceResource::PERIODS, array_keys($this->coreLabels()));
@@ -107,7 +107,7 @@ class PerformanceSurfaceTest extends DataSurfaceKernelTestBase {
    * Tests the form is core's form: the select, its title and its options.
    */
   public function testTheFormIsCoresForm(): void {
-    $route_name = 'data_surface_performance.configure';
+    $route_name = 'surface_examples_performance.configure';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -116,7 +116,7 @@ class PerformanceSurfaceTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
     $form_state = new FormState();
-    $form = $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state)[DataSurfaceOperationForm::SURFACE_KEY];
+    $form = $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $form_state)[SurfaceOperationForm::SURFACE_KEY];
 
     $max_age = $form['max_age'];
     $this->assertSame('select', $max_age['#type']);
@@ -130,9 +130,9 @@ class PerformanceSurfaceTest extends DataSurfaceKernelTestBase {
     $this->assertSame('checkbox', $form['js_preprocess']['#type']);
     $this->assertSame('Aggregate JavaScript files', (string) $form['js_preprocess']['#title']);
 
-    $caching = $form[DataSurfaceFormBuilderInterface::GROUP_PREFIX . 'caching'];
+    $caching = $form[SurfaceFormBuilderInterface::GROUP_PREFIX . 'caching'];
     $this->assertSame(['details', 'Caching'], [$caching['#type'], (string) $caching['#title']]);
-    $bandwidth = $form[DataSurfaceFormBuilderInterface::GROUP_PREFIX . 'bandwidth_optimization'];
+    $bandwidth = $form[SurfaceFormBuilderInterface::GROUP_PREFIX . 'bandwidth_optimization'];
     $this->assertSame('Bandwidth optimization', (string) $bandwidth['#title']);
     $this->assertSame('External resources can be optimized automatically, which can reduce both the size and number of requests made to your website.', (string) $bandwidth['#description']);
   }
@@ -179,7 +179,7 @@ class PerformanceSurfaceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(PerformanceResource::PERIODS, $constraints['Choice']['choices']);
     $this->assertSame($labels, $constraints['LabeledChoice']['labels']);
 
-    $document = json_decode((string) json_encode($this->container->get('data_surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document, JSON_THROW_ON_ERROR), TRUE);
+    $document = json_decode((string) json_encode($this->container->get('surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document, JSON_THROW_ON_ERROR), TRUE);
     $this->assertArrayHasKey('/surface-api/system.performance', $document['paths']);
     $schema = $document['components']['schemas']['system.performance.configure']['properties']['max_age'];
     $this->assertSame('integer', $schema['type']);

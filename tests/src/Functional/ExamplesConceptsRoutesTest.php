@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
-use Drupal\Tests\data_surface\Traits\ExampleFilesPanelTrait;
+use Drupal\Tests\surface\Traits\ExampleFilesPanelTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * each page shows what it demonstrates above its contract and saves
  * through its form.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesConceptsRoutesTest extends BrowserTestBase {
 
@@ -27,7 +27,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
+    'surface_examples',
   ];
 
   /**
@@ -88,14 +88,14 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     foreach ([...array_keys(self::PAGES), 'surface-examples/15'] as $path) {
       $assert->linkByHrefExists('/' . $path);
     }
-    $assert->pageTextContains('In React at /surface-react/event.doors/configure, once data_surface_react is enabled.');
+    $assert->pageTextContains('In React at /surface-react/event.doors/configure, once surface_react is enabled.');
 
     foreach (self::PAGES as $path => $paragraph) {
       $this->drupalGet($path);
       $assert->statusCodeEquals(200);
-      $concept = $assert->elementExists('css', 'details.data-surface-concept-panel');
+      $concept = $assert->elementExists('css', 'details.surface-concept-panel');
       $this->assertSame('open', $concept->getAttribute('open'), $path);
-      $assert->elementTextContains('css', 'details.data-surface-concept-panel > summary', 'What this example shows');
+      $assert->elementTextContains('css', 'details.surface-concept-panel > summary', 'What this example shows');
       $assert->pageTextContains($paragraph);
       $assert->pageTextContains('Ask the tool');
       $assert->pageTextContains('Behind the scenes: the contract, as it stands');
@@ -131,13 +131,13 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
 
     $this->drupalGet('surface-examples/13');
     $assert->statusCodeEquals(200);
-    $assert->pageTextContains('Enable both: ddev drush pm:install data_surface_component_block data_surface_block');
+    $assert->pageTextContains('Enable both: ddev drush pm:install surface_examples_component_block surface_examples_block');
     $assert->pageTextContains('The block is not enabled on this site yet.');
     $assert->pageTextNotContains('Ask the tool');
     // The block's files are listed whether or not it is on.
     $this->assertFilesPanel(13);
 
-    $this->container->get('module_installer')->install(['data_surface_component_block', 'data_surface_block']);
+    $this->container->get('module_installer')->install(['surface_examples_component_block', 'surface_examples_block']);
     $this->rebuildContainer();
     // The tool configures a placed block, which asks for "administer
     // blocks".
@@ -147,21 +147,21 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('Both are enabled on this site now.');
     $assert->pageTextContains("The same three lines: example 12's resource and the block's structure");
     $assert->pageTextContains("The hero's actions slot, narrowed to what it expects");
-    $assert->pageTextContains('data_surface:block.placement:update:read');
+    $assert->pageTextContains('surface:block.placement:update:read');
     $assert->pageTextContains('Ask the tool');
     $assert->pageTextContains('Success: Dry run of Edit a placed block');
     $assert->pageTextContains('Success: Dry run of Remove a placed block');
-    $assert->linkByHrefExists('/admin/structure/block/add/data_surface_component/stark');
+    $assert->linkByHrefExists('/admin/structure/block/add/surface_component/stark');
     // The Spotlight and Tonight blocks, placed through the create operation
     // when the modules were enabled, below.
-    $card = $assert->elementExists('css', 'article.data-surface-card.data-surface-card--highlight');
+    $card = $assert->elementExists('css', 'article.surface-card.surface-card--highlight');
     $this->assertSame('Doors open at half past six', $card->find('css', 'h3')?->getText());
     $this->assertSame('Bring your ticket, on your phone or printed.', $card->find('css', 'p')?->getText(), 'Its text, held by its slot.');
     // The Tonight block below it: a section holding a card.
-    $section = $assert->elementExists('css', 'section.data-surface-section');
-    $this->assertSame('Talks start at seven', $section->find('css', 'article.data-surface-card h3')?->getText());
+    $section = $assert->elementExists('css', 'section.surface-section');
+    $this->assertSame('Talks start at seven', $section->find('css', 'article.surface-card h3')?->getText());
     $this->drupalGet('surface-examples/12');
-    $assert->elementNotExists('css', 'article.data-surface-card');
+    $assert->elementNotExists('css', 'article.surface-card');
   }
 
 }

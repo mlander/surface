@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Traits;
+namespace Drupal\Tests\surface\Traits;
 
-use Drupal\data_surface_react\Controller\ResourceApiController;
-use Drupal\data_surface_react\ProblemDetails;
+use Drupal\surface_react\Controller\ResourceApiController;
+use Drupal\surface_react\ProblemDetails;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -88,8 +88,8 @@ trait ServedControllerTrait {
    *   The decoded answer: the result, or a refusal's problem details.
    */
   protected function httpDryRun(string $resource, string $operation, array $values, array $parameters = []): array {
-    $registry = $this->container->get('data_surface.resource_registry');
-    $paths = $this->container->get('data_surface_react.served_paths');
+    $registry = $this->container->get('surface.resource_registry');
+    $paths = $this->container->get('surface_react.served_paths');
     $definition = $registry->getDefinition($resource);
     $found = $registry->getOperation($definition->name(), $operation);
     [$method, $named] = $paths->writes($definition, $found);

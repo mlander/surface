@@ -13,17 +13,17 @@ region of the chosen country. This page adds exactly that, one key whose
 allowed values depend on another key's value, written as one refiner,
 and stops there.
 
-It is the store location in the same module, `data_surface_first`. The
+It is the store location in the same module, `surface_examples_first`. The
 storage, the permission and the route are the first page's, with new
 names, and the schema and install file are written from the resource
 by the same command; only the refiner is new.
 
 ## The settings
 
-<!-- yaml: modules/data_surface_first/config/schema/data_surface_first.schema.yml#data_surface_first.store -->
+<!-- yaml: modules/surface_examples_first/config/schema/surface_examples_first.schema.yml#surface_examples_first.store -->
 
 ```yaml
-data_surface_first.store:
+surface_examples_first.store:
   type: config_object
   label: 'Store location'
   constraints:
@@ -37,23 +37,23 @@ data_surface_first.store:
       label: 'Region'
 ```
 
-<!-- code: modules/data_surface_first/config/install/data_surface_first.store.yml -->
+<!-- code: modules/surface_examples_first/config/install/surface_examples_first.store.yml -->
 
 ```yaml
 country: CA
 region: CA-ON
 ```
 
-<!-- code: modules/data_surface_first/src/Storage/StoreStorage.php -->
+<!-- code: modules/surface_examples_first/src/Storage/StoreStorage.php -->
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface_first\Storage;
+namespace Drupal\surface_examples_first\Storage;
 
-use Drupal\data_surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectStorage;
 
 /**
  * Keeps the store location in its config object.
@@ -63,42 +63,42 @@ final class StoreStorage extends ConfigObjectStorage {
   /**
    * {@inheritdoc}
    */
-  public const CONFIG = 'data_surface_first.store';
+  public const CONFIG = 'surface_examples_first.store';
 
 }
 ```
 
-<!-- yaml: modules/data_surface_first/data_surface_first.routing.yml#data_surface_first.store -->
+<!-- yaml: modules/surface_examples_first/surface_examples_first.routing.yml#surface_examples_first.store -->
 
 ```yaml
-data_surface_first.store:
+surface_examples_first.store:
   path: '/admin/config/services/surface-store'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Store location'
-    _data_surface_resource: 'Drupal\data_surface_first\Resource\StoreResource'
-    _data_surface_operation: 'configure'
+    _surface_resource: 'Drupal\surface_examples_first\Resource\StoreResource'
+    _surface_operation: 'configure'
 ```
 
 ## The resource, and its one rule
 
-<!-- code: modules/data_surface_first/src/Resource/StoreResource.php -->
+<!-- code: modules/surface_examples_first/src/Resource/StoreResource.php -->
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface_first\Resource;
+namespace Drupal\surface_examples_first\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Resource\Attribute\Operation;
-use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\ResourceInterface;
-use Drupal\data_surface_first\Storage\StoreStorage;
+use Drupal\surface\Resource\Attribute\Operation;
+use Drupal\surface\Resource\Attribute\RefinesInput;
+use Drupal\surface\Resource\Attribute\Resource;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\ResourceInterface;
+use Drupal\surface_examples_first\Storage\StoreStorage;
 
 /**
  * The store location: a region is one of the chosen country's.
@@ -107,7 +107,7 @@ use Drupal\data_surface_first\Storage\StoreStorage;
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the store location'),
   description: new TranslatableMarkup('Sets the store location: its country, and a region of that country.'),
-  permission: 'administer data_surface_first',
+  permission: 'administer surface_examples_first',
 )]
 final class StoreResource implements ResourceInterface {
 
@@ -205,8 +205,8 @@ the method below it:
   with DDEV):
 
   ```bash
-  drush tool:run data_surface:first.store:configure --uid=1 --input='{"values":{"country":"US","region":"CA-ON"}}' --input=dry_run=true
-  drush tool:run data_surface:first.store:configure --uid=1 --input='{"values":{"country":"US","region":"US-NY"}}' --input=dry_run=true
+  drush tool:run surface:first.store:configure --uid=1 --input='{"values":{"country":"US","region":"CA-ON"}}' --input=dry_run=true
+  drush tool:run surface:first.store:configure --uid=1 --input='{"values":{"country":"US","region":"US-NY"}}' --input=dry_run=true
   ```
 
   ```

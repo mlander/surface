@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface\Pipeline\TypeMismatchException;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Pipeline\ViolationSummary;
+use Drupal\surface\Pipeline\TypeMismatchException;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Pipeline\ViolationSummary;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -27,10 +27,10 @@ use PHPUnit\Framework\Attributes\Group;
  * sentence that every log line truncates in the middle; the full list
  * stays on the exception for a caller that wants it.
  *
- * @see \Drupal\data_surface\Pipeline\UnknownKeysException
- * @see \Drupal\data_surface\Pipeline\TypeMismatchException
+ * @see \Drupal\surface\Pipeline\UnknownKeysException
+ * @see \Drupal\surface\Pipeline\TypeMismatchException
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class PipelineExceptionTest extends UnitTestCase {
 
   /**

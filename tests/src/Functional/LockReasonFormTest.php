@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
-use Drupal\data_surface_examples\Access\FeesAccess;
-use Drupal\data_surface_examples\Storage\ProgramStorage;
-use Drupal\data_surface_examples_workflow\Alter\ProgramWorkflowAlter;
+use Drupal\surface_examples\Access\FeesAccess;
+use Drupal\surface_examples\Storage\ProgramStorage;
+use Drupal\surface_examples_workflow\Alter\ProgramWorkflowAlter;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#locked-at-the-top
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class LockReasonFormTest extends BrowserTestBase {
 
@@ -29,8 +29,8 @@ class LockReasonFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
-    'data_surface_examples_workflow',
+    'surface_examples',
+    'surface_examples_workflow',
   ];
 
   /**

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\ResourceBuild\NamesNothingException;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface\ResourceBuild\SiteCatalog;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\NamesNothingException;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface\ResourceBuild\SiteCatalog;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -32,9 +32,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * @see docs/forms.md#a-route-that-fixes-or-fills-keys
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
+class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
   use OperationRouteTrait;
@@ -43,7 +43,7 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'data_surface_route_test'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_route_test'];
 
   /**
    * {@inheritdoc}
@@ -59,7 +59,7 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
       'administer nodes',
       'use text format basic',
     ]);
-    $name = 'data_surface_route_test.add_welcome_page';
+    $name = 'surface_route_test.add_welcome_page';
     $route = $this->container->get('router.route_provider')->getRouteByName($name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -99,7 +99,7 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
    * The title is drawn fixed, the body starts filled, both stated and saved.
    */
   public function testTheTitleIsFixedAndTheBodyFilled(): void {
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class)[DataSurfaceOperationForm::SURFACE_KEY];
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('item', $form['title']['value']['#type']);
     $this->assertSame('Welcome', $form['title']['value']['#value']);
     $this->assertSame('Start here.', $form['body']['value']['#default_value']);
@@ -107,7 +107,7 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
     // The contract panel beside the form states what the form draws, in
     // the field's structure: the fixed key `const`, its label under
     // `x-surface.fixed`, and the filled key's default.
-    $panel = $form[DataSurfaceOperationForm::PANEL_KEY];
+    $panel = $form[SurfaceOperationForm::PANEL_KEY];
     foreach (['contract', 'full'] as $document) {
       $json = $panel[$document]['json']['#code'];
       $this->assertStringContainsString('"const": "Welcome"', $json, $document);
@@ -117,11 +117,11 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
 
     $form_state = new FormState();
     $form_state->setValues([
-      DataSurfaceOperationForm::SURFACE_KEY => [
+      SurfaceOperationForm::SURFACE_KEY => [
         'field_description' => ['value' => 'Described.'],
       ],
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     $this->assertSame([], $form_state->getErrors());
     $storage = $this->container->get('entity_type.manager')->getStorage('node');
     $ids = $storage->getQuery()->accessCheck(FALSE)->execute();
@@ -147,7 +147,7 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
 
     // A bundle with no form display has no resource: nothing is there.
     $this->visit('/surface-test/node/article/add');
-    $this->assertNamesNothing('The data_surface_route_test.add_node route serves "entity.content:node.article" at this path, and no resource has that id.', 'node_type');
+    $this->assertNamesNothing('The surface_route_test.add_node route serves "entity.content:node.article" at this path, and no resource has that id.', 'node_type');
 
     // Core's entity title callback reads two plain defaults the operation
     // does not, and neither is refused.
@@ -159,8 +159,8 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
    * The catalog lists one route serving every bundle under each, filled.
    */
   public function testTheCatalogListsTheRouteUnderEveryBundle(): void {
-    $registry = $this->container->get('data_surface.resource_registry');
-    $forms = $this->container->get('data_surface.form_route_doors');
+    $registry = $this->container->get('surface.resource_registry');
+    $forms = $this->container->get('surface.form_route_doors');
     $door = static function (string $bundle, string $operation) use ($registry, $forms): array {
       $resource = $registry->getDefinition('entity.content:node.' . $bundle);
       $definition = $registry->getOperation($resource->name(), $operation);
@@ -172,23 +172,23 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
     foreach (['page', 'kitchen'] as $bundle) {
       [$listed] = $door($bundle, 'create');
       // The path filled for the bundle, and what the route says beside.
-      $this->assertStringContainsString('/surface-test/node/' . $bundle . '/add (data_surface_route_test.add_node)', $listed);
-      $this->assertStringContainsString('/surface-test/node/' . $bundle . '/welcome (data_surface_route_test.add_node_welcome) [fixes title.value: Welcome]', $listed);
+      $this->assertStringContainsString('/surface-test/node/' . $bundle . '/add (surface_route_test.add_node)', $listed);
+      $this->assertStringContainsString('/surface-test/node/' . $bundle . '/welcome (surface_route_test.add_node_welcome) [fixes title.value: Welcome]', $listed);
       // The two plain defaults core's title callback reads pin no
       // parameter of the operation.
-      $this->assertStringContainsString('/surface-test/node/' . $bundle . '/add-titled (data_surface_route_test.add_node_titled)', $listed);
-      $this->assertStringNotContainsString('(data_surface_route_test.add_node_titled) [', $listed);
+      $this->assertStringContainsString('/surface-test/node/' . $bundle . '/add-titled (surface_route_test.add_node_titled)', $listed);
+      $this->assertStringNotContainsString('(surface_route_test.add_node_titled) [', $listed);
       // The edit page, whose node the URL names: listed.
       [$edit] = $door($bundle, 'update');
-      $this->assertStringContainsString('/surface-test/node/' . $bundle . '/{id}/edit (data_surface_route_test.edit_node)', $edit);
+      $this->assertStringContainsString('/surface-test/node/' . $bundle . '/{id}/edit (surface_route_test.edit_node)', $edit);
     }
     // The page's own add pages name it as written, and come first.
     [$listed, $link] = $door('page', 'create');
-    $this->assertStringContainsString('(data_surface_route_test.add_welcome_page)', $listed);
+    $this->assertStringContainsString('(surface_route_test.add_welcome_page)', $listed);
     $this->assertLessThan(strpos($listed, 'add_node)'), strpos($listed, 'add_welcome_page)'));
     $this->assertContains($link?->getRouteName(), [
-      'data_surface_entity.node_page_create',
-      'data_surface_route_test.add_welcome_page',
+      'surface_examples_entity.node_page_create',
+      'surface_route_test.add_welcome_page',
     ]);
     // The kitchen has none: its link is a route serving every bundle,
     // filled for the kitchen.
@@ -203,15 +203,15 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
 
     // The site's catalog prints the same, and lists the route that pins a
     // node no node is as refused, as every visitor is refused.
-    $catalog = $this->container->get('data_surface.site_catalog');
+    $catalog = $this->container->get('surface.site_catalog');
     $kitchen = array_column($catalog->describe()['entity.content:node.kitchen']['operations'], 'doors', 'id');
-    $this->assertStringContainsString('/surface-test/node/kitchen/add (data_surface_route_test.add_node)', $kitchen['create'][SiteCatalog::FORM]);
+    $this->assertStringContainsString('/surface-test/node/kitchen/add (surface_route_test.add_node)', $kitchen['create'][SiteCatalog::FORM]);
     $refused = array_values(array_filter($catalog->refused(), static fn (array $refusal): bool => $refusal['stage'] === SiteCatalog::ROUTE && str_starts_with((string) $refusal['resource'], 'entity.content:')));
     $this->assertSame([
       [
         'entity.content:node.page',
         'update',
-        'The data_surface_route_test.edit_missing_page route\'s "id" default names nothing: The "update" operation needs a node as $id, and there is none with the id "999".',
+        'The surface_route_test.edit_missing_page route\'s "id" default names nothing: The "update" operation needs a node as $id, and there is none with the id "999".',
       ],
     ], array_map(static fn (array $refusal): array => [$refusal['resource'], $refusal['operation'], $refusal['message']], $refused));
   }
@@ -224,9 +224,9 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
    * binding, and the route's literal value.
    */
   public function testEachBundlesSeededBuildIsKept(): void {
-    $bin = $this->container->get('cache.data_surface_build');
+    $bin = $this->container->get('cache.surface_build');
     $bin->deleteAll();
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     foreach ([1, 2] as $visit) {
       $resources->forgetBuilds();
@@ -273,7 +273,7 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
     $kitchen->save();
     $page = Node::create(['type' => 'page', 'title' => 'Page']);
     $page->save();
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     foreach ([
       'The update operation of entity.content:node.page takes a node of the page bundle.' => $kitchen,
       'The "update" operation needs a node as $id, and there is none with the id "999".' => 999,
@@ -304,7 +304,7 @@ class ContentEntityRouteValuesTest extends DataSurfaceKernelTestBase {
     }
     catch (\InvalidArgumentException $e) {
       $this->assertNotInstanceOf(NamesNothingException::class, $e);
-      $this->assertSame('The data_surface_route_test.edit_missing_page route\'s "id" default names nothing: The "update" operation needs a node as $id, and there is none with the id "999".', $e->getMessage());
+      $this->assertSame('The surface_route_test.edit_missing_page route\'s "id" default names nothing: The "update" operation needs a node as $id, and there is none with the id "999".', $e->getMessage());
     }
   }
 

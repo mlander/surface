@@ -82,25 +82,25 @@ page's idea.
 A route names the resource class and the operation:
 
 ```yaml
-data_surface_block.update:
+surface_examples_block.update:
   path: '/admin/structure/block/surface/{id}'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Edit a placed block (resource)'
-    _data_surface_resource: 'Drupal\data_surface_block\Resource\BlockPlacementResource'
-    _data_surface_operation: 'update'
-    _data_surface_cosmetics: 'data_surface_block.form_cosmetics'
+    _surface_resource: 'Drupal\surface_examples_block\Resource\BlockPlacementResource'
+    _surface_operation: 'update'
+    _surface_cosmetics: 'surface_examples_block.form_cosmetics'
   options:
     parameters:
       id:
         type: 'entity:block'
 ```
 
-`_data_surface_cosmetics` names a service that adds what only this page
+`_surface_cosmetics` names a service that adds what only this page
 needs, such as a message or a redirect, and never changes what the form
 accepts. That route is a working form with no form
 class of its own. The same
-operation is also the tool `data_surface:block.placement:update`.
+operation is also the tool `surface:block.placement:update`.
 
 ## What is known is locked
 

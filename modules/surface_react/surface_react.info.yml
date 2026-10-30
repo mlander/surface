@@ -1,0 +1,9 @@
+name: Surface API - React
+type: module
+description: 'Serves a resource over HTTP as a JSON contract, the path its resource and the method its operation, with a narrowing and a dry run, and renders its form in React from that contract.'
+package: Surface API
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

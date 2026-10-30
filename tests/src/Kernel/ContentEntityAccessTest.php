@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_entity_test\Hook\EntityTestHooks;
-use Drupal\data_surface_entity_test\Structure\TelephoneItemStructure;
-use Drupal\data_surface_entity_test\Alter\EntityContentAlter;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface_entity_test\Hook\EntityTestHooks;
+use Drupal\surface_entity_test\Structure\TelephoneItemStructure;
+use Drupal\surface_entity_test\Alter\EntityContentAlter;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -27,11 +27,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * resource through the deriver's base id, and writes the telephone item
  * structure by hand.
  *
- * @see \Drupal\data_surface_entity_test\Hook\EntityTestHooks
+ * @see \Drupal\surface_entity_test\Hook\EntityTestHooks
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
+class ContentEntityAccessTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
   use UserCreationTrait;
@@ -39,7 +39,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'data_surface_entity_test'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_entity_test'];
 
   /**
    * The page every test edits.
@@ -86,20 +86,20 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
    * Builds the page being edited, for the current account.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function edit(): DataSurfaceInterface {
+  protected function edit(): SurfaceInterface {
     return $this->resources()->buildOperation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
   }
 
@@ -117,7 +117,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
     $this->assertContains('user.permissions', $edit->getCacheContexts());
 
     // Both contracts say it is shown and fixed.
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $context = $this->resources()->operation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
     $storage = $this->resources()->storage('entity.content:node.page', $context, $edit);
     $stored = $storage->load($edit);
@@ -205,7 +205,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
    * Tests an alter naming the deriver's base: every derivative, no other.
    */
   public function testAnAlterNamingTheBaseAppliesToEveryDerivative(): void {
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     foreach (['entity.content:node.page', 'entity.content:node.kitchen'] as $id) {
       $this->assertSame([EntityContentAlter::class], array_map(static fn ($alter): string => $alter->class, $registry->getAlters($id)));
     }
@@ -213,12 +213,12 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
     $edit = $this->edit();
     $mount = $edit->getDefinition('third_party_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $mount);
-    $own = $mount->getPropertyDefinition('data_surface_entity_test');
+    $own = $mount->getPropertyDefinition('surface_entity_test');
     $this->assertInstanceOf(MapDataDefinition::class, $own);
     $this->assertNotNull($own->getPropertyDefinition('reviewer_note'));
     // Its key has nowhere to live on a node, and the write goes on.
     $context = $this->resources()->operation('entity.content:node.page', 'update', ['id' => $this->node->id()]);
-    $result = $this->pipeline()->submit($edit, ['third_party_settings' => ['data_surface_entity_test' => ['reviewer_note' => 'Fine.']]], $this->resources()->storage('entity.content:node.page', $context, $edit));
+    $result = $this->pipeline()->submit($edit, ['third_party_settings' => ['surface_entity_test' => ['reviewer_note' => 'Fine.']]], $this->resources()->storage('entity.content:node.page', $context, $edit));
     $this->assertTrue($result->isValid());
   }
 
@@ -226,7 +226,7 @@ class ContentEntityAccessTest extends DataSurfaceKernelTestBase {
    * Tests an item structure written by hand for a field type.
    */
   public function testAnOverrideReplacesTheDerivation(): void {
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $phone = $registry->getDefinition('field.item:node.page.field_phone');
     $this->assertStringContainsString(TelephoneItemStructure::class, (string) $phone->notes['override']);
     $this->assertSame([TelephoneItemStructure::class . '::shortNumbers()'], array_map(static fn ($refiner): string => $refiner->describe(), $phone->refiners));

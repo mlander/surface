@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline\Storage;
+namespace Drupal\surface\Pipeline\Storage;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Field\FieldConfigInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Pipeline\PreparedValues;
-use Drupal\data_surface\Storage\EncryptedStorageLayout;
-use Drupal\data_surface\Storage\SecretCodecInterface;
-use Drupal\data_surface\Storage\StorageLayoutInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Pipeline\PreparedValues;
+use Drupal\surface\Storage\EncryptedStorageLayout;
+use Drupal\surface\Storage\SecretCodecInterface;
+use Drupal\surface\Storage\StorageLayoutInterface;
 
 /**
  * Stores a data surface's values in one field's instance settings.
@@ -44,28 +44,28 @@ use Drupal\data_surface\Storage\StorageLayoutInterface;
  * update of the settings beside a secret leave the secret intact. A data
  * surface with no secret key is not wrapped and nothing about it changes.
  *
- * @see \Drupal\data_surface\Storage\StorageLayoutInterface
- * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
+ * @see \Drupal\surface\Storage\StorageLayoutInterface
+ * @see \Drupal\surface\Storage\EncryptedStorageLayout
  * @see docs/storage.md
  */
-final class FieldSettingsStorage implements DataSurfaceStorageInterface {
+final class FieldSettingsStorage implements SurfaceStorageInterface {
 
   use DependencySerializationTrait;
 
   /**
    * The service id of the site's secret codec.
    */
-  protected const CODEC_SERVICE = 'data_surface.secret_codec';
+  protected const CODEC_SERVICE = 'surface.secret_codec';
 
   /**
    * Constructs a FieldSettingsStorage.
    *
    * @param \Drupal\Core\Field\FieldConfigInterface $field
    *   The field config entity whose settings the data surface describes.
-   * @param \Drupal\data_surface\Storage\StorageLayoutInterface|null $layout
+   * @param \Drupal\surface\Storage\StorageLayoutInterface|null $layout
    *   The translation between input layout and storage layout. Omitted
    *   when the input layout is the storage layout.
-   * @param \Drupal\data_surface\Storage\SecretCodecInterface|null $codec
+   * @param \Drupal\surface\Storage\SecretCodecInterface|null $codec
    *   The codec a data surface's secret keys are encrypted with. Omitted,
    *   as every host but a test omits it, means the site's own codec
    *   service when the container offers one: a host constructs this
@@ -82,7 +82,7 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function load(DataSurfaceInterface $surface): array {
+  public function load(SurfaceInterface $surface): array {
     $settings = $this->field->getSettings();
     $layout = $this->layoutFor($surface);
     return $layout === NULL ? $settings : $layout->fromStorage($settings);
@@ -91,7 +91,7 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+  public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
     $layout = $this->layoutFor($surface);
     $settings = $layout === NULL ? $values : $layout->toStorage($values);
     // Every key the data surface owns is produced by the transform, so
@@ -109,13 +109,13 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
    * is where the two meet. A data surface that declares no secret key
    * gets the layout it was constructed with, unchanged and unwrapped.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface being read or written.
    *
-   * @return \Drupal\data_surface\Storage\StorageLayoutInterface|null
+   * @return \Drupal\surface\Storage\StorageLayoutInterface|null
    *   The layout, or NULL when there is nothing to translate.
    */
-  protected function layoutFor(DataSurfaceInterface $surface): ?StorageLayoutInterface {
+  protected function layoutFor(SurfaceInterface $surface): ?StorageLayoutInterface {
     $codec = $this->secretCodec();
     return $codec === NULL
       ? $this->layout
@@ -125,7 +125,7 @@ final class FieldSettingsStorage implements DataSurfaceStorageInterface {
   /**
    * Gets the codec: the one given, or the site's own.
    *
-   * @return \Drupal\data_surface\Storage\SecretCodecInterface|null
+   * @return \Drupal\surface\Storage\SecretCodecInterface|null
    *   The codec, or NULL when none was given and there is no container
    *   to ask (which is an ordinary unit test), and a data surface with a
    *   secret key then stores it in the clear, so a kernel test is what

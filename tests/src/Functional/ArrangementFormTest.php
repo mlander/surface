@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#arrangement-is-declared-once
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ArrangementFormTest extends BrowserTestBase {
 
@@ -30,9 +30,9 @@ class ArrangementFormTest extends BrowserTestBase {
    */
   protected static $modules = [
     'block',
-    'data_surface',
-    'data_surface_resource_test',
-    'data_surface_demo',
+    'surface',
+    'surface_resource_test',
+    'surface_examples_plugins',
   ];
 
   /**
@@ -43,7 +43,7 @@ class ArrangementFormTest extends BrowserTestBase {
   /**
    * The input of the booking fee StudioAlter mounts on the studio.
    */
-  protected const BOOKING_FEE = 'surface[third_party_settings][data_surface_resource_test][booking_fee]';
+  protected const BOOKING_FEE = 'surface[third_party_settings][surface_resource_test][booking_fee]';
 
   /**
    * {@inheritdoc}
@@ -120,14 +120,14 @@ class ArrangementFormTest extends BrowserTestBase {
       'surface[deposit]' => TRUE,
       self::BOOKING_FEE => '15',
     ], 'Save');
-    $stored = $this->config('data_surface_resource_test.studio')->getRawData();
+    $stored = $this->config('surface_resource_test.studio')->getRawData();
     $this->assertSame('North studio', $stored['name']);
     $this->assertSame('08:00', $stored['opens']);
     $this->assertSame('17:00', $stored['closes']);
     $this->assertSame(45, $stored['rate']);
     $this->assertTrue($stored['deposit']);
     // Drawn in the group, posted and stored at its mount.
-    $this->assertSame(['data_surface_resource_test' => ['booking_fee' => 15]], $stored['third_party_settings']);
+    $this->assertSame(['surface_resource_test' => ['booking_fee' => 15]], $stored['third_party_settings']);
   }
 
   /**
@@ -135,7 +135,7 @@ class ArrangementFormTest extends BrowserTestBase {
    */
   public function testThePluginHostDrawsTheArrangement(): void {
     $assert_session = $this->assertSession();
-    $this->drupalGet('admin/structure/block/add/data_surface_demo/stark');
+    $this->drupalGet('admin/structure/block/add/surface_examples_plugins/stark');
     $assert_session->statusCodeEquals(200);
 
     $source = '//fieldset[legend[normalize-space()="What to feature"]]';

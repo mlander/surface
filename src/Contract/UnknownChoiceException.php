@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 /**
  * A choice that names no key, no list, or no value of the key's list.
@@ -10,7 +10,7 @@ namespace Drupal\data_surface\Contract;
  * Thrown by Choices::resolve() before anything is emitted; a door answers
  * it as its own refusal, the HTTP door a 404 naming the pointer.
  *
- * @see \Drupal\data_surface\Contract\Choices
+ * @see \Drupal\surface\Contract\Choices
  */
 final class UnknownChoiceException extends \InvalidArgumentException {
 

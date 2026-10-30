@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -16,10 +16,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * depot uses one shape at two keys, refused in the same words at each
  * and in each key's own words for what it narrows.
  *
- * @see \Drupal\Tests\data_surface\Kernel\ShapesTest
+ * @see \Drupal\Tests\surface\Kernel\ShapesTest
  * @see docs/decisions.md#a-shape-is-a-named-definition
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ShapeFormTest extends BrowserTestBase {
 
@@ -27,9 +27,9 @@ class ShapeFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_resource_test',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_resource_test',
   ];
 
   /**
@@ -64,23 +64,23 @@ class ShapeFormTest extends BrowserTestBase {
    */
   public function testShapedKeysRefuseInTheShapesWords(): void {
     $assert = $this->assertSession();
-    $license = 'surface[third_party_settings][data_surface_examples_compliance][license]';
+    $license = 'surface[third_party_settings][surface_examples_compliance][license]';
     $this->drupalGet('surface-examples/3');
     $assert->statusCodeEquals(200);
     $assert->fieldExists($license);
-    $before = $this->stored('data_surface_examples.registration_step3');
+    $before = $this->stored('surface_examples.registration_step3');
     $this->submitForm([$license => 'EV-2048'], 'Save');
     $assert->elementExists('css', 'input[name="' . $license . '"][aria-invalid="true"]');
     $assert->pageTextContains('A license number is four digits, such as 2048.');
     $assert->pageTextNotContains('The changes have been saved.');
-    $this->assertSame($before, $this->stored('data_surface_examples.registration_step3'));
+    $this->assertSame($before, $this->stored('surface_examples.registration_step3'));
     $this->submitForm([$license => '2048'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $this->assertSame('2048', $this->stored('data_surface_examples.registration_step3')['third_party_settings']['data_surface_examples_compliance']['license']);
+    $this->assertSame('2048', $this->stored('surface_examples.registration_step3')['third_party_settings']['surface_examples_compliance']['license']);
 
     $this->drupalGet('surface-test/depot');
     $assert->statusCodeEquals(200);
-    $depot = $this->stored('data_surface_resource_test.depot');
+    $depot = $this->stored('surface_resource_test.depot');
     $assert->fieldValueEquals('surface[sku]', 'AB1234');
     $assert->fieldValueEquals('surface[spare]', 'CD12');
     $this->submitForm(['surface[sku]' => 'ab1234', 'surface[spare]' => 'XY99999'], 'Save');
@@ -90,10 +90,10 @@ class ShapeFormTest extends BrowserTestBase {
     // `maxlength`, so a browser stops at six.
     $assert->elementExists('css', 'input[name="surface[spare]"][maxlength="6"][aria-invalid="true"]');
     $assert->elementExists('css', 'input[name="surface[sku]"][maxlength="12"]');
-    $this->assertSame($depot, $this->stored('data_surface_resource_test.depot'));
+    $this->assertSame($depot, $this->stored('surface_resource_test.depot'));
     $this->submitForm(['surface[sku]' => 'XY99', 'surface[spare]' => 'ZZ1'], 'Save');
     $assert->pageTextNotContains('A stock code is two capitals and digits');
-    $stored = $this->stored('data_surface_resource_test.depot');
+    $stored = $this->stored('surface_resource_test.depot');
     $this->assertSame(['XY99', 'ZZ1'], [$stored['sku'], $stored['spare']]);
   }
 

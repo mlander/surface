@@ -9,10 +9,10 @@ the key you want. A key and its rules are introduced in
 Nine things a resource often asks for that no other page shows end to
 end. The snippets of the first six are keys of the test module's
 opening hours (`resource_test.opening_hours`, in
-`tests/modules/data_surface_resource_test`), written into its
+`tests/modules/surface_resource_test`), written into its
 `defineInputs()` as shown here; the seventh quotes the same module's
 workshop, the eighth the schema test module's alias settings
-(`schema_test.aliases`, in `tests/modules/data_surface_schema_test`),
+(`schema_test.aliases`, in `tests/modules/surface_schema_test`),
 and the last example 15's venue.
 A test fails if this page and the class differ, and another holds each
 key to what this page says it does. Read
@@ -32,7 +32,7 @@ when you need it and not how.
 Core has no data type for a time of day, so a time is a string with a
 pattern, which asks the form for a time picker:
 
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
+<!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
 $inputs->add('opens', 'string', t('Opens at'), default: '09:00')
@@ -70,7 +70,7 @@ number, `1020` for 17:00, which is the price.
 so it is no rule between keys: it is what the key allows, a constraint
 in `defineInputs()`:
 
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
+<!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
 $inputs->add('closes', 'integer', t('Closes at, in minutes after midnight'), default: 1020)
@@ -92,7 +92,7 @@ A list whose item is a choice: the `LabeledChoice` goes on the item, and
 as `add()` declares any key. Up to twelve choices it is drawn as
 checkboxes.
 
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
+<!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
 $day = DataDefinition::create('string')
@@ -138,7 +138,7 @@ is required on the form.
 
 A string with core's `multiline` setting:
 
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
+<!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
 $inputs->add('notes', 'string', t('Notes'))
@@ -160,7 +160,7 @@ then it must be given. Declare it required in `defineInputs()`, as it is
 wherever it applies, and say where it does not apply with a declared
 rule: it does not apply `unless()` after-hours access is on.
 
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
+<!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
 $inputs->add('after_hours', 'boolean', t('After-hours access'), default: FALSE);
@@ -201,7 +201,7 @@ with its own message, in `defineInputs()` beside the same rule: the
 count is what the list allows wherever it applies, and a key that does
 not apply is never validated, so the condition stays the rule's alone.
 
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
+<!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
 $inputs->addList('late_days', $day, t('After-hours days'), default: [])
@@ -241,7 +241,7 @@ draws it as rows, one text field per keyword, with "Remove" beside each
 and "Add another" under them, each rebuilding the list over AJAX. Nothing
 to declare but the list, its item a type name:
 
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
+<!-- excerpt: tests/modules/surface_resource_test/src/Resource/Library/OpeningHoursResource.php -->
 
 ```php
 $inputs->addList('keywords', 'string', t('Keywords'), default: []);
@@ -262,7 +262,7 @@ keys are the site's, so a provider lists them and the resource declares
 the map they sit in. The workshop holds a light switch, a stock code and
 a bench per bench its configuration lists:
 
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Resource/Workshop/WorkshopResource.php -->
+<!-- excerpt: tests/modules/surface_resource_test/src/Resource/Workshop/WorkshopResource.php -->
 
 ```php
 $inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class)
@@ -279,7 +279,7 @@ is one structure per thing. The provider is a class of its own, never
 the resource, and says what it read, so the form, both schemas and the
 tool listing change when the configuration does:
 
-<!-- excerpt: tests/modules/data_surface_resource_test/src/Keys/WorkshopBenches.php -->
+<!-- excerpt: tests/modules/surface_resource_test/src/Keys/WorkshopBenches.php -->
 
 ```php
 public function list(): SiteList {
@@ -309,7 +309,7 @@ person and an agent should send, a map of booleans from a provider
 ([above](#one-key-per-thing-the-site-has)), and let the storage
 translate. The alias settings ask for their types so:
 
-<!-- excerpt: tests/modules/data_surface_schema_test/src/Resource/AliasSettingsResource.php -->
+<!-- excerpt: tests/modules/surface_schema_test/src/Resource/AliasSettingsResource.php -->
 
 ```php
 $inputs->addEach('types', 'boolean', from: AliasTypes::class, default: FALSE)
@@ -320,7 +320,7 @@ The translation is a layout, a `StorageLayoutInterface` with two
 methods. `fromStorage()` turns the stored list into the map, and
 `toStorage()` turns the map back into the list:
 
-<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/CheckedListLayout.php -->
+<!-- excerpt: tests/modules/surface_schema_test/src/Storage/CheckedListLayout.php -->
 
 ```php
 public function toStorage(array $values): array {
@@ -331,7 +331,7 @@ public function toStorage(array $values): array {
 }
 ```
 
-<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/CheckedListLayout.php -->
+<!-- excerpt: tests/modules/surface_schema_test/src/Storage/CheckedListLayout.php -->
 
 ```php
 public function fromStorage(array $settings): array {
@@ -345,7 +345,7 @@ public function fromStorage(array $settings): array {
 The layout also implements `StoredSchemaInterface`, whose one method
 says the config schema of each key it translates, as it is stored:
 
-<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/CheckedListLayout.php -->
+<!-- excerpt: tests/modules/surface_schema_test/src/Storage/CheckedListLayout.php -->
 
 ```php
 public function storedSchema(): array {
@@ -360,7 +360,7 @@ public function storedSchema(): array {
 
 The storage, a `ConfigObjectStorage` subclass, names it in `layout()`:
 
-<!-- excerpt: tests/modules/data_surface_schema_test/src/Storage/AliasSettingsStorage.php -->
+<!-- excerpt: tests/modules/surface_schema_test/src/Storage/AliasSettingsStorage.php -->
 
 ```php
 protected function layout(): StorageLayoutInterface {
@@ -376,7 +376,7 @@ holds the resource to that schema
 ([A schema the module did not generate](storage.md#a-schema-the-module-did-not-generate)),
 and skips each key the layout names: a boolean at each entry is what
 the resource asks for, and a list of strings is what is stored. `drush
-data_surface:config-schema` writes the schema the layout gives for the
+surface:config-schema` writes the schema the layout gives for the
 key, labeled with the key's label, so `types` is generated as a
 `sequence` of `string`.
 
@@ -407,7 +407,7 @@ content type or a block: the machine name is suggested from the name, a
 person may type over it, it is held once, and it stays as it is once
 the thing exists. It is two keys. Example 15's venue declares them:
 
-<!-- excerpt: modules/data_surface_examples/src/Resource/VenueResource.php -->
+<!-- excerpt: modules/surface_examples/src/Resource/VenueResource.php -->
 
 ```php
 $inputs->add('label', 'string', t('Name'))
@@ -431,7 +431,7 @@ storage a `ConfigEntityStorage`. That is all it takes:
   `cafe_deja_vu`. A call that sends one keeps it.
 - A create refuses a machine name a venue holds: "A venue named
   riverside already exists." The build adds that rule, the stock
-  `DataSurfaceUnique`, to the identity key of every create whose storage
+  `SurfaceUnique`, to the identity key of every create whose storage
   can say whether a thing exists; write none of your own.
 - The form draws core's machine name element beside the name. On edit
   the machine name is the venue the page is about: drawn disabled, and

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Commands;
+namespace Drupal\surface\Drush\Commands;
 
 use Drupal\Core\Url;
-use Drupal\data_surface\ResourceBuild\CatalogDocument;
-use Drupal\data_surface\ResourceBuild\SiteCatalog;
+use Drupal\surface\ResourceBuild\CatalogDocument;
+use Drupal\surface\ResourceBuild\SiteCatalog;
 use Drush\Commands\AutowireTrait;
 use Drush\Style\DrushStyle;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -32,12 +32,11 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * docs/catalog.md is. The table's rows are the catalog page's
  * (/admin/config/development/surfaces), whose URL it prints last.
  *
- * @see \Drupal\data_surface\ResourceBuild\SiteCatalog
+ * @see \Drupal\surface\ResourceBuild\SiteCatalog
  */
 #[AsCommand(
   name: 'surface:catalog',
   description: 'Lists every resource and structure on this site, with each operation\'s doors, and every build refusal.',
-  aliases: ['data_surface:catalog'],
 )]
 final class CatalogCommand extends Command {
 
@@ -51,11 +50,11 @@ final class CatalogCommand extends Command {
   /**
    * Constructs a CatalogCommand.
    *
-   * @param \Drupal\data_surface\ResourceBuild\SiteCatalog $catalog
+   * @param \Drupal\surface\ResourceBuild\SiteCatalog $catalog
    *   The site catalog.
    */
   public function __construct(
-    #[Autowire(service: 'data_surface.site_catalog')]
+    #[Autowire(service: 'surface.site_catalog')]
     private readonly SiteCatalog $catalog,
   ) {
     parent::__construct();
@@ -118,7 +117,7 @@ final class CatalogCommand extends Command {
       count($refused),
       $refused === [] ? '' : ' (drush surface:catalog --refused lists them)',
     ));
-    $this->page($io, 'The catalog page lists the same, each door linked: ', Url::fromRoute('data_surface.catalog'));
+    $this->page($io, 'The catalog page lists the same, each door linked: ', Url::fromRoute('surface.catalog'));
     return self::SUCCESS;
   }
 
@@ -235,7 +234,7 @@ final class CatalogCommand extends Command {
     if ($entry['refused'] !== []) {
       $this->refusalTable($io, $entry['refused']);
     }
-    $this->page($io, 'Its page in the catalog: ', Url::fromRoute('data_surface.catalog.resource', ['resource' => $entry['read'] ?? $entry['id']]));
+    $this->page($io, 'Its page in the catalog: ', Url::fromRoute('surface.catalog.resource', ['resource' => $entry['read'] ?? $entry['id']]));
     return self::SUCCESS;
   }
 

@@ -1,4 +1,4 @@
-# What Data Surface does
+# What Surface API does
 
 You describe once what a thing on your site accepts: each value it
 holds, its type, its label, its default and what it allows. From that
@@ -72,8 +72,8 @@ description. The module makes the rest from this class:
 | What you get | From the same five values |
 | --- | --- |
 | A form | a text field, a number field, a checkbox, an email field and a select |
-| A Tool API tool | `data_surface:my_module.settings:configure`, which an AI agent calls |
-| The command line | `drush tool:run data_surface:my_module.settings:configure`, which runs the same tool |
+| A Tool API tool | `surface:my_module.settings:configure`, which an AI agent calls |
+| The command line | `drush tool:run surface:my_module.settings:configure`, which runs the same tool |
 | An HTTP API | `PATCH /surface-api/my_module.settings`, with a JSON Schema of the values |
 | A React page | a form drawn in the browser from that JSON Schema |
 

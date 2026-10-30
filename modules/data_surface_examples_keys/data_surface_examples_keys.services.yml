@@ -1,6 +1,0 @@
-services:
-  # The keys the site manages, with the cacheability of the list.
-  data_surface_examples_keys.keys:
-    class: Drupal\data_surface_examples_keys\Keys\ManagedKeys
-    arguments: ['@config.factory']
-  Drupal\data_surface_examples_keys\Keys\ManagedKeys: '@data_surface_examples_keys.keys'

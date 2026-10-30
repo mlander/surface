@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\Pipeline\StorageViolationsException;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Storage\ConfigObjectStorage;
-use Drupal\data_surface_storage_test\Storage\NestedSettingsStorage;
-use Drupal\data_surface_storage_test\Storage\PlainSettingsStorage;
-use Drupal\data_surface_storage_test\Storage\TranslatableSettingsStorage;
-use Drupal\data_surface_storage_test\Storage\MissingSchemaSettingsStorage;
+use Drupal\surface\Surface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface_storage_test\Storage\NestedSettingsStorage;
+use Drupal\surface_storage_test\Storage\PlainSettingsStorage;
+use Drupal\surface_storage_test\Storage\TranslatableSettingsStorage;
+use Drupal\surface_storage_test\Storage\MissingSchemaSettingsStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -28,26 +28,26 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * mounted module's settings refused when no schema describes them, and a
  * key kept under a path read, judged and written there.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
+class ConfigObjectStorageTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
   protected static $modules = [
     'system',
-    'data_surface',
-    'data_surface_storage_test',
+    'surface',
+    'surface_storage_test',
   ];
 
   /**
    * Makes one of the fixture storage classes, as autowiring would.
    *
-   * @param class-string<\Drupal\data_surface\Storage\ConfigObjectStorage> $class
+   * @param class-string<\Drupal\surface\Storage\ConfigObjectStorage> $class
    *   The storage class.
    *
-   * @return \Drupal\data_surface\Storage\ConfigObjectStorage
+   * @return \Drupal\surface\Storage\ConfigObjectStorage
    *   The storage.
    */
   protected function storage(string $class): ConfigObjectStorage {
@@ -62,7 +62,7 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the context a singleton resource is configured in.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The context.
    */
   protected function context(): OperationContext {
@@ -72,7 +72,7 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
   /**
    * Prepares values and returns what the storage refused.
    *
-   * @param \Drupal\data_surface\Storage\ConfigObjectStorage $storage
+   * @param \Drupal\surface\Storage\ConfigObjectStorage $storage
    *   The storage.
    * @param array $values
    *   The values.
@@ -162,17 +162,17 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
     $described = [
       'greeting' => 'Hello',
       'limit' => 3,
-      'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Kept']],
+      'third_party_settings' => ['surface_storage_test' => ['note' => 'Kept']],
     ];
     $this->assertSame([], $this->refusals($storage, $described));
 
     $refusals = $this->refusals($storage, ['third_party_settings' => ['nobody' => ['note' => 'Lost']]] + $described);
     $this->assertSame(['third_party_settings.nobody'], array_keys($refusals));
-    $this->assertStringContainsString('No config schema describes the settings the nobody module stores in data_surface_storage_test.translatable', $refusals['third_party_settings.nobody']);
+    $this->assertStringContainsString('No config schema describes the settings the nobody module stores in surface_storage_test.translatable', $refusals['third_party_settings.nobody']);
 
     $refusals = $this->refusals($this->storage(PlainSettingsStorage::class), [
       'limit' => 3,
-      'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Lost']],
+      'third_party_settings' => ['surface_storage_test' => ['note' => 'Lost']],
     ]);
     $this->assertSame(['third_party_settings'], array_keys($refusals), 'An owner that declares no third party settings refuses every mount, under that key.');
   }
@@ -205,7 +205,7 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($storage->mayClear($this->context(), 'limit'), 'The schema at the path does not call it nullable.');
     $this->assertTrue($storage->mayClear($this->context(), 'title'));
 
-    $surface = static fn (int $max): DataSurface => new DataSurface(DefinitionMap::fromArrays(definitions: [
+    $surface = static fn (int $max): Surface => new Surface(DefinitionMap::fromArrays(definitions: [
       'limit' => DataDefinition::create('integer')
         ->setLabel('Limit')
         ->setRequired(TRUE)
@@ -221,7 +221,7 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
    */
   public function testAnObjectWithNoSchemaIsAnError(): void {
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('No config schema describes data_surface_storage_test.missing');
+    $this->expectExceptionMessage('No config schema describes surface_storage_test.missing');
     $this->storage(MissingSchemaSettingsStorage::class)->prepare($this->context(), ['limit' => 1], new AnonymousUserSession());
   }
 

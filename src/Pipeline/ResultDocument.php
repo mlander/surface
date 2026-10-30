@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Component\Render\PlainTextOutput;
 
@@ -51,7 +51,7 @@ final class ResultDocument {
   /**
    * Answers a run.
    *
-   * @param \Drupal\data_surface\Pipeline\DataSurfaceResult $result
+   * @param \Drupal\surface\Pipeline\SurfaceResult $result
    *   The run.
    * @param array|\stdClass $values
    *   Its values as the door may return them.
@@ -63,7 +63,7 @@ final class ResultDocument {
    * @return array
    *   The result, every key in KEYS.
    */
-  public static function of(DataSurfaceResult $result, array|\stdClass $values, bool $machine = TRUE): array {
+  public static function of(SurfaceResult $result, array|\stdClass $values, bool $machine = TRUE): array {
     $entry = static fn (Violation $violation): array => self::entry($violation, $machine);
     return [
       'ok' => $result->isValid(),
@@ -82,7 +82,7 @@ final class ResultDocument {
    *
    * @param array|\stdClass $values
    *   No values, as the door writes none: `[]` or an empty object.
-   * @param \Drupal\data_surface\Pipeline\Violation ...$violations
+   * @param \Drupal\surface\Pipeline\Violation ...$violations
    *   Why.
    *
    * @return array
@@ -106,7 +106,7 @@ final class ResultDocument {
   /**
    * Writes one violation or note for a door.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation $violation
+   * @param \Drupal\surface\Pipeline\Violation $violation
    *   The violation.
    * @param bool $machine
    *   Whether its message is rendered for a machine or for a person.
@@ -126,7 +126,7 @@ final class ResultDocument {
   /**
    * Writes one stale reference for a door, with the value it keeps.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation $violation
+   * @param \Drupal\surface\Pipeline\Violation $violation
    *   The stale entry.
    * @param bool $machine
    *   Whether its message is rendered for a machine or for a person.
@@ -144,7 +144,7 @@ final class ResultDocument {
    * The boundary a message object stops being one, rendered once, by the
    * renderer the door chooses.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation $violation
+   * @param \Drupal\surface\Pipeline\Violation $violation
    *   The violation.
    * @param bool $machine
    *   TRUE to render it for a machine, values as sent
@@ -165,7 +165,7 @@ final class ResultDocument {
    * The path is the JSON Pointer the structured result carries. A refusal
    * of the whole call, whose path is empty, is its message alone.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation ...$violations
+   * @param \Drupal\surface\Pipeline\Violation ...$violations
    *   The violations.
    *
    * @return string

@@ -1,0 +1,20 @@
+# The site's catalog, as a page: what drush surface:catalog lists, from the
+# same SiteCatalog data. Built for no account, so the page is the same
+# whoever reads it; the per-request documents differ by account.
+# Decision: see docs/decisions.md#the-catalog-is-the-sites-live-map.
+
+surface.catalog:
+  path: '/admin/config/development/surfaces'
+  defaults:
+    _controller: '\Drupal\surface\Controller\CatalogController::catalog'
+    _title: 'Data surface catalog'
+  requirements:
+    _permission: 'access surface catalog'
+
+surface.catalog.resource:
+  path: '/admin/config/development/surfaces/{resource}'
+  defaults:
+    _controller: '\Drupal\surface\Controller\CatalogController::resource'
+    _title_callback: '\Drupal\surface\Controller\CatalogController::title'
+  requirements:
+    _permission: 'access surface catalog'

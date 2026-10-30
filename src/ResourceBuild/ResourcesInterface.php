@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Resource\OperationContext;
 
 /**
  * The build step: a class and a context in, a sealed data surface out.
@@ -20,10 +20,10 @@ use Drupal\data_surface\Resource\OperationContext;
  * child the same way in its own frame, and seals. It is the only way either
  * kind is built.
  *
- * The answer is the engine's DataSurfaceInterface, which the pipeline,
+ * The answer is the engine's SurfaceInterface, which the pipeline,
  * the generated form, the widgets and the tool bridge all read.
  *
- * @see \Drupal\data_surface\ResourceBuild\Resources
+ * @see \Drupal\surface\ResourceBuild\Resources
  *   For the order of the steps and what each refuses.
  */
 interface ResourcesInterface {
@@ -33,10 +33,10 @@ interface ResourcesInterface {
    *
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for. A generic caller passes an empty one.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface.
    *
    * @throws \InvalidArgumentException
@@ -44,7 +44,7 @@ interface ResourcesInterface {
    * @throws \LogicException
    *   When it fails a seal-time check, naming the offender.
    */
-  public function build(string $resource, OperationContext $context): DataSurfaceInterface;
+  public function build(string $resource, OperationContext $context): SurfaceInterface;
 
   /**
    * Builds a resource or structure for what the account alone decides.
@@ -66,10 +66,10 @@ interface ResourcesInterface {
    *
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface, its cacheability carrying what the static
    *   answers read and the cache contexts the set-aside ones read.
    *
@@ -78,7 +78,7 @@ interface ResourcesInterface {
    * @throws \LogicException
    *   When it fails a seal-time check, naming the offender.
    */
-  public function buildStatic(string $resource, OperationContext $context): DataSurfaceInterface;
+  public function buildStatic(string $resource, OperationContext $context): SurfaceInterface;
 
   /**
    * Answers whether the access asked of the whole is runtime for an account.
@@ -87,14 +87,14 @@ interface ResourcesInterface {
    * a whole, asked for the account alone as buildStatic() asks them,
    * without building it: TRUE when an answer is set aside, so that a build
    * for that account marks every key
-   * (DataSurfaceInterface::isRuntimeAccessWhole()).
+   * (SurfaceInterface::isRuntimeAccessWhole()).
    *
    * Decision: see
    * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
    *
    * @param string $resource
    *   The class, or its id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
@@ -127,10 +127,10 @@ interface ResourcesInterface {
    *
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface.
    *
    * @throws \InvalidArgumentException
@@ -138,7 +138,7 @@ interface ResourcesInterface {
    * @throws \LogicException
    *   When it fails a seal-time check, naming the offender.
    */
-  public function buildDeclared(string $resource, OperationContext $context): DataSurfaceInterface;
+  public function buildDeclared(string $resource, OperationContext $context): SurfaceInterface;
 
   /**
    * Builds what buildDeclared() builds, kept for this request alone.
@@ -155,10 +155,10 @@ interface ResourcesInterface {
    *
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface.
    *
    * @throws \InvalidArgumentException
@@ -166,7 +166,7 @@ interface ResourcesInterface {
    * @throws \LogicException
    *   When it fails a seal-time check, naming the offender.
    */
-  public function holdDeclared(string $resource, OperationContext $context): DataSurfaceInterface;
+  public function holdDeclared(string $resource, OperationContext $context): SurfaceInterface;
 
   /**
    * Builds the context one operation describes.
@@ -178,7 +178,7 @@ interface ResourcesInterface {
    * @param array $arguments
    *   The operation method's arguments, positional or by parameter name.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The context, whose id is the operation id.
    *
    * @throws \InvalidArgumentException
@@ -199,10 +199,10 @@ interface ResourcesInterface {
    * @param array $arguments
    *   The operation method's arguments, positional or by parameter name.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface.
    */
-  public function buildOperation(string $resource, string $operation, array $arguments = []): DataSurfaceInterface;
+  public function buildOperation(string $resource, string $operation, array $arguments = []): SurfaceInterface;
 
   /**
    * Answers an operation's static permission, before anything is read.
@@ -222,7 +222,7 @@ interface ResourcesInterface {
    *   The operation id.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account, or NULL for the current user.
-   * @param \Drupal\data_surface\Resource\OperationContext|null $context
+   * @param \Drupal\surface\Resource\OperationContext|null $context
    *   The context, once built, whose identity fills a `%key` placeholder;
    *   NULL asks the permission as written.
    *
@@ -255,7 +255,7 @@ interface ResourcesInterface {
    *
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account, or NULL for the current user.
@@ -288,9 +288,9 @@ interface ResourcesInterface {
    *
    * @param string $resource
    *   The resource class, or its #[Resource] id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context the storage loads and commits by.
-   * @param \Drupal\data_surface\DataSurfaceInterface|null $built
+   * @param \Drupal\surface\SurfaceInterface|null $built
    *   The resource already built in that context, which saves building
    *   it again to find its children; NULL builds it.
    * @param \Drupal\Core\Session\AccountInterface|null $account
@@ -298,7 +298,7 @@ interface ResourcesInterface {
    *   each level's storage, or NULL for the current user: a storage
    *   never reads the current user itself.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface
+   * @return \Drupal\surface\Pipeline\SurfaceStorageInterface
    *   The storage, for the pipeline's submit(). Composed along the tree
    *   of children: a child whose class names storage of its own has its
    *   values routed there, in the context its parent's hands it; a child
@@ -307,7 +307,7 @@ interface ResourcesInterface {
    * @throws \LogicException
    *   When it names no storage: its host supplies it.
    */
-  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL, ?AccountInterface $account = NULL): DataSurfaceStorageInterface;
+  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL): SurfaceStorageInterface;
 
   /**
    * Reads what a resource holds, as the code that uses it needs it.

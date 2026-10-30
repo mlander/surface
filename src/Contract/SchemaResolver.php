@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 /**
  * Reads a schema the contract emitter wrote as one inline schema.
@@ -32,7 +32,7 @@ namespace Drupal\data_surface\Contract;
  *
  * A reference that leads back into a def being read is left as it is, so
  * a recursive schema ends. A def's own `title` is its id, not a label, so
- * it is not laid over a site. This is data_surface_react's
+ * it is not laid over a site. This is surface_react's
  * `resolveSchema()` and `inlineSchema()`, in PHP.
  *
  * The inline reading is the emitter's own, before the placement rules of
@@ -44,7 +44,7 @@ namespace Drupal\data_surface\Contract;
  * a key's union of its variants is left to the conditionals, which state
  * each one exactly.
  *
- * @see \Drupal\data_surface\Contract\PropertySchema::reference()
+ * @see \Drupal\surface\Contract\PropertySchema::reference()
  */
 final class SchemaResolver {
 

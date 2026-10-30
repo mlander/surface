@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Refinement;
+namespace Drupal\surface\Refinement;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\ConstraintMessages;
-use Drupal\data_surface\Contract\PatternTranslation;
+use Drupal\surface\ConstraintMessages;
+use Drupal\surface\Contract\PatternTranslation;
 
 /**
  * A rule between keys, declared as data: a condition and its effects.
@@ -122,7 +122,7 @@ final class Rule {
   /**
    * Says when the effects apply.
    *
-   * @param \Drupal\data_surface\Refinement\Condition $condition
+   * @param \Drupal\surface\Refinement\Condition $condition
    *   The condition, on keys of the same frame.
    *
    * @return $this
@@ -152,7 +152,7 @@ final class Rule {
    *   ->doesNotApply();
    * @endcode
    *
-   * @param \Drupal\data_surface\Refinement\Condition $condition
+   * @param \Drupal\surface\Refinement\Condition $condition
    *   The condition under which the effects do not apply, on keys of the
    *   same frame.
    *
@@ -271,7 +271,7 @@ final class Rule {
   /**
    * Gets the condition.
    *
-   * @return \Drupal\data_surface\Refinement\Condition|null
+   * @return \Drupal\surface\Refinement\Condition|null
    *   The condition; NULL only before when() was called, which the build
    *   refuses.
    */

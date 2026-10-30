@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Core\Access\AccessResult;
-use Drupal\data_surface\Pipeline\ResultDocument;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface_examples\ConceptCalls;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool_test\Storage\VaultStorage;
+use Drupal\surface\Pipeline\ResultDocument;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface_examples\ConceptCalls;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\surface_tool_test\Storage\VaultStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolInterface;
 use PHPUnit\Framework\Attributes\Group;
@@ -26,9 +26,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the write tool or React, and its entry read back by path and code; the
  * table the codes are documented in is docs/semantics.md (Codes).
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ResultCodesTest extends DataSurfaceKernelTestBase {
+class ResultCodesTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
 
@@ -46,13 +46,13 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     'node',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_demo_node_type',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_workflow',
-    'data_surface_react',
-    'data_surface_tool_test',
+    'surface',
+    'surface_examples_node_type',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_workflow',
+    'surface_react',
+    'surface_tool_test',
   ];
 
   /**
@@ -62,7 +62,7 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
-    $this->installConfig(['field', 'node', 'data_surface_examples']);
+    $this->installConfig(['field', 'node', 'surface_examples']);
     // The first account is the super user; every test acts as another.
     $this->setUpCurrentUser(admin: TRUE);
     $this->setUpCurrentUser([], ['administer site configuration', 'administer content types']);
@@ -109,7 +109,7 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
    */
   protected function dryRun(string $resource, array $values, string $operation = 'configure'): array {
     $inputs = [OperationInputs::VALUES => $values];
-    $tool = 'data_surface:' . $resource . ':' . $operation;
+    $tool = 'surface:' . $resource . ':' . $operation;
     if (isset($this->container->get('plugin.manager.tool')->createInstance($tool)->getInputDefinitions()[OperationInputs::DRY_RUN])) {
       $inputs[OperationInputs::DRY_RUN] = TRUE;
     }
@@ -189,7 +189,7 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     // A value in a shape its definition cannot hold, which the Tool API
     // refuses on its own before the pipeline is asked, is the pipeline's
     // type mismatch where nothing holds the call to its shape first.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation('registration.step3', 'configure');
     $built = $resources->build('registration.step3', $context);
     $result = $this->pipeline()->submit($built, ['contact' => 'events@example.com'], $resources->storage('registration.step3', $context, $built), TRUE);
@@ -206,7 +206,7 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
         ['host' => 'west.example.com', 'password' => 'mirror-two'],
       ],
     ]);
-    $removed = $this->runTool('data_surface:tool_test.vault:configure', [OperationInputs::VALUES => ['mirrors' => [['host' => 'west.example.com']]]]);
+    $removed = $this->runTool('surface:tool_test.vault:configure', [OperationInputs::VALUES => ['mirrors' => [['host' => 'west.example.com']]]]);
     $this->assertFalse($removed['success']);
     $this->assertShape($removed['outputs']);
     $this->assertSame(['/mirrors/0/password' => Violation::SECRET_IN_ITEM], static::codes($removed['outputs']['violations']));
@@ -218,7 +218,7 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
   public function testWholeCallRefusalsHaveCodes(): void {
     // The operation's permission.
     $this->setUpCurrentUser([], ['access content']);
-    $refused = $this->runTool('data_surface:registration.step3:configure', [OperationInputs::VALUES => []]);
+    $refused = $this->runTool('surface:registration.step3:configure', [OperationInputs::VALUES => []]);
     $this->assertFalse($refused['success']);
     $this->assertShape($refused['outputs']);
     $this->assertSame(['' => Violation::PERMISSION], static::codes($refused['outputs']['violations']));
@@ -226,12 +226,12 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
 
     $this->setUpCurrentUser([], ['administer site configuration', 'administer content types']);
     // A resource locked whole.
-    $this->container->get('state')->set('data_surface_examples_workflow.state', 'published');
-    $locked = $this->runTool('data_surface:event.program:configure', [
+    $this->container->get('state')->set('surface_examples_workflow.state', 'published');
+    $locked = $this->runTool('surface:event.program:configure', [
       OperationInputs::VALUES => ['headline' => 'Four days of talks'],
       OperationInputs::DRY_RUN => TRUE,
     ]);
-    $this->container->get('state')->delete('data_surface_examples_workflow.state');
+    $this->container->get('state')->delete('surface_examples_workflow.state');
     $this->assertFalse($locked['success']);
     $this->assertShape($locked['outputs']);
     $this->assertSame(['' => Violation::LOCKED], static::codes($locked['outputs']['violations']));
@@ -240,8 +240,8 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
 
     // A parameter that names nothing, at the write and the read tool.
     $tools = [
-      'data_surface:node.type:update' => [OperationInputs::VALUES => []],
-      'data_surface:node.type:update:read' => [],
+      'surface:node.type:update' => [OperationInputs::VALUES => []],
+      'surface:node.type:update:read' => [],
     ];
     foreach ($tools as $tool => $inputs) {
       $missing = $this->runTool($tool, ['type' => 'nowhere'] + $inputs);
@@ -251,7 +251,7 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     }
 
     // The resource's access answer, handed to the pipeline.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation('registration.step3', 'configure');
     $built = $resources->build('registration.step3', $context);
     $result = $this->pipeline()->submit($built, [], $resources->storage('registration.step3', $context, $built), access: AccessResult::forbidden('The gate is shut.'));
@@ -259,14 +259,14 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
 
     // The Tool API's own refusal of the shape, answered by the tool when
     // it is called directly: values sent null.
-    $null = $this->runTool('data_surface:registration.step3:configure', [
+    $null = $this->runTool('surface:registration.step3:configure', [
       OperationInputs::VALUES => NULL,
       OperationInputs::DRY_RUN => TRUE,
     ]);
     $this->assertFalse($null['success']);
     $this->assertShape($null['outputs']);
     $this->assertSame(['' => 'is_null'], static::codes($null['outputs']['violations']));
-    $left_out = $this->runTool('data_surface:registration.step3:configure', [OperationInputs::DRY_RUN => TRUE]);
+    $left_out = $this->runTool('surface:registration.step3:configure', [OperationInputs::DRY_RUN => TRUE]);
     $this->assertFalse($left_out['success']);
     $this->assertSame(['' => 'is_null'], static::codes($left_out['outputs']['violations']));
 
@@ -287,7 +287,7 @@ class ResultCodesTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['/on_sale/speaker' => Violation::LOCKED], static::codes($sales['notes']));
 
     // A room stored that the venue stored no longer offers.
-    $this->config('data_surface_examples.registration_step2')->set('venue', 'harbour')->set('room', 'library_garden')->save();
+    $this->config('surface_examples.registration_step2')->set('venue', 'harbour')->set('room', 'library_garden')->save();
     $kept = $this->dryRun('registration.step2', []);
     $this->assertShape($kept);
     $this->assertTrue($kept['ok']);

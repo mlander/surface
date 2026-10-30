@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Pipeline\ViolationSummary;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\ViolationSummary;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -28,9 +28,9 @@ use Symfony\Component\HttpFoundation\Request;
  * the message; and core's number element checked #min and #max itself,
  * before the pipeline, so its wording replaced the rule's.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RefusalMessagesTest extends DataSurfaceKernelTestBase {
+class RefusalMessagesTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -42,9 +42,9 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_first',
+    'surface',
+    'surface_tool',
+    'surface_examples_first',
   ];
 
   /**
@@ -58,18 +58,18 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_first']);
+    $this->installConfig(['surface_examples_first']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Builds a data surface whose Range carries the custom message.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function cappedSurface(): DataSurfaceInterface {
-    return new DataSurface(DefinitionMap::fromArrays(definitions: [
+  protected function cappedSurface(): SurfaceInterface {
+    return new Surface(DefinitionMap::fromArrays(definitions: [
       'max_recipients' => DataDefinition::create('integer')
         ->setLabel('Maximum recipients per send')
         ->addConstraint('Range', ['min' => 1, 'max' => 1000, 'notInRangeMessage' => self::MESSAGE]),
@@ -98,7 +98,7 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
    * API validates it before the pipeline runs, through core's translator.
    */
   public function testTheToolsOwnCheckFillsThemIn(): void {
-    $map = $this->container->get('data_surface_tool.input_definitions')->fromSurface($this->cappedSurface(), 'Capped', '');
+    $map = $this->container->get('surface_tool.input_definitions')->fromSurface($this->cappedSurface(), 'Capped', '');
     $constraints = $map->getPropertyDefinition('max_recipients')->getConstraints();
     $this->assertSame('At most %max recipients per send until a legal notice is written.', $constraints['Range']['notInRangeMessage']);
 
@@ -114,10 +114,10 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
    * them as they are, with no warning from reading options they have not.
    */
   public function testAnOptionsLessConstraintCrosses(): void {
-    $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
       'name' => DataDefinition::create('string')->setLabel('Name')->addConstraint('NotNull'),
     ]));
-    $map = $this->container->get('data_surface_tool.input_definitions')->fromSurface($surface, 'Named', '');
+    $map = $this->container->get('surface_tool.input_definitions')->fromSurface($surface, 'Named', '');
     $constraints = $map->getPropertyDefinition('name')->getConstraints();
     $this->assertArrayHasKey('NotNull', $constraints);
     $this->assertNull($constraints['NotNull']);
@@ -127,7 +127,7 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
    * Tests the number field shows the rule's message, not the element's.
    */
   public function testTheRulesMessageReachesTheNumberField(): void {
-    $route_name = 'data_surface_first.newsletter';
+    $route_name = 'surface_examples_first.newsletter';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -136,26 +136,26 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
 
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
-    $element = $form[DataSurfaceOperationForm::SURFACE_KEY]['max_recipients'];
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $element = $form[SurfaceOperationForm::SURFACE_KEY]['max_recipients'];
     $this->assertSame(10000, $element['#max'], 'The bound still reaches the browser, as a hint.');
     $this->assertSame([], $element['#element_validate']);
 
     $form_state = new FormState();
     $form_state->setValues([
-      DataSurfaceOperationForm::SURFACE_KEY => [
+      SurfaceOperationForm::SURFACE_KEY => [
         'sender_name' => 'The newsletter',
         'sender_email' => 'newsletter@example.com',
         'frequency' => 'weekly',
         'max_recipients' => '20000',
       ],
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
 
     $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
     // Printed at the top of the page, so named for its field.
     $this->assertSame(['surface][max_recipients' => 'Maximum recipients per send: This value should be between 1 and 10000.'], $errors);
-    $this->assertSame(500, $this->config('data_surface_first.newsletter')->get('max_recipients'), 'Nothing was written.');
+    $this->assertSame(500, $this->config('surface_examples_first.newsletter')->get('max_recipients'), 'Nothing was written.');
   }
 
   /**
@@ -166,7 +166,7 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
    * an attribute, and the rule's violation is the one message.
    */
   public function testTheRulesMessageReachesTheTextField(): void {
-    $route_name = 'data_surface_first.newsletter';
+    $route_name = 'surface_examples_first.newsletter';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -175,26 +175,26 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
 
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
-    $element = $form[DataSurfaceOperationForm::SURFACE_KEY]['sender_name'];
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $element = $form[SurfaceOperationForm::SURFACE_KEY]['sender_name'];
     $this->assertSame(64, $element['#attributes']['maxlength'], 'The maximum still reaches the browser, as a hint.');
     $this->assertNull($element['#maxlength'], 'Core does not check it beside the rule.');
-    $this->assertNull($form[DataSurfaceOperationForm::SURFACE_KEY]['sender_email']['#maxlength'], 'Nor its own default for an element type.');
+    $this->assertNull($form[SurfaceOperationForm::SURFACE_KEY]['sender_email']['#maxlength'], 'Nor its own default for an element type.');
 
     $form_state = new FormState();
     $form_state->setValues([
-      DataSurfaceOperationForm::SURFACE_KEY => [
+      SurfaceOperationForm::SURFACE_KEY => [
         'sender_name' => str_repeat('n', 65),
         'sender_email' => 'newsletter@example.com',
         'frequency' => 'weekly',
         'max_recipients' => '500',
       ],
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
 
     $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
     $this->assertSame(['surface][sender_name' => 'Sender name: This value is too long. It should have 64 characters or less.'], $errors);
-    $this->assertSame('The newsletter', $this->config('data_surface_first.newsletter')->get('sender_name'), 'Nothing was written.');
+    $this->assertSame('The newsletter', $this->config('surface_examples_first.newsletter')->get('sender_name'), 'Nothing was written.');
   }
 
   /**
@@ -206,28 +206,28 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
    * and the label's marker, and the pipeline's violation is the message.
    */
   public function testTheRulesMessageReachesRequiredField(): void {
-    $this->onRoute('data_surface_first.newsletter');
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
-    $element = $form[DataSurfaceOperationForm::SURFACE_KEY]['sender_name'];
+    $this->onRoute('surface_examples_first.newsletter');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $element = $form[SurfaceOperationForm::SURFACE_KEY]['sender_name'];
     $this->assertFalse($element['#required'], 'Core does not check it beside the rule.');
-    $this->assertTrue($element[DataSurfaceFormBuilderInterface::REQUIRED_KEY]);
+    $this->assertTrue($element[SurfaceFormBuilderInterface::REQUIRED_KEY]);
     $html = (string) $this->container->get('renderer')->renderInIsolation($element);
     $this->assertMatchesRegularExpression('/<input[^>]*name="surface\[sender_name\]"[^>]*required="required"/', $html, 'The browser is still told, as a hint.');
     $this->assertStringContainsString('form-required', $html, 'The label keeps its marker.');
 
     $form_state = new FormState();
     $form_state->setValues([
-      DataSurfaceOperationForm::SURFACE_KEY => [
+      SurfaceOperationForm::SURFACE_KEY => [
         'sender_name' => '',
         'sender_email' => 'newsletter@example.com',
         'frequency' => 'weekly',
         'max_recipients' => '500',
       ],
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
     $this->assertSame(['surface][sender_name' => 'Sender name is required.'], $errors);
-    $this->assertSame('The newsletter', $this->config('data_surface_first.newsletter')->get('sender_name'), 'Nothing was written.');
+    $this->assertSame('The newsletter', $this->config('surface_examples_first.newsletter')->get('sender_name'), 'Nothing was written.');
   }
 
   /**
@@ -238,20 +238,20 @@ class RefusalMessagesTest extends DataSurfaceKernelTestBase {
    * rule read, as the tool's is.
    */
   public function testRuleMadeRequiredSaysItsConditionOnTheForm(): void {
-    $this->container->get('module_installer')->install(['data_surface_resource_test']);
-    $this->config('data_surface_resource_test.parcel')->set('insured', TRUE)->set('signature', 'Ann')->save();
-    $this->onRoute('data_surface_resource_test.parcel');
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
-    $this->assertTrue($form[DataSurfaceOperationForm::SURFACE_KEY]['signature'][DataSurfaceFormBuilderInterface::REQUIRED_KEY]);
+    $this->container->get('module_installer')->install(['surface_resource_test']);
+    $this->config('surface_resource_test.parcel')->set('insured', TRUE)->set('signature', 'Ann')->save();
+    $this->onRoute('surface_resource_test.parcel');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $this->assertTrue($form[SurfaceOperationForm::SURFACE_KEY]['signature'][SurfaceFormBuilderInterface::REQUIRED_KEY]);
 
     $form_state = new FormState();
     $form_state->setValues([
-      DataSurfaceOperationForm::SURFACE_KEY => ['signature' => ''] + $this->config('data_surface_resource_test.parcel')->getRawData(),
+      SurfaceOperationForm::SURFACE_KEY => ['signature' => ''] + $this->config('surface_resource_test.parcel')->getRawData(),
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     $errors = array_map(static fn ($error): string => strip_tags((string) $error), $form_state->getErrors());
     $this->assertSame(['surface][signature' => 'Signed for by is required when Insured is on and Declared value is 100.'], $errors);
-    $this->assertSame('Ann', $this->config('data_surface_resource_test.parcel')->get('signature'), 'Nothing was written.');
+    $this->assertSame('Ann', $this->config('surface_resource_test.parcel')->get('signature'), 'Nothing was written.');
   }
 
   /**

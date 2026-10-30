@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface_first\Resource\NewsletterResource;
-use Drupal\data_surface_first\Storage\NewsletterStorage;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface_examples_first\Resource\NewsletterResource;
+use Drupal\surface_examples_first\Storage\NewsletterStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -22,9 +22,9 @@ use Symfony\Component\HttpFoundation\Request;
  * declared defaults, a write is held to the config schema, and the first
  * write creates the object.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class MissingConfigObjectTest extends DataSurfaceKernelTestBase {
+class MissingConfigObjectTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -34,8 +34,8 @@ class MissingConfigObjectTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_first',
+    'surface',
+    'surface_examples_first',
   ];
 
   /**
@@ -45,7 +45,7 @@ class MissingConfigObjectTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     // No installConfig(): the newsletter settings were never installed.
-    $this->setUpCurrentUser(permissions: ['administer data_surface_first']);
+    $this->setUpCurrentUser(permissions: ['administer surface_examples_first']);
   }
 
   /**
@@ -55,7 +55,7 @@ class MissingConfigObjectTest extends DataSurfaceKernelTestBase {
    *   The form's data surface container.
    */
   protected function form(): array {
-    $route_name = 'data_surface_first.newsletter';
+    $route_name = 'surface_examples_first.newsletter';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -64,7 +64,7 @@ class MissingConfigObjectTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
     $form_state = new FormState();
-    return $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state)[DataSurfaceOperationForm::SURFACE_KEY];
+    return $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $form_state)[SurfaceOperationForm::SURFACE_KEY];
   }
 
   /**
@@ -78,7 +78,7 @@ class MissingConfigObjectTest extends DataSurfaceKernelTestBase {
     $this->assertSame(500, $form['max_recipients']['#default_value']);
     $this->assertEmpty($form['sender_name']['#default_value'] ?? NULL);
 
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(NewsletterResource::class, 'configure');
     $surface = $resources->build(NewsletterResource::class, $context);
     $storage = $resources->storage(NewsletterResource::class, $context, $surface);

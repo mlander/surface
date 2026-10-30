@@ -1,0 +1,28 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the managed keys example.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Takes the managed key this module stored on the webhook away with it:
+ * once the module is gone no config schema describes it, and a save with
+ * schema checking on would refuse the whole object. The webhook's pasted
+ * key is the webhook's, and stays.
+ */
+function surface_examples_keys_uninstall(): void {
+  $config = \Drupal::configFactory()->getEditable('surface_examples.webhook');
+  if ($config->isNew() || $config->get('third_party_settings.surface_examples_keys') === NULL) {
+    return;
+  }
+  $config->clear('third_party_settings.surface_examples_keys');
+  if ($config->get('third_party_settings') === []) {
+    $config->clear('third_party_settings');
+  }
+  $config->save();
+}

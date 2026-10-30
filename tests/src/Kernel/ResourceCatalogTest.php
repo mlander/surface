@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface_demo_extras\Alter\NodeTypeAlter;
-use Drupal\data_surface_demo_node_type\Access\NodeTypeAccess;
-use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
-use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
-use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
-use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
-use Drupal\data_surface_examples_workflow\Alter\ProgramWorkflowAlter;
-use Drupal\data_surface\ResourceBuild\CatalogDocument;
-use Drupal\data_surface_tool\Resource\FieldInstanceResource;
+use Drupal\surface_examples_extras\Alter\NodeTypeAlter;
+use Drupal\surface_examples_node_type\Access\NodeTypeAccess;
+use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
+use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
+use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
+use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
+use Drupal\surface_examples_workflow\Alter\ProgramWorkflowAlter;
+use Drupal\surface\ResourceBuild\CatalogDocument;
+use Drupal\surface_tool\Resource\FieldInstanceResource;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -25,9 +25,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * --format=markdown` prints for these modules, written here through the
  * same builder (SiteCatalog::markdown()).
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ResourceCatalogTest extends DataSurfaceKernelTestBase {
+class ResourceCatalogTest extends SurfaceKernelTestBase {
 
   /**
    * Every module here that declares or alters a resource or structure.
@@ -46,22 +46,22 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     'address',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_address',
-    'data_surface_demo',
-    'data_surface_demo_extras',
-    'data_surface_demo_node_type',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_examples_workflow',
-    'data_surface_entity',
-    'data_surface_first',
-    'data_surface_component_block',
-    'data_surface_block',
-    'data_surface_react',
-    'data_surface_openapi',
-    'data_surface_performance',
+    'surface',
+    'surface_examples_address',
+    'surface_examples_plugins',
+    'surface_examples_extras',
+    'surface_examples_node_type',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_examples_workflow',
+    'surface_examples_entity',
+    'surface_examples_first',
+    'surface_examples_component_block',
+    'surface_examples_block',
+    'surface_react',
+    'surface_openapi',
+    'surface_examples_performance',
   ];
 
   /**
@@ -72,7 +72,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     // What a build reads: the accounts a key may refer to, the examples'
     // settings.
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_first']);
+    $this->installConfig(['surface_examples', 'surface_examples_first']);
   }
 
   /**
@@ -82,7 +82,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
    *   What ResourceCatalog::describe() returns.
    */
   protected function catalog(): array {
-    return $this->container->get('data_surface.resource_catalog')->describe();
+    return $this->container->get('surface.resource_catalog')->describe();
   }
 
   /**
@@ -91,12 +91,12 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
   public function testTheCatalogueReadsTheStaticLayer(): void {
     $catalog = $this->catalog();
     $this->assertSame([
-      'block.data_surface_component',
-      'block.data_surface_demo',
-      'block.data_surface_demo.presentation.grid',
-      'block.data_surface_demo.presentation.list',
       'block.placement',
       'block.placement.condition',
+      'block.surface_component',
+      'block.surface_examples_plugins',
+      'block.surface_examples_plugins.presentation.grid',
+      'block.surface_examples_plugins.presentation.list',
       'event.bulletin',
       'event.desk',
       'event.doors',
@@ -120,7 +120,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
       'field.instance',
       'field.settings.address',
       'field.storage',
-      'field_formatter:data_surface_demo_string',
+      'field_formatter:surface_examples_plugins_string',
       'first.newsletter',
       'first.store',
       'node.type',
@@ -136,7 +136,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
 
     $node_type = $catalog['node.type'];
     $this->assertSame(NodeTypeResource::class, $node_type['class']);
-    $this->assertSame('data_surface_demo_node_type', $node_type['module']);
+    $this->assertSame('surface_examples_node_type', $node_type['module']);
     $this->assertSame(['type'], $node_type['identity']);
     $this->assertSame(NodeTypeStorage::class, $node_type['storage']);
     $this->assertSame(NodeTypeAccess::class, $node_type['access']);
@@ -145,7 +145,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
         'id' => 'create',
         'label' => 'Add a content type',
         'provider' => '#[Operation] on ' . NodeTypeResource::class,
-        'module' => 'data_surface_demo_node_type',
+        'module' => 'surface_examples_node_type',
         'parameters' => [],
         'creates' => TRUE,
         'kind' => 'create',
@@ -158,7 +158,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
         'id' => 'update',
         'label' => 'Edit a content type',
         'provider' => NodeTypeResource::class . '::update()',
-        'module' => 'data_surface_demo_node_type',
+        'module' => 'surface_examples_node_type',
         'parameters' => ['NodeTypeInterface $type'],
         'creates' => FALSE,
         'kind' => 'update',
@@ -171,7 +171,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       [
         'class' => NodeTypeAlter::class,
-        'module' => 'data_surface_demo_extras',
+        'module' => 'surface_examples_extras',
         'operations' => [],
         'access' => FALSE,
         'refines' => [],
@@ -181,7 +181,7 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       [
         'class' => ProgramWorkflowAlter::class,
-        'module' => 'data_surface_examples_workflow',
+        'module' => 'surface_examples_workflow',
         'operations' => ['configure'],
         'access' => TRUE,
         'refines' => [],
@@ -218,12 +218,12 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($storage['create']['standalone']);
     $this->assertTrue($storage['update']['standalone']);
 
-    $this->assertSame(['block:data_surface_demo'], $catalog['block.data_surface_demo']['plugins']);
+    $this->assertSame(['block:surface_examples_plugins'], $catalog['block.surface_examples_plugins']['plugins']);
     // A plugin that is its own structure is used by itself.
-    $this->assertSame(['field_formatter:data_surface_demo_string'], $catalog['field_formatter:data_surface_demo_string']['plugins']);
-    $this->assertSame(DataSurfaceDemoFormatter::class, $catalog['field_formatter:data_surface_demo_string']['class']);
+    $this->assertSame(['field_formatter:surface_examples_plugins_string'], $catalog['field_formatter:surface_examples_plugins_string']['plugins']);
+    $this->assertSame(ExampleFormatter::class, $catalog['field_formatter:surface_examples_plugins_string']['class']);
     $this->assertSame(['field_type:address'], $catalog['field.settings.address']['plugins']);
-    $this->assertSame([], $catalog['block.data_surface_demo.presentation.list']['plugins']);
+    $this->assertSame([], $catalog['block.surface_examples_plugins.presentation.list']['plugins']);
   }
 
   /**
@@ -250,11 +250,11 @@ class ResourceCatalogTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the checked-in catalog is what the command prints.
    *
-   * Running with DATA_SURFACE_WRITE_CATALOGUE=1 writes the new document
+   * Running with SURFACE_WRITE_CATALOGUE=1 writes the new document
    * first, which is what scripts/generate-catalog.php does.
    */
   public function testCatalogueHasNotDrifted(): void {
-    $document = $this->container->get('data_surface.site_catalog')->markdown();
+    $document = $this->container->get('surface.site_catalog')->markdown();
     $path = dirname(__DIR__, 3) . '/' . CatalogDocument::PATH;
     if (getenv(CatalogDocument::WRITE_VARIABLE) === '1') {
       file_put_contents($path, $document);

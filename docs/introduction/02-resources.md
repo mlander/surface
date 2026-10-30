@@ -39,8 +39,8 @@ The second attribute, `#[Operation]`, and the `storage:` argument are
 the ideas of [Operations](09-operations.md) and [Storage](10-storage.md).
 
 The module ships resources for things core already has. The
-`data_surface_demo_node_type` submodule's `NodeTypeResource` makes a
-content type the resource `node.type`. The `data_surface_block`
+`surface_examples_node_type` submodule's `NodeTypeResource` makes a
+content type the resource `node.type`. The `surface_examples_block`
 submodule's `BlockPlacementResource` makes core's placed block config
 entity, `block`, the resource `block.placement`, and ships the routes
 that serve it. Later pages show parts of both.
@@ -69,7 +69,7 @@ module finds on a site. Its entry for the placed block starts:
 ```
 ## block.placement
 
-`Drupal\data_surface_block\Resource\BlockPlacementResource`, in `data_surface_block`.
+`Drupal\surface_examples_block\Resource\BlockPlacementResource`, in `surface_examples_block`.
 
 - Kind: resource
 ```

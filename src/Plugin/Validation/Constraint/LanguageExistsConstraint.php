@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -33,7 +33,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * setting naming one is almost always a mistake; a consumer that does
  * want them says so.
  *
- * @see \Drupal\data_surface\Plugin\DataSurfaceOptionsResolver\LanguageExistsOptions
+ * @see \Drupal\surface\Plugin\SurfaceOptionsResolver\LanguageExistsOptions
  */
 #[Constraint(
   id: 'LanguageExists',

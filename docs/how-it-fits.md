@@ -11,7 +11,7 @@ Three parties, in order:
 | Party | Does | Knows |
 | --- | --- | --- |
 | **Caller** (a route's form, a tool, a plugin host, a test) | builds a context, asks for the built resource or structure, then uses it | where it is |
-| **Framework** (`Resources`, the service `data_surface.resources`) | runs `defineInputs()` and `defineOutputs()`, applies alters, applies the context, binds refiners, builds children, seals | everything |
+| **Framework** (`Resources`, the service `surface.resources`) | runs `defineInputs()` and `defineOutputs()`, applies alters, applies the context, binds refiners, builds children, seals | everything |
 | **Resource** or **structure**, and its **alters** | declare | nothing about the caller |
 
 The context is how the caller tells the framework where it is. The
@@ -23,11 +23,11 @@ contexts are made.
 ## Discovery
 
 Before anything is built, `ResourceBuild\ResourceCollectorPass`, a
-compiler pass registered by `DataSurfaceServiceProvider`, lists every
+compiler pass registered by `SurfaceServiceProvider`, lists every
 class in an enabled module's `src/Resource/`, `src/Structure/` and
 `src/Alter/` into a container parameter, and registers each alter, and
 each storage and access class a resource or structure names, as an
-autowired service. `ResourceRegistry` (`data_surface.resource_registry`)
+autowired service. `ResourceRegistry` (`surface.resource_registry`)
 reads their attributes into the discovery cache: each resource's or
 structure's id and access class (and a resource's identity and storage)
 and its `#[RefinesInput]` methods; each operation with its parameters;
@@ -53,7 +53,7 @@ section below says what else is kept.
 ## The build step
 
 `ResourcesInterface::build(string $resource, OperationContext $context):
-DataSurfaceInterface`, in `Resources::buildResource()`, which calls its
+SurfaceInterface`, in `Resources::buildResource()`, which calls its
 phases in order: `Declaring` for steps 1 to 4, `Attaching` and `Binding`
 for the mixins, the refiners and the children, and `Gating` for every
 access answer (why: [decision](decisions.md#the-build-is-read-by-phase)):
@@ -64,7 +64,7 @@ build(FieldInstanceResource::class, $context):
   1. the owner's blueprint, filled by the class: no instance is ever made
        $class::defineInputs(new ResourceBlueprint($builder))          <- no context: the
        $class::defineOutputs(new ResourceBlueprint($builder, TRUE))      same everywhere
-     ResourceBlueprint writes straight into a fresh DataSurfaceBuilder,
+     ResourceBlueprint writes straight into a fresh SurfaceBuilder,
      the engine's internal builder. $class is the #[Resource] or
      #[Structure] class, or the plugin class of a plugin that is its
      own structure
@@ -121,7 +121,7 @@ build(FieldInstanceResource::class, $context):
          -> one read structure per value the provider lists and no
             variant class fills
 
-  7. seal: a DataSurfaceInterface, its children sealed into the parent's
+  7. seal: a SurfaceInterface, its children sealed into the parent's
      entries as Attachment / Variants
 ```
 
@@ -145,7 +145,7 @@ storage($resource, $context, $built)           Resources::storage()
   is stored by the parent under its key, and one its access omitted
   keeps what is stored under its key
 
-refine($values)                                  DataSurface::refine()
+refine($values)                                  Surface::refine()
   for each key whose watched siblings all hold values (a key an alter
   mounted, which only that alter watches, is read at its path and not
   waited for): its chain of
@@ -161,7 +161,7 @@ pipeline.
 
 ## One request: editing an existing field
 
-The derived tool `data_surface:field.instance:update`, given
+The derived tool `surface:field.instance:update`, given
 `entity_type: node`, `bundle: article`, `field_name: field_address`:
 
 ```
@@ -237,7 +237,7 @@ Same resource, same alters, same children.
 ## A structure from a plugin host
 
 A plugin's structure is built by its host, in
-`DataSurfaceHostTrait::hostedStructure()`, with `new
+`SurfaceHostTrait::hostedStructure()`, with `new
 OperationContext('configure')`: the host's own verb, which is no declared
 operation, and nothing known. The host supplies the storage (the
 plugin's configuration, or the field config Field UI is editing),
@@ -248,7 +248,7 @@ blueprint alone, with no alter and no context.
 
 ## Tools, derived
 
-`data_surface_tool` derives one tool per operation that can be asked
+`surface_tool` derives one tool per operation that can be asked
 on its own (`ResourceCatalog::standalone()`: the resource names
 storage, no plugin uses it, and every `%key` in its permission can be
 supplied by a parameter). `ResourceOperationToolDeriver` writes each

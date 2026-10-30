@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 /**
  * Encrypts and decrypts the values a data surface declared secret.
@@ -30,8 +30,8 @@ namespace Drupal\data_surface\Storage;
  * - isEncrypted() answers from the envelope alone, cheaply, without
  *   needing the key.
  *
- * @see \Drupal\data_surface\Storage\SodiumSecretCodec
- * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
+ * @see \Drupal\surface\Storage\SodiumSecretCodec
+ * @see \Drupal\surface\Storage\EncryptedStorageLayout
  * @see docs/storage.md
  */
 interface SecretCodecInterface {
@@ -45,7 +45,7 @@ interface SecretCodecInterface {
    * @return string
    *   The enveloped ciphertext, which isEncrypted() recognizes.
    *
-   * @throws \Drupal\data_surface\Storage\SecretCodecException
+   * @throws \Drupal\surface\Storage\SecretCodecException
    *   When the codec has no key to work with.
    */
   public function encrypt(string $plaintext): string;
@@ -59,7 +59,7 @@ interface SecretCodecInterface {
    * @return string
    *   The secret.
    *
-   * @throws \Drupal\data_surface\Storage\SecretCodecException
+   * @throws \Drupal\surface\Storage\SecretCodecException
    *   When the value is not an envelope this codec wrote, when it has
    *   been tampered with or truncated, or when the key cannot open it.
    */

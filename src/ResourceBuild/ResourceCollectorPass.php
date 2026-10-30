@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
-use Drupal\data_surface\Resource\Attribute\Alters;
-use Drupal\data_surface\Resource\Attribute\DerivesResources;
-use Drupal\data_surface\Resource\Attribute\Operation;
-use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\Attribute\Shape;
-use Drupal\data_surface\Resource\Attribute\Structure;
+use Drupal\surface\Resource\Attribute\Alters;
+use Drupal\surface\Resource\Attribute\DerivesResources;
+use Drupal\surface\Resource\Attribute\Operation;
+use Drupal\surface\Resource\Attribute\Resource;
+use Drupal\surface\Resource\Attribute\Shape;
+use Drupal\surface\Resource\Attribute\Structure;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
@@ -56,19 +56,19 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  * page of the site.
  *
  * @see \Drupal\Core\Hook\HookCollectorPass
- * @see \Drupal\data_surface\ResourceBuild\ResourceRegistry
+ * @see \Drupal\surface\ResourceBuild\ResourceRegistry
  */
 final class ResourceCollectorPass implements CompilerPassInterface {
 
   /**
    * The interface removed on 2026-10-24 through which an alter added outputs.
    */
-  public const ALTERS_OUTPUTS = 'Drupal\\data_surface\\Resource\\AltersOutputsInterface';
+  public const ALTERS_OUTPUTS = 'Drupal\\surface\\Resource\\AltersOutputsInterface';
 
   /**
    * The container parameter the discovered class lists are written to.
    */
-  public const PARAMETER = 'data_surface.resource_classes';
+  public const PARAMETER = 'surface.resource_classes';
 
   /**
    * The directories scanned in each module, relative to its src/.

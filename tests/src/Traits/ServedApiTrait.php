@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Traits;
+namespace Drupal\Tests\surface\Traits;
 
 use Psr\Http\Message\ResponseInterface;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Component\Render\MarkupInterface;
 use Drupal\Component\Utility\Html;

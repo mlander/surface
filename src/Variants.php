@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\surface\Pipeline\ValueState;
 
 /**
  * Variants: the structures a sibling key chooses between at one key.
@@ -33,7 +33,7 @@ use Drupal\data_surface\Pipeline\ValueState;
  * the pipeline can always find the child that answers for the chosen
  * variant.
  *
- * @see \Drupal\data_surface\DataSurfaceBuilderInterface::attachVariants()
+ * @see \Drupal\surface\SurfaceBuilderInterface::attachVariants()
  */
 final class Variants {
 
@@ -46,7 +46,7 @@ final class Variants {
    *   The map describing the key the variants are attached at (label,
    *   description, required flag), which every chosen variant wears. It
    *   declares no properties: those are the variant's.
-   * @param array<string, \Drupal\data_surface\Attachment> $variants
+   * @param array<string, \Drupal\surface\Attachment> $variants
    *   The variants, keyed by the value of the deciding key that chooses
    *   each, in declaration order.
    */
@@ -90,7 +90,7 @@ final class Variants {
    * @param string $id
    *   The variant id.
    *
-   * @return \Drupal\data_surface\Attachment
+   * @return \Drupal\surface\Attachment
    *   The variant.
    *
    * @throws \InvalidArgumentException
@@ -111,14 +111,14 @@ final class Variants {
    *
    * @param string $id
    *   The chosen variant.
-   * @param \Drupal\data_surface\DataSurfaceInterface|null $child
+   * @param \Drupal\surface\SurfaceInterface|null $child
    *   The variant refined against the key's value, or NULL for the
    *   variant as advertised.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The resolved definition.
    */
-  public function definitionFor(string $id, ?DataSurfaceInterface $child = NULL): MapDataDefinition {
+  public function definitionFor(string $id, ?SurfaceInterface $child = NULL): MapDataDefinition {
     return Attachment::mapOf($this->shell, $child ?? $this->variant($id)->child);
   }
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolInterface;
 use PHPUnit\Framework\Attributes\Group;
@@ -22,9 +22,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/fresh-eyes-2026-10-21.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class FreshEyesFourTest extends DataSurfaceKernelTestBase {
+class FreshEyesFourTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
 
@@ -39,13 +39,13 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_examples_workflow',
-    'data_surface_react',
-    'data_surface_tool_test',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_examples_workflow',
+    'surface_react',
+    'surface_tool_test',
   ];
 
   /**
@@ -64,7 +64,7 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     // The first account is the super user; the tests act as another.
     $this->setUpCurrentUser(admin: TRUE);
     $this->setUpCurrentUser([], ['administer site configuration', 'see event fees']);
@@ -124,29 +124,29 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
    */
   public function testMarkFromTheTopIsSaidOnce(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    foreach (['data_surface:event.program:configure', 'data_surface:event.program:configure:read'] as $id) {
+    foreach (['surface:event.program:configure', 'surface:event.program:configure:read'] as $id) {
       $this->assertStringEndsWith(self::ONCE, (string) $tools->getDefinition($id)->getDescription(), $id);
     }
-    $this->assertStringNotContainsString(self::ONCE, (string) $tools->getDefinition('data_surface:event.program:check')->getDescription());
+    $this->assertStringNotContainsString(self::ONCE, (string) $tools->getDefinition('surface:event.program:check')->getDescription());
 
-    $values = $tools->createInstance('data_surface:event.program:configure')->getInputDefinition(OperationInputs::VALUES);
+    $values = $tools->createInstance('surface:event.program:configure')->getInputDefinition(OperationInputs::VALUES);
     $this->assertNotSame([], $values->getPropertyDefinitions());
     foreach ($values->getPropertyDefinitions() as $key => $property) {
       $own = $key === 'fees';
       $this->assertSame($own, str_contains((string) $property->getDescription(), self::OWN), $key);
     }
-    $read = $this->container->get('tool.definition_serializer')->normalizeOutputSchema($tools->createInstance('data_surface:event.program:configure:read'));
+    $read = $this->container->get('tool.definition_serializer')->normalizeOutputSchema($tools->createInstance('surface:event.program:configure:read'));
     foreach (['headline', 'sessions', 'published'] as $key) {
       $this->assertStringNotContainsString(self::OWN, $read['properties'][OperationInputs::VALUES]['properties'][$key]['description'] ?? '', 'Nor does the read tool say it on ' . $key);
     }
-    $this->assertStringNotContainsString(self::ONCE, (string) $tools->getDefinition('data_surface:tool_test.cabinet:update')->getDescription(), 'A static answer at the top marks nothing.');
+    $this->assertStringNotContainsString(self::ONCE, (string) $tools->getDefinition('surface:tool_test.cabinet:update')->getDescription(), 'A static answer at the top marks nothing.');
 
-    $check = $tools->createInstance('data_surface:event.program:check')->getInputDefinition(OperationInputs::VALUES);
+    $check = $tools->createInstance('surface:event.program:check')->getInputDefinition(OperationInputs::VALUES);
     $this->assertStringContainsString(self::OWN, (string) $check->getPropertyDefinition('fees')->getDescription(), 'A mark that is the key\'s own stays on the key.');
     $this->assertStringNotContainsString(self::OWN, (string) $check->getPropertyDefinition('headline')->getDescription());
 
     // The built surfaces say which it is.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $this->assertTrue($resources->buildStatic('event.program', $resources->operation('event.program', 'configure'))->isRuntimeAccessWhole());
     $this->assertFalse($resources->buildStatic('event.program', $resources->operation('event.program', 'check'))->isRuntimeAccessWhole());
   }
@@ -159,8 +159,8 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
    * a read after it answers none, at the tool door and at React's.
    */
   public function testTheWriteAnswersWhatTheReadAnswers(): void {
-    $this->assertArrayNotHasKey('third_party_settings', $this->config('data_surface_examples.registration_step3')->getRawData());
-    $id = 'data_surface:registration.step3:configure';
+    $this->assertArrayNotHasKey('third_party_settings', $this->config('surface_examples.registration_step3')->getRawData());
+    $id = 'surface:registration.step3:configure';
 
     $dry = $this->runTool($id, [
       OperationInputs::VALUES => ['title' => 'Autumn meetup'],
@@ -180,10 +180,10 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $dry['outputs'][OperationInputs::VALUES] + ['title' => 'Autumn meetup'], 'And so did the dry run.');
 
     // Sent, it is written and answered.
-    $license = ['third_party_settings' => ['data_surface_examples_compliance' => ['license' => '2048']]];
+    $license = ['third_party_settings' => ['surface_examples_compliance' => ['license' => '2048']]];
     $written = $this->runTool($id, [OperationInputs::VALUES => $license]);
     $this->assertTrue($written['success'], $written['message']);
-    $this->assertSame('2048', $written['outputs'][OperationInputs::VALUES]['third_party_settings']['data_surface_examples_compliance']['license']);
+    $this->assertSame('2048', $written['outputs'][OperationInputs::VALUES]['third_party_settings']['surface_examples_compliance']['license']);
     $read = $this->runTool($id . ':read', []);
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $written['outputs'][OperationInputs::VALUES]);
   }
@@ -192,7 +192,7 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
    * Tests a refused item of a list lists what the item may be.
    */
   public function testRefusedItemListsItsChoices(): void {
-    $refused = $this->runTool('data_surface:event.doors:configure', [
+    $refused = $this->runTool('surface:event.doors:configure', [
       OperationInputs::VALUES => ['days' => ['fri', 'mon']],
       OperationInputs::DRY_RUN => TRUE,
     ]);
@@ -213,7 +213,7 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
    */
   public function testMisspelledKeyNamesTheNearest(): void {
     // cspell:ignore titel capacty emial
-    $refused = $this->runTool('data_surface:registration.step3:configure', [
+    $refused = $this->runTool('surface:registration.step3:configure', [
       OperationInputs::VALUES => [
         'titel' => 'Autumn meetup',
         'capacty' => 40,
@@ -233,7 +233,7 @@ class FreshEyesFourTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['unknown_key'], array_values(array_unique(array_column($refused['outputs']['violations'], 'code'))));
 
     // Inside a map, by its path.
-    $nested = $this->runTool('data_surface:registration.step3:configure', [
+    $nested = $this->runTool('surface:registration.step3:configure', [
       OperationInputs::VALUES => ['contact' => ['emial' => 'events@example.com']],
       OperationInputs::DRY_RUN => TRUE,
     ]);

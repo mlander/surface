@@ -1,6 +1,6 @@
 {
     "resource": "event.webhook",
-    "module": "data_surface_examples",
+    "module": "surface_examples",
     "contract": 4,
     "documents": [
         {
@@ -42,7 +42,7 @@
                         "writeOnly": true,
                         "x-surface": {
                             "dependsOn": [
-                                "third_party_settings.data_surface_examples_keys.key_id"
+                                "third_party_settings.surface_examples_keys.key_id"
                             ]
                         }
                     },
@@ -52,7 +52,7 @@
                             "null"
                         ],
                         "properties": {
-                            "data_surface_examples_keys": {
+                            "surface_examples_keys": {
                                 "title": "Managed key",
                                 "type": [
                                     "object",
@@ -107,7 +107,7 @@
                                         "null"
                                     ],
                                     "properties": {
-                                        "data_surface_examples_keys": {
+                                        "surface_examples_keys": {
                                             "type": [
                                                 "object",
                                                 "null"
@@ -125,7 +125,7 @@
                                         }
                                     },
                                     "required": [
-                                        "data_surface_examples_keys"
+                                        "surface_examples_keys"
                                     ]
                                 }
                             },

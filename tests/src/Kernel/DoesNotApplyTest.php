@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Refinement\Narrowing;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_resource_test\Resource\Bulletin\BulletinResource;
-use Drupal\data_surface_resource_test\Structure\Broken\NarrowsAttachedStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\UndeclaredDoesNotApplyStructure;
-use Drupal\data_surface_resource_test\Structure\Notice\NoticeBoardStructure;
-use Drupal\data_surface_resource_test\Structure\Notice\NoticeStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
-use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Refinement\Narrowing;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_resource_test\Resource\Bulletin\BulletinResource;
+use Drupal\surface_resource_test\Structure\Broken\NarrowsAttachedStructure;
+use Drupal\surface_resource_test\Structure\Broken\UndeclaredDoesNotApplyStructure;
+use Drupal\surface_resource_test\Structure\Notice\NoticeBoardStructure;
+use Drupal\surface_resource_test\Structure\Notice\NoticeStructure;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -37,9 +37,9 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * @see docs/decisions.md#a-key-that-does-not-apply
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DoesNotApplyTest extends DataSurfaceKernelTestBase {
+class DoesNotApplyTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use StaticRefinerAgreementTrait;
@@ -53,15 +53,15 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_resource_test',
   ];
 
   /**
    * The bulletin's config object.
    */
-  protected const CONFIG = 'data_surface_resource_test.bulletin';
+  protected const CONFIG = 'surface_resource_test.bulletin';
 
   /**
    * {@inheritdoc}
@@ -69,7 +69,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -79,11 +79,11 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    * @param string $class
    *   The class.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource or structure.
    */
-  protected function built(string $class = BulletinResource::class): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function built(string $class = BulletinResource::class): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $class === BulletinResource::class
       ? $resources->build($class, $resources->operation($class, 'configure'))
       : $resources->build($class, new OperationContext('configure'));
@@ -146,8 +146,8 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $post = $notice->refine(['channel' => 'post', 'cadence' => 'weekly']);
     $this->assertFalse(DoesNotApply::marks($post->getDefinition('address')));
     $this->assertTrue(DoesNotApply::marks($post->getDefinition('schedule')), 'Variants are ruled out like any key.');
-    $this->assertSame(['data_surface_resource_test.signature'], $notice->getDefinitions()->entry('third_party_settings')->mayNotApply(), 'A mounted key, by its path inside the mount.');
-    $this->assertSame(['data_surface_resource_test.signature'], DoesNotApply::inside($post->getDefinition('third_party_settings')));
+    $this->assertSame(['surface_resource_test.signature'], $notice->getDefinitions()->entry('third_party_settings')->mayNotApply(), 'A mounted key, by its path inside the mount.');
+    $this->assertSame(['surface_resource_test.signature'], DoesNotApply::inside($post->getDefinition('third_party_settings')));
     $this->assertSame([], DoesNotApply::inside($email->getDefinition('third_party_settings')));
 
     $narrows = $this->built(NarrowsAttachedStructure::class);
@@ -161,7 +161,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    */
   public function testThePipelineReadsTheKeyAsLeftOut(): void {
     $built = $this->built();
-    $storage = $this->container->get('data_surface.resources')->storage(BulletinResource::class, $this->container->get('data_surface.resources')->operation(BulletinResource::class, 'configure'), $built);
+    $storage = $this->container->get('surface.resources')->storage(BulletinResource::class, $this->container->get('surface.resources')->operation(BulletinResource::class, 'configure'), $built);
 
     $result = $this->pipeline()->submit($built, ['frequency' => 'monthly'], $storage);
     $this->assertTrue($result->isValid(), (string) json_encode(array_map('strval', array_map(static fn ($violation) => $violation->message, iterator_to_array($result->violations, FALSE)))));
@@ -201,31 +201,31 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
       'cadence' => 'weekly',
       'address' => ['street' => 'Main street'],
       'schedule' => ['day' => 'friday'],
-      'third_party_settings' => ['data_surface_resource_test' => ['signature' => 'Ada', 'footer' => 'Sent by post']],
+      'third_party_settings' => ['surface_resource_test' => ['signature' => 'Ada', 'footer' => 'Sent by post']],
     ];
 
     $email = $this->pipeline()->accept($notice, ['channel' => 'email'], $stored);
     $this->assertArrayNotHasKey('address', $email);
     $this->assertSame(['day' => 'friday'], $email['schedule']);
-    $this->assertSame(['signature' => 'Ada', 'footer' => 'Sent by post'], $email['third_party_settings']['data_surface_resource_test']);
+    $this->assertSame(['signature' => 'Ada', 'footer' => 'Sent by post'], $email['third_party_settings']['surface_resource_test']);
     $this->assertTrue($this->pipeline()->validate($notice, $email, $stored)->isEmpty());
     $this->assertSame($stored['address'], $this->pipeline()->kept($notice, $email, $stored)['address'], 'What is stored under it is kept.');
 
     $post = $this->pipeline()->accept($notice, [], $stored);
     $this->assertArrayNotHasKey('schedule', $post);
-    $this->assertSame(['footer' => 'Sent by post'], $post['third_party_settings']['data_surface_resource_test'], 'The mounted signature is left out of its mount.');
+    $this->assertSame(['footer' => 'Sent by post'], $post['third_party_settings']['surface_resource_test'], 'The mounted signature is left out of its mount.');
     $this->assertTrue($this->pipeline()->validate($notice, $post, $stored)->isEmpty(), 'The required signature is not asked for where it does not apply.');
     $kept = $this->pipeline()->kept($notice, $post, $stored);
     $this->assertSame($stored, $kept, 'What does not apply is put back, in declaration order.');
 
     $sent = $this->pipeline()->accept($notice, [
       'schedule' => ['day' => 'monday'],
-      'third_party_settings' => ['data_surface_resource_test' => ['signature' => 'Bea']],
+      'third_party_settings' => ['surface_resource_test' => ['signature' => 'Bea']],
     ], $stored);
     $messages = array_map(static fn ($violation): string => $violation->fullPath() . ': ' . $violation->message, iterator_to_array($this->pipeline()->validate($notice, $sent, $stored), FALSE));
     $this->assertSame([
       'schedule: Schedule does not apply when Channel is post.',
-      'third_party_settings.data_surface_resource_test.signature: Signature does not apply when Channel is post.',
+      'third_party_settings.surface_resource_test.signature: Signature does not apply when Channel is post.',
     ], $messages);
   }
 
@@ -234,7 +234,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    */
   public function testTheSchemaForTheseAnswersLeavesTheKeyOut(): void {
     $built = $this->built();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $monthly = $emitter->emit($built, ['frequency' => 'monthly', 'send_day' => 'friday'], 'resource_test.bulletin', 'configure')->document;
     $this->assertSame(['frequency'], array_keys($monthly['schema']['properties']));
     $this->assertSame(['frequency'], $monthly['schema']['required']);
@@ -253,7 +253,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    */
   public function testTheFullSchemaStatesItConditionally(): void {
     $built = $this->built();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = json_decode((string) json_encode($emitter->emitFull($built, 'resource_test.bulletin', 'configure')->document['schema']), TRUE);
     $this->assertSame(['frequency'], $full['required'], 'Required only where it applies.');
     $this->assertTrue($full['properties']['send_day']['x-surface']['enumerated']);
@@ -279,10 +279,10 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    */
   public function testTheFullSchemaRulesOutNestedKeys(): void {
     $notice = $this->built(NoticeStructure::class);
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = json_decode((string) json_encode($emitter->emitFull($notice, 'resource_test.notice')->document['schema']), TRUE);
     $this->assertSame(['channel', 'cadence'], $full['required']);
-    $this->assertArrayNotHasKey('required', $full['properties']['third_party_settings']['properties']['data_surface_resource_test'], 'The signature is required only where it applies.');
+    $this->assertArrayNotHasKey('required', $full['properties']['third_party_settings']['properties']['surface_resource_test'], 'The signature is required only where it applies.');
     $by_channel = [];
     foreach ($full['allOf'] as $condition) {
       $channel = $condition['if']['properties']['channel']['const'] ?? NULL;
@@ -294,13 +294,13 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     }
     $this->assertContains(['properties' => ['address' => FALSE]], $by_channel['email']);
     $this->assertContains(['properties' => ['schedule' => FALSE]], $by_channel['post']);
-    $this->assertContains(['properties' => ['third_party_settings' => ['properties' => ['data_surface_resource_test' => ['properties' => ['signature' => FALSE]]]]]], $by_channel['post']);
-    $this->assertContains(['properties' => ['third_party_settings' => ['properties' => ['data_surface_resource_test' => ['required' => ['signature']]]]]], $by_channel['email']);
+    $this->assertContains(['properties' => ['third_party_settings' => ['properties' => ['surface_resource_test' => ['properties' => ['signature' => FALSE]]]]]], $by_channel['post']);
+    $this->assertContains(['properties' => ['third_party_settings' => ['properties' => ['surface_resource_test' => ['required' => ['signature']]]]]], $by_channel['email']);
     $this->assertGreaterThan(0, $this->assertStaticRefinersAgree($notice, NULL, 'resource_test.notice'));
 
     $post = json_decode((string) json_encode($emitter->emit($notice, ['channel' => 'post', 'cadence' => 'weekly'], 'resource_test.notice')->document), TRUE);
     $this->assertSame(['channel', 'cadence', 'address', 'third_party_settings'], array_keys($post['schema']['properties']));
-    $this->assertSame(['footer'], array_keys($post['schema']['properties']['third_party_settings']['properties']['data_surface_resource_test']['properties']), 'The signature is no property of its mount.');
+    $this->assertSame(['footer'], array_keys($post['schema']['properties']['third_party_settings']['properties']['surface_resource_test']['properties']), 'The signature is no property of its mount.');
     $this->assertArrayNotHasKey('schedule', $post['values']);
     $this->assertSame([], array_filter($post['schema']['allOf'] ?? [], static fn (array $condition): bool => isset($condition['then']['properties']['schedule'])), 'No variant of a key that does not apply.');
   }
@@ -310,7 +310,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    */
   public function testRuntimeRuledOutIsRequiredNowhereAhead(): void {
     $board = $this->built(NoticeBoardStructure::class);
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $this->assertSame([''], $board->getDefinitions()->entry('pinned')->mayNotApply(TRUE));
     $full = $emitter->emitFull($board, 'resource_test.notice_board')->document['schema'];
     $this->assertSame(['title'], $full['required'], 'Nothing says where it applies, so nothing requires it.');
@@ -334,7 +334,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    */
   public function testTheToolAndTheReadTool(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    $tool = $tools->createInstance('data_surface:resource_test.bulletin:configure');
+    $tool = $tools->createInstance('surface:resource_test.bulletin:configure');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertFalse($values->getPropertyDefinition('send_day')->isRequired(), 'Required only where it applies, which a listing cannot say.');
     // An update: required in words, a stored value standing when left out.
@@ -346,19 +346,19 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
     $this->assertSame(['frequency' => 'monthly', 'send_day' => 'friday'], $this->stored());
 
-    $tool = $tools->createInstance('data_surface:resource_test.bulletin:configure');
+    $tool = $tools->createInstance('surface:resource_test.bulletin:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['frequency' => 'monthly', 'send_day' => 'monday']);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('/send_day: Send day does not apply when Frequency is monthly (Monthly).', (string) $tool->getResult()->getMessage());
 
-    $read = $tools->createInstance('data_surface:resource_test.bulletin:configure:read');
+    $read = $tools->createInstance('surface:resource_test.bulletin:configure:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess());
     $this->assertSame(['frequency' => 'monthly'], $read->getResult()->getContextValues()[OperationInputs::VALUES], 'What does not apply is not read back.');
 
     $this->config(self::CONFIG)->set('frequency', 'weekly')->save();
-    $read = $tools->createInstance('data_surface:resource_test.bulletin:configure:read');
+    $read = $tools->createInstance('surface:resource_test.bulletin:configure:read');
     $read->execute();
     $this->assertSame(['frequency' => 'weekly', 'send_day' => 'friday'], $read->getResult()->getContextValues()[OperationInputs::VALUES]);
   }
@@ -373,7 +373,7 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    *   The form and its state.
    */
   protected function form(?array $values = NULL): array {
-    $route_name = 'data_surface_resource_test.bulletin';
+    $route_name = 'surface_resource_test.bulletin';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -383,11 +383,11 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
     $stack->push($request);
     $form_state = new FormState();
     if ($values === NULL) {
-      $form = $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state);
+      $form = $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $form_state);
       return [$form, $form_state];
     }
-    $form_state->setValues([DataSurfaceOperationForm::SURFACE_KEY => $values]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $form_state->setValues([SurfaceOperationForm::SURFACE_KEY => $values]);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     return [$form_state->getCompleteForm(), $form_state];
   }
 
@@ -396,11 +396,11 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    */
   public function testTheFormDrawsNothing(): void {
     [$form] = $this->form();
-    $this->assertSame('select', $form[DataSurfaceOperationForm::SURFACE_KEY]['send_day']['#type'], 'Weekly, as stored.');
+    $this->assertSame('select', $form[SurfaceOperationForm::SURFACE_KEY]['send_day']['#type'], 'Weekly, as stored.');
 
     $this->config(self::CONFIG)->set('frequency', 'monthly')->save();
     [$form] = $this->form();
-    $send_day = $form[DataSurfaceOperationForm::SURFACE_KEY]['send_day'];
+    $send_day = $form[SurfaceOperationForm::SURFACE_KEY]['send_day'];
     $this->assertArrayNotHasKey('#type', $send_day, 'Not rendered: not disabled, not hidden.');
     $this->assertSame('', $send_day['#markup']);
 
@@ -413,14 +413,14 @@ class DoesNotApplyTest extends DataSurfaceKernelTestBase {
    * Tests a list narrowed to nothing is a select offering nothing.
    */
   public function testListOfNothingIsSelectOfNothing(): void {
-    $surface = new DataSurface(DefinitionMap::fromArrays(definitions: [
+    $surface = new Surface(DefinitionMap::fromArrays(definitions: [
       'badge' => DataDefinition::create('string')->setLabel('Badge')->addConstraint('LabeledChoice', ['choices' => []]),
       'kind' => DataDefinition::create('string')->setLabel('Kind')->setRequired(TRUE)->addConstraint('Choice', ['choices' => []]),
     ]));
     $form = $this->formBuilder()->buildSurfaceForm($surface, ['badge' => 'star'], new FormState());
     $this->assertSame('select', $form['badge']['#type']);
     $this->assertSame([], $form['badge']['#options']);
-    $schema = $this->container->get('data_surface.contract_emitter')->emit($surface, [], 'test')->document['schema'];
+    $schema = $this->container->get('surface.contract_emitter')->emit($surface, [], 'test')->document['schema'];
     $this->assertSame([['const' => NULL]], $schema['properties']['badge']['oneOf'], 'Optional: null alone.');
     $this->assertSame([['const' => NULL]], $schema['properties']['kind']['oneOf'], 'Required: null, which its type refuses, so nothing.');
     $this->assertSame('string', $schema['properties']['kind']['type']);

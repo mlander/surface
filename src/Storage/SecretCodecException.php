@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 /**
  * A secret could not be encrypted or decrypted.
@@ -18,7 +18,7 @@ namespace Drupal\data_surface\Storage;
  * The message never carries the value, plaintext or ciphertext, because
  * an exception message reaches logs.
  *
- * @see \Drupal\data_surface\Storage\SecretCodecInterface
+ * @see \Drupal\surface\Storage\SecretCodecInterface
  */
 final class SecretCodecException extends \RuntimeException {
 

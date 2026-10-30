@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Variants;
+namespace Drupal\surface\Variants;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\data_surface\Resource\EntrySchemasInterface;
-use Drupal\data_surface\Resource\SiteList;
+use Drupal\surface\Resource\EntrySchemasInterface;
+use Drupal\surface\Resource\SiteList;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -42,7 +42,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Decision: see
  * docs/decisions.md#a-slot-holds-text-a-component-or-components.
  *
- * @see \Drupal\data_surface\Variants\ComponentProps
+ * @see \Drupal\surface\Variants\ComponentProps
  */
 final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionInterface {
 
@@ -102,7 +102,7 @@ final class ComponentSlots implements EntrySchemasInterface, ContainerInjectionI
   /**
    * Constructs the provider.
    *
-   * @param \Drupal\data_surface\Variants\ComponentsOffered $components
+   * @param \Drupal\surface\Variants\ComponentsOffered $components
    *   The components the site has, and those it offers.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $stringTranslation
    *   The string translation service.

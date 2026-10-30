@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource\Attribute;
+namespace Drupal\surface\Resource\Attribute;
 
 /**
  * Says which variants this structure is one of, and for which value.

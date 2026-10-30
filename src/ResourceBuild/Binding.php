@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Refinement\Condition;
-use Drupal\data_surface\Refinement\DeclaredRefiner;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Refinement\Narrowing;
-use Drupal\data_surface\Refinement\Rule;
-use Drupal\data_surface\Refinement\RuntimeRefiner;
-use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
-use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Resource\ResourceStorageInterface;
-use Drupal\data_surface\Entry;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Refinement\DeclaredRefiner;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Refinement\Narrowing;
+use Drupal\surface\Refinement\Rule;
+use Drupal\surface\Refinement\RuntimeRefiner;
+use Drupal\surface\Resource\KnowsClearableKeysInterface;
+use Drupal\surface\Resource\AltersInputsInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\ResourceStorageInterface;
+use Drupal\surface\Entry;
 
 /**
  * The binding phase of the build: refiners and rules into the builder.
@@ -38,7 +38,7 @@ use Drupal\data_surface\Entry;
  *
  * @internal
  *
- * @see \Drupal\data_surface\ResourceBuild\Resources
+ * @see \Drupal\surface\ResourceBuild\Resources
  */
 final class Binding {
 
@@ -47,7 +47,7 @@ final class Binding {
    *
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, for the definitions a rule creates.
-   * @param \Drupal\data_surface\ResourceBuild\Declaring $declaring
+   * @param \Drupal\surface\ResourceBuild\Declaring $declaring
    *   The declaring phase, for the alters and storage discovery names and
    *   the blueprint a structure mixed in declares.
    */
@@ -60,15 +60,15 @@ final class Binding {
   /**
    * Finds the storage that stores a resource's keys, and where.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure being built.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Its context.
    * @param array $ancestry
    *   Its parents, outermost first, each with what held()'s answer was
    *   for it.
    *
-   * @return array{storage: \Drupal\data_surface\Resource\KnowsClearableKeysInterface, context: \Drupal\data_surface\Resource\OperationContext, prefix: string}|null
+   * @return array{storage: \Drupal\surface\Resource\KnowsClearableKeysInterface, context: \Drupal\surface\Resource\OperationContext, prefix: string}|null
    *   The storage, the context it is asked in and the path under which it
    *   stores these keys; NULL when no storage that can say stores them.
    */
@@ -93,14 +93,14 @@ final class Binding {
    * A plain scalar or list key only: a map holds its keys, which say for
    * themselves, and a secret keeps what it holds when sent nothing.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The builder holding the keys.
    * @param string[] $keys
    *   The plain input keys.
    * @param array|null $held
    *   What heldBy() answered.
    */
-  public function markAlwaysHeld(DataSurfaceBuilderInterface $builder, array $keys, ?array $held): void {
+  public function markAlwaysHeld(SurfaceBuilderInterface $builder, array $keys, ?array $held): void {
     if ($held === NULL) {
       return;
     }
@@ -123,22 +123,22 @@ final class Binding {
    * in, in the owner's frame; then each contributor's coded refiners and
    * the rules it declared, the owner's before any alter's.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build, its frame and its input keys resolved.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's inputs blueprint.
-   * @param array<int, array{0: object|string, 1: \Drupal\data_surface\ResourceBuild\RefinerDefinition[], 2: string|null}> $links
+   * @param array<int, array{0: object|string, 1: \Drupal\surface\ResourceBuild\RefinerDefinition[], 2: string|null}> $links
    *   The refiner links, as declareShape() answered them.
-   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions> $additions
+   * @param array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions> $additions
    *   Each alter's additions, by module.
-   * @param array{bind: array<int, array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]} $mixins
+   * @param array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]} $mixins
    *   What mixIn() answered.
    * @param array<string, string[]> $readable
    *   The keys of the structure each module attached at its mount.
    * @param array<string, string[]> $mounted_by
    *   Every key any alter mounted, mapped to the modules that mounted it.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Build
+   * @return \Drupal\surface\ResourceBuild\Build
    *   The build, with the keys a refiner may rule out.
    */
   public function bind(Build $build, ResourceBlueprint $inputs, array $links, array $additions, array $mixins, array $readable, array $mounted_by): Build {
@@ -199,10 +199,10 @@ final class Binding {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build: its builder, the owner, and its context, which
    *   says which alters apply.
-   * @param array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]} $mixin
+   * @param array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]} $mixin
    *   The structure, as mixIn() lists it.
    */
   protected function bindMixin(Build $build, array $mixin): void {
@@ -241,7 +241,7 @@ final class Binding {
   /**
    * Checks one class's refiners against the shape, and binds them.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The build, as the contributor whose methods these are:
    *   - the builder holding the shape and the resource or structure;
    *   - its input and output keys, and the keys holding an attached child
@@ -264,7 +264,7 @@ final class Binding {
    * @param object|class-string $instance
    *   The owner's class, whose methods are static, or the alter instance
    *   the methods are called on.
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition[] $refiners
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition[] $refiners
    *   Its #[RefinesInput] methods.
    *
    * @throws \LogicException
@@ -368,12 +368,12 @@ final class Binding {
         ? $builder->getThirdPartyDefinition((string) $module, $refiner->key)
         : $builder->getDefinition($refiner->key);
       assert($advertised !== NULL);
-      $refined = $link->invoke($refiner, DataSurface::deepClone($advertised), []);
+      $refined = $link->invoke($refiner, Surface::deepClone($advertised), []);
       Narrowing::assertNarrows($refiner->key, $refiner->describe(), $advertised, $refined);
       if (in_array($refiner->key, $lists, TRUE)) {
-        DataSurface::assertItemsUntouched(new Entry($refiner->key, $advertised), $refined);
+        Surface::assertItemsUntouched(new Entry($refiner->key, $advertised), $refined);
       }
-      DataSurface::carryMetadata($advertised, $refined);
+      Surface::carryMetadata($advertised, $refined);
       if ($own) {
         $builder->setThirdPartyDefinition((string) $module, $refiner->key, $refined);
         continue;
@@ -394,7 +394,7 @@ final class Binding {
    *
    * Decision: see docs/decisions.md#a-rule-declared-as-data.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The build, as the contributor whose rules these are:
    *   - the builder holding the shape and the resource or structure;
    *   - its plain input keys, the keys holding an attached child or
@@ -411,7 +411,7 @@ final class Binding {
    *   - for a structure mixed into an owner, each of its ports mapped to
    *     the owner's key it is wired to, where a condition on the port
    *     reads.
-   * @param \Drupal\data_surface\Refinement\Rule[] $rules
+   * @param \Drupal\surface\Refinement\Rule[] $rules
    *   The rules the contributor declared, in order.
    *
    * @throws \LogicException
@@ -529,7 +529,7 @@ final class Binding {
    *
    * @param string $name
    *   The rule, in words.
-   * @param \Drupal\data_surface\Refinement\Rule $rule
+   * @param \Drupal\surface\Refinement\Rule $rule
    *   The rule.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $advertised
    *   The key as declared.
@@ -550,7 +550,7 @@ final class Binding {
         throw new \LogicException(sprintf('%s constrains "%s", whose type is %s, by %s, which it cannot take%s.', $name, $rule->key, $type, $constraint === 'Choice' ? 'a list of its values' : $constraint, $constraint === 'Choice' ? ': it declares no list of values' : ''));
       }
     }
-    $written = $rule->applyAsWritten(DataSurface::deepClone($advertised));
+    $written = $rule->applyAsWritten(Surface::deepClone($advertised));
     if (DoesNotApply::marks($written)) {
       return;
     }
@@ -571,7 +571,7 @@ final class Binding {
    *   The rule, in words.
    * @param string $key
    *   The condition key.
-   * @param \Drupal\data_surface\Refinement\Condition $condition
+   * @param \Drupal\surface\Refinement\Condition $condition
    *   The whole condition.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $read
    *   The condition key's definition.
@@ -610,9 +610,9 @@ final class Binding {
    * instance to run on; an alter's may be either, since an alter is a
    * service.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition $refiner
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param string|null $module
    *   The module of an alter, or NULL for the owner itself.
@@ -645,9 +645,9 @@ final class Binding {
    *
    * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition $refiner
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method, an alter's: an owner's that is not static is refused
    *   before this, by assertStaticOnResource().
    *
@@ -681,9 +681,9 @@ final class Binding {
    * them under; what another module mounted is that module's, and an
    * alter does not read it, as a child does not read its parent.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition $refiner
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param string[] $input_keys
    *   The owner's input keys.
@@ -718,9 +718,9 @@ final class Binding {
    * stands, NULL while unanswered, because it never holds the key it
    * refines back, so the parameter receiving it has to accept NULL.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition $refiner
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param string[] $input_keys
    *   The owner's input keys, which win over a mounted key of one name.
@@ -767,9 +767,9 @@ final class Binding {
    * context. The one door is the context: a parent
    * hands a child what it needs as identity with withChild().
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition $refiner
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param string[] $input_keys
    *   Its own plain input keys.
@@ -828,9 +828,9 @@ final class Binding {
   /**
    * Refuses a #[RefinesInput] method the shape cannot honor.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition $refiner
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition $refiner
    *   The method.
    * @param string[] $input_keys
    *   The owner's input keys.

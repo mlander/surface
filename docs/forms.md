@@ -11,12 +11,12 @@ a plugin, an entity form or a route of your own, or arrange its keys.
 
 A generated form is one more consumer of the pipeline, not a value path
 of its own. The widgets collect a raw submitted tree and
-`DataSurfacePipelineInterface::accept()` does the rest (coercion,
+`SurfacePipelineInterface::accept()` does the rest (coercion,
 merging, locking, refusing undeclared keys), so the form produces exactly
 what a JSON payload carrying the same strings produces.
 
-The layer has two halves. `data_surface.form_builder`
-(`Form\DataSurfaceFormBuilderInterface`) knows how to turn a data surface
+The layer has two halves. `surface.form_builder`
+(`Form\SurfaceFormBuilderInterface`) knows how to turn a data surface
 into a container of elements and read it back. The host traits know how to
 satisfy one host family's protocol using it. The service draws through
 `Form\Drawing`, reads back through `Form\Extracting` and refines over
@@ -31,41 +31,41 @@ Every plugin family names its structure class the same way, with
 
 | Family | Use | What you write |
 | --- | --- | --- |
-| Blocks | `Plugin\Block\DataSurfaceBlockBase` | `#[UsesStructure]`, `build()`. |
-| Conditions | `Plugin\Condition\DataSurfaceConditionBase` | `#[UsesStructure]`, `evaluate()` and `summary()`. |
-| Actions | `Plugin\Action\DataSurfaceActionBase` | `#[UsesStructure]`, `execute()` and `access()`. |
-| Field formatters | `Plugin\Field\FieldFormatter\DataSurfaceFormatterBase` | `#[UsesStructure]`, `formatValue()` or `viewElements()`. |
-| Field types | `Form\DataSurfaceFieldTypeTrait` on the item class, implementing `Form\FieldSurfaceProviderInterface` | `#[UsesStructure]` and a one-line `defaultFieldSettings()`; `getDataSurfaceStorage()` only when the storage layout differs from the input layout. The structure is built in the `field_settings` context. |
-| Any plugin resolving a form class per operation | `Form\DataSurfacePluginForm` | Nothing but `#[UsesStructure]`: list the class under a `forms` key. It is named per operation, so it settles the context's id at construction. |
-| A resource's operation served at a route | `Form\DataSurfaceOperationForm` | Nothing but routing, and a cosmetic layer if the page needs one. |
+| Blocks | `Plugin\Block\TypedBlockBase` | `#[UsesStructure]`, `build()`. |
+| Conditions | `Plugin\Condition\TypedConditionPluginBase` | `#[UsesStructure]`, `evaluate()` and `summary()`. |
+| Actions | `Plugin\Action\TypedConfigurableActionBase` | `#[UsesStructure]`, `execute()` and `access()`. |
+| Field formatters | `Plugin\Field\FieldFormatter\TypedFormatterBase` | `#[UsesStructure]`, `formatValue()` or `viewElements()`. |
+| Field types | `Form\SurfaceFieldTypeTrait` on the item class, implementing `Form\FieldSurfaceProviderInterface` | `#[UsesStructure]` and a one-line `defaultFieldSettings()`; `getSurfaceStorage()` only when the storage layout differs from the input layout. The structure is built in the `field_settings` context. |
+| Any plugin resolving a form class per operation | `Form\SurfacePluginForm` | Nothing but `#[UsesStructure]`: list the class under a `forms` key. It is named per operation, so it settles the context's id at construction. |
+| A resource's operation served at a route | `Form\SurfaceOperationForm` | Nothing but routing, and a cosmetic layer if the page needs one. |
 | A standalone form of your own | Nothing | Build the container, call `submit()`. |
 
 Under those sit three traits, and it is worth knowing which is which when
 you adopt a family none of the base classes covers:
 
-- **`DataSurfaceConfigurationTrait`** implements `ConfigurableInterface`
+- **`SurfaceConfigurationTrait`** implements `ConfigurableInterface`
   from a structure: defaults come from the structure, and
   `setConfiguration()` runs values through the pipeline rather than
   trusting its caller. Keys the structure does not declare pass through
   untouched, which is what lets host-owned keys (a block's `id`, `label`,
   `provider`; a variant's `weight`; a context mapping) survive
   progressive adoption.
-- **`DataSurfaceHostFormTrait`** holds the three form stages,
-  `buildDataSurfaceForm()`, `validateDataSurfaceForm()` and
-  `submitDataSurfaceForm()`, named for what they do rather than for one
+- **`SurfaceHostFormTrait`** holds the three form stages,
+  `buildSurfaceForm()`, `validateSurfaceForm()` and
+  `submitSurfaceForm()`, named for what they do rather than for one
   host's spelling of them.
-- **`DataSurfacePluginFormTrait`** names those three for
+- **`SurfacePluginFormTrait`** names those three for
   `PluginFormInterface`: `buildConfigurationForm`,
   `validateConfigurationForm`, `submitConfigurationForm`.
 
 The split between the last two is not tidiness. A trait method *replaces*
 an inherited one, so a block base class that pulled in the public triple
 would silently replace the block form it is supposed to extend. A host
-whose names match the triple adds `DataSurfacePluginFormTrait` and
+whose names match the triple adds `SurfacePluginFormTrait` and
 nothing else; a host that renames them maps its own names onto the three
-bodies. That is why `DataSurfaceConditionBase` and
-`DataSurfaceActionBase` use the plugin form trait and
-`DataSurfaceBlockBase` does not.
+bodies. That is why `TypedConditionPluginBase` and
+`TypedConfigurableActionBase` use the plugin form trait and
+`TypedBlockBase` does not.
 
 The counted evidence for the claim that one adapter serves a family: the
 action base needs no translation methods at all, the condition base five
@@ -87,7 +87,7 @@ injecting them: a documented exception, not a habit.
 **Trait over inheritance.** A host base class that composes core's
 `ConfigurableTrait` into itself (actions, search pages, media sources,
 CKEditor 5) is adopted by a subclass that simply uses
-`DataSurfaceConfigurationTrait`. A trait used in the child overrides
+`SurfaceConfigurationTrait`. A trait used in the child overrides
 methods the parent flattened from its own trait, so no `insteadof` is
 needed, and `insteadof` naming a parent's trait is itself a fatal error.
 The deep merge `ConfigurableTrait` would have applied is therefore never
@@ -107,11 +107,11 @@ The rule: **the resource or structure answers, and every gate reads
 that answer.** `ResourcesInterface::access()` is the operation's
 permission and then the access class the resource or structure names. A
 plugin host's `surfaceAccess()` asks it in the host's context, and
-`submitDataSurfaceForm()` passes that into `submit()`, so a host gates
+`submitSurfaceForm()` passes that into `submit()`, so a host gates
 its own form without writing a line of access code; a structure with no
 access class answers neutral, and the
-host's own gates stand exactly as they stood. `data_surface_demo_node_type`
-is the worked example: its routes' `_data_surface_operation_access`
+host's own gates stand exactly as they stood. `surface_examples_node_type`
+is the worked example: its routes' `_surface_operation_access`
 requirement (which every route naming a resource and an operation has
 without saying it), the operation link in the content type listing, the
 operation form on its way in and out, and the generated tool all ask
@@ -181,7 +181,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   it alike; the build refuses two that differ. It is drawn where its
   first key is declared: the form builder puts its element in the frame
   directly before that key, under `@group.<id>`
-  (`DataSurfaceFormBuilderInterface::GROUP_PREFIX`), and the container's
+  (`SurfaceFormBuilderInterface::GROUP_PREFIX`), and the container's
   pre-render moves each key into it when the form is drawn, as a placed
   fieldset is moved ([below](#a-placed-fieldset)). Until then every key
   stays where its value is posted: its `#parents`, its `#name`, its
@@ -274,7 +274,7 @@ callback's walk to each dependent. What is kept:
 
 ## Wrapper ids and AJAX
 
-The container carries a private marker, `#data_surface_wrapper`, holding
+The container carries a private marker, `#surface_wrapper`, holding
 its DOM id. The id itself comes from `Html::getUniqueId()` over the
 wrapper key the host passed, so two data surfaces on one page cannot
 share a wrapper and rebuild each other.
@@ -444,7 +444,7 @@ and an "Add another" button:
   button, whose accessible name adds the item's title, "Remove Spice
   racks 2", so no two buttons in a list read the same.
 - **Add and remove** are submit buttons, named for their place
-  (`data_surface_racks_add`, `data_surface_racks_1_remove`), with
+  (`surface_racks_add`, `surface_racks_1_remove`), with
   `#limit_validation_errors` empty: nothing is judged, every value is
   still mid-edit. Their submit handler (`addListItem()`,
   `removeListItem()`) rewrites the posted items, one empty item more at
@@ -475,7 +475,7 @@ and an "Add another" button:
 - **A collection inside an item** is drawn as one, in its place among
   the item's elements, by the same rules: its elements and buttons are
   named by both deltas (`surface[aisles][1][shelves][0][height]`,
-  `data_surface_aisles_1_shelves_add`), its buttons replace only that
+  `surface_aisles_1_shelves_add`), its buttons replace only that
   item's list, it is read back into the item it belongs to, and a
   violation inside it (`aisles.1.shelves.0.height`) is flagged where it
   was drawn, each delta remembered at each depth (decided 2026-10-19;
@@ -497,8 +497,8 @@ in a `fieldset` of rows rather than a `details` of items
 - **The widget cannot know where it sits**, so it marks the list and its
   buttons, and the container's process callback wires them at any depth
   when the form is processed: the list gets its refresh wrapper, each
-  button a name for its place (`data_surface_keywords_add`,
-  `data_surface_keywords_remove-1`), the container's AJAX callback and
+  button a name for its place (`surface_keywords_add`,
+  `surface_keywords_remove-1`), the container's AJAX callback and
   the path it sits at. Their submit handlers (`ListWidget::addRow()`,
   `removeRow()`) rewrite the posted rows and rebuild; nothing is judged.
 - **Bounds and extraction** are a collection's: at least the Count's
@@ -558,8 +558,8 @@ violation for a required key and a stored value replaced by nothing for
 an optional one.
 
 Two places resolve it, both by asking the complete form state for an
-absolute path: `DataSurfaceWidgetBase::rawValue()` when extracting, and
-`DataSurfaceHostTrait::surfaceRefinementInput()` when reading what an
+absolute path: `SurfaceWidgetBase::rawValue()` when extracting, and
+`SurfaceHostTrait::surfaceRefinementInput()` when reading what an
 in-progress AJAX rebuild has collected. The second locates the submitted
 tree through the triggering element's own position rather than through a
 fixed path, which is what makes it nesting-agnostic: the trigger's
@@ -600,7 +600,7 @@ select left on the empty option it was given in place of a stored value
 (named in the hidden input the container posts) is read as that
 stored value, here and on an AJAX rebuild alike, so it is rebuilt
 standing for it rather than as a key that holds nothing.
-`DataSurfaceOperationForm` answers `surfaceSubmissionPath()`, since its
+`SurfaceOperationForm` answers `surfaceSubmissionPath()`, since its
 container is its own top level key; a plugin host nested inside another
 form cannot know its position before Form API assigns it, answers NULL,
 and is built from what is stored, so without JavaScript a plugin host
@@ -623,7 +623,7 @@ build) has said nothing about its value. Without the stored values to
 fall back on, `accept()` would replace every one of them with its declared default.
 
 The same reasoning is why the elements that carry a pipeline into a
-static callback also carry `#data_surface_current`: the values the form
+static callback also carry `#surface_current`: the values the form
 started from, as a plain array, so it survives the form cache. See [the serialization rule](storage.md#the-serialization-rule) for what may and
 may not ride on a form array.
 
@@ -678,7 +678,7 @@ not among what the moved key now offers. Its select stands for the
 stored value, but nothing below it is refined against that value: the
 overlay holds the key unanswered, the same as the empty select the
 person is looking at, and records what it stands for under
-`DataSurfaceFormBuilderInterface::STANDING_KEY` for the element alone.
+`SurfaceFormBuilderInterface::STANDING_KEY` for the element alone.
 So in the registration example, moving the venue away from a stored
 room leaves the room standing for it and the capacity back at its
 declared limit, not still capped, and described, by a room no longer
@@ -782,17 +782,17 @@ of losing the value:
   save used to write that first option over the stored value without
   anybody choosing anything.
 - **The element carries the value it stands for** on
-  `#data_surface_stale` (a plain value, per [the serialization rule](storage.md#the-serialization-rule)), and extraction reads an
+  `#surface_stale` (a plain value, per [the serialization rule](storage.md#the-serialization-rule)), and extraction reads an
   empty submission from such an element as that value, so **leaving the
   select alone sends the stored value back**, and a save keeps it as
   long as nothing it depends on moved in the same submission. Reading it
-  back is `DataSurfaceWidgetBase`'s job rather than the options
+  back is `SurfaceWidgetBase`'s job rather than the options
   widget's: extraction resolves widgets from the data surface as advertised,
   having no values yet to refine with, so a key that is only a choice
   once a refiner has narrowed it is built by the select widget and read
   back by another.
 - **The container says which selects those are**, in a hidden input,
-  `DataSurfaceFormBuilderInterface::STALE_MARKER_KEY`, holding their
+  `SurfaceFormBuilderInterface::STALE_MARKER_KEY`, holding their
   dotted paths. The build a submission or a rebuild is processed against
   is made from the submitted input before any element exists, and an
   empty string there is the same whether it means "keep" or "nothing";
@@ -877,7 +877,7 @@ Two more things these hosts force:
 
 - **Static defaults.** `defaultSettings()` is static and cannot consult
   an instance's built structure.
-  `DataSurfaceHostTrait::surfaceDeclaredDefaults()` answers it from the
+  `SurfaceHostTrait::surfaceDeclaredDefaults()` answers it from the
   class's `#[UsesStructure]`, which is readable with no instance:
   `ResourcesInterface::defaults()` runs the structure's own
   `defineInputs()` alone, with no alter, context or refiner, and reads
@@ -891,7 +891,7 @@ Two more things these hosts force:
 
 ## The operation form
 
-`Form\DataSurfaceOperationForm` serves a resource in one of its
+`Form\SurfaceOperationForm` serves a resource in one of its
 operations from the route alone. An operation says what is known, the
 resource names its storage and its access class, and that is everything
 a form needs, so a resource served at a route needs no form class:
@@ -900,11 +900,11 @@ a form needs, so a resource served at a route needs no form class:
 example.edit:
   path: '/admin/structure/examples/{example}/surface-edit'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Edit example'
-    _data_surface_resource: 'Drupal\example\Resource\ExampleResource'
-    _data_surface_operation: 'update'
-    _data_surface_cosmetics: 'example.surface_form_cosmetics'
+    _surface_resource: 'Drupal\example\Resource\ExampleResource'
+    _surface_operation: 'update'
+    _surface_cosmetics: 'example.surface_form_cosmetics'
   options:
     parameters:
       example:
@@ -915,13 +915,13 @@ The defaults:
 
 | Default | Holds |
 | --- | --- |
-| `_data_surface_resource` | The resource class, or its `#[Resource]` id. A derived resource's id may hold a variable of the route's path, `entity.content:node.{node_type}`, so one route serves every bundle ([below](#one-route-for-every-bundle)). |
-| `_data_surface_operation` | One of its operation ids. |
-| `_data_surface_cosmetics` | Optional. A service id or class implementing `Form\DataSurfaceFormCosmeticsInterface`: a borrowed element, markup, the message and the redirect. Grouping and order are the keys' [arrangement](#arranging-the-keys). |
-| `_data_surface_panel` | Optional. A service id or class implementing `Form\DataSurfaceFormPanelInterface`: something shown inside the data surface's container, rebuilt with it. |
-| `_data_surface_fixed` | Optional. A map of key paths to values, each key fixed to its value on this page; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
-| `_data_surface_defaults` | Optional. A map of key paths to values, each the value its key starts from on this page, for an operation that creates; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
-| `_data_surface_query` | Optional. A map of key paths to query parameter names, each key a link may start from the parameter it names, `?subject=Pricing`, on any operation that draws values ([below](#keys-a-link-or-the-code-starts)). |
+| `_surface_resource` | The resource class, or its `#[Resource]` id. A derived resource's id may hold a variable of the route's path, `entity.content:node.{node_type}`, so one route serves every bundle ([below](#one-route-for-every-bundle)). |
+| `_surface_operation` | One of its operation ids. |
+| `_surface_cosmetics` | Optional. A service id or class implementing `Form\SurfaceFormCosmeticsInterface`: a borrowed element, markup, the message and the redirect. Grouping and order are the keys' [arrangement](#arranging-the-keys). |
+| `_surface_panel` | Optional. A service id or class implementing `Form\SurfaceFormPanelInterface`: something shown inside the data surface's container, rebuilt with it. |
+| `_surface_fixed` | Optional. A map of key paths to values, each key fixed to its value on this page; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
+| `_surface_defaults` | Optional. A map of key paths to values, each the value its key starts from on this page, for an operation that creates; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
+| `_surface_query` | Optional. A map of key paths to query parameter names, each key a link may start from the parameter it names, `?subject=Pricing`, on any operation that draws values ([below](#keys-a-link-or-the-code-starts)). |
 
 The route's parameters are the operation method's, by name: an upcast
 entity parameter arrives as the entity, a plain one as its value, so
@@ -974,41 +974,41 @@ or the lock is an operation's (an identity key). An operation that
 changes nothing is offered under its own label, "Check a program", not
 "Save", and says, on submit, that the values were accepted and nothing
 was written. The form id is
-`data_surface_operation_form_<route name>`, so an alter hook can name
+`surface_operation_form_<route name>`, so an alter hook can name
 one route's form and two of them on one page cannot share a form state.
 The content type demo's two routes are the worked example, and
 [Routes from operations](resources.md#routes-from-operations) shows one.
 
 The data surface's container is built under the `surface` key, which is
-`DataSurfaceOperationForm::SURFACE_KEY` and is part of the contract with
+`SurfaceOperationForm::SURFACE_KEY` and is part of the contract with
 anything that reads submitted values by path.
 
 ### A panel beside the elements
 
-A route may name a panel in `_data_surface_panel`. The form hands it the
+A route may name a panel in `_surface_panel`. The form hands it the
 operation, the resource built in it, and the values the elements are
 built with, and places what it returns inside the data surface's
 container,
-under `DataSurfaceOperationForm::PANEL_KEY`, with the builder's
+under `SurfaceOperationForm::PANEL_KEY`, with the builder's
 `placeRefreshed()`: every AJAX rebuild a refinement triggers replaces
 it beside the dependents, whichever key moved, because a panel that
 describes the built resource as the answers stand changes when they
 do. Extraction reads only the data surface's own keys, so nothing in a panel is
 ever taken for a value.
 
-`data_surface_tool.contract_panel` (`ContractPanel`) is the one
+`surface_tool.contract_panel` (`ContractPanel`) is the one
 this repository ships: every key with its type, label, requiredness,
 default, what it allows in words, what it depends on and whether it is
 narrowed right now, children and mounted keys included; and, collapsed,
-the contract as JSON Schema from `data_surface.contract_emitter`
+the contract as JSON Schema from `surface.contract_emitter`
 ([The served contract](served-contract.md)), then what the derived tool
 for the same operation can advertise through the Tool API.
 
 A route names one panel. Two are one panel that composes them: the
-examples' routes name `data_surface_examples.panels` (`ExamplePanels`),
+examples' routes name `surface_examples.panels` (`ExamplePanels`),
 which returns the contract panel and, below it, what config schema alone
 can say about the same settings
-(`modules/data_surface_examples/README.md`).
+(`modules/surface_examples/README.md`).
 Both sit under the one key, so one rebuild replaces both.
 
 ### A route that fixes or fills keys
@@ -1047,12 +1047,12 @@ body starts with text, served by the generic `create`:
 example.add_welcome:
   path: '/admin/content/add-welcome'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Add a welcome page'
-    _data_surface_resource: 'entity.content:node.page'
-    _data_surface_operation: 'create'
-    _data_surface_fixed: { 'title.value': 'Welcome' }
-    _data_surface_defaults: { 'body.value': 'Start here.' }
+    _surface_resource: 'entity.content:node.page'
+    _surface_operation: 'create'
+    _surface_fixed: { 'title.value': 'Welcome' }
+    _surface_defaults: { 'body.value': 'Start here.' }
 ```
 
 A basic page's title and body are each a field's structure, attached at
@@ -1060,9 +1060,9 @@ the field's name, so the paths name the `value` key inside each
 ([Content entities](entities.md)). `OperationRoute` reads both defaults
 after the operation has built its context, and applies them to it:
 
-- **`_data_surface_fixed`** narrows each key to its value:
+- **`_surface_fixed`** narrows each key to its value:
   `withConstraint($path, 'Choice', ['choices' => [$value],
-  'data_surface_fixed' => TRUE])`, the last option saying the Choice
+  'surface_fixed' => TRUE])`, the last option saying the Choice
   fixes the key, which the build reads and takes off. A fixed key holds
   its value: it starts from the value whatever default it declares, is
   made required where it was optional, and is drawn as that value, an
@@ -1070,7 +1070,7 @@ after the operation has built its context, and applies them to it:
   under `x-surface.fixed`, and list it as required. Any other value is
   refused by the key's name, and a submission cannot leave the key
   empty.
-- **`_data_surface_defaults`** gives each key the value it starts from in
+- **`_surface_defaults`** gives each key the value it starts from in
   this build: `withDefaults([$path => $value])`. The form's element
   starts from it, both documents state it as `default`, and a create that
   leaves the key stores it. Only an operation that creates takes
@@ -1099,8 +1099,8 @@ that fix or fill one are refused alike, before the context's values are
 written. Each is refused saying why.
 
 **Order.** The declared default, then the site's
-(`data_surface.defaults`), then the operation's own `withDefaults()`,
-then the route's `_data_surface_defaults`, each over the last; a fixed
+(`surface.defaults`), then the operation's own `withDefaults()`,
+then the route's `_surface_defaults`, each over the last; a fixed
 value is what its key starts from over all of them. A prefill is laid
 over these as the element's starting input, the code's first and a
 link's over it, and what the visitor posts stands over both.
@@ -1123,11 +1123,11 @@ vocabulary (`'entity:taxonomy_term:departments'`):
 example.inquiry_department:
   path: '/contact/{department}'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
-    _title_callback: '\Drupal\data_surface\Form\DataSurfaceOperationForm::title'
-    _data_surface_resource: 'example.inquiry'
-    _data_surface_operation: 'send'
-    _data_surface_fixed: { department: '{department}' }
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title_callback: '\Drupal\surface\Form\SurfaceOperationForm::title'
+    _surface_resource: 'example.inquiry'
+    _surface_operation: 'send'
+    _surface_fixed: { department: '{department}' }
   requirements:
     department: '\d+'
   options:
@@ -1190,10 +1190,10 @@ every resource its path names:
 example.node_add:
   path: '/example/node/{node_type}/add'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
-    _title_callback: '\Drupal\data_surface\Form\DataSurfaceOperationForm::title'
-    _data_surface_resource: 'entity.content:node.{node_type}'
-    _data_surface_operation: 'create'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title_callback: '\Drupal\surface\Form\SurfaceOperationForm::title'
+    _surface_resource: 'entity.content:node.{node_type}'
+    _surface_operation: 'create'
   options:
     parameters:
       node_type:
@@ -1213,7 +1213,7 @@ of. The context is the deriver's create, which knows the entity type and
 the bundle from its binding, so nothing in it is read from the request
 ([below](#which-build-holds-a-routes-values)).
 
-`DataSurfaceOperationForm::title` titles the page with the operation's
+`SurfaceOperationForm::title` titles the page with the operation's
 label, which a derived create already words for its bundle, "Add Basic
 page", and answers "Page not found" for an id the path fills that no
 resource has. It serves any route whose `_title` cannot say what it
@@ -1239,11 +1239,11 @@ parameter:
 example.inquiry:
   path: '/contact'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Contact us'
-    _data_surface_resource: 'example.inquiry'
-    _data_surface_operation: 'send'
-    _data_surface_query: { subject: subject }
+    _surface_resource: 'example.inquiry'
+    _surface_operation: 'send'
+    _surface_query: { subject: subject }
 ```
 
 `/contact?subject=Pricing` draws the form with the subject starting as
@@ -1290,7 +1290,7 @@ does not list is the page's own, and the form does not read it.
 A path no prefill reaches is the route written wrong: the form's first
 draw refuses it with a `\LogicException` naming the route and the key,
 whatever the link sends ("The example.inquiry route's
-"_data_surface_query": "code" on example.inquiry is a secret, which no
+"_surface_query": "code" on example.inquiry is a secret, which no
 form draws, so no prefill starts it."), and the catalog lists it before
 a visitor meets it. A query name no link can use fails the router
 rebuild: an empty one, one in braces (what a link sends is input, never
@@ -1316,15 +1316,15 @@ example.report_add:
   defaults:
     _controller: '\Drupal\example\Controller\ReportController::add'
     _title: 'Add a report'
-    _data_surface_resource: 'entity.content:node.report'
-    _data_surface_operation: 'create'
+    _surface_resource: 'entity.content:node.report'
+    _surface_operation: 'create'
 ```
 
 ```php
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
+use Drupal\surface\Form\SurfaceOperationForm;
 
 public function add(): array {
-  return $this->formBuilder()->getForm(DataSurfaceOperationForm::class, [
+  return $this->formBuilder()->getForm(SurfaceOperationForm::class, [
     'field_report_date' => ['value' => date('Y-m-d', $this->time->getRequestTime())],
   ]);
 }
@@ -1344,7 +1344,7 @@ the serialized form.
 When a route that seeds is matched, its access check holds the seeds to
 the resource at once, by building it for no account, so a seed the
 resource refuses is refused before the page is drawn. Whether the build
-cache, `cache.data_surface_build`, keeps that build for the next request
+cache, `cache.surface_build`, keeps that build for the next request
 depends on what the context holds:
 
 - **Nothing read from the request.** Literal seeds and plain defaults,
@@ -1383,10 +1383,10 @@ What it answers depends on who chose what is wrong:
   `\InvalidArgumentException` core throws for a reserved variable name
   in a path: a `{name}` in the resource's id, or a reference, that names
   no variable of the path or one nothing bounds; one path under both
-  `_data_surface_fixed` and `_data_surface_defaults`, since a fixed
-  value is also what its key starts from; a `_data_surface_query` that
+  `_surface_fixed` and `_surface_defaults`, since a fixed
+  value is also what its key starts from; a `_surface_query` that
   is no map of key paths to query names, or names one no link can use;
-  and `_data_surface_fixed` on a React page
+  and `_surface_fixed` on a React page
   ([below](#what-the-page-states)). Such a refusal stops the rebuild for
   the whole site, as core's own does: no route of any module is written
   until the routing file is corrected, and the router serves the routes
@@ -1394,7 +1394,7 @@ What it answers depends on who chose what is wrong:
   the route is matched, with the same words, for a route no rebuild saw.
   The rest needs the operation or the resource built, and is refused
   when the route is matched, a 403 that gives the reason: the shape of
-  `_data_surface_fixed` and `_data_surface_defaults`; a path that names
+  `_surface_fixed` and `_surface_defaults`; a path that names
   no key or that no seed reaches; a literal value its key refuses, "The
   example.add_welcome route: The "create" operation sets "body.value" on
   entity.content:node.page to ..., which the key does not accept: ...";
@@ -1466,12 +1466,12 @@ query prefills as starting values, and fixes nothing:
 example.card_app:
   path: '/example/cards/app/{copies}'
   defaults:
-    _controller: '\Drupal\data_surface_react\Controller\ResourceReactPage::served'
-    _title_callback: '\Drupal\data_surface_react\Controller\ResourceReactPage::servedTitle'
-    _data_surface_resource: 'example.card'
-    _data_surface_operation: 'create'
-    _data_surface_defaults: { title: 'Dear you', copies: '{copies}' }
-    _data_surface_query: { occasion: occasion }
+    _controller: '\Drupal\surface_react\Controller\ResourceReactPage::served'
+    _title_callback: '\Drupal\surface_react\Controller\ResourceReactPage::servedTitle'
+    _surface_resource: 'example.card'
+    _surface_operation: 'create'
+    _surface_defaults: { title: 'Dear you', copies: '{copies}' }
+    _surface_query: { occasion: occasion }
   requirements:
     copies: '\d+'
 ```
@@ -1491,23 +1491,23 @@ operation's, fetched from the API, which knows no route, so they state
 the operation's `default` and none of the route's. Its write goes to the
 operation's own API path, which holds a value to the operation's
 constraints alone, so a key the page stated fixed would take any value
-there, and `_data_surface_fixed` on such a route fails the router
+there, and `_surface_fixed` on such a route fails the router
 rebuild, naming the route. The page varies by each query parameter the
 route lists, as the form does, and `servedTitle()` titles it with the
 operation's label. The generic page,
 `/surface-react/{resource}/{operation}`, carries no seeds, and answers a
 URL that names nothing as the form's route does
-([React](https://github.com/mlander/data_surface/blob/main/modules/data_surface_react/README.md#a-page-at-a-modules-route)).
+([React](https://github.com/mlander/surface/blob/main/modules/surface_react/README.md#a-page-at-a-modules-route)).
 
 ### Access, twice
 
-The route's requirement, `_data_surface_operation_access`, is the
+The route's requirement, `_surface_operation_access`, is the
 operation's permission and then the resource's access class, the
 permission asked from the two ids before anything the URL carries is
 read ([Refusal, by who chose the value](#refusal-by-who-chose-the-value)).
 A route whose defaults name a resource and an operation has it without
 saying it (`OperationRouteSubscriber` adds it); a routing file may still
-say `_data_surface_operation_access: 'TRUE'`. The form
+say `_surface_operation_access: 'TRUE'`. The form
 asks the same answer again on its way in, as the floor under the route
 for a caller that reached the form another way, and hands it to the
 pipeline on its way out. The second is the one that matters, for the
@@ -1520,7 +1520,7 @@ pipeline a decisive answer on the way out.
 
 ### The cosmetic seam
 
-Three methods, `Form\DataSurfaceFormCosmeticsInterface`, and they are
+Three methods, `Form\SurfaceFormCosmeticsInterface`, and they are
 the whole of what a form class is still for:
 
 | Method | Decides |
@@ -1529,7 +1529,7 @@ the whole of what a form class is still for:
 | `surfaceFormMessage()` | What the person is told. NULL for the generic sentence. |
 | `surfaceFormRedirect()` | Where they are sent. NULL to stay on the form. |
 
-A route names one, in `_data_surface_cosmetics`. Each method is told the
+A route names one, in `_surface_cosmetics`. Each method is told the
 operation id, as `$operation`, and, as `$subject`, the raw value of the
 first of the operation's parameters that is a variable of the route's
 path (the string in the path, before upcasting), or `NULL` when the path
@@ -1576,7 +1576,7 @@ contract says `radios` or `checkboxes`, and the React app draws them,
 where a swap changes the form alone. A swap that changes what is posted
 is a widget of its own ([Writing a widget](widgets.md#writing-a-widget)).
 
-`data_surface_demo_node_type` is the worked example: two routes, a
+`surface_examples_node_type` is the worked example: two routes, a
 resource that declares its three groups, and a cosmetics service that
 puts those groups into core's vertical tabs (placed before the first
 group, so the tabs render before the groups they gather), the machine
@@ -1592,7 +1592,7 @@ Three cases, and the demo module is the second one:
    batch, an entity form it rides inside) is a form, and it composes the
    data surface's container itself.
 2. **The structure and the destination belong to different owners.**
-   `data_surface_demo` renders the demo block's structure into a
+   `surface_examples_plugins` renders the demo block's structure into a
    `StateStorage`, which is exactly the claim it exists to make: a
    structure is independent of where its values are stored. An operation
    route writes to the resource's own storage, and the demo block's
@@ -1605,17 +1605,17 @@ Three cases, and the demo module is the second one:
 ## A standalone form
 
 A form that is not a plugin needs none of the above. Get the data
-surface (from a plugin's `getDataSurface()`, or from
+surface (from a plugin's `getSurface()`, or from
 `ResourcesInterface::build()` with a context), build the container, and
 hand the submitted values to the pipeline with storage:
 
-Compose `DataSurfaceHostTrait` for the three collaborators (the
+Compose `SurfaceHostTrait` for the three collaborators (the
 pipeline, the form builder, and the in-progress AJAX input), and the
 class is three delegations long:
 
 ```php
 public function buildForm(array $form, FormStateInterface $form_state): array {
-  $surface = $this->dataSurface();
+  $surface = $this->surface();
   // The pipeline's own merge rule, reused rather than restated: the
   // declared defaults, then whatever the storage holds, and then, laid
   // over the top by surfaceFormValues(), the in-progress choice an AJAX
@@ -1631,7 +1631,7 @@ public function buildForm(array $form, FormStateInterface $form_state): array {
 }
 
 public function submitForm(array &$form, FormStateInterface $form_state): void {
-  $surface = $this->dataSurface();
+  $surface = $this->surface();
   $builder = $this->surfaceFormBuilder();
   $storage = $this->storage();
   $values = $builder->extractSurfaceValues($surface, $form['surface'], $form_state, $storage->load($surface));
@@ -1643,6 +1643,6 @@ public function submitForm(array &$form, FormStateInterface $form_state): void {
 ```
 
 A data surface plus storage is a complete configurable thing.
-`data_surface_demo` ships exactly this against a `StateStorage`, asking
+`surface_examples_plugins` ships exactly this against a `StateStorage`, asking
 the block manager for the demo block and reading its data surface rather
 than repeating its keys, which is what any other consumer would do.

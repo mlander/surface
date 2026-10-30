@@ -1,0 +1,128 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\surface_examples_address\Resource;
+
+use CommerceGuys\Addressing\AddressFormat\AddressField;
+use CommerceGuys\Addressing\AddressFormat\FieldOverride;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Resource\Attribute\Resource;
+use Drupal\surface\Resource\Attribute\Variant;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\ResourceInterface;
+use Drupal\surface_examples_address\Storage\AddressFieldSettingsStorage;
+use Drupal\surface_tool\Resource\FieldInstanceResource;
+
+/**
+ * Settings only an address field has: the address field's settings variant.
+ *
+ * The three settings the address module stores per field instance, in
+ * the input layout a caller sends rather than the layout the field stores:
+ * - a list of country codes, not the map of each code to itself a
+ *   multi-select happens to submit;
+ * - one optional override per address field, not a single-key array
+ *   wrapped around each one;
+ * - no deprecated 'fields' key at all, because a caller should never be
+ *   offered a key that silently overrules the one next to it.
+ * The storage is where the two layouts meet, through AddressStorageLayout.
+ *
+ * #[Variant] declares this the address field type's variant among the
+ * field instance resource's settings variants, which any module may add
+ * to, so the field resource never names this class. The reference to
+ * FieldInstanceResource is a class name and nothing more: on a site
+ * without the tool bridge it does not load, discovery skips the variant,
+ * and the field type's own host still builds this resource for Field UI.
+ *
+ * The live lists are named as constraints, Country and LanguageExists,
+ * and resolved by their options resolvers; nothing here asks the site
+ * for anything, which is what lets a resource hold no services.
+ *
+ * @see \Drupal\surface_examples_address\Plugin\Field\FieldType\SurfaceAddressItem
+ * @see \Drupal\surface_examples_address\Storage\AddressFieldSettingsStorage
+ */
+#[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
+#[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]
+final class AddressFieldSettingsResource implements ResourceInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    // The item says what one country code is, and the Country constraint
+    // is the whole of that.
+    $country = DataDefinition::create('string')
+      ->setLabel(t('Country'))
+      ->addConstraint('Country', []);
+    $inputs->addList('available_countries', $country, t('Available countries'), default: [])
+      ->setDescription(t('Leave empty for all countries.'));
+
+    // Locked languages are excluded by default, which is what the address
+    // module's own settings form does by hand: "not specified" and "not
+    // applicable" are not languages an address is formatted in.
+    $inputs->add('langcode_override', 'string', t('Language override'))
+      ->setDescription(t('Ensures entered addresses are always formatted in the same language.'))
+      ->addConstraint('LanguageExists', []);
+
+    $overrides = MapDataDefinition::create()
+      ->setLabel(t('Field overrides'))
+      ->setDescription(t('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'));
+    foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
+      $overrides->setPropertyDefinition($field_name, $definition);
+    }
+    $inputs->addDefinition('field_overrides', $overrides, default: []);
+  }
+
+  /**
+   * Declares the one address field override a caller may set, twelve times.
+   *
+   * The keys are the addressing library's own field constants, which are
+   * camel case and cover twelve of the fourteen address properties. The
+   * labels repeat what the address module's
+   * LabelHelper::getGenericFieldLabels() says rather than calling it, so
+   * the declaration stays literal; AddressFieldResourceTest asserts the
+   * two agree word for word.
+   *
+   * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
+   *   One optional override definition per overridable address field, in
+   *   the order the address module names them.
+   */
+  protected static function fieldOverrideDefinitions(): array {
+    $labels = [
+      AddressField::GIVEN_NAME => t('First name', [], ['context' => 'Address label']),
+      AddressField::ADDITIONAL_NAME => t('Middle name', [], ['context' => 'Address label']),
+      AddressField::FAMILY_NAME => t('Last name', [], ['context' => 'Address label']),
+      AddressField::ORGANIZATION => t('Organization', [], ['context' => 'Address label']),
+      AddressField::ADDRESS_LINE1 => t('Address line 1', [], ['context' => 'Address label']),
+      AddressField::ADDRESS_LINE2 => t('Address line 2', [], ['context' => 'Address label']),
+      AddressField::ADDRESS_LINE3 => t('Address line 3', [], ['context' => 'Address label']),
+      AddressField::POSTAL_CODE => t('Postal code', [], ['context' => 'Address label']),
+      AddressField::SORTING_CODE => t('Sorting code', [], ['context' => 'Address label']),
+      // The address module's own source string, British spelling and all,
+      // so the two share one translation.
+      // cspell:ignore Neighbourhood
+      AddressField::DEPENDENT_LOCALITY => t('Dependent locality (e.g. Neighbourhood)', [], ['context' => 'Address label']),
+      AddressField::LOCALITY => t('Locality (e.g. City)', [], ['context' => 'Address label']),
+      AddressField::ADMINISTRATIVE_AREA => t('Administrative area (e.g. State or Province)', [], ['context' => 'Address label']),
+    ];
+    $definitions = [];
+    foreach ($labels as $field_name => $label) {
+      $definitions[$field_name] = new DataDefinition([
+        'type' => 'string',
+        'label' => $label,
+        'constraints' => [
+          'LabeledChoice' => [
+            'choices' => [
+              FieldOverride::HIDDEN => t('Hidden'),
+              FieldOverride::OPTIONAL => t('Optional'),
+              FieldOverride::REQUIRED => t('Required'),
+            ],
+          ],
+        ],
+      ]);
+    }
+    return $definitions;
+  }
+
+}

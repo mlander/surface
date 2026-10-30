@@ -1,4 +1,4 @@
-# Data Surface documentation
+# Surface API documentation
 
 Every page of the documentation, in four sections and the project's own
 records. This page only points; each linked page explains its idea.
@@ -13,7 +13,7 @@ install; read it first.
 
 - [Your first resource](first-resource.md): a settings page from a
   resource, an operation, a storage and `add()`, pinned to the shipped
-  module `data_surface_first`.
+  module `surface_examples_first`.
 - [Your second resource](second-resource.md): one key whose allowed
   values depend on another's, with one refiner.
 - [A plugin's settings](plugin-settings.md): give a block, formatter or
@@ -83,7 +83,7 @@ install; read it first.
 - [Evolving a resource](evolution.md): which changes are compatible, the
   version, stored-value migrations as designed, and the contract diff
   that holds a module to its baselines.
-- `data_surface.api.php`, beside the module's README: resource and
+- `surface.api.php`, beside the module's README: resource and
   structure classes, alters and the two plugin types, for the API
   reference.
 
@@ -97,20 +97,20 @@ install; read it first.
 - [Value semantics](semantics.md): configured or not, the coercion
   table (the Tool API's), secrets, stale values, type mismatches,
   required, locked keys.
-- [The Tool API bridge](https://github.com/mlander/data_surface/blob/main/modules/data_surface_tool/README.md): one
+- [The Tool API bridge](https://github.com/mlander/surface/blob/main/modules/surface_tool/README.md): one
   tool per operation and a read tool beside it, who may run them, the
   contract panel, and what MCP and the Tool API are told. Enabling it:
   [Installation: Tool](installation.md#tool), for an agent, MCP and
   Drush.
-- [The React app](https://github.com/mlander/data_surface/blob/main/modules/data_surface_react/README.md): the served
+- [The React app](https://github.com/mlander/surface/blob/main/modules/surface_react/README.md): the served
   contract's endpoints and the React form drawn from them.
-- [The OpenAPI document](https://github.com/mlander/data_surface/blob/main/modules/data_surface_openapi/README.md):
+- [The OpenAPI document](https://github.com/mlander/surface/blob/main/modules/surface_openapi/README.md):
   every operation's endpoints as OpenAPI 3.1, for any OpenAPI client,
   generator or UI.
-- [The component block](https://github.com/mlander/data_surface/blob/main/modules/data_surface_component_block/README.md):
+- [The component block](https://github.com/mlander/surface/blob/main/modules/surface_examples_component_block/README.md):
   a block that embeds a single-directory component, its settings a
   structure.
-- [Block placement](https://github.com/mlander/data_surface/blob/main/modules/data_surface_block/README.md): a placed
+- [Block placement](https://github.com/mlander/surface/blob/main/modules/surface_examples_block/README.md): a placed
   block of any plugin as a resource, placed, configured and removed
   through a tool, HTTP and a form.
 

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Widget;
+namespace Drupal\surface\Widget;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\Options\OptionSet;
+use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Options\OptionSet;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * definition offers, a list's from its item definition, and render what
  * the resolver said about how long the answer may be reused.
  */
-abstract class ChoiceWidgetBase extends DataSurfaceWidgetBase implements ContainerFactoryPluginInterface {
+abstract class ChoiceWidgetBase extends SurfaceWidgetBase implements ContainerFactoryPluginInterface {
 
   /**
    * Constructs a choice widget.
@@ -30,14 +30,14 @@ abstract class ChoiceWidgetBase extends DataSurfaceWidgetBase implements Contain
    *   The plugin ID.
    * @param mixed $plugin_definition
    *   The plugin definition.
-   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
+   * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service.
    */
   final public function __construct(
     array $configuration,
     string $plugin_id,
     mixed $plugin_definition,
-    protected readonly DataSurfaceOptions $options,
+    protected readonly SurfaceOptions $options,
   ) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
   }
@@ -46,7 +46,7 @@ abstract class ChoiceWidgetBase extends DataSurfaceWidgetBase implements Contain
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition): static {
-    return new static($configuration, $plugin_id, $plugin_definition, $container->get('data_surface.options'));
+    return new static($configuration, $plugin_id, $plugin_definition, $container->get('surface.options'));
   }
 
   /**
@@ -63,7 +63,7 @@ abstract class ChoiceWidgetBase extends DataSurfaceWidgetBase implements Contain
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
    *
-   * @return \Drupal\data_surface\Options\OptionSet|null
+   * @return \Drupal\surface\Options\OptionSet|null
    *   The option set, or NULL when the definition names no list.
    */
   protected function optionSet(DataDefinitionInterface $definition): ?OptionSet {
@@ -82,7 +82,7 @@ abstract class ChoiceWidgetBase extends DataSurfaceWidgetBase implements Contain
    *
    * @param array $element
    *   The element.
-   * @param \Drupal\data_surface\Options\OptionSet|null $set
+   * @param \Drupal\surface\Options\OptionSet|null $set
    *   The values it offers.
    *
    * @return array
@@ -100,7 +100,7 @@ abstract class ChoiceWidgetBase extends DataSurfaceWidgetBase implements Contain
    *
    * @param array $element
    *   A radios or checkboxes element.
-   * @param \Drupal\data_surface\Options\OptionSet $set
+   * @param \Drupal\surface\Options\OptionSet $set
    *   The values it offers.
    *
    * @return array

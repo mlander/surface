@@ -1,6 +1,6 @@
 {
     "resource": "block.placement.condition",
-    "module": "data_surface_block",
+    "module": "surface_examples_block",
     "contract": 4,
     "documents": [
         {

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_widget_test\Plugin\DataSurfaceWidget\ColorPickerWidget;
-use Drupal\data_surface_widget_test\Structure\SwatchStructure;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_widget_test\Plugin\SurfaceWidget\ColorPickerWidget;
+use Drupal\surface_widget_test\Structure\SwatchStructure;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -24,9 +24,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind
  * @see docs/decisions.md#a-widget-is-chosen-from-the-definition
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class WidgetClaimTest extends DataSurfaceKernelTestBase {
+class WidgetClaimTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -34,18 +34,18 @@ class WidgetClaimTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_widget_test',
+    'surface',
+    'surface_widget_test',
   ];
 
   /**
    * Builds the swatch.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built structure.
    */
-  protected function swatch(): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->build(SwatchStructure::class, new OperationContext('configure'));
+  protected function swatch(): SurfaceInterface {
+    return $this->container->get('surface.resources')->build(SwatchStructure::class, new OperationContext('configure'));
   }
 
   /**
@@ -53,7 +53,7 @@ class WidgetClaimTest extends DataSurfaceKernelTestBase {
    */
   public function testClaimServesTheKeyAndLosesToTheOwnersSetting(): void {
     $swatch = $this->swatch();
-    $widgets = $this->container->get('plugin.manager.data_surface_widget');
+    $widgets = $this->container->get('plugin.manager.surface_widget');
     $this->assertInstanceOf(ColorPickerWidget::class, $widgets->getWidgetFor($swatch->getDefinition('accent')), 'The higher priority of two claims serves the key.');
     $this->assertNull($widgets->claimed($swatch->getDefinition('trim')), 'A key whose owner asks for a widget is claimed by none.');
     $this->assertNull($widgets->claimed($swatch->getDefinition('caption')), 'A key no claim matches is claimed by none.');
@@ -70,7 +70,7 @@ class WidgetClaimTest extends DataSurfaceKernelTestBase {
    */
   public function testTheContractSaysTheChosenWord(): void {
     $swatch = $this->swatch();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     foreach ([
       'the full schema' => $emitter->emitFull($swatch, 'widget_test.swatch', widgets: TRUE)->document['schema'],
       'the schema as it stands' => $emitter->emit($swatch, $swatch->getDefaultValues(), 'widget_test.swatch', widgets: TRUE)->document['schema'],
@@ -87,7 +87,7 @@ class WidgetClaimTest extends DataSurfaceKernelTestBase {
    * The catalog's view of one structure names the widget of each key.
    */
   public function testTheCatalogNamesTheWidget(): void {
-    $keys = array_column($this->container->get('data_surface.site_catalog')->resource('widget_test.swatch')['keys'], 'widget', 'key');
+    $keys = array_column($this->container->get('surface.site_catalog')->resource('widget_test.swatch')['keys'], 'widget', 'key');
     $this->assertSame(['accent' => 'widget_test_color', 'trim' => 'radios', 'caption' => 'string'], $keys);
   }
 
@@ -98,7 +98,7 @@ class WidgetClaimTest extends DataSurfaceKernelTestBase {
     $definition = ['id' => 'widget_test_rows', 'claims' => [['type' => 'list']]];
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The widget_test_rows widget\'s claim {"type":"list"} claims a list or a map, which are drawn by what they hold: a claim names the type of one value. A claim is [\'type\' => <data type>], [\'type\' => <data type>, \'format\' => <format>] or [\'shape\' => <shape id>].');
-    $this->container->get('plugin.manager.data_surface_widget')->processDefinition($definition, 'widget_test_rows');
+    $this->container->get('plugin.manager.surface_widget')->processDefinition($definition, 'widget_test_rows');
   }
 
 }

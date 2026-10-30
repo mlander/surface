@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Config\Schema\SchemaCheckTrait;
@@ -10,12 +10,12 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
-use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
-use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
-use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationTool;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface_examples_extras\NodeTypeReviewSettings;
+use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
+use Drupal\surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
+use Drupal\surface_tool\Plugin\tool\Tool\ResourceOperationTool;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodePreviewMode;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -30,13 +30,13 @@ use Symfony\Component\HttpFoundation\Request;
 /**
  * Compares two content type tools once another module has extended it.
  *
- * The data_surface_demo_extras module adds two review settings to every
+ * The surface_examples_extras module adds two review settings to every
  * content type, twice: to the content type resource through an alter, and
  * to core's own content type form through a form alter. Neither tool
  * compared here was written with those settings in mind. The resource
  * driven tool picks them up because its input is the resource; the
  * classic one, Tool Belt's bundle create tool, is what an agent has without
- * Data Surface, and this test records exactly what it offers and what it
+ * Surface API, and this test records exactly what it offers and what it
  * does, including what it lets through that the form would not.
  *
  * The strict config schema checker stays on for everything except the
@@ -44,13 +44,13 @@ use Symfony\Component\HttpFoundation\Request;
  * Schema conformance is also asserted explicitly wherever a claim is
  * about it.
  *
- * The last test holds modules/data_surface_demo_node_type_tool's
+ * The last test holds modules/surface_examples_node_type_tool's
  * COMPARISON.md to what this class observes; the document is written by
  * scripts/generate-comparison.php.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
+class NodeTypeToolComparisonTest extends SurfaceKernelTestBase {
 
   use SchemaCheckTrait;
   use UserCreationTrait;
@@ -58,10 +58,10 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * The resource driven tool.
    */
-  protected const SURFACE_TOOL = 'data_surface:node.type:create';
+  protected const SURFACE_TOOL = 'surface:node.type:create';
 
   /**
-   * The tool an agent has for creating a content type without Data Surface.
+   * The tool an agent has for creating a content type without Surface API.
    */
   protected const CLASSIC_TOOL = 'tool_belt:entity_bundle_add';
 
@@ -85,12 +85,12 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     'tool',
     'tool_belt',
     'tool_belt_entity',
-    'data_surface',
-    'data_surface_demo',
-    'data_surface_demo_extras',
-    'data_surface_demo_node_type',
-    'data_surface_tool',
-    'data_surface_demo_node_type_tool',
+    'surface',
+    'surface_examples_plugins',
+    'surface_examples_extras',
+    'surface_examples_node_type',
+    'surface_tool',
+    'surface_examples_node_type_tool',
   ];
 
   /**
@@ -108,7 +108,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    require_once dirname(__DIR__, 3) . '/scripts/DataSurfaceNodeTypeComparisonDocument.php';
+    require_once dirname(__DIR__, 3) . '/scripts/SurfaceNodeTypeComparisonDocument.php';
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
     $this->installConfig(['field', 'node']);
@@ -195,7 +195,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
       (new \ReflectionClass(ResourceOperationToolDeriver::class))->getFileName(),
       (new \ReflectionClass(OperationInputs::class))->getFileName(),
     ];
-    $surface = $this->container->get('data_surface.resources')->buildOperation(NodeTypeResource::class, 'create');
+    $surface = $this->container->get('surface.resources')->buildOperation(NodeTypeResource::class, 'create');
     $keys = array_merge(
       $surface->getDefinitions()->names(),
       [self::EXTRAS, NodeTypeReviewSettings::DEADLINE, NodeTypeReviewSettings::TAGS],
@@ -264,7 +264,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
     $this->assertNull(NodeType::load('late'));
 
     // The same through the pipeline alone, and in weeks.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $add = $resources->operation(NodeTypeResource::class, 'create');
     $surface = $resources->build(NodeTypeResource::class, $add);
     $pipeline_result = $this->pipeline()->submit(
@@ -528,8 +528,8 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    */
   public function testResourceFormRendersTheExtension(): void {
     $this->serveResourceAddRoute();
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
-    $extras = $form[DataSurfaceOperationForm::SURFACE_KEY]['third_party_settings'][self::EXTRAS];
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $extras = $form[SurfaceOperationForm::SURFACE_KEY]['third_party_settings'][self::EXTRAS];
     $deadline = $extras[NodeTypeReviewSettings::DEADLINE];
     $this->assertSame('number', $deadline[NodeTypeReviewSettings::AMOUNT]['#type']);
     $this->assertSame('select', $deadline[NodeTypeReviewSettings::UNIT]['#type']);
@@ -557,20 +557,20 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * Every cell of the outcome table is computed here from a real call, so
    * a drift means either tool, or the form, started behaving differently,
    * which is exactly the change worth noticing. Running with
-   * DATA_SURFACE_WRITE_COMPARISON=1 writes the new document first, which
+   * SURFACE_WRITE_COMPARISON=1 writes the new document first, which
    * is what scripts/generate-comparison.php does.
    */
   public function testComparisonHasNotDrifted(): void {
-    $document = \DataSurfaceNodeTypeComparisonDocument::render($this->resourceSchema(), $this->classicSchema(), $this->outcomes());
-    $path = dirname(__DIR__, 3) . '/' . \DataSurfaceNodeTypeComparisonDocument::PATH;
-    if (getenv(\DataSurfaceNodeTypeComparisonDocument::WRITE_VARIABLE) === '1') {
+    $document = \SurfaceNodeTypeComparisonDocument::render($this->resourceSchema(), $this->classicSchema(), $this->outcomes());
+    $path = dirname(__DIR__, 3) . '/' . \SurfaceNodeTypeComparisonDocument::PATH;
+    if (getenv(\SurfaceNodeTypeComparisonDocument::WRITE_VARIABLE) === '1') {
       file_put_contents($path, $document);
     }
     $this->assertFileExists($path);
     $this->assertSame(
       $document,
       (string) file_get_contents($path),
-      \DataSurfaceNodeTypeComparisonDocument::PATH . ' is out of date. Regenerate it with scripts/generate-comparison.php.',
+      \SurfaceNodeTypeComparisonDocument::PATH . ' is out of date. Regenerate it with scripts/generate-comparison.php.',
     );
   }
 
@@ -665,7 +665,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    *   What the composed storage loads, in the resource's shape.
    */
   protected function loadThroughTheResource(string $type): array {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(NodeTypeResource::class, 'update', ['type' => $type]);
     $surface = $resources->build(NodeTypeResource::class, $context);
     return $resources->storage(NodeTypeResource::class, $context, $surface)->load($surface);
@@ -799,7 +799,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
    * Puts the resource driven create route on the request stack.
    */
   protected function serveResourceAddRoute(): void {
-    $route_name = 'data_surface_demo_node_type.create';
+    $route_name = 'surface_examples_node_type.create';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -827,7 +827,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
   protected function submitResourceForm(string $type, string $amount, string $unit, string $tags): FormStateInterface {
     $form_state = new FormState();
     $form_state->setValues([
-      DataSurfaceOperationForm::SURFACE_KEY => [
+      SurfaceOperationForm::SURFACE_KEY => [
         'name' => ucfirst($type),
         'type' => $type,
         'title_label' => 'Title',
@@ -843,7 +843,7 @@ class NodeTypeToolComparisonTest extends DataSurfaceKernelTestBase {
         ],
       ],
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     return $form_state;
   }
 

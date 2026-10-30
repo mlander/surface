@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Routing\RouteMatch;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface_react\Access\ServedOperationAccessCheck;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface_react\Access\ServedOperationAccessCheck;
 use Drupal\node\Entity\Node;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -24,9 +24,9 @@ use Symfony\Component\Routing\Route;
  *
  * Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class BuildMemoTest extends DataSurfaceKernelTestBase {
+class BuildMemoTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
   use UserCreationTrait;
@@ -34,7 +34,7 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'data_surface_react'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_react'];
 
   /**
    * {@inheritdoc}
@@ -48,11 +48,11 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources
+   * @return \Drupal\surface\ResourceBuild\Resources
    *   The service.
    */
   protected function resources(): Resources {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     return $resources;
   }
@@ -137,7 +137,7 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
     $tools->getDefinitions();
     $this->resources()->forgetBuilds();
     [$built, $reused] = $this->counted(function () use ($tools, $node): void {
-      $tool = $tools->createInstance('data_surface:entity.content:node.page:update');
+      $tool = $tools->createInstance('surface:entity.content:node.page:update');
       $tool->setInputValue('id', (int) $node->id());
       $tool->setInputValue('values', [
         'field_description' => ['value' => 'Second'],
@@ -161,7 +161,7 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
   public function testTheRouteAccessCheckBuildsNothing(): void {
     $node = Node::create(['type' => 'page', 'title' => 'One', 'field_description' => 'First']);
     $node->save();
-    $check = $this->container->get('data_surface_react.access');
+    $check = $this->container->get('surface_react.access');
     assert($check instanceof ServedOperationAccessCheck);
     // The API's route, the page's id the path's one identity segment.
     $ids = [
@@ -172,7 +172,7 @@ class BuildMemoTest extends DataSurfaceKernelTestBase {
       's4' => '',
       's5' => '',
     ];
-    $route_match = new RouteMatch('data_surface_react.api', new Route('/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'), $ids, $ids);
+    $route_match = new RouteMatch('surface_react.api', new Route('/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'), $ids, $ids);
     $this->resources()->forgetBuilds();
     $this->assertSame([0, 0], $this->counted(function () use ($check, $route_match, $node): void {
       $request = Request::create('/surface-api/entity.content:node.page/' . $node->id());

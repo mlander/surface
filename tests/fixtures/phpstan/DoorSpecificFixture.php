@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Fixtures;
+namespace Drupal\Tests\surface\Fixtures;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Resource\Attribute\RefinesInput;
+use Drupal\surface\Resource\Attribute\RefinesInput;
 
 /**
  * A runtime refiner for DoorSpecificRuleTest: the current user is flagged.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Validation\Attribute\Constraint;
@@ -26,7 +26,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
  */
 #[Constraint(
-  id: 'DataSurfaceUnique',
+  id: 'SurfaceUnique',
   label: new TranslatableMarkup('Held once: an identity a thing already holds is refused', [], ['context' => 'Validation']),
 )]
 final class UniqueConstraint extends SymfonyConstraint {

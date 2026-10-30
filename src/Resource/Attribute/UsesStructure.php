@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource\Attribute;
+namespace Drupal\surface\Resource\Attribute;
 
 /**
  * On a plugin class: its configuration is this structure.
@@ -29,7 +29,7 @@ namespace Drupal\data_surface\Resource\Attribute;
  * structure class it names, or the plugin class itself when it names
  * none.
  *
- * @see \Drupal\data_surface\Hook\ResourcePluginHooks
+ * @see \Drupal\surface\Hook\ResourcePluginHooks
  */
 #[\Attribute(\Attribute::TARGET_CLASS)]
 final class UsesStructure {
@@ -37,12 +37,12 @@ final class UsesStructure {
   /**
    * The plugin definition key the structure class is recorded under.
    */
-  public const DEFINITION_KEY = 'data_surface';
+  public const DEFINITION_KEY = 'surface';
 
   /**
    * Constructs a UsesStructure attribute.
    *
-   * @param class-string<\Drupal\data_surface\Resource\DefinesInputsInterface>|null $structure
+   * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface>|null $structure
    *   The structure the plugin's configuration is, or NULL when the
    *   plugin class is its own structure.
    */

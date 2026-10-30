@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\data_surface\Attachment;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Variants;
+use Drupal\surface\Attachment;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entry;
+use Drupal\surface\Variants;
 
 /**
  * How many entries of a list the site decides a document spells out.
@@ -20,7 +20,7 @@ use Drupal\data_surface\Variants;
  * structure read from a schema, a component in a slot), and keys from the
  * site (`addEach()`, `attachEach()`). Each is spelled out in the full
  * schema and the schema for these answers while its list has at most
- * `data_surface.settings:site_list_limit` entries. Past it, the full
+ * `surface.settings:site_list_limit` entries. Past it, the full
  * schema states the key open and marks it `deferred`; the chooser's own
  * options are listed whatever the count, since they are one id and one
  * label each. Each key is counted at its own level: a component in a slot
@@ -35,7 +35,7 @@ final class SiteListBudget {
   /**
    * The configuration object the limit lives in.
    */
-  public const SETTINGS = 'data_surface.settings';
+  public const SETTINGS = 'surface.settings';
 
   /**
    * The setting: the most entries of a site's list a document spells out.
@@ -114,7 +114,7 @@ final class SiteListBudget {
   /**
    * Answers whether a key's list is the site's.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    *
    * @return bool
@@ -130,7 +130,7 @@ final class SiteListBudget {
   /**
    * Answers whether a key's list is the site's and longer than the limit.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param \Drupal\Core\Cache\CacheableMetadata|null $cacheability
    *   Collects the setting's cacheability, for a key whose list is the
@@ -151,7 +151,7 @@ final class SiteListBudget {
   /**
    * Answers whether a key with variants is the site's and over the limit.
    *
-   * @param \Drupal\data_surface\Variants $variants
+   * @param \Drupal\surface\Variants $variants
    *   The variants.
    * @param \Drupal\Core\Cache\CacheableMetadata|null $cacheability
    *   Collects the setting's cacheability, as over() does.
@@ -170,13 +170,13 @@ final class SiteListBudget {
   /**
    * Answers whether any key, at any depth, is the site's and over the limit.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built resource or structure.
    *
    * @return bool
    *   TRUE when its full schema has a key marked `deferred` for its count.
    */
-  public function anyOver(DataSurfaceInterface $surface): bool {
+  public function anyOver(SurfaceInterface $surface): bool {
     return static::anyKey($surface, fn (Entry $entry): bool => $this->over($entry));
   }
 
@@ -187,17 +187,17 @@ final class SiteListBudget {
    * passes answers at once, so nothing below it is read, and a child met
    * twice is read once.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built resource or structure.
-   * @param callable(\Drupal\data_surface\Entry): bool $test
+   * @param callable(\Drupal\surface\Entry): bool $test
    *   The test.
-   * @param (callable(\Drupal\data_surface\Entry, \Drupal\data_surface\Attachment): bool)|null $walks
+   * @param (callable(\Drupal\surface\Entry, \Drupal\surface\Attachment): bool)|null $walks
    *   Which of a key's variants to walk into; NULL for every one.
    *
    * @return bool
    *   TRUE when a key passes.
    */
-  public static function anyKey(DataSurfaceInterface $surface, callable $test, ?callable $walks = NULL): bool {
+  public static function anyKey(SurfaceInterface $surface, callable $test, ?callable $walks = NULL): bool {
     $seen = [];
     return static::anyIn($surface, $test, $walks, $seen);
   }
@@ -205,11 +205,11 @@ final class SiteListBudget {
   /**
    * Walks one frame for anyKey().
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The frame.
-   * @param callable(\Drupal\data_surface\Entry): bool $test
+   * @param callable(\Drupal\surface\Entry): bool $test
    *   The test.
-   * @param (callable(\Drupal\data_surface\Entry, \Drupal\data_surface\Attachment): bool)|null $walks
+   * @param (callable(\Drupal\surface\Entry, \Drupal\surface\Attachment): bool)|null $walks
    *   Which of a key's variants to walk into.
    * @param array<int, true> $seen
    *   The frames read, by object id.
@@ -217,7 +217,7 @@ final class SiteListBudget {
    * @return bool
    *   TRUE when a key in it or below it passes.
    */
-  protected static function anyIn(DataSurfaceInterface $surface, callable $test, ?callable $walks, array &$seen): bool {
+  protected static function anyIn(SurfaceInterface $surface, callable $test, ?callable $walks, array &$seen): bool {
     if (isset($seen[spl_object_id($surface)])) {
       return FALSE;
     }
@@ -230,7 +230,7 @@ final class SiteListBudget {
       $children = [
         ...($entry->attachment === NULL ? [] : [$entry->attachment->child]),
         ...($entry->list === NULL ? [] : [$entry->list->child()]),
-        ...array_map(static fn (Attachment $variant): DataSurfaceInterface => $variant->child, array_values($variants)),
+        ...array_map(static fn (Attachment $variant): SurfaceInterface => $variant->child, array_values($variants)),
       ];
       foreach ($children as $child) {
         if (static::anyIn($child, $test, $walks, $seen)) {
@@ -244,7 +244,7 @@ final class SiteListBudget {
   /**
    * Counts a key's entries: its variants, or the keys of its map.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   A key whose list is the site's.
    *
    * @return int

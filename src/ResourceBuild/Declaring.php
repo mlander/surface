@@ -2,30 +2,30 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Reference\References;
-use Drupal\data_surface\Refinement\Narrowing;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Plugin\Validation\Constraint\UniqueConstraint;
-use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Resource\DefinesOutputsInterface;
-use Drupal\data_surface\Resource\AltersStorageLayoutInterface;
-use Drupal\data_surface\Resource\OperationAccessInterface;
-use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Resource\DefinesInputsInterface;
-use Drupal\data_surface\Resource\DeletableStorageInterface;
-use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
-use Drupal\data_surface\Resource\ResourceStorageInterface;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Refinement\Narrowing;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Plugin\Validation\Constraint\UniqueConstraint;
+use Drupal\surface\Refinement\WatchedValueCheckInterface;
+use Drupal\surface\Resource\DefinesOutputsInterface;
+use Drupal\surface\Resource\AltersStorageLayoutInterface;
+use Drupal\surface\Resource\OperationAccessInterface;
+use Drupal\surface\Resource\AltersInputsInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\DefinesInputsInterface;
+use Drupal\surface\Resource\DeletableStorageInterface;
+use Drupal\surface\Resource\HeldToConfigSchemaInterface;
+use Drupal\surface\Resource\ResourceStorageInterface;
 
 /**
  * The first phase of the build: the blueprint filled from the class.
@@ -47,7 +47,7 @@ use Drupal\data_surface\Resource\ResourceStorageInterface;
  *
  * @internal
  *
- * @see \Drupal\data_surface\ResourceBuild\Resources
+ * @see \Drupal\surface\ResourceBuild\Resources
  */
 final class Declaring {
 
@@ -68,7 +68,7 @@ final class Declaring {
    * Decision: see
    * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
    */
-  public const FIXED = 'data_surface_fixed';
+  public const FIXED = 'surface_fixed';
 
   /**
    * The resources found no wider than their storage's schema.
@@ -92,21 +92,21 @@ final class Declaring {
   /**
    * Constructs the declaring phase.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, for the definitions add() creates.
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
    *   The class resolver, which returns an alter, a storage or an access
    *   class as the autowired service discovery registered.
-   * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
+   * @param \Drupal\surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it.
-   * @param \Drupal\data_surface\ResourceBuild\SiteDefaults|null $siteDefaults
+   * @param \Drupal\surface\ResourceBuild\SiteDefaults|null $siteDefaults
    *   The defaults the site sets over the declared ones; NULL reads none.
-   * @param \Drupal\data_surface\Reference\References|null $heldReferences
+   * @param \Drupal\surface\Reference\References|null $heldReferences
    *   What builds reference keys, where Resources::withRegistry() was
    *   handed one; NULL for the service.
-   * @param \Drupal\data_surface\ResourceBuild\Resources $resources
+   * @param \Drupal\surface\ResourceBuild\Resources $resources
    *   The build step, for the operation a child is invoked through and the
    *   structure an operation takes the keys of.
    * @param \Drupal\Core\Config\TypedConfigManagerInterface|null $typedConfig
@@ -139,15 +139,15 @@ final class Declaring {
    *
    * @param string $resource
    *   The class, or its id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it was asked for.
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   What was built.
    *
    * @throws \LogicException
    *   Naming each key the schema says less for.
    */
-  public function assertHeldToSchema(string $resource, OperationContext $context, DataSurfaceInterface $built): void {
+  public function assertHeldToSchema(string $resource, OperationContext $context, SurfaceInterface $built): void {
     if (!$this->holdsToSchema) {
       return;
     }
@@ -167,7 +167,7 @@ final class Declaring {
           $keys[] = sprintf('"%s": %s', $path, $why);
         }
         throw new \LogicException(sprintf(
-          'The %s resource advertises more than %s, the config schema %s holds what it stores to, so storage would refuse what every door offers. Where: %s. Narrow the resource to what the schema states; a schema generated from the resource is written again with drush data_surface:config-schema --write.',
+          'The %s resource advertises more than %s, the config schema %s holds what it stores to, so storage would refuse what every door offers. Where: %s. Narrow the resource to what the schema states; a schema generated from the resource is written again with drush surface:config-schema --write.',
           $definition->id,
           $storage->configSchemaType(),
           $definition->storage,
@@ -206,16 +206,16 @@ final class Declaring {
    * its kind that cannot be given an argument it needs is passed over, for
    * the next step; one the parent named is refused.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $child
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $child
    *   The child.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The parent's context.
    * @param string $key
    *   The key the child sits at.
    * @param string $parent
    *   The parent's id, for messages.
    *
-   * @return array{0: \Drupal\data_surface\Resource\OperationContext, 1: \Drupal\data_surface\ResourceBuild\OperationDefinition|null}
+   * @return array{0: \Drupal\surface\Resource\OperationContext, 1: \Drupal\surface\ResourceBuild\OperationDefinition|null}
    *   The child's context, and the operation of its own it was invoked
    *   through, or NULL when it inherits.
    *
@@ -279,14 +279,14 @@ final class Declaring {
    * Decision: see
    * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $parent
+   * @param \Drupal\surface\Resource\OperationContext $parent
    *   The parent's context.
    * @param string $key
    *   The key the child sits at.
-   * @param \Drupal\data_surface\Resource\OperationContext $child
+   * @param \Drupal\surface\Resource\OperationContext $child
    *   The child's context as invoked.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The child's context, saying what the parent's said below the key.
    */
   protected static function handDown(OperationContext $parent, string $key, OperationContext $child): OperationContext {
@@ -312,7 +312,7 @@ final class Declaring {
    *
    * @param string $parent
    *   The parent's id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The parent's context.
    *
    * @return string
@@ -328,11 +328,11 @@ final class Declaring {
   /**
    * Invokes one of a child's operations for its parent.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $child
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $child
    *   The child.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The child's operation.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The parent's context.
    * @param array<string, mixed> $handed
    *   The identity the parent handed the child with the operation's name.
@@ -344,7 +344,7 @@ final class Declaring {
    *   Whether the parent named the operation, so that one that cannot be
    *   invoked is a mistake rather than a step to pass over.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext|null
+   * @return \Drupal\surface\Resource\OperationContext|null
    *   The child's context, knowing what it was handed and what its parent
    *   knows, its own known keys first; NULL for an operation the parent did
    *   not name that cannot be given what it needs.
@@ -385,9 +385,9 @@ final class Declaring {
    * own, which this storage stores, the same, by dotted path. The storage
    * keeps what it holds under each, since the caller could not see it.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource, or a child it stores.
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   It as built.
    * @param string $prefix
    *   The child's path in the resource, with its trailing dot.
@@ -395,8 +395,8 @@ final class Declaring {
    * @return string[]
    *   The omitted keys, by dotted path.
    */
-  public function omittedKeys(ResourceDefinition $definition, DataSurfaceInterface $built, string $prefix = ''): array {
-    $blueprint = $this->blueprint(new DataSurfaceBuilder(), $definition);
+  public function omittedKeys(ResourceDefinition $definition, SurfaceInterface $built, string $prefix = ''): array {
+    $blueprint = $this->blueprint(new SurfaceBuilder(), $definition);
     $this->fillBlueprints($definition, $blueprint);
     // A mixed-in structure's members its access took back out, too.
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
@@ -436,11 +436,11 @@ final class Declaring {
    *
    * Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The builder, its keys and its alters' declared.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   What is being built.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   Its blueprint, which says which keys hold no plain value.
    * @param bool $top
    *   Whether it is built at the top.
@@ -450,7 +450,7 @@ final class Declaring {
    * @return array<string, array{resource: string, at: string, values: array<string, mixed>}>
    *   The defaults for each child attached at a fixed key, by its key.
    */
-  public function writeSiteDefaults(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceBlueprint $inputs, bool $top, ?array $siteDefaults): array {
+  public function writeSiteDefaults(SurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceBlueprint $inputs, bool $top, ?array $siteDefaults): array {
     if ($this->siteDefaults === NULL || !$this->holdsToSchema) {
       return [];
     }
@@ -475,9 +475,9 @@ final class Declaring {
    * Decision: see
    * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   What is being built.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is built in.
    * @param array<int, array<string, mixed>> $ancestry
    *   The parents it is built inside, outermost first, for messages.
@@ -519,12 +519,12 @@ final class Declaring {
    * Decision: see
    * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The builder, its keys and its alters' declared, the site's defaults
    *   written.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   What is being built.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is built in.
    * @param array<string, string> $kinds
    *   Its keys that hold no plain value (KeyPaths::kinds()).
@@ -535,7 +535,7 @@ final class Declaring {
    *   When the context does not create, or a path names no key a default
    *   reaches, or a value does not fit its key.
    */
-  public function writeContextDefaults(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context, array $kinds, array $ancestry): void {
+  public function writeContextDefaults(SurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context, array $kinds, array $ancestry): void {
     $defaults = $context->defaults();
     if ($defaults === []) {
       return;
@@ -556,9 +556,9 @@ final class Declaring {
   /**
    * Says where a context's value comes from, for its refusals.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   What is being built.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is built in.
    * @param array<int, array<string, mixed>> $ancestry
    *   The parents it is built inside, outermost first: the resource named
@@ -588,7 +588,7 @@ final class Declaring {
    * Answers whether a constraint fixes its key to one value.
    *
    * A Choice of one value that says so, with the FIXED option, as a
-   * route's `_data_surface_fixed` does. A Choice of one value that does
+   * route's `_surface_fixed` does. A Choice of one value that does
    * not say so narrows as any constraint does and is drawn as a list of
    * one, as an operation's own (a placed block's theme on its update)
    * always was.
@@ -613,7 +613,7 @@ final class Declaring {
   /**
    * Gets what finds the key a path names and holds a value to it.
    *
-   * @return \Drupal\data_surface\ResourceBuild\KeyPaths
+   * @return \Drupal\surface\ResourceBuild\KeyPaths
    *   The key paths.
    */
   protected function keyPaths(): KeyPaths {
@@ -632,7 +632,7 @@ final class Declaring {
    * one, though it may hold nothing where nothing fixes it, so it is drawn
    * as the value and stated `const`.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The build: the builder holding the shape, the resource or
    *   structure, the context, the owner's input keys, its keys holding an
    *   attached child or variants, and its collection keys, which a context
@@ -692,7 +692,7 @@ final class Declaring {
         $target = $builder->getDefinition($key);
       }
       assert($target !== NULL);
-      $before = DataSurface::deepClone($target);
+      $before = Surface::deepClone($target);
       $fixed = [];
       foreach ($constraints as $name => $options) {
         if (static::fixes((string) $name, $options)) {
@@ -737,7 +737,7 @@ final class Declaring {
   /**
    * Holds the identity a create names to one no thing holds yet.
    *
-   * The stock DataSurfaceUnique constraint on the identity key, for an
+   * The stock SurfaceUnique constraint on the identity key, for an
    * operation that creates a thing of a resource whose storage can say
    * whether one is stored under an identity: one identity key, an input
    * the context does not know, and a storage implementing
@@ -746,7 +746,7 @@ final class Declaring {
    *
    * Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The build.
    */
   protected function holdIdentityOnce(Build $build): void {
@@ -763,7 +763,7 @@ final class Declaring {
     $storage = $this->instance($definition->storage, ResourceStorageInterface::class);
     assert($storage instanceof DeletableStorageInterface);
     $thing = $storage->singularLabel();
-    $target->addConstraint('DataSurfaceUnique', [
+    $target->addConstraint('SurfaceUnique', [
       'storage' => $definition->storage,
       'key' => $key,
       'thing' => $thing,
@@ -774,24 +774,24 @@ final class Declaring {
   /**
    * Makes the blueprint a resource or structure declares into.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The builder it fills.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
    * @param bool $outputs
    *   TRUE for its outputs' blueprint.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceBlueprint
+   * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
    *   The blueprint, which names a structure mixed in by discovery's id.
    */
-  public function blueprint(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, bool $outputs = FALSE): ResourceBlueprint {
+  public function blueprint(SurfaceBuilderInterface $builder, ResourceDefinition $definition, bool $outputs = FALSE): ResourceBlueprint {
     return (new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name()))->useShapes($this->shapes())->useReferences($this->references());
   }
 
   /**
    * Gets what resolves a shape, with its alters, for a blueprint.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Shapes
+   * @return \Drupal\surface\ResourceBuild\Shapes
    *   The resolver.
    */
   public function shapes(): Shapes {
@@ -801,14 +801,14 @@ final class Declaring {
   /**
    * Gets what builds a key that refers to an entity, for a blueprint.
    *
-   * @return \Drupal\data_surface\Reference\References
+   * @return \Drupal\surface\Reference\References
    *   The service.
    */
   public function references(): References {
     if ($this->heldReferences !== NULL) {
       return $this->heldReferences;
     }
-    $references = $this->classResolver->getInstanceFromDefinition('data_surface.references');
+    $references = $this->classResolver->getInstanceFromDefinition('surface.references');
     assert($references instanceof References);
     return $references;
   }
@@ -823,9 +823,9 @@ final class Declaring {
    *
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure being built.
-   * @param array<string, \Drupal\data_surface\ResourceBuild\BlueprintAdapterBase> $blueprints
+   * @param array<string, \Drupal\surface\ResourceBuild\BlueprintAdapterBase> $blueprints
    *   Its blueprints, each keyed by the prefix its keys are named with.
    *
    * @throws \LogicException
@@ -863,19 +863,19 @@ final class Declaring {
    * additions mounted under its module, its storage layout set; then each
    * named shape is held to narrowing, wherever it was used.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is built in, which decides the alters that apply.
    *
-   * @return array{0: \Drupal\data_surface\DataSurfaceBuilder, 1: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, 2: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, 3: array<int, array{0: object|string, 1: \Drupal\data_surface\ResourceBuild\RefinerDefinition[], 2: string|null}>, 4: array<string, \Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions>}
+   * @return array{0: \Drupal\surface\SurfaceBuilder, 1: \Drupal\surface\ResourceBuild\ResourceBlueprint, 2: \Drupal\surface\ResourceBuild\ResourceBlueprint, 3: array<int, array{0: object|string, 1: \Drupal\surface\ResourceBuild\RefinerDefinition[], 2: string|null}>, 4: array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions>}
    *   The builder; the inputs and the outputs blueprints; the refiner
    *   links, the owner's first, each its class or alter, its refiners and
    *   its module (NULL for the owner); and each alter's additions, by
    *   module.
    */
   public function declareShape(ResourceDefinition $definition, OperationContext $context): array {
-    $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
+    $builder = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $inputs = $this->blueprint($builder, $definition);
     $outputs = $this->blueprint($builder, $definition, TRUE);
     $this->fillBlueprints($definition, $inputs, $outputs);
@@ -922,11 +922,11 @@ final class Declaring {
    * class; a derived resource's are the callables its deriver
    * named, handed the blueprint first.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The input blueprint.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint|null $outputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint|null $outputs
    *   The output blueprint, or NULL when only the inputs are wanted.
    */
   public function fillBlueprints(ResourceDefinition $definition, ResourceBlueprint $inputs, ?ResourceBlueprint $outputs = NULL): void {
@@ -949,10 +949,10 @@ final class Declaring {
   /**
    * Gets the class whose static methods describe a definition.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
    *
-   * @return class-string<\Drupal\data_surface\Resource\DefinesInputsInterface>
+   * @return class-string<\Drupal\surface\Resource\DefinesInputsInterface>
    *   Its class, which discovery held to DefinesInputsInterface.
    */
   public static function resourceClass(ResourceDefinition $definition): string {

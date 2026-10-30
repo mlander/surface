@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
-use Drupal\data_surface_examples_references\Sponsorship;
-use Drupal\data_surface_examples_references\Storage\SponsorshipStorage;
+use Drupal\surface_examples_references\Sponsorship;
+use Drupal\surface_examples_references\Storage\SponsorshipStorage;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\node\Entity\Node;
-use Drupal\Tests\data_surface\Traits\ServedApiTrait;
+use Drupal\Tests\surface\Traits\ServedApiTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -25,7 +25,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ReferenceKeysFormTest extends BrowserTestBase {
 
@@ -35,8 +35,8 @@ class ReferenceKeysFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples_references',
-    'data_surface_react',
+    'surface_examples_references',
+    'surface_react',
   ];
 
   /**
@@ -84,7 +84,7 @@ class ReferenceKeysFormTest extends BrowserTestBase {
     $this->assertTrue($this->assertSession()->optionExists('surface[page]', (string) $nodes['article'])->isSelected(), 'Read back as its id.');
 
     // Past the limit: core's entity autocomplete, read back as the id.
-    $this->config('data_surface.settings')->set('reference_list_limit', 1)->save();
+    $this->config('surface.settings')->set('reference_list_limit', 1)->save();
     $this->drupalGet('surface-examples/16');
     $venue = $this->assertSession()->elementExists('css', 'input[name="surface[venue]"]');
     $this->assertStringContainsString('/entity_reference_autocomplete/event_venue/default/', (string) $venue->getAttribute('data-autocomplete-path'));
@@ -141,7 +141,7 @@ class ReferenceKeysFormTest extends BrowserTestBase {
     $this->drupalLogin($this->drupalCreateUser(['set event sponsorship', 'access content']));
     $this->drupalGet('surface-react/event.sponsorship/configure');
     $this->assertSession()->statusCodeEquals(200);
-    $settings = $this->getDrupalSettings()['dataSurfaceReact']['endpoints'];
+    $settings = $this->getDrupalSettings()['surfaceReact']['endpoints'];
     $this->assertStringEndsWith('/surface-api/event.sponsorship:lookup', $settings['lookup']);
 
     $schema = $this->decoded($this->send('GET', 'surface-api/event.sponsorship/schema'), 200, 'application/schema+json');

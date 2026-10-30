@@ -96,7 +96,7 @@ svg .t-alter { fill: var(--alter); } svg .t-refine { fill: var(--refine); }
 <main class="page">
   <header>
     <div class="top">
-      <p class="eyebrow"><a href="index.html">Data Surface visuals</a> &middot; 7 of 7</p>
+      <p class="eyebrow"><a href="index.html">Surface API visuals</a> &middot; 7 of 7</p>
       <nav class="pager" aria-label="Visuals"><a href="doors.html" rel="prev">Previous</a> <a href="index.html">All</a></nav>
     </div>
     <h1>What a key goes through</h1>
@@ -252,8 +252,8 @@ svg .t-alter { fill: var(--alter); } svg .t-refine { fill: var(--refine); }
 <text x="58.0" y="972.7" font-size="13" class="k">storage</text></svg>
   </figure>
   <p class="caption">Every door hands its values to one pipeline: <code>accept()</code> coerces and merges them, <code>validate()</code> refines the keys for those values and then checks them, <code>prepare()</code> rehearses the write, and <code>commit()</code> makes it. Only commit has side effects, so a dry run is the pipeline stopped before it; a computed key is filled at the end of accept, from what its sources were accepted as.</p>
-  <p class="more"><b>Read more</b> <a href="https://github.com/mlander/data_surface/blob/next/docs/pipeline.md">The pipeline</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/transformations.md">Transformations</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/declaring-a-resource.md#computed-keys">Computed keys</a>. <b>Decisions</b> <a href="https://github.com/mlander/data_surface/blob/next/docs/decisions.md#absent-keeps-null-clears">Absent keeps, null clears</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/decisions.md#one-coercion-table-the-tool-apis">One coercion table, the Tool API's</a>, <a href="https://github.com/mlander/data_surface/blob/next/docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources">A computed key is a pure function of its sources</a>.</p>
-  <p class="foot">Part of Data Surface; see the <a href="../every-door/index.html">full explainer</a>.</p>
+  <p class="more"><b>Read more</b> <a href="https://github.com/mlander/surface/blob/next/docs/pipeline.md">The pipeline</a>, <a href="https://github.com/mlander/surface/blob/next/docs/transformations.md">Transformations</a>, <a href="https://github.com/mlander/surface/blob/next/docs/declaring-a-resource.md#computed-keys">Computed keys</a>. <b>Decisions</b> <a href="https://github.com/mlander/surface/blob/next/docs/decisions.md#absent-keeps-null-clears">Absent keeps, null clears</a>, <a href="https://github.com/mlander/surface/blob/next/docs/decisions.md#one-coercion-table-the-tool-apis">One coercion table, the Tool API's</a>, <a href="https://github.com/mlander/surface/blob/next/docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources">A computed key is a pure function of its sources</a>.</p>
+  <p class="foot">Part of Surface API; see the <a href="../every-door/index.html">full explainer</a>.</p>
 </main>
 </body>
 </html>

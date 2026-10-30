@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface\Contract\PatternTranslation;
+use Drupal\surface\Contract\PatternTranslation;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -20,10 +20,10 @@ use PHPUnit\Framework\Attributes\Group;
  * `u` or without; each of those was once carried, so the schema refused
  * `٢٠٤٨`, `café`, `é` and a no-break space that the pipeline accepts.
  *
- * @see \Drupal\data_surface\Contract\PatternTranslation
+ * @see \Drupal\surface\Contract\PatternTranslation
  * @see docs/decisions.md#a-pattern-both-engines-read-alike
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class PatternUnderUnicodeTest extends UnitTestCase {
 
   /**

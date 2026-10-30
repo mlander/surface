@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
-use Drupal\data_surface\Pipeline\ResultDocument;
-use Drupal\data_surface_examples\ConceptPanel;
-use Drupal\data_surface_examples\Resource\VenueResource;
+use Drupal\surface\Pipeline\ResultDocument;
+use Drupal\surface_examples\ConceptPanel;
+use Drupal\surface_examples\Resource\VenueResource;
 use Drupal\Tests\BrowserTestBase;
-use Drupal\Tests\data_surface\Traits\ExampleFilesPanelTrait;
-use Drupal\Tests\data_surface\Traits\ServedApiTrait;
+use Drupal\Tests\surface\Traits\ExampleFilesPanelTrait;
+use Drupal\Tests\surface\Traits\ServedApiTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -24,7 +24,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class VenueApiTest extends BrowserTestBase {
 
@@ -35,8 +35,8 @@ class VenueApiTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
-    'data_surface_react',
+    'surface_examples',
+    'surface_react',
   ];
 
   /**
@@ -250,12 +250,12 @@ class VenueApiTest extends BrowserTestBase {
     // which leave the three venues shipped as they were.
     $this->drupalGet('surface-examples/15');
     $assert->statusCodeEquals(200);
-    $assert->elementsCount('css', '.data-surface-venues tbody tr', 3);
+    $assert->elementsCount('css', '.surface-venues tbody tr', 3);
     $assert->pageTextContains('Riverside Hall');
     $assert->linkByHrefExists('/surface-examples/15/venue/riverside');
     $assert->linkByHrefExists('/surface-react/event.venue/create');
-    $assert->elementsCount('css', '.data-surface-concept-paths tbody tr', count(ConceptPanel::VENUE_PATHS));
-    $assert->pageTextContains('data_surface:event.venue:reorder');
+    $assert->elementsCount('css', '.surface-concept-paths tbody tr', count(ConceptPanel::VENUE_PATHS));
+    $assert->pageTextContains('surface:event.venue:reorder');
     $assert->pageTextContains('Town Hall removed: written, so the three venues shipped are what is left');
     $assert->pageTextContains('No venue is named concert_hall.');
     $this->assertFilesPanel(15);

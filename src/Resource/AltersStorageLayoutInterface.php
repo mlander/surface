@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
-use Drupal\data_surface\Storage\StorageLayoutInterface;
+use Drupal\surface\Storage\StorageLayoutInterface;
 
 /**
  * An alter whose keys are asked for in one layout and stored in another.
@@ -20,15 +20,15 @@ use Drupal\data_surface\Storage\StorageLayoutInterface;
  * The layout must be pure, because it is applied wherever the altered
  * values are written: StorageLayoutInterface says why.
  *
- * @see \Drupal\data_surface\ResourceBuild\StorageAdapter
- * @see \Drupal\data_surface\DataSurfaceBuilderInterface::setThirdPartyLayout()
+ * @see \Drupal\surface\ResourceBuild\StorageAdapter
+ * @see \Drupal\surface\SurfaceBuilderInterface::setThirdPartyLayout()
  */
 interface AltersStorageLayoutInterface {
 
   /**
    * The layout this alter's mounted settings are stored in.
    *
-   * @return \Drupal\data_surface\Storage\StorageLayoutInterface
+   * @return \Drupal\surface\Storage\StorageLayoutInterface
    *   The layout.
    */
   public function storageLayout(): StorageLayoutInterface;

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
-use Drupal\data_surface\Pipeline\ResultDocument;
-use Drupal\data_surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\ResultDocument;
+use Drupal\surface\Pipeline\Violation;
 use Drupal\Tests\BrowserTestBase;
-use Drupal\Tests\data_surface\Traits\ServedApiTrait;
+use Drupal\Tests\surface\Traits\ServedApiTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -20,7 +20,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * removing nothing; a refusal is problem details, a region of another
  * theme by its pointer, and DELETE of what is gone a 404.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class BlockPlacementApiTest extends BrowserTestBase {
 
@@ -32,10 +32,10 @@ class BlockPlacementApiTest extends BrowserTestBase {
   protected static $modules = [
     'block',
     'path_alias',
-    'data_surface_examples',
-    'data_surface_component_block',
-    'data_surface_block',
-    'data_surface_react',
+    'surface_examples',
+    'surface_examples_component_block',
+    'surface_examples_block',
+    'surface_react',
   ];
 
   /**
@@ -54,9 +54,9 @@ class BlockPlacementApiTest extends BrowserTestBase {
   protected const HERO = [
     'label' => 'Doors',
     'id' => 'doors_hero',
-    'plugin' => 'data_surface_component',
+    'plugin' => 'surface_component',
     'settings' => [
-      'component' => 'data_surface_examples:hero',
+      'component' => 'surface_examples:hero',
       'props' => ['title' => 'Doors open at half past six', 'align' => 'start'],
     ],
     'theme' => 'stark',
@@ -108,7 +108,7 @@ class BlockPlacementApiTest extends BrowserTestBase {
     $read = $this->send('GET', self::COLLECTION . '/doors_hero');
     $envelope = $this->decoded($read);
     $this->assertSame('update', $envelope['operation']);
-    $this->assertSame('data_surface_examples:hero', $envelope['values']['settings']['component']);
+    $this->assertSame('surface_examples:hero', $envelope['values']['settings']['component']);
     $tag = $read->getHeaderLine('ETag');
     $this->assertNotSame('', $tag);
 

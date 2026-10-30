@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline\Storage;
+namespace Drupal\surface\Pipeline\Storage;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\State\StateInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Pipeline\PreparedValues;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Pipeline\PreparedValues;
 
 /**
  * Stores a data surface's values under one State key.
@@ -19,7 +19,7 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  *
  * @see docs/storage.md
  */
-final class StateStorage implements DataSurfaceStorageInterface {
+final class StateStorage implements SurfaceStorageInterface {
 
   use DependencySerializationTrait;
 
@@ -40,7 +40,7 @@ final class StateStorage implements DataSurfaceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function load(DataSurfaceInterface $surface): array {
+  public function load(SurfaceInterface $surface): array {
     $values = $this->state->get($this->key);
     return is_array($values) ? $values : [];
   }
@@ -48,7 +48,7 @@ final class StateStorage implements DataSurfaceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+  public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
     return new PreparedValues($values, $values);
   }
 

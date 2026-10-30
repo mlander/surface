@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource\Attribute;
+namespace Drupal\surface\Resource\Attribute;
 
 /**
  * Names a shape: a scalar definition reused at many keys.
@@ -16,7 +16,7 @@ namespace Drupal\data_surface\Resource\Attribute;
  * module's src/Shape directory carrying this is found. The id shares one
  * namespace with resource and structure ids, since all three name defs.
  *
- * @see \Drupal\data_surface\Resource\ShapeInterface
+ * @see \Drupal\surface\Resource\ShapeInterface
  * @see docs/decisions.md#a-shape-is-a-named-definition
  */
 #[\Attribute(\Attribute::TARGET_CLASS)]

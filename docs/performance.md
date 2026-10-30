@@ -79,7 +79,7 @@ it back is no faster than building it, so its row is about the same.
 
 ## What is kept, and what drops it
 
-A build for no account is kept in `cache.data_surface_build`, under
+A build for no account is kept in `cache.surface_build`, under
 `declared:<resource id>:<hash>`. The hash is of the request memo's key
 (the resource, everything the context says, its parameters among them,
 the kind of build and the reference limit) and the current and
@@ -87,8 +87,8 @@ configuration override languages. It is tagged with:
 
 - what the build read: each provider's list, the site's defaults;
 - each discovery entry it built from, and discovery's index;
-- `config:core.extension`, `config:data_surface.settings` and
-  `config:data_surface.defaults`.
+- `config:core.extension`, `config:surface.settings` and
+  `config:surface.defaults`.
 
 Stored with it are the structures it built that were read from a schema
 or made for a reference key, so a request that reads it can name them. A
@@ -141,7 +141,7 @@ answers; before, the four over 128 MB ran out of memory.
 | `/surface-api/event.spotlight/schema` | 132 MB | 60 MB |
 | `.../schema?choose=/props=aries:sq-card` | 132 MB | 60 MB |
 | `.../schema?choose=/slots=aries:sq-card` | 132 MB | 88 MB |
-| `drush tool:run data_surface:event.spotlight:configure:schema` | 114 MB | 78 MB |
+| `drush tool:run surface:event.spotlight:configure:schema` | 114 MB | 78 MB |
 | `/admin/structure/block/surface/add` | 74 MB | 74 MB |
 | Every other example page | 70 to 76 MB | 70 to 76 MB |
 
@@ -185,7 +185,7 @@ The time bounds leave room for a slower machine, ten to forty times what
 this one measured; the size bounds about half again. Built cold on the
 same site the four took 18 to 24 ms, 6 to 8 ms, 3.5 to 4 ms and 0.3 to
 0.6 ms; that is not held to a bound, since it is most of what a first
-request pays in class loading. `DATA_SURFACE_BENCHMARK=<file>` writes
+request pays in class loading. `SURFACE_BENCHMARK=<file>` writes
 what a machine measures.
 
 ## What remains

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Reference;
+namespace Drupal\surface\Reference;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Plugin\Exception\PluginException;
@@ -23,7 +23,7 @@ use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\surface\SurfaceInterface;
 
 /**
  * What a key that refers to an entity is, and which entities it may name.
@@ -39,7 +39,7 @@ use Drupal\data_surface\DataSurfaceInterface;
  * out for an account without "bypass node access", and a user's leaves
  * blocked users out without "administer users".
  *
- * Up to the site's limit, `data_surface.settings:reference_list_limit`,
+ * Up to the site's limit, `surface.settings:reference_list_limit`,
  * the candidates are the key's options; above it, the key takes an id and
  * the lookup finds one.
  *
@@ -51,7 +51,7 @@ final class References {
   /**
    * The configuration object the limit lives in.
    */
-  public const SETTINGS = 'data_surface.settings';
+  public const SETTINGS = 'surface.settings';
 
   /**
    * The setting: the most candidates a key lists as its options.
@@ -66,12 +66,12 @@ final class References {
   /**
    * The constraint a reference key's id carries.
    */
-  public const CONSTRAINT = 'DataSurfaceValidReference';
+  public const CONSTRAINT = 'SurfaceValidReference';
 
   /**
    * The constraint the entity type of a bare `entity` key carries.
    */
-  public const TYPE_CONSTRAINT = 'DataSurfaceReferenceableType';
+  public const TYPE_CONSTRAINT = 'SurfaceReferenceableType';
 
   /**
    * The most a lookup answers, whatever it is asked for.
@@ -86,7 +86,7 @@ final class References {
    *
    * Decision: see docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
    */
-  public const CONTENT = 'data_surface_reference_content';
+  public const CONTENT = 'surface_reference_content';
 
   /**
    * The setting with which an author keeps a content reference as an id.
@@ -441,7 +441,7 @@ final class References {
    * type it is handed, once its own entity type key allows it: the id is
    * refined for it, as the form refines it when the entity type is chosen.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource, built.
    * @param string[] $path
    *   The keys, from the top: `['venue']`, `['thing', 'id']`.
@@ -453,7 +453,7 @@ final class References {
    *   key, which target() reads; NULL when no key at the path refers to
    *   one entity type.
    */
-  public function definitionAt(DataSurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?DataDefinitionInterface {
+  public function definitionAt(SurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?DataDefinitionInterface {
     $name = array_shift($path);
     $entry = $name === NULL ? NULL : $surface->getDefinitions()->entry($name);
     if ($entry === NULL) {

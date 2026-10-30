@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Config\Schema\Mapping;
@@ -14,12 +14,12 @@ use Drupal\Core\TypedData\Type\BooleanInterface;
 use Drupal\Core\TypedData\Type\FloatInterface;
 use Drupal\Core\TypedData\Type\IntegerInterface;
 use Drupal\Core\TypedData\Type\StringInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entry;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\ResourceBuild\RefinesInputRefiner;
 
 /**
  * Says where a resource is wider than the config schema its storage writes.
@@ -45,7 +45,7 @@ use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
  *   itself: an empty string is nothing, which clears. Any other constraint
  *   the schema states is not read.
  *
- * @see \Drupal\data_surface\Resource\HeldToConfigSchemaInterface
+ * @see \Drupal\surface\Resource\HeldToConfigSchemaInterface
  * @see docs/storage.md#a-schema-the-module-did-not-generate
  */
 trait HeldToConfigSchemaTrait {
@@ -90,14 +90,14 @@ trait HeldToConfigSchemaTrait {
    * Decision: see
    * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The resource, built.
    *
    * @return array<string, array>
    *   Each such key's config schema as stored, by its dotted path, an
    *   entry of a map of keys from the site named `*`; none by default.
    */
-  public function translatedKeys(DataSurfaceInterface $built): array {
+  public function translatedKeys(SurfaceInterface $built): array {
     return [];
   }
 
@@ -112,13 +112,13 @@ trait HeldToConfigSchemaTrait {
    * Decision: see
    * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The resource, built.
    *
    * @return array<string, array>
    *   Each such key's config schema as stored, by its dotted path.
    */
-  protected static function mountedLayouts(DataSurfaceInterface $built): array {
+  protected static function mountedLayouts(SurfaceInterface $built): array {
     $mount = $built->getDefinition(RefinesInputRefiner::MOUNT);
     $keys = [];
     foreach ($mount instanceof ComplexDataDefinitionInterface ? array_keys($mount->getPropertyDefinitions()) : [] as $module) {
@@ -162,7 +162,7 @@ trait HeldToConfigSchemaTrait {
    * A key the storage translates (translatedKeys()) is not compared: its
    * stored shape is not the one the resource asks for.
    */
-  public function widerThanSchema(DataSurfaceInterface $built): array {
+  public function widerThanSchema(SurfaceInterface $built): array {
     $type = $this->configSchemaType();
     if (!$this->typedConfig->hasConfigSchema($type)) {
       return [];
@@ -219,7 +219,7 @@ trait HeldToConfigSchemaTrait {
   /**
    * Compares one key of the resource with its schema property.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param array|null $property
    *   Its property in the schema, as written there; NULL for none.
@@ -318,7 +318,7 @@ trait HeldToConfigSchemaTrait {
   /**
    * Compares a map of the resource's keys with a schema mapping.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The keys.
    * @param array $schema
    *   The mapping, merged with its type.

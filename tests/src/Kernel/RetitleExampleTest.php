@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface_examples\ConceptCalls;
-use Drupal\data_surface_examples\ConceptPanel;
-use Drupal\data_surface_examples\ExamplePanels;
-use Drupal\data_surface_examples_retitle\Resource\RetitleResource;
-use Drupal\data_surface_examples_retitle\Retitle;
-use Drupal\data_surface_examples_retitle\TitleRewriter;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface_examples\ConceptCalls;
+use Drupal\surface_examples\ConceptPanel;
+use Drupal\surface_examples\ExamplePanels;
+use Drupal\surface_examples_retitle\Resource\RetitleResource;
+use Drupal\surface_examples_retitle\Retitle;
+use Drupal\surface_examples_retitle\TitleRewriter;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -27,16 +27,16 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * The module writes its three pages and roles; both documents of the
  * retitle operation are pinned whole under tests/fixtures/retitle/
- * (written again with DATA_SURFACE_RETITLE_WRITE=1); the tool listing
+ * (written again with SURFACE_RETITLE_WRITE=1); the tool listing
  * declares the operation's own permission and says the list is settled
  * per node; the rewriter is the same every time; the page shows its
  * panel; uninstalled, the module deletes its pages.
  *
  * @see docs/decisions.md#a-gate-is-borrowed-never-copied
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RetitleExampleTest extends DataSurfaceKernelTestBase {
+class RetitleExampleTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -52,10 +52,10 @@ class RetitleExampleTest extends DataSurfaceKernelTestBase {
     'node',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_retitle',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_retitle',
   ];
 
   /**
@@ -66,7 +66,7 @@ class RetitleExampleTest extends DataSurfaceKernelTestBase {
   /**
    * The tool.
    */
-  protected const TOOL = 'data_surface:ai.retitle:retitle';
+  protected const TOOL = 'surface:ai.retitle:retitle';
 
   /**
    * {@inheritdoc}
@@ -81,9 +81,9 @@ class RetitleExampleTest extends DataSurfaceKernelTestBase {
       'system',
       'node',
       'filter',
-      'data_surface',
-      'data_surface_examples',
-      'data_surface_examples_retitle',
+      'surface',
+      'surface_examples',
+      'surface_examples_retitle',
     ]);
     // The page bundle is the module's optional config.
     $this->assertNotNull(NodeType::load('page'));
@@ -108,7 +108,7 @@ class RetitleExampleTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($requester?->hasPermission('retitle nodes'));
     $this->assertFalse($requester->hasPermission('edit any page content'));
     $this->assertNotSame($retitler->id(), $requester->id(), 'Each role its own account id, so core keeps no answer of one for the other.');
-    $this->container->get('module_installer')->uninstall(['data_surface_examples_retitle']);
+    $this->container->get('module_installer')->uninstall(['surface_examples_retitle']);
     $this->assertSame([], Node::loadMultiple(array_values($ids)));
     $this->assertNull($this->container->get('state')->get(Retitle::NODES));
   }
@@ -117,9 +117,9 @@ class RetitleExampleTest extends DataSurfaceKernelTestBase {
    * Tests both documents of the retitle operation, whole.
    */
   public function testBothDocuments(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $operation = $this->container->get('data_surface.resource_registry')->getOperation(RetitleResource::class, 'retitle');
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
+    $operation = $this->container->get('surface.resource_registry')->getOperation(RetitleResource::class, 'retitle');
     $context = $resources->operation(RetitleResource::class, 'retitle');
     $built = $resources->build(RetitleResource::class, $context);
     $values = array_replace($built->getDefaultValues(), $resources->storage(RetitleResource::class, $context, $built)->load($built));
@@ -130,15 +130,15 @@ class RetitleExampleTest extends DataSurfaceKernelTestBase {
     foreach ($documents as $kind => $document) {
       $json = json_encode($document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION) . "\n";
       $file = self::FIXTURES . 'retitle.' . $kind . '.json';
-      if (getenv('DATA_SURFACE_RETITLE_WRITE')) {
+      if (getenv('SURFACE_RETITLE_WRITE')) {
         @mkdir(self::FIXTURES);
         file_put_contents($file, $json);
         continue;
       }
       $this->assertFileExists($file);
-      $this->assertSame(file_get_contents($file), $json, sprintf('The %s document; written again with DATA_SURFACE_RETITLE_WRITE=1.', $kind));
+      $this->assertSame(file_get_contents($file), $json, sprintf('The %s document; written again with SURFACE_RETITLE_WRITE=1.', $kind));
     }
-    if (getenv('DATA_SURFACE_RETITLE_WRITE')) {
+    if (getenv('SURFACE_RETITLE_WRITE')) {
       $this->markTestSkipped('The retitle documents were written.');
     }
     $full = $documents['full']['schema'];
@@ -179,17 +179,17 @@ class RetitleExampleTest extends DataSurfaceKernelTestBase {
    * Tests the page: its form, its panel, the gates and the calls.
    */
   public function testThePage(): void {
-    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_examples.step17');
+    $route = $this->container->get('router.route_provider')->getRouteByName('surface_examples.step17');
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
     $request->setSession($stack->getSession());
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_examples.step17');
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_examples.step17');
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class)[DataSurfaceOperationForm::SURFACE_KEY];
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
     $this->assertArrayHasKey('items', $form);
     $this->assertSame('select', $form['style']['#type']);
-    $concept = $form[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $concept = $form[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $this->assertSame(ConceptPanel::DOCS['ai.retitle'], array_map(static fn (array $item): string => strip_tags((string) $item['#markup']), $concept['docs']['#items']));
     foreach (ConceptPanel::DOCS['ai.retitle'] as $page) {
       $this->assertFileExists(dirname(__DIR__, 3) . '/' . strtok($page, '#'));

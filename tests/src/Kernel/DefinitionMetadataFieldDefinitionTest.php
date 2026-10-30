@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Field\BaseFieldDefinition;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Drupal\data_surface\DefinitionMetadata;
+use Drupal\surface\DefinitionMetadata;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
@@ -17,16 +17,16 @@ use PHPUnit\Framework\Attributes\Group;
  * under test is precisely that a real field definition is not the kind
  * of definition it may delegate to.
  *
- * @see \Drupal\data_surface\DefinitionMetadata
+ * @see \Drupal\surface\DefinitionMetadata
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DefinitionMetadataFieldDefinitionTest extends DataSurfaceKernelTestBase {
+class DefinitionMetadataFieldDefinitionTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'field', 'data_surface'];
+  protected static $modules = ['system', 'field', 'surface'];
 
   /**
    * Tests a field definition, whose getDefaultValue() means something else.

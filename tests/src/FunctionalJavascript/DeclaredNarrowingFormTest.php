@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -18,10 +18,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * parcel requires the signature, and what is saved is what the rules
  * allow.
  *
- * @see \Drupal\data_surface_resource_test\Resource\Parcel\ParcelResource
+ * @see \Drupal\surface_resource_test\Resource\Parcel\ParcelResource
  * @see docs/decisions.md#a-rule-declared-as-data
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class DeclaredNarrowingFormTest extends WebDriverTestBase {
 
@@ -29,8 +29,8 @@ class DeclaredNarrowingFormTest extends WebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -41,7 +41,7 @@ class DeclaredNarrowingFormTest extends WebDriverTestBase {
   /**
    * The parcel's config object.
    */
-  protected const CONFIG = 'data_surface_resource_test.parcel';
+  protected const CONFIG = 'surface_resource_test.parcel';
 
   /**
    * {@inheritdoc}

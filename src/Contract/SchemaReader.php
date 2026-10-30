@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Refinement\Condition;
-use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\ResourceCallable;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\ResourceCallable;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
 
 /**
  * Reads a JSON Schema document into a blueprint: the emitter run backwards.
@@ -313,7 +313,7 @@ final class SchemaReader {
   /**
    * Constructs a SchemaReader.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry|null $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry|null $registry
    *   The registry a document read on its own is registered with
    *   (structure()); NULL for a reader that only fills a blueprint, which
    *   holds a registry itself.
@@ -331,7 +331,7 @@ final class SchemaReader {
    *
    * @param array $document
    *   The schema, decoded with objects as arrays.
-   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The blueprint to fill: the build step's own.
    *
    * @return array<string, string>
@@ -354,7 +354,7 @@ final class SchemaReader {
    * The inputs of what ResourceRegistry::defineRead() registers: the
    * object at the pointer, read as a frame.
    *
-   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The structure's blueprint.
    * @param array $root
    *   The document, as prepared().
@@ -383,9 +383,9 @@ final class SchemaReader {
    * @return string
    *   The name ResourcesInterface::build() takes.
    */
-  public function structure(array $document, string $id, string $module = 'data_surface'): string {
+  public function structure(array $document, string $id, string $module = 'surface'): string {
     if ($this->registry === NULL) {
-      throw new \LogicException('A schema is registered as a structure by the data_surface.schema_reader service, which holds the registry.');
+      throw new \LogicException('A schema is registered as a structure by the surface.schema_reader service, which holds the registry.');
     }
     $root = static::prepared($document);
     $inputs = new ResourceCallable(static::class, 'fill', [$root, '']);
@@ -405,7 +405,7 @@ final class SchemaReader {
   public function notes(array $document): array {
     $root = static::prepared($document);
     if ($this->registry === NULL) {
-      throw new \LogicException('A whole document is surveyed by the data_surface.schema_reader service, which holds the registry.');
+      throw new \LogicException('A whole document is surveyed by the surface.schema_reader service, which holds the registry.');
     }
     $this->notes = [];
     $this->survey($root, '', $root, []);
@@ -814,12 +814,12 @@ final class SchemaReader {
   /**
    * Renames the keys a condition reads.
    *
-   * @param \Drupal\data_surface\Refinement\Condition $condition
+   * @param \Drupal\surface\Refinement\Condition $condition
    *   The condition.
    * @param array<string, string> $names
    *   Each key's new name, by its old one.
    *
-   * @return \Drupal\data_surface\Refinement\Condition
+   * @return \Drupal\surface\Refinement\Condition
    *   The same test of the renamed keys.
    */
   protected static function renamed(Condition $condition, array $names): Condition {
@@ -849,7 +849,7 @@ final class SchemaReader {
    * @param array $if
    *   The `if`.
    *
-   * @return \Drupal\data_surface\Refinement\Condition|null
+   * @return \Drupal\surface\Refinement\Condition|null
    *   The condition, or NULL for an `if` outside the vocabulary.
    */
   public static function condition(array $if): ?Condition {
@@ -903,7 +903,7 @@ final class SchemaReader {
    * @param array $test
    *   The schema it is held to.
    *
-   * @return \Drupal\data_surface\Refinement\Condition|null
+   * @return \Drupal\surface\Refinement\Condition|null
    *   The test, or NULL for one outside the vocabulary.
    */
   protected static function test(string $key, array $test): ?Condition {
@@ -939,10 +939,10 @@ final class SchemaReader {
   /**
    * Gets the build step's blueprint behind the interface.
    *
-   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The blueprint.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceBlueprint
+   * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
    *   The same.
    */
   protected static function blueprintOf(BlueprintInterface $inputs): ResourceBlueprint {
@@ -1021,7 +1021,7 @@ final class SchemaReader {
    *   The object schema.
    * @param string $pointer
    *   Its pointer in the document.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint its keys are declared in.
    * @param array $root
    *   The document.
@@ -1172,7 +1172,7 @@ final class SchemaReader {
    *   The frame's `x-surface`.
    * @param string $pointer
    *   The frame's pointer.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint.
    */
   protected function frameExtension(array $extension, string $pointer, ResourceBlueprint $inputs): void {
@@ -1401,7 +1401,7 @@ final class SchemaReader {
    *   Whether the frame requires it.
    * @param string $pointer
    *   The key's pointer.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint.
    * @param array $root
    *   The document.
@@ -1504,7 +1504,7 @@ final class SchemaReader {
    *   Whether the frame requires it.
    * @param string $pointer
    *   Its pointer.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint.
    * @param array $root
    *   The document.
@@ -1657,7 +1657,7 @@ final class SchemaReader {
    *
    * @param string $id
    *   The def's key.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint, which knows the site's shapes.
    *
    * @return string|null
@@ -1682,7 +1682,7 @@ final class SchemaReader {
    *   Whether the frame requires it.
    * @param string $pointer
    *   Its pointer.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint.
    */
   protected function shapedKey(string $name, array $property, array $def, string $shape, bool $required, string $pointer, ResourceBlueprint $inputs): void {
@@ -1722,7 +1722,7 @@ final class SchemaReader {
    *   Whether the frame requires it.
    * @param string $pointer
    *   Its pointer.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint.
    * @param array $root
    *   The document.
@@ -2415,7 +2415,7 @@ final class SchemaReader {
    *   The frame's properties.
    * @param string $pointer
    *   The frame's pointer.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint.
    * @param array $left
    *   Collects what is left over for the frame's JsonSchema constraint.
@@ -2479,7 +2479,7 @@ final class SchemaReader {
   /**
    * Marks a declared key required.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint.
    * @param string $key
    *   The key.
@@ -2730,9 +2730,9 @@ final class SchemaReader {
     $was = $this->frames;
     $this->frames = [];
     if ($this->typedDataManager === NULL) {
-      throw new \LogicException('A whole document is surveyed by the data_surface.schema_reader service, which holds the typed data manager.');
+      throw new \LogicException('A whole document is surveyed by the surface.schema_reader service, which holds the typed data manager.');
     }
-    $blueprint = (new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager, FALSE, $this->registry))->useShapes(NULL);
+    $blueprint = (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager, FALSE, $this->registry))->useShapes(NULL);
     $this->frame($schema, $pointer, $blueprint, $root);
     $found = $this->frames;
     $this->frames = $was;
@@ -2747,7 +2747,7 @@ final class SchemaReader {
   /**
    * Registers the structure an object of the document is, to be built.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The blueprint reading the frame that holds it.
    * @param string $id
    *   Its id.

@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Resource\Attribute\UsesStructure;
-use Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceGatedItem;
-use Drupal\data_surface_test\Structure\GatedFieldSettingsStructure;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Resource\Attribute\UsesStructure;
+use Drupal\surface_test\Plugin\Field\FieldType\SurfaceGatedItem;
+use Drupal\surface_test\Structure\GatedFieldSettingsStructure;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\tool\Tool\ToolManager;
@@ -37,12 +37,12 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * operation knows; a variant its locked deciding key chose may
  * refuse its parent through its access class.
  *
- * @see \Drupal\data_surface_test\Structure\GatedFieldSettingsStructure
- * @see \Drupal\data_surface_test\Access\GatedFieldSettingsAccess
+ * @see \Drupal\surface_test\Structure\GatedFieldSettingsStructure
+ * @see \Drupal\surface_test\Access\GatedFieldSettingsAccess
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
+class FieldToolsAccessTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -63,9 +63,9 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     'entity_test',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_test',
-    'data_surface_tool',
+    'surface',
+    'surface_test',
+    'surface_tool',
   ];
 
   /**
@@ -87,7 +87,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     FieldStorageConfig::create([
       'field_name' => 'field_gated',
       'entity_type' => 'entity_test',
-      'type' => 'data_surface_gated',
+      'type' => 'surface_gated',
     ])->save();
   }
 
@@ -145,17 +145,17 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
     $edit = $reuse;
 
     // Holding everything core asks for, both tools are allowed.
-    $this->assertTrue($this->checkAccess('data_surface:field.instance:reuse', $reuse, $account)->isAllowed());
+    $this->assertTrue($this->checkAccess('surface:field.instance:reuse', $reuse, $account)->isAllowed());
     $this->createField();
-    $this->assertTrue($this->checkAccess('data_surface:field.instance:update', $edit, $account)->isAllowed());
+    $this->assertTrue($this->checkAccess('surface:field.instance:update', $edit, $account)->isAllowed());
 
     // The field type refuses, and nothing else changed.
     $this->setFieldTypeRefusal(TRUE);
-    $refused = $this->checkAccess('data_surface:field.instance:update', $edit, $account);
+    $refused = $this->checkAccess('surface:field.instance:update', $edit, $account);
     $this->assertTrue($refused->isForbidden());
     $reason = $refused instanceof AccessResultReasonInterface ? (string) $refused->getReason() : '';
     $this->assertStringContainsString('gated test field type', $reason);
-    $this->assertTrue($this->checkAccess('data_surface:field.instance:reuse', $reuse, $account)->isForbidden());
+    $this->assertTrue($this->checkAccess('surface:field.instance:reuse', $reuse, $account)->isForbidden());
     // The permission is still held, which is what makes this the
     // structure's refusal rather than core's.
     $this->assertTrue($account->hasPermission(self::PERMISSION));
@@ -167,7 +167,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
   public function testExecuteIsRefusedAndWritesNothing(): void {
     $field = $this->createField();
     $this->setFieldTypeRefusal(TRUE);
-    $tool = $this->toolManager->createInstance('data_surface:field.instance:update');
+    $tool = $this->toolManager->createInstance('surface:field.instance:update');
     $tool->setInputValue('entity_type', 'entity_test');
     $tool->setInputValue('bundle', 'entity_test');
     $tool->setInputValue('field_name', 'field_gated');
@@ -195,7 +195,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testTheSameCallSucceedsWhenTheFieldTypeAllows(): void {
     $this->createField();
-    $tool = $this->toolManager->createInstance('data_surface:field.instance:update');
+    $tool = $this->toolManager->createInstance('surface:field.instance:update');
     $tool->setInputValue('entity_type', 'entity_test');
     $tool->setInputValue('bundle', 'entity_test');
     $tool->setInputValue('field_name', 'field_gated');
@@ -219,7 +219,7 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testTheFieldTypeHostReadsTheAttribute(): void {
     $field = $this->createField();
-    $definition = $this->container->get('plugin.manager.field.field_type')->getDefinition('data_surface_gated');
+    $definition = $this->container->get('plugin.manager.field.field_type')->getDefinition('surface_gated');
     $this->assertSame(GatedFieldSettingsStructure::class, $definition[UsesStructure::DEFINITION_KEY]);
     $this->assertSame(['note' => NULL], SurfaceGatedItem::defaultFieldSettings());
 
@@ -244,15 +244,15 @@ class FieldToolsAccessTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
    */
   public function testRuntimeVariantIsOfferedForTheAccountAlone(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $arguments = ['entity_type' => 'entity_test', 'bundle' => 'entity_test'];
     $context = $resources->operation('field.instance', 'create', $arguments);
     $this->setFieldTypeRefusal(TRUE);
     $built = $resources->build('field.instance', $context)->getDefinitions()->entry('settings');
-    $this->assertArrayNotHasKey('data_surface_gated', $built->variants->variants);
+    $this->assertArrayNotHasKey('surface_gated', $built->variants->variants);
     $this->assertFalse($built->runtimeAccess);
     $alone = $resources->buildStatic('field.instance', $context)->getDefinitions()->entry('settings');
-    $this->assertArrayHasKey('data_surface_gated', $alone->variants->variants);
+    $this->assertArrayHasKey('surface_gated', $alone->variants->variants);
     $this->assertTrue($alone->runtimeAccess);
   }
 

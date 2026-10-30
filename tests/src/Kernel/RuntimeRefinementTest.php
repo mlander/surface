@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\Cache;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Refinement\RuntimeRefiner;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_resource_test\Structure\StockroomStructure;
-use Drupal\data_surface_test\RecordingStorage;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Refinement\RuntimeRefiner;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_resource_test\Structure\StockroomStructure;
+use Drupal\surface_test\RecordingStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -24,12 +24,12 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * values, the pipeline and the form's discard rule hold the values to
  * both kinds alike.
  *
- * @see \Drupal\data_surface_resource_test\Structure\StockroomStructure
+ * @see \Drupal\surface_resource_test\Structure\StockroomStructure
  * @see docs/decisions.md#static-by-default-runtime-by-declaration
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
+class RuntimeRefinementTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -37,9 +37,9 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_test',
-    'data_surface_resource_test',
+    'surface',
+    'surface_test',
+    'surface_resource_test',
   ];
 
   /**
@@ -55,17 +55,17 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the stockroom.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built structure, with nothing locked.
    */
-  protected function stockroom(): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->build(StockroomStructure::class, new OperationContext('configure'));
+  protected function stockroom(): SurfaceInterface {
+    return $this->container->get('surface.resources')->build(StockroomStructure::class, new OperationContext('configure'));
   }
 
   /**
    * Emits one of the two documents' schemas, as a client decodes it.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built structure.
    * @param array|null $values
    *   The values the schema is for, or NULL for the full schema.
@@ -73,8 +73,8 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The schema.
    */
-  protected function schema(DataSurfaceInterface $surface, ?array $values = NULL): array {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+  protected function schema(SurfaceInterface $surface, ?array $values = NULL): array {
+    $emitter = $this->container->get('surface.contract_emitter');
     $served = $values === NULL ? $emitter->emitFull($surface, 'resource_test.stockroom') : $emitter->emit($surface, $values, 'resource_test.stockroom');
     return json_decode((string) json_encode($served->document['schema']), TRUE);
   }
@@ -122,7 +122,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['aisle'], $shelf->dependencies);
     $this->assertSame(['aisle'], $shelf->staticDependencies());
     $this->assertTrue($shelf->isRefinedAtRuntime());
-    $links = $shelf->refiners[DataSurfaceInterface::OWNER];
+    $links = $shelf->refiners[SurfaceInterface::OWNER];
     $this->assertCount(2, $links, 'One link per kind.');
     $this->assertNotInstanceOf(RuntimeRefiner::class, $links[0]);
     $this->assertInstanceOf(RuntimeRefiner::class, $links[1]);
@@ -131,7 +131,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $tag = $definitions->entry('tag');
     $this->assertSame([], $tag->dependencies, 'A runtime refiner that watches nothing waits for nothing.');
     $this->assertTrue($tag->isRefinedAtRuntime());
-    $ungated = $tag->refiners[DataSurfaceInterface::OWNER][0];
+    $ungated = $tag->refiners[SurfaceInterface::OWNER][0];
     $this->assertInstanceOf(RuntimeRefiner::class, $ungated);
     $this->assertFalse($ungated->gated);
     $this->assertFalse($definitions->entry('aisle')->isRefinedAtRuntime());
@@ -202,7 +202,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     // Nothing the runtime refiners said made it in: no description, and
     // the document did not become uncacheable for having been asked.
     $this->assertArrayNotHasKey('description', $after['properties']['shelf']);
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($surface, 'resource_test.stockroom');
+    $full = $this->container->get('surface.contract_emitter')->emitFull($surface, 'resource_test.stockroom');
     $this->assertSame(Cache::PERMANENT, $full->getCacheMaxAge());
   }
 
@@ -225,7 +225,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($schema['properties']['shelf']['x-surface']['live']);
     $this->assertArrayNotHasKey('enumerated', $schema['properties']['shelf']['x-surface'], 'Refined for the values, so nothing is enumerated.');
     $this->assertTrue($schema['properties']['tag']['x-surface']['refined']);
-    $served = $this->container->get('data_surface.contract_emitter')->emit($surface, $values, 'resource_test.stockroom');
+    $served = $this->container->get('surface.contract_emitter')->emit($surface, $values, 'resource_test.stockroom');
     $this->assertSame(0, $served->getCacheMaxAge());
 
     // The static refiners alone, as the engine answers them when asked.
@@ -280,7 +280,7 @@ class RuntimeRefinementTest extends DataSurfaceKernelTestBase {
     StockroomStructure::$banned = ['red'];
     $this->assertSame(['shelf'], $discarded(['aisle' => 'south', 'shelf' => 'south_1']));
     $this->assertSame([], $discarded(['aisle' => 'south', 'shelf' => 'south_2', 'tag' => 'red']));
-    $document = $this->container->get('data_surface.contract_emitter')->emit($surface, $stored, 'resource_test.stockroom')->document;
+    $document = $this->container->get('surface.contract_emitter')->emit($surface, $stored, 'resource_test.stockroom')->document;
     $this->assertSame(['/shelf', '/tag'], $document['stale']);
     $this->assertSame([NULL, NULL], [$document['values']['shelf'], $document['values']['tag']]);
   }

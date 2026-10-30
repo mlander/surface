@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\Attachment;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Resource\Attribute\Variant;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\data_surface_examples\Structure\PaidTicketStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\UnofferedVariantStructure;
+use Drupal\surface\Attachment;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Resource\Attribute\Variant;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\surface_examples\Structure\PaidTicketStructure;
+use Drupal\surface_resource_test\Structure\Broken\UnofferedVariantStructure;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -26,9 +26,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#variants-not-slots
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class VariantLabelsTest extends DataSurfaceKernelTestBase {
+class VariantLabelsTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -39,20 +39,20 @@ class VariantLabelsTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_resource_test',
   ];
 
   /**
    * Gets a variant with no keys, sealed.
    *
-   * @return \Drupal\data_surface\Attachment
+   * @return \Drupal\surface\Attachment
    *   The variant.
    */
   protected static function variant(): Attachment {
-    return new Attachment((new DataSurfaceBuilder())->seal());
+    return new Attachment((new SurfaceBuilder())->seal());
   }
 
   /**
@@ -63,11 +63,11 @@ class VariantLabelsTest extends DataSurfaceKernelTestBase {
    * @param array<string, string> $labels
    *   The labels the variants give.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected static function attached(DataDefinition $deciding, array $labels = []): DataSurfaceInterface {
-    $builder = new DataSurfaceBuilder(['kind' => $deciding->setLabel('Kind')]);
+  protected static function attached(DataDefinition $deciding, array $labels = []): SurfaceInterface {
+    $builder = new SurfaceBuilder(['kind' => $deciding->setLabel('Kind')]);
     $variants = ['jar' => self::variant(), 'tin' => self::variant(), 'pot' => self::variant()];
     $builder->attachVariants('settings', 'kind', $variants, $labels);
     return $builder->seal();
@@ -83,7 +83,7 @@ class VariantLabelsTest extends DataSurfaceKernelTestBase {
     $variant = (new \ReflectionClass(PaidTicketStructure::class))->getAttributes(Variant::class)[0]->newInstance();
     $this->assertSame('Paid', (string) $variant->label);
 
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
     $set = ChoiceSet::of($surface->getDefinition('pricing'));
     $this->assertNotNull($set);
@@ -92,7 +92,7 @@ class VariantLabelsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['free' => 'Free', 'paid' => 'Paid'], array_map('strval', $set->labels));
     $this->assertSame('free', $surface->getDefault('pricing'), 'The default stays the key\'s.');
 
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $expected = [['const' => 'free', 'title' => 'Free'], ['const' => 'paid', 'title' => 'Paid']];
     $full = json_decode((string) json_encode($emitter->emitFull($surface, 'registration.step3')->document['schema']), TRUE);
     $this->assertSame($expected, $full['properties']['pricing']['oneOf']);
@@ -130,7 +130,7 @@ class VariantLabelsTest extends DataSurfaceKernelTestBase {
   public function testDeclaredListMayNotWiden(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('resource_test.broken.unoffered_variant lists "pot" for "kind", and no variant at "settings" is for it. A deciding key\'s list narrows the values its variants are for and names no other');
-    $this->container->get('data_surface.resources')->build(UnofferedVariantStructure::class, new OperationContext('configure'));
+    $this->container->get('surface.resources')->build(UnofferedVariantStructure::class, new OperationContext('configure'));
   }
 
 }

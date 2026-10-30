@@ -1,0 +1,14 @@
+# The React app, built from app/ into dist/ by `npm run build`. dist/ is
+# committed, so the module works on a site with no Node; rebuild it
+# whenever app/ changes. The app highlights its JSON with Prism, bundled;
+# the colors are the Prism theme the PHP panels use.
+app:
+  js:
+    dist/app.js: { minified: true }
+  css:
+    component:
+      dist/app.css: {}
+  dependencies:
+    - core/drupal
+    - core/drupalSettings
+    - surface/prism_theme

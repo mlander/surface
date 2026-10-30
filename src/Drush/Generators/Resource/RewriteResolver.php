@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Generators\Resource;
+namespace Drupal\surface\Drush\Generators\Resource;
 
 use DrupalCodeGenerator\Asset\Asset;
 use DrupalCodeGenerator\Asset\File;
@@ -14,7 +14,7 @@ use DrupalCodeGenerator\InputOutput\IO;
  *
  * For a config object's install file: the generator wrote its content
  * from the file as it is (a value the file gives a key is kept), as
- * `drush data_surface:config-schema --write` does, so it is written
+ * `drush surface:config-schema --write` does, so it is written
  * without asking.
  */
 final class RewriteResolver implements ResolverInterface {

@@ -1,4 +1,4 @@
-# Generated from the my_module.settings resource by drush data_surface:config-schema.
+# Generated from the my_module.settings resource by drush surface:config-schema.
 my_module.settings:
   type: config_object
   label: 'My module settings'
@@ -30,7 +30,7 @@ my_module.settings:
       type: string
       label: 'Layout'
 
-# Generated from the my_module.colors resource by drush data_surface:config-schema.
+# Generated from the my_module.colors resource by drush surface:config-schema.
 my_module.colors:
   type: config_object
   label: 'my_module.colors'

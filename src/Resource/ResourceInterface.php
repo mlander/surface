@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * A resource: a thing with identity and storage that operations act on.
@@ -19,8 +19,8 @@ namespace Drupal\data_surface\Resource;
  * plugin that names it with #[UsesStructure], or the container a parent
  * stores it in.
  *
- * @see \Drupal\data_surface\Resource\Attribute\Resource
- * @see \Drupal\data_surface\Resource\StructureInterface
+ * @see \Drupal\surface\Resource\Attribute\Resource
+ * @see \Drupal\surface\Resource\StructureInterface
  */
 interface ResourceInterface extends DefinesInputsInterface {
 

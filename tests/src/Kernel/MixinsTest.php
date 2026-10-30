@@ -2,31 +2,31 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_resource_test\Resource\Journal\JournalResource;
-use Drupal\data_surface_resource_test\Resource\Journal\LedgerResource;
-use Drupal\data_surface_resource_test\Structure\Broken\MixesMountingStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinByAlterStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinClashLateStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinClashStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinCycleStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinGuardStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinResourceStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinRulesOutStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinUnwiredStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinWiresMemberStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MixinWithChildStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\TwoMixinsClashStructure;
-use Drupal\data_surface_resource_test\Structure\Mixin\EntryStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
-use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_resource_test\Resource\Journal\JournalResource;
+use Drupal\surface_resource_test\Resource\Journal\LedgerResource;
+use Drupal\surface_resource_test\Structure\Broken\MixesMountingStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinByAlterStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinClashLateStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinClashStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinCycleStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinGuardStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinResourceStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinRulesOutStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinUnwiredStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinWiresMemberStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinWithChildStructure;
+use Drupal\surface_resource_test\Structure\Broken\TwoMixinsClashStructure;
+use Drupal\surface_resource_test\Structure\Mixin\EntryStructure;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
@@ -45,10 +45,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/resources.md#mixins
  * @see docs/decisions.md#a-mixin-is-merged-flat
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class MixinsTest extends DataSurfaceKernelTestBase {
+class MixinsTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use StaticRefinerAgreementTrait;
@@ -62,9 +62,9 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_resource_test',
   ];
 
   /**
@@ -109,7 +109,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
   }
 
@@ -119,11 +119,11 @@ class MixinsTest extends DataSurfaceKernelTestBase {
    * @param class-string $class
    *   The resource or structure.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built data surface.
    */
-  protected function built(string $class): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function built(string $class): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     $context = in_array($class, [JournalResource::class, LedgerResource::class], TRUE) ? $resources->operation($class, 'configure') : new OperationContext('configure');
     return $resources->build($class, $context);
   }
@@ -141,7 +141,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
    *   The schema.
    */
   protected function schema(string $class, ?array $values = NULL): array {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $built = $this->built($class);
     $id = $class === JournalResource::class ? 'resource_test.journal' : 'resource_test.ledger';
     $served = $values === NULL
@@ -153,7 +153,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
   /**
    * Accepts and validates values, answering the messages by path.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param array $input
    *   The input.
@@ -163,7 +163,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
    * @return array<string, string>
    *   The refusals, by dotted path.
    */
-  protected function refusals(DataSurfaceInterface $surface, array $input, array $stored = self::JOURNAL): array {
+  protected function refusals(SurfaceInterface $surface, array $input, array $stored = self::JOURNAL): array {
     $accepted = $this->pipeline()->accept($surface, $input, $stored);
     $messages = [];
     foreach ($this->pipeline()->validate($surface, $accepted, $stored) as $violation) {
@@ -175,7 +175,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
   /**
    * Reads one refined definition at a dotted path.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The refined data surface.
    * @param string $path
    *   The path.
@@ -183,7 +183,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition.
    */
-  protected static function at(DataSurfaceInterface $surface, string $path): ?DataDefinitionInterface {
+  protected static function at(SurfaceInterface $surface, string $path): ?DataDefinitionInterface {
     $parents = explode('.', $path);
     $definition = $surface->getDefinition((string) array_shift($parents));
     foreach ($parents as $property) {
@@ -228,18 +228,18 @@ class MixinsTest extends DataSurfaceKernelTestBase {
       'revision' => 1,
       'published' => FALSE,
       'archive' => NULL,
-    ], $this->container->get('data_surface.resources')->defaults(JournalResource::class), 'The members\' declared defaults are the owner\'s.');
+    ], $this->container->get('surface.resources')->defaults(JournalResource::class), 'The members\' declared defaults are the owner\'s.');
     $this->assertSame('Seconds since the epoch.', (string) $journal->getDefinition('created')->getDescription(), 'The timestamps\' alter applies where they are mixed in.');
     $this->assertSame('Seconds since the epoch.', (string) self::at($this->built(LedgerResource::class), 'stamps.created')->getDescription(), 'And where they are attached.');
 
     // Stored flat: the members beside the owner's own keys.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(JournalResource::class, 'configure');
     $storage = $resources->storage(JournalResource::class, $context, $journal);
     $this->assertSame(self::JOURNAL, array_intersect_key($storage->load($journal), self::JOURNAL));
     $result = $this->pipeline()->submit($journal, ['owner' => 'bea', 'created' => 1700000100], $storage);
     $this->assertTrue($result->isValid(), (string) json_encode(array_map(static fn ($violation): string => $violation->fullPath() . ': ' . strip_tags((string) $violation->message), iterator_to_array($result->violations))));
-    $stored = $this->config('data_surface_resource_test.journal')->get();
+    $stored = $this->config('surface_resource_test.journal')->get();
     $this->assertSame(['bea', 1700000100, 1700000500], [$stored['owner'], $stored['created'], $stored['changed']]);
   }
 
@@ -251,17 +251,17 @@ class MixinsTest extends DataSurfaceKernelTestBase {
       MixinClashStructure::class => 'resource_test.timestamps, mixed into resource_test.broken.mixin_clash, declares "created", which resource_test.broken.mixin_clash declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.',
       MixinClashLateStructure::class => 'resource_test.broken.mixin_clash_late declares "changed", which resource_test.timestamps, mixed in, declares already. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.',
       TwoMixinsClashStructure::class => 'resource_test.broken.created_only, mixed into resource_test.broken.two_mixins_clash, declares "created", which resource_test.timestamps, also mixed in, declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once.',
-      MixinByAlterStructure::class => 'The data_surface_resource_test alter mixes Drupal\data_surface_resource_test\Structure\Mixin\TimestampsStructure in. Only an owner mixes a structure in: an alter\'s keys live under its own module\'s name, and a mixed-in structure\'s members would be the owner\'s. Attach it at the alter\'s own mount, third_party_settings.data_surface_resource_test, instead.',
-      MixinWithChildStructure::class => 'resource_test.notice, mixed into resource_test.broken.mixin_with_child, attaches Drupal\data_surface_resource_test\Structure\Notice\NoticeAddressStructure at "address". A mixed-in structure holds keys and maps, not children, for now: attach resource_test.notice under a key of its own instead.',
+      MixinByAlterStructure::class => 'The surface_resource_test alter mixes Drupal\surface_resource_test\Structure\Mixin\TimestampsStructure in. Only an owner mixes a structure in: an alter\'s keys live under its own module\'s name, and a mixed-in structure\'s members would be the owner\'s. Attach it at the alter\'s own mount, third_party_settings.surface_resource_test, instead.',
+      MixinWithChildStructure::class => 'resource_test.notice, mixed into resource_test.broken.mixin_with_child, attaches Drupal\surface_resource_test\Structure\Notice\NoticeAddressStructure at "address". A mixed-in structure holds keys and maps, not children, for now: attach resource_test.notice under a key of its own instead.',
       MixinCycleStructure::class => 'resource_test.broken.mixin_cycle_loop mixes resource_test.broken.mixin_cycle in, through resource_test.broken.mixin_cycle -> resource_test.broken.mixin_cycle_loop -> resource_test.broken.mixin_cycle: a structure cannot be mixed into itself, directly or through another.',
       MixinUnwiredStructure::class => 'resource_test.broken.mixin_unwired mixes resource_test.ownership in without wiring its "audience" port: with(..., reads: [\'audience\' => \'<key>\']) names the key of resource_test.broken.mixin_unwired it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
       MixinWiresMemberStructure::class => 'resource_test.broken.mixin_wires_member wires the "audience" port of resource_test.ownership, mixed in, to "owner", which resource_test.ownership brought itself: a port reads a key of the owner it is mixed into, and its members are its own.',
-      MixinGuardStructure::class => 'Drupal\data_surface_resource_test\Structure\Broken\MixinGuardStructure::noteOfTheOwner() names "owner", a member of resource_test.ownership, which is mixed into resource_test.broken.mixin_guard and has an access class. What that access may take away for one account, nothing of the owner\'s may depend on: read it inside resource_test.ownership, or drop the access class.',
+      MixinGuardStructure::class => 'Drupal\surface_resource_test\Structure\Broken\MixinGuardStructure::noteOfTheOwner() names "owner", a member of resource_test.ownership, which is mixed into resource_test.broken.mixin_guard and has an access class. What that access may take away for one account, nothing of the owner\'s may depend on: read it inside resource_test.ownership, or drop the access class.',
       MixinRulesOutStructure::class => 'narrow("changed") in resource_test.broken.mixin_rules_out may answer that "changed", a member of resource_test.timestamps mixed into resource_test.broken.mixin_rules_out, does not apply. Whether a mixed-in structure\'s member applies is the structure\'s to say: its def, which every owner shares, says where it is required.',
       MixinResourceStructure::class => 'resource_test.broken.mixin_resource mixes resource_test.ledger in, which names storage of its own. A mixed-in structure\'s members are the owner\'s keys, stored by the owner: mix in a structure, or attach a resource under a key of its own.',
-      MixesMountingStructure::class => 'The data_surface_resource_test alter of resource_test.broken.mounting_mixin adds "color", and resource_test.broken.mounting_mixin is mixed into resource_test.broken.mixes_mounting. An alter of a mixed-in structure narrows and rewords its members where it is mixed in; what it mounts would be mounted on resource_test.broken.mixes_mounting, which is not built.',
+      MixesMountingStructure::class => 'The surface_resource_test alter of resource_test.broken.mounting_mixin adds "color", and resource_test.broken.mounting_mixin is mixed into resource_test.broken.mixes_mounting. An alter of a mixed-in structure narrows and rewords its members where it is mixed in; what it mounts would be mounted on resource_test.broken.mixes_mounting, which is not built.',
     ];
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     foreach ($refusals as $class => $message) {
       try {
         $resources->build($class, new OperationContext('configure'));
@@ -364,11 +364,11 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['title', 'visibility', 'created', 'changed', 'revision', 'published', 'archive'], $journal->getDefinitions()->names());
     $this->assertSame(['resource_test.timestamps'], array_map(static fn ($mixin) => $mixin->structure->id, $journal->getDefinitions()->mixins()));
     $this->assertSame(['shelf', 'circle', 'stamps'], $journal->getDefinitions()->entry('archive')->attachment->child->getDefinitions()->names());
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(JournalResource::class, 'configure');
     $result = $this->pipeline()->submit($journal, ['title' => 'Kept apart'], $resources->storage(JournalResource::class, $context, $journal));
     $this->assertTrue($result->isValid(), (string) json_encode(array_map(static fn ($violation): string => $violation->fullPath() . ': ' . strip_tags((string) $violation->message), iterator_to_array($result->violations))));
-    $stored = $this->config('data_surface_resource_test.journal')->get();
+    $stored = $this->config('surface_resource_test.journal')->get();
     $kept = [$stored['title'], $stored['owner'], $stored['shared'], $stored['archive']['owner']];
     $this->assertSame(['Kept apart', 'ada', FALSE, 'grace'], $kept, 'What the access took away, storage keeps.');
     $full = $this->schema(JournalResource::class);
@@ -505,7 +505,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
    * Tests a structure that mixes another in, mixed in itself.
    */
   public function testStructureMixesAnotherIn(): void {
-    $entry = $this->container->get('data_surface.resources')->build(EntryStructure::class, new OperationContext('configure'));
+    $entry = $this->container->get('surface.resources')->build(EntryStructure::class, new OperationContext('configure'));
     $map = $entry->getDefinitions();
     $this->assertSame(['line', 'reference', 'created', 'changed'], $map->names());
     $this->assertCount(1, $map->mixins());
@@ -514,7 +514,7 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(5, $entry->refine(['created' => 5])->getDefinition('changed')->getConstraints()['Range']['min']);
     $this->assertSame('Seconds since the epoch.', (string) $entry->getDefinition('created')->getDescription());
 
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = json_decode((string) json_encode($emitter->emitFull($entry, 'resource_test.entry')->document['schema']), TRUE);
     $this->assertSame(['$ref' => '#/$defs/resource_test.record'], $full['allOf'][0]);
     $this->assertSame(['line', 'reference', 'created', 'changed'], array_keys($full['properties']));
@@ -536,8 +536,8 @@ class MixinsTest extends DataSurfaceKernelTestBase {
    */
   public function testToolsReadTheMembersFlat(): void {
     $manager = $this->container->get('plugin.manager.tool');
-    $this->assertTrue($manager->hasDefinition('data_surface:resource_test.journal:configure'));
-    $values = $manager->getDefinition('data_surface:resource_test.journal:configure')->getInputDefinition(OperationInputs::VALUES);
+    $this->assertTrue($manager->hasDefinition('surface:resource_test.journal:configure'));
+    $values = $manager->getDefinition('surface:resource_test.journal:configure')->getInputDefinition(OperationInputs::VALUES);
     $properties = $values->getPropertyDefinitions();
     $this->assertSame(self::KEYS, array_keys($properties));
     // An update: required in words, a stored value standing when left out.
@@ -545,21 +545,21 @@ class MixinsTest extends DataSurfaceKernelTestBase {
     $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $properties['owner']->getDescription());
     $this->assertFalse($properties['shared']->isRequired());
 
-    $read = $manager->createInstance('data_surface:resource_test.journal:configure:read');
+    $read = $manager->createInstance('surface:resource_test.journal:configure:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::JOURNAL, $read->getResult()->getContextValues()[OperationInputs::VALUES] ?? NULL);
 
-    $tool = $manager->createInstance('data_surface:resource_test.journal:configure');
+    $tool = $manager->createInstance('surface:resource_test.journal:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['changed' => 1600000000] + self::JOURNAL);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertSame("The values were refused:\n" . '/changed: This value should be 1700000000 or more. This applies when Created is 1700000000.', strip_tags((string) $tool->getResult()->getMessage()));
-    $tool = $manager->createInstance('data_surface:resource_test.journal:configure');
+    $tool = $manager->createInstance('surface:resource_test.journal:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['owner' => 'bea', 'changed' => 1700000900] + self::JOURNAL);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $stored = $this->config('data_surface_resource_test.journal');
+    $stored = $this->config('surface_resource_test.journal');
     $this->assertSame(['bea', 1700000900], [$stored->get('owner'), $stored->get('changed')]);
   }
 

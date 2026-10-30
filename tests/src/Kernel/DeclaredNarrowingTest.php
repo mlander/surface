@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Refinement\Condition;
-use Drupal\data_surface\Refinement\DeclaredRefiner;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Refinement\Rule;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_resource_test\Resource\Parcel\ParcelResource;
-use Drupal\data_surface_resource_test\Structure\Sender\SenderIdentityStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MistypedConditionStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\RequiresRuledOutStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\UnconditionalRuleStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\UnofferedRuleValueStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WideningRuleStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
-use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Refinement\DeclaredRefiner;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Refinement\Rule;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_resource_test\Resource\Parcel\ParcelResource;
+use Drupal\surface_resource_test\Structure\Sender\SenderIdentityStructure;
+use Drupal\surface_resource_test\Structure\Broken\MistypedConditionStructure;
+use Drupal\surface_resource_test\Structure\Broken\RequiresRuledOutStructure;
+use Drupal\surface_resource_test\Structure\Broken\UnconditionalRuleStructure;
+use Drupal\surface_resource_test\Structure\Broken\UnofferedRuleValueStructure;
+use Drupal\surface_resource_test\Structure\Broken\WideningRuleStructure;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -38,9 +38,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-rule-declared-as-data
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
+class DeclaredNarrowingTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use StaticRefinerAgreementTrait;
@@ -54,15 +54,15 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_resource_test',
   ];
 
   /**
    * Where the alter's customs code is, in the frame.
    */
-  protected const CUSTOMS = 'third_party_settings.data_surface_resource_test.customs';
+  protected const CUSTOMS = 'third_party_settings.surface_resource_test.customs';
 
   /**
    * {@inheritdoc}
@@ -70,18 +70,18 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Builds the parcel in its operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built parcel.
    */
-  protected function parcel(): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function parcel(): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build(ParcelResource::class, $resources->operation(ParcelResource::class, 'configure'));
   }
 
@@ -102,7 +102,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
       return $refined->getDefinition($key);
     }
     $mount = $refined->getDefinition('third_party_settings');
-    $own = $mount instanceof ComplexDataDefinitionInterface ? $mount->getPropertyDefinition('data_surface_resource_test') : NULL;
+    $own = $mount instanceof ComplexDataDefinitionInterface ? $mount->getPropertyDefinition('surface_resource_test') : NULL;
     $customs = $own instanceof ComplexDataDefinitionInterface ? $own->getPropertyDefinition('customs') : NULL;
     $this->assertNotNull($customs, 'The customs code is mounted.');
     return $customs;
@@ -135,7 +135,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
    *   The values of the mount.
    */
   protected static function customs(?string $customs): array {
-    return ['third_party_settings' => ['data_surface_resource_test' => ['customs' => $customs]]];
+    return ['third_party_settings' => ['surface_resource_test' => ['customs' => $customs]]];
   }
 
   /**
@@ -162,17 +162,17 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['weight', 'reference', 'insured', self::CUSTOMS], $value->dependencies);
     $this->assertSame(['weight', 'reference', 'insured', self::CUSTOMS], $value->declaredDependencies());
     $this->assertSame([], $value->codedDependencies(), 'No coded refiner watches them.');
-    $this->assertSame([], $value->gate(DataSurfaceInterface::EVERY), 'A rule waits for nothing.');
+    $this->assertSame([], $value->gate(SurfaceInterface::EVERY), 'A rule waits for nothing.');
     $links = array_merge(...array_values($value->refiners));
     $this->assertCount(2, $links, 'The owner\'s rules, then the alter\'s.');
     $this->assertContainsOnlyInstancesOf(DeclaredRefiner::class, $links);
 
     $note = $definitions->entry('note');
     $this->assertSame([''], $note->mayNotApply(), 'Ruled out by a rule.');
-    $this->assertSame([''], $note->mayNotApply(DataSurfaceInterface::DECLARED));
-    $this->assertSame([], $note->mayNotApply(DataSurfaceInterface::CODED));
+    $this->assertSame([''], $note->mayNotApply(SurfaceInterface::DECLARED));
+    $this->assertSame([], $note->mayNotApply(SurfaceInterface::CODED));
     $mount = $definitions->entry('third_party_settings');
-    $this->assertSame(['data_surface_resource_test.customs'], $mount->mayNotApply());
+    $this->assertSame(['surface_resource_test.customs'], $mount->mayNotApply());
     foreach (['service', 'tracking', 'handling', 'labels', 'signature'] as $key) {
       $this->assertTrue($definitions->entry($key)->isDeclared(), $key);
     }
@@ -269,18 +269,18 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#a-key-that-does-not-apply
    */
   public function testMountWithNothingInItIsAnEmptyMap(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(ParcelResource::class, 'configure');
     $parcel = $resources->build(ParcelResource::class, $context);
     $storage = $resources->storage(ParcelResource::class, $context, $parcel);
     $result = $this->pipeline()->submit($parcel, ['note' => ''], $storage);
     $this->assertTrue($result->committed);
     $this->assertSame([], $result->values['third_party_settings']);
-    $this->assertSame([], $this->config('data_surface_resource_test.parcel')->get('third_party_settings'));
-    $result = $this->pipeline()->submit($parcel, ['third_party_settings' => ['data_surface_resource_test' => ['customs' => NULL]]], $storage);
+    $this->assertSame([], $this->config('surface_resource_test.parcel')->get('third_party_settings'));
+    $result = $this->pipeline()->submit($parcel, ['third_party_settings' => ['surface_resource_test' => ['customs' => NULL]]], $storage);
     $this->assertTrue($result->committed);
-    $this->assertSame(['data_surface_resource_test' => []], $result->values['third_party_settings']);
-    $this->assertSame('{"data_surface_resource_test":{}}', json_encode($this->pipeline()->document($parcel, $result->values)->third_party_settings));
+    $this->assertSame(['surface_resource_test' => []], $result->values['third_party_settings']);
+    $this->assertSame('{"surface_resource_test":{}}', json_encode($this->pipeline()->document($parcel, $result->values)->third_party_settings));
   }
 
   /**
@@ -288,7 +288,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
    */
   public function testThePipelineHoldsValuesToTheRules(): void {
     $parcel = $this->parcel();
-    $stored = $this->config('data_surface_resource_test.parcel')->getRawData();
+    $stored = $this->config('surface_resource_test.parcel')->getRawData();
     $refusals = function (array $values) use ($parcel, $stored): array {
       $messages = [];
       $accepted = $this->pipeline()->accept($parcel, $values, $stored);
@@ -301,7 +301,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $freight = ['service' => 'freight', 'weight' => 40, 'handling' => 'cold'];
     $this->assertSame([], $refusals([]));
     $this->assertSame([
-      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is empty; Insured is off; Data Surface Resource Test: Customs code is empty.',
+      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is empty; Insured is off; Surface API Resource Test: Customs code is empty.',
     ], $refusals(['declared_value' => 501]));
     // A declared rule's require() names what it read, as a refused
     // constraint does; a key declared required names nothing.
@@ -331,7 +331,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
    */
   public function testPresenceConditionIsSaidAsSet(): void {
     $parcel = $this->parcel();
-    $stored = $this->config('data_surface_resource_test.parcel')->getRawData();
+    $stored = $this->config('surface_resource_test.parcel')->getRawData();
     $refusals = function (array $values) use ($parcel, $stored): array {
       $messages = [];
       $accepted = $this->pipeline()->accept($parcel, $values, $stored);
@@ -341,17 +341,17 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
       return $messages;
     };
     $this->assertSame([
-      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is set; Insured is off; Data Surface Resource Test: Customs code is empty.',
+      'declared_value' => 'This value should be between 0 and 500. This applies when all 4 of these hold: Weight in kilograms is 1; Reference is set; Insured is off; Surface API Resource Test: Customs code is empty.',
     ], $refusals(['declared_value' => 501, 'reference' => 'R1']));
     $this->assertSame([
-      'declared_value' => 'This value should be between 1 and 100000. This applies when all 4 of these hold: Weight in kilograms is 2; Reference is set; Insured is off; Data Surface Resource Test: Customs code is set.',
+      'declared_value' => 'This value should be between 1 and 100000. This applies when all 4 of these hold: Weight in kilograms is 2; Reference is set; Insured is off; Surface API Resource Test: Customs code is set.',
     ], $refusals(['weight' => 2, 'declared_value' => 0, 'reference' => 'R1'] + self::customs('C1')), 'A key an alter mounted, the same.');
     $this->assertSame([
       'tracking' => 'A tracking code is two capitals and six digits, such as AB123456. This applies when all 3 of these hold: Reference is set; Service is Express; Insured is off.',
     ], $refusals(['reference' => 'R1', 'service' => 'express', 'tracking' => 'nope']));
 
     // The third fresh-eyes run's sender: a name once an email is given.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $sender = $resources->build(SenderIdentityStructure::class, new OperationContext('configure'));
     $said = function (array $values) use ($sender): array {
       $messages = [];
@@ -378,7 +378,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     ];
     foreach ($refusals as $class => $message) {
       try {
-        $this->container->get('data_surface.resources')->build($class, new OperationContext('configure'));
+        $this->container->get('surface.resources')->build($class, new OperationContext('configure'));
         $this->fail($class . ' was built.');
       }
       catch (\LogicException $e) {
@@ -461,7 +461,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
    */
   public function testTheFullSchemaStatesEachRuleAsWritten(): void {
     $parcel = $this->parcel();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = json_decode((string) json_encode($emitter->emitFull($parcel, 'resource_test.parcel', 'configure')->document['schema']), TRUE);
     $this->assertSame(['service', 'weight'], $full['required'], 'The note may not apply, so it is required only where it does.');
     $declared = [
@@ -485,7 +485,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
       $this->assertArrayNotHasKey('declared', $full['properties'][$key]['x-surface'] ?? [], $key . ' carries no marker.');
       $this->assertArrayNotHasKey('refine', $full['properties'][$key]['x-surface'] ?? [], $key . ' is exact.');
     }
-    $this->assertArrayNotHasKey('required', $full['properties']['third_party_settings']['properties']['data_surface_resource_test']);
+    $this->assertArrayNotHasKey('required', $full['properties']['third_party_settings']['properties']['surface_resource_test']);
     // Listed by the frame, none marked on the conditional: no x-surface
     // below an applicator. Decision: see docs/decisions.md#contract-2.
     $this->assertSame(array_keys($full['allOf']), $full['x-surface']['rules'], 'Every conditional here is a rule\'s.');
@@ -551,19 +551,19 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
         {"if": {"allOf": [
            {"properties": {"service": {"const": "freight"}}, "required": ["service"]},
            {"not": {"properties": {"weight": {"type": "number", "exclusiveMaximum": 2}}, "required": ["weight"]}}]},
-         "then": {"properties": {"third_party_settings": {"properties": {"data_surface_resource_test": {
+         "then": {"properties": {"third_party_settings": {"properties": {"surface_resource_test": {
            "properties": {"customs": {"type": "string"}}, "required": ["customs"]}}}}}}
         JSON,
       'the alter\'s own key, ruled out' => <<<'JSON'
         {"if": {"properties": {"weight": {"type": "number", "exclusiveMaximum": 2}}, "required": ["weight"]},
-         "then": {"properties": {"third_party_settings": {"properties": {"data_surface_resource_test": {
+         "then": {"properties": {"third_party_settings": {"properties": {"surface_resource_test": {
            "properties": {"customs": false}}}}}}}
         JSON,
       'the owner\'s key, read by the alter\'s' => <<<'JSON'
         {"if": {"properties": {"third_party_settings": {
-           "properties": {"data_surface_resource_test": {
+           "properties": {"surface_resource_test": {
              "properties": {"customs": {"not": {"type": "null"}}}, "required": ["customs"]}},
-           "required": ["data_surface_resource_test"]}},
+           "required": ["surface_resource_test"]}},
            "required": ["third_party_settings"]},
          "then": {"properties": {"declared_value": {"minimum": 1}}}}
         JSON,
@@ -585,7 +585,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
    * Tests the schema for these answers is refined by the rules.
    */
   public function testTheSchemaForTheseAnswersEvaluatesTheRules(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $values = ['service' => 'express', 'weight' => 1, 'insured' => TRUE, 'reference' => 'R1'];
     $document = json_decode((string) json_encode($emitter->emit($this->parcel(), $values, 'resource_test.parcel', 'configure')->document), TRUE);
     $schema = $document['schema'];
@@ -606,7 +606,7 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
    */
   public function testTheToolListing(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    $tool = $tools->createInstance('data_surface:resource_test.parcel:configure');
+    $tool = $tools->createInstance('surface:resource_test.parcel:configure');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertFalse($values->getPropertyDefinition('note')->isRequired(), 'Required where it applies, which a listing cannot say.');
     $this->assertFalse($values->getPropertyDefinition('signature')->isRequired(), 'Required for an insured parcel only.');
@@ -621,11 +621,11 @@ class DeclaredNarrowingTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('signature: Signed for by is required when Insured is on and Declared value is 100.', (string) $tool->getResult()->getMessage());
 
-    $tool = $tools->createInstance('data_surface:resource_test.parcel:configure');
+    $tool = $tools->createInstance('surface:resource_test.parcel:configure');
     $tool->setInputValue(OperationInputs::VALUES, $parcel + ['signature' => 'Ann', 'declared_value' => 400]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $this->assertSame('Ann', $this->config('data_surface_resource_test.parcel')->get('signature'));
+    $this->assertSame('Ann', $this->config('surface_resource_test.parcel')->get('signature'));
   }
 
   /**

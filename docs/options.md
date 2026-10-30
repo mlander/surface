@@ -40,7 +40,7 @@ of the two documents:
 One line gets a key's provider from the options service:
 
 ```php
-$provider = \Drupal::service('data_surface.options')->provider($declared, $refined);
+$provider = \Drupal::service('surface.options')->provider($declared, $refined);
 ```
 
 The labels are the `OptionSet`'s, and `$provider->cacheability()` holds
@@ -170,7 +170,7 @@ $inputs->add('variant', 'string', t('Variant'))
 
 **An enum is not a fence around the key.** What the key allows is the
 constraint, and an alter widens it at build time with
-`extendChoices()`: `data_surface_demo_extras` contributes `ribbon`, which
+`extendChoices()`: `surface_examples_extras` contributes `ribbon`, which
 is deliberately not a case in the demo's enum. A contributor answers for
 its own value, and the owner's enum is not where that value lives: that
 is what a contribution *is*. So code acting on a stored value takes the
@@ -192,8 +192,8 @@ matched on in code. And when the values are integers, the enum's
 ## The resolver plugin type
 
 A resolver reads one kind of constraint as a list of allowed values.
-Classes live in `Plugin/DataSurfaceOptionsResolver` and are declared with
-the `#[DataSurfaceOptionsResolver]` attribute, which names the validation
+Classes live in `Plugin/SurfaceOptionsResolver` and are declared with
+the `#[SurfaceOptionsResolver]` attribute, which names the validation
 constraint plugin the resolver reads.
 
 ```php
@@ -209,7 +209,7 @@ and answers with an `OptionSet`: allowed values as keys mapped to their
 labels, optional per-value descriptions, and a `CacheableMetadata`
 saying how long the answer may be reused.
 
-`DataSurfaceOptionsResolverBase` answers `applies()` from the declared
+`SurfaceOptionsResolverBase` answers `applies()` from the declared
 constraint plugin id: the resolver serves that constraint's class and
 anything extending it, so a constraint refining another is read by the
 same resolver unless one of its own is declared. That is why the
@@ -218,7 +218,7 @@ resolver did not exist.
 
 ### The service
 
-`data_surface.options` (`Options\DataSurfaceOptions`) is what consumers
+`surface.options` (`Options\SurfaceOptions`) is what consumers
 call. `resolve(DataDefinitionInterface $definition): ?OptionSet` walks
 the definition's constraints, asks each resolver, and answers with the
 list, or `NULL` when no constraint on the definition names one.
@@ -250,8 +250,8 @@ still refuses invalid values when they are validated.
 | `entity_bundle_exists` | `EntityBundleExists` | bundle info for the constraint's `entityTypeId` | bundle labels | tag `entity_bundles` |
 | `language_exists` | `LanguageExists` | the language manager; locked languages only when `allowLocked` is set | language names | tag `config:configurable_language_list` |
 | `country` | `Country` (the address module's) | `address.country_repository`, narrowed to the constraint's `availableCountries` when it names any | localized country names | tag `countries`, context `languages:language_interface` |
-| `data_surface_reference` | `DataSurfaceValidReference` | core's selection handler for its `entityTypeId` and `bundles`, for the account asking, while there are at most `data_surface.settings:reference_list_limit` ([below](#a-key-that-refers-to-an-entity)) | the entities' labels, sorted | the type's list tags, `References::CONTEXTS` for it, the settings' tag |
-| `data_surface_referenceable_type` | `DataSurfaceReferenceableType` | the entity types of its `interface` and its `targets` of which the account may reference one, `exact` | entity type labels | tag `entity_types`, each type's list tags and contexts |
+| `surface_reference` | `SurfaceValidReference` | core's selection handler for its `entityTypeId` and `bundles`, for the account asking, while there are at most `surface.settings:reference_list_limit` ([below](#a-key-that-refers-to-an-entity)) | the entities' labels, sorted | the type's list tags, `References::CONTEXTS` for it, the settings' tag |
+| `surface_referenceable_type` | `SurfaceReferenceableType` | the entity types of its `interface` and its `targets` of which the account may reference one, `exact` | entity type labels | tag `entity_types`, each type's list tags and contexts |
 
 "Permanent" means the default `CacheableMetadata`: no tags, no contexts,
 `PERMANENT` max-age. A list read from the constraint alone cannot go
@@ -306,7 +306,7 @@ refiner narrows by such a key is still `enumerated`: one conditional per
 value it lists. When no stock constraint names the kind, write one for
 the kind, not for a resource, and [its resolver](#writing-a-resolver):
 example 2 does for the rooms of the site's venues (`EventVenueRoom`),
-and `data_surface_examples_keys` for the keys the site manages
+and `surface_examples_keys` for the keys the site manages
 (`ManagedKey`).
 
 The address port shows why this beats a `LabeledChoice` whose choices
@@ -332,7 +332,7 @@ as the permission option, a placeholder message), for the same reason
 list can state: a comparison between two keys, uniqueness against what
 is stored, a check of site state with a reason of its own. One such rule
 needs none: a create's identity held once across what is stored is the
-stock `DataSurfaceUnique`, which the build adds where the storage can
+stock `SurfaceUnique`, which the build adds where the storage can
 say whether a thing exists ("A venue named riverside already exists.";
 [A title and its machine name](declaring-a-resource.md#a-title-and-its-machine-name)),
 so no resource writes one. The cost: the
@@ -356,7 +356,7 @@ it `x-surface.reference`. The room keeps what no stock constraint
 says, a room of one of the site's venues: one constraint with its
 validator and its resolver, and a narrower one its refiner adds for the
 venue chosen
-([example 2](https://github.com/mlander/data_surface/blob/main/modules/data_surface_examples/README.md#example-2-answers-depend-on-answers)).
+([example 2](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-2-answers-depend-on-answers)).
 
 ## A key that refers to an entity
 
@@ -372,25 +372,25 @@ $inputs->add('contact', 'entity:user', t('Contact'));       // a user's id
 $inputs->add('page', 'entity:node:article', t('Announcement'));
 
 $inputs->add('thing', 'entity', t('Featured beside'))
-  ->addConstraint('DataSurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+  ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
 ```
 
 - **`entity:<type>` and `entity:<type>:<bundle>`** build one key: the
   id, typed as the entity type keeps it (an integer where a content
   entity type's id field is one, a string for a config entity), with
-  `DataSurfaceValidReference` naming the entity type and the bundle.
+  `SurfaceValidReference` naming the entity type and the bundle.
   An entity type the site does not have is refused when the resource
   is built; a bundle it does not have yet is no refusal, and the key
   offers nothing until it has.
 - **The bare `entity`** is two keys attached at the key, `entity_type`
   and `id`. `entity_type` lists the entity types the account may
-  reference one of, by `DataSurfaceReferenceableType`, which the
+  reference one of, by `SurfaceReferenceableType`, which the
   author writes on the key and the build moves onto it: `interface`
   (`ContentEntityInterface` or `ConfigEntityInterface`) and `targets`,
   each entity type allowed with its bundles (`['node' => ['article'],
   'user' => []]`). Internal entity types are never offered. `id` is a
   string, and a static refiner narrows it to the entity type chosen with
-  the same `DataSurfaceValidReference`, so the three spellings are one
+  the same `SurfaceValidReference`, so the three spellings are one
   mechanism, and the full schema states the id once per entity type, as
   a conditional. The id does not apply while no entity type is chosen,
   and is required once one is. Stored as `{entity_type, id}`.
@@ -421,7 +421,7 @@ entity the account cannot see exists (core's own `ValidReference` tells
 the first apart).
 
 **The limit.** While the handler counts at most
-`data_surface.settings:reference_list_limit` candidates (50 as
+`surface.settings:reference_list_limit` candidates (50 as
 shipped), the resolver lists them: the key's options, a select on the
 form, a `oneOf` in both documents and an enum in the tool listing. Past
 it, the resolver does not apply: the key takes an id, which the
@@ -443,7 +443,7 @@ saving nothing, which example 16's page uses to show a key past it.
 ## A list the site decides, past its budget
 
 A reference key's limit has a sibling for variants and keys the site
-lists: `data_surface.settings:site_list_limit`, 20 as shipped. A key
+lists: `surface.settings:site_list_limit`, 20 as shipped. A key
 whose variants come from the site (`attachVariants(from:)`, a component
 per single-directory component) or whose keys do (`addEach()`,
 `attachEach()`) is spelled out in the full schema while the site lists
@@ -460,7 +460,7 @@ the key's `x-surface.deferred.fetch` filled, once per value, and keep it until
 the site's list changes
 ([the fetch per choice](served-contract.md#the-fetch-per-choice)). Or
 ask with values, `POST .../schema` over HTTP or the narrowing tool,
-`data_surface:<resource>:<operation>:schema`; both answer the chosen
+`surface:<resource>:<operation>:schema`; both answer the chosen
 variant's keys exactly
 ([asking again at the tool door](served-contract.md#asking-again-at-the-tool-door);
 why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
@@ -468,7 +468,7 @@ why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
 nothing, as `References::withLimit()` does.
 
 The limit defers a long list; it does not shorten it. A site shortens
-the components offered with `data_surface.settings:components_offered`:
+the components offered with `surface.settings:components_offered`:
 component ids (`provider:name`) and providers (every component one
 provides), empty for every one. Both component lists read it, so the
 chooser, the props and the slots offer the same components, and both
@@ -479,12 +479,12 @@ as stored, as any stored value the list no longer offers
 ## Writing a resolver
 
 ```php
-#[DataSurfaceOptionsResolver(
+#[SurfaceOptionsResolver(
   id: 'my_module_role_exists',
   label: new TranslatableMarkup('Role exists'),
   constraint: 'MyModuleRoleExists',
 )]
-final class RoleExistsOptions extends DataSurfaceOptionsResolverBase {
+final class RoleExistsOptions extends SurfaceOptionsResolverBase {
 
   public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
     $options = [];
@@ -528,7 +528,7 @@ To take a resolver out of circulation site-wide, or point it at a
 different source:
 
 ```php
-function my_module_data_surface_options_resolver_info_alter(array &$definitions): void {
+function my_module_surface_options_resolver_info_alter(array &$definitions): void {
   $definitions['country']['class'] = 'Drupal\my_module\ShippingZoneOptions';
 }
 ```

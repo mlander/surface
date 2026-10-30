@@ -70,7 +70,7 @@ Which names kept the old word is the next entry,
 
 ### The product keeps its name
 
-The product is Data Surface. A name that is the product's, or that is
+The product is Surface API. A name that is the product's, or that is
 on the wire, keeps the word surface; a name for a concept uses the
 concept's word. Renaming a product name tells a reader nothing the docs
 do not, and breaks every site, client and tool that reads it. Renaming
@@ -80,14 +80,14 @@ in code teaches the wrong model.
 These keep the word, as product names or on-the-wire identifiers:
 
 - the module and submodule machine names and PHP namespaces
-  (`data_surface`, `Drupal\data_surface\...`), the test modules'
-  `data_surface_` prefix, the project name, the `data_surface.` service
+  (`surface`, `Drupal\surface\...`), the test modules'
+  `surface_` prefix, the project name, the `surface.` service
   prefix, the logger channel and cache ids;
-- route names, the route keys (`_data_surface_resource`,
-  `_data_surface_operation`, `_data_surface_operation_access`,
-  `_data_surface_panel`, `_data_surface_cosmetics`,
-  `_data_surface_fixed`, `_data_surface_defaults`,
-  `_data_surface_query`, `_data_surface_react_access`) and URL paths
+- route names, the route keys (`_surface_resource`,
+  `_surface_operation`, `_surface_operation_access`,
+  `_surface_panel`, `_surface_cosmetics`,
+  `_surface_fixed`, `_surface_defaults`,
+  `_surface_query`, `_surface_react_access`) and URL paths
   (`/surface-api/...`, `/surface-react/...`, `/surface-examples/...`);
 - config names and State keys;
 - the served contract's `x-surface` keyword, because clients already
@@ -97,16 +97,16 @@ These keep the word, as product names or on-the-wire identifiers:
   [contract 2](#contract-2), which moved them with the other wire
   changes, once (they were `surface` and `situation`);
 - the `surface[...]` form key;
-- the React app's identifiers (`SurfaceForm`, the `dataSurfaceReact`
+- the React app's identifiers (`SurfaceForm`, the `surfaceReact`
   settings namespace);
 - the engine: what the build step seals is a *data surface*
-  (`DataSurfaceInterface`), and the classes around it keep the name
-  (`DataSurfaceBuilder`, `DataSurfacePipeline`, `DataSurfaceFormBuilder`,
-  `DataSurfaceOperationForm`, the `DataSurface*` host bases and plugin
+  (`SurfaceInterface`), and the classes around it keep the name
+  (`SurfaceBuilder`, `SurfacePipeline`, `SurfaceFormBuilder`,
+  `SurfaceOperationForm`, the `Surface*` host bases and plugin
   types), as do the hosts' `surface*()` methods (`surfaceAccess()`,
   `buildSurfaceForm()`), named so beside core's methods of the same
   verb;
-- tool ids, `data_surface:<id>:<operation>`;
+- tool ids, `surface:<id>:<operation>`;
 - the `Surface` prefix of a class-swap adopter (`SurfaceAddressItem`).
 
 Everything that names a concept uses the new word: resource, structure,
@@ -131,8 +131,8 @@ unchanged:
 - `BlueprintAdapterBase::reserveSubsurface()` is `reserveChild()`, and
   `ResourceCollectorPass::SHAPES` is `DECLARATIONS`;
 - the test modules `data_surface_target_test` and
-  `data_surface_surface_test` are `data_surface_storage_test` and
-  `data_surface_resource_test`, their ids `resource_test.*`; the
+  `data_surface_surface_test` are `surface_storage_test` and
+  `surface_resource_test`, their ids `resource_test.*`; the
   fixtures `BothKindsShape` and `InstanceShapeStructure` are
   `BothKindsClass` and `InstanceDefineInputsStructure`;
   `OutputSurfaceTest` is `OutputsTest`; test variables and methods
@@ -189,7 +189,7 @@ grep:
 - `event.licence` → `event.license`, the examples' def id;
 - `licence` → `license`, the examples' stored key;
 - `ResourceCatalogue` → `ResourceCatalog`;
-- `data_surface.resource_catalogue` → `data_surface.resource_catalog`;
+- `surface.resource_catalogue` → `surface.resource_catalog`;
 - `docs/catalogue.md` → `docs/catalog.md`, `scripts/generate-catalogue.php` → `scripts/generate-catalog.php`;
 - "labelled", "honour", "colour", "behaviour" → "labeled", "honor", "color", "behavior".
 <!-- cspell:enable -->
@@ -239,10 +239,10 @@ label, the `committed` output's title, now "Committed" (A6).
 | Rows of [concepts](concepts.md) | 49 | 44 |
 
 *Grown 2026-10-24,* by the alter-pattern survey's three gaps: two
-attribute arguments, `#[DataSurfaceWidget(claims:, priority:)]`
+attribute arguments, `#[SurfaceWidget(claims:, priority:)]`
 ([A widget is chosen from the definition](#a-widget-is-chosen-from-the-definition)),
 one definition setting a claim reads, `format`, and one config object,
-`data_surface.defaults`
+`surface.defaults`
 ([A site sets a default in configuration](#a-site-sets-a-default-in-configuration)).
 The widget attribute is in `src/Attribute/`, which `PublicSurfaceTest`
 does not count, so its pins are unchanged.
@@ -282,21 +282,21 @@ What changed, old → new, to grep:
   `compute(array $from)`; `Derive::ON_CREATE`, `ON_CHANGE` →
   `Compute::ON_CREATE`, `ON_CHANGE`; `PipelineGuard::guardDeriver()` →
   `guardCompute()`; `Computed::$deriver` → `$using`; the PHPStan
-  identifier `dataSurface.deriver` → `dataSurface.compute`. "Deriver"
+  identifier `surface.deriver` → `surface.compute`. "Deriver"
   names one thing, a class that makes resources at discovery. The wire
   keyword `computed` and the result code `computed` stay.
 - **A3.** `#[Operation(values:)]`, `OperationDefinition::$values` →
   `structure:`, `$structure`; the tool input `values` and the envelope
   key stay.
-- **A4.** `data_surface.settings:reference_enum_limit` →
+- **A4.** `surface.settings:reference_enum_limit` →
   `reference_list_limit`, beside `site_list_limit`, the stored value
-  moved by `data_surface_post_update_reference_list_limit()`.
+  moved by `surface_post_update_reference_list_limit()`.
 - **A5.** The stock widget plugins `options`, `map`, `boolean` →
   `select`, `fieldset`, `checkbox`, the words `x-surface.widget` and the
-  `widget` setting say; a `hook_data_surface_widget_info_alter()` keyed
+  `widget` setting say; a `hook_surface_widget_info_alter()` keyed
   by an old id finds nothing.
 - **A6.** The tool's `committed` output labeled "Written" → "Committed";
-  `drush data_surface:contract-diff --dir` → `--baselines`, `--dir` still
+  `drush surface:contract-diff --dir` → `--baselines`, `--dir` still
   read.
 - **B1, one provider for a list the site decides.**
   `KeysFromSiteInterface::keys(): KeyedList` and
@@ -310,7 +310,7 @@ What changed, old → new, to grep:
   `attachVariants(from:)` each refuse an entry carrying what they do not
   read.
 - **B2.** `DerivedVariantsInterface`, `DerivedVariants` and the
-  `data_surface.derived_variants` tag are gone: the field types'
+  `surface.derived_variants` tag are gone: the field types'
   settings come from `FieldSettingsSchemaVariants` and
   `FieldStorageSettingsSchemaVariants`, providers the field resources
   name, counted against `site_list_limit`
@@ -322,9 +322,9 @@ What changed, old → new, to grep:
   ([An alter may answer access](#an-alter-may-answer-access-and-the-stricter-stands)).
 - **B4.** The concept rows "Child operations" (into the operation
   context row) and "Transformations" (a pointer in the page's opening).
-- **B5.** `_data_surface_operation_access: 'TRUE'` is implied: a route
-  whose defaults name `_data_surface_resource` and
-  `_data_surface_operation` gets it from `OperationRouteSubscriber`, and
+- **B5.** `_surface_operation_access: 'TRUE'` is implied: a route
+  whose defaults name `_surface_resource` and
+  `_surface_operation` gets it from `OperationRouteSubscriber`, and
   one that says it is read the same. Every shipped routing file dropped
   the line (42 entries; the resource test module's larder route keeps it,
   to show it is still accepted), and the first page's quoted route with
@@ -381,9 +381,9 @@ D5 with it, on 2026-10-24
 ### The ids are the standard five, the labels are Drupal's
 
 Decided 2026-10-23, by the owner. An operation's id is what a program
-reads: the tool id (`data_surface:event.venue:create`), the custom
+reads: the tool id (`surface:event.venue:create`), the custom
 method after a path, `x-surface.operation.id` in both documents, a
-route's `_data_surface_operation`. Its label is what a person reads:
+route's `_surface_operation`. Its label is what a person reads:
 the form's title and the tool's. The default ids are the kinds' own
 names, `create`, `read`, `list`, `update` and `delete`, and Drupal's
 words for them stay in the labels: `create` is "Add a venue", `update`
@@ -429,9 +429,9 @@ is "Configure the newsletter" or "Edit a content type", `delete` is
   its method, its label kept: the venues, the placed block, the content
   type, the field and its storage, every content entity resource and
   field item, and the test modules'. Tool ids follow
-  (`data_surface:event.venue:update`, `:update:read`, `:delete`); the
+  (`surface:event.venue:update`, `:update:read`, `:delete`); the
   read tool's suffix stays `:read`. Route names follow the id
-  (`data_surface_block.update`, `data_surface_examples.step15_delete`).
+  (`surface_examples_block.update`, `surface_examples.step15_delete`).
   A path keeps Drupal's own convention where it had one, `/add` and
   `/edit` (`/admin/structure/block/surface/add`,
   `/surface-entity/node/{id}/edit`, `/admin/structure/types/surface-add`);
@@ -621,7 +621,7 @@ and `paid`, in the form and both documents.
   the order discovery found them, as `Variants` always held them; an
   owner wanting another order declares the list.
 
-(`Resource\Attribute\Variant::$label`, `DataSurfaceBuilder::attachVariants()`,
+(`Resource\Attribute\Variant::$label`, `SurfaceBuilder::attachVariants()`,
 `Attaching::assertListNarrowsVariants()`)
 
 ### A page stands without the decisions page
@@ -764,14 +764,14 @@ top ([Which constraint to write](options.md#which-constraint-to-write)):
   and no list states: a comparison between two keys, uniqueness against
   what is stored, a check of site state with a reason of its own. A
   create's identity held once is no author's: the build adds the stock
-  `DataSurfaceUnique` (*amended 2026-10-26*,
+  `SurfaceUnique` (*amended 2026-10-26*,
   [A machine name is a computed identity](#a-machine-name-is-a-computed-identity)). Why
   last: the schema can only name it under `checkedOnServer`, nothing
   reads it back, nothing narrows on it in the browser, and a caller
   learns it when a call is refused. One that is written extends the
   closest stock constraint, so its validator, refusal and result code
   come with it. *Amended 2026-10-26:* the demo's
-  `DataSurfaceDemoExtrasUniqueItems` was a step three constraint for a
+  `SurfaceExamplesExtrasUniqueItems` was a step three constraint for a
   rule JSON Schema has a keyword for, so it moved to step one as the
   stock `UniqueItems`, written as `uniqueItems: true` and read back.
 
@@ -783,13 +783,13 @@ which is how example 2 started, because each one is code a reader must
 open to learn what a key allows, where a type string or a stock
 constraint says it.
 (`PropertySchema::STATED`, `PropertySchema::keywords()`,
-`DataSurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
+`SurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
 `EventVenueRoomConstraint`, `UniqueItemsConstraint`)
 
 ### Our options answer core's question
 
 Decided 2026-10-27. A key's lists answer core's
-`OptionsProviderInterface`: `DataSurfaceOptions::provider($declared,
+`OptionsProviderInterface`: `SurfaceOptions::provider($declared,
 $refined)` returns an `OptionsProvider` whose possible values and
 options are the declared definition's list, and whose settable values
 and options are the refined definition's list, or the declared one when
@@ -818,7 +818,7 @@ no refined definition is handed in
 
 The select widget reads its `#options` through the provider, so the
 generated form asks the question in core's words.
-(`Options\OptionsProvider`, `DataSurfaceOptions::provider()`,
+(`Options\OptionsProvider`, `SurfaceOptions::provider()`,
 `OptionsWidget::buildElement()`, `OptionsProviderTest`)
 
 ### A key is named once, as a constant
@@ -1054,7 +1054,7 @@ Decided 2026-10-24, from the alter-pattern survey, which found contrib
 alters setting `#default_value` on forms throughout. Here an alter may
 not change an owner's default, and `withDefaults()` is gone, so a site
 that wants a key to start from another value had no way to say so. It
-says so in configuration: `data_surface.defaults`, a list of entries,
+says so in configuration: `surface.defaults`, a list of entries,
 each a resource id, a key path and a value.
 
 - **Configuration, not an alter.** Which value a key starts from on a
@@ -1088,7 +1088,7 @@ each a resource id, a key path and a value.
   structure, a secret (both documents state a default, and a secret is
   never read back), or a computed key. Each is refused saying why.
 - **Every build carries the config object's tag**,
-  `config:data_surface.defaults`, so a change reaches the form, both
+  `config:surface.defaults`, so a change reaches the form, both
   documents and the tool listing at the next request, and the builds a
   request keeps and the derived tools are cleared with it.
 - **A stored value stands.** A default is what a key with nothing stored
@@ -1115,7 +1115,7 @@ the same holding, both in `KeyPaths`
 Decided 2026-10-28, from a site's add page: a basic page whose title is
 set, or whose body starts with text, served by the generic `create` of
 `entity.content:node.page`, with no operation of its own. A route says
-it with two defaults, `_data_surface_fixed` and `_data_surface_defaults`,
+it with two defaults, `_surface_fixed` and `_surface_defaults`,
 each a map of key paths to values, which `OperationRoute` applies to the
 context the operation built ([forms](forms.md#a-route-that-fixes-or-fills-keys)).
 
@@ -1135,10 +1135,10 @@ context the operation built ([forms](forms.md#a-route-that-fixes-or-fills-keys))
   route. *Open:* whether a route may give defaults to an operation that
   neither creates nor updates and whose storage stores nothing, such as
   a check or a report run; until the maintainer decides, the rule holds,
-  and `_data_surface_query` starts such a key from a link.
+  and `_surface_query` starts such a key from a link.
 - **Fixing narrows the contract, so at a route it is true on that page
   only.** A fixed value is `withConstraint($path, 'Choice', ['choices' =>
-  [$value], 'data_surface_fixed' => TRUE])`, nothing new in either
+  [$value], 'surface_fixed' => TRUE])`, nothing new in either
   document's vocabulary: a key fixed so is drawn as that value and
   stated `const` with `x-surface.fixed`, as a deciding key with one
   variant is, and starts from it (a fixed key holds its value, below).
@@ -1198,7 +1198,7 @@ context the operation built ([forms](forms.md#a-route-that-fixes-or-fills-keys))
   gated by the same check. Its defaults and query prefills are values
   the page hands the app to start from, held as the form holds them; the
   app's documents and its write are the operation's own, at the API, so
-  they state and hold nothing of the route. `_data_surface_fixed` on
+  they state and hold nothing of the route. `_surface_fixed` on
   such a route fails the router rebuild: the write at the operation's
   own path holds a value to the operation's constraints alone, so a key
   the page stated `const` would take any value there, the property this
@@ -1237,7 +1237,7 @@ page states it for every visitor, a prefill when a link offers it or
 code computes it at request time. The choices, and why:
 
 - **A seed's value may come from the route's own path.** A value of
-  `_data_surface_fixed` or `_data_surface_defaults` that is `'{name}'`,
+  `_surface_fixed` or `_surface_defaults` that is `'{name}'`,
   whole, is a reference: the raw value of the route's path variable of
   that name, read through the coercion table and held to the key as a
   literal is, and left out when the URL carries none, so one route with
@@ -1282,7 +1282,7 @@ code computes it at request time. The choices, and why:
   as core's own check costs it: a failed rebuild writes no route of any
   module until the file is corrected.
 - **A visitor's query value is input, never the context.**
-  `_data_surface_query` names each key a link may start and the query
+  `_surface_query` names each key a link may start and the query
   parameter it reads; the form lays the value on its first draw, held to
   the key and dropped without a word when the key refuses it, and puts
   nothing in the context. Why: what is in the context the page states,
@@ -1348,7 +1348,7 @@ code computes it at request time. The choices, and why:
   other doors refuse. One path both fixed and filled by a route is
   refused for the same reason in another form: a fixed value is also
   what its key starts from, so the default would be ignored without a
-  word. *Open:* a route's `_data_surface_defaults` on a key the
+  word. *Open:* a route's `_surface_defaults` on a key the
   operation's own context fixes is overridden by the fixed value with no
   refusal, at the form and at a React page; refusing it as the route's
   would say so.
@@ -1361,7 +1361,7 @@ code computes it at request time. The choices, and why:
   nothing and stated as either, which fixed nothing. This amends the
   bullet above under which a key fixed so was drawn fixed only where it
   held a value. *Open:* a reference key fixed past
-  `data_surface.settings:reference_list_limit` is labeled by its id on
+  `surface.settings:reference_list_limit` is labeled by its id on
   the form's item and under `x-surface.fixed`, since past the limit the
   key lists no candidate to read a label from; whether a fixed reference
   looks its label up is the maintainer's.
@@ -1401,8 +1401,8 @@ code computes it at request time. The choices, and why:
 `OperationRouteSubscriber`, `OperationAccessCheck`, `OperationGate`,
 `NamesNothingException`, `Declaring::assertKnownIdentityKept()`,
 `Declaring::applyContext()`, `Resources::holdDeclared()`,
-`KeyPaths::heldOn()`, `DataSurfaceOperationForm::prefilled()`,
-`DataSurfaceOperationForm::title()`, `ResourceReactPage::served()`,
+`KeyPaths::heldOn()`, `SurfaceOperationForm::prefilled()`,
+`SurfaceOperationForm::title()`, `ResourceReactPage::served()`,
 `ServedOperationAccessCheck`, `FormRouteDoors`,
 `SiteCatalog::routeRefusals()`, `RouteValuesTest`, `RouteAccessTest`,
 `RoutePrefillTest`, `RouteCatalogTest`, `ReactRoutePageTest`,
@@ -1539,7 +1539,7 @@ to the operation's method as `$to = 'support'`, as a path variable would
 be, and the method says what its context knows
 ([forms](forms.md#the-operation-form)).
 
-- **The plain default, not a second spelling.** A `_data_surface_known`
+- **The plain default, not a second spelling.** A `_surface_known`
   default naming the pinned parameters was weighed and refused: the
   plain default is what core's own routes write (an entity's add page
   names its entity type and its bundle parameter this way), the catalog
@@ -1699,7 +1699,7 @@ themselves are not touched, so a form keeps showing what was typed and
 the pipeline refuses it under its own key; only refinement treats it as
 absent. It is the Tool API's rule, which validates the simulated
 dependency values and keeps the unrefined definition on a violation,
-and it lives in `DataSurface::refine()` itself, so the form, the AJAX
+and it lives in `Surface::refine()` itself, so the form, the AJAX
 rebuild, the pipeline's validate, the served contract and the React
 refine all get it from one place. The check is
 `Refinement\WatchedValueCheck`, typed data's own validation, sealed
@@ -1720,8 +1720,8 @@ refined data surface says which values it withheld
 says the license is empty and that "EV-2048" was refused, which is what
 the rule was handed, and not the value sent (decided 2026-10-20, B11;
 [A refusal names what it depends on](#a-refusal-names-what-it-depends-on)).
-(`DataSurface::refine()`, `DataSurface::refusedWatchedValues()`,
-`DataSurface::withheldValues()`, `Resources::buildResource()`)
+(`Surface::refine()`, `Surface::refusedWatchedValues()`,
+`Surface::withheldValues()`, `Resources::buildResource()`)
 
 ### Alters' refiners in the owner's chain
 
@@ -1807,7 +1807,7 @@ config is the plain case), and no declaration alone stops it:
   a kernel test trait holds every conditional of a document to a fresh
   `refine()` for its values, run over the examples and the fixtures.
   (`Conditionals::answersAgain()`,
-  `Tests\data_surface\Traits\StaticRefinerAgreementTrait`)
+  `Tests\surface\Traits\StaticRefinerAgreementTrait`)
 
 None of them proves purity: running a refiner twice proves nothing about
 tomorrow, and a static method can still read a static property something
@@ -1820,7 +1820,7 @@ before the bootstrap file teaches it where the rule's class lives, and
 it does not try static state, which a rule cannot tell from a constant
 without false alarms. The broken fixtures, which exist to be refused
 when they run, are ignored by its identifier.
-(`Tests\data_surface\PHPStan\StaticRefinerRule`, `StaticRefinerRuleTest`,
+(`Tests\surface\PHPStan\StaticRefinerRule`, `StaticRefinerRuleTest`,
 `RefinesInput`, `Binding::bindRefiners()`, `RuntimeRefiner`,
 `ContractEmitter::frame()`, `Conditionals::enumerate()`)
 
@@ -1862,7 +1862,7 @@ bounded by what the refiners can narrow to, not by the values they
 were handed. *Changed after the compliance
 example's stewards were found leaking between tool calls in one
 process; see `docs/core-gaps.md`.* (`DefinitionTypedData`,
-`DataSurfacePipeline`, `Refinement\WatchedValueCheck`)
+`SurfacePipeline`, `Refinement\WatchedValueCheck`)
 
 ### A key that does not apply
 
@@ -1885,7 +1885,7 @@ is invisible until the refiner runs, and the full schema and the tool's
 listing must know before anything runs which keys may not apply, or a
 `refine` or `live` key required in them would be stricter than the
 pipeline. A blueprint declaration, `add(..., appliesWhen:)`, is
-declarative narrowing ([ROADMAP](https://github.com/mlander/data_surface/blob/main/ROADMAP.md) item 3), which cannot
+declarative narrowing ([ROADMAP](https://github.com/mlander/surface/blob/main/ROADMAP.md) item 3), which cannot
 state a runtime rule; it has since landed as a refiner too, whose
 `doesNotApply()` gives this same answer ([A rule declared as
 data](#a-rule-declared-as-data)). The
@@ -1920,7 +1920,7 @@ it as it states any static answer. Each door:
 - **Storage.** It keeps what it holds. Monthly, then weekly again, the
   send day survives: no value is silently lost, the rule Phase B item 10
   set against pruning. `submit()` hands storage the stored value back
-  (`DataSurfacePipelineInterface::kept()`), so a storage that writes its
+  (`SurfacePipelineInterface::kept()`), so a storage that writes its
   whole object keeps it too, and a plugin host loading its
   configuration keeps it. The cost is a value in storage nobody can see
   while the key does not apply: the read tool and the contract's
@@ -1975,7 +1975,7 @@ a list holds is kept when the list is left out, as "absent keeps" says
 of any key; once it is sent, the list written is the list sent.
 
 A map whose every key is ruled out is an empty map, and is written as
-one: `DataSurfacePipelineInterface::document()` writes accepted values
+one: `SurfacePipelineInterface::document()` writes accepted values
 as their JSON document, every map an object (`{}`, an empty one
 included) and every list a list, as the emitter writes its own `values`,
 and the React `/validate` answers with it (decided 2026-10-19; a JSON
@@ -1987,8 +1987,8 @@ accepted as an empty map, not `null`, which a config object's schema
 refuses (decided 2026-10-19; until then the parcel fixture carried a
 `courier` with a default so its mount was never empty).
 (`Refinement\DoesNotApply`, `RefinesInputRefiner::invoke()`,
-`DataSurface::refineAgainst()`, `DataSurfacePipeline::accept()`,
-`DataSurfacePipeline::document()`, `Conditionals::enumerate()`,
+`Surface::refineAgainst()`, `SurfacePipeline::accept()`,
+`SurfacePipeline::document()`, `Conditionals::enumerate()`,
 `narrow()` in `app/src/contract.ts`, `AdvertisedSchemaAcceptanceTest`)
 
 ### A rule declared as data
@@ -2156,7 +2156,7 @@ coded and `refine` (they watch a number), so the React page still asks
 on a license change: the stewards depend on the capacity. Phase C item 9
 of the roadmap (dependent effects as data) is this, but `locked`.
 (`Refinement\Condition`, `Refinement\Rule`, `Refinement\DeclaredRefiner`,
-`Binding::bindRules()`, `DataSurface::refinedEntry()`,
+`Binding::bindRules()`, `Surface::refinedEntry()`,
 `Conditionals::rules()`, `holdsIf()` in `app/src/contract.ts`)
 
 ## Alters
@@ -2195,7 +2195,7 @@ that answers for it), is refused at a mount; each is open. *Changed for ports: u
 an alter were both refused, an attached structure inside the mount not
 being built.*
 (`ResourceBlueprintAdditions::attach()`, `ResourceBlueprintAdditions::attachList()`,
-`Attaching::mountStructure()`, `DataSurface::refineMounted()`)
+`Attaching::mountStructure()`, `Surface::refineMounted()`)
 
 ### An alter refines its own mounted key
 
@@ -2235,7 +2235,7 @@ license while the stewards beside it watch the capacity is no cycle.
 key was refused, pending dotted refinement paths, `ROADMAP.md` item 16,
 of which this is the one case the third-party mount needs.*
 (`Binding::assertNotWatchingForeignMount()`, `Binding::mountedWatches()`,
-`DataSurface::dependencyValues()`, `DataSurfaceBuilder::edgesOf()`)
+`Surface::dependencyValues()`, `SurfaceBuilder::edgesOf()`)
 
 ### A storage layout for a mount
 
@@ -2359,13 +2359,13 @@ examples ship both, each for the case it fits.
   its variant is chosen; each variant's config schema says it may be
   there (`requiredKey: false`). A plain value of a variant not chosen
   still goes: it can be read and sent again. (`Variants::keptSecrets()`,
-  `Variants::held()`, `DataSurfacePipeline::kept()`,
+  `Variants::held()`, `SurfacePipeline::kept()`,
   `ConfigSchemaGenerator::keptSecrets()`)
 - **On the form, a switch is read off what was drawn.** Whether posted
   values fit a variant cannot be told by their keys alone: the card's
   `link` map and a teaser's `link` string share a name. So each variant
   key's element says the variant it was drawn for
-  (`DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY`, a render key, at
+  (`SurfaceFormBuilderInterface::DRAWN_FOR_KEY`, a render key, at
   every depth). When the deciding key now chooses another, extraction
   reads nothing from the element, and the rebuild draws the chosen
   variant as a reload would: from what is stored when what is stored was
@@ -2373,7 +2373,7 @@ examples ship both, each for the case it fits.
   posted field: the AJAX request is processed against the form as drawn,
   which carries it, and nothing a browser sends can change it.
   (`Drawing::drawnFor()`, `Extracting::switchedVariants()`,
-  `DataSurfaceHostTrait::surfaceFormValues()`, `SpotlightFormTest`)
+  `SurfaceHostTrait::surfaceFormValues()`, `SpotlightFormTest`)
 - **What is stored is the variant the stored deciding key chose**
   (*amended 2026-10-27*). The same names say as little of a stored value
   as of a posted one: a tool call sending the teaser alone against a
@@ -2383,7 +2383,7 @@ examples ship both, each for the case it fits.
   otherwise the chosen variant starts from its defaults, and from the
   secrets of its own kept beside them, at every door
   (`Variants::heldFor()`, read by `Accepting::acceptKey()`,
-  `DataSurfacePipeline::kept()` and the form's `Extracting::settle()`;
+  `SurfacePipeline::kept()` and the form's `Extracting::settle()`;
   `SpotlightFormTest::testNewComponentSentAloneStartsFromItsDefaults()`).
 - **The owner does not integrate: an alter.** The webhook declares a
   pasted key and nothing else. The key module's alter mounts `key_id` at
@@ -2517,7 +2517,7 @@ settings variants and the storage's. A declared variant always wins.
 
 *Changed 2026-10-24, by the owner:* these came through a second
 mechanism, a `DerivedVariantsInterface` service tagged
-`data_surface.derived_variants` that named the owner's class and key
+`surface.derived_variants` that named the owner's class and key
 from outside and sealed plain definitions into a child, counted by no
 budget. They come through the one provider now: `FieldInstanceResource`
 attaches its `settings` with `attachVariants('settings', by:
@@ -2629,7 +2629,7 @@ Open: a container opting out of the alters of a structure it attaches,
 which apply wherever it is used; ports on a variant or a
 collection's item, which nothing wires yet. (`Port`, `BlueprintInterface::reads()`,
 `Attachment::bound()`, `Attaching::assertWiring()`, `Attaching::wirePorts()`,
-`DataSurface::refine()`, `ContractEmitter::site()`, `ContractEmitter::mounts()`)
+`Surface::refine()`, `ContractEmitter::site()`, `ContractEmitter::mounts()`)
 
 ### A mixin is merged flat
 
@@ -2856,7 +2856,7 @@ each item's violations under its delta. Count is compared by its
 bounds, as Length and Range are, so narrowing it is checkable at all;
 nothing shipped carried a Count before, so nothing that narrowed
 one changed verdict.
-(`DataSurface::assertItemsUntouched()`, `Narrowing::COMPARATORS`)
+(`Surface::assertItemsUntouched()`, `Narrowing::COMPARATORS`)
 
 ## Storage
 
@@ -2897,7 +2897,7 @@ entrench what the module means to retire, a second declaration in the
 format core is asked to replace with data definitions
 ([core gaps, step 2](core-gaps.md#step-2-operations-and-access-for-simple-config)).
 
-- **Written, committed, checked.** `drush data_surface:config-schema`
+- **Written, committed, checked.** `drush surface:config-schema`
   writes, for every resource a `ConfigObjectStorage` stores, the
   object's entry in `config/schema/<module>.schema.yml` and its
   `config/install` file; without `--write` it prints the difference and
@@ -3018,7 +3018,7 @@ entry and install file, from an interview or from one of two sources,
 - **The page stays the truth.** The page quotes the shipped module, as
   it did; `ResourceGeneratorTest` answers the interview as the
   newsletter needs and compares each file it writes with
-  `data_surface_first` byte for byte, whitespace included. Why: the page
+  `surface_examples_first` byte for byte, whitespace included. Why: the page
   is the module's concept budget (ROADMAP item 13). Generating the page
   from the generator would make the generator the description and the
   page a copy that nothing reads back.
@@ -3145,7 +3145,7 @@ Three choices settle it:
   knows which the key is. Why "storage holds nothing" and not the
   operation's `creates`: a thing stored before the key existed gets its
   value at its next write, and a post-update can write the same value
-  for what is stored (`data_surface_examples_post_update_venue_slugs()`).
+  for what is stored (`surface_examples_post_update_venue_slugs()`).
 - **A value sent for it.** Equal to the one it holds for these values
   (computed, or stored where it is not computed again), it is noted,
   code `computed`, "Slug is computed from Name; the value sent was not
@@ -3192,7 +3192,7 @@ value locally, which needs the class in a language the page runs.
 (`Computed`, `ComputesValueInterface`, `Compute`, `ResourceBlueprint::compute()`,
 `Accepting::acceptComputed()`, `Validating::notComputed()`,
 `Validating::namingSources()`, `PipelineGuard::guardCompute()`,
-`DataSurfaceFormBuilder::refinementOverlay()`, `Slugify`, `ComputedKeysTest`,
+`SurfaceFormBuilder::refinementOverlay()`, `Slugify`, `ComputedKeysTest`,
 `VenueResourceTest`)
 
 *Amended 2026-10-26:* a third `when:`, `Compute::UNLESS_SENT`, computes
@@ -3278,7 +3278,7 @@ Five parts, each an existing mechanism:
   every other class. It transliterates for English; the browser
   transliterates for the page's language, and what it suggests is sent
   and kept.
-- **Uniqueness, `DataSurfaceUnique`.** A stock constraint nobody writes:
+- **Uniqueness, `SurfaceUnique`.** A stock constraint nobody writes:
   the build adds it to the identity key of every operation that creates,
   when the resource has one identity key and its storage implements
   `DeletableStorageInterface`, which now also answers `exists()`, whether
@@ -3308,9 +3308,9 @@ Five parts, each an existing mechanism:
 
 Moved onto it: example 15's venue `id`, whose slug stays `ON_CREATE`,
 the contrast the page shows, and the content type demo's `type`, whose
-`DataSurfaceUniqueNodeType` constraint and whose cosmetic machine name
+`SurfaceUniqueNodeType` constraint and whose cosmetic machine name
 element are deleted. A placed block and the storage test's config entity
-get `DataSurfaceUnique` too: their storages are config entity storages.
+get `SurfaceUnique` too: their storages are config entity storages.
 
 Rejected: a blueprint verb of its own, `machineName()`, since it would
 repeat `compute()`'s sources, class and mode under another name, where
@@ -3406,7 +3406,7 @@ still its own override.
 
 ### A resource may hold some keys of a config object it does not own
 
-Decided 2026-10-28, with `data_surface_performance`. Core's config
+Decided 2026-10-28, with `surface_examples_performance`. Core's config
 objects keep settings several forms edit, at paths:
 `system.performance` keeps the page cache's maximum age at
 `cache.page.max_age`, beside `css.compress`, `js.compress` and
@@ -3514,9 +3514,9 @@ stored as the entity's uuid; a config entity's stays its id.
   id while that entity exists, and written as its uuid at the next
   write. It hides nothing: the uuid type's `Uuid` constraint refuses it,
   so config validation names each one left. A module converts them in a
-  post-update with `data_surface_store_references_by_uuid()`, which
+  post-update with `surface_store_references_by_uuid()`, which
   reads and writes the object through its storage; example 16's is
-  `data_surface_examples_references_post_update_references_by_uuid()`.
+  `surface_examples_references_post_update_references_by_uuid()`.
 - **Opting out.** `->setSetting(References::STORED_AS,
   References::BY_ID)` on the key, or on a bare key itself, keeps the id
   in config. Right only for config that never leaves its site, or where
@@ -3561,7 +3561,7 @@ stored as the entity's uuid; a config entity's stays its id.
 the next save through the storage; the entity class's own
 `calculateDependencies()` is where core expects them. A config entity
 resource has no conversion helper for ids stored before. A site's
-default for such a key (`data_surface.defaults`, [A site sets a default
+default for such a key (`surface.defaults`, [A site sets a default
 in configuration](#a-site-sets-a-default-in-configuration)) is a value
 as every door sends it, an id, written over the declared default and
 never through the storage's layout, so it deploys as an id does;
@@ -3570,7 +3570,7 @@ entity is on the site yet.
 (`ReferenceStorageLayout`, `References::storedByUuid()`,
 `References::stored()`, `ReferenceDependencies`,
 `ReferenceDependencyHooks`, `StorageAdapter::referenceLayout()`,
-`data_surface_store_references_by_uuid()`, `ReferenceStorageTest`,
+`surface_store_references_by_uuid()`, `ReferenceStorageTest`,
 `ReferenceStoredByUuidTest`)
 
 ## Access
@@ -3696,7 +3696,7 @@ is known. Decided 2026-10-18, point by point.
   it; a key whose mark is its own (a child's access, a mixin's) keeps
   its note (decided 2026-10-21, from the fourth fresh-eyes log, entry 18,
   where the same sentence on fourteen keys buried what each key said of
-  itself; `DataSurfaceInterface::isRuntimeAccessWhole()`,
+  itself; `SurfaceInterface::isRuntimeAccessWhole()`,
   `isRuntimeAccessOwn()`). The tool's description is cached for every
   account, so whether to say it is asked of the answers at the top for
   the anonymous account alone, without a build
@@ -3875,7 +3875,7 @@ closing that gap (found 2026-10-19), point by point.
   once the subject is known. *Changed with this decision: until then
   nothing was marked, and the full schema stated open keys the build
   would lock, which the agreement trait found on example 10 with its
-  workflow module.* (`DataSurfaceBuilderInterface::markRuntimeAccessWhole()`)
+  workflow module.* (`SurfaceBuilderInterface::markRuntimeAccessWhole()`)
 - **Read by the wall.** Like any access answer, an alter's is the
   site's, never the def's: the def stays the widest reading of the
   child ([The wall is the reference
@@ -3890,7 +3890,7 @@ operation), the plaque it mixes in, the wall it attaches twice and the
 annex once, the oil finish one of its variants is, and the room
 at every entry of its keys from the site; one more alter tries to open
 the wall (`AlterAccessTest`, `AlterAccessFormTest`). The first case on
-a site is example 10's workflow module, `data_surface_examples_workflow`.
+a site is example 10's workflow module, `surface_examples_workflow`.
 *Open:* an alter cannot answer for one key of its owner, since an answer
 is about a resource or structure, and a key that needs an answer of its
 own is a structure, as a field is; a structure at a mount that an
@@ -3927,7 +3927,7 @@ only the nodes the account may update and whose title it may edit.
   `field:node.title:edit`, through the entity type's access handler.
   Core's form is there because entity access is what every module
   already extends, and because it needs no derived resource for the
-  entity type: the gate works on a site without `data_surface_entity`.
+  entity type: the gate works on a site without `surface_examples_entity`.
   Field access does not include entity access, as core's entity form
   asks both, so a list may name both, and each is answered by itself.
 - **The subject is what the context hands, or each item's.** A gate is
@@ -4012,7 +4012,7 @@ projects](#every-door-projects-what-the-read-tool-projects)). And it is
 not written: the storage adapter hands what is stored under the key
 back to the parent's storage, which may store its values whole and
 would otherwise drop what the caller never saw; which is why what
-storage rehearsed is never served. (`DataSurfaceBuilder::omit()`,
+storage rehearsed is never served. (`SurfaceBuilder::omit()`,
 `StorageAdapter::prepare()`, `Pipeline\Outbound::declared()`)
 
 ### Every door projects what the read tool projects
@@ -4022,7 +4022,7 @@ B26 of the reviews' synthesis). One rule: whatever a door hands a
 caller of a resource's values is what the read tool would hand that
 caller of them, never more. The projection is the read tool's, now one
 function of the built data surface (`Pipeline\Outbound::project()`,
-`DataSurfacePipelineInterface::outbound()`): a key the build left out
+`SurfacePipelineInterface::outbound()`): a key the build left out
 for the caller is not there, at any depth (a child the parent stores
 whole included, which only the read's top level left out before); a
 secret is not there, at any depth, under every variant that
@@ -4044,7 +4044,7 @@ leaves a secret out" are promises about every door, or about none.
   `/submit`'s, are projected from what the run writes, not from every
   key accepted: a key storage never held that the run leaves at its
   default is not written (absent keeps), so it is not answered either
-  (`DataSurfaceResult::held()`). Decided 2026-10-21, from the fourth
+  (`SurfaceResult::held()`). Decided 2026-10-21, from the fourth
   fresh-eyes log (entry 20): a write of one key answered a mounted key
   never sent, at its declared default, which the read tool right after
   did not. A refusal still answers the values as accepted, since nothing
@@ -4057,7 +4057,7 @@ leaves a secret out" are promises about every door, or about none.
   is `values`, and whether storage's own checks passed, which is the
   run's success; so the write tool declares no `prepared` output and
   React's `/validate` answers no `prepared` key. It stays on
-  `DataSurfaceResult` for PHP callers, who hold the storage anyway.
+  `SurfaceResult` for PHP callers, who hold the storage anyway.
   Projecting it instead was weighed and refused: storage's shape is not
   the resource's, and a projection that must know every layout is one a
   new layout breaks.
@@ -4131,7 +4131,7 @@ leaves a secret out" are promises about every door, or about none.
   outside a static listing, as it refuses at the top ([A permission a
   child cannot name](#a-permission-a-child-cannot-name)).
 
-(`Pipeline\Outbound`, `DataSurfacePipeline::outbound()`,
+(`Pipeline\Outbound`, `SurfacePipeline::outbound()`,
 `Accepting::acceptCollection()`, `Accepting::takes()`,
 `ResourceOperationTool::doExecute()`, `ResourceApiController::validate()`,
 `OperationInputs::stored()`, `Resources::permissionAccess()`,
@@ -4155,7 +4155,7 @@ moves with the site's language and its alters.
 
 - **The shape.** `{ok, committed, changed, changes, values, violations,
   notes, stale}`, every key always present (`Pipeline\ResultDocument`,
-  `DataSurfaceResult::document()`): whether nothing was refused, whether
+  `SurfaceResult::document()`): whether nothing was refused, whether
   anything was written, whether the write moved a stored value, the
   paths it changed or a dry run would, the accepted values as the read
   tool would answer them, and three lists. A violation and a note are
@@ -4167,7 +4167,7 @@ moves with the site's language and its alters.
   form says it. The paths and the codes are the same at every door, so
   an agent calling React still has the machine's facts in `path` and
   `code` (decided 2026-10-20, the owner's follow-up: the renderer is
-  the door's choice, `DataSurfaceResult::document(machine:)`, not the
+  the door's choice, `SurfaceResult::document(machine:)`, not the
   sentence's).
 - **A code on every violation.** `Violation::$code`, required by its
   constructor: a constraint's Symfony code by the name its constraint
@@ -4184,7 +4184,7 @@ moves with the site's language and its alters.
   constraint's code until now.
 - **No `@access`.** A refusal of the whole call is a violation with an
   empty path and its code, `access`, `permission`, `locked`,
-  `not_found` or `conflict`; `DataSurfacePipelineInterface::ACCESS_VIOLATION_KEY`
+  `not_found` or `conflict`; `SurfacePipelineInterface::ACCESS_VIOLATION_KEY`
   is gone. The pseudo-path was a path that named nothing, and the only
   way to tell a resource locked whole from a refusal by access; the
   code says which. A form files it as a form-level error, as before.
@@ -4227,7 +4227,7 @@ moves with the site's language and its alters.
   for a property left out.
 
 (`Pipeline\Violation`, `Pipeline\ResultDocument`,
-`DataSurfaceResult::document()`, `ResourceOperationTool::doExecute()`,
+`SurfaceResult::document()`, `ResourceOperationTool::doExecute()`,
 `ResourceOperationTool::execute()`, `ResourceOperationToolBase::refused()`,
 `OperationInputs::outputs()`, `ResourceApiController::validate()`,
 `ResourceApiController::submit()`, `ResultCodesTest`,
@@ -4325,12 +4325,12 @@ that is their job ([No door-specific context](resources.md#no-door-specific-cont
 
 *Open:* the listing form draws a boolean filter that holds nothing as a
 checkbox left clear, so it cannot say "any" (the venues' `status`); the
-plugin hosts' forms (`DataSurfaceHostFormTrait`, the demo form) still
+plugin hosts' forms (`SurfaceHostFormTrait`, the demo form) still
 say a refusal from their submit handler; core's selection handler reads
 the current user itself for a reference's options, which every door
 sets alike. (`PipelineGuard`, `RefinesInputRefiner::invoke()`,
 `StorageAdapter`, `ResourceStorageInterface`, `DeletableStorageInterface`,
-`Tests\data_surface\PHPStan\DoorSpecificRule`, `PipelineGuardTest`,
+`Tests\surface\PHPStan\DoorSpecificRule`, `PipelineGuardTest`,
 `DoorAgreementTrait`, `EveryDoorAgreesTest`,
 `ContentEntityStorageTest::testTheWriteIsMadeAsTheAccountItIsHanded()`)
 
@@ -4349,7 +4349,7 @@ reading under which a locked answer at the top was a refusal.
   held to what is stored, as `hold()` holds one, after the variants, so
   a variant is chosen by what its deciding key holds and not preselected by
   its default; the sealed data surface says why
-  (`DataSurfaceInterface::lockedWhole()`). A class whose `access()` is
+  (`SurfaceInterface::lockedWhole()`). A class whose `access()` is
   declared to return core's answer alone cannot answer locked, so it is
   not asked here and nothing changes for it; an alter that answers
   access is asked after it, the stricter standing. Built for the account
@@ -4375,13 +4375,13 @@ Why refused at the pipeline rather than at access: locked is the
 answer that lets the caller see, so access cannot be the refusal; and a
 submit written back unchanged would report a write that did nothing.
 (`Gating::lockedAtTheTop()`, `Gating::atTheTop()`,
-`DataSurfacePipeline::submit()`, `DocumentHead::lockedWhole()`,
+`SurfacePipeline::submit()`, `DocumentHead::lockedWhole()`,
 `LockedAccessTest`, `LockedAccessFormTest`)
 
 **A lock says its own reason, once** (decided 2026-10-20, from the Form
 API review, B16 of the reviews' synthesis). A key an access answer
 locked carries the answer's reason, recorded with the lock
-(`DataSurfaceBuilderInterface::lock()`, `Entry::$lockedBecause`), and
+(`SurfaceBuilderInterface::lock()`, `Entry::$lockedBecause`), and
 the form prints that reason beside the fixed element, as it prints a
 locked variant's; "Fixed for this operation." is left for a lock with
 no reason, an operation's (an identity key) or an answer that gave
@@ -4391,7 +4391,7 @@ sent, so nothing is asked for. An operation that changes nothing has
 nothing to save either, so its form's button is the operation's label
 ("Check a program"), not "Save". (`Form\Drawing::describeLocked()`,
 `Form\Drawing::withoutRequired()`,
-`DataSurfaceOperationForm::buildForm()`, `LockReasonFormTest`)
+`SurfaceOperationForm::buildForm()`, `LockReasonFormTest`)
 
 **A locked key inside an open write is said, not refused** (decided
 2026-10-19, from the third fresh-eyes log, entry 22). A key locked one
@@ -4405,7 +4405,7 @@ keeps, read as though the key were open (a form's `"0"` for a stored
 `FALSE`, or a map sent with fewer keys, each as held, is what it keeps
 and says nothing), "<Label> is locked and kept as stored; the value
 sent was not taken." The notes block nothing and are no violation
-(`DataSurfaceResult::$notes`): the write tool puts each on a line of
+(`SurfaceResult::$notes`): the write tool puts each on a line of
 its own after its message, by its full path, and every door lists them
 under `notes` beside `stale`, `{path, code, message}`, code `locked`
 ([One result at every door](#one-result-at-every-door)). The form
@@ -4430,7 +4430,7 @@ stored. A locked variant chosen by a locked deciding key no longer
 refuses its parent ([A chosen variant may
 refuse](#a-chosen-variant-may-refuse)): the parent is written, the
 variant's keys kept. (`Resources::buildResource()`,
-`DataSurfaceFormBuilder::buildSurfaceForm()`)
+`SurfaceFormBuilder::buildSurfaceForm()`)
 
 ### A chosen variant may refuse
 
@@ -4481,7 +4481,7 @@ one would grant or refuse the wrong thing. (`Gating::ownAccess()`)
 ### Neutral is a refusal for an operation's caller
 
 A route or tool addressing an operation reads a neutral answer as a
-refusal (`DataSurfaceAccess::decisive()`). Asked on its own, an
+refusal (`SurfaceAccess::decisive()`). Asked on its own, an
 operation has no parent to allow it, so nothing else is going to.
 (`ResourceOperationTool`, `OperationAccessCheck`)
 
@@ -4551,7 +4551,7 @@ value not on its list unexplained.
   refined for these values, each by its label, a value with no label of
   its own by itself: "The value you selected is not a valid choice.
   This applies when Venue is Riverside Hall. Choose Main hall or East
-  room." At most ten (`DataSurfacePipeline::CHOICES_SHOWN`),
+  room." At most ten (`SurfacePipeline::CHOICES_SHOWN`),
   then "or one of 2 more"; an empty list says "Nothing may be chosen."
   An item of a list refused by its list of values says its item's
   choices the same way, at its delta: "days.1: The value you selected
@@ -4602,10 +4602,10 @@ value not on its list unexplained.
   Only the sentence changes: the refused key's pointer stays the
   result's `path`, and the value keeps what is sent beside its label
   for a machine. Example 14's webhook said "API key does not apply when
-  third_party_settings.data_surface_examples_keys.key_id is set." and
+  third_party_settings.surface_examples_keys.key_id is set." and
   says "API key does not apply when Managed key: Key is set."; the
   parcel's declared value said "... Customs code is empty." and says
-  "... Data Surface Resource Test: Customs code is empty." (the mount is
+  "... Surface API Resource Test: Customs code is empty." (the mount is
   titled with its module's name); a crate's layers, in the fruit
   variant at `contents_settings`, say "This applies when Contents
   settings: Fruit is peach."; the bulletin's send day says "when
@@ -4626,7 +4626,7 @@ value not on its list unexplained.
   (`Validating::conditionKey()`, `RefusalLabelsTest`).
 - **Whole sentences, for translation** (decided 2026-10-20, from the
   multilingual review, B10). Every sentence a refusal adds is one source
-  string a translator sees entire, in the context `data_surface
+  string a translator sees entire, in the context `surface
   refusal`, and none is glued from translated fragments: the
   constraint's message is no longer cut at its full stop (the old
   `Pipeline\Clause` only knew an ASCII one), and the sentences are set
@@ -4656,7 +4656,7 @@ value not on its list unexplained.
   Compliance: Event license is empty (EV-2048 was refused)."; it read
   "... is set", the
   opposite of the reason, and an agent cleared the license
-  (`DataSurfaceInterface::withheldValues()`).
+  (`SurfaceInterface::withheldValues()`).
 - **Why each part.** The caller who sent stewards and no capacity learns
   which sibling to change, which the key's own message cannot say, and
   what it holds, so a caller that sent nothing for it sees that. Every
@@ -4860,7 +4860,7 @@ that destroys, or that is not idempotent, is refused at discovery.
 
 A read only operation writes nothing at any door (decided 2026-10-19,
 closing the point this entry left open): the build marks the data
-surface (`DataSurfaceInterface::changesNothing()`), its pipeline
+surface (`SurfaceInterface::changesNothing()`), its pipeline
 accepts, validates and prepares and then stops where a dry run does, and
 `commit()` refuses values prepared for it with a `LogicException`, so a
 caller driving the stages itself cannot write either. Its form and its
@@ -4874,7 +4874,7 @@ the cheapest honest check. Whether a call reaches beyond
 the site (MCP's open world) is a fact of the storage, not the
 operation, and a later flag there; the MCP bridge says open world for
 every tool today. (`Operation`, `OperationDefinition::facts()`, `OperationDefinition::kind()`,
-`DocumentHead::operation()`, `DataSurfacePipeline::commit()`,
+`DocumentHead::operation()`, `SurfacePipeline::commit()`,
 `OperationFactsTest`, `OperationKindsTest`, `LockedAccessTest`)
 
 ### A violation summary is plain text
@@ -5090,21 +5090,21 @@ either. *Open:* a read permission of its own.
 
 ### A panel inside the operation form
 
-A route may name a read-only panel in `_data_surface_panel`, a service
-id or class implementing `DataSurfaceFormPanelInterface`, the way it
+A route may name a read-only panel in `_surface_panel`, a service
+id or class implementing `SurfaceFormPanelInterface`, the way it
 names a cosmetic layer. The operation form places what it returns
 inside the form's `surface` container, and the AJAX rebuild replaces it
 along with the dependents of whatever changed, because a panel
 describing the resource as it stands has to follow every change; it is
 handed the values the elements are built with, not a refined data
 surface, so it can tell which variant is shown. The
-contract panel lives in `data_surface_tool`, since half of it is the
+contract panel lives in `surface_tool`, since half of it is the
 derived tool's JSON Schema. Its "Right now" column, and the React
 page's, says "narrowed, and checked at runtime" for a key that is
 narrowed and that a runtime rule also checks (decided 2026-10-19,
 replacing "narrowed at runtime", which named the runtime rule as what
 narrowed a key a static refiner had narrowed); neither knows which of
-them narrowed it, so neither says. (`DataSurfaceOperationForm::surfacePanel()`,
+them narrowed it, so neither says. (`SurfaceOperationForm::surfacePanel()`,
 `ContractPanel::status()`, `ContractPanel.tsx`)
 
 ### An error on the trigger renders inline
@@ -5130,8 +5130,8 @@ maximum length, does stop the rebuild; it is printed the same way and
 taken back out of the messages at the top, so it is not said twice
 either. The data surface's message wins when both have one. On a full
 submission nothing changes: core prints every error at the top and
-marks the elements. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
-`DataSurfaceFormBuilder::refreshSurface()`, `Hook\InlineErrorHooks`)
+marks the elements. (`SurfaceFormBuilder::flagSurfaceErrors()`,
+`SurfaceFormBuilder::refreshSurface()`, `Hook\InlineErrorHooks`)
 
 ### An element hints and the rule speaks
 
@@ -5164,7 +5164,7 @@ when Email is set.", so the form said one thing and the tool another.
 The element keeps `required` as a hint: the form builder, processing
 the container before any element in it is checked, clears `#required`
 on every element that holds a value (any widget's, a module's own
-included), marks it (`DataSurfaceFormBuilderInterface::REQUIRED_KEY`),
+included), marks it (`SurfaceFormBuilderInterface::REQUIRED_KEY`),
 and puts it back when the element is drawn, first in its `#pre_render`
 list, so the browser's `required` attribute, the label's marker and the
 radios' legend are drawn as core draws them, on the page and in an AJAX
@@ -5176,7 +5176,7 @@ never drawn required, a multiple select now as the checkboxes already
 were: the empty list satisfies a required list, and a `required`
 attribute would ask for one item more than the rule does. The widgets'
 `#required_error` went with this. (`Form\Refreshing::requiredHints()`,
-`DataSurfaceFormBuilder::preRenderRequired()`, `RefusalMessagesTest`,
+`SurfaceFormBuilder::preRenderRequired()`, `RefusalMessagesTest`,
 `FirstResourceTest`)
 
 The form names the field where the message is not printed beside it
@@ -5198,7 +5198,7 @@ response ends in one polite announcement (WCAG 4.1.3): the refusal,
 named, then what the rebuild changed on the dependents it replaced, in
 whole sentences ("Send day no longer applies. Items per issue now
 allows 1 to 20."), read off what each was drawn as on the page the
-request came from. (`DataSurfaceFormBuilder::flagSurfaceErrors()`,
+request came from. (`SurfaceFormBuilder::flagSurfaceErrors()`,
 `Form\Drawing::named()`, `Form\Refreshing::changesSaid()`,
 `Hook\InlineErrorHooks`, `ErrorsNameTheirFieldTest`,
 `RebuildAnnouncesTest`)
@@ -5234,8 +5234,8 @@ cleared:
    the reviews' synthesis), posting the empty string as before. It is
    not put back into the list as a choice; the stored value travels on
    the element
-   (`#data_surface_stale`), and the container posts the paths of such
-   selects in a hidden input (`DataSurfaceFormBuilderInterface::STALE_MARKER_KEY`).
+   (`#surface_stale`), and the container posts the paths of such
+   selects in a hidden input (`SurfaceFormBuilderInterface::STALE_MARKER_KEY`).
    A save that leaves the select empty keeps the stored value, and its
    dependents, with the non-blocking stale warning; only an explicit
    new choice replaces it. The same after an AJAX change of a parent
@@ -5284,8 +5284,8 @@ it, say "- Select -" or "- None -" as before. The served contract's
 `emptyOption` carries the same words, and the React app says them. Pipeline callers are unaffected: a payload that leaves a key out
 keeps it, one that sends the stored stale value back keeps it with a
 stale entry, as before. (`OptionsWidget::singleSelect()`,
-`RadiosWidget::buildElement()`, `DataSurfaceWidgetBase::unstash()`,
-`DataSurfaceHostTrait::surfaceFormValues()`)
+`RadiosWidget::buildElement()`, `SurfaceWidgetBase::unstash()`,
+`SurfaceHostTrait::surfaceFormValues()`)
 
 ### A widget is chosen from the definition
 
@@ -5345,13 +5345,13 @@ free strings and a time picker):
 The served contract's `x-surface.widget` mirrors each choice by asking
 the same rule (`CheckboxesWidget::drawsList()`,
 `RadiosWidget::drawsOne()`, `TimeWidget::draws()`), and is still written
-only when asked for. (`DataSurfaceWidgetManager::asked()`,
-`DataSurfaceWidgetBase::answersTo()`, `DataSurfaceWidgetBase::checked()`,
+only when asked for. (`SurfaceWidgetManager::asked()`,
+`SurfaceWidgetBase::answersTo()`, `SurfaceWidgetBase::checked()`,
 `ListWidget`, `StockWidgetsTest`)
 
 *Amended 2026-10-24,* from the alter-pattern survey: a module's widget
 may claim every key of a kind on the site,
-`#[DataSurfaceWidget(claims:, priority:)]`. A contrib module that ships
+`#[SurfaceWidget(claims:, priority:)]`. A contrib module that ships
 a color picker serves every color key on a site; here only a key's
 owner could ask for a widget, by name. A claim is a data type
 (`['type' => 'string']`), a data type and the key's `format` setting
@@ -5370,7 +5370,7 @@ word it has no field for as the stock field for the key's JSON type
 (`stockWidget()`), and a key no widget draws stays not editable. The
 catalog's view of one resource names each key's widget. The `format`
 setting is read by claims alone: no document writes it, and no rule
-checks it. (`DataSurfaceWidgetManager::claimed()`, `WidgetClaimTest`)
+checks it. (`SurfaceWidgetManager::claimed()`, `WidgetClaimTest`)
 
 *Amended 2026-10-27:* a date is the time input's twin,
 `setSetting('widget', 'date')` on a string, drawn as core's `date`
@@ -5400,7 +5400,7 @@ value as JSON for an `any` key holding no variants and a list the list
 widget refuses, decoded on save and accepted and validated as any value,
 text that is not JSON an error on the element. It is the worst
 acceptable form of an editable key, and it is marked for replacement
-([roadmap](https://github.com/mlander/data_surface/blob/main/ROADMAP.md), item 29): a text field for a value of several
+([roadmap](https://github.com/mlander/surface/blob/main/ROADMAP.md), item 29): a text field for a value of several
 scalar types, and rows for a list of maps. The served contract names no
 widget for it, since it says nothing about the key.
 
@@ -5527,9 +5527,9 @@ page never saw the content type's groups, and a block had none to give.
   its groups and its hand-tuned weights.
 
 (`Resource\Arrangement`, `Resource\ArrangementGroup`,
-`DefinitionMetadata::setArrangement()`, `DataSurfaceWidgetBase::arranged()`,
+`DefinitionMetadata::setArrangement()`, `SurfaceWidgetBase::arranged()`,
 `Form\Drawing::withGroups()`, `Form\Drawing::gatherGroups()`,
-`DataSurfaceBuilder::assertGroupsAgree()`, `PropertySchema::arrangement()`,
+`SurfaceBuilder::assertGroupsAgree()`, `PropertySchema::arrangement()`,
 `ArrangementTest`, `ArrangementFormTest`)
 
 Declined, each in a line:
@@ -5538,8 +5538,8 @@ Declined, each in a line:
   (drupal-architecture): a borrowed element, the message and the
   redirect are still one route's, and a route key is where that route
   says so; a form alter hook would be a second spelling of the same seam.
-- **Renaming it the form display, `_data_surface_display`** (form-api):
-  `_data_surface_cosmetics` is a route key, which [the product keeps its
+- **Renaming it the form display, `_surface_display`** (form-api):
+  `_surface_cosmetics` is a route key, which [the product keeps its
   name](#the-product-keeps-its-name) holds to, and with the arrangement
   gone from it, what is left is cosmetic.
 
@@ -5548,11 +5548,11 @@ Declined, each in a line:
 under its summary or legend on the form and the React page, and stated
 as plain text in `x-surface.arrangement.group.description`, only when
 declared. Core's performance form says one sentence of its bandwidth
-settings, which `data_surface_performance` declares once.
+settings, which `surface_examples_performance` declares once.
 
 ### The form builder draws, extracts and refreshes
 
-`DataSurfaceFormBuilder` had grown to 2,973 lines. It is now the service
+`SurfaceFormBuilder` had grown to 2,973 lines. It is now the service
 and its Form API callbacks, and three final internal classes in
 `src/Form/` do the work:
 
@@ -5571,8 +5571,8 @@ and its Form API callbacks, and three final internal classes in
   what it says changed, and the container's place in a host's own
   element.
 
-`DataSurfaceFormBuilder` stays the one service.
-`DataSurfaceFormBuilderInterface`, the service id and the constructor's
+`SurfaceFormBuilder` stays the one service.
+`SurfaceFormBuilderInterface`, the service id and the constructor's
 arguments are unchanged, and the constructor builds the three from the
 services it already has. The Form API callbacks stay on the service
 under their own names: `refreshSurface()`, `processSurfaceContainer()`,
@@ -5590,13 +5590,13 @@ and `Refreshing::containerKey()`, are public on the internal classes and
 not on the service. Nothing changed in what is drawn: the method bodies
 moved as they were, the examples' forms render byte for byte as they did,
 and the documents and tool definitions did not move.
-(`DataSurfaceFormBuilder`, `Form\Drawing`, `Form\Extracting`,
+(`SurfaceFormBuilder`, `Form\Drawing`, `Form\Extracting`,
 `Form\Refreshing`)
 
 ### Defaults follow the definitions under a stored value
 
 A door that starts from storage lays the declared defaults under what is
-stored by the definitions, in one place, `DataSurfaceInterface::withDefaults()`
+stored by the definitions, in one place, `SurfaceInterface::withDefaults()`
 (decided 2026-10-27, from the second port of pathauto's settings form,
 [the adopter log of 2026-10-26](adopters-2026-10-26.md), entry 17):
 
@@ -5623,20 +5623,20 @@ from its defaults, and `kept()` and the rule for what does not apply read
 defaults by nested path from `getDefaultValues()`, which is the whole
 tree.
 
-Which doors had it: the operation form (`DataSurfaceOperationForm`). The
+Which doors had it: the operation form (`SurfaceOperationForm`). The
 envelope (`GET /surface-api/...`, the React page) and the narrowing (the
 schema route's `POST`, the narrowing tool) seeded with the same one-level
 merge, but the emitter lays each child's defaults under its value as it
 walks, so their values were right; they now seed through the same
-method. A plugin host's form (`DataSurfaceHostFormTrait`) seeds from a
+method. A plugin host's form (`SurfaceHostFormTrait`) seeds from a
 configuration the pipeline already completed, and does too. The read
 tool and a write's answer report what storage holds: an entry storage
 holds nothing for is left out, never `null`, and a save leaves it
 unstored, since [a default storage never held is not
 written](#absent-keeps-null-clears).
-(`DataSurfaceInterface::withDefaults()`, `DataSurfaceOperationForm::buildForm()`,
+(`SurfaceInterface::withDefaults()`, `SurfaceOperationForm::buildForm()`,
 `ServedOperations::current()`, `ResourceOperationSchemaTool`,
-`DataSurfaceHostFormTrait`, `DefaultsUnderStoredMapTest`)
+`SurfaceHostFormTrait`, `DefaultsUnderStoredMapTest`)
 
 ## Discovery
 
@@ -5722,7 +5722,7 @@ is kept for one account or one language; none holds a stored value.
 | One discovery entry per definition | once, and only the entries whose tags fired are written again | its own tags: a field item its field's and storage's configuration (a base field its override's, named before one exists), a bundle resource its bundle's, its form display's and its fields', a class none |
 | One tool entry per resource, every tool of it | once per resource, its operations built once for all its tools, under core's lock | that resource's tags: its discovery entry's and every build it was made from |
 | The Tool API's item, every tool | read on every listing | any tag a tool was read from; derived again from the tool entries |
-| A sealed build for no account | once, in the build cache | a tag it read, a discovery tag, `config:core.extension`, `config:data_surface.settings` or `config:data_surface.defaults` ([The static build is cached, the rest is per request](#the-static-build-is-cached-the-rest-is-per-request)) |
+| A sealed build for no account | once, in the build cache | a tag it read, a discovery tag, `config:core.extension`, `config:surface.settings` or `config:surface.defaults` ([The static build is cached, the rest is per request](#the-static-build-is-cached-the-rest-is-per-request)) |
 | A sealed build | once per request, per kind and account kind | the end of the request, a tag it read, or 32 newer builds ([A build is not cached across requests](#a-build-is-not-cached-across-requests)) |
 | A variant the site lists | once per request, when a door reads it | as the build that holds it |
 | The OpenAPI document | once, in the build cache | a tag it read; by contract version, site and language |
@@ -5796,7 +5796,7 @@ the numbers). Four choices, and why:
   build (`buildDeclared()`) asks no access answer and reads no account,
   so it is a pure function of the code, the site's structure and what
   its providers list: the same for every request until one of those
-  changes. It is kept in its own bin, `cache.data_surface_build`, so a
+  changes. It is kept in its own bin, `cache.surface_build`, so a
   site can give it a backend of its own and a development site that
   turns the discovery bin off still keeps it. The key is the memo's:
   the resource, everything the context says (its parameters among
@@ -5805,8 +5805,8 @@ the numbers). Four choices, and why:
   configuration is in the language that loaded it. The tags are the
   contract: what the build read (each provider's list, the site's
   defaults), each discovery entry it built from, discovery's index, and
-  `config:core.extension`, `config:data_surface.settings` and
-  `config:data_surface.defaults`, which every build depends on. One
+  `config:core.extension`, `config:surface.settings` and
+  `config:surface.defaults`, which every build depends on. One
   that expires or varies by a cache context is not kept. The request's
   memo stays in front of it. A build for the account alone
   (`buildStatic()`) or with every answer (`build()`) is not derived
@@ -5854,7 +5854,7 @@ the numbers). Four choices, and why:
 - **One prepare per submit.** The operation form's validation runs the
   whole pipeline dry, prepare included, so a refusal storage raises is
   said on its element; the submit commits what that run prepared
-  (`DataSurfacePipelineInterface::commitDryRun()`) when the values are
+  (`SurfacePipelineInterface::commitDryRun()`) when the values are
   the ones it judged and a fingerprint of what storage holds is the one
   it was judged against, and runs the whole submit otherwise. The host
   form trait validates without preparing, so it prepares once already.
@@ -5864,7 +5864,7 @@ version, the site and the language, and served with an `ETag` and 304.
 
 (`Resources::buildAs()`, `Resources::keep()`, `Resources::settleVariant()`,
 `VariantToSettle`, `SerializedMaps`, `SettledCacheability`,
-`ResourceRegistry::exportRead()`, `DataSurfaceOperationForm::submitForm()`,
+`ResourceRegistry::exportRead()`, `SurfaceOperationForm::submitForm()`,
 `OpenApiDocument::build()`, `BuildCacheTest`, `LazyVariantsTest`,
 `OnePreparePerSubmitTest`, `BuildBenchmarkTest`)
 
@@ -5961,8 +5961,8 @@ why:
 
 - **Doors are named by the module that opens them.** Each module that
   opens a door implements `CatalogDoorsInterface`, a service tagged
-  `data_surface.catalog_doors`: the main module names the form routes
-  (any route naming the operation in `_data_surface_resource`), the
+  `surface.catalog_doors`: the main module names the form routes
+  (any route naming the operation in `_surface_resource`), the
   tool bridge the tool and the read tool it derived, the React module
   the HTTP path and the page, the OpenAPI module its operation. The
   main module cannot know a submodule's paths, and a door listed where
@@ -6063,7 +6063,7 @@ which is what a derived resource is for. (`ResourceDefinition::name()`,
 A derived id is `<base>:<derivative>`: the base dotted like
 any other id, one colon, then the derivative, dotted and holding no
 colon, `entity.content:node.page`, `field.item:node.page.body`. A tool
-is `data_surface:<id>:<operation>` and a read tool adds `:read`;
+is `surface:<id>:<operation>` and a read tool adds `:read`;
 the tool reads the operation off the last colon, so a derivative with
 a colon of its own would be misread, and is refused. The MCP bridge
 mangles tool ids, so the derivative adds one colon, between base and
@@ -6110,7 +6110,7 @@ definition asks in the real context. (`FieldItemAccess`)
 
 ### The content entity storage
 
-`ContentEntityStorage` is `data_surface_entity`'s, not one of the
+`ContentEntityStorage` is `surface_examples_entity`'s, not one of the
 engine's storage classes: what it reads and writes is what the field item
 derivation declares (a child per field, a key per property), which the
 engine does not own, and it reads the derivation to know which fields
@@ -6125,7 +6125,7 @@ may not edit, as core's form does. (`ContentEntityStorage::prepare()`)
 site](#keys-that-come-from-the-site).* The registry forgets a derived
 definition when the tags it was read from are invalidated, and the Tool
 API keeps its plugin definitions apart, with no tags, until a cache
-rebuild. An invalidator in `data_surface_tool` closes the gap without
+rebuild. An invalidator in `surface_tool` closes the gap without
 coupling the engine to the Tool API: the tool deriver remembers the cache
 tags of every derived definition and of every resource it built, and an
 invalidation of any of them clears the tool definitions, so a field added
@@ -6195,7 +6195,7 @@ why:
 - **Cacheability travels.** The list's cacheability is the built
   resource's, so the form, both documents and the schema route are kept
   by it, and a thing added to the site is a key at the next request. The
-  tool listing is cleared by `data_surface_tool`'s invalidator when one of
+  tool listing is cleared by `surface_tool`'s invalidator when one of
   the tags it was built with is invalidated ([settled
   above](#tool-definitions-after-a-field-changes)), and only the
   resources that read the list are derived again. A list with max-age 0
@@ -6254,7 +6254,7 @@ why:
   rules are stated too, so both documents leave out what does not apply
   to it. Inside, the map reads the sibling through a port of its own,
   `:<sibling>` (`Port::$through`), and binds each entry's port when it
-  is bound (`DataSurface::withPorts()`), so every door that asks an
+  is bound (`Surface::withPorts()`), so every door that asks an
   entry for its child hands it the sibling's entry; no document lists
   that port. Rejected: one port per entry on the map, named by the id,
   which an id could collide with; and a path per entry written by the
@@ -6294,12 +6294,12 @@ A plugin host builds the structure its plugin names in a bare context
 whose id is the host's own verb (`configure`, `field_settings`),
 which is no declared operation. The pattern says the host "supplies the
 operation" without naming one; a plugin's configuration has no create or
-update, only the instance the host holds. (`DataSurfaceHostTrait`)
+update, only the instance the host holds. (`SurfaceHostTrait`)
 
 ### A plugin host cannot overlay a full submission
 
 *Open.* A plugin host (a block, or any plugin using
-`DataSurfaceHostFormTrait`) answers NULL from `surfaceSubmissionPath()`,
+`SurfaceHostFormTrait`) answers NULL from `surfaceSubmissionPath()`,
 so the build a full submission is processed against is built from what
 is stored, not from what was submitted. A nested subform cannot know its
 position in the input at build time: Form API assigns its `#parents`
@@ -6315,7 +6315,7 @@ component block's create form is the same case with variants: without
 JavaScript the props are drawn for the component stored, none, so a
 component chosen and saved at once is refused for the props it requires
 ("Heading is required."), which `ComponentBlockPlacementTest` pins.
-(`DataSurfaceHostTrait::surfaceSubmissionPath()`)
+(`SurfaceHostTrait::surfaceSubmissionPath()`)
 
 ### Static defaults
 
@@ -6328,22 +6328,22 @@ protocols do not look. (`ResourcesInterface::defaults()`)
 ### The demo's bundle-field constraint
 
 `DemoBlockStructure` points at a bundle's fields with a constraint of the
-demo's own, `DataSurfaceDemoBundleField`, and its options resolver.
+demo's own, `SurfaceExamplesBundleField`, and its options resolver.
 The pattern fetches such a list through an options source, which is
 not built yet, and no core constraint names a bundle's fields.
 (`DemoBlockStructure::fieldOfBundle()`)
 
 ### A block embeds a component through its structure
 
-Decided 2026-10-23. `data_surface_component_block` ships a block,
-"Component" (`data_surface_component`), that embeds a single-directory
+Decided 2026-10-23. `surface_examples_component_block` ships a block,
+"Component" (`surface_component`), that embeds a single-directory
 component: a component chosen from those the site has, and its props
 read from the schema the component declares. Its settings are a
 structure of two keys, example 12's two lines under the block's id,
-`block.data_surface_component`. Each choice, and why:
+`block.surface_component`. Each choice, and why:
 
 - **A structure and a host, as for any plugin.** The plugin names the
-  structure with `#[UsesStructure]` on `DataSurfaceBlockBase`, so the
+  structure with `#[UsesStructure]` on `TypedBlockBase`, so the
   block host builds it in its `configure` context, draws the settings
   form, holds what is submitted to the structure and stores it in the
   block's settings ([A plugin host's
@@ -6358,7 +6358,7 @@ structure of two keys, example 12's two lines under the block's id,
   site's ([A schema can be read back into a
   structure](#a-schema-can-be-read-back-into-a-structure)).
 - **One provider, in the main module.** `ComponentProps` moved from the
-  examples to `Drupal\data_surface\Variants\ComponentProps`. Example 12
+  examples to `Drupal\surface\Variants\ComponentProps`. Example 12
   must keep working with the submodule off and the submodule must work
   without the examples, so the provider can live in neither; the main
   module needs nothing new for it, since the component plugin manager is
@@ -6458,7 +6458,7 @@ how strictly to apply them to a display builder. Each choice, and why:
   states what a slot offers, and a contract that lists an expectation
   and accepts anything would be stricter on paper than in practice. A
   component outside the list is refused naming the ones the slot
-  expects: "Choose data_surface_examples:call_to_action (Call to
+  expects: "Choose surface_examples:call_to_action (Call to
   action)."
 - **Three deep.** `ComponentSlots::DEPTH` is 3. The slots of the
   component a block names are at depth 1, those of a component in one of
@@ -6519,7 +6519,7 @@ the variant its `plugin` key chooses. An agent places, configures, moves
 within its theme and removes a block through the tool door, HTTP and a
 form, each validated as any resource is. Each choice, and why:
 
-- **A submodule of its own, `data_surface_block`.** The placement is the
+- **A submodule of its own, `surface_examples_block`.** The placement is the
   block layout's, not any plugin's: every plugin's settings are one
   variant of it. So the general resource lives beside the block layout,
   and the component block, one plugin, needs no resource of its own: its
@@ -6527,7 +6527,7 @@ form, each validated as any resource is. Each choice, and why:
   are the general resource's. Neither submodule depends on the other.
   The component block renders without the placement, and the placement
   offers whatever plugins the site has, the component block among them
-  when it is on. Rejected: renaming `data_surface_component_block`,
+  when it is on. Rejected: renaming `surface_examples_component_block`,
   which would tie every placed block to one plugin's module.
 - **Three operations, by the machine name.** `create` creates under an `id`
   the caller types, idempotent since the caller names it, and refuses an
@@ -6566,8 +6566,8 @@ form, each validated as any resource is. Each choice, and why:
 - **The theme and the region.** The theme is core's `ExtensionExists`
   (`theme`), which a new options resolver, `extension_exists`, reads as
   the installed themes. The region is any installed theme's visible
-  region (`DataSurfaceAnyThemeRegion`) until the theme narrows it: a
-  static refiner adds `DataSurfaceThemeRegion` with the theme beside it,
+  region (`SurfaceAnyThemeRegion`) until the theme narrows it: a
+  static refiner adds `SurfaceThemeRegion` with the theme beside it,
   and the one resolver answers the two together as that theme's visible
   regions, the ones the block layout offers. Declared with a list, the
   region is a select at every door from the start, which the React page,
@@ -6728,8 +6728,8 @@ listed, and how they are put in order.
   test module's `append` and `clear`, the only custom updates before,
   moved from `POST` to `PATCH` with it.
 - **The entity type's config schema is written from the resource.**
-  `drush data_surface:config-schema --write` writes
-  `data_surface_examples.event_venue.*` from `event.venue`, as it writes
+  `drush surface:config-schema --write` writes
+  `surface_examples.event_venue.*` from `event.venue`, as it writes
   a config object's: the rule [A config object is described by its
   resource](#a-config-object-is-described-by-its-resource) applied to an
   entity type a module declares. The entity class has no form classes,
@@ -6739,7 +6739,7 @@ listed, and how they are put in order.
   venue entities', so a venue added through example 15 is offered at
   the next request with no cache rebuild. A resolver may say its list
   is the whole of its constraint
-  (`#[DataSurfaceOptionsResolver(exact: TRUE)]`), as a `Choice`'s is,
+  (`#[SurfaceOptionsResolver(exact: TRUE)]`), as a `Choice`'s is,
   and the emitter then names that constraint under no `checkedOnServer`.
   *Changed 2026-10-26:* the venue was a constraint of its own, read with
   the room's by one resolver; it is a reference now, `entity:event_venue`
@@ -6761,7 +6761,7 @@ than an offset; a `sort` input. (`Operation::$values`,
 `StorageAdapter::outputs()`, `ServedPaths::listing()`,
 `ServedPaths::defaults()`, `ResourceApiController::listing()`,
 `OpenApiDocument::listed()`, `ConfigSchemaGenerator::describeEntityType()`,
-`DataSurfaceOptions::isStatedByList()`, `VenueResource`, `VenueStorage`,
+`SurfaceOptions::isStatedByList()`, `VenueResource`, `VenueStorage`,
 `VenueAccess`, `EventVenue`, `VenueResourceTest`, `VenueApiTest`)
 
 ### A reference is an id with a list the site decides, listed or looked up
@@ -6804,7 +6804,7 @@ Decided 2026-10-23, with example 16, the sponsorship
   with no round trip. The parts are registered per key
   (`ResourceRegistry::defineReference()`), as a structure read from a
   schema is, because what the author narrowed the key by is the key's:
-  `DataSurfaceReferenceableType` written on the key (`interface`,
+  `SurfaceReferenceableType` written on the key (`interface`,
   `targets`) is moved onto `entity_type` when the parts are built. A
   parent cannot name a key inside its child; this is the build writing
   the child from what the parent declared, not the parent reaching in.
@@ -6815,14 +6815,14 @@ Decided 2026-10-23, with example 16, the sponsorship
   places, and the access filtering is the handler's query's own (a
   node's unpublished nodes, a user's blocked users, node grants). The
   check is core's `ValidReference` for a key that holds one id
-  (`DataSurfaceValidReference`, its subclass): core's validator reads
+  (`SurfaceValidReference`, its subclass): core's validator reads
   the handler off a field's item list, and a key has no field. One
   message for every refusal, core's "This entity (%type: %id) cannot be
   referenced.", so a refusal never says whether an entity the account
   cannot see exists. Rejected: a `Choice` filled at build, which needs
   services in a static class and cannot say "any id the handler
   accepts" past the limit.
-- **The threshold, `data_surface.settings:reference_list_limit`.**
+- **The threshold, `surface.settings:reference_list_limit`.**
   (*Renamed 2026-10-24* from `reference_enum_limit`, beside
   `site_list_limit`, a post-update moving the stored value: a list of
   candidates is a `oneOf`, never an `enum`; [The surface was counted
@@ -6859,7 +6859,7 @@ Decided 2026-10-23, with example 16, the sponsorship
 
 *Open:* a multi-value reference, a list of
 references (`addList()` of an entity type); the entity side's two
-shapes, a reference field's `target_id` item (`DataSurfaceReferenceable`,
+shapes, a reference field's `target_id` item (`SurfaceReferenceable`,
 no marker) beside a reference key; a lookup tool for an agent with no
 HTTP; a custom method's own lookup; a stored id the account may no
 longer reference, which core's field validator keeps and this refuses.
@@ -6875,12 +6875,12 @@ longer reference, which core's field validator keeps and this refuses.
 
 ### What the examples are made of
 
-Each example of `data_surface_examples` keeps its settings in a config
+Each example of `surface_examples` keeps its settings in a config
 object of its own and names a subclass of `ConfigObjectStorage`
 that says which; an example's resource repeats the previous example's
 keys rather than extending its class, so each example reads alone on
 screen. The machine names keep the word step (`registration_step2`,
-`RegistrationStep2Resource`, the `data_surface_examples.step2` route):
+`RegistrationStep2Resource`, the `surface_examples.step2` route):
 they were never shown to anybody, and renaming them would churn the
 catalog and every test for no reader's benefit. A
 ticket price is a `float` with a `Range` minimum of 0.01: core's typed
@@ -6888,7 +6888,7 @@ data has no decimal type and no `Positive` constraint plugin. The event
 title is stored as a `string`, not a translatable `label`, because a
 `label` would make the classic twin's `#config_target` demand a
 language code the data surface side never needs. (`RegistrationStep3Resource`,
-`PaidTicketStructure`, `data_surface_examples.schema.yml`)
+`PaidTicketStructure`, `surface_examples.schema.yml`)
 
 ### The examples' README is held, not generated
 
@@ -6910,7 +6910,7 @@ newcomer logs found whole files were what stopped the guessing; the
 landing page reads each example's line, what it introduces and how many
 files it is made of, from the same list, and the README's Files tables are held to it by `ExampleFilesTest`, which also
 fails when the examples have a part no example lists. The links name a
-branch from `$settings['data_surface_examples_branch']`, `next` by
+branch from `$settings['surface_examples_branch']`, `next` by
 default: asking git on every request costs a process, and a site need
 not be a checkout.
 
@@ -6919,12 +6919,12 @@ not be a checkout.
 ### The emitter is the main module's, and widgets are asked for
 
 The served contract's emitter reads any data surface and nothing else,
-so it is the main module's (`data_surface.contract_emitter`), the
+so it is the main module's (`surface.contract_emitter`), the
 canonical contract the operation form's contract panel shows and
 `/surface-api` serves. The roadmap rejects widget vocabulary in the
 contract, so `x-surface.widget`, the Form API mapping said for a
 renderer, and `multiple`, its qualifier, are written only when a caller
-passes `widgets: TRUE`; `data_surface_react` does, for its app. The rest
+passes `widgets: TRUE`; `surface_react` does, for its app. The rest
 of `x-surface` (locked, dependsOn, refined, stale, emptyOption, fixed, by,
 variants and chosen, rules, within, checkedOnServer, enumerated,
 refine, live) is the
@@ -7073,7 +7073,7 @@ setting ([A budget for what the site decides](#a-budget-for-what-the-site-decide
 Decided 2026-10-24, with examples 12 and 13 on the development site,
 whose themes provide 312 components. A list the site decides is spelled
 out in the full schema and the tool listing while it has at most
-`data_surface.settings:site_list_limit` entries, 20 as shipped: one
+`surface.settings:site_list_limit` entries, 20 as shipped: one
 setting beside `reference_list_limit` (so named since 2026-10-24, one
 pattern for the two), with the same schema and a post-update of its
 own. Two kinds of key take their list from the site:
@@ -7093,7 +7093,7 @@ level: a component in a slot counts the components the slot offers.
   names both ways to learn the keys: "Too many to list: choose
   component, then fetch GET
   /surface-api/event.spotlight/schema?choose=/props={component} once per
-  component, or call data_surface:event.spotlight:configure:schema with
+  component, or call surface:event.spotlight:configure:schema with
   your values, to get this key's schema." *Changed 2026-10-24:* the
   marker was `refine` and the listing named the narrowing tool alone.
   The schema for these answers, built with the
@@ -7131,8 +7131,8 @@ level: a component in a slot counts the components the slot offers.
   site decides carries the settings' cache tag, and the tool listing is
   derived again when the setting changes.
 - **The narrowing tool.** Where an operation's declared listing has such
-  a key, at any depth (`SiteListBudget::anyOver()`), `data_surface_tool`
-  derives `data_surface:<resource>:<operation>:schema` beside the write
+  a key, at any depth (`SiteListBudget::anyOver()`), `surface_tool`
+  derives `surface:<resource>:<operation>:schema` beside the write
   tool: the Read kind, so read only and idempotent, its inputs the
   operation's parameters and an optional open `values`, its outputs
   `schema` and `values`, what `POST .../schema` answers for the same
@@ -7183,7 +7183,7 @@ counted, come from a provider and are counted
 `AdvertisedSchemaAcceptanceTest::testListsPastTheSiteListLimit()`)
 
 *Amended 2026-10-27:* a site may also offer fewer components than it
-has: `data_surface.settings:components_offered` lists component ids and
+has: `surface.settings:components_offered` lists component ids and
 providers, empty for every one, and `ComponentProps` and
 `ComponentSlots` read it in one place (`ComponentsOffered`), both lists
 carrying its cache tag. The two settings answer different questions
@@ -7216,7 +7216,7 @@ these answers, and nothing else of variants. There is no new setting.
   it is stated exactly key by key.
 - **Why.** A tool's definition is sent to the model in every request
   that lists it. Measured on the development site for
-  `data_surface:event.spotlight:configure` with 312 components: left
+  `surface:event.spotlight:configure` with 312 components: left
   out, its normalized input schema is 8 KB; spelled out with the limit
   raised to 1000, 1.6 MB. Twenty spelled-out components would be about
   100 KB per turn. And the Tool API cannot state a shape chosen by a
@@ -7288,7 +7288,7 @@ key is counted, is unchanged.
   template: the full schema's URL with `choose=<pointer>={value}` for
   the key, and a `choose` for each variant on the way to it, so a key
   inside a chosen variant names that choice too
-  (`.../block.placement/schema?choose=/settings=data_surface_component&choose=/settings/props={value}`).
+  (`.../block.placement/schema?choose=/settings=surface_component&choose=/settings/props={value}`).
   A client fills `{value}` with the deciding key's value, or an entry's
   id. In a document no route serves (a baseline, the contract panel, the
   tool's answer) the template is its query alone, read against the full
@@ -7454,7 +7454,7 @@ make it one:
   is not the one stored starts whole. A plugin reads its
   configuration array whole, so `PluginConfigurationStorage` fills a
   declared default back into what it hands the plugin.
-- **A write that changes nothing is not made.** `DataSurfaceResult`
+- **A write that changes nothing is not made.** `SurfaceResult`
   carries `changes`, the dotted path of each stored value the write
   changes against what storage held (a map by its own keys, a list
   whole), on a dry run too, which is then a plan; with none, on a thing
@@ -7466,9 +7466,9 @@ make it one:
   Every door answers `changes`: the write tool as a declared output, the
   React `/validate` and `/submit` beside `notes`.
 
-(`DataSurfacePipeline::kept()`, `DataSurfacePipeline::heldAlike()`,
-`DataSurfacePipeline::isDefault()`,
-`DataSurfacePipeline::changes()`, `DataSurfaceResult::$changes`,
+(`SurfacePipeline::kept()`, `SurfacePipeline::heldAlike()`,
+`SurfacePipeline::isDefault()`,
+`SurfacePipeline::changes()`, `SurfaceResult::$changes`,
 `ConfigObjectStorage::commit()`, `ReadWriteRoundTripTest`)
 
 ### A key its storage always holds
@@ -7532,7 +7532,7 @@ what is stored (the codec's keep-on-empty); its type is the declared
 one, not nullable, `writeOnly`, with no default; the values a document
 carries for it are `null`, as the masking rule has always said, which a
 reader takes as the key left out; an accepted document leaves a secret
-that holds nothing out (`DataSurfacePipelineInterface::document()`,
+that holds nothing out (`SurfacePipelineInterface::document()`,
 2026-10-23, found by example 14's webhook, whose key ships empty). A
 required secret never set is still refused by the pipeline as missing.
 Before 2026-10-18 a required secret
@@ -7583,7 +7583,7 @@ first makes that unnecessary.
 
 ### The pipeline is read by verb
 
-`Pipeline\DataSurfacePipeline` held every stage from raw values to stored
+`Pipeline\SurfacePipeline` held every stage from raw values to stored
 values in 2,874 lines. The three verbs before a write are now final
 internal classes in `src/Pipeline/`, which the pipeline's constructor
 builds from the services it already has:
@@ -7600,8 +7600,8 @@ builds from the services it already has:
 - **`Conforming`** holds outputs to their declared shape and coerces
   nothing.
 
-`DataSurfacePipeline` stays the one service, and
-`DataSurfacePipelineInterface`, the constructor and the public constants
+`SurfacePipeline` stays the one service, and
+`SurfacePipelineInterface`, the constructor and the public constants
 are unchanged. It keeps the write path and the document: `kept()`,
 `changes()`, `prepare()`, `commit()`, `submit()`, `commitDryRun()`, a
 delete, `outbound()` and `document()`. Its `accept()`, `validate()` and
@@ -7618,7 +7618,7 @@ about a key of another variant, and calls the pipeline for `document()`;
 the three holds a door-specific service. Nothing changed in what is
 accepted, refused or written: the method bodies moved as they were, no
 test changed, and the examples' documents and tool definitions are byte
-for byte what they were. (`DataSurfacePipeline`, `Pipeline\Accepting`,
+for byte what they were. (`SurfacePipeline`, `Pipeline\Accepting`,
 `Pipeline\Validating`, `Pipeline\Conforming`)
 
 ### A pattern both engines read alike
@@ -7835,7 +7835,7 @@ Decided 2026-10-20, from the DX reviews (group E of
 of the wire format, the contract's own, distinct from a resource's
 version: `x-surface.contract`, at the top of both, first under
 `x-surface`, and the `Contract-Version` header every route of
-`data_surface_react` answers with, but for an error. Contract 1 is what `main` serves and
+`surface_react` answers with, but for an error. Contract 1 is what `main` serves and
 what every document said before it had a number; `next` serves 2. Every
 wire change the reviews asked for moved together, once, so a client
 moves once. The changes, each with why ([the table](served-contract.md#contract-2)):
@@ -7951,8 +7951,8 @@ had it right: one tool per operation, with a `dry_run` flag. Contract 3
 rebuilds the HTTP door on the standard shape: the path is the resource,
 the method is the operation. `ContractEmitter::CONTRACT` is 3, the
 `Contract-Version` header says `3`, and the baselines were re-pinned
-(`ContractBaselineTest` with `DATA_SURFACE_CONTRACT_WRITE=1`, the site the
-suite builds; `drush data_surface:contract-diff --write` on the demo site
+(`ContractBaselineTest` with `SURFACE_CONTRACT_WRITE=1`, the site the
+suite builds; `drush surface:contract-diff --write` on the demo site
 would pin that site's own components as variants). Both documents are written exactly as contract 2 wrote them
 but for `x-surface.contract`; what changed is the door, and how every
 door spells a path. The endpoint table is in
@@ -8150,12 +8150,12 @@ door spells a path. The endpoint table is in
   logged-in session: a write carries the token `/session/token` answers
   and, as `If-Match`, the last `ETag` an answer for the same path
   carried. The JSON stays open, as before; the two pages are under a
-  permission of their own, `access data surface api docs`, because each
+  permission of their own, `access surface api docs`, because each
   runs a CDN's script on the site's origin, which a site grants to the
   roles it chooses, and `access content` belongs to node, which the
   submodule does not need.
   The code blocks the module renders are highlighted the same way:
-  Prism (`data_surface/prism`, attached by the `data_surface_code`
+  Prism (`surface/prism`, attached by the `surface_code`
   element) from cdnjs, the version pinned, each file held to its
   integrity hash, its core and only the languages the blocks are in, so
   no language is fetched at run time. It takes no permission of its own:
@@ -8179,7 +8179,7 @@ Decided 2026-10-24, by the owner, from group D of [the API consolidation review]
 `ContractEmitter::CONTRACT` is 4, the `Contract-Version` header says
 `4`, the OpenAPI document's `info.version` is `4`, and the baselines
 were re-pinned (`ContractBaselineTest` with
-`DATA_SURFACE_CONTRACT_WRITE=1`). No path, method or status changed:
+`SURFACE_CONTRACT_WRITE=1`). No path, method or status changed:
 contract 3's door stands, so nothing new answers 410; the number is the
 signal. Every change removes or moves a keyword; none adds one.
 
@@ -8299,8 +8299,8 @@ the contract baselines did not move. (`ContractEmitter`,
 
 ### An OpenAPI document is one more door
 
-`data_surface_openapi` serves `GET /surface-api/openapi.json` (and
-`.yaml`): an OpenAPI 3.1 document of the API of `data_surface_react`
+`surface_openapi` serves `GET /surface-api/openapi.json` (and
+`.yaml`): an OpenAPI 3.1 document of the API of `surface_react`
 for every operation that can be asked on its own, so any OpenAPI
 client, generator or UI drives a resource without reading these pages.
 Decided 2026-10-21; its paths are contract 3's since 2026-10-22
@@ -8657,7 +8657,7 @@ was accepted. The table, change by change, is [Evolving a resource](evolution.md
   reads it as what is stored, so every door reads converted values;
   storage stamps the declared versions at commit, since it owns the
   layout and so where the stamp lives (`ConfigObjectStorage` beside
-  `_core`, as `_data_surface.versions`). The stamp travels with the data,
+  `_core`, as `_surface.versions`). The stamp travels with the data,
   so an import of an older export is converted again on read and
   environments converge in recorded order. Only up-steps: going back is
   a restore. A stored version above the declared one is refused at load.
@@ -8681,8 +8681,8 @@ was accepted. The table, change by change, is [Evolving a resource](evolution.md
   path is inside) or when the baseline allows its path with a reason,
   and fails otherwise. A keyword it does not read is breaking, so the
   lint is never more lenient than it can show. `ContractBaselineTest`
-  pins the examples and `data_surface_first`, and `drush
-  data_surface:contract-diff` prints the verdicts and, with `--write`,
+  pins the examples and `surface_examples_first`, and `drush
+  surface:contract-diff` prints the verdicts and, with `--write`,
   pins a change once it is accepted. In the main module, because the
   contract and its emitter are. The lint fails closed (decided
   2026-10-20, B25 of the reviews): a declaration with no baseline fails,
@@ -8701,7 +8701,7 @@ was accepted. The table, change by change, is [Evolving a resource](evolution.md
   or `within` is a note; `checkedOnServer` is compared by constraint.
 - **What is promised.** `main` promises nothing today. From the first
   tagged release, every resource and structure of the examples and
-  `data_surface_first` keeps a baseline (as will any the main module
+  `surface_examples_first` keeps a baseline (as will any the main module
   ships), a breaking change to one is versioned or allowed with its
   reason and named in the release notes, and values stored by a tagged
   release are converted forward once the migrations exist
@@ -8741,7 +8741,7 @@ before removal (ROADMAP.md, Phase D item 15); a field a site builder
 removes from a derived resource, a breaking change no code made; and
 baselines for operations that need a subject, which the lint leaves out.
 (`Resource\Attribute\Resource::$version`, `Structure::$version`,
-`ResourceRegistry::versionOf()`, `DataSurfaceInterface::version()`,
+`ResourceRegistry::versionOf()`, `SurfaceInterface::version()`,
 `DocumentHead::versioned()`, `Resource\StoredValueMigrationInterface`,
 `Contract\ContractDiff`, `Contract\ContractBaselines`,
 `Drush\Commands\ContractDiffCommand`, `ContractBaselineTest`,
@@ -8799,7 +8799,7 @@ run). Each choice, and why:
   path) back off the message's arguments, and names a primitive type
   refusal `type_mismatch`, as the pipeline does.
 - **Baselines are theirs.** The contract baseline check reads and
-  writes the directory the adopter names, `DATA_SURFACE_BASELINES_WRITE=1`
+  writes the directory the adopter names, `SURFACE_BASELINES_WRITE=1`
   pinning today's, so a breaking change fails their build the way it
   fails ours; nothing of this module's is compared.
 
@@ -8815,7 +8815,7 @@ on](#a-refusal-names-what-it-depends-on)), and
 `ExamplesSecretsInvariantsTest` holds example 14's mailer and webhook to
 every check.
 
-(`Tests\data_surface\Kernel\ResourceTestBase`,
+(`Tests\surface\Kernel\ResourceTestBase`,
 `FirstResourceInvariantsTest`, `ExamplesSecretsInvariantsTest`,
 `Traits\NeverStricterTrait`,
 `Traits\SchemaRoundTripTrait`, `SchemaRoundTripTest`,

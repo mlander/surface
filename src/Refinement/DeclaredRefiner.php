@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Refinement;
+namespace Drupal\surface\Refinement;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceRefinerInterface;
-use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
+use Drupal\surface\SurfaceRefinerInterface;
+use Drupal\surface\ResourceBuild\RefinesInputRefiner;
 
 /**
  * The engine's refiner for the rules one contributor declared as data.
@@ -42,12 +42,12 @@ use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
  *
  * @internal
  */
-final class DeclaredRefiner implements DataSurfaceRefinerInterface, ApplicabilityInterface {
+final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInterface {
 
   /**
    * Constructs a DeclaredRefiner.
    *
-   * @param array<string, \Drupal\data_surface\Refinement\Rule[]> $rules
+   * @param array<string, \Drupal\surface\Refinement\Rule[]> $rules
    *   The rules, keyed by the key they narrow; an alter's rules on its own
    *   mounted keys under RefinesInputRefiner::MOUNT.
    * @param string|null $module
@@ -107,7 +107,7 @@ final class DeclaredRefiner implements DataSurfaceRefinerInterface, Applicabilit
    *   The path below the definition.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition, a copy.
-   * @param \Drupal\data_surface\Refinement\Rule[] $rules
+   * @param \Drupal\surface\Refinement\Rule[] $rules
    *   The rules.
    * @param array $values
    *   The values the engine handed over.
@@ -148,7 +148,7 @@ final class DeclaredRefiner implements DataSurfaceRefinerInterface, Applicabilit
    * @param string $name
    *   The key; the mount for an alter's rules on the keys it added.
    *
-   * @return array<int, array{0: string, 1: \Drupal\data_surface\Refinement\Rule}>
+   * @return array<int, array{0: string, 1: \Drupal\surface\Refinement\Rule}>
    *   Each rule in order, beside '' for the key itself or, for a key an
    *   alter mounted, `<module>.<key>`, its path below the mount.
    */
@@ -177,7 +177,7 @@ final class DeclaredRefiner implements DataSurfaceRefinerInterface, Applicabilit
   /**
    * Evaluates a rule's condition on the values the engine handed over.
    *
-   * @param \Drupal\data_surface\Refinement\Rule $rule
+   * @param \Drupal\surface\Refinement\Rule $rule
    *   The rule.
    * @param array $values
    *   The values, keyed by key, a mounted one by its dotted path.

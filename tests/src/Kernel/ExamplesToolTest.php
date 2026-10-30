@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface_examples\ExampleCalls;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface_examples\ExampleCalls;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests step 5: step 3's form, as a tool, with no form.
  *
  * Makes the three calls ExampleCalls writes down to the derived tool
- * data_surface:registration.step3:configure, and asserts their outcomes:
+ * surface:registration.step3:configure, and asserts their outcomes:
  * valid values are written, a capacity above the room's is refused with
  * the refiner's own bound, and a dry run answers with what would be
  * stored and writes nothing. Beside them, what the tool's definition
@@ -26,16 +26,16 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * scripts/examples-dry-run.php runs this test with the variable below set
  * to a file, and prints what the test wrote there: the three results.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ExamplesToolTest extends DataSurfaceKernelTestBase {
+class ExamplesToolTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
   /**
    * The environment variable naming the file the results are written to.
    */
-  public const OUTPUT_VARIABLE = 'DATA_SURFACE_EXAMPLES_DRY_RUN_OUTPUT';
+  public const OUTPUT_VARIABLE = 'SURFACE_EXAMPLES_DRY_RUN_OUTPUT';
 
   /**
    * {@inheritdoc}
@@ -46,9 +46,9 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_tool',
+    'surface_examples',
   ];
 
   /**
@@ -57,7 +57,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -96,7 +96,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     foreach (array_keys(ExampleCalls::CALLS) as $call) {
       $results[$call] = $this->call($call);
     }
-    $config = fn (): array => $this->config('data_surface_examples.registration_step3')->get();
+    $config = fn (): array => $this->config('surface_examples.registration_step3')->get();
 
     $this->assertTrue($results['valid']['success'], $results['valid']['message']);
     $this->assertSame('Configure registration (step 3): the values were accepted and written.', $results['valid']['message']);
@@ -119,7 +119,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $this->assertEquals(['price' => 12.5, 'currency' => 'EUR'], $stored['ticket']);
 
     // The examples' README quotes the three answers.
-    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/data_surface_examples/README.md');
+    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/surface_examples/README.md');
     foreach ($results as $result) {
       $this->assertStringContainsString(($result['success'] ? 'Success: ' : 'Failed: ') . $result['message'], $readme);
     }
@@ -179,7 +179,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $again = $manager->getDefinition(ExampleCalls::TOOL)->getInputDefinition(OperationInputs::VALUES);
     $this->assertSame([], $this->defaults($again));
     $this->assertSame([], $this->required($again));
-    $this->assertSame('Summer meetup', $this->config('data_surface_examples.registration_step3')->get('title'), 'What the read tool would return.');
+    $this->assertSame('Summer meetup', $this->config('surface_examples.registration_step3')->get('title'), 'What the read tool would return.');
   }
 
   /**
@@ -241,9 +241,9 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#absent-keeps-null-clears
    */
   public function testChildSentNullIsRefusedAtItsRequiredKey(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $surface = $resources->buildOperation('registration.step3', 'configure', []);
-    $stored = $this->config('data_surface_examples.registration_step3')->get();
+    $stored = $this->config('surface_examples.registration_step3')->get();
     $form = $this->formBuilder()->buildSurfaceForm($surface, array_replace($surface->getDefaultValues(), $stored), new FormState());
     $form_state = new FormState();
     $form_state->setValues(['contact' => NULL] + $stored);
@@ -260,7 +260,7 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess(), 'The tool door.');
     $this->assertSame("The values were refused:\n" . '/contact/email: Email is required.', PlainTextOutput::renderFromHtml((string) $tool->getResult()->getMessage()));
-    $this->assertSame('events@example.com', $this->config('data_surface_examples.registration_step3')->get('contact.email'), 'Nothing was written.');
+    $this->assertSame('events@example.com', $this->config('surface_examples.registration_step3')->get('contact.email'), 'Nothing was written.');
   }
 
   /**
@@ -278,27 +278,27 @@ class ExamplesToolTest extends DataSurfaceKernelTestBase {
     $tool->setInputValue(OperationInputs::VALUES, ['capacity' => 30]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $stored = $this->config('data_surface_examples.registration_step3')->get();
+    $stored = $this->config('surface_examples.registration_step3')->get();
     $this->assertSame(30, $stored['capacity']);
     $this->assertSame('Spring meetup', $stored['title'], 'As installed.');
     $this->assertTrue($stored['open']);
     $this->assertSame('events@example.com', $stored['contact']['email']);
 
     // Nothing stored for the title: the next write must supply it.
-    $this->config('data_surface_examples.registration_step3')->clear('title')->save();
+    $this->config('surface_examples.registration_step3')->clear('title')->save();
     $tool = $this->container->get('plugin.manager.tool')->createInstance(ExampleCalls::TOOL);
     $tool->setInputValue(OperationInputs::VALUES, ['capacity' => 40]);
     $tool->execute();
     $result = $tool->getResult();
     $this->assertFalse($result->isSuccess());
     $this->assertSame("The values were refused:\n" . '/title: Event title is required.', PlainTextOutput::renderFromHtml((string) $result->getMessage()));
-    $this->assertSame(30, $this->config('data_surface_examples.registration_step3')->get('capacity'), 'Nothing was written.');
+    $this->assertSame(30, $this->config('surface_examples.registration_step3')->get('capacity'), 'Nothing was written.');
 
     $tool = $this->container->get('plugin.manager.tool')->createInstance(ExampleCalls::TOOL);
     $tool->setInputValue(OperationInputs::VALUES, ['title' => 'Summer meetup', 'capacity' => 40]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $stored = $this->config('data_surface_examples.registration_step3')->get();
+    $stored = $this->config('surface_examples.registration_step3')->get();
     $this->assertSame(['Summer meetup', 40], [$stored['title'], $stored['capacity']]);
   }
 

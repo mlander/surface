@@ -2,35 +2,35 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\block\Entity\Block;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
-use Drupal\data_surface_demo\Structure\DemoBlockStructure;
-use Drupal\data_surface_demo_extras\Alter\DemoBlockAlter;
-use Drupal\data_surface_resource_test\Access\RecipeAccess;
-use Drupal\data_surface_resource_test\OutsideDiscovery\BothKindsClass;
-use Drupal\data_surface_resource_test\Shape\Sku;
-use Drupal\data_surface_resource_test\OutsideDiscovery\DefaultOperationStructure;
-use Drupal\data_surface_resource_test\OutsideDiscovery\HomelessResource;
-use Drupal\data_surface_resource_test\OutsideDiscovery\OperationAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\OperationOfAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\OutputsAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\RecipeByIdAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\SkuByIdAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\UnknownIdAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\WatchesRefinerStructure;
-use Drupal\data_surface_resource_test\OutsideDiscovery\InstanceDefineInputsStructure;
-use Drupal\data_surface_resource_test\OutsideDiscovery\WrongKindStructure;
-use Drupal\data_surface_resource_test\Plugin\Block\StickyNoteBlock;
-use Drupal\data_surface_resource_test\Structure\HerbGarnishStructure;
-use Drupal\data_surface_resource_test\Resource\RecipeResource;
-use Drupal\data_surface_resource_test\Alter\EditOnlyRecipeAlter;
-use Drupal\data_surface_resource_test\Alter\RecipeAlter;
-use Drupal\data_surface_resource_test\Storage\RecipeStorage;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourceCollectorPass;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
+use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples_extras\Alter\DemoBlockAlter;
+use Drupal\surface_resource_test\Access\RecipeAccess;
+use Drupal\surface_resource_test\OutsideDiscovery\BothKindsClass;
+use Drupal\surface_resource_test\Shape\Sku;
+use Drupal\surface_resource_test\OutsideDiscovery\DefaultOperationStructure;
+use Drupal\surface_resource_test\OutsideDiscovery\HomelessResource;
+use Drupal\surface_resource_test\OutsideDiscovery\OperationAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\OperationOfAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\OutputsAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\RecipeByIdAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\SkuByIdAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\UnknownIdAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\WatchesRefinerStructure;
+use Drupal\surface_resource_test\OutsideDiscovery\InstanceDefineInputsStructure;
+use Drupal\surface_resource_test\OutsideDiscovery\WrongKindStructure;
+use Drupal\surface_resource_test\Plugin\Block\StickyNoteBlock;
+use Drupal\surface_resource_test\Structure\HerbGarnishStructure;
+use Drupal\surface_resource_test\Resource\RecipeResource;
+use Drupal\surface_resource_test\Alter\EditOnlyRecipeAlter;
+use Drupal\surface_resource_test\Alter\RecipeAlter;
+use Drupal\surface_resource_test\Storage\RecipeStorage;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -42,9 +42,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * alter or an operation by hand: the compiler pass finds them all, the
  * way core finds hook classes.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
+class ResourceDiscoveryTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -56,10 +56,10 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     'node',
     'field',
     'text',
-    'data_surface',
-    'data_surface_demo',
-    'data_surface_demo_extras',
-    'data_surface_resource_test',
+    'surface',
+    'surface_examples_plugins',
+    'surface_examples_extras',
+    'surface_resource_test',
   ];
 
   /**
@@ -75,11 +75,11 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the registry.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceRegistry
+   * @return \Drupal\surface\ResourceBuild\ResourceRegistry
    *   The registry.
    */
   protected function registry(): ResourceRegistry {
-    return $this->container->get('data_surface.resource_registry');
+    return $this->container->get('surface.resource_registry');
   }
 
   /**
@@ -87,9 +87,9 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
    */
   public function testDemoStructureIsDiscovered(): void {
     $definition = $this->registry()->getDefinition(DemoBlockStructure::class);
-    $this->assertSame('block.data_surface_demo', $definition->id);
-    $this->assertSame('data_surface_demo', $definition->module);
-    $this->assertSame($definition, $this->registry()->getDefinition('block.data_surface_demo'));
+    $this->assertSame('block.surface_examples_plugins', $definition->id);
+    $this->assertSame('surface_examples_plugins', $definition->module);
+    $this->assertSame($definition, $this->registry()->getDefinition('block.surface_examples_plugins'));
     $this->assertSame([], $this->registry()->getOperations(DemoBlockStructure::class));
     $this->assertSame([], $definition->identity);
     $this->assertNull($definition->storage);
@@ -97,7 +97,7 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     $alters = $this->registry()->getAlters(DemoBlockStructure::class);
     $this->assertCount(1, $alters);
     $this->assertSame(DemoBlockAlter::class, $alters[0]->class);
-    $this->assertSame('data_surface_demo_extras', $alters[0]->module);
+    $this->assertSame('surface_examples_extras', $alters[0]->module);
     $this->assertSame(['limit'], array_map(static fn ($refiner) => $refiner->key, $alters[0]->refiners));
 
     // An alter is an autowired service, the way a hook class is.
@@ -142,19 +142,19 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
   public function testDefinitionsAreCached(): void {
     $this->registry()->getDefinitions();
     $classes = $this->container->getParameter(ResourceCollectorPass::PARAMETER);
-    $plugins = $this->container->get('data_surface.resource_plugins');
+    $plugins = $this->container->get('surface.resource_plugins');
     // The ids carry both lists: the classes the compiler pass found and
     // the plugins that are their own structure.
     $hash = hash('xxh3', serialize([$classes, $plugins->ownStructures()]));
     $bin = $this->container->get('cache.discovery');
-    $index = $bin->get('data_surface:resources:index:' . $hash);
+    $index = $bin->get('surface:resources:index:' . $hash);
     $this->assertNotFalse($index);
     // The index names every resource and structure, and holds the shapes
     // by class; each definition is an entry of its own.
     $this->assertArrayHasKey(DemoBlockStructure::class, $index->data['names']);
     $this->assertArrayHasKey(StickyNoteBlock::class, $index->data['names']);
     $this->assertSame('resource_test.sku', $index->data['shapes'][Sku::class]->id);
-    $entry = $bin->get('data_surface:resources:entry:' . $hash . ':' . DemoBlockStructure::class);
+    $entry = $bin->get('surface:resources:entry:' . $hash . ':' . DemoBlockStructure::class);
     $this->assertNotFalse($entry);
     $this->assertSame(DemoBlockStructure::class, $entry->data->class);
     // A class read from code alone carries no tag: a cache rebuild is what
@@ -176,11 +176,11 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
    */
   public function testAnInstanceDefineInputsIsRefused(): void {
     $registry = new ResourceRegistry(
-      ['resources' => [InstanceDefineInputsStructure::class => 'data_surface_resource_test']],
+      ['resources' => [InstanceDefineInputsStructure::class => 'surface_resource_test']],
       $this->container->get('cache.discovery'),
     );
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage(InstanceDefineInputsStructure::class . ' carries #[Structure] and declares defineInputs() as an instance method. What a class declares belongs to the class, and the method takes nothing but the blueprint to fill: declare it `public static function defineInputs(BlueprintInterface $inputs): void`, and implement Drupal\data_surface\Resource\StructureInterface.');
+    $this->expectExceptionMessage(InstanceDefineInputsStructure::class . ' carries #[Structure] and declares defineInputs() as an instance method. What a class declares belongs to the class, and the method takes nothing but the blueprint to fill: declare it `public static function defineInputs(BlueprintInterface $inputs): void`, and implement Drupal\surface\Resource\StructureInterface.');
     $registry->getDefinitions();
   }
 
@@ -193,9 +193,9 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
   public function testClassIsOneKind(): void {
     foreach ([
       BothKindsClass::class => BothKindsClass::class . ' carries both #[Resource] and #[Structure].',
-      WrongKindStructure::class => WrongKindStructure::class . ' carries #[Structure] but does not implement Drupal\data_surface\Resource\StructureInterface.',
+      WrongKindStructure::class => WrongKindStructure::class . ' carries #[Structure] but does not implement Drupal\surface\Resource\StructureInterface.',
     ] as $class => $message) {
-      $registry = new ResourceRegistry(['resources' => [$class => 'data_surface_resource_test']], $this->container->get('cache.discovery'));
+      $registry = new ResourceRegistry(['resources' => [$class => 'surface_resource_test']], $this->container->get('cache.discovery'));
       try {
         $registry->getDefinitions();
         $this->fail($class . ' was not refused.');
@@ -214,7 +214,7 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
    * structure is refused too.
    */
   public function testRemovedArgumentsAreRefused(): void {
-    $module = 'data_surface_resource_test';
+    $module = 'surface_resource_test';
     $recipe = [RecipeResource::class => $module];
     $refusals = [
       [
@@ -257,17 +257,17 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
    * refused where the alters are read.
    */
   public function testAnAlterAddingOutputsIsRefused(): void {
-    $tail = " adds outputs (Drupal\\data_surface\\Resource\\AltersOutputsInterface, alterOutputs()), which an alter no longer may since 2026-10-24: what a call answers is its operation's outputs, declared by the resource or structure that owns it, and a reaction to a save belongs to ECA.";
+    $tail = " adds outputs (Drupal\\surface\\Resource\\AltersOutputsInterface, alterOutputs()), which an alter no longer may since 2026-10-24: what a call answers is its operation's outputs, declared by the resource or structure that owns it, and a reaction to a save belongs to ECA.";
     try {
-      ResourceCollectorPass::reflect('Drupal\\data_surface_resource_test\\OutsideDiscovery\\OutputsInterfaceAlter');
+      ResourceCollectorPass::reflect('Drupal\\surface_resource_test\\OutsideDiscovery\\OutputsInterfaceAlter');
       $this->fail('An alter implementing the removed interface was read.');
     }
     catch (\LogicException $e) {
-      $this->assertSame('Drupal\\data_surface_resource_test\\OutsideDiscovery\\OutputsInterfaceAlter' . $tail, $e->getMessage());
+      $this->assertSame('Drupal\\surface_resource_test\\OutsideDiscovery\\OutputsInterfaceAlter' . $tail, $e->getMessage());
     }
     $registry = new ResourceRegistry([
-      'resources' => [RecipeResource::class => 'data_surface_resource_test'],
-      'alters' => [OutputsAlter::class => 'data_surface_resource_test'],
+      'resources' => [RecipeResource::class => 'surface_resource_test'],
+      'alters' => [OutputsAlter::class => 'surface_resource_test'],
     ], $this->container->get('cache.discovery'));
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage(OutputsAlter::class . $tail);
@@ -289,9 +289,9 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     ];
     foreach ($cases as $alter => [$id, $owner]) {
       $registry = new ResourceRegistry([
-        'resources' => [RecipeResource::class => 'data_surface_resource_test'],
-        'shapes' => [Sku::class => 'data_surface_resource_test'],
-        'alters' => [$alter => 'data_surface_resource_test'],
+        'resources' => [RecipeResource::class => 'surface_resource_test'],
+        'shapes' => [Sku::class => 'surface_resource_test'],
+        'alters' => [$alter => 'surface_resource_test'],
       ], $this->container->get('cache.discovery'));
       try {
         $registry->getDefinitions();
@@ -303,8 +303,8 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     }
 
     $registry = new ResourceRegistry([
-      'resources' => [RecipeResource::class => 'data_surface_resource_test'],
-      'alters' => [UnknownIdAlter::class => 'data_surface_resource_test'],
+      'resources' => [RecipeResource::class => 'surface_resource_test'],
+      'alters' => [UnknownIdAlter::class => 'surface_resource_test'],
     ], $this->container->get('cache.discovery'));
     $this->assertSame([], $registry->getAlters(RecipeResource::class));
   }
@@ -314,7 +314,7 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
    */
   public function testResourceHasStorageOrHost(): void {
     $registry = new ResourceRegistry(
-      ['resources' => [HomelessResource::class => 'data_surface_resource_test']],
+      ['resources' => [HomelessResource::class => 'surface_resource_test']],
       $this->container->get('cache.discovery'),
     );
     $this->expectException(\LogicException::class);
@@ -326,11 +326,11 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
    * Tests that the extras alter applies to the demo block.
    */
   public function testExtrasAlterApplies(): void {
-    $surface = $this->container->get('data_surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
 
     // The badge is mounted under the alter's module, with its default.
     $this->assertSame(
-      ['data_surface_demo_extras' => ['badge' => 'star']],
+      ['surface_examples_extras' => ['badge' => 'star']],
       $surface->getDefaultValues()['third_party_settings'],
     );
 
@@ -349,11 +349,11 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
 
     // And the block, built by its host, carries both and stores both.
     $this->container->get('theme_installer')->install(['stark']);
-    $block = $this->container->get('plugin.manager.block')->createInstance('data_surface_demo');
-    $this->assertInstanceOf(DataSurfaceDemoBlock::class, $block);
-    $this->assertSame('star', $block->getConfiguration()['third_party_settings']['data_surface_demo_extras']['badge']);
+    $block = $this->container->get('plugin.manager.block')->createInstance('surface_examples_plugins');
+    $this->assertInstanceOf(ExampleBlock::class, $block);
+    $this->assertSame('star', $block->getConfiguration()['third_party_settings']['surface_examples_extras']['badge']);
     $this->assertContains('limit', $this->pipeline()->validate(
-      $block->getDataSurface(),
+      $block->getSurface(),
       ['limit' => 30, 'presentation' => 'grid', 'presentation_settings' => ['columns' => 3]] + $block->getConfiguration(),
     )->keys());
 
@@ -362,11 +362,11 @@ class ResourceDiscoveryTest extends DataSurfaceKernelTestBase {
     $placed = Block::create([
       'id' => 'demo',
       'theme' => 'stark',
-      'plugin' => 'data_surface_demo',
+      'plugin' => 'surface_examples_plugins',
       'settings' => ['label' => 'Demo'] + $block->getConfiguration(),
     ]);
     $placed->save();
-    $this->assertSame('star', $placed->getPlugin()->getConfiguration()['third_party_settings']['data_surface_demo_extras']['badge']);
+    $this->assertSame('star', $placed->getPlugin()->getConfiguration()['third_party_settings']['surface_examples_extras']['badge']);
   }
 
 }

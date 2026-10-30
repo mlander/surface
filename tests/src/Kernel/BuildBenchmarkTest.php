@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\ResourceBuild\Resources;
+use Drupal\surface\ResourceBuild\Resources;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
 use Drupal\user\Entity\User;
@@ -19,15 +19,15 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * bound set from what this kernel site measured, with headroom, so a
  * change that makes the kept build slow to read again, or large, fails
  * here. The bounds and the numbers they were set from are in
- * docs/performance.md; DATA_SURFACE_BENCHMARK=<file> writes what this
+ * docs/performance.md; SURFACE_BENCHMARK=<file> writes what this
  * machine measures to that file.
  *
  * Decision: see
  * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class BuildBenchmarkTest extends DataSurfaceKernelTestBase {
+class BuildBenchmarkTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -59,14 +59,14 @@ class BuildBenchmarkTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_first',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_examples_first',
     'block',
-    'data_surface_component_block',
-    'data_surface_block',
+    'surface_examples_component_block',
+    'surface_examples_block',
   ];
 
   /**
@@ -75,7 +75,7 @@ class BuildBenchmarkTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_first']);
+    $this->installConfig(['surface_examples', 'surface_examples_first']);
     $this->container->get('theme_installer')->install(['stark']);
     User::create(['uid' => 0, 'name' => '', 'status' => 0])->save();
     User::create(['uid' => 1, 'name' => 'admin', 'status' => 1])->save();
@@ -87,9 +87,9 @@ class BuildBenchmarkTest extends DataSurfaceKernelTestBase {
    * Tests each declared build, read back from the cache, within its bounds.
    */
   public function testDeclaredBuildsStayWithinBounds(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
-    $bin = $this->container->get('cache.data_surface_build');
+    $bin = $this->container->get('cache.surface_build');
     $memo = new \ReflectionMethod(Resources::class, 'memoKey');
     $cid = new \ReflectionMethod(Resources::class, 'cacheId');
     $measured = [];
@@ -121,7 +121,7 @@ class BuildBenchmarkTest extends DataSurfaceKernelTestBase {
       $this->assertLessThan($bound['ms'], $warm, sprintf('%s is read back in under %.1f ms (%s).', $operation, $bound['ms'], $measured[$operation]));
       $this->assertLessThan($bound['bytes'], $bytes, sprintf('%s is kept in under %d bytes (%s).', $operation, $bound['bytes'], $measured[$operation]));
     }
-    $file = getenv('DATA_SURFACE_BENCHMARK');
+    $file = getenv('SURFACE_BENCHMARK');
     if (is_string($file) && $file !== '') {
       file_put_contents($file, implode("\n", array_map(static fn (string $operation, string $line): string => $operation . ': ' . $line, array_keys($measured), $measured)) . "\n", FILE_APPEND);
     }

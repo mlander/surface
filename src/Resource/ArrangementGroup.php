@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * A named group the keys of one frame are drawn in: a fieldset or a details.
@@ -14,7 +14,7 @@ namespace Drupal\data_surface\Resource;
  * checks. Only drawing: every key inside it is posted, stored and sent at
  * its own path, as though no group were there.
  *
- * @see \Drupal\data_surface\Resource\Arrangement
+ * @see \Drupal\surface\Resource\Arrangement
  * @see docs/decisions.md#arrangement-is-declared-once
  */
 final class ArrangementGroup {

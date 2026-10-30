@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
-use Drupal\data_surface\Pipeline\Storage\StateStorage;
-use Drupal\data_surface_test\ConfigurableHostPlugin;
+use Drupal\surface\Surface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
+use Drupal\surface\Pipeline\Storage\StateStorage;
+use Drupal\surface_test\ConfigurableHostPlugin;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -28,19 +28,19 @@ use PHPUnit\Framework\Attributes\Group;
  * stored values, preparing without writing, and leaving host-owned
  * storage keys alone.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class PipelineParityTest extends DataSurfaceKernelTestBase {
+class PipelineParityTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'data_surface', 'data_surface_test'];
+  protected static $modules = ['system', 'surface', 'surface_test'];
 
   /**
    * The state key the state storage writes to.
    */
-  protected const STATE_KEY = 'data_surface.parity';
+  protected const STATE_KEY = 'surface.parity';
 
   /**
    * Builds a data surface covering every shape the coercion rules touch.
@@ -48,7 +48,7 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
    * A string, an integer, a float, a boolean, a select with labeled
    * choices, a nested map carrying a default, and a locked key.
    */
-  protected function surface(): DataSurfaceInterface {
+  protected function surface(): SurfaceInterface {
     $badge = DataDefinition::create('string')
       ->setLabel('Badge')
       ->addConstraint('Choice', ['choices' => ['star', 'flame']]);
@@ -76,7 +76,7 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
     DefinitionMetadata::setDefaultValue($definitions['mode'], 1);
     DefinitionMetadata::setDefaultValue($definitions['flavor'], 'vanilla');
 
-    return new DataSurface(
+    return new Surface(
       DefinitionMap::fromArrays(
         definitions: $definitions,
         locked: ['flavor'],
@@ -306,7 +306,7 @@ class PipelineParityTest extends DataSurfaceKernelTestBase {
       'flavor' => 'vanilla',
       'id' => 'demo_block',
       'label' => 'Demo',
-      'provider' => 'data_surface',
+      'provider' => 'surface',
     ], $plugin->getConfiguration());
   }
 

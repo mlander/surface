@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Hook;
+namespace Drupal\surface\Hook;
 
 use Drupal\Component\Render\MarkupInterface;
 use Drupal\Core\Hook\Attribute\Hook;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
 
 /**
  * Prints a refinement trigger's own error under it.
@@ -19,7 +19,7 @@ use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
  * its errors printed there whether or not Inline Form Errors is on. The
  * same value either way, so the two never print it twice.
  *
- * @see \Drupal\data_surface\Form\DataSurfaceFormBuilder::refreshSurface()
+ * @see \Drupal\surface\Form\SurfaceFormBuilder::refreshSurface()
  */
 final class InlineErrorHooks {
 
@@ -58,7 +58,7 @@ final class InlineErrorHooks {
    */
   protected static function inline(array &$variables): void {
     $element = $variables['element'] ?? [];
-    $id = $element[DataSurfaceFormBuilderInterface::INLINE_ERROR_KEY] ?? NULL;
+    $id = $element[SurfaceFormBuilderInterface::INLINE_ERROR_KEY] ?? NULL;
     if (empty($id) || empty($element['#errors'])) {
       return;
     }

@@ -2,31 +2,31 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_resource_test\Resource\Venue\HallResource;
-use Drupal\data_surface_resource_test\Resource\Venue\VenueResource;
-use Drupal\data_surface_resource_test\Structure\Broken\AlterAttachTargetStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\PortClashStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\PortCycleStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\PortsInCollectionStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\RefinesPortStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\UnwiredPortStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WiresInsideChildStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WiresMissingKeyStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WiresUnknownPortStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WiresWrongTypeStructure;
-use Drupal\data_surface_resource_test\Structure\Seating\SeatingStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
-use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_resource_test\Resource\Venue\HallResource;
+use Drupal\surface_resource_test\Resource\Venue\VenueResource;
+use Drupal\surface_resource_test\Structure\Broken\AlterAttachTargetStructure;
+use Drupal\surface_resource_test\Structure\Broken\PortClashStructure;
+use Drupal\surface_resource_test\Structure\Broken\PortCycleStructure;
+use Drupal\surface_resource_test\Structure\Broken\PortsInCollectionStructure;
+use Drupal\surface_resource_test\Structure\Broken\RefinesPortStructure;
+use Drupal\surface_resource_test\Structure\Broken\UnwiredPortStructure;
+use Drupal\surface_resource_test\Structure\Broken\WiresInsideChildStructure;
+use Drupal\surface_resource_test\Structure\Broken\WiresMissingKeyStructure;
+use Drupal\surface_resource_test\Structure\Broken\WiresUnknownPortStructure;
+use Drupal\surface_resource_test\Structure\Broken\WiresWrongTypeStructure;
+use Drupal\surface_resource_test\Structure\Seating\SeatingStructure;
+use Drupal\surface_tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -44,9 +44,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/resources.md#ports
  * @see docs/decisions.md#a-port-is-a-live-sibling-value
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class PortsTest extends DataSurfaceKernelTestBase {
+class PortsTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use StaticRefinerAgreementTrait;
@@ -60,15 +60,15 @@ class PortsTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_resource_test',
   ];
 
   /**
    * Where HallSeatingAlter's mount is.
    */
-  protected const MOUNT = 'third_party_settings.data_surface_resource_test';
+  protected const MOUNT = 'third_party_settings.surface_resource_test';
 
   /**
    * {@inheritdoc}
@@ -76,7 +76,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -86,11 +86,11 @@ class PortsTest extends DataSurfaceKernelTestBase {
    * @param class-string $class
    *   The resource.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function built(string $class): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function built(string $class): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     $context = $class === SeatingStructure::class ? new OperationContext('configure') : $resources->operation($class, 'configure');
     return $resources->build($class, $context);
   }
@@ -135,14 +135,14 @@ class PortsTest extends DataSurfaceKernelTestBase {
       'style' => $style,
       'guests' => $guests,
       'chairs' => $chairs,
-      'third_party_settings' => ['data_surface_resource_test' => $overflow],
+      'third_party_settings' => ['surface_resource_test' => $overflow],
     ];
   }
 
   /**
    * Lists the values a refined key offers.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The refined data surface.
    * @param string $path
    *   The key's dotted path.
@@ -150,7 +150,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The values.
    */
-  protected static function offered(DataSurfaceInterface $surface, string $path): array {
+  protected static function offered(SurfaceInterface $surface, string $path): array {
     $definition = self::at($surface, $path);
     return $definition === NULL ? [] : (ChoiceSet::of($definition)->values ?? []);
   }
@@ -158,7 +158,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
   /**
    * Reads one definition at a dotted path of a refined data surface.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param string $path
    *   The path.
@@ -166,7 +166,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition.
    */
-  protected static function at(DataSurfaceInterface $surface, string $path): ?DataDefinitionInterface {
+  protected static function at(SurfaceInterface $surface, string $path): ?DataDefinitionInterface {
     $parents = explode('.', $path);
     $definition = $surface->getDefinition((string) array_shift($parents));
     foreach ($parents as $property) {
@@ -190,7 +190,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
    *   The schema.
    */
   protected function schema(string $id, string $class, ?array $values = NULL): array {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $built = $this->built($class);
     $served = $values === NULL
       ? $emitter->emitFull($built, 'resource_test.' . $id, 'configure')
@@ -217,9 +217,9 @@ class PortsTest extends DataSurfaceKernelTestBase {
     $hall = $this->built(HallResource::class)->getDefinitions();
     $this->assertSame(['layout' => 'arrangement'], $hall->entry('chairs')->attachment->reads, 'The guests port is optional, and left unwired.');
     $mounted = $hall->entry('third_party_settings')->mounted;
-    $this->assertSame(['data_surface_resource_test'], array_keys($mounted));
-    $this->assertSame(['layout' => 'style', 'guests' => 'guests'], $mounted['data_surface_resource_test']->reads);
-    $this->assertSame('resource_test.seating', $mounted['data_surface_resource_test']->id);
+    $this->assertSame(['surface_resource_test'], array_keys($mounted));
+    $this->assertSame(['layout' => 'style', 'guests' => 'guests'], $mounted['surface_resource_test']->reads);
+    $this->assertSame('resource_test.seating', $mounted['surface_resource_test']->id);
     $this->assertSame([
       'guests' => [self::MOUNT . '.aisle'],
       'chairs.aisle' => ['arrangement'],
@@ -241,14 +241,14 @@ class PortsTest extends DataSurfaceKernelTestBase {
       WiresMissingKeyStructure::class => 'resource_test.broken.wires_missing_key wires the "layout" port of resource_test.seating at "seating" to "shape", which resource_test.broken.wires_missing_key does not declare as an input: a port reads a key of its container, by name.',
       WiresWrongTypeStructure::class => 'resource_test.broken.wires_wrong_type wires the "layout" port of resource_test.seating at "seating", which reads a string, to "size", which holds an integer.',
       WiresInsideChildStructure::class => 'resource_test.broken.wires_inside_child wires the "layout" port of resource_test.seating at "seating" to "seating.aisle", which is inside the child itself: a port reads its container\'s key, and what the child holds is its own.',
-      PortCycleStructure::class => 'The refinement map has a cycle: third_party_settings.data_surface_resource_test.rows -> size -> third_party_settings.data_surface_resource_test.rows. A definition cannot be refined against itself, directly or through its dependencies. It runs through the "guests" port of resource_test.seating, which the data_surface_resource_test alter of resource_test.broken.port_cycle wires to "size": a port may not read a key that reads, through the structure, the port itself.',
+      PortCycleStructure::class => 'The refinement map has a cycle: third_party_settings.surface_resource_test.rows -> size -> third_party_settings.surface_resource_test.rows. A definition cannot be refined against itself, directly or through its dependencies. It runs through the "guests" port of resource_test.seating, which the surface_resource_test alter of resource_test.broken.port_cycle wires to "size": a port may not read a key that reads, through the structure, the port itself.',
       WiresUnknownPortStructure::class => 'resource_test.broken.wires_unknown_port wires the "seats" port of resource_test.seating at "seating", which resource_test.seating does not read; it reads layout, guests.',
       PortsInCollectionStructure::class => 'resource_test.seating fills the "seatings" collection of resource_test.broken.ports_in_collection and requires the "layout" port, which nothing wires: a port is wired by attach(), and a collection\'s item is wired by nothing yet.',
       PortClashStructure::class => '"layout" is already declared in this blueprint, as a key, so it cannot be read as a port too: a port has a name of its own.',
-      RefinesPortStructure::class => 'Drupal\data_surface_resource_test\Structure\Broken\RefinesPortStructure::narrowsTheLayout() refines "layout", a port resource_test.broken.refines_port reads. A port is its container\'s key, read under a name of the structure\'s own: it is watched, never refined.',
-      AlterAttachTargetStructure::class => 'The data_surface_resource_test alter attaches Drupal\data_surface_resource_test\Structure\Seating\SeatingStructure at "seating". An alter attaches under its own mount, and only at the mount itself, third_party_settings.data_surface_resource_test: at the owner\'s level the structure\'s keys would be the owner\'s, and a structure at a key inside the mount is not built.',
+      RefinesPortStructure::class => 'Drupal\surface_resource_test\Structure\Broken\RefinesPortStructure::narrowsTheLayout() refines "layout", a port resource_test.broken.refines_port reads. A port is its container\'s key, read under a name of the structure\'s own: it is watched, never refined.',
+      AlterAttachTargetStructure::class => 'The surface_resource_test alter attaches Drupal\surface_resource_test\Structure\Seating\SeatingStructure at "seating". An alter attaches under its own mount, and only at the mount itself, third_party_settings.surface_resource_test: at the owner\'s level the structure\'s keys would be the owner\'s, and a structure at a key inside the mount is not built.',
     ];
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     foreach ($refusals as $class => $message) {
       try {
         $resources->build($class, new OperationContext('configure'));
@@ -316,7 +316,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(10, self::at($refined, self::MOUNT . '.rows')->getConstraints()['Range']['max']);
     $this->assertSame(['centre', 'side', 'none'], self::offered($refined, 'chairs.aisle'), 'The chairs read the arrangement, which holds nothing here.');
     $this->assertSame(40, self::at($hall->refine(['arrangement' => 'theatre', 'guests' => 50]), 'chairs.rows')->getConstraints()['Range']['max'], 'The chairs\' guests port is unwired: it holds nothing, and the rule reading it never holds.');
-    $glued = $hall->refine(['third_party_settings' => ['data_surface_resource_test' => ['aisle' => 'none']]]);
+    $glued = $hall->refine(['third_party_settings' => ['surface_resource_test' => ['aisle' => 'none']]]);
     $this->assertSame(300, $glued->getDefinition('guests')->getConstraints()['Range']['max'], 'The adapter\'s rule reads the structure\'s aisle.');
     $no_ushers = ['rows' => 20, 'aisle' => 'side', 'ushers' => NULL];
     $overflow = self::hall('standing', 'banquet', 250, ['rows' => 5], $no_ushers);
@@ -401,7 +401,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['resource_test.seating'], array_keys($hall['$defs']));
     $this->assertSame($def, $hall['$defs']['resource_test.seating'], 'The def is the structure\'s, wherever it is attached.');
     $this->assertSame('#/$defs/resource_test.seating', $hall['properties']['chairs']['$ref']);
-    $mount = $hall['properties']['third_party_settings']['properties']['data_surface_resource_test'];
+    $mount = $hall['properties']['third_party_settings']['properties']['surface_resource_test'];
     $this->assertSame(['title', '$ref', 'x-surface'], array_keys($mount));
     $this->assertSame(['Overflow seating', '#/$defs/resource_test.seating'], [$mount['title'], $mount['$ref']]);
     $this->assertSame(['layout' => 'style', 'guests' => 'guests'], $mount['x-surface']['reads']);
@@ -451,7 +451,7 @@ class PortsTest extends DataSurfaceKernelTestBase {
    */
   public function testTheToolListing(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    $tool = $tools->createInstance('data_surface:resource_test.venue:configure');
+    $tool = $tools->createInstance('surface:resource_test.venue:configure');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $seating = $values->getPropertyDefinition('seating');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $seating);
@@ -463,25 +463,25 @@ class PortsTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('/seating/aisle', (string) $tool->getResult()->getMessage());
 
-    $tool = $tools->createInstance('data_surface:resource_test.venue:configure');
+    $tool = $tools->createInstance('surface:resource_test.venue:configure');
     $tool->setInputValue(OperationInputs::VALUES, self::venue('banquet', 300, ['rows' => 30, 'aisle' => 'none']));
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $this->assertSame(['rows' => 30, 'aisle' => 'none', 'ushers' => 0], $this->config('data_surface_resource_test.venue')->get('seating'));
+    $this->assertSame(['rows' => 30, 'aisle' => 'none', 'ushers' => 0], $this->config('surface_resource_test.venue')->get('seating'));
 
     // The adapter's structure is stored under the module's name, and its
     // glue holds the hall's guests to 300 with no aisle.
-    $tool = $tools->createInstance('data_surface:resource_test.hall:configure');
+    $tool = $tools->createInstance('surface:resource_test.hall:configure');
     $overflow = ['rows' => 12, 'aisle' => 'none'];
     $tool->setInputValue(OperationInputs::VALUES, self::hall('banquet', 'banquet', 400, ['rows' => 5, 'aisle' => 'side'], $overflow));
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('guests:', (string) $tool->getResult()->getMessage());
-    $tool = $tools->createInstance('data_surface:resource_test.hall:configure');
+    $tool = $tools->createInstance('surface:resource_test.hall:configure');
     $tool->setInputValue(OperationInputs::VALUES, self::hall('banquet', 'banquet', 250, ['rows' => 5, 'aisle' => 'side'], $overflow));
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $this->assertSame(['rows' => 12, 'aisle' => 'none', 'ushers' => 0], $this->config('data_surface_resource_test.hall')->get('third_party_settings.data_surface_resource_test'));
+    $this->assertSame(['rows' => 12, 'aisle' => 'none', 'ushers' => 0], $this->config('surface_resource_test.hall')->get('third_party_settings.surface_resource_test'));
   }
 
 }

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Refinement\ApplicabilityInterface;
-use Drupal\data_surface\Refinement\DeclaredRefiner;
-use Drupal\data_surface\Refinement\RuntimeRefiner;
+use Drupal\surface\Refinement\ApplicabilityInterface;
+use Drupal\surface\Refinement\DeclaredRefiner;
+use Drupal\surface\Refinement\RuntimeRefiner;
 
 /**
  * One key of a data surface, and everything known about it.
@@ -26,7 +26,7 @@ use Drupal\data_surface\Refinement\RuntimeRefiner;
  * The data surface's own cacheability is not per key and stays on the
  * data surface.
  *
- * @see \Drupal\data_surface\DefinitionMap
+ * @see \Drupal\surface\DefinitionMap
  *   The ordered collection of entries a data surface is sealed with.
  */
 final class Entry {
@@ -48,17 +48,17 @@ final class Entry {
    *   The sibling keys this key's refinement reads, in declaration
    *   order. Empty for a key that never refines. A key an alter mounted
    *   is named by its dotted path, `third_party_settings.<module>.<key>`.
-   * @param array<string, array<\Drupal\data_surface\DataSurfaceRefinerInterface>> $refiners
+   * @param array<string, array<\Drupal\surface\SurfaceRefinerInterface>> $refiners
    *   Refiner chains keyed by contributor, the owner's own under
-   *   DataSurfaceInterface::OWNER. Always empty on an output's entry:
+   *   SurfaceInterface::OWNER. Always empty on an output's entry:
    *   outputs are never refined.
    * @param array<string, array> $contributions
    *   The values contributed to this key at build time, keyed by the
    *   provider that added them. What is not here is the owner's.
-   * @param \Drupal\data_surface\Attachment|null $attachment
+   * @param \Drupal\surface\Attachment|null $attachment
    *   The child fixed at this key, when the key holds an attached
    *   structure: its definition is then the child's definitions as a map.
-   * @param \Drupal\data_surface\Variants|null $variants
+   * @param \Drupal\surface\Variants|null $variants
    *   The variant table, when the key has variants a sibling chooses
    *   between: its definition is then the `any` placeholder until the
    *   sibling holds a value, and that variant's map afterwards.
@@ -72,18 +72,18 @@ final class Entry {
    *   The keys in $dependencies that only a runtime refiner of this key
    *   watches: what refinement waits for, and what nothing stating the
    *   key ahead of time reads (staticDependencies()).
-   * @param \Drupal\data_surface\Collection|null $list
+   * @param \Drupal\surface\Collection|null $list
    *   The child every item is, when the key is a collection: its
    *   definition is then a list whose item is the child's map. The key
    *   is the parent's own, refined by the parent's refiners (its Count)
    *   and locked by the parent; each item is the child's.
    * @param array<string, int> $watchedBy
    *   For each key in $dependencies, which kinds of link watch it, as a
-   *   mask of DataSurfaceInterface::CODED, DECLARED and RUNTIME: a key
+   *   mask of SurfaceInterface::CODED, DECLARED and RUNTIME: a key
    *   only a declared rule reads gates nothing. Empty for an entry built
    *   by hand, whose every dependency is read as a coded refiner's, a
    *   runtime one's in $runtimeOnly.
-   * @param array<string, \Drupal\data_surface\Attachment> $mounted
+   * @param array<string, \Drupal\surface\Attachment> $mounted
    *   The structures alters attached at their mounts inside this key, by
    *   the path below it (`<module>`), each with its ports wired: the
    *   `third_party_settings` key's alone. The key stays a plain map the
@@ -107,7 +107,7 @@ final class Entry {
   public function __construct(
     public readonly string $name,
     public readonly DataDefinitionInterface $definition,
-    public readonly string $contributor = DataSurfaceInterface::OWNER,
+    public readonly string $contributor = SurfaceInterface::OWNER,
     public readonly bool $locked = FALSE,
     public readonly array $dependencies = [],
     public readonly array $refiners = [],
@@ -186,7 +186,7 @@ final class Entry {
    *   The keys, in the order of $dependencies.
    */
   public function codedDependencies(): array {
-    return $this->watchedBy === [] ? $this->staticDependencies() : $this->watching(DataSurfaceInterface::CODED);
+    return $this->watchedBy === [] ? $this->staticDependencies() : $this->watching(SurfaceInterface::CODED);
   }
 
   /**
@@ -197,7 +197,7 @@ final class Entry {
    *   $dependencies.
    */
   public function declaredDependencies(): array {
-    return $this->watching(DataSurfaceInterface::DECLARED);
+    return $this->watching(SurfaceInterface::DECLARED);
   }
 
   /**
@@ -231,7 +231,7 @@ final class Entry {
     }
     return array_map('strval', array_keys(array_filter(
       $presence,
-      fn (bool $only, int|string $key): bool => $only && ($this->watchedBy[(string) $key] ?? 0) === DataSurfaceInterface::DECLARED,
+      fn (bool $only, int|string $key): bool => $only && ($this->watchedBy[(string) $key] ?? 0) === SurfaceInterface::DECLARED,
       ARRAY_FILTER_USE_BOTH,
     )));
   }
@@ -246,7 +246,7 @@ final class Entry {
    * Decision: see docs/decisions.md#a-rule-declared-as-data.
    *
    * @param int $kinds
-   *   The kinds of link that run, a mask of DataSurfaceInterface::CODED,
+   *   The kinds of link that run, a mask of SurfaceInterface::CODED,
    *   DECLARED and RUNTIME.
    *
    * @return string[]
@@ -254,9 +254,9 @@ final class Entry {
    */
   public function gate(int $kinds): array {
     if ($this->watchedBy === []) {
-      return $kinds & DataSurfaceInterface::RUNTIME ? $this->dependencies : $this->staticDependencies();
+      return $kinds & SurfaceInterface::RUNTIME ? $this->dependencies : $this->staticDependencies();
     }
-    return $this->watching($kinds & (DataSurfaceInterface::CODED | DataSurfaceInterface::RUNTIME));
+    return $this->watching($kinds & (SurfaceInterface::CODED | SurfaceInterface::RUNTIME));
   }
 
   /**
@@ -278,17 +278,17 @@ final class Entry {
   /**
    * Tells which kind of link a refiner is.
    *
-   * @param \Drupal\data_surface\DataSurfaceRefinerInterface $link
+   * @param \Drupal\surface\SurfaceRefinerInterface $link
    *   The link.
    *
    * @return int
-   *   DataSurfaceInterface::RUNTIME, DECLARED or CODED.
+   *   SurfaceInterface::RUNTIME, DECLARED or CODED.
    */
-  public static function kindOf(DataSurfaceRefinerInterface $link): int {
+  public static function kindOf(SurfaceRefinerInterface $link): int {
     return match (TRUE) {
-      $link instanceof RuntimeRefiner => DataSurfaceInterface::RUNTIME,
-      $link instanceof DeclaredRefiner => DataSurfaceInterface::DECLARED,
-      default => DataSurfaceInterface::CODED,
+      $link instanceof RuntimeRefiner => SurfaceInterface::RUNTIME,
+      $link instanceof DeclaredRefiner => SurfaceInterface::DECLARED,
+      default => SurfaceInterface::CODED,
     };
   }
 
@@ -340,7 +340,7 @@ final class Entry {
    * @param bool|int|null $runtime
    *   TRUE for its runtime refiners only, FALSE for its static ones only
    *   (coded and declared), NULL for every one; or the kinds of link, a
-   *   mask of DataSurfaceInterface::CODED, DECLARED and RUNTIME.
+   *   mask of SurfaceInterface::CODED, DECLARED and RUNTIME.
    *
    * @return string[]
    *   '' for the key itself, and the dotted path below it of each mounted
@@ -348,9 +348,9 @@ final class Entry {
    */
   public function mayNotApply(bool|int|null $runtime = NULL): array {
     $kinds = match ($runtime) {
-      NULL => DataSurfaceInterface::EVERY,
-      TRUE => DataSurfaceInterface::RUNTIME,
-      FALSE => DataSurfaceInterface::STATIC,
+      NULL => SurfaceInterface::EVERY,
+      TRUE => SurfaceInterface::RUNTIME,
+      FALSE => SurfaceInterface::STATIC,
       default => $runtime,
     };
     $paths = [];
@@ -380,11 +380,11 @@ final class Entry {
    *   The values of the data surface this key belongs to, which is where a
    *   variants' deciding key and an attached child's wired ports are read.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   * @return \Drupal\surface\SurfaceInterface|null
    *   The child, or NULL for a plain key and for variants nothing has
    *   chosen yet.
    */
-  public function childFor(array $values): ?DataSurfaceInterface {
+  public function childFor(array $values): ?SurfaceInterface {
     if ($this->attachment !== NULL) {
       return $this->attachment->bound($values);
     }
@@ -454,10 +454,10 @@ final class Entry {
   /**
    * Gets the child every item of a collection is, if this key is one.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   * @return \Drupal\surface\SurfaceInterface|null
    *   The child, as advertised, or NULL for any other key.
    */
-  public function itemChild(): ?DataSurfaceInterface {
+  public function itemChild(): ?SurfaceInterface {
     return $this->list?->item->child;
   }
 
@@ -469,7 +469,7 @@ final class Entry {
    * mean something different if that provider went away.
    *
    * @param string $contributor
-   *   The provider id, or DataSurfaceInterface::OWNER.
+   *   The provider id, or SurfaceInterface::OWNER.
    *
    * @return bool
    *   TRUE when the provider touched this key.

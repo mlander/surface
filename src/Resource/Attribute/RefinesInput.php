@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource\Attribute;
+namespace Drupal\surface\Resource\Attribute;
 
 /**
  * On a method: it tightens one input key against sibling values.

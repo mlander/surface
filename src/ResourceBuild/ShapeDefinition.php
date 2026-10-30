@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 /**
  * One #[Shape] class, as discovery read it, with the alters naming it.
@@ -14,13 +14,13 @@ final class ShapeDefinition {
   /**
    * Constructs a ShapeDefinition.
    *
-   * @param class-string<\Drupal\data_surface\Resource\ShapeInterface> $class
+   * @param class-string<\Drupal\surface\Resource\ShapeInterface> $class
    *   The shape's class.
    * @param string $id
    *   Its id, from #[Shape].
    * @param string $module
    *   The module it is in.
-   * @param \Drupal\data_surface\ResourceBuild\AlterDefinition[] $alters
+   * @param \Drupal\surface\ResourceBuild\AlterDefinition[] $alters
    *   Every alter of it, in discovery order.
    */
   public function __construct(
@@ -33,7 +33,7 @@ final class ShapeDefinition {
   /**
    * Returns a copy with its alters.
    *
-   * @param \Drupal\data_surface\ResourceBuild\AlterDefinition[] $alters
+   * @param \Drupal\surface\ResourceBuild\AlterDefinition[] $alters
    *   The alters.
    *
    * @return static

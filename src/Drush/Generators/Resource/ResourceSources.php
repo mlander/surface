@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Generators\Resource;
+namespace Drupal\surface\Drush\Generators\Resource;
 
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Extension\ModuleExtensionList;
-use Drupal\data_surface\Contract\ConfigSchemaDocument;
-use Drupal\data_surface\Contract\SchemaReader;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Resource\ResourceCallable;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface\Variants\ComponentProps;
+use Drupal\surface\Contract\ConfigSchemaDocument;
+use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\ResourceCallable;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface\Variants\ComponentProps;
 
 /**
  * Builds what the resource generator writes, from one of its three sources.
@@ -40,14 +40,14 @@ final class ResourceSources {
   /**
    * Constructs a ResourceSources.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   The registry, which a source is registered with as a structure read
    *   from it.
-   * @param \Drupal\data_surface\ResourceBuild\Resources $resources
+   * @param \Drupal\surface\ResourceBuild\Resources $resources
    *   The build step.
-   * @param \Drupal\data_surface\Contract\SchemaReader $reader
+   * @param \Drupal\surface\Contract\SchemaReader $reader
    *   The schema reader.
-   * @param \Drupal\data_surface\Contract\ConfigSchemaDocument $documents
+   * @param \Drupal\surface\Contract\ConfigSchemaDocument $documents
    *   Writes a config schema entry as JSON Schema.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $configFactory
    *   The config factory, for what a config object holds now.
@@ -76,7 +76,7 @@ final class ResourceSources {
    * @param array<int, array<string, mixed>> $keys
    *   The keys, as KeyAnswers reads them.
    *
-   * @return \Drupal\data_surface\Drush\Generators\Resource\BuiltSource
+   * @return \Drupal\surface\Drush\Generators\Resource\BuiltSource
    *   What was built.
    */
   public function fromAnswers(string $id, string $module, array $keys): BuiltSource {
@@ -99,7 +99,7 @@ final class ResourceSources {
    * @param string $config
    *   The config object, whose schema entry is read.
    *
-   * @return \Drupal\data_surface\Drush\Generators\Resource\BuiltSource
+   * @return \Drupal\surface\Drush\Generators\Resource\BuiltSource
    *   What was built, with what the schema states that is not written.
    *
    * @throws \InvalidArgumentException
@@ -127,7 +127,7 @@ final class ResourceSources {
    * @param string $file
    *   The document's path.
    *
-   * @return \Drupal\data_surface\Drush\Generators\Resource\BuiltSource
+   * @return \Drupal\surface\Drush\Generators\Resource\BuiltSource
    *   What was built.
    *
    * @throws \InvalidArgumentException
@@ -216,7 +216,7 @@ final class ResourceSources {
    * @param array $left
    *   What a config schema states that the document does not.
    *
-   * @return \Drupal\data_surface\Drush\Generators\Resource\BuiltSource
+   * @return \Drupal\surface\Drush\Generators\Resource\BuiltSource
    *   What was built.
    */
   protected function built(string $name, string $source, array $notes = [], array $left = []): BuiltSource {

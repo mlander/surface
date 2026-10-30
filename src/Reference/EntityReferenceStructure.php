@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Reference;
+namespace Drupal\surface\Reference;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Refinement\Condition;
-use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\BlueprintInterface;
+use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Resource\Attribute\RefinesInput;
+use Drupal\surface\Resource\BlueprintInterface;
 
 /**
  * The two parts a bare `entity` key is: an entity type, then an id of it.
  *
  * `add('thing', 'entity', t('Thing'))` attaches this at the key, built
  * once per key with what its author narrowed the key by: the
- * DataSurfaceReferenceableType constraint written on the key, moved onto
+ * SurfaceReferenceableType constraint written on the key, moved onto
  * `entity_type` (filter()). The id is a string, since entity types keep
  * their ids as integers or strings, and its refiner narrows it to the
  * chosen entity type the way `entity:<type>` builds a key: the same
@@ -35,7 +35,7 @@ final class EntityReferenceStructure {
   /**
    * The setting on the id holding the bundles each entity type allows.
    */
-  public const TARGETS = 'data_surface_reference_targets';
+  public const TARGETS = 'surface_reference_targets';
 
   /**
    * Reads, and takes off the key, what its author narrowed it by.
@@ -69,7 +69,7 @@ final class EntityReferenceStructure {
   /**
    * Declares the two parts, for one key's filter.
    *
-   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The structure's blueprint.
    * @param string|null $interface
    *   The interface its entity types implement, or NULL for any.

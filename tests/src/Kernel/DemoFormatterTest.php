@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\NotEmitted;
-use Drupal\data_surface\Resource\Attribute\UsesStructure;
-use Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\NotEmitted;
+use Drupal\surface\Resource\Attribute\UsesStructure;
+use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
 use Drupal\entity_test\Entity\EntityTest;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -27,9 +27,9 @@ use PHPUnit\Framework\Attributes\Group;
  * contributed to a key the formatter already refines, narrowed by a
  * refiner of the contributor's own.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DemoFormatterTest extends DataSurfaceKernelTestBase {
+class DemoFormatterTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -39,10 +39,10 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     'user',
     'field',
     'entity_test',
-    'data_surface',
-    'data_surface_demo',
-    'data_surface_demo_extras',
-    'data_surface_test',
+    'surface',
+    'surface_examples_plugins',
+    'surface_examples_extras',
+    'surface_test',
   ];
 
   /**
@@ -51,21 +51,21 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
    * @param array $settings
    *   Formatter settings.
    *
-   * @return \Drupal\data_surface_demo\Plugin\Field\FieldFormatter\DataSurfaceDemoFormatter
+   * @return \Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter
    *   The formatter instance.
    */
-  protected function createFormatter(array $settings = []): DataSurfaceDemoFormatter {
+  protected function createFormatter(array $settings = []): ExampleFormatter {
     $field_definition = BaseFieldDefinition::create('string')
       ->setName('field_demo')
       ->setLabel('Demo');
-    $formatter = $this->container->get('plugin.manager.field.formatter')->createInstance('data_surface_demo_string', [
+    $formatter = $this->container->get('plugin.manager.field.formatter')->createInstance('surface_examples_plugins_string', [
       'field_definition' => $field_definition,
       'settings' => $settings,
       'label' => 'above',
       'view_mode' => 'default',
       'third_party_settings' => [],
     ]);
-    $this->assertInstanceOf(DataSurfaceDemoFormatter::class, $formatter);
+    $this->assertInstanceOf(ExampleFormatter::class, $formatter);
     return $formatter;
   }
 
@@ -85,7 +85,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
    * the claim nor evidence for it.
    */
   public function testDefaultSettingsAreDerived(): void {
-    $defaults = DataSurfaceDemoFormatter::defaultSettings();
+    $defaults = ExampleFormatter::defaultSettings();
     $this->assertNull($defaults['prefix']);
     $this->assertSame('none', $defaults['casing']);
     $this->assertNull($defaults['variant']);
@@ -94,13 +94,13 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     // They agree with what the built structure declares, apart from the
     // mounted namespace: the static array cannot see a runtime mount,
     // which is exactly why it declares the key unconditionally.
-    $surface_defaults = $this->createFormatter()->getDataSurface()->getDefaultValues();
+    $surface_defaults = $this->createFormatter()->getSurface()->getDefaultValues();
     $this->assertSame(
       ['prefix' => NULL, 'casing' => 'none', 'variant' => NULL],
       array_diff_key($surface_defaults, ['third_party_settings' => NULL]),
     );
     $this->assertSame(
-      ['data_surface_demo_extras' => ['badge' => 'star']],
+      ['surface_examples_extras' => ['badge' => 'star']],
       $surface_defaults['third_party_settings'],
     );
   }
@@ -141,7 +141,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     $this->assertArrayHasKey('#empty_option', $form['variant']);
     // The data surface rides along for the element validate callback, which
     // is the only stage this host protocol leaves room for.
-    $this->assertArrayHasKey('#data_surface', $form);
+    $this->assertArrayHasKey('#surface', $form);
   }
 
   /**
@@ -157,15 +157,15 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       'prefix' => '>> ',
       'casing' => 'uppercase',
       'variant' => 'bold',
-      'third_party_settings' => ['data_surface_demo_extras' => ['badge' => 'flame']],
+      'third_party_settings' => ['surface_examples_extras' => ['badge' => 'flame']],
     ]);
-    DataSurfaceDemoFormatter::validateSurfaceSettings($element, $form_state);
+    ExampleFormatter::validateSurfaceSettings($element, $form_state);
     $this->assertSame([], $form_state->getErrors());
     $this->assertSame([
       'prefix' => '>> ',
       'casing' => 'uppercase',
       'variant' => 'bold',
-      'third_party_settings' => ['data_surface_demo_extras' => ['badge' => 'flame']],
+      'third_party_settings' => ['surface_examples_extras' => ['badge' => 'flame']],
     ], $form_state->getValues());
 
     // A variant outside the refined choices is refused.
@@ -174,9 +174,9 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       'prefix' => '',
       'casing' => 'lowercase',
       'variant' => 'bold',
-      'third_party_settings' => ['data_surface_demo_extras' => ['badge' => 'star']],
+      'third_party_settings' => ['surface_examples_extras' => ['badge' => 'star']],
     ]);
-    DataSurfaceDemoFormatter::validateSurfaceSettings($element, $form_state);
+    ExampleFormatter::validateSurfaceSettings($element, $form_state);
     $this->assertNotEmpty($form_state->getErrors());
   }
 
@@ -184,11 +184,11 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
    * Tests that the third party's setting joins the structure.
    */
   public function testExtrasMountsTheBadge(): void {
-    $surface = $this->createFormatter()->getDataSurface();
+    $surface = $this->createFormatter()->getSurface();
 
     $third_party = $surface->getDefinition('third_party_settings');
     $this->assertInstanceOf(MapDataDefinition::class, $third_party);
-    $provider = $third_party->getPropertyDefinitions()['data_surface_demo_extras'] ?? NULL;
+    $provider = $third_party->getPropertyDefinitions()['surface_examples_extras'] ?? NULL;
     $this->assertInstanceOf(MapDataDefinition::class, $provider);
     $badge = $provider->getPropertyDefinitions()['badge'] ?? NULL;
     $this->assertNotNull($badge);
@@ -212,9 +212,9 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     // and a stored value round-trips back into it — the form-alter era
     // needed a hook for this and left nothing a machine could read.
     $form = $this->createFormatter([
-      'third_party_settings' => ['data_surface_demo_extras' => ['badge' => 'flame']],
+      'third_party_settings' => ['surface_examples_extras' => ['badge' => 'flame']],
     ])->settingsForm([], new FormState());
-    $badge_element = $form['third_party_settings']['data_surface_demo_extras']['badge'];
+    $badge_element = $form['third_party_settings']['surface_examples_extras']['badge'];
     $this->assertSame('select', $badge_element['#type']);
     $this->assertSame('flame', $badge_element['#default_value']);
     $this->assertSame(
@@ -228,25 +228,25 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
     // static-defaults gap, visible from the other side.
     $this->assertSame(
       'star',
-      $surface->getDefaultValues()['third_party_settings']['data_surface_demo_extras']['badge'],
+      $surface->getDefaultValues()['third_party_settings']['surface_examples_extras']['badge'],
     );
     $fresh = $this->createFormatter()->settingsForm([], new FormState());
     // So the select comes up on its empty option.
-    $this->assertSame('', $fresh['third_party_settings']['data_surface_demo_extras']['badge']['#default_value']);
+    $this->assertSame('', $fresh['third_party_settings']['surface_examples_extras']['badge']['#default_value']);
 
     // The mounted value is validated by the structure like any other.
     $this->assertContains(
       'third_party_settings',
       $this->pipeline()->validate($surface, [
         'casing' => 'none',
-        'third_party_settings' => ['data_surface_demo_extras' => ['badge' => 'sash']],
+        'third_party_settings' => ['surface_examples_extras' => ['badge' => 'sash']],
       ])->keys(),
     );
 
     // And it is named in the settings summary rather than counted.
     $summary = array_map('strval', $this->createFormatter([
       'casing' => 'uppercase',
-      'third_party_settings' => ['data_surface_demo_extras' => ['badge' => 'flame']],
+      'third_party_settings' => ['surface_examples_extras' => ['badge' => 'flame']],
     ])->settingsSummary());
     $this->assertContains('Casing: uppercase', $summary);
     $this->assertContains('Badge: flame', $summary);
@@ -256,7 +256,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
    * Tests the contribution: what each refiner is handed, and the union.
    */
   public function testTheUnionOfContributions(): void {
-    $surface = $this->createFormatter()->getDataSurface();
+    $surface = $this->createFormatter()->getSurface();
 
     // The contribution is advertised, under the name of who made it.
     $this->assertSame(
@@ -264,7 +264,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       $surface->getDefinition('variant')->getConstraints()['LabeledChoice']['choices'],
     );
     $this->assertSame(
-      ['variant' => ['data_surface_demo_extras' => ['ribbon']]],
+      ['variant' => ['surface_examples_extras' => ['ribbon']]],
       $surface->getDefinitions()->contributions(),
     );
 
@@ -304,13 +304,13 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
   /**
    * Reads the values a refined data surface offers for the variant key.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface to read.
    *
    * @return array
    *   The allowed values, in the order they are offered.
    */
-  protected function variants(DataSurfaceInterface $surface): array {
+  protected function variants(SurfaceInterface $surface): array {
     return $surface->getDefinition('variant')->getConstraints()['LabeledChoice']['choices'];
   }
 
@@ -334,13 +334,13 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       'status' => TRUE,
     ]);
     $display->setComponent('field_demo', [
-      'type' => 'data_surface_demo_string',
+      'type' => 'surface_examples_plugins_string',
       'settings' => [
         'prefix' => '>> ',
         'casing' => 'uppercase',
         'variant' => 'bold',
         'third_party_settings' => [
-          'data_surface_demo_extras' => ['badge' => 'flame'],
+          'surface_examples_extras' => ['badge' => 'flame'],
         ],
       ],
     ]);
@@ -351,7 +351,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       ->getComponent('field_demo')['settings'];
     $this->assertSame('uppercase', $settings['casing']);
     $this->assertSame(
-      ['data_surface_demo_extras' => ['badge' => 'flame']],
+      ['surface_examples_extras' => ['badge' => 'flame']],
       $settings['third_party_settings'],
     );
   }
@@ -369,7 +369,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
    * held to it by conformOutput().
    */
   public function testOutputsAreDeclaredBesideTheSettings(): void {
-    $surface = $this->createFormatter()->getDataSurface();
+    $surface = $this->createFormatter()->getSurface();
 
     $outputs = $surface->getOutputDefinitions();
     $this->assertSame(['text', 'classes'], $outputs->names());
@@ -396,16 +396,16 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
    * class in its own `configure` context, under its own host id.
    */
   public function testTheHostReadsTheStructureFromTheAttribute(): void {
-    $definition = $this->container->get('plugin.manager.field.formatter')->getDefinition('data_surface_demo_string');
-    $this->assertSame(DataSurfaceDemoFormatter::class, $definition[UsesStructure::DEFINITION_KEY]);
+    $definition = $this->container->get('plugin.manager.field.formatter')->getDefinition('surface_examples_plugins_string');
+    $this->assertSame(ExampleFormatter::class, $definition[UsesStructure::DEFINITION_KEY]);
     $this->assertSame(
       ['prefix', 'casing', 'variant', 'third_party_settings'],
-      $this->createFormatter()->getDataSurface()->getDefinitions()->names(),
+      $this->createFormatter()->getSurface()->getDefinitions()->names(),
     );
     // The static defaults are the structure's own shape, alters left out.
     $this->assertSame(
-      $this->container->get('data_surface.resources')->defaults(DataSurfaceDemoFormatter::class) + ['third_party_settings' => []],
-      DataSurfaceDemoFormatter::defaultSettings(),
+      $this->container->get('surface.resources')->defaults(ExampleFormatter::class) + ['third_party_settings' => []],
+      ExampleFormatter::defaultSettings(),
     );
   }
 
@@ -426,7 +426,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       'variant' => 'bold',
     ]);
     $settings = $formatter->getSettings();
-    $surface = $formatter->getDataSurface();
+    $surface = $formatter->getSurface();
 
     $emitted = [];
     foreach ($entity->get('field_demo') as $delta => $item) {
@@ -438,8 +438,8 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       );
     }
     $this->assertSame([
-      ['text' => '>> ONE', 'classes' => ['data-surface-variant-bold']],
-      ['text' => '>> TWO', 'classes' => ['data-surface-variant-bold']],
+      ['text' => '>> ONE', 'classes' => ['surface-variant-bold']],
+      ['text' => '>> TWO', 'classes' => ['surface-variant-bold']],
     ], array_map(NotEmitted::strip(...), $emitted));
   }
 
@@ -460,7 +460,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
 
     $this->assertTrue(NotEmitted::is($data['classes']));
     $this->assertSame(['text' => 'plain'], NotEmitted::strip($data));
-    $this->assertCount(0, $this->pipeline()->conformOutput($formatter->getDataSurface(), $data));
+    $this->assertCount(0, $this->pipeline()->conformOutput($formatter->getSurface(), $data));
   }
 
   /**
@@ -479,7 +479,7 @@ class DemoFormatterTest extends DataSurfaceKernelTestBase {
       ->viewElements($entity->get('field_demo'), 'en');
     $this->assertSame('html_tag', $elements[0]['#type']);
     $this->assertSame('span', $elements[0]['#tag']);
-    $this->assertSame(['class' => ['data-surface-variant-bold']], $elements[0]['#attributes']);
+    $this->assertSame(['class' => ['surface-variant-bold']], $elements[0]['#attributes']);
     $this->assertSame('LOUD', $elements[0]['text']['#plain_text']);
 
     // No variant means no class attribute, not an empty one.

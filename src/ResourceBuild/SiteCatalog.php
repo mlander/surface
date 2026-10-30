@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Collection;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\Contract\ContractBaselines;
-use Drupal\data_surface\Contract\SiteListBudget;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
+use Drupal\surface\Collection;
+use Drupal\surface\Computed;
+use Drupal\surface\Contract\ContractBaselines;
+use Drupal\surface\Contract\SiteListBudget;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Widget\SurfaceWidgetManager;
 
 /**
  * The live map of a site: what discovery found, its doors, its refusals.
@@ -33,7 +33,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
  * (ResourcesInterface::buildDeclared()), asked as the anonymous one, as
  * the tool listing is, so the map is the same whoever asks.
  *
- * @see \Drupal\data_surface\Drush\Commands\CatalogCommand
+ * @see \Drupal\surface\Drush\Commands\CatalogCommand
  */
 final class SiteCatalog {
 
@@ -117,33 +117,33 @@ final class SiteCatalog {
   /**
    * Constructs a SiteCatalog.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceCatalog $catalog
+   * @param \Drupal\surface\ResourceBuild\ResourceCatalog $catalog
    *   The static layer's catalog.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins $plugins
+   * @param \Drupal\surface\ResourceBuild\ResourcePlugins $plugins
    *   Which plugins name which structure.
    * @param \Drupal\Core\Session\AccountSwitcherInterface $switcher
    *   The account switcher, so every build is the anonymous account's.
-   * @param iterable<\Drupal\data_surface\ResourceBuild\CatalogDoorsInterface> $doors
+   * @param iterable<\Drupal\surface\ResourceBuild\CatalogDoorsInterface> $doors
    *   What names the doors, one per module that opens some.
    * @param string $root
    *   The Drupal root, which a refusal's file is named from.
-   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
+   * @param \Drupal\surface\Contract\SiteListBudget|null $budget
    *   How many variants of a list the site decides have their keys listed;
    *   without it, every one.
-   * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager|null $widgets
+   * @param \Drupal\surface\Widget\SurfaceWidgetManager|null $widgets
    *   The widget manager, which names the widget each key is drawn by;
    *   without it, none is named.
-   * @param \Drupal\data_surface\ResourceBuild\FormRouteDoors|null $forms
+   * @param \Drupal\surface\ResourceBuild\FormRouteDoors|null $forms
    *   The routes modules serve operations at, an operation form's or a
    *   React page's; with the two below, each is judged for the operation
    *   it serves. Without them, none is.
-   * @param \Drupal\data_surface\ResourceBuild\OperationArguments|null $arguments
+   * @param \Drupal\surface\ResourceBuild\OperationArguments|null $arguments
    *   What maps a route's parameters onto the operation's.
-   * @param \Drupal\data_surface\ResourceBuild\KeyPaths|null $keyPaths
+   * @param \Drupal\surface\ResourceBuild\KeyPaths|null $keyPaths
    *   What finds the key a path names on a built resource.
    */
   public function __construct(
@@ -155,7 +155,7 @@ final class SiteCatalog {
     protected readonly iterable $doors,
     protected readonly string $root,
     protected readonly ?SiteListBudget $budget = NULL,
-    protected readonly ?DataSurfaceWidgetManager $widgets = NULL,
+    protected readonly ?SurfaceWidgetManager $widgets = NULL,
     protected readonly ?FormRouteDoors $forms = NULL,
     protected readonly ?OperationArguments $arguments = NULL,
     protected readonly ?KeyPaths $keyPaths = NULL,
@@ -310,20 +310,20 @@ final class SiteCatalog {
    * Decision: see
    * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   One of its operations.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context the catalog built it in.
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The build, for no account.
    *
    * @return list<\Throwable>
    *   What refused each route written wrong, one per route, its message
    *   naming the route.
    */
-  protected function routeRefusals(ResourceDefinition $definition, OperationDefinition $operation, OperationContext $context, DataSurfaceInterface $built): array {
+  protected function routeRefusals(ResourceDefinition $definition, OperationDefinition $operation, OperationContext $context, SurfaceInterface $built): array {
     if ($this->forms === NULL || $this->arguments === NULL || $this->keyPaths === NULL) {
       return [];
     }
@@ -373,12 +373,12 @@ final class SiteCatalog {
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The build.
    * @param array<int, true> $seen
    *   The frames read, by object id.
    */
-  protected static function settle(DataSurfaceInterface $surface, array &$seen = []): void {
+  protected static function settle(SurfaceInterface $surface, array &$seen = []): void {
     if (isset($seen[spl_object_id($surface)])) {
       return;
     }
@@ -517,9 +517,9 @@ final class SiteCatalog {
   /**
    * Asks every door provider about one operation.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param bool $standalone
    *   Whether it can be asked on its own.
@@ -548,10 +548,10 @@ final class SiteCatalog {
    *
    * @param string $name
    *   The resource's name.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   Its own context when it needs nothing; else one of its id alone,
    *   its subject unknown.
    */
@@ -578,7 +578,7 @@ final class SiteCatalog {
   /**
    * Writes one refusal.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition|null $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition|null $definition
    *   What it was raised for, or NULL for discovery.
    * @param string|null $operation
    *   The operation, or NULL for the whole.
@@ -620,7 +620,7 @@ final class SiteCatalog {
   /**
    * Lists the keys of a built resource or structure, its parts' too.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built resource or structure.
    * @param string|null $source
    *   The name it was built from, for its refiners; NULL for none.
@@ -632,7 +632,7 @@ final class SiteCatalog {
    * @return list<array>
    *   The keys, in declaration order, each part's after the key holding it.
    */
-  protected function keys(DataSurfaceInterface $surface, ?string $source, string $prefix, ?string $within = NULL): array {
+  protected function keys(SurfaceInterface $surface, ?string $source, string $prefix, ?string $within = NULL): array {
     $refiners = [];
     if ($source !== NULL && $this->registry->hasDefinition($source)) {
       $owner = $this->registry->getDefinition($source);
@@ -686,7 +686,7 @@ final class SiteCatalog {
         'rules' => $entry->declaredDependencies(),
         'watches' => array_values(array_map('strval', $entry->dependencies)),
         'runtime' => $entry->isRefinedAtRuntime(),
-        'contributor' => $entry->contributor === DataSurfaceInterface::OWNER ? NULL : $entry->contributor,
+        'contributor' => $entry->contributor === SurfaceInterface::OWNER ? NULL : $entry->contributor,
         'child' => $entry->attachment->id ?? $entry->attachment?->source,
         'variants' => $entry->variants === NULL ? NULL : [
           'by' => $entry->variants->by,
@@ -729,7 +729,7 @@ final class SiteCatalog {
       return NULL;
     }
     try {
-      return DataSurfaceWidgetManager::wordOf($this->widgets->getWidgetFor($definition));
+      return SurfaceWidgetManager::wordOf($this->widgets->getWidgetFor($definition));
     }
     catch (\InvalidArgumentException) {
       return NULL;

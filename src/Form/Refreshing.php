@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Form;
+namespace Drupal\surface\Form;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
@@ -16,9 +16,9 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Form\OptGroup;
 use Drupal\Core\Form\SubformStateInterface;
 use Drupal\Core\Render\ElementInfoManagerInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Collection;
-use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Collection;
+use Drupal\surface\Widget\SurfaceWidgetBase;
 
 /**
  * Refines a form over AJAX: the triggers, the wrappers and the response.
@@ -33,7 +33,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
  * the container in (mergeSurfaceContainer()), and the container takes an
  * element every rebuild replaces (placeRefreshed()).
  *
- * The Form API callbacks stay on DataSurfaceFormBuilder under their own
+ * The Form API callbacks stay on SurfaceFormBuilder under their own
  * names, because form caches and render arrays hold those names. Its
  * refreshSurface(), processSurfaceContainer() and processOptionTrigger()
  * call the static method of the same name here.
@@ -43,14 +43,14 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Form\DataSurfaceFormBuilder
+ * @see \Drupal\surface\Form\SurfaceFormBuilder
  */
 final class Refreshing {
 
   /**
    * Render key marking the data surface container the AJAX path rebuilds.
    */
-  public const WRAPPER_KEY = '#data_surface_wrapper';
+  public const WRAPPER_KEY = '#surface_wrapper';
 
   /**
    * Render key on an element the AJAX callback may replace: its path.
@@ -58,14 +58,14 @@ final class Refreshing {
    * Dotted, below the container. The container's #process turns it into
    * a wrapper and REFRESH_ID_KEY once the container's id is final.
    */
-  public const REFRESH_KEY = '#data_surface_refresh';
+  public const REFRESH_KEY = '#surface_refresh';
 
   /**
    * Render key on the container listing the keys every rebuild replaces.
    *
    * Filled by placeRefreshed().
    */
-  protected const REFRESHED_KEY = '#data_surface_refreshed';
+  protected const REFRESHED_KEY = '#surface_refreshed';
 
   /**
    * Where a request keeps the options its triggers were rendered with.
@@ -74,7 +74,7 @@ final class Refreshing {
    * which is the page the person sees, before any rebuild, so the AJAX
    * callback can tell a trigger whose options the rebuild changed.
    */
-  protected const RENDERED_OPTIONS = 'data_surface_rendered_options';
+  protected const RENDERED_OPTIONS = 'surface_rendered_options';
 
   /**
    * Where a request keeps what each element it may replace was drawn as.
@@ -84,7 +84,7 @@ final class Refreshing {
    * changed: keyed by the container's place in the form, then by each
    * replaceable element's dotted path, each as drawing() reads it.
    */
-  protected const DRAWN_AS = 'data_surface_drawn_as';
+  protected const DRAWN_AS = 'surface_drawn_as';
 
   /**
    * Element types that hold children rather than a value of their own.
@@ -125,7 +125,7 @@ final class Refreshing {
   /**
    * Merges a data surface container into a host's own form element.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::mergeSurfaceContainer()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::mergeSurfaceContainer()
    */
   public function mergeSurfaceContainer(array $container, array $form): array {
     // The rule, in one line: the data surface fills in what the host left
@@ -157,10 +157,10 @@ final class Refreshing {
     // the tree flag and the rest were settled by the loop above.
     $merged['#attributes'] = ($form['#attributes'] ?? []) + $container['#attributes'];
     $merged['#process'] = isset($form['#process'])
-      ? array_merge($form['#process'], [[DataSurfaceFormBuilder::class, 'processSurfaceContainer']])
+      ? array_merge($form['#process'], [[SurfaceFormBuilder::class, 'processSurfaceContainer']])
       : $this->surfaceProcess($merged['#type'] ?? NULL);
     $merged['#pre_render'] = isset($form['#pre_render'])
-      ? array_merge($form['#pre_render'], [[DataSurfaceFormBuilder::class, 'preRenderSurfaceContainer']])
+      ? array_merge($form['#pre_render'], [[SurfaceFormBuilder::class, 'preRenderSurfaceContainer']])
       : $this->surfacePreRender($merged['#type'] ?? NULL);
     return $merged;
   }
@@ -168,7 +168,7 @@ final class Refreshing {
   /**
    * Places an element in the container that every refinement replaces.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::placeRefreshed()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::placeRefreshed()
    */
   public function placeRefreshed(array $container, string $key, array $element): array {
     $element[self::REFRESH_KEY] = $key;
@@ -187,16 +187,16 @@ final class Refreshing {
    * element is then taken from the rebuilt container, because that is
    * the one built against the new answer.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::refreshSurface()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::refreshSurface()
    */
   public static function refreshSurface(array &$form, FormStateInterface $form_state): AjaxResponse|array {
     $trigger = $form_state->getTriggeringElement() ?? [];
     $container = static::containerOf($form, $trigger['#array_parents'] ?? []);
-    $replaces = $trigger[DataSurfaceFormBuilderInterface::TRIGGER_KEY]['replaces'] ?? NULL;
+    $replaces = $trigger[SurfaceFormBuilderInterface::TRIGGER_KEY]['replaces'] ?? NULL;
     if ($container === NULL || !is_array($replaces)) {
       return $container ?? $form;
     }
-    $own = implode('.', $trigger[DataSurfaceFormBuilderInterface::TRIGGER_KEY]['path'] ?? []);
+    $own = implode('.', $trigger[SurfaceFormBuilderInterface::TRIGGER_KEY]['path'] ?? []);
     $wrapper_id = (string) $container[self::WRAPPER_KEY];
     $own_parents = explode('.', $own);
     $touched = NestedArray::getValue($container, $own_parents);
@@ -207,8 +207,8 @@ final class Refreshing {
       NestedArray::setValue($container, $own_parents, $touched);
       // Decision: see docs/decisions.md#an-error-on-the-trigger-renders-inline.
       $rendered = $state->getTemporaryValue([self::RENDERED_OPTIONS, static::containerKey($container), $own]);
-      $replace_own = !empty($touched[DataSurfaceFormBuilderInterface::INLINE_ERROR_KEY])
-        || ($state->getUserInput()[DataSurfaceFormBuilderInterface::INVALID_INPUT] ?? NULL) === '1'
+      $replace_own = !empty($touched[SurfaceFormBuilderInterface::INLINE_ERROR_KEY])
+        || ($state->getUserInput()[SurfaceFormBuilderInterface::INVALID_INPUT] ?? NULL) === '1'
         || ($rendered !== NULL && $rendered !== static::optionsSignature($touched));
     }
     $elements = [];
@@ -223,7 +223,7 @@ final class Refreshing {
       }
       $exists = FALSE;
       $element = NestedArray::getValue($container, explode('.', (string) $dotted), $exists);
-      if (!$exists || !is_array($element) || !isset($element[DataSurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
+      if (!$exists || !is_array($element) || !isset($element[SurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
         // Taken out by a host or a cosmetic layer, or never wrapped:
         // there is no telling where it went, so the container goes
         // whole, which is coarser and never wrong.
@@ -239,7 +239,7 @@ final class Refreshing {
       }
       // Rendered without the container, so a group or a fieldset placed
       // inside it is drawn here, as the container's pre-render would have.
-      $elements[$element[DataSurfaceFormBuilderInterface::REFRESH_ID_KEY]] = Drawing::placeMounts(Drawing::gatherGroups($element));
+      $elements[$element[SurfaceFormBuilderInterface::REFRESH_ID_KEY]] = Drawing::placeMounts(Drawing::gatherGroups($element));
     }
     $response = new AjaxResponse();
     foreach ($elements as $id => $element) {
@@ -250,7 +250,7 @@ final class Refreshing {
     $said = static::changesSaid(
       $state->getTemporaryValue([self::DRAWN_AS, static::containerKey($container)]) ?? [],
       $drawn,
-      is_array($touched) && !empty($touched[DataSurfaceFormBuilderInterface::INLINE_ERROR_KEY]) ? $touched : NULL,
+      is_array($touched) && !empty($touched[SurfaceFormBuilderInterface::INLINE_ERROR_KEY]) ? $touched : NULL,
     );
     if ($said !== '') {
       $response->addCommand(new AnnounceCommand($said));
@@ -261,14 +261,14 @@ final class Refreshing {
     // marker left naming a select that now holds a real choice would
     // read that select back as its stored value on the next request.
     $response->addCommand(new RemoveCommand('#' . static::reservedId($wrapper_id, 'stale')));
-    if (isset($container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY])) {
-      $response->addCommand(new AppendCommand('#' . $wrapper_id, $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]));
+    if (isset($container[SurfaceFormBuilderInterface::STALE_MARKER_KEY])) {
+      $response->addCommand(new AppendCommand('#' . $wrapper_id, $container[SurfaceFormBuilderInterface::STALE_MARKER_KEY]));
     }
     // The keys drawn as nothing, likewise: one the rebuild drew must not
     // be read as left out by the next submission.
     $response->addCommand(new RemoveCommand('#' . static::reservedId($wrapper_id, 'absent')));
-    if (isset($container[DataSurfaceFormBuilderInterface::ABSENT_MARKER_KEY])) {
-      $response->addCommand(new AppendCommand('#' . $wrapper_id, $container[DataSurfaceFormBuilderInterface::ABSENT_MARKER_KEY]));
+    if (isset($container[SurfaceFormBuilderInterface::ABSENT_MARKER_KEY])) {
+      $response->addCommand(new AppendCommand('#' . $wrapper_id, $container[SurfaceFormBuilderInterface::ABSENT_MARKER_KEY]));
     }
     // What the render-array path printed into the replaced container,
     // printed in the same place, so nothing the request said is held
@@ -401,7 +401,7 @@ final class Refreshing {
   /**
    * Element #process callback: scopes AJAX validation, places wrappers.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::processSurfaceContainer()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::processSurfaceContainer()
    */
   public static function processSurfaceContainer(array &$element, FormStateInterface $form_state, array &$complete_form): array {
     // The container knows its own #parents by now — Form API assigns
@@ -454,11 +454,11 @@ final class Refreshing {
         $state->setTemporaryValue([self::DRAWN_AS, static::containerKey($element)], Drawing::drawnAs($element));
       }
       static::wrapRefreshed($element, $wrapper_id);
-      if (isset($element[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]) && !isset($element[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
-        $element[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY] = static::wrapped($element[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY], static::reservedId($wrapper_id, 'stale'));
+      if (isset($element[SurfaceFormBuilderInterface::STALE_MARKER_KEY]) && !isset($element[SurfaceFormBuilderInterface::STALE_MARKER_KEY][SurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
+        $element[SurfaceFormBuilderInterface::STALE_MARKER_KEY] = static::wrapped($element[SurfaceFormBuilderInterface::STALE_MARKER_KEY], static::reservedId($wrapper_id, 'stale'));
       }
-      if (isset($element[DataSurfaceFormBuilderInterface::ABSENT_MARKER_KEY]) && !isset($element[DataSurfaceFormBuilderInterface::ABSENT_MARKER_KEY][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
-        $element[DataSurfaceFormBuilderInterface::ABSENT_MARKER_KEY] = static::wrapped($element[DataSurfaceFormBuilderInterface::ABSENT_MARKER_KEY], static::reservedId($wrapper_id, 'absent'));
+      if (isset($element[SurfaceFormBuilderInterface::ABSENT_MARKER_KEY]) && !isset($element[SurfaceFormBuilderInterface::ABSENT_MARKER_KEY][SurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
+        $element[SurfaceFormBuilderInterface::ABSENT_MARKER_KEY] = static::wrapped($element[SurfaceFormBuilderInterface::ABSENT_MARKER_KEY], static::reservedId($wrapper_id, 'absent'));
       }
     }
     return $element;
@@ -494,9 +494,9 @@ final class Refreshing {
     $type = $element['#type'] ?? NULL;
     if (!empty($element['#required']) && is_string($type) && !empty($element_info->getInfo($type)['#input'])) {
       $element['#required'] = FALSE;
-      $element[DataSurfaceFormBuilderInterface::REQUIRED_KEY] = TRUE;
+      $element[SurfaceFormBuilderInterface::REQUIRED_KEY] = TRUE;
       $element['#pre_render'] = [
-        [DataSurfaceFormBuilder::class, 'preRenderRequired'],
+        [SurfaceFormBuilder::class, 'preRenderRequired'],
         ...($element['#pre_render'] ?? $element_info->getInfo($type)['#pre_render'] ?? []),
       ];
     }
@@ -541,7 +541,7 @@ final class Refreshing {
    */
   protected static function wrapRefreshed(array &$element, string $wrapper_id): void {
     foreach (Drawing::elementChildren($element) as $key) {
-      if (isset($element[$key][self::REFRESH_KEY]) && !isset($element[$key][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
+      if (isset($element[$key][self::REFRESH_KEY]) && !isset($element[$key][SurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
         $element[$key] = static::wrapped($element[$key], static::refreshId($wrapper_id, (string) $element[$key][self::REFRESH_KEY]));
       }
       static::wrapRefreshed($element[$key], $wrapper_id);
@@ -565,7 +565,7 @@ final class Refreshing {
    *   The element, wrapped, and carrying the id.
    */
   protected static function wrapped(array $element, string $id): array {
-    $element[DataSurfaceFormBuilderInterface::REFRESH_ID_KEY] = $id;
+    $element[SurfaceFormBuilderInterface::REFRESH_ID_KEY] = $id;
     $element['#prefix'] = '<div id="' . Html::escape($id) . '">' . ($element['#prefix'] ?? '');
     $element['#suffix'] = ($element['#suffix'] ?? '') . '</div>';
     return $element;
@@ -624,7 +624,7 @@ final class Refreshing {
   public static function triggerPath(array $container, FormStateInterface $form_state): ?string {
     $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
     $triggering = $state->getTriggeringElement() ?? [];
-    $path = $triggering[DataSurfaceFormBuilderInterface::TRIGGER_KEY]['path'] ?? NULL;
+    $path = $triggering[SurfaceFormBuilderInterface::TRIGGER_KEY]['path'] ?? NULL;
     if (!is_array($path) || $path === []) {
       return NULL;
     }
@@ -669,7 +669,7 @@ final class Refreshing {
     $found = [];
     foreach (Drawing::elementChildren($element) as $key) {
       $child = $element[$key];
-      $path = $child[DataSurfaceFormBuilderInterface::TRIGGER_KEY]['path'] ?? NULL;
+      $path = $child[SurfaceFormBuilderInterface::TRIGGER_KEY]['path'] ?? NULL;
       $signature = is_array($path) ? static::optionsSignature($child) : NULL;
       if ($signature !== NULL) {
         $found[implode('.', $path)] = $signature;
@@ -749,18 +749,18 @@ final class Refreshing {
       return $element;
     }
     $element['#ajax'] = [
-      'callback' => [DataSurfaceFormBuilder::class, 'refreshSurface'],
+      'callback' => [SurfaceFormBuilder::class, 'refreshSurface'],
       'wrapper' => $wrapper_id,
       // Core posts what is under 'submit' with the request, beside the
       // trigger's name, which it puts there itself.
-      'submit' => [DataSurfaceFormBuilderInterface::WRAPPER_INPUT => $wrapper_id],
+      'submit' => [SurfaceFormBuilderInterface::WRAPPER_INPUT => $wrapper_id],
     ];
     if (in_array($element['#type'], self::BLUR_CHANGE_TYPES, TRUE)) {
       // Focus stays where the person put it; core's refocus-blur still
       // carries it to the field they tabbed to.
       $element['#ajax']['disable-refocus'] = TRUE;
     }
-    $element[DataSurfaceFormBuilderInterface::TRIGGER_KEY] = ['path' => $path, 'replaces' => $replaces];
+    $element[SurfaceFormBuilderInterface::TRIGGER_KEY] = ['path' => $path, 'replaces' => $replaces];
     // A wrapper of its own as well: a trigger is replaced when its own
     // value was refused, so the error is printed under it.
     $element[self::REFRESH_KEY] ??= implode('.', $path);
@@ -768,7 +768,7 @@ final class Refreshing {
       // Each radio or checkbox is what triggers, and Form API copies the
       // #ajax of the group onto it and nothing else of ours.
       $declared = $element['#process'] ?? $this->elementInfo->getInfo($element['#type'])['#process'] ?? [];
-      $element['#process'] = array_merge($declared, [[DataSurfaceFormBuilder::class, 'processOptionTrigger']]);
+      $element['#process'] = array_merge($declared, [[SurfaceFormBuilder::class, 'processOptionTrigger']]);
     }
     return $element;
   }
@@ -789,7 +789,7 @@ final class Refreshing {
    */
   public static function processOptionTrigger(array $element): array {
     foreach (Drawing::elementChildren($element) as $key) {
-      foreach ([DataSurfaceFormBuilderInterface::TRIGGER_KEY, '#limit_validation_errors'] as $property) {
+      foreach ([SurfaceFormBuilderInterface::TRIGGER_KEY, '#limit_validation_errors'] as $property) {
         if (isset($element[$property]) && is_array($element[$key])) {
           $element[$key][$property] = $element[$property];
         }
@@ -810,7 +810,7 @@ final class Refreshing {
    * @param array $element
    *   The container, or the element an attached child or a variant is
    *   rendered as.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface or built child the element renders.
    * @param array $values
    *   The values the frame is rendered with.
@@ -822,7 +822,7 @@ final class Refreshing {
    * @return array
    *   The element, marked and wired.
    */
-  public function wireRefinement(array $element, DataSurfaceInterface $surface, array $values, array $path, string $wrapper_id): array {
+  public function wireRefinement(array $element, SurfaceInterface $surface, array $values, array $path, string $wrapper_id): array {
     $definitions = $surface->getDefinitions();
     // One property at a time inside the mount: a key an alter refines
     // there is a target of its own, and a key it watches there a trigger.
@@ -864,7 +864,7 @@ final class Refreshing {
         }
         continue;
       }
-      if (!$entry->isNested() || !empty($element[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+      if (!$entry->isNested() || !empty($element[$name][SurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
         continue;
       }
       $child = $entry->attachment?->child;
@@ -956,7 +956,7 @@ final class Refreshing {
    */
   public function surfaceProcess(?string $type): array {
     $declared = $type === NULL ? [] : ($this->elementInfo->getInfo($type)['#process'] ?? []);
-    return array_merge($declared, [[DataSurfaceFormBuilder::class, 'processSurfaceContainer']]);
+    return array_merge($declared, [[SurfaceFormBuilder::class, 'processSurfaceContainer']]);
   }
 
   /**
@@ -975,7 +975,7 @@ final class Refreshing {
    */
   public function surfacePreRender(?string $type): array {
     $declared = $type === NULL ? [] : ($this->elementInfo->getInfo($type)['#pre_render'] ?? []);
-    return array_merge($declared, [[DataSurfaceFormBuilder::class, 'preRenderSurfaceContainer']]);
+    return array_merge($declared, [[SurfaceFormBuilder::class, 'preRenderSurfaceContainer']]);
   }
 
   /**
@@ -1015,8 +1015,8 @@ final class Refreshing {
       if (isset($element[$key]['#ajax']['wrapper'])) {
         $element[$key]['#ajax']['wrapper'] = $wrapper_id;
       }
-      if (isset($element[$key]['#ajax']['submit'][DataSurfaceFormBuilderInterface::WRAPPER_INPUT])) {
-        $element[$key]['#ajax']['submit'][DataSurfaceFormBuilderInterface::WRAPPER_INPUT] = $wrapper_id;
+      if (isset($element[$key]['#ajax']['submit'][SurfaceFormBuilderInterface::WRAPPER_INPUT])) {
+        $element[$key]['#ajax']['submit'][SurfaceFormBuilderInterface::WRAPPER_INPUT] = $wrapper_id;
       }
       $element[$key] = static::retargetAjax($element[$key], $wrapper_id);
     }
@@ -1041,7 +1041,7 @@ final class Refreshing {
         continue;
       }
       $path = $prefix . $key;
-      if (!empty($element[$key][DataSurfaceFormBuilderInterface::RULED_OUT_KEY])) {
+      if (!empty($element[$key][SurfaceFormBuilderInterface::RULED_OUT_KEY])) {
         $paths[] = $path;
         continue;
       }
@@ -1065,7 +1065,7 @@ final class Refreshing {
     $paths = [];
     foreach (Drawing::elementChildren($element) as $key) {
       $path = $prefix . $key;
-      if (array_key_exists(DataSurfaceWidgetBase::STALE_KEY, $element[$key])) {
+      if (array_key_exists(SurfaceWidgetBase::STALE_KEY, $element[$key])) {
         $paths[] = $path;
         continue;
       }

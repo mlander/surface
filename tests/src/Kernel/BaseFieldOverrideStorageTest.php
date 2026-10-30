@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\Storage\BaseFieldOverrideStorage;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -23,14 +23,14 @@ use PHPUnit\Framework\Attributes\Group;
  * naming a configurable field would rewrite that field instance instead
  * of overriding a base field.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class BaseFieldOverrideStorageTest extends DataSurfaceKernelTestBase {
+class BaseFieldOverrideStorageTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'user', 'field', 'entity_test', 'data_surface'];
+  protected static $modules = ['system', 'user', 'field', 'entity_test', 'surface'];
 
   /**
    * {@inheritdoc}
@@ -44,11 +44,11 @@ class BaseFieldOverrideStorageTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the one key data surface these tests submit through.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function surface(): DataSurfaceInterface {
-    $builder = new DataSurfaceBuilder([
+  protected function surface(): SurfaceInterface {
+    $builder = new SurfaceBuilder([
       'name_label' => DataDefinition::create('string')
         ->setLabel('Name field label'),
     ]);
@@ -62,7 +62,7 @@ class BaseFieldOverrideStorageTest extends DataSurfaceKernelTestBase {
    * @param array $map
    *   The override map, defaulting to the name base field's label.
    *
-   * @return \Drupal\data_surface\Pipeline\Storage\BaseFieldOverrideStorage
+   * @return \Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage
    *   The storage.
    */
   protected function storage(array $map = ['name_label' => ['field' => 'name']]): BaseFieldOverrideStorage {
@@ -98,7 +98,7 @@ class BaseFieldOverrideStorageTest extends DataSurfaceKernelTestBase {
    */
   public function testNullClearsAnOverride(): void {
     $surface = $this->surface();
-    $pipeline = $this->container->get('data_surface.pipeline');
+    $pipeline = $this->container->get('surface.pipeline');
 
     // The base field's own label, before anything overrides it.
     $base = (string) $this->container->get('entity_field.manager')
@@ -171,7 +171,7 @@ class BaseFieldOverrideStorageTest extends DataSurfaceKernelTestBase {
    * better than letting the order of the map decide.
    */
   public function testClearingAndSettingOneFieldIsRefused(): void {
-    $builder = new DataSurfaceBuilder([
+    $builder = new SurfaceBuilder([
       'name_label' => DataDefinition::create('string')->setLabel('Label'),
       'name_default' => DataDefinition::create('string')->setLabel('Default'),
     ]);
@@ -179,7 +179,7 @@ class BaseFieldOverrideStorageTest extends DataSurfaceKernelTestBase {
     $builder->setDefault('name_default', NULL);
     $surface = $builder->seal();
 
-    $this->container->get('data_surface.pipeline')->submit(
+    $this->container->get('surface.pipeline')->submit(
       $surface,
       ['name_label' => 'Given name'],
       $this->storage([

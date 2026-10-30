@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -45,7 +45,7 @@ final class OperationArguments {
   /**
    * Names the entity type a parameter takes, if it takes an entity.
    *
-   * @param \Drupal\data_surface\ResourceBuild\OperationParameter $parameter
+   * @param \Drupal\surface\ResourceBuild\OperationParameter $parameter
    *   The parameter.
    *
    * @return string|null
@@ -77,7 +77,7 @@ final class OperationArguments {
   /**
    * Resolves the arguments for one operation.
    *
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param array $arguments
    *   The arguments, by parameter name or by position. An entity
@@ -88,7 +88,7 @@ final class OperationArguments {
    *
    * @throws \InvalidArgumentException
    *   When a parameter that has to be given is not.
-   * @throws \Drupal\data_surface\ResourceBuild\NamesNothingException
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   When an id names no entity, naming the parameter.
    */
   public function resolve(OperationDefinition $operation, array $arguments): array {
@@ -120,7 +120,7 @@ final class OperationArguments {
    * the route upcasts it; a parameter the route does not carry is left
    * out, which is refused by resolve() unless it is optional.
    *
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The route match.
@@ -142,9 +142,9 @@ final class OperationArguments {
   /**
    * Resolves one argument.
    *
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation, for messages.
-   * @param \Drupal\data_surface\ResourceBuild\OperationParameter $parameter
+   * @param \Drupal\surface\ResourceBuild\OperationParameter $parameter
    *   The parameter.
    * @param mixed $value
    *   What was given.
@@ -152,7 +152,7 @@ final class OperationArguments {
    * @return mixed
    *   The argument.
    *
-   * @throws \Drupal\data_surface\ResourceBuild\NamesNothingException
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   When an id names no entity, naming the parameter.
    */
   protected function resolveOne(OperationDefinition $operation, OperationParameter $parameter, mixed $value): mixed {

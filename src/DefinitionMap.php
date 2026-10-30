@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 
@@ -29,8 +29,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * access answers the same question; set and unset throw, because a
  * sealed data surface has already been advertised.
  *
- * @see \Drupal\data_surface\Entry
- * @see \Drupal\data_surface\DataSurfaceInterface::getDefinitions()
+ * @see \Drupal\surface\Entry
+ * @see \Drupal\surface\SurfaceInterface::getDefinitions()
  *
  * @implements \IteratorAggregate<string, \Drupal\Core\TypedData\DataDefinitionInterface>
  * @implements \ArrayAccess<string, \Drupal\Core\TypedData\DataDefinitionInterface>
@@ -45,21 +45,21 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * property is private and nothing else assigns to it, so the map is
    * immutable to everything outside this class.
    *
-   * @var array<string, \Drupal\data_surface\Entry>
+   * @var array<string, \Drupal\surface\Entry>
    */
   private array $entries = [];
 
   /**
    * The ports the data surface reads from its container, by name.
    *
-   * @var array<string, \Drupal\data_surface\Port>
+   * @var array<string, \Drupal\surface\Port>
    */
   private array $ports = [];
 
   /**
    * The structures mixed into the data surface, in the order mixed in.
    *
-   * @var \Drupal\data_surface\Mixin[]
+   * @var \Drupal\surface\Mixin[]
    */
   private array $mixins = [];
 
@@ -83,15 +83,15 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * refinement edge names a key that exists.
    *
    * The refinement map is checked for cycles by
-   * DataSurfaceBuilderInterface::seal(), which is the moment the map is
+   * SurfaceBuilderInterface::seal(), which is the moment the map is
    * whole, and not again here.
    *
-   * @param \Drupal\data_surface\Entry[] $entries
+   * @param \Drupal\surface\Entry[] $entries
    *   The entries, in the order the data surface declares them.
-   * @param \Drupal\data_surface\Port[] $ports
+   * @param \Drupal\surface\Port[] $ports
    *   The ports the data surface reads from its container: names a
    *   refinement edge may watch that are no key of its own.
-   * @param \Drupal\data_surface\Mixin[] $mixins
+   * @param \Drupal\surface\Mixin[] $mixins
    *   The structures mixed into it, whose members are among the entries.
    *
    * @throws \InvalidArgumentException
@@ -152,32 +152,32 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    *   The keys whose value the data surface fixes.
    * @param string $contributor
    *   Who introduced these keys.
-   * @param array<string, array<string, array<\Drupal\data_surface\DataSurfaceRefinerInterface>>> $refiners
+   * @param array<string, array<string, array<\Drupal\surface\SurfaceRefinerInterface>>> $refiners
    *   Refiner chains keyed by target key, then by contributor.
    * @param array<string, array<string, array>> $contributions
    *   Contributed values keyed by definition key, then by provider.
-   * @param array<string, \Drupal\data_surface\Attachment> $attachments
+   * @param array<string, \Drupal\surface\Attachment> $attachments
    *   The children fixed at keys, keyed by definition key.
-   * @param array<string, \Drupal\data_surface\Variants> $variants
+   * @param array<string, \Drupal\surface\Variants> $variants
    *   The variant tables of the keys with variants, keyed by definition
    *   key.
    * @param array<string, string[]>|null $staticRefinements
    *   The part of $refinements a static refiner declared, in the same
    *   form; what is in $refinements and not here only a runtime refiner
    *   watches. NULL when every refiner is static.
-   * @param array<string, \Drupal\data_surface\Collection> $lists
+   * @param array<string, \Drupal\surface\Collection> $lists
    *   The collections, each the child its items are, keyed by definition
    *   key.
    * @param array<string, array<string, int>> $watchedBy
    *   For each target of $refinements, which kinds of link watch each of
-   *   its dependencies, as a mask of DataSurfaceInterface::CODED,
+   *   its dependencies, as a mask of SurfaceInterface::CODED,
    *   DECLARED and RUNTIME. Empty for a map built by hand.
-   * @param \Drupal\data_surface\Port[] $ports
+   * @param \Drupal\surface\Port[] $ports
    *   The ports the data surface reads from its container.
-   * @param array<string, array<string, \Drupal\data_surface\Attachment>> $mounted
+   * @param array<string, array<string, \Drupal\surface\Attachment>> $mounted
    *   The structures alters attached at their mounts, keyed by the key
    *   holding the mounts, then by the path below it.
-   * @param \Drupal\data_surface\Mixin[] $mixins
+   * @param \Drupal\surface\Mixin[] $mixins
    *   The structures mixed in, in order.
    * @param string[] $held
    *   The locked keys that hold what is stored rather than a declared
@@ -202,7 +202,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $definitions,
     array $refinements = [],
     array $locked = [],
-    string $contributor = DataSurfaceInterface::OWNER,
+    string $contributor = SurfaceInterface::OWNER,
     array $refiners = [],
     array $contributions = [],
     array $attachments = [],
@@ -307,7 +307,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param string $name
    *   The definition key.
    *
-   * @return \Drupal\data_surface\Entry|null
+   * @return \Drupal\surface\Entry|null
    *   The entry, or NULL when the map declares no such key.
    */
   public function entry(string $name): ?Entry {
@@ -317,7 +317,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   /**
    * Gets every entry, keyed by definition key, in declaration order.
    *
-   * @return array<string, \Drupal\data_surface\Entry>
+   * @return array<string, \Drupal\surface\Entry>
    *   The entries.
    */
   public function entries(): array {
@@ -463,9 +463,9 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * Gets the entries one provider had a hand in.
    *
    * @param string $contributor
-   *   The provider id, or DataSurfaceInterface::OWNER.
+   *   The provider id, or SurfaceInterface::OWNER.
    *
-   * @return array<string, \Drupal\data_surface\Entry>
+   * @return array<string, \Drupal\surface\Entry>
    *   The entries that provider introduced, contributed values to, or
    *   registered a refiner for, keyed by definition key.
    */
@@ -484,7 +484,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * declared, and an entry carries the same name, the same dependency
    * edges and the same contributors whatever definition it holds.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The replacement entry.
    *
    * @return static
@@ -522,7 +522,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   /**
    * Gets the ports the data surface reads from its container.
    *
-   * @return array<string, \Drupal\data_surface\Port>
+   * @return array<string, \Drupal\surface\Port>
    *   The ports, keyed by name, in the order they were declared.
    */
   public function ports(): array {
@@ -536,7 +536,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * which structure brought which, for the contract, which states each
    * structure once as a def the owner composes.
    *
-   * @return \Drupal\data_surface\Mixin[]
+   * @return \Drupal\surface\Mixin[]
    *   The mixed-in structures, in the order they were mixed in.
    */
   public function mixins(): array {

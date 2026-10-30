@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Drush\Generators\Resource\ResourceSources;
-use Drupal\data_surface\Drush\Generators\ResourceGenerator;
-use Drupal\data_surface\Storage\ConfigSchemaGenerator;
+use Drupal\surface\Drush\Generators\Resource\ResourceSources;
+use Drupal\surface\Drush\Generators\ResourceGenerator;
+use Drupal\surface\Storage\ConfigSchemaGenerator;
 use Drupal\KernelTests\KernelTestBase;
 use DrupalCodeGenerator\Application as DcgApplication;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -38,7 +38,7 @@ abstract class ResourceGeneratorTestBase extends KernelTestBase {
     parent::setUp();
     // A directory on disk, not the virtual site directory: the written
     // classes are parsed by PHP and read back by the class loader.
-    $this->sandbox = sys_get_temp_dir() . '/data_surface_generator_' . $this->databasePrefix;
+    $this->sandbox = sys_get_temp_dir() . '/surface_generator_' . $this->databasePrefix;
     (new Filesystem())->mkdir($this->sandbox);
   }
 
@@ -59,7 +59,7 @@ abstract class ResourceGeneratorTestBase extends KernelTestBase {
    * @return string
    *   Its directory, as it would be under the Drupal root.
    */
-  protected function moduleDirectory(string $module = 'data_surface_first'): string {
+  protected function moduleDirectory(string $module = 'surface_examples_first'): string {
     return $this->sandbox . '/' . $this->container->get('extension.list.module')->getPath($module);
   }
 
@@ -85,21 +85,21 @@ abstract class ResourceGeneratorTestBase extends KernelTestBase {
     $container = $this->container;
     $modules = $container->get('extension.list.module');
     $schemas = new ConfigSchemaGenerator(
-      $container->get('data_surface.resource_registry'),
-      $container->get('data_surface.resources'),
+      $container->get('surface.resource_registry'),
+      $container->get('surface.resources'),
       $modules,
       $this->sandbox,
       $container->getParameter('container.modules'),
       $container,
       $container->get('class_resolver'),
-      $container->get('data_surface.resource_plugins'),
+      $container->get('surface.resource_plugins'),
       $container->get('entity_type.manager'),
     );
     $sources = new ResourceSources(
-      $container->get('data_surface.resource_registry'),
-      $container->get('data_surface.resources'),
-      $container->get('data_surface.schema_reader'),
-      $container->get('data_surface.config_schema_document'),
+      $container->get('surface.resource_registry'),
+      $container->get('surface.resources'),
+      $container->get('surface.schema_reader'),
+      $container->get('surface.config_schema_document'),
       $container->get('config.factory'),
       $modules,
       $this->root,

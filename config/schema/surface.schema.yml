@@ -1,0 +1,59 @@
+surface.settings:
+  type: config_object
+  label: 'Surface API settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    reference_list_limit:
+      type: integer
+      label: 'Most targets a reference key lists as its options'
+      constraints:
+        Range:
+          min: 0
+    site_list_limit:
+      type: integer
+      label: 'Most entries of a list the site decides that a document spells out'
+      constraints:
+        Range:
+          min: 0
+    components_offered:
+      type: sequence
+      label: 'The components offered where a key chooses one, by id or by provider; empty for every one'
+      sequence:
+        type: string
+        label: 'A component id (provider:name), or a provider'
+        constraints:
+          NotBlank: {}
+
+# The defaults a site sets over the ones a resource declares. A config key
+# may not hold a dot, and a resource id and a key path do, so each entry
+# names them as values. The value is text, as a form posts it; the build
+# reads it through the coercion table, holds it to the key's definition
+# and refuses the build, naming the key, when it does not fit.
+surface.defaults:
+  type: config_object
+  label: 'Surface API site defaults'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    defaults:
+      type: sequence
+      label: 'The defaults the site sets'
+      sequence:
+        type: mapping
+        label: 'A default'
+        mapping:
+          resource:
+            type: string
+            label: 'The resource or structure id, as the catalog lists it'
+            constraints:
+              NotBlank: []
+          key:
+            type: string
+            label: 'The key path from it, dotted: capacity, contact.phone'
+            constraints:
+              NotBlank: []
+          value:
+            type: string
+            label: 'The value, as a form posts it: monthly, 250, true, a JSON list or object; empty for none'
+            nullable: true

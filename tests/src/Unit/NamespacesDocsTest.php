@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\Group;
  * The dated records, the fresh-eyes logs and the adopters' trial, keep
  * what was written then and are not held.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class NamespacesDocsTest extends UnitTestCase {
 
   /**
@@ -86,7 +86,7 @@ class NamespacesDocsTest extends UnitTestCase {
     foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS)) as $file) {
       $path = substr($file->getPathname(), strlen($src) + 1);
       if (str_ends_with($path, '.php')) {
-        $classes[basename($path, '.php')][] = 'Drupal\\data_surface\\' . str_replace('/', '\\', substr($path, 0, -4));
+        $classes[basename($path, '.php')][] = 'Drupal\\surface\\' . str_replace('/', '\\', substr($path, 0, -4));
       }
     }
     return $classes;
@@ -105,8 +105,8 @@ class NamespacesDocsTest extends UnitTestCase {
       $files = glob(self::ROOT . '/src/' . $directory . '/*.php');
       $this->assertNotEmpty($files, $directory);
       foreach ($files as $file) {
-        $class = 'Drupal\\data_surface\\' . str_replace('/', '\\', $directory) . '\\' . basename($file, '.php');
-        $this->assertSame($pipeline, is_subclass_of($class, DataSurfaceStorageInterface::class), sprintf('%s %s the pipeline\'s storage interface.', $class, $pipeline ? 'implements' : 'does not implement'));
+        $class = 'Drupal\\surface\\' . str_replace('/', '\\', $directory) . '\\' . basename($file, '.php');
+        $this->assertSame($pipeline, is_subclass_of($class, SurfaceStorageInterface::class), sprintf('%s %s the pipeline\'s storage interface.', $class, $pipeline ? 'implements' : 'does not implement'));
       }
     }
   }
@@ -118,9 +118,9 @@ class NamespacesDocsTest extends UnitTestCase {
     $table = static::table();
     $this->assertNotEmpty($table);
     foreach ($table as $short => $class) {
-      $this->assertStringStartsWith('Drupal\\data_surface\\', $class, $short);
+      $this->assertStringStartsWith('Drupal\\surface\\', $class, $short);
       $this->assertStringEndsWith('\\' . $short, $class, $short);
-      $file = self::ROOT . '/src/' . str_replace('\\', '/', substr($class, strlen('Drupal\\data_surface\\'))) . '.php';
+      $file = self::ROOT . '/src/' . str_replace('\\', '/', substr($class, strlen('Drupal\\surface\\'))) . '.php';
       $this->assertFileExists($file, sprintf('The table names %s, which is not there.', $class));
     }
     $sorted = array_keys($table);

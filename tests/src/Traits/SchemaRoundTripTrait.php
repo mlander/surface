@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Traits;
+namespace Drupal\Tests\surface\Traits;
 
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface\Contract\SchemaReader;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\AlterDefinition;
-use Drupal\data_surface\ResourceBuild\ResourceDefinition;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\AlterDefinition;
+use Drupal\surface\ResourceBuild\ResourceDefinition;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
 
 /**
  * Reads a full schema back into a structure, and names why one differs.
@@ -68,7 +68,7 @@ trait SchemaRoundTripTrait {
    *   The operation's label.
    * @param array $facts
    *   The operation's facts.
-   * @param \Drupal\data_surface\DataSurfaceInterface|null $declared
+   * @param \Drupal\surface\SurfaceInterface|null $declared
    *   The declaration as the document was emitted from it, to tell a key
    *   `live` for a runtime refiner from one `live` for a runtime access
    *   answer; NULL builds it for the account alone in a context of that
@@ -78,15 +78,15 @@ trait SchemaRoundTripTrait {
    *   `same`, `differs`, `live` (a runtime refiner's, not read back) or
    *   `error`; the schema read back; and what was raised, for `error`.
    */
-  protected function readBack(array $schema, string $id, string $module, string $context, ?string $operation, \Stringable|string|null $label, array $facts, ?DataSurfaceInterface $declared = NULL): array {
-    $resources = \Drupal::service('data_surface.resources');
+  protected function readBack(array $schema, string $id, string $module, string $context, ?string $operation, \Stringable|string|null $label, array $facts, ?SurfaceInterface $declared = NULL): array {
+    $resources = \Drupal::service('surface.resources');
     assert($resources instanceof ResourcesInterface);
     if (str_contains((string) json_encode($schema), '"live":true')) {
       // `live` marks a runtime refiner and a runtime access answer alike;
       // only the first is a rule no document states. A key marked for its
       // access is read back, and differs as an access answer.
       try {
-        $declared ??= $resources->buildStatic(\Drupal::service('data_surface.resource_registry')->getDefinition($id)->name(), new OperationContext($context));
+        $declared ??= $resources->buildStatic(\Drupal::service('surface.resource_registry')->getDefinition($id)->name(), new OperationContext($context));
       }
       catch (\Throwable) {
         $declared = NULL;
@@ -95,9 +95,9 @@ trait SchemaRoundTripTrait {
         return ['verdict' => 'live', 'again' => NULL, 'error' => NULL];
       }
     }
-    $reader = \Drupal::service('data_surface.schema_reader');
+    $reader = \Drupal::service('surface.schema_reader');
     assert($reader instanceof SchemaReader);
-    $emitter = \Drupal::service('data_surface.contract_emitter');
+    $emitter = \Drupal::service('surface.contract_emitter');
     assert($emitter instanceof ContractEmitter);
     try {
       $read = $reader->structure($schema, $id, $module);
@@ -136,7 +136,7 @@ trait SchemaRoundTripTrait {
    *   The full schema as emitted.
    * @param array|null $again
    *   What was emitted from it read back.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The declaration.
    *
    * @return string|null
@@ -149,7 +149,7 @@ trait SchemaRoundTripTrait {
     $added = [];
     static::marks($again === NULL ? [] : SchemaResolver::restored(json_decode((string) json_encode($again), TRUE)), $added);
     $added = array_diff_key($added, $marks);
-    $registry = \Drupal::service('data_surface.resource_registry');
+    $registry = \Drupal::service('surface.resource_registry');
     assert($registry instanceof ResourceRegistry);
     $answering = $definition->answersAccess();
     foreach (array_keys($original['$defs'] ?? []) as $def) {
@@ -259,7 +259,7 @@ trait SchemaRoundTripTrait {
   /**
    * Answers whether a runtime refiner narrows any key of a declaration.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The declaration, built.
    * @param array<int, true> $seen
    *   The data surfaces walked already.
@@ -268,7 +268,7 @@ trait SchemaRoundTripTrait {
    *   TRUE where one does, at any depth: a child, a variant, a
    *   collection's item, a structure an alter mounted.
    */
-  protected static function refinedAtRuntime(DataSurfaceInterface $surface, array &$seen = []): bool {
+  protected static function refinedAtRuntime(SurfaceInterface $surface, array &$seen = []): bool {
     if (isset($seen[spl_object_id($surface)])) {
       return FALSE;
     }
@@ -276,11 +276,11 @@ trait SchemaRoundTripTrait {
     foreach ($surface->getDefinitions()->entries() as $entry) {
       $children = [
         ...($entry->attachment === NULL ? [] : [$entry->attachment->child]),
-        ...array_map(static fn ($variant): DataSurfaceInterface => $variant->child, $entry->variants->variants ?? []),
+        ...array_map(static fn ($variant): SurfaceInterface => $variant->child, $entry->variants->variants ?? []),
         ...($entry->list === NULL ? [] : [$entry->list->child()]),
-        ...array_map(static fn ($mounted): DataSurfaceInterface => $mounted->child, $entry->mounted),
+        ...array_map(static fn ($mounted): SurfaceInterface => $mounted->child, $entry->mounted),
       ];
-      if ($entry->isRefinedAtRuntime() || array_filter($children, static fn (DataSurfaceInterface $child): bool => static::refinedAtRuntime($child, $seen)) !== []) {
+      if ($entry->isRefinedAtRuntime() || array_filter($children, static fn (SurfaceInterface $child): bool => static::refinedAtRuntime($child, $seen)) !== []) {
         return TRUE;
       }
     }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 /**
  * One #[Alters] class, as discovery read it.
@@ -21,7 +21,7 @@ final class AlterDefinition {
    *   mounted under.
    * @param string[] $operations
    *   The operations it applies in; empty for all.
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition[] $refiners
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition[] $refiners
    *   Its #[RefinesInput] methods.
    * @param bool $answersAccess
    *   Whether it answers access too (OperationAccessInterface).

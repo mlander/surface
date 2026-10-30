@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -19,11 +19,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * widest honest object, because the Tool API has no way to say a union
  * keyed by a sibling.
  *
- * @see \Drupal\data_surface_tool\InputDefinitions::fromVariants()
+ * @see \Drupal\surface_tool\InputDefinitions::fromVariants()
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
+class AttachedStructureEmissionTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -34,24 +34,24 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_tool',
+    'surface_resource_test',
   ];
 
   /**
    * Emits one data surface as the JSON Schema a tool input would advertise.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    *
    * @return array
    *   The schema of the map input the data surface converts to.
    */
-  protected function schema(DataSurfaceInterface $surface): array {
-    $definition = $this->container->get('data_surface_tool.input_definitions')->fromSurface($surface, 'Pantry', '');
+  protected function schema(SurfaceInterface $surface): array {
+    $definition = $this->container->get('surface_tool.input_definitions')->fromSurface($surface, 'Pantry', '');
     $this->assertInstanceOf(InputDefinitionInterface::class, $definition);
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:field.instance:create');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:field.instance:create');
     return $this->container->get('tool.definition_serializer')->normalizeInputDefinition($tool, 'pantry', $definition);
   }
 
@@ -59,7 +59,7 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
    * Tests an attached child: a nested object of the child's keys.
    */
   public function testAttachedChildIsNestedObject(): void {
-    $schema = $this->schema($this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::create()));
+    $schema = $this->schema($this->container->get('surface.resources')->build(PantryResource::class, PantryResource::create()));
     $shelf = $schema['properties']['shelf'];
     // Optional, so the Tool API lets it be null as well.
     $this->assertSame(['object', 'null'], $shelf['type']);
@@ -73,7 +73,7 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
    * Tests unresolved variants: every variant's keys, none required.
    */
   public function testUnresolvedVariantsAreTheWidestHonestObject(): void {
-    $schema = $this->schema($this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::create()));
+    $schema = $this->schema($this->container->get('surface.resources')->build(PantryResource::class, PantryResource::create()));
     $variants = $schema['properties']['kind_settings'];
     $this->assertSame(['object', 'null'], $variants['type']);
     $this->assertEqualsCanonicalizing(['lid', 'volume', 'opener'], array_keys($variants['properties']));
@@ -96,7 +96,7 @@ class AttachedStructureEmissionTest extends DataSurfaceKernelTestBase {
    * Tests resolved variants: exactly the chosen variant's object.
    */
   public function testResolvedVariantsAreTheChosenVariant(): void {
-    $surface = $this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::create());
+    $surface = $this->container->get('surface.resources')->build(PantryResource::class, PantryResource::create());
     $variants = $this->schema($surface->refine(['kind' => 'tin']))['properties']['kind_settings'];
     $this->assertSame(['object', 'null'], $variants['type']);
     $this->assertSame(['opener', 'volume'], array_keys($variants['properties']));

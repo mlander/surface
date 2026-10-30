@@ -1,4 +1,4 @@
-# Data Surface
+# Surface API
 
 You describe once what a thing on your site accepts: each value, its
 type, and what it allows. From that one description the module makes
@@ -25,8 +25,8 @@ which Composer installs with the module
 ## Installation
 
 ```
-composer require drupal/data_surface
-drush pm:install data_surface
+composer require drupal/surface
+drush pm:install surface
 ```
 
 The submodules, the optional integrations and the production settings

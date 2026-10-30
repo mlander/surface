@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 /**
  * Thrown when input carries keys the data surface does not declare.
@@ -16,7 +16,7 @@ namespace Drupal\data_surface\Pipeline;
  * The message names the first few keys and counts the rest; getKeys()
  * still hands back every one of them.
  *
- * @see \Drupal\data_surface\Pipeline\ViolationSummary
+ * @see \Drupal\surface\Pipeline\ViolationSummary
  */
 final class UnknownKeysException extends \InvalidArgumentException {
 

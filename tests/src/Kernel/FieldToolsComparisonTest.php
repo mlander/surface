@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface_tool\OperationInputs;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolManager;
@@ -18,10 +18,10 @@ use PHPUnit\Framework\Attributes\Group;
  * Both tools answer the same question: given an existing field storage
  * and a bundle to add its field to, what may the settings be? Tool
  * Belt's field_add derives its answer from the field type's config
- * schema; data_surface:field.instance:reuse, the tool derived from the
+ * schema; surface:field.instance:reuse, the tool derived from the
  * field instance resource's reuse operation, from the field type's
  * settings resource, the field instance's settings variant for it. The
- * two answers are put side by side in the data_surface_tool module's
+ * two answers are put side by side in the surface_tool module's
  * COMPARISON.md.
  * That file is written by scripts/generate-comparison.php; the last test
  * here asserts on every ordinary run that it still says what the
@@ -32,9 +32,9 @@ use PHPUnit\Framework\Attributes\Group;
  * JSON Schema, which is the document an MCP client or a function calling
  * model is handed.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
+class FieldToolsComparisonTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -51,9 +51,9 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     'tool',
     'tool_belt',
     'tool_belt_entity',
-    'data_surface',
-    'data_surface_address',
-    'data_surface_tool',
+    'surface',
+    'surface_examples_address',
+    'surface_tool',
   ];
 
   /**
@@ -69,7 +69,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     // The renderer the generator script uses, included rather than
     // restated, so the document this test asserts against and the
     // document the script writes come from one piece of code.
-    require_once dirname(__DIR__, 3) . '/scripts/DataSurfaceComparisonDocument.php';
+    require_once dirname(__DIR__, 3) . '/scripts/SurfaceComparisonDocument.php';
     $this->installEntitySchema('user');
     $this->installEntitySchema('entity_test');
     // An account the field tools are open to, as a real client's is: the
@@ -86,7 +86,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * The tool derived from the field instance resource's reuse operation.
    */
-  protected const SURFACE_TOOL = 'data_surface:field.instance:reuse';
+  protected const SURFACE_TOOL = 'surface:field.instance:reuse';
 
   /**
    * The free-form tool it is compared with.
@@ -173,7 +173,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
   /**
    * Tests that the derived tools say at least what the retired ones did.
    *
-   * The hand-written data_surface:field_add advertised an entity type
+   * The hand-written surface:field_add advertised an entity type
    * with its vocabulary, a label, help text and a required flag, each
    * with a sentence saying what it is, and the address settings. The
    * tools derived from the field instance resource's operations say all
@@ -181,7 +181,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    * its range, and the field name's length.
    */
   public function testTheDerivedToolsSayAtLeastWhatTheRetiredOnesDid(): void {
-    $add = $this->toolManager->createInstance('data_surface:field.instance:create');
+    $add = $this->toolManager->createInstance('surface:field.instance:create');
     $add->setInputValue('entity_type', 'entity_test');
     $add->setInputValue('bundle', 'entity_test');
     $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($add);
@@ -285,7 +285,7 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    *
    * The same renderer produces both sides, so a drift can only mean the
    * two schemas changed, which is exactly the change worth noticing.
-   * Running with DATA_SURFACE_WRITE_COMPARISON=1 writes the new document
+   * Running with SURFACE_WRITE_COMPARISON=1 writes the new document
    * first, which is what the script does.
    */
   public function testComparisonHasNotDrifted(): void {
@@ -293,17 +293,17 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
     $belt = $this->settingsSchema(self::BELT_TOOL);
     $this->assertNotSame($surface, $belt);
 
-    $document = \DataSurfaceComparisonDocument::render($surface, $belt);
-    $path = dirname(__DIR__, 3) . '/modules/data_surface_tool/COMPARISON.md';
-    if (getenv(\DataSurfaceComparisonDocument::WRITE_VARIABLE) === '1') {
+    $document = \SurfaceComparisonDocument::render($surface, $belt);
+    $path = dirname(__DIR__, 3) . '/modules/surface_tool/COMPARISON.md';
+    if (getenv(\SurfaceComparisonDocument::WRITE_VARIABLE) === '1') {
       file_put_contents($path, $document);
     }
 
     $this->assertFileExists($path);
     $this->assertSame(
-      \DataSurfaceComparisonDocument::normalize($document),
-      \DataSurfaceComparisonDocument::normalize((string) file_get_contents($path)),
-      'modules/data_surface_tool/COMPARISON.md is out of date. Regenerate it with scripts/generate-comparison.php.',
+      \SurfaceComparisonDocument::normalize($document),
+      \SurfaceComparisonDocument::normalize((string) file_get_contents($path)),
+      'modules/surface_tool/COMPARISON.md is out of date. Regenerate it with scripts/generate-comparison.php.',
     );
   }
 

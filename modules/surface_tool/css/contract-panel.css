@@ -1,0 +1,18 @@
+/**
+ * The contract panel below the form it describes.
+ *
+ * The panel sits inside the data surface's container, so the AJAX
+ * rebuild of the container replaces both. It is collapsed by default and stacks
+ * under the form; nothing here changes the page's columns.
+ */
+.surface-contract-panel {
+  margin-top: 1.5rem;
+}
+.surface-contract-panel table {
+  font-size: 0.875em;
+}
+.surface-contract-panel pre {
+  overflow: auto;
+  max-height: 40rem;
+  font-size: 0.8em;
+}

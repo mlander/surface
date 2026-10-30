@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource\Attribute;
+namespace Drupal\surface\Resource\Attribute;
 
 /**
  * Names a structure: a group of keys held by something else.
@@ -15,7 +15,7 @@ namespace Drupal\data_surface\Resource\Attribute;
  * class in a module's src/Resource or src/Structure directory carrying
  * this is found; the attribute, not the directory, decides the kind.
  *
- * @see \Drupal\data_surface\Resource\StructureInterface
+ * @see \Drupal\surface\Resource\StructureInterface
  */
 #[\Attribute(\Attribute::TARGET_CLASS)]
 final class Structure {
@@ -25,7 +25,7 @@ final class Structure {
    *
    * @param string $id
    *   Machine name.
-   * @param class-string<\Drupal\data_surface\Resource\OperationAccessInterface>|null $access
+   * @param class-string<\Drupal\surface\Resource\OperationAccessInterface>|null $access
    *   The run-time part of access, for what depends on the subject: at a
    *   child, whether its keys are open, locked or omitted. NULL means the
    *   permission of the operation it is invoked through is the whole

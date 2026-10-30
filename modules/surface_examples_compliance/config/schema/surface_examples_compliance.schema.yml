@@ -1,0 +1,19 @@
+# Generated from the registration.step3 resource by drush surface:config-schema.
+surface_examples.registration_step3.third_party.surface_examples_compliance:
+  type: mapping
+  label: 'Compliance'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    license:
+      type: string
+      label: 'Event license'
+      nullable: true
+      requiredKey: false
+      constraints:
+        Regex:
+          pattern: '/^\d{4}$/D'
+    stewards:
+      type: integer
+      label: 'Stewards'
+      requiredKey: false

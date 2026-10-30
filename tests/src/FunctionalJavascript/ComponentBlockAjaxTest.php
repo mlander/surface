@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 use Drupal\block\Entity\Block;
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * swaps its own props the same way, and the block saved renders the
  * component with the props and slots it holds.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ComponentBlockAjaxTest extends WebDriverTestBase {
 
@@ -30,9 +30,9 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
    */
   protected static $modules = [
     'block',
-    'data_surface',
-    'data_surface_examples',
-    'data_surface_component_block',
+    'surface',
+    'surface_examples',
+    'surface_examples_component_block',
   ];
 
   /**
@@ -57,16 +57,16 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
   public function testChoosingComponentDrawsItsProps(): void {
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
-    $this->drupalGet('admin/structure/block/add/data_surface_component/stark');
+    $this->drupalGet('admin/structure/block/add/surface_component/stark');
     $component = $assert->fieldExists('settings[component]');
     $this->assertSame('', $component->getValue(), 'No component is chosen yet.');
-    $assert->optionExists('settings[component]', 'data_surface_examples:card');
-    $assert->optionExists('settings[component]', 'data_surface_examples:hero');
+    $assert->optionExists('settings[component]', 'surface_examples:card');
+    $assert->optionExists('settings[component]', 'surface_examples:hero');
     $assert->fieldNotExists('settings[props][heading]');
 
     // The card's props, over AJAX, as its schema declares them.
     $this->probe(['settings[component]', 'settings[label]']);
-    $page->selectFieldOption('settings[component]', 'data_surface_examples:card');
+    $page->selectFieldOption('settings[component]', 'surface_examples:card');
     $assert->assertWaitOnAjaxRequest();
     $heading = $assert->fieldExists('settings[props][heading]');
     $this->assertTrue($heading->isVisible());
@@ -78,11 +78,11 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
     $this->assertTrue($this->stillProbed('settings[label]'));
 
     // Another component swaps them for its own.
-    $page->selectFieldOption('settings[component]', 'data_surface_examples:hero');
+    $page->selectFieldOption('settings[component]', 'surface_examples:hero');
     $assert->assertWaitOnAjaxRequest();
     $assert->fieldNotExists('settings[props][heading]');
     $this->assertSame('40', $assert->fieldExists('settings[props][overlay]')->getValue());
-    $page->selectFieldOption('settings[component]', 'data_surface_examples:card');
+    $page->selectFieldOption('settings[component]', 'surface_examples:card');
     $assert->assertWaitOnAjaxRequest();
     $heading = $assert->fieldExists('settings[props][heading]');
 
@@ -101,7 +101,7 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
     $block = Block::load($id);
     $this->assertInstanceOf(Block::class, $block);
     $settings = $block->get('settings');
-    $this->assertSame('data_surface_examples:card', $settings['component']);
+    $this->assertSame('surface_examples:card', $settings['component']);
     $this->assertSame([
       'heading' => 'Doors open at six',
       'tone' => 'highlight',
@@ -112,7 +112,7 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
 
     // Rendered: the card, with the props the block holds.
     $this->drupalGet('<front>');
-    $card = $assert->elementExists('css', 'article.data-surface-card.data-surface-card--highlight');
+    $card = $assert->elementExists('css', 'article.surface-card.surface-card--highlight');
     $this->assertSame('Doors open at six', $card->find('css', 'h3')?->getText());
     $this->assertSame('Bring your ticket.', $card->find('css', 'p')?->getText());
     $this->assertSame('https://example.com/tickets', $card->find('css', 'a')?->getAttribute('href'));
@@ -130,8 +130,8 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
   public function testTheSlotsKindAndTheNestedComponentSwap(): void {
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
-    $this->drupalGet('admin/structure/block/add/data_surface_component/stark');
-    $page->selectFieldOption('settings[component]', 'data_surface_examples:section');
+    $this->drupalGet('admin/structure/block/add/surface_component/stark');
+    $page->selectFieldOption('settings[component]', 'surface_examples:section');
     $assert->assertWaitOnAjaxRequest();
     $kind = $assert->fieldExists('settings[slots][content][kind]');
     $this->assertSame('text', $kind->getValue());
@@ -145,17 +145,17 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
     $nested = 'settings[slots][content][component]';
     $this->assertNotNull($assert->waitForField($nested . '[component]'));
     $assert->fieldNotExists('settings[slots][content][text]');
-    $assert->optionExists($nested . '[component]', 'data_surface_examples:card');
-    $assert->optionExists($nested . '[component]', 'data_surface_examples:hero');
-    $assert->optionNotExists($nested . '[component]', 'data_surface_examples:call_to_action');
+    $assert->optionExists($nested . '[component]', 'surface_examples:card');
+    $assert->optionExists($nested . '[component]', 'surface_examples:hero');
+    $assert->optionNotExists($nested . '[component]', 'surface_examples:call_to_action');
     $this->assertTrue($this->stillProbed('settings[component]'), 'The component chosen above is not replaced.');
 
     // The nested component's props and slots, swapped over AJAX.
-    $page->selectFieldOption($nested . '[component]', 'data_surface_examples:hero');
+    $page->selectFieldOption($nested . '[component]', 'surface_examples:hero');
     $assert->assertWaitOnAjaxRequest();
     $this->assertSame('40', $assert->fieldExists($nested . '[props][overlay]')->getValue());
     $assert->fieldExists($nested . '[slots][actions][kind]');
-    $page->selectFieldOption($nested . '[component]', 'data_surface_examples:card');
+    $page->selectFieldOption($nested . '[component]', 'surface_examples:card');
     $assert->assertWaitOnAjaxRequest();
     $assert->fieldNotExists($nested . '[props][overlay]');
     $heading = $assert->fieldExists($nested . '[props][heading]');
@@ -168,14 +168,14 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
     $page->pressButton('Save block');
     $this->assertTrue($assert->waitForText('The block configuration has been saved.'), (string) $page->find('css', '[role="contentinfo"], [role="alert"], .messages')?->getText());
 
-    $blocks = $this->container->get('entity_type.manager')->getStorage('block')->loadByProperties(['plugin' => 'data_surface_component']);
+    $blocks = $this->container->get('entity_type.manager')->getStorage('block')->loadByProperties(['plugin' => 'surface_component']);
     $this->assertCount(1, $blocks);
     $block = reset($blocks);
     $this->assertSame([
       'content' => [
         'kind' => 'component',
         'component' => [
-          'component' => 'data_surface_examples:card',
+          'component' => 'surface_examples:card',
           'props' => [
             'heading' => 'Talks start at seven',
             'tone' => 'plain',
@@ -187,10 +187,10 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
     ], $block->get('settings')['slots']);
 
     $this->drupalGet('<front>');
-    $section = $assert->elementExists('css', 'section.data-surface-section');
+    $section = $assert->elementExists('css', 'section.surface-section');
     $this->assertSame('Tonight', $section->find('css', 'h2')?->getText());
-    $this->assertSame('Talks start at seven', $section->find('css', 'article.data-surface-card h3')?->getText());
-    $this->assertSame('In the main hall.', $section->find('css', 'article.data-surface-card p')?->getText());
+    $this->assertSame('Talks start at seven', $section->find('css', 'article.surface-card h3')?->getText());
+    $this->assertSame('In the main hall.', $section->find('css', 'article.surface-card p')?->getText());
   }
 
 }

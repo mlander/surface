@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Component\Render\MarkupInterface;
 use Drupal\Component\Utility\Html;
@@ -25,7 +25,7 @@ use Drupal\Component\Utility\Html;
  *
  * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
  *
- * @see \Drupal\data_surface\Pipeline\Sentences::machine()
+ * @see \Drupal\surface\Pipeline\Sentences::machine()
  */
 final class Named implements MarkupInterface {
 

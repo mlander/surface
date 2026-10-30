@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Pipeline\TypeMismatchException;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Pipeline\VariantMismatchException;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Attachment;
-use Drupal\data_surface_demo\Structure\DemoBlockStructure;
-use Drupal\data_surface_examples\Venues;
-use Drupal\data_surface_resource_test\Structure\Crate\CrateStructure;
-use Drupal\data_surface_resource_test\Structure\Cupboard\CupboardStructure;
-use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Pipeline\TypeMismatchException;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Pipeline\VariantMismatchException;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Attachment;
+use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples\Venues;
+use Drupal\surface_resource_test\Structure\Crate\CrateStructure;
+use Drupal\surface_resource_test\Structure\Cupboard\CupboardStructure;
+use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
 use Drupal\node\Entity\NodeType;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Opis\JsonSchema\CompliantValidator;
 use PHPUnit\Framework\Attributes\Group;
@@ -47,9 +47,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * has the same shape in both drafts, and no 2020-12 meta-schema is
  * vendored.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ServedContractTest extends DataSurfaceKernelTestBase {
+class ServedContractTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
 
@@ -69,12 +69,12 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     'block',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_demo',
-    'data_surface_demo_node_type',
-    'data_surface_react',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_plugins',
+    'surface_examples_node_type',
+    'surface_react',
   ];
 
   /**
@@ -84,7 +84,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
-    $this->installConfig(['field', 'node', 'data_surface_examples']);
+    $this->installConfig(['field', 'node', 'surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -106,9 +106,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    *   The contract, through JSON and back.
    */
   protected function contract(string $resource, string $operation, array $parameters = [], array $values = [], bool $widgets = TRUE): array {
-    $served = $this->container->get('data_surface_react.served_operations');
+    $served = $this->container->get('surface_react.served_operations');
     $operation = $served->resolve($resource, $operation, $parameters);
-    $contract = $this->container->get('data_surface.contract_emitter')->emit(
+    $contract = $this->container->get('surface.contract_emitter')->emit(
       $operation->surface,
       array_replace($served->current($operation), $values),
       $operation->definition->id,
@@ -294,7 +294,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['show' => TRUE, 'label' => '- Keep riverside_main (no longer offered) -'], $room['x-surface']['emptyOption']);
     $orphaned = $this->contract('registration.step2', 'configure', [], [
       'venue' => 'library',
-      DataSurfaceFormBuilderInterface::STANDING_KEY => ['room' => 'riverside_main'],
+      SurfaceFormBuilderInterface::STANDING_KEY => ['room' => 'riverside_main'],
       'room' => NULL,
     ]);
     $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $orphaned['schema']['properties']['room']['x-surface']['emptyOption']);
@@ -314,16 +314,16 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * widget, and the value itself never handed over.
    */
   public function testRefinementOverlay(): void {
-    $served = $this->container->get('data_surface_react.served_operations');
+    $served = $this->container->get('surface_react.served_operations');
     $operation = $served->resolve('registration.step2', 'configure', []);
-    $overlay = $this->container->get('data_surface.form_builder')->refinementOverlay(
+    $overlay = $this->container->get('surface.form_builder')->refinementOverlay(
       $operation->surface,
       $served->current($operation),
       ['venue' => 'library', 'room' => 'riverside_main'],
     );
-    $this->assertSame(['room' => 'riverside_main'], $overlay[DataSurfaceFormBuilderInterface::STANDING_KEY]);
+    $this->assertSame(['room' => 'riverside_main'], $overlay[SurfaceFormBuilderInterface::STANDING_KEY]);
     $contract = $this->contract('registration.step2', 'configure', [], $overlay);
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STANDING_KEY, $contract['values']);
+    $this->assertArrayNotHasKey(SurfaceFormBuilderInterface::STANDING_KEY, $contract['values']);
     $room = $contract['schema']['properties']['room'];
     $this->assertTrue($room['x-surface']['stale']);
     $this->assertSame(['show' => TRUE, 'label' => '- Select -'], $room['x-surface']['emptyOption']);
@@ -342,7 +342,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // word for it.
     $number = $this->contract('registration.step1', 'configure', [], [
       'capacity' => NULL,
-      DataSurfaceFormBuilderInterface::STANDING_KEY => ['capacity' => 70],
+      SurfaceFormBuilderInterface::STANDING_KEY => ['capacity' => 70],
     ]);
     $this->assertTrue($number['schema']['properties']['capacity']['x-surface']['stale']);
     $this->assertArrayNotHasKey('emptyOption', $number['schema']['properties']['capacity']['x-surface']);
@@ -439,9 +439,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * submodule's endpoint asks the same service for the hints.
    */
   public function testWidgetHintsAreTheRenderersAlone(): void {
-    $surface = $this->container->get('data_surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
-    $default = $this->container->get('data_surface.contract_emitter')
-      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo')
+    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $default = $this->container->get('surface.contract_emitter')
+      ->emit($surface, $surface->getDefaultValues(), 'block.surface_examples_plugins')
       ->document;
     $plain = json_decode((string) json_encode($default['schema']), TRUE);
     $this->assertSame($plain, $this->contractOf($surface, FALSE));
@@ -502,7 +502,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   /**
    * Emits a data surface asked for in no operation, its schema decoded.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param bool $widgets
    *   Whether to ask for the widget hints.
@@ -510,9 +510,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The schema, through JSON and back.
    */
-  protected function contractOf(DataSurfaceInterface $surface, bool $widgets): array {
-    $document = $this->container->get('data_surface.contract_emitter')
-      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo', NULL, NULL, $widgets)
+  protected function contractOf(SurfaceInterface $surface, bool $widgets): array {
+    $document = $this->container->get('surface.contract_emitter')
+      ->emit($surface, $surface->getDefaultValues(), 'block.surface_examples_plugins', NULL, NULL, $widgets)
       ->document;
     return json_decode((string) json_encode($document['schema']), TRUE);
   }
@@ -526,8 +526,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * hundred back to the room's limit.
    */
   public function testExampleFourWatchesTheLicense(): void {
-    $this->enableModules(['data_surface_examples_compliance']);
-    $license = 'third_party_settings.data_surface_examples_compliance.license';
+    $this->enableModules(['surface_examples_compliance']);
+    $license = 'third_party_settings.surface_examples_compliance.license';
     $room = ['venue' => 'riverside', 'room' => 'riverside_main'];
     $contract = $this->contract('registration.step3', 'configure', [], $room);
     $capacity = $contract['schema']['properties']['capacity'];
@@ -541,11 +541,11 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('title', $mount);
     $this->assertArrayNotHasKey('description', $mount);
     $this->assertTrue($mount['x-surface']['group']);
-    $this->assertSame('Compliance', $mount['properties']['data_surface_examples_compliance']['title']);
+    $this->assertSame('Compliance', $mount['properties']['surface_examples_compliance']['title']);
     // Its alter draws it after the capacity: said on the module's
     // object, and only said. The schema keeps it where its values go,
     // inside the group, the group last.
-    $this->assertSame('capacity', $mount['properties']['data_surface_examples_compliance']['x-surface']['after']);
+    $this->assertSame('capacity', $mount['properties']['surface_examples_compliance']['x-surface']['after']);
     $this->assertArrayNotHasKey('after', $mount['x-surface']);
     $this->assertSame([
       'title', 'open', 'venue', 'room', 'capacity', 'pricing', 'ticket', 'contact', 'third_party_settings',
@@ -553,7 +553,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
 
     $licensed = $this->contract('registration.step3', 'configure', [], $room + [
       'capacity' => 150,
-      'third_party_settings' => ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]],
+      'third_party_settings' => ['surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]],
     ]);
     $capacity = $licensed['schema']['properties']['capacity'];
     $this->assertSame(400, $capacity['maximum']);
@@ -565,7 +565,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   /**
    * Emits a data surface's static contract: described for no values at all.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param string $id
    *   Its id.
@@ -573,8 +573,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The contract, through JSON and back, and what it depends on.
    */
-  protected function staticContract(DataSurfaceInterface $surface, string $id): array {
-    $served = $this->container->get('data_surface.contract_emitter')->emit($surface, [], $id);
+  protected function staticContract(SurfaceInterface $surface, string $id): array {
+    $served = $this->container->get('surface.contract_emitter')->emit($surface, [], $id);
     return [json_decode((string) json_encode($served->document), TRUE), $served->getCacheTags()];
   }
 
@@ -584,11 +584,11 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * @param string $resource
    *   The resource id.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource, in its configure operation.
    */
-  protected function operationSurface(string $resource): DataSurfaceInterface {
-    return $this->container->get('data_surface_react.served_operations')->resolve($resource, 'configure', [])->surface;
+  protected function operationSurface(string $resource): SurfaceInterface {
+    return $this->container->get('surface_react.served_operations')->resolve($resource, 'configure', [])->surface;
   }
 
   /**
@@ -752,8 +752,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertSame(9, $compared, 'Three venues and six rooms.');
 
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    $surface = $this->container->get('data_surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
-    [$contract, $tags] = $this->staticContract($surface, 'block.data_surface_demo');
+    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    [$contract, $tags] = $this->staticContract($surface, 'block.surface_examples_plugins');
     $static = $contract['schema'];
     $this->assertWellFormed($static);
     // The bundle lists the conditionals read are what the contract rests on.
@@ -763,7 +763,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $pairs = [];
     foreach (['bundle', 'field'] as $key) {
       foreach ($this->branches($static, $key) as [$when, $then]) {
-        $document = $this->container->get('data_surface.contract_emitter')->emit($surface, $when, 'block.data_surface_demo')->document;
+        $document = $this->container->get('surface.contract_emitter')->emit($surface, $when, 'block.surface_examples_plugins')->document;
         $refined = json_decode((string) json_encode($document['schema']['properties'][$key]), TRUE);
         $this->assertTrue($refined['x-surface']['refined']);
         $this->assertEquals($this->plain($refined), $this->applied($this->plain($static['properties'][$key]), $then), $key . ' for ' . json_encode($when));
@@ -788,7 +788,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * the venue, is still enumerated.
    */
   public function testExampleFourStatesTheCapacityExactly(): void {
-    $this->enableModules(['data_surface_examples_compliance']);
+    $this->enableModules(['surface_examples_compliance']);
     $schema = $this->full('registration.step3')['schema'];
     $this->assertWellFormed($schema);
     $capacity = $schema['properties']['capacity']['x-surface'];
@@ -797,7 +797,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // The frame's rules name the declared rule's conditional (below); the
     // key carries no marker.
     $this->assertArrayNotHasKey('declared', $capacity);
-    $this->assertSame(['room', 'third_party_settings.data_surface_examples_compliance.license'], $capacity['dependsOn']);
+    $this->assertSame(['room', 'third_party_settings.surface_examples_compliance.license'], $capacity['dependsOn']);
     $this->assertCount(6, $this->branches($schema, 'capacity'));
     // Listed by the frame, not marked on the conditional: no x-surface
     // below an applicator.
@@ -810,7 +810,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
           'properties' => [
             'third_party_settings' => [
               'type' => ['object', 'null'],
-              'properties' => ['data_surface_examples_compliance' => $absent],
+              'properties' => ['surface_examples_compliance' => $absent],
             ],
           ],
         ],
@@ -852,8 +852,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
 
     // The fruit has no default, so the crate's layers are enumerated in
     // the fruit variant's own schema, under its conditional.
-    $this->enableModules(['data_surface_resource_test']);
-    $surface = $this->container->get('data_surface.resources')->build(CrateStructure::class, new OperationContext('configure'));
+    $this->enableModules(['surface_resource_test']);
+    $surface = $this->container->get('surface.resources')->build(CrateStructure::class, new OperationContext('configure'));
     [$contract] = $this->staticContract($surface, 'resource_test.crate');
     $schema = $contract['schema'];
     $this->assertWellFormed($schema);
@@ -881,8 +881,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    *   The document, through JSON and back.
    */
   protected function full(string $resource): array {
-    $operation = $this->container->get('data_surface_react.served_operations')->resolve($resource, 'configure', []);
-    $served = $this->container->get('data_surface.contract_emitter')->emitFull(
+    $operation = $this->container->get('surface_react.served_operations')->resolve($resource, 'configure', []);
+    $served = $this->container->get('surface.contract_emitter')->emitFull(
       $operation->surface,
       $operation->definition->id,
       $operation->operation->id,
@@ -958,7 +958,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // Stored elsewhere, the full schema is the same document; the other
     // one is not.
     $before = (string) json_encode($this->full('registration.step2'));
-    $this->config('data_surface_examples.registration_step2')
+    $this->config('surface_examples.registration_step2')
       ->set('venue', 'harbour')
       ->set('room', 'harbour_deck')
       ->set('capacity', 90)
@@ -982,14 +982,14 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * from nothing, not from its defaults.
    */
   public function testFullSchemaLeavesWhatCannotBeListedAsDeclared(): void {
-    $this->enableModules(['data_surface_examples_compliance']);
+    $this->enableModules(['surface_examples_compliance']);
     $schema = $this->full('registration.step3')['schema'];
     $this->assertWellFormed($schema);
     $capacity = $schema['properties']['capacity'];
     $this->assertArrayNotHasKey('maximum', $capacity);
     $this->assertArrayNotHasKey('description', $capacity);
     $this->assertSame([
-      'dependsOn' => ['room', 'third_party_settings.data_surface_examples_compliance.license'],
+      'dependsOn' => ['room', 'third_party_settings.surface_examples_compliance.license'],
       'enumerated' => TRUE,
     ], $capacity['x-surface']);
     // The license rule is declared: the frame's rules name its one
@@ -1014,19 +1014,19 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $crowd = ['capacity' => 150] + $stored['values'];
     $this->assertFalse($this->validates($schema, $crowd));
     $this->assertFalse($this->validates($stored['schema'], $crowd));
-    $crowd['third_party_settings']['data_surface_examples_compliance']['license'] = '2048';
-    $crowd['third_party_settings']['data_surface_examples_compliance']['stewards'] = 3;
+    $crowd['third_party_settings']['surface_examples_compliance']['license'] = '2048';
+    $crowd['third_party_settings']['surface_examples_compliance']['stewards'] = 3;
     $this->assertTrue($this->validates($schema, $crowd));
     // Wider where it cannot be exact: one steward for 150 people fits the
     // full schema, which cannot list the capacity the stewards watch.
-    $crowd['third_party_settings']['data_surface_examples_compliance']['stewards'] = 1;
+    $crowd['third_party_settings']['surface_examples_compliance']['stewards'] = 1;
     $this->assertTrue($this->validates($schema, $crowd));
     $this->assertFalse($this->validates($schema, ['venue' => 'library'] + $stored['values']), 'What can be listed is still held: the main hall is not the library\'s.');
 
     // A child whose unit defaults to `cm` is not described for `cm`.
-    $this->enableModules(['data_surface_resource_test']);
-    $pantry = $this->container->get('data_surface.resources')->build(PantryResource::class, PantryResource::create());
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $this->enableModules(['surface_resource_test']);
+    $pantry = $this->container->get('surface.resources')->build(PantryResource::class, PantryResource::create());
+    $emitter = $this->container->get('surface.contract_emitter');
     $document = json_decode((string) json_encode($emitter->emitFull($pantry, 'resource_test.pantry')->document['schema']), TRUE);
     $shelf = SchemaResolver::inline($document['properties']['shelf'], $document);
     $this->assertSame(['dependsOn' => ['unit'], 'enumerated' => TRUE], $shelf['properties']['height']['x-surface']);
@@ -1064,7 +1064,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   public function testExampleThreeDefinesEachPartOnce(): void {
     foreach ([FALSE, TRUE] as $compliance) {
       if ($compliance) {
-        $this->enableModules(['data_surface_examples_compliance']);
+        $this->enableModules(['surface_examples_compliance']);
       }
       $documents = [
         'the schema for these answers' => $this->contract('registration.step3', 'configure', widgets: FALSE)['schema'],
@@ -1106,7 +1106,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
         $this->assertSame(['price', 'currency'], $schema['$defs']['registration.step3.ticket.paid']['required'], $at);
         // Nothing narrows, but the compliance structure for these answers,
         // whose stewards follow the capacity its port reads.
-        $mount = $schema['properties']['third_party_settings']['properties']['data_surface_examples_compliance'] ?? [];
+        $mount = $schema['properties']['third_party_settings']['properties']['surface_examples_compliance'] ?? [];
         $elsewhere = ['properties' => array_diff_key($schema['properties'], ['third_party_settings' => TRUE])] + $schema;
         $this->assertStringNotContainsString('"allOf":[{"$ref"', (string) json_encode($elsewhere), $at . ': nothing narrows.');
         if ($compliance) {
@@ -1166,7 +1166,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   public function testExampleThreeFullSchemaReadsNoValue(): void {
     $before = (string) json_encode($this->full('registration.step3'));
     $stored = $this->contract('registration.step3', 'configure');
-    $this->config('data_surface_examples.registration_step3')
+    $this->config('surface_examples.registration_step3')
       ->set('venue', 'harbour')
       ->set('room', 'harbour_deck')
       ->set('capacity', 90)
@@ -1195,9 +1195,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * whose refinement has the last word, refuses it.
    */
   public function testClosedRoomIsLeftToTheRuntime(): void {
-    $this->enableModules(['data_surface_examples_compliance']);
+    $this->enableModules(['surface_examples_compliance']);
     $state = $this->container->get('state');
-    $closed = 'data_surface_examples_compliance.closed_rooms';
+    $closed = 'surface_examples_compliance.closed_rooms';
     $this->assertNull($state->get($closed));
     $full = (string) json_encode($this->full('registration.step3'));
     $stored = $this->contract('registration.step3', 'configure', widgets: FALSE);
@@ -1231,7 +1231,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($this->validates($schema, $east), 'The full schema accepts the East room.');
     $this->assertFalse($this->validates($now['schema'], $east), 'The schema for these answers does not.');
     $surface = $this->operationSurface('registration.step3');
-    $pipeline = $this->container->get('data_surface.pipeline');
+    $pipeline = $this->container->get('surface.pipeline');
     $this->assertNotContains('room', $pipeline->validate($surface, $now['values'])->keys());
     $this->assertContains('room', $pipeline->validate($surface, $east)->keys(), 'The pipeline refuses it.');
     $state->delete($closed);
@@ -1252,10 +1252,10 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * holding it to the child's schema written out inline.
    */
   public function testOneDefPerChildClass(): void {
-    $this->enableModules(['data_surface_resource_test']);
+    $this->enableModules(['surface_resource_test']);
     $context = (new OperationContext('update'))->withChild('left', new OperationContext('update', known: ['bin' => 'left']));
-    $cupboard = $this->container->get('data_surface.resources')->build(CupboardStructure::class, $context);
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $cupboard = $this->container->get('surface.resources')->build(CupboardStructure::class, $context);
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = json_decode((string) json_encode($emitter->emitFull($cupboard, 'resource_test.cupboard')->document['schema']), TRUE);
     $this->assertWellFormed($full);
     $this->assertSame(['resource_test.pantry.shelf', 'resource_test.cupboard.bin'], array_keys($full['$defs']));
@@ -1274,7 +1274,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $type = $def['properties']['height']['type'];
     $this->assertSame(['cm' => ['type' => $type, 'maximum' => 200], 'in' => ['type' => $type, 'maximum' => 80]], $ceilings, 'The declared type beside the bound.');
     $this->assertSame('Measured inside.', $def['properties']['height']['description']);
-    $this->assertArrayHasKey('sturdy', $def['properties']['third_party_settings']['properties']['data_surface_resource_test']['properties']);
+    $this->assertArrayHasKey('sturdy', $def['properties']['third_party_settings']['properties']['surface_resource_test']['properties']);
 
     // The bin as declared, which no context has locked; the left bin's
     // lock is its site's.
@@ -1358,15 +1358,15 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * surface.
    */
   public function testOneIdTwoDeclarationsKeepsBoth(): void {
-    $leaf = new DataSurfaceBuilder();
+    $leaf = new SurfaceBuilder();
     $leaf->setDefinition('depth', DataDefinition::create('integer'));
-    $node = new DataSurfaceBuilder();
+    $node = new SurfaceBuilder();
     $node->setDefinition('name', DataDefinition::create('string'));
     $node->attach('next', new Attachment($leaf->seal(), NULL, 'loop.node'));
-    $root = new DataSurfaceBuilder();
+    $root = new SurfaceBuilder();
     $root->attach('first', new Attachment($node->seal(), NULL, 'loop.node'));
     $surface = $root->seal();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     foreach ([
       $emitter->emitFull($surface, 'loop')->document['schema'],
       $emitter->emit($surface, $surface->getDefaultValues(), 'loop')->document['schema'],
@@ -1413,7 +1413,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     // Named with what it checks, the reason the build gives it; computed
     // from the name unless sent, and offered.
     $this->assertContains([
-      'constraint' => 'DataSurfaceUnique',
+      'constraint' => 'SurfaceUnique',
       'message' => 'Refused when a content type named this already exists.',
     ], $type['x-surface']['checkedOnServer']);
     $this->assertSame(['from' => ['name'], 'when' => 'unless_sent'], $type['x-surface']['computed']);
@@ -1424,9 +1424,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * Tests the demo block's structure, built as its host builds it.
    */
   public function testDemoBlock(): void {
-    $surface = $this->container->get('data_surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
-    $document = $this->container->get('data_surface.contract_emitter')
-      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo', widgets: TRUE)
+    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $document = $this->container->get('surface.contract_emitter')
+      ->emit($surface, $surface->getDefaultValues(), 'block.surface_examples_plugins', widgets: TRUE)
       ->document;
     $contract = json_decode((string) json_encode($document), TRUE);
     $this->assertNull($contract['operation']);
@@ -1496,7 +1496,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
   /**
    * Answers whether the pipeline accepts and validates a value set.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built resource.
    * @param array $values
    *   The values, every key answered.
@@ -1504,7 +1504,7 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
    * @return bool
    *   Whether accept() takes them and validate() refuses nothing.
    */
-  protected function accepts(DataSurfaceInterface $surface, array $values): bool {
+  protected function accepts(SurfaceInterface $surface, array $values): bool {
     try {
       $accepted = $this->pipeline()->accept($surface, $values);
     }
@@ -1529,10 +1529,10 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
       $cases = static::verdicts();
       $event = static::EVENT;
       if ($compliance) {
-        $this->enableModules(['data_surface_examples_compliance']);
+        $this->enableModules(['surface_examples_compliance']);
         $mount = static fn (?string $license, int $stewards): array => [
           'third_party_settings' => [
-            'data_surface_examples_compliance' => ['license' => $license, 'stewards' => $stewards],
+            'surface_examples_compliance' => ['license' => $license, 'stewards' => $stewards],
           ],
         ];
         $event += $mount(NULL, 1);
@@ -1543,8 +1543,8 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
           'a license that is not four digits' => [$mount('EV-1', 1), FALSE, FALSE, FALSE],
         ];
       }
-      $emitter = $this->container->get('data_surface.contract_emitter');
-      $resources = $this->container->get('data_surface.resources');
+      $emitter = $this->container->get('surface.contract_emitter');
+      $resources = $this->container->get('surface.resources');
       $surface = $resources->build('registration.step3', $resources->operation('registration.step3', 'configure'));
       $full = json_decode((string) json_encode($emitter->emitFull($surface, 'registration.step3', 'configure')->document['schema']), TRUE);
       $this->assertWellFormed($full);
@@ -1579,9 +1579,9 @@ class ServedContractTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($this->validates($edit['schema'], ['name' => str_repeat('a', 256)] + $edit['values']));
     $this->assertWellFormed($this->contract('node.type', 'create')['schema']);
 
-    $surface = $this->container->get('data_surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
-    $document = $this->container->get('data_surface.contract_emitter')
-      ->emit($surface, $surface->getDefaultValues(), 'block.data_surface_demo', widgets: TRUE)
+    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $document = $this->container->get('surface.contract_emitter')
+      ->emit($surface, $surface->getDefaultValues(), 'block.surface_examples_plugins', widgets: TRUE)
       ->document;
     $contract = json_decode((string) json_encode($document), TRUE);
     $this->assertWellFormed($contract['schema']);

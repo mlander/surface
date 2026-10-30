@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 use Drupal\Core\TypedData\DataDefinition;
 
@@ -18,7 +18,7 @@ use Drupal\Core\TypedData\DataDefinition;
  * add(), `$inputs->add('license', License::class, t('Event license'))`, or
  * of a port, `$inputs->reads('code', License::class)`.
  *
- * @see \Drupal\data_surface\Resource\Attribute\Shape
+ * @see \Drupal\surface\Resource\Attribute\Shape
  * @see docs/declaring-a-resource.md#named-shapes
  */
 interface ShapeInterface {

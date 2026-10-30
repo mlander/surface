@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
-use Drupal\data_surface_resource_test\Alter\WallAlter;
+use Drupal\surface_resource_test\Alter\WallAlter;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -19,10 +19,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * more: the walls are open, marked in its full schema as decided once the
  * walls are known, which taking them down then decides.
  *
- * @see \Drupal\Tests\data_surface\Kernel\AlterAccessTest
+ * @see \Drupal\Tests\surface\Kernel\AlterAccessTest
  * @see docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class AlterAccessFormTest extends BrowserTestBase {
 
@@ -30,9 +30,9 @@ class AlterAccessFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_react',
-    'data_surface_resource_test',
+    'surface',
+    'surface_react',
+    'surface_resource_test',
   ];
 
   /**
@@ -58,7 +58,7 @@ class AlterAccessFormTest extends BrowserTestBase {
    */
   protected function stored(): array {
     $this->container->get('config.factory')->reset();
-    return array_diff_key($this->config('data_surface_resource_test.gallery')->getRawData(), ['_core' => TRUE]);
+    return array_diff_key($this->config('surface_resource_test.gallery')->getRawData(), ['_core' => TRUE]);
   }
 
   /**

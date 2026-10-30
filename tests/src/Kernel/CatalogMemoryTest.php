@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Drush\Commands\CatalogCommand;
+use Drupal\surface\Drush\Commands\CatalogCommand;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -23,9 +23,9 @@ use Symfony\Component\Console\Tester\CommandTester;
  *
  * @see docs/decisions.md#a-budget-for-what-the-site-decides
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class CatalogMemoryTest extends DataSurfaceKernelTestBase {
+class CatalogMemoryTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -37,11 +37,11 @@ class CatalogMemoryTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_component_block',
-    'data_surface_block',
+    'surface',
+    'surface_tool',
+    'surface_examples',
+    'surface_examples_component_block',
+    'surface_examples_block',
   ];
 
   /**
@@ -55,7 +55,7 @@ class CatalogMemoryTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['system', 'data_surface']);
+    $this->installConfig(['system', 'surface']);
     $this->container->get('theme_installer')->install(['stark']);
   }
 
@@ -67,10 +67,10 @@ class CatalogMemoryTest extends DataSurfaceKernelTestBase {
    */
   protected function placement(): array {
     // Built once first, so the measure is the walk and its rendering.
-    $this->container->get('data_surface.site_catalog')->refused();
+    $this->container->get('surface.site_catalog')->refused();
     $before = memory_get_usage();
     memory_reset_peak_usage();
-    $tester = new CommandTester(new CatalogCommand($this->container->get('data_surface.site_catalog')));
+    $tester = new CommandTester(new CatalogCommand($this->container->get('surface.site_catalog')));
     $status = $tester->execute(['--resource' => 'block.placement', '--format' => 'json']);
     $peak = memory_get_peak_usage() - $before;
     $this->assertSame(0, $status, $tester->getDisplay());
@@ -91,11 +91,11 @@ class CatalogMemoryTest extends DataSurfaceKernelTestBase {
 
     // Past the limit (two here, for the four components and the block
     // plugins), the settings are listed by value and not walked.
-    $this->container->get('data_surface.site_list_budget')->withLimit(2, function () use ($walked): void {
+    $this->container->get('surface.site_list_budget')->withLimit(2, function () use ($walked): void {
       [$entry, $peak] = $this->placement();
       $keys = array_column($entry['keys'], NULL, 'key');
       $this->assertFalse($keys['settings']['variants']['listed']);
-      $this->assertContains('data_surface_component', array_keys($keys['settings']['variants']['values']));
+      $this->assertContains('surface_component', array_keys($keys['settings']['variants']['values']));
       $this->assertSame([], array_filter(array_keys($keys), static fn (string $key): bool => str_starts_with($key, 'settings.')));
       $this->assertLessThan($walked, count($entry['keys']));
       $this->assertLessThan(self::BUDGET, $peak);
@@ -111,7 +111,7 @@ class CatalogMemoryTest extends DataSurfaceKernelTestBase {
    *   The exit status and what it printed.
    */
   protected function table(): array {
-    $tester = new CommandTester(new CatalogCommand($this->container->get('data_surface.site_catalog')));
+    $tester = new CommandTester(new CatalogCommand($this->container->get('surface.site_catalog')));
     $status = $tester->execute(['--resource' => 'block.placement']);
     return [$status, (string) preg_replace('/\s+/', ' ', $tester->getDisplay())];
   }

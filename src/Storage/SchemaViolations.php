@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 use Drupal\Core\Config\TypedConfigManagerInterface;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\Pipeline\StorageViolationsException;
-use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\ViolationSet;
 
 /**
  * Validates storage shaped data and reports it back in data surface terms.
@@ -54,7 +54,7 @@ final class SchemaViolations {
    *   FALSE to report every violation the schema found, with the ones no
    *   data surface key claims filed under their own property path.
    *
-   * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
+   * @throws \Drupal\surface\Pipeline\StorageViolationsException
    *   When the data breaks the schema's constraints.
    */
   public static function check(TypedConfigManagerInterface $typed_config, string $schema_name, array $data, array $paths, bool $mapped_only = TRUE): void {
@@ -78,7 +78,7 @@ final class SchemaViolations {
    * @param bool $mapped_only
    *   TRUE, the default, to report only violations under a mapped path.
    *
-   * @return \Drupal\data_surface\Pipeline\ViolationSet
+   * @return \Drupal\surface\Pipeline\ViolationSet
    *   The violations, filed under the data surface keys that own them;
    *   empty when the data is valid or when nothing describes it.
    */

@@ -1,0 +1,15 @@
+surface_examples_first.newsletter:
+  path: '/admin/config/services/surface-newsletter'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Newsletter settings'
+    _surface_resource: 'Drupal\surface_examples_first\Resource\NewsletterResource'
+    _surface_operation: 'configure'
+
+surface_examples_first.store:
+  path: '/admin/config/services/surface-store'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Store location'
+    _surface_resource: 'Drupal\surface_examples_first\Resource\StoreResource'
+    _surface_operation: 'configure'

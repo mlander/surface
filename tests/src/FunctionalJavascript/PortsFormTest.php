@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -17,10 +17,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * caps the rows at ten, said under the field; and the seating is saved
  * under the venue's own key, with nothing of the ports in it.
  *
- * @see \Drupal\data_surface_resource_test\Resource\Venue\VenueResource
+ * @see \Drupal\surface_resource_test\Resource\Venue\VenueResource
  * @see docs/resources.md#ports
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class PortsFormTest extends WebDriverTestBase {
 
@@ -28,8 +28,8 @@ class PortsFormTest extends WebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -40,7 +40,7 @@ class PortsFormTest extends WebDriverTestBase {
   /**
    * The venue's config object.
    */
-  protected const CONFIG = 'data_surface_resource_test.venue';
+  protected const CONFIG = 'surface_resource_test.venue';
 
   /**
    * {@inheritdoc}

@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Contract\ContractBaselines;
-use Drupal\data_surface\Contract\ContractChange;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\OperationDefinition;
-use Drupal\data_surface\ResourceBuild\ResourceCatalog;
-use Drupal\data_surface\ResourceBuild\ResourceDefinition;
-use Drupal\Tests\data_surface\Traits\DoorAgreementTrait;
-use Drupal\Tests\data_surface\Traits\NeverStricterTrait;
-use Drupal\Tests\data_surface\Traits\SchemaRoundTripTrait;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
-use Drupal\Tests\data_surface\Traits\StaticAccessAgreementTrait;
-use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\surface\Contract\ContractBaselines;
+use Drupal\surface\Contract\ContractChange;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\OperationDefinition;
+use Drupal\surface\ResourceBuild\ResourceCatalog;
+use Drupal\surface\ResourceBuild\ResourceDefinition;
+use Drupal\Tests\surface\Traits\DoorAgreementTrait;
+use Drupal\Tests\surface\Traits\NeverStricterTrait;
+use Drupal\Tests\surface\Traits\SchemaRoundTripTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
+use Drupal\Tests\surface\Traits\StaticAccessAgreementTrait;
+use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -46,7 +46,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
  *   of notes (DoorAgreementTrait);
  * - the contract baseline: today's full schema keeps the promise the
  *   committed baseline made, a breaking change failing unless versioned
- *   or allowed (DATA_SURFACE_BASELINES_WRITE=1 pins today's).
+ *   or allowed (SURFACE_BASELINES_WRITE=1 pins today's).
  *
  * An operation that needs a subject is built with none for the build
  * check and left out of the rest, which need values to read. A test
@@ -57,7 +57,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
  * @see docs/testing-a-resource.md
  * @see docs/decisions.md#an-adopters-tests-hold-the-invariants
  */
-abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
+abstract class ResourceTestBase extends SurfaceKernelTestBase {
 
   use DoorAgreementTrait;
   use NeverStricterTrait;
@@ -70,7 +70,7 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
   /**
    * The environment variable that pins today's full schemas as baselines.
    */
-  public const BASELINES_WRITE = 'DATA_SURFACE_BASELINES_WRITE';
+  public const BASELINES_WRITE = 'SURFACE_BASELINES_WRITE';
 
   /**
    * The modules this class needs, merged before the adopter's own.
@@ -83,9 +83,9 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
+    'surface',
+    'surface_tool',
+    'surface_react',
   ];
 
   /**
@@ -124,7 +124,7 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $modules = [];
     foreach (static::$resources as $resource) {
       if ($registry->hasDefinition($resource)) {
@@ -153,9 +153,9 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
   #[DataProvider('resourceProvider')]
   public function testEveryOperationBuilds(string $resource): void {
     $definition = $this->definition($resource);
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $operations = $this->container->get('data_surface.resource_registry')->getOperations($definition->name());
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
+    $operations = $this->container->get('surface.resource_registry')->getOperations($definition->name());
     $contexts = $operations === [] ? [ContractBaselines::ALONE => new OperationContext(ContractBaselines::ALONE)] : [];
     foreach ($operations as $operation) {
       $contexts[$operation->id] = $operation->needsNothing() ? $resources->operation($definition->name(), $operation->id) : new OperationContext($operation->id);
@@ -175,7 +175,7 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
   #[DataProvider('resourceProvider')]
   public function testNeverStricterThanThePipeline(string $resource): void {
     foreach ($this->asked($resource) as $id => [$context, $operation]) {
-      $resources = $this->container->get('data_surface.resources');
+      $resources = $this->container->get('surface.resources');
       $name = $this->definition($resource)->name();
       $surface = $resources->build($name, $context);
       $declared = $resources->buildStatic($name, $context);
@@ -190,8 +190,8 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
   #[DataProvider('resourceProvider')]
   public function testFullSchemaReadsBackToItself(string $resource): void {
     $definition = $this->definition($resource);
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
     $skipped = [];
     foreach ($this->asked($resource) as $id => [$context, $operation]) {
       $declared = $resources->buildStatic($definition->name(), $context);
@@ -216,7 +216,7 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
    */
   #[DataProvider('resourceProvider')]
   public function testStaticRefinersAgree(string $resource): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $name = $this->definition($resource)->name();
     $compared = 0;
     foreach ($this->asked($resource) as $id => [$context]) {
@@ -243,7 +243,7 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
   public function testStaticAccessAgrees(string $resource): void {
     $definition = $this->definition($resource);
     $administrator = $this->container->get('current_user')->getAccount();
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     foreach ($this->asked($resource) as $id => [$context, $operation]) {
       if ($operation === NULL) {
         // A structure no operation asks for is built by its host, which
@@ -276,10 +276,10 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
   #[DataProvider('resourceProvider')]
   public function testEveryDoorAgrees(string $resource): void {
     $definition = $this->definition($resource);
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $doors = 0;
     foreach ($this->asked($resource) as [$context, $operation]) {
-      if ($operation === NULL || !ResourceCatalog::standalone($definition, $operation, $this->container->get('data_surface.resource_plugins')->usedBy($definition->name())) || $operation->kind() === OperationDefinition::DELETE) {
+      if ($operation === NULL || !ResourceCatalog::standalone($definition, $operation, $this->container->get('surface.resource_plugins')->usedBy($definition->name())) || $operation->kind() === OperationDefinition::DELETE) {
         continue;
       }
       $rows = [];
@@ -302,7 +302,7 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
     if (static::$baselines === '') {
       $this->markTestSkipped('No baselines directory: name one in $baselines to hold ' . $resource . ' to its contract.');
     }
-    $baselines = $this->container->get('data_surface.contract_baselines');
+    $baselines = $this->container->get('surface.contract_baselines');
     $current = array_intersect_key($baselines->emit([$definition->module]), [$definition->id => TRUE]);
     $this->assertArrayHasKey($definition->id, $current, $resource . ' is emitted: it is no derived one, and something of it needs no subject.');
     $directory = static::$baselines;
@@ -314,7 +314,7 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
     $this->assertDirectoryExists($directory, 'The baselines directory is there; ' . static::BASELINES_WRITE . '=1 makes it.');
     $failing = array_filter($baselines->compare($committed, $current), static fn (ContractChange $change): bool => $change->fails());
     $this->assertSame([], array_values(array_map(static fn (ContractChange $change): string => sprintf('%s %s: %s (%s)', $change->surface, $change->path, $change->change, $change->status), $failing)), sprintf(
-      'A breaking change raises its owner\'s version, or its baseline allows it with a reason; a declaration with no baseline is pinned with %s=1, and an accepted change with drush data_surface:contract-diff --write.',
+      'A breaking change raises its owner\'s version, or its baseline allows it with a reason; a declaration with no baseline is pinned with %s=1, and an accepted change with drush surface:contract-diff --write.',
       static::BASELINES_WRITE,
     ));
   }
@@ -325,11 +325,11 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
    * @param string $resource
    *   Its id.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceDefinition
+   * @return \Drupal\surface\ResourceBuild\ResourceDefinition
    *   What discovery found.
    */
   protected function definition(string $resource): ResourceDefinition {
-    return $this->container->get('data_surface.resource_registry')->getDefinition($resource);
+    return $this->container->get('surface.resource_registry')->getDefinition($resource);
   }
 
   /**
@@ -338,14 +338,14 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
    * @param string $resource
    *   Its id.
    *
-   * @return array<string, array{0: \Drupal\data_surface\Resource\OperationContext, 1: \Drupal\data_surface\ResourceBuild\OperationDefinition|null}>
+   * @return array<string, array{0: \Drupal\surface\Resource\OperationContext, 1: \Drupal\surface\ResourceBuild\OperationDefinition|null}>
    *   By `<id>:<operation>`, the context and the operation; a declaration
    *   with none is held alone, as a host builds it, its operation NULL.
    */
   protected function asked(string $resource): array {
     $definition = $this->definition($resource);
-    $resources = $this->container->get('data_surface.resources');
-    $operations = $this->container->get('data_surface.resource_registry')->getOperations($definition->name());
+    $resources = $this->container->get('surface.resources');
+    $operations = $this->container->get('surface.resource_registry')->getOperations($definition->name());
     if ($operations === []) {
       return [
         $definition->id . ':' . ContractBaselines::ALONE => [new OperationContext(ContractBaselines::ALONE), NULL],
@@ -368,7 +368,7 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
    *
    * @param string $resource
    *   Its id.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   It, built in the operation.
    * @param bool $generated
    *   Whether to add the generated rows to the adopter's: the defaults,
@@ -377,7 +377,7 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
    * @return array<string, array{0: array, 1: bool|null, 2?: bool|null, 3?: bool|null}>
    *   The rows, by label.
    */
-  protected function rows(string $resource, DataSurfaceInterface $surface, bool $generated = TRUE): array {
+  protected function rows(string $resource, SurfaceInterface $surface, bool $generated = TRUE): array {
     $rows = [];
     if ($generated) {
       foreach (static::generated($surface) as $label => $input) {
@@ -395,19 +395,19 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
    *
    * @param string $name
    *   The resource's name.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   It, built there.
    *
    * @return array
    *   The stored values; none for a structure no storage holds.
    */
-  protected function stored(string $name, OperationContext $context, DataSurfaceInterface $surface): array {
-    if ($this->container->get('data_surface.resource_registry')->getDefinition($name)->storage === NULL) {
+  protected function stored(string $name, OperationContext $context, SurfaceInterface $surface): array {
+    if ($this->container->get('surface.resource_registry')->getDefinition($name)->storage === NULL) {
       return [];
     }
-    $storage = $this->container->get('data_surface.resources')->storage($name, $context, $surface);
+    $storage = $this->container->get('surface.resources')->storage($name, $context, $surface);
     return array_intersect_key($storage->load($surface), $surface->getDefinitions()->toArray());
   }
 
@@ -416,14 +416,14 @@ abstract class ResourceTestBase extends DataSurfaceKernelTestBase {
    *
    * @param string $name
    *   The resource's name.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    * @param array $input
    *   The values.
    */
   protected function write(string $name, OperationContext $context, array $input): void {
-    $resources = $this->container->get('data_surface.resources');
-    if ($resources->buildDeclared($name, $context)->changesNothing() || $this->container->get('data_surface.resource_registry')->getDefinition($name)->storage === NULL) {
+    $resources = $this->container->get('surface.resources');
+    if ($resources->buildDeclared($name, $context)->changesNothing() || $this->container->get('surface.resource_registry')->getDefinition($name)->storage === NULL) {
       return;
     }
     $surface = $resources->build($name, $context);

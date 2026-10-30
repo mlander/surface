@@ -1,0 +1,241 @@
+# The examples: one resource that grows, one idea per example.
+#
+# Examples 1 to 3 are each one operation of that example's resource, served by
+# the generic operation form: none of them names a form class of this
+# module. The panel beside each form is the contract the resource emits,
+# rebuilt with the form whenever an answer narrows another key, and below
+# it what config schema alone can say about the same settings today.
+#
+# Examples 1 and 2 also have a classic twin each, the same settings written
+# as a ConfigFormBase by hand, writing the same config object; its page is a
+# controller only to put what config schema says under the form without
+# adding a line to it. Examples 4 and 5 change no resource, so their pages
+# say what to do and where to look.
+#
+# Examples 7 to 12 leave the registration behind: each is one small resource
+# of its own for one or two later concepts, served the same way, with a
+# third panel saying what the page shows and where the docs explain it.
+# Example 14 is two resources served the same way, the mailer and the
+# webhook, each page with the same panel; the module that manages keys is a
+# submodule the panel tells you to enable.
+
+surface_examples.index:
+  path: '/surface-examples'
+  defaults:
+    _controller: '\Drupal\surface_examples\Controller\ExamplesController::index'
+    _title: 'Surface examples'
+  requirements:
+    _permission: 'administer site configuration'
+
+surface_examples.reset:
+  path: '/surface-examples/reset'
+  defaults:
+    _form: 'Drupal\surface_examples\Form\ResetExamplesForm'
+    _title: 'Reset the examples'
+  requirements:
+    _permission: 'administer site configuration'
+
+surface_examples.step1:
+  path: '/surface-examples/1'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 1: declare what you accept'
+    _surface_resource: 'Drupal\surface_examples\Resource\RegistrationStep1Resource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step1_classic:
+  path: '/surface-examples/1/classic'
+  defaults:
+    _controller: '\Drupal\surface_examples\Controller\ExamplesController::step1Classic'
+    _title: 'Example 1, the classic way'
+  requirements:
+    _permission: 'administer site configuration'
+
+surface_examples.step2:
+  path: '/surface-examples/2'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 2: answers depend on answers'
+    _surface_resource: 'Drupal\surface_examples\Resource\RegistrationStep2Resource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step2_classic:
+  path: '/surface-examples/2/classic'
+  defaults:
+    _controller: '\Drupal\surface_examples\Controller\ExamplesController::step2Classic'
+    _title: 'Example 2, the classic way'
+  requirements:
+    _permission: 'administer site configuration'
+
+surface_examples.step3:
+  path: '/surface-examples/3'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 3: made of parts'
+    _surface_resource: 'Drupal\surface_examples\Resource\RegistrationStep3Resource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step4:
+  path: '/surface-examples/4'
+  defaults:
+    _controller: '\Drupal\surface_examples\Controller\ExamplesController::step4'
+    _title: 'Example 4: others get a say'
+  requirements:
+    _permission: 'administer site configuration'
+
+surface_examples.step5:
+  path: '/surface-examples/5'
+  defaults:
+    _controller: '\Drupal\surface_examples\Controller\ExamplesController::step5'
+    _title: 'Example 5: same contract, no form'
+  requirements:
+    _permission: 'administer site configuration'
+
+surface_examples.step7:
+  path: '/surface-examples/7'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 7: a rule written as data'
+    _surface_resource: 'Drupal\surface_examples\Resource\BulletinResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step8:
+  path: '/surface-examples/8'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 8: one part, used twice'
+    _surface_resource: 'Drupal\surface_examples\Resource\PressResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step8_desk:
+  path: '/surface-examples/8/desk'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 8, the information desk'
+    _surface_resource: 'Drupal\surface_examples\Resource\InfoDeskResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step9:
+  path: '/surface-examples/9'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 9: keys that come from the site'
+    _surface_resource: 'Drupal\surface_examples\Resource\TicketSalesResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step10:
+  path: '/surface-examples/10'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 10: who may change what'
+    _surface_resource: 'Drupal\surface_examples\Resource\ProgramResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step10_check:
+  path: '/surface-examples/10/check'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 10, a check that changes nothing'
+    _surface_resource: 'Drupal\surface_examples\Resource\ProgramResource'
+    _surface_operation: 'check'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step11:
+  path: '/surface-examples/11'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 11: the stock widgets, and what nothing means'
+    _surface_resource: 'Drupal\surface_examples\Resource\DoorsResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step12:
+  path: '/surface-examples/12'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 12: a schema read into a structure'
+    _surface_resource: 'Drupal\surface_examples\Resource\SpotlightResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step13:
+  path: '/surface-examples/13'
+  defaults:
+    _controller: '\Drupal\surface_examples\Controller\ExamplesController::step13'
+    _title: 'Example 13: a block that embeds a component'
+  requirements:
+    _permission: 'administer site configuration'
+
+surface_examples.step14:
+  path: '/surface-examples/14'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 14: an optional extension'
+    _surface_resource: 'Drupal\surface_examples\Resource\MailerResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step14_webhook:
+  path: '/surface-examples/14/webhook'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 14, the sales webhook'
+    _surface_resource: 'Drupal\surface_examples\Resource\WebhookResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step15:
+  path: '/surface-examples/15'
+  defaults:
+    _controller: '\Drupal\surface_examples\Controller\ExamplesController::step15'
+    _title: 'Example 15: a config entity of your own'
+  requirements:
+    _permission: 'administer event venues'
+
+# Example 15's three forms, each one operation of the venue resource,
+# served by the generic operation form: the update and delete routes' {id}
+# is upcast to the venue the operations take. The delete route draws a
+# confirmation, since a delete takes no values; the cosmetic layer says
+# what was done and goes back to the example's page.
+surface_examples.step15_create:
+  path: '/surface-examples/15/add'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 15, add a venue'
+    _surface_resource: 'Drupal\surface_examples\Resource\VenueResource'
+    _surface_operation: 'create'
+    _surface_cosmetics: 'surface_examples.venue_form_cosmetics'
+
+surface_examples.step15_update:
+  path: '/surface-examples/15/venue/{id}'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 15, edit a venue'
+    _surface_resource: 'Drupal\surface_examples\Resource\VenueResource'
+    _surface_operation: 'update'
+    _surface_cosmetics: 'surface_examples.venue_form_cosmetics'
+  options:
+    parameters:
+      id:
+        type: 'entity:event_venue'
+
+surface_examples.step15_delete:
+  path: '/surface-examples/15/venue/{id}/delete'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 15, remove a venue'
+    _surface_resource: 'Drupal\surface_examples\Resource\VenueResource'
+    _surface_operation: 'delete'
+    _surface_cosmetics: 'surface_examples.venue_form_cosmetics'
+  options:
+    parameters:
+      id:
+        type: 'entity:event_venue'

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface\Contract\ContractChange;
-use Drupal\data_surface\Contract\ContractDiff;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\Contract\ContractChange;
+use Drupal\surface\Contract\ContractDiff;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * @see docs/evolution.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class ContractDiffTest extends UnitTestCase {
 
   /**

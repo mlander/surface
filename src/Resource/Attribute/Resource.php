@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource\Attribute;
+namespace Drupal\surface\Resource\Attribute;
 
 /**
  * Names a resource, and says which one, where it lives and who may act.
@@ -17,7 +17,7 @@ namespace Drupal\data_surface\Resource\Attribute;
  * one that names no storage, no identity and no plugin that hosts it,
  * since everything it says a structure says.
  *
- * @see \Drupal\data_surface\Resource\ResourceInterface
+ * @see \Drupal\surface\Resource\ResourceInterface
  */
 #[\Attribute(\Attribute::TARGET_CLASS)]
 final class Resource {
@@ -34,11 +34,11 @@ final class Resource {
    *   than in defineInputs() because it is part of the address: what a
    *   discovery document lists, what a tool or route must supply. A
    *   resource with none is a singleton.
-   * @param class-string<\Drupal\data_surface\Resource\ResourceStorageInterface>|null $storage
+   * @param class-string<\Drupal\surface\Resource\ResourceStorageInterface>|null $storage
    *   Where accepted values are written. NULL means a host supplies it:
    *   a plugin's configuration, or the parent that stores this resource
    *   under its key.
-   * @param class-string<\Drupal\data_surface\Resource\OperationAccessInterface>|null $access
+   * @param class-string<\Drupal\surface\Resource\OperationAccessInterface>|null $access
    *   The run-time part of access, for what depends on the subject. NULL
    *   means the operation's permission is the whole answer.
    * @param int $version

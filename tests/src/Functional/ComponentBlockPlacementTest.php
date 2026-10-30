@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use Drupal\block\Entity\Block;
@@ -22,9 +22,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * props are drawn when the component is chosen (ComponentBlockAjaxTest).
  *
  * @see docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission
- * @see \Drupal\Tests\data_surface\FunctionalJavascript\ComponentBlockAjaxTest
+ * @see \Drupal\Tests\surface\FunctionalJavascript\ComponentBlockAjaxTest
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ComponentBlockPlacementTest extends BrowserTestBase {
 
@@ -33,9 +33,9 @@ class ComponentBlockPlacementTest extends BrowserTestBase {
    */
   protected static $modules = [
     'block',
-    'data_surface',
-    'data_surface_examples',
-    'data_surface_component_block',
+    'surface',
+    'surface_examples',
+    'surface_examples_component_block',
   ];
 
   /**
@@ -46,7 +46,7 @@ class ComponentBlockPlacementTest extends BrowserTestBase {
   /**
    * The block placement form of the component block, in stark.
    */
-  protected const ADD = 'admin/structure/block/add/data_surface_component/stark';
+  protected const ADD = 'admin/structure/block/add/surface_component/stark';
 
   /**
    * {@inheritdoc}
@@ -66,9 +66,9 @@ class ComponentBlockPlacementTest extends BrowserTestBase {
     $assert = $this->assertSession();
     $this->drupalGet(self::ADD);
     $assert->statusCodeEquals(200);
-    $assert->optionExists('settings[component]', 'data_surface_examples:card');
-    $assert->optionExists('settings[component]', 'data_surface_examples:hero');
-    $assert->optionExists('settings[component]', 'data_surface_examples:call_to_action');
+    $assert->optionExists('settings[component]', 'surface_examples:card');
+    $assert->optionExists('settings[component]', 'surface_examples:hero');
+    $assert->optionExists('settings[component]', 'surface_examples:call_to_action');
     $assert->fieldNotExists('settings[props][heading]');
 
     $id = $assert->fieldExists('id')->getValue();
@@ -81,7 +81,7 @@ class ComponentBlockPlacementTest extends BrowserTestBase {
     $this->drupalGet('<front>');
     $assert->statusCodeEquals(200);
     $assert->pageTextNotContains('Nothing yet');
-    $assert->elementNotExists('css', 'article.data-surface-card');
+    $assert->elementNotExists('css', 'article.surface-card');
   }
 
   /**
@@ -91,7 +91,7 @@ class ComponentBlockPlacementTest extends BrowserTestBase {
     $assert = $this->assertSession();
     $this->drupalGet(self::ADD);
     $id = $assert->fieldExists('id')->getValue();
-    $this->submitForm(['region' => 'content', 'settings[component]' => 'data_surface_examples:card'], 'Save block');
+    $this->submitForm(['region' => 'content', 'settings[component]' => 'surface_examples:card'], 'Save block');
     $assert->pageTextContains('Heading is required.');
     $assert->pageTextNotContains('The block configuration has been saved.');
     $this->assertNull(Block::load($id));
@@ -106,21 +106,21 @@ class ComponentBlockPlacementTest extends BrowserTestBase {
       'id' => 'hero',
       'theme' => 'stark',
       'region' => 'content',
-      'plugin' => 'data_surface_component',
+      'plugin' => 'surface_component',
       'settings' => [
         'label' => 'Hero',
         'label_display' => '0',
-        'component' => 'data_surface_examples:hero',
+        'component' => 'surface_examples:hero',
         'props' => ['title' => 'Doors open at half past six'],
       ],
     ]);
     $block->save();
-    $this->assertSame(['module' => ['data_surface_component_block', 'data_surface_examples'], 'theme' => ['stark']], $block->getDependencies(), 'The block depends on the module that provides its component.');
+    $this->assertSame(['module' => ['surface_examples', 'surface_examples_component_block'], 'theme' => ['stark']], $block->getDependencies(), 'The block depends on the module that provides its component.');
 
     $this->drupalGet('<front>');
-    $hero = $assert->elementExists('css', 'header.data-surface-hero.data-surface-hero--center');
+    $hero = $assert->elementExists('css', 'header.surface-hero.surface-hero--center');
     $this->assertSame('Doors open at half past six', $hero->find('css', 'h2')?->getText());
-    $this->assertStringContainsString('--data-surface-hero-overlay: 40%', (string) $hero->getAttribute('style'));
+    $this->assertStringContainsString('--surface-hero-overlay: 40%', (string) $hero->getAttribute('style'));
 
     $this->drupalGet($block->toUrl('edit-form'));
     $this->assertSame('Doors open at half past six', $assert->fieldExists('settings[props][title]')->getValue());
@@ -148,9 +148,9 @@ class ComponentBlockPlacementTest extends BrowserTestBase {
     $assert->elementExists('css', 'input[name="settings[props][overlay]"].error');
 
     $this->drupalGet('<front>');
-    $hero = $assert->elementExists('css', 'header.data-surface-hero.data-surface-hero--start');
+    $hero = $assert->elementExists('css', 'header.surface-hero.surface-hero--start');
     $this->assertSame('Doors open at six', $hero->find('css', 'h2')?->getText());
-    $this->assertStringContainsString('--data-surface-hero-overlay: 60%', (string) $hero->getAttribute('style'));
+    $this->assertStringContainsString('--surface-hero-overlay: 60%', (string) $hero->getAttribute('style'));
   }
 
 }

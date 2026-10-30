@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\Plugin\DataType\EntityAdapter;
 use Drupal\Core\Form\FormState;
@@ -10,13 +10,13 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\address\LabelHelper;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_address\Plugin\Field\FieldType\SurfaceAddressItem;
-use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Form\FieldSurfaceProviderInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples_address\Plugin\Field\FieldType\SurfaceAddressItem;
+use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
 use Drupal\entity_test\Entity\EntityTest;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -32,9 +32,9 @@ use PHPUnit\Framework\Attributes\Group;
  * and that the distance between the two lives in the storage's prepare
  * step where every caller goes through it: a form, a payload, a test.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
+class AddressFieldResourceTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -45,8 +45,8 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
     'field',
     'entity_test',
     'address',
-    'data_surface',
-    'data_surface_address',
+    'surface',
+    'surface_examples_address',
   ];
 
   /**
@@ -77,10 +77,10 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the resource the field item class declares.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function surface(): DataSurfaceInterface {
+  protected function surface(): SurfaceInterface {
     return $this->fieldItem()->getFieldSurface();
   }
 
@@ -95,15 +95,15 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
    * @param \Drupal\field\Entity\FieldConfig|null $field
    *   The field, or NULL for the one created in setUp().
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface
+   * @return \Drupal\surface\Pipeline\SurfaceStorageInterface
    *   The storage.
    */
-  protected function storage(?FieldConfig $field = NULL): DataSurfaceStorageInterface {
+  protected function storage(?FieldConfig $field = NULL): SurfaceStorageInterface {
     $field ??= $this->field;
     $item = $this->container->get('typed_data_manager')->create($field->getItemDefinition());
     $this->assertInstanceOf(FieldSurfaceProviderInterface::class, $item);
-    $storage = $item->getDataSurfaceStorage();
-    $this->assertInstanceOf(DataSurfaceStorageInterface::class, $storage);
+    $storage = $item->getSurfaceStorage();
+    $this->assertInstanceOf(SurfaceStorageInterface::class, $storage);
     return $storage;
   }
 
@@ -161,7 +161,7 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
    * @param \Drupal\field\Entity\FieldConfig|null $field
    *   The field, or NULL for the one created in setUp().
    *
-   * @return \Drupal\data_surface_address\Plugin\Field\FieldType\SurfaceAddressItem
+   * @return \Drupal\surface_examples_address\Plugin\Field\FieldType\SurfaceAddressItem
    *   The field item.
    */
   protected function fieldItem(?FieldConfig $field = NULL): SurfaceAddressItem {
@@ -222,7 +222,7 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
       $definitions->names(),
     );
 
-    $options = $this->container->get('data_surface.options');
+    $options = $this->container->get('surface.options');
     // Country labels are resolved live from the country repository, so
     // the list that validates and the list that is offered are one list.
     $countries = $options->resolve($this->itemOf($definitions['available_countries']));
@@ -411,8 +411,8 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
     // validate, as an identifier rather than as a built resource or a
     // storage object: the form cache holds strings, and the static
     // callback rebuilds both from the field.
-    $this->assertSame($this->field->id(), $form['#data_surface']);
-    $this->assertIsString($form['#data_surface']);
+    $this->assertSame($this->field->id(), $form['#surface']);
+    $this->assertIsString($form['#surface']);
     // Which is what makes the element the form cache stores survive the
     // round trip the form cache puts it through, classes and all, the
     // way core's own form cache restores it.
@@ -529,7 +529,7 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
    * whole reason it can be.
    */
   public function testResourceIsDeclaredOnTheClass(): void {
-    $declared = $this->container->get('data_surface.resources')
+    $declared = $this->container->get('surface.resources')
       ->build(AddressFieldSettingsResource::class, new OperationContext('field_settings'))
       ->getDefinitions()
       ->toArray();
@@ -579,7 +579,7 @@ class AddressFieldResourceTest extends DataSurfaceKernelTestBase {
    */
   public function testLiveListsResolveFromTheirConstraints(): void {
     $definitions = $this->surface()->getDefinitions();
-    $options = $this->container->get('data_surface.options');
+    $options = $this->container->get('surface.options');
 
     $countries = $options->resolve($this->itemOf($definitions['available_countries']));
     $this->assertNotNull($countries);

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Drush\Generators\Resource\ResourceCode;
+use Drupal\surface\Drush\Generators\Resource\ResourceCode;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Filesystem\Filesystem;
@@ -28,7 +28,7 @@ use Symfony\Component\Filesystem\Filesystem;
  *   constant; keys whose names would clash take a suffix, and every class
  *   written parses.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ResourceGeneratorTest extends ResourceGeneratorTestBase {
 
@@ -39,19 +39,19 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
     'system',
     'user',
     'node',
-    'data_surface',
+    'surface',
   ];
 
   /**
    * The module the page's files are, from the module root.
    */
-  protected const FIRST = __DIR__ . '/../../../modules/data_surface_first';
+  protected const FIRST = __DIR__ . '/../../../modules/surface_examples_first';
 
   /**
    * The answers that write the first page's module.
    */
   public const NEWSLETTER = [
-    'data_surface_first',
+    'surface_examples_first',
     'first.newsletter',
     'Newsletter settings',
     // Class name: Newsletter.
@@ -60,9 +60,9 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
     '1',
     'Configure the newsletter',
     'Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.',
-    // Config object: data_surface_first.newsletter.
+    // Config object: surface_examples_first.newsletter.
     '',
-    // Permission: administer data_surface_first.
+    // Permission: administer surface_examples_first.
     '',
     'Configure the newsletter and the store location',
     '/admin/config/services/surface-newsletter',
@@ -78,7 +78,7 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
    * Gives a shipped file's first block: what precedes its first blank line.
    *
    * @param string $file
-   *   The file, from data_surface_first.
+   *   The file, from surface_examples_first.
    *
    * @return string
    *   The block, with its line end.
@@ -101,16 +101,16 @@ class ResourceGeneratorTest extends ResourceGeneratorTestBase {
     foreach ([
       'src/Resource/NewsletterResource.php',
       'src/Storage/NewsletterStorage.php',
-      'config/install/data_surface_first.newsletter.yml',
-      'data_surface_first.permissions.yml',
+      'config/install/surface_examples_first.newsletter.yml',
+      'surface_examples_first.permissions.yml',
     ] as $file) {
       $this->assertSame((string) file_get_contents(self::FIRST . '/' . $file), $this->written($file), sprintf('%s differs from the shipped module.', $file));
     }
-    $this->assertSame(self::firstBlock('data_surface_first.routing.yml'), $this->written('data_surface_first.routing.yml'));
-    $this->assertSame(self::firstBlock('config/schema/data_surface_first.schema.yml'), $this->written('config/schema/data_surface_first.schema.yml'));
+    $this->assertSame(self::firstBlock('surface_examples_first.routing.yml'), $this->written('surface_examples_first.routing.yml'));
+    $this->assertSame(self::firstBlock('config/schema/surface_examples_first.schema.yml'), $this->written('config/schema/surface_examples_first.schema.yml'));
     $this->assertStringContainsString('Config schema entry and install file: written from a build of the interview', $display);
-    $this->assertStringContainsString('Checked against a build of the class just written (drush data_surface:config-schema --module=data_surface_first): the schema entry and install file agree.', $display);
-    $this->assertFileDoesNotExist($this->moduleDirectory() . '/data_surface_first.info.yml', 'The module\'s info file is left as it is.');
+    $this->assertStringContainsString('Checked against a build of the class just written (drush surface:config-schema --module=surface_examples_first): the schema entry and install file agree.', $display);
+    $this->assertFileDoesNotExist($this->moduleDirectory() . '/surface_examples_first.info.yml', 'The module\'s info file is left as it is.');
     $this->assertStringContainsString(<<<'PHP'
   public const SENDER_NAME = 'sender_name';
   public const SENDER_EMAIL = 'sender_email';
@@ -124,30 +124,30 @@ PHP, $this->written('src/Resource/NewsletterResource.php'), 'The interview names
   public function testTheYamlFilesAreAddedToNeverReplaced(): void {
     $directory = $this->moduleDirectory();
     (new Filesystem())->mkdir($directory . '/config/schema');
-    $store_route = (string) preg_replace('/\A.*?\n\n/s', '', (string) file_get_contents(self::FIRST . '/data_surface_first.routing.yml'));
-    $store_schema = (string) preg_replace('/\A.*?\n\n/s', '', (string) file_get_contents(self::FIRST . '/config/schema/data_surface_first.schema.yml'));
-    file_put_contents($directory . '/data_surface_first.routing.yml', $store_route);
-    file_put_contents($directory . '/config/schema/data_surface_first.schema.yml', $store_schema);
-    $permissions = (string) file_get_contents(self::FIRST . '/data_surface_first.permissions.yml');
-    file_put_contents($directory . '/data_surface_first.permissions.yml', $permissions);
+    $store_route = (string) preg_replace('/\A.*?\n\n/s', '', (string) file_get_contents(self::FIRST . '/surface_examples_first.routing.yml'));
+    $store_schema = (string) preg_replace('/\A.*?\n\n/s', '', (string) file_get_contents(self::FIRST . '/config/schema/surface_examples_first.schema.yml'));
+    file_put_contents($directory . '/surface_examples_first.routing.yml', $store_route);
+    file_put_contents($directory . '/config/schema/surface_examples_first.schema.yml', $store_schema);
+    $permissions = (string) file_get_contents(self::FIRST . '/surface_examples_first.permissions.yml');
+    file_put_contents($directory . '/surface_examples_first.permissions.yml', $permissions);
 
     // The permission is declared already, so its title is not asked.
     $answers = self::NEWSLETTER;
     array_splice($answers, 9, 1);
     $display = $this->generate($answers);
 
-    $route = self::firstBlock('data_surface_first.routing.yml');
-    $this->assertSame($store_route . "\n" . $route, $this->written('data_surface_first.routing.yml'), 'The store route is kept byte for byte, the newsletter route added after a blank line.');
-    $this->assertSame($permissions, $this->written('data_surface_first.permissions.yml'), 'The permission that is there is kept.');
-    $this->assertStringContainsString('data_surface_first.permissions.yml already declares the permission administer data_surface_first: kept as it is', $display);
-    $this->assertStringContainsString('data_surface_first.routing.yml: the route data_surface_first.newsletter added at its end; every other entry kept as it was.', $display);
-    $schema = $this->written('config/schema/data_surface_first.schema.yml');
+    $route = self::firstBlock('surface_examples_first.routing.yml');
+    $this->assertSame($store_route . "\n" . $route, $this->written('surface_examples_first.routing.yml'), 'The store route is kept byte for byte, the newsletter route added after a blank line.');
+    $this->assertSame($permissions, $this->written('surface_examples_first.permissions.yml'), 'The permission that is there is kept.');
+    $this->assertStringContainsString('surface_examples_first.permissions.yml already declares the permission administer surface_examples_first: kept as it is', $display);
+    $this->assertStringContainsString('surface_examples_first.routing.yml: the route surface_examples_first.newsletter added at its end; every other entry kept as it was.', $display);
+    $schema = $this->written('config/schema/surface_examples_first.schema.yml');
     $this->assertStringStartsWith(rtrim($store_schema, "\n") . "\n\n# Generated from the first.newsletter resource", $schema, 'The store entry is kept, the newsletter entry added.');
 
     // Again: the route is there now, and is kept.
     $display = $this->generate($answers, ['--replace' => TRUE]);
-    $this->assertSame($store_route . "\n" . $route, $this->written('data_surface_first.routing.yml'));
-    $this->assertStringContainsString('data_surface_first.routing.yml already declares the route data_surface_first.newsletter: kept as it is', $display);
+    $this->assertSame($store_route . "\n" . $route, $this->written('surface_examples_first.routing.yml'));
+    $this->assertStringContainsString('surface_examples_first.routing.yml already declares the route surface_examples_first.newsletter: kept as it is', $display);
   }
 
   /**
@@ -156,7 +156,7 @@ PHP, $this->written('src/Resource/NewsletterResource.php'), 'The interview names
   public function testTheKeysOfNodeSettings(): void {
     $out = $this->sandbox . '/node_settings';
     $display = $this->generate([
-      'data_surface_first',
+      'surface_examples_first',
       // Resource id: node.settings; label: Node settings; class.
       '', '', '',
       '1',
@@ -179,7 +179,7 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
     $this->assertStringContainsString("#[Resource('node.settings', storage: NodeSettingsStorage::class)]", $resource);
     $this->assertStringContainsString('Written by drush generate surface:resource from the config schema of', $resource);
     $this->assertStringContainsString("public const CONFIG = 'node.settings';", $this->written('src/Storage/NodeSettingsStorage.php', $out));
-    $this->assertFileDoesNotExist($out . '/config/schema/data_surface_first.schema.yml', 'node.settings is node\'s: its schema describes it.');
+    $this->assertFileDoesNotExist($out . '/config/schema/surface_examples_first.schema.yml', 'node.settings is node\'s: its schema describes it.');
     $this->assertFileDoesNotExist($out . '/config/install/node.settings.yml');
     $this->assertStringContainsString('No config schema entry and no install file: node.settings is node\'s', $display);
     $this->assertParses(['src/Resource/NodeSettingsResource.php', 'src/Storage/NodeSettingsStorage.php'], $out);
@@ -191,10 +191,10 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
   public function testTheKeysOfComponentProps(): void {
     $out = $this->sandbox . '/card';
     $this->generate([
-      'data_surface_first', 'first.card', 'Card', '', '1', '',
+      'surface_examples_first', 'first.card', 'Card', '', '1', '',
       'Sets the card: its heading, its tone and its link.',
       '', '', '', '',
-    ], ['--from-json-schema' => dirname(__DIR__, 3) . '/modules/data_surface_examples/components/card/card.component.yml'], $out);
+    ], ['--from-json-schema' => dirname(__DIR__, 3) . '/modules/surface_examples/components/card/card.component.yml'], $out);
     $resource = $this->written('src/Resource/CardResource.php', $out);
     $this->assertStringContainsString(<<<'PHP'
     $inputs->add(self::HEADING, 'string', t('Heading'))
@@ -217,10 +217,10 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
       ->setLabel(t('Link'));
 PHP, $resource);
     $this->assertStringContainsString("public const ALWAYS_HELD = ['tone'];", $this->written('src/Storage/CardStorage.php', $out), 'An optional key that refuses null and has a default is one its storage always holds.');
-    $schema = $this->written('config/schema/data_surface_first.schema.yml', $out);
-    $this->assertStringContainsString("data_surface_first.card:\n  type: config_object\n  label: 'Card'", $schema);
+    $schema = $this->written('config/schema/surface_examples_first.schema.yml', $out);
+    $this->assertStringContainsString("surface_examples_first.card:\n  type: config_object\n  label: 'Card'", $schema);
     $this->assertStringContainsString("    tone:\n      type: string\n      label: 'Tone'\n", $schema, 'Always held: not nullable.');
-    $this->assertSame("heading: ~\ntone: plain\nlink: ~\n", $this->written('config/install/data_surface_first.card.yml', $out), 'As the schema command writes a map with no default: nothing.');
+    $this->assertSame("heading: ~\ntone: plain\nlink: ~\n", $this->written('config/install/surface_examples_first.card.yml', $out), 'As the schema command writes a map with no default: nothing.');
     $this->assertParses(['src/Resource/CardResource.php', 'src/Storage/CardStorage.php'], $out);
   }
 
@@ -230,7 +230,7 @@ PHP, $resource);
   public function testTheKeysOfDocument(): void {
     $out = $this->sandbox . '/event';
     $display = $this->generate([
-      'data_surface_first', 'first.event', '', '', '1', '',
+      'surface_examples_first', 'first.event', '', '', '1', '',
       'Sets the event: its name, kind, seats, venue and contact.',
       '', '', '', '',
     ], ['--from-json-schema' => dirname(__DIR__, 2) . '/fixtures/generator/event.schema.json'], $out);
@@ -332,7 +332,7 @@ PHP, $resource, 'A labeled choice is its labels alone, unless a value is a numer
     ]));
     $out = $this->sandbox . '/clash';
     $this->generate([
-      'data_surface_first', 'first.clash', 'Clash', '', '1', '',
+      'surface_examples_first', 'first.clash', 'Clash', '', '1', '',
       'Sets the clash.',
       '', '', '', '',
     ], ['--from-json-schema' => $document], $out);
@@ -370,7 +370,7 @@ PHP, $resource, 'Each key is a constant, in declaration order; every call and co
    */
   public function testIdentityIsRefusedForNow(): void {
     $out = $this->sandbox . '/identity';
-    $display = $this->generate(['data_surface_first', 'first.venue', 'Venue', '', '2', 'id'], [], $out, 1);
+    $display = $this->generate(['surface_examples_first', 'first.venue', 'Venue', '', '2', 'id'], [], $out, 1);
     $this->assertStringContainsString('A resource with identity (id) is stored in a config entity type', $display);
     // What to write by hand: the title and machine name pair.
     $this->assertStringContainsString("compute('id', 'machine_name', t('Machine name'), from: ['label'], using: MachineName::class, when: Compute::UNLESS_SENT)", $display);

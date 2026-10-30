@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Listeners;
+namespace Drupal\surface\Drush\Listeners;
 
-use Drupal\data_surface\Drush\Generators\ResourceGenerator;
+use Drupal\surface\Drush\Generators\ResourceGenerator;
 use Drush\Event\ConsoleDefinitionsEvent;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;

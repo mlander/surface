@@ -1,0 +1,16 @@
+# Written by hand, as the owner's is: what this module mounts on the alias
+# settings, the reviewer by uuid and the delay as stored, a duration.
+surface_schema_test.aliases.third_party.surface_mount_test:
+  type: mapping
+  label: 'Alias review'
+  mapping:
+    reviewer:
+      type: uuid
+      label: 'Reviewer'
+      nullable: true
+      requiredKey: false
+    delay:
+      type: string
+      label: 'Delay'
+      nullable: true
+      requiredKey: false
