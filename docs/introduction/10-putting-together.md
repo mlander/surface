@@ -26,14 +26,17 @@ A placed block shows one block plugin, and each plugin has its own
 settings. The teaser block of the previous page takes a `headline` and
 a `limit`; the site branding block takes `use_site_logo`, `use_site_name` and
 `use_site_slogan`. So the placed block's `settings` key cannot hold one
-fixed structure. Its `plugin` key chooses which one:
+fixed structure. Its `plugin` key chooses which one. These are the two
+keys in `BlockPlacementResource`'s `defineInputs()`, in full:
 
 ```php
 $inputs->add('plugin', 'string', t('Block'))
+  ->setDescription(t('What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.'))
   ->setRequired(TRUE);
 
 $inputs->attachVariants('settings', by: 'plugin', from: BlockPluginStructures::class)
-  ->setLabel(t('Settings'));
+  ->setLabel(t('Settings'))
+  ->setDescription(t('The settings of the block chosen, as its plugin declares them.'));
 ```
 
 `BlockPluginStructures` lists one variant per block plugin the block

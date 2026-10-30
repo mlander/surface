@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 210" role="img" aria-labelledby="t">
-  <title id="t">Three resources side by side, each a thing the site keeps values for: node.type, a content type; block.placement, a placed block; system.performance, the performance settings; each with two of its stored values</title>
+  <title id="t">Three resources side by side, each a thing the site keeps values for: node.type, a content type; block.placement, a placed block; my_module.settings, a module's settings; each with two of its stored values</title>
   <style>
     .bg { fill: #F6F8FA; }
     .ink { fill: #1F2328; }
@@ -38,11 +38,11 @@
   <text class="ink code small" x="268" y="122">theme: "olivero"</text>
   <text class="ink code small" x="268" y="146">region: "content"</text>
 
-  <!-- The performance settings -->
+  <!-- A module's settings -->
   <rect class="resource" x="480" y="30" width="216" height="150" rx="10"/>
-  <text class="resource-label bold code" x="496" y="58" font-size="15">system.performance</text>
-  <text class="muted small" x="496" y="78">the performance settings</text>
+  <text class="resource-label bold code" x="496" y="58" font-size="15">my_module.settings</text>
+  <text class="muted small" x="496" y="78">your module's settings</text>
   <line class="line" x1="496" y1="94" x2="680" y2="94"/>
-  <text class="ink code small" x="496" y="122">max_age: 0</text>
-  <text class="ink code small" x="496" y="146">css_preprocess: true</text>
+  <text class="ink code small" x="496" y="122">title: "Latest content"</text>
+  <text class="ink code small" x="496" y="146">items_per_page: 10</text>
 </svg>

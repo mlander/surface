@@ -13,7 +13,7 @@ to read the introduction.
 ### Resource
 
 A resource is a thing your site keeps values for, that can be asked for
-on its own: a content type, a placed block, the performance settings.
+on its own: a content type, a placed block, a module's settings.
 
 Precisely: a thing with identity and storage that operations read and
 write; the form, the tool and the schema are derived from it. Declared
@@ -127,7 +127,7 @@ Reference: [Operations and identity](declaring-a-resource.md#operations-and-iden
 
 ### Singleton
 
-A singleton is a resource that exists once, such as the performance
+A singleton is a resource that exists once, such as a module's
 settings.
 
 Precisely: a resource with no identity keys, such as a settings object.

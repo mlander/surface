@@ -1,5 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 190" role="img" aria-labelledby="t">
-  <title id="t">The system.performance resource with two of its keys and their rules: max_age, an integer, is required and one of 14 cache periods; css_preprocess, a boolean, is required</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 236" role="img" aria-labelledby="t">
+  <title id="t">The my_module.settings resource with three of its keys and their rules: title, a string, is required and at most 64 characters; items_per_page, an integer, is required and between 1 and 50; layout, a string, is required and one of list or grid</title>
   <style>
     .bg { fill: #F6F8FA; }
     .ink { fill: #1F2328; }
@@ -26,24 +26,35 @@
       .rule-label { fill: #E267A8; }
     }
   </style>
-  <rect class="bg" x="0" y="0" width="720" height="190" rx="12"/>
+  <rect class="bg" x="0" y="0" width="720" height="236" rx="12"/>
 
-  <rect class="resource" x="24" y="24" width="672" height="142" rx="10"/>
-  <text class="resource-label bold code" x="40" y="50" font-size="15">system.performance</text>
+  <rect class="resource" x="24" y="24" width="672" height="188" rx="10"/>
+  <text class="resource-label bold code" x="40" y="50" font-size="15">my_module.settings</text>
 
-  <!-- max_age and its rules -->
+  <!-- title and its rules -->
   <rect class="key" x="40" y="70" width="230" height="26" rx="13"/>
-  <text x="54" y="88"><tspan class="ink code small">max_age</tspan><tspan class="muted small"> integer</tspan></text>
+  <text x="54" y="88"><tspan class="ink code small">title</tspan><tspan class="muted small"> string</tspan></text>
   <line class="rule-line" x1="270" y1="83" x2="286" y2="83"/>
-  <rect class="rule" x="286" y="72" width="84" height="22" rx="6"/>
+  <rect class="rule" x="286" y="72" width="81" height="22" rx="6"/>
   <text class="rule-label small" x="298" y="88">required</text>
-  <rect class="rule" x="380" y="72" width="196" height="22" rx="6"/>
-  <text class="rule-label small" x="392" y="88">one of 14 cache periods</text>
+  <rect class="rule" x="377" y="72" width="175" height="22" rx="6"/>
+  <text class="rule-label small" x="389" y="88">at most 64 characters</text>
 
-  <!-- css_preprocess and its rule -->
+  <!-- items_per_page and its rules -->
   <rect class="key" x="40" y="116" width="230" height="26" rx="13"/>
-  <text x="54" y="134"><tspan class="ink code small">css_preprocess</tspan><tspan class="muted small"> boolean</tspan></text>
+  <text x="54" y="134"><tspan class="ink code small">items_per_page</tspan><tspan class="muted small"> integer</tspan></text>
   <line class="rule-line" x1="270" y1="129" x2="286" y2="129"/>
-  <rect class="rule" x="286" y="118" width="84" height="22" rx="6"/>
+  <rect class="rule" x="286" y="118" width="81" height="22" rx="6"/>
   <text class="rule-label small" x="298" y="134">required</text>
+  <rect class="rule" x="377" y="118" width="139" height="22" rx="6"/>
+  <text class="rule-label small" x="389" y="134">between 1 and 50</text>
+
+  <!-- layout and its rules -->
+  <rect class="key" x="40" y="162" width="230" height="26" rx="13"/>
+  <text x="54" y="180"><tspan class="ink code small">layout</tspan><tspan class="muted small"> string</tspan></text>
+  <line class="rule-line" x1="270" y1="175" x2="286" y2="175"/>
+  <rect class="rule" x="286" y="164" width="81" height="22" rx="6"/>
+  <text class="rule-label small" x="298" y="180">required</text>
+  <rect class="rule" x="377" y="164" width="110" height="22" rx="6"/>
+  <text class="rule-label small" x="389" y="180">list or grid</text>
 </svg>

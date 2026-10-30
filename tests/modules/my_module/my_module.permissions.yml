@@ -1,0 +1,3 @@
+administer my_module:
+  title: 'Configure my module'
+  restrict access: true

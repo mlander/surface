@@ -5,7 +5,7 @@ config entity or a content entity. A resource names one storage class,
 and that class reads and writes the values for it. The resource's keys
 and rules stay the same whichever storage holds them.
 
-![The system.performance resource with three keys, max_age, css_preprocess and js_preprocess, each with an arrow to the path where its storage saves it in the system.performance config object](images/08-storage.svg)
+![The my_module.settings resource with its five keys, each with an arrow to the same name in the my_module.settings config object, which MySettingsStorage reads and writes](images/08-storage.svg)
 
 ## What a storage class does
 
@@ -20,62 +20,49 @@ goes, in three steps:
   ([Dry runs](../pipeline.md#dry-runs));
 - **commit** writes them.
 
-The performance settings name a storage class that extends the
-module's `ConfigObjectStorage`:
+Your module's settings name their storage class on `#[Resource]`:
 
 ```php
-#[Resource('system.performance', storage: PerformanceStorage::class)]
-// ...
+#[Resource('my_module.settings', storage: MySettingsStorage::class)]
+```
 
-final class PerformanceStorage extends ConfigObjectStorage {
+The class extends the module's `ConfigObjectStorage` and names the
+config object. This is all of it:
 
-  public const CONFIG = 'system.performance';
+```php
+final class MySettingsStorage extends ConfigObjectStorage {
 
-  public const STORED_AT = [
-    'max_age' => 'cache.page.max_age',
-    'css_preprocess' => 'css.preprocess',
-    'js_preprocess' => 'js.preprocess',
-  ];
+  public const CONFIG = 'my_module.settings';
 
-  // commit() also deletes the aggregated CSS and JavaScript files, as
-  // core's performance form does after it saves.
 }
 ```
 
 Where each class lives: [Namespaces](../concepts.md#namespaces).
 
-The keys are flat; core keeps them at nested paths:
-
-| Key the resource declares | Where core keeps it in `system.performance` |
-| --- | --- |
-| `max_age` | `cache.page.max_age` |
-| `css_preprocess` | `css.preprocess` |
-| `js_preprocess` | `js.preprocess` |
-
-The form, the tool and the HTTP API ask for `max_age`. Core goes on
-reading `cache.page.max_age`. The translation between the two lives in
-one constant on the storage class.
+`ConfigObjectStorage` does the three steps: it reads
+`my_module.settings`, checks the values against the object's config
+schema, and saves them, each key under its own name. The config schema
+and the install file are written from the resource by a Drush command
+([A schema generated from the resource](../storage.md#a-schema-generated-from-the-resource)).
+A storage class whose object keeps a key under another name says so in
+a `STORED_AT` constant; this one needs none.
 
 ## The three kinds
 
 | What Drupal keeps | The storage class | Used by |
 | --- | --- | --- |
-| A config object | a subclass of `ConfigObjectStorage` | the performance settings |
+| A config object | a subclass of `ConfigObjectStorage` | your module's settings |
 | A config entity | a subclass of `ConfigEntityStorage` | the placed block (`block`), the content type (`node_type`) |
 | A content entity | `ContentEntityStorage`, in the `data_surface_entity` submodule, used as it is | a node |
 
 A config entity's storage names the entity type and the keys that are
-the entity's own properties. The placed block's says:
-
-```php
-final class BlockPlacementStorage extends ConfigEntityStorage {
-  public const ENTITY_TYPE_ID = 'block';
-  public const PROPERTIES = ['id', 'status', 'weight', 'theme', 'region', 'plugin'];
-  // ...
-}
-```
-
-Where each class lives: [Namespaces](../concepts.md#namespaces).
+the entity's own properties. The placed block's, `BlockPlacementStorage`
+in the `data_surface_block` submodule, sets `ENTITY_TYPE_ID` to
+`block` and `PROPERTIES` to `id`, `status`, `weight`, `theme`, `region`
+and `plugin`. The rest of that class turns the
+resource's `settings` and `visibility` keys into the arrays core's
+block entity keeps; [A config entity](../storage.md#a-config-entity)
+explains what a config entity's storage does.
 
 ## Why keep them apart
 

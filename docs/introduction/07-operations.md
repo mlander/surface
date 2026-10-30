@@ -11,55 +11,75 @@ operations it declares.
 ## Declaring them
 
 The placed block, `block.placement`, declares three operations. An
-operation is an `#[Operation]` attribute with an id, a label and a
-permission, in one of two places:
+operation is an `#[Operation]` attribute with an id, a label, a
+description and a permission, in one of two places. These are
+`BlockPlacementResource`'s operations in full. Above the class, beside
+`#[Resource]`:
 
 ```php
-#[Resource('block.placement', identity: ['id'], /* ... */)]
+#[Resource('block.placement',
+  identity: ['id'],
+  storage: BlockPlacementStorage::class,
+)]
 #[Operation('create',
   label: new TranslatableMarkup('Place a block'),
-  permission: 'administer blocks',
+  description: new TranslatableMarkup('Places a block under a machine name the caller chooses, in a region of a theme, with the settings its plugin takes; a machine name already in use is refused.'),
+  permission: self::PERMISSION,
   creates: TRUE,
+  idempotent: TRUE,
 )]
-final class BlockPlacementResource implements ResourceInterface {
+```
+
+Inside the class, the permission they share and the two methods:
+
+```php
+  public const PERMISSION = 'administer blocks';
 
   #[Operation('update',
     label: new TranslatableMarkup('Edit a placed block'),
-    permission: 'administer blocks',
+    description: new TranslatableMarkup('Changes a placed block, named by its machine name: its label, region, weight, status, plugin settings and visibility. Its theme stays as it is.'),
+    permission: self::PERMISSION,
   )]
   public static function update(BlockInterface $id): OperationContext {
-    // ...
+    return (new OperationContext(known: ['id' => (string) $id->id()]))
+      ->withConstraint('theme', 'Choice', ['choices' => [$id->getTheme()]]);
   }
 
-  // delete() is declared as update() is, with deletes: TRUE and destructive: TRUE.
-}
+  #[Operation('delete',
+    label: new TranslatableMarkup('Remove a placed block'),
+    description: new TranslatableMarkup('Removes a placed block, named by its machine name, from its region.'),
+    permission: self::PERMISSION,
+    destructive: TRUE,
+    deletes: TRUE,
+  )]
+  public static function delete(BlockInterface $id): OperationContext {
+    return new OperationContext(known: ['id' => (string) $id->id()]);
+  }
 ```
 
 Where each class lives: [Namespaces](../concepts.md#namespaces).
 
 - **On the class**, when asking needs nothing more. `create` knows
-  nothing yet: the caller chooses the machine name. The performance
+  nothing yet: the caller chooses the machine name. Your module's
   settings declare their one operation this way, with the id
-  `configure`. That id is the usual one for a settings operation, not a
-  reserved word.
+  `configure` ([Resources](02-resources.md) shows it). That id is the
+  usual one for a settings operation, not a reserved word.
 - **On a static method**, when the operation knows something. `update`
-  edits one block, so it knows that block's machine name.
+  and `delete` each act on one block, so each knows that block's
+  machine name.
 
 The method's parameters are what the operation needs, and a route or a
 tool supplies them by name. The parameter `$id` is named after the
 identity key. The update route declares `{id}` as `entity:block` in
 its options, so Drupal's param converter upcasts it and the method
-receives the loaded block entity. The method returns an `OperationContext`: the
-object that says which operation is asked and what it already knows.
-Here it knows the `id`:
-
-```php
-return new OperationContext(known: ['id' => (string) $id->id()]);
-```
-
-The real `update()` also holds the theme to the one the block is in;
+receives the loaded block entity. The method returns an
+`OperationContext`: the object that says which operation is asked and
+what it already knows, here the `id`. `update()` also holds `theme` to
+the one the block is in, with `withConstraint()`, so an edit cannot
+move a block to another theme;
 [Operations](../resources.md#operations-create-update-and-the-rest) has
-the rest of what a method can add.
+the rest of what a method can add. The `storage:` argument is the next
+page's idea.
 
 A route names the resource class and the operation:
 
@@ -68,12 +88,20 @@ data_surface_block.update:
   path: '/admin/structure/block/surface/{id}'
   defaults:
     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Edit a placed block (resource)'
     _data_surface_resource: 'Drupal\data_surface_block\Resource\BlockPlacementResource'
     _data_surface_operation: 'update'
-  # ...
+    _data_surface_cosmetics: 'data_surface_block.form_cosmetics'
+  options:
+    parameters:
+      id:
+        type: 'entity:block'
 ```
 
-That route is a working form with no form class of its own. The same
+`_data_surface_cosmetics` names a service that adds what only this page
+needs, such as a message or a redirect, and never changes what the form
+accepts. That route is a working form with no form
+class of its own. The same
 operation is also the tool `data_surface:block.placement:update`.
 
 ## What is known is locked
@@ -94,7 +122,10 @@ types it.
 Every route and tool made from an operation checks that operation's
 permission, here `administer blocks`, the block layout's own. An
 operation may also say how a call behaves: `creates: TRUE` for one that
-adds a thing, and `deletes: TRUE` for one that removes it.
+adds a thing, and `deletes: TRUE` for one that removes it. A create is
+not idempotent unless it says so; this one is, with `idempotent: TRUE`,
+because the caller names the block, so a second identical call is
+refused for the machine name the first one took and changes nothing.
 `deletes: TRUE` makes the call take no values, only the parameters that
 name the thing; the module requires `destructive: TRUE` beside it,
 which tells a client to ask before it calls. A later page shows how

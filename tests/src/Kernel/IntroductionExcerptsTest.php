@@ -7,7 +7,9 @@ namespace Drupal\Tests\data_surface\Kernel;
 use Drupal\block\Entity\Block;
 use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
+use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
+use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
@@ -25,16 +27,19 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
 /**
- * Produces what the introduction quotes of the teaser block, and finds it.
+ * Produces what the introduction quotes of a developer's own code.
  *
- * Pages 9, 11, 12 and 16 describe a teaser block and a badge alter that
- * no shipped module has; data_surface_intro_test holds them as the pages
- * show them (IntroductionDocsTest holds the snippets to its lines). Each
- * test here runs the code, takes what it answers, and asserts the page
- * says that text: the form drawn from the structure (page 9), the input
- * the placement tool takes (page 11), the refusal of a loosening alter
- * (page 12), and one refused value at the form, the tool and HTTP (page
- * 16). The output is the authority: a page that drifts from it fails.
+ * Pages 1 to 4 and 6 describe my_module's settings, and pages 9, 11, 12
+ * and 16 a teaser block and a badge alter, that no shipped module has;
+ * my_module and data_surface_intro_test hold them as the pages show them
+ * (IntroductionDocsTest holds the snippets to their lines). Each test
+ * here runs the code, takes what it answers, and asserts the page says
+ * that text: the settings' form, tool and HTTP path (page 1), their JSON
+ * Schema (pages 3 and 4), their refusals (page 4) and their path (page
+ * 6); the form drawn from the structure (page 9), the input the
+ * placement tool takes (page 11), the refusal of a loosening alter (page
+ * 12), and one refused value at the form, the tool and HTTP (page 16).
+ * The output is the authority: a page that drifts from it fails.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -60,6 +65,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     'data_surface_react',
     'data_surface_block',
     'data_surface_intro_test',
+    'my_module',
   ];
 
   /**
@@ -75,7 +81,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     // Core's block form asks the request path condition's alias manager.
     $this->installEntitySchema('path_alias');
-    $this->installConfig(['system']);
+    $this->installConfig(['system', 'my_module']);
     $this->container->get('theme_installer')->install(['olivero']);
     $this->config('system.theme')->set('default', 'olivero')->save();
     $this->setUpCurrentUser(admin: TRUE);
@@ -178,6 +184,153 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
    */
   protected function placement(): array {
     return json_decode($this->block('11-doors.md', '"plugin": "my_teaser"'), TRUE, 512, JSON_THROW_ON_ERROR);
+  }
+
+  /**
+   * Builds the settings form my_module's route serves.
+   *
+   * @return array
+   *   The form's data surface container.
+   */
+  protected function settingsForm(): array {
+    $route = $this->container->get('router.route_provider')->getRouteByName('my_module.settings');
+    $stack = $this->container->get('request_stack');
+    $request = Request::create($route->getPath());
+    $request->setSession(new Session(new MockArraySessionStorage()));
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'my_module.settings');
+    $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
+    $stack->push($request);
+    $form_state = new FormState();
+    return $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state)[DataSurfaceOperationForm::SURFACE_KEY];
+  }
+
+  /**
+   * Gets the JSON Schema of the settings, as the HTTP door serves it.
+   *
+   * @return array
+   *   The schema of the values, through JSON and back.
+   */
+  protected function settingsSchema(): array {
+    $served = $this->container->get('data_surface_react.served_operations');
+    $operation = $served->resolve('my_module.settings', 'configure', []);
+    $contract = $this->container->get('data_surface.contract_emitter')->emit(
+      $operation->surface,
+      $served->current($operation),
+      $operation->definition->id,
+      $operation->operation->id,
+      $operation->operation->label,
+      FALSE,
+      $operation->operation->facts(),
+    );
+    return json_decode((string) json_encode($contract->document), TRUE)['schema'];
+  }
+
+  /**
+   * Asserts a page's trimmed JSON Schema excerpt is the served schema's.
+   *
+   * @param string $page
+   *   The page's file name.
+   * @param string $holding
+   *   Text the excerpt holds.
+   */
+  protected function assertSchemaExcerpt(string $page, string $holding): void {
+    $schema = $this->settingsSchema();
+    $quoted = json_decode('{' . $this->block($page, $holding) . '}', TRUE, 512, JSON_THROW_ON_ERROR);
+    foreach ($quoted as $key => $value) {
+      if ($key === 'required') {
+        $this->assertSame($schema['required'], $value, $page);
+        continue;
+      }
+      $this->assertArrayHasKey($key, $schema['properties'], $page);
+      // Trimmed: what the page quotes is what is served, less the rest.
+      $this->assertSame($value, array_intersect_key($schema['properties'][$key], $value), sprintf('%s quotes %s otherwise than it is served.', $page, $key));
+    }
+  }
+
+  /**
+   * Calls the settings tool, dry.
+   *
+   * @param array $values
+   *   The values sent.
+   *
+   * @return array
+   *   `success`, then every output.
+   */
+  protected function configure(array $values): array {
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:my_module.settings:configure');
+    $tool->setInputValue(OperationInputs::VALUES, $values);
+    $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
+    $tool->execute();
+    $result = $tool->getResult();
+    return ['success' => $result->isSuccess()] + $result->getContextValues();
+  }
+
+  /**
+   * Tests page 1: one class, a form, a tool and an HTTP path.
+   */
+  public function testOneDescriptionEveryDoor(): void {
+    $form = $this->settingsForm();
+    $keys = ['title', 'items_per_page', 'show_author', 'notify_email', 'layout'];
+    $types = array_map(static fn (string $key): string => $form[$key]['#type'], $keys);
+    $this->assertSame(['textfield', 'number', 'checkbox', 'email', 'select'], $types);
+    $this->assertPageSays('01-what-it-does.md', '| A form | a text field, a number field, a checkbox, an email field and a select |');
+    $this->assertPageSays('03-keys.md', 'a text field for `title`, a number field for `items_per_page`, a checkbox for `show_author` and an email field for `notify_email`.');
+
+    $this->assertTrue($this->container->get('plugin.manager.tool')->hasDefinition('data_surface:my_module.settings:configure'));
+    $this->assertPageSays('01-what-it-does.md', '`data_surface:my_module.settings:configure`');
+
+    $registry = $this->container->get('data_surface.resource_registry');
+    $definition = $registry->getDefinition('my_module.settings');
+    $operation = $registry->getOperation($definition->name(), 'configure');
+    $paths = $this->container->get('data_surface_react.served_paths');
+    [$method, $named] = $paths->writes($definition, $operation);
+    $path = $method . ' ' . $paths->url($definition, $operation, [], $named, FALSE)->getGeneratedUrl();
+    $this->assertSame('PATCH /surface-api/my_module.settings', $path);
+    $this->assertPageSays('01-what-it-does.md', '`' . $path . '`');
+    $this->assertStringContainsString($path, $this->block('06-identity.md', 'PATCH /surface-api/node.type/{type}'));
+  }
+
+  /**
+   * Tests pages 3 and 4: the JSON Schema they quote is the served one.
+   */
+  public function testTheSchemaTheyQuote(): void {
+    $this->assertSchemaExcerpt('03-keys.md', '"items_per_page"');
+    $this->assertSchemaExcerpt('04-rules-on-a-key.md', '"oneOf"');
+  }
+
+  /**
+   * Tests page 4: the form's rules and the tool's refusals.
+   */
+  public function testTheRulesRefuse(): void {
+    $form = $this->settingsForm();
+    $this->assertSame(['list' => 'List', 'grid' => 'Grid'], array_map('strval', $form['layout']['#options']));
+    $this->assertSame([1, 50], [$form['items_per_page']['#min'], $form['items_per_page']['#max']]);
+    $this->assertPageSays('04-rules-on-a-key.md', 'The form reads the rules to draw the fields: `layout` becomes a select of List and Grid, `items_per_page` a number field from 1 to 50');
+
+    $refused = $this->configure(['title' => NULL]);
+    $this->assertFalse($refused['success']);
+    $quoted = json_decode($this->block('04-rules-on-a-key.md', '"path": "/title"'), TRUE, 512, JSON_THROW_ON_ERROR);
+    $this->assertSame([$quoted], $refused['violations']);
+    // The form, posted with no title: the same message, at the field.
+    $form_state = new FormState();
+    $form_state->setValues([
+      DataSurfaceOperationForm::SURFACE_KEY => [
+        'title' => '',
+        'items_per_page' => '10',
+        'show_author' => 1,
+        'notify_email' => 'admin@example.com',
+        'layout' => 'list',
+      ],
+    ]);
+    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $errors = array_map(static fn ($message): string => strip_tags((string) $message), $form_state->getErrors());
+    $this->assertSame([$quoted['message']], array_values($errors));
+    $this->assertPageSays('04-rules-on-a-key.md', 'The form says "' . $quoted['message'] . '" at the field.');
+
+    $refused = $this->configure(['layout' => 'table']);
+    $this->assertFalse($refused['success']);
+    $this->assertSame(['/layout'], array_column($refused['violations'], 'path'));
+    $this->assertPageSays('04-rules-on-a-key.md', 'the message lists the allowed values instead: "' . $refused['violations'][0]['message'] . '"');
   }
 
   /**
