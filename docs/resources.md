@@ -220,16 +220,19 @@ already known, and that is a **context**, an `OperationContext`:
   id are refused, naming both.
 - A context may also narrow a key (`withConstraint()`, checked
   narrower); a Choice of one value with `'data_surface_fixed' => TRUE`
-  fixes it, drawn as that value and stated `const` where the key holds
-  a value. It may give keys the values they start from in this
-  build (`withDefaults()`), over the declared default and the site's;
-  only a context that creates takes them, since on an update the stored
-  value stands, so a context that does not create and carries defaults
-  is refused when the resource is built, naming the operation. Both name
-  a key by path, with [a site default's](declaring-a-resource.md#a-sites-own-defaults)
+  fixes it: the key holds that value, made required where it was
+  optional, drawn as it and stated `const`. It may give keys the values
+  they start from in this build (`withDefaults()`), over the declared
+  default and the site's; only a context that creates takes them, since
+  on an update the stored value stands, so a context that does not
+  create and carries defaults is refused when the resource is built,
+  naming the operation. Both name a key by path, with
+  [a site default's](declaring-a-resource.md#a-sites-own-defaults)
   reach: a path into a structure attached at a fixed key (`title.value`)
-  is handed to that child's own context. A route uses both to fix or
-  fill keys on one page
+  is handed to that child's own context. Neither may name an identity
+  key the context knows, which is the operation's to say: a context that
+  fixes or fills one is refused when the resource is built. A route uses
+  both to fix or fill keys on one page
   ([forms](forms.md#a-route-that-fixes-or-fills-keys)). It may hand a
   child a context of its own, or name the child's own operation to
   invoke (`withChild()`, see [Child operations](#child-operations)).
@@ -392,11 +395,15 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ### Routes from operations
 
-A route names a resource class and an operation, and its parameters are
-the operation method's, by name; an upcast entity parameter arrives as
-the entity. `DataSurfaceOperationForm` builds the context with the
-operation, renders the data surface, loads current values from the
-composed storage and submits through the pipeline to it. The route's
+A route names a resource class (or a resource's id) and an operation,
+and its parameters are the operation method's, by name; an upcast entity
+parameter arrives as the entity. A route default whose name has no
+leading underscore is a route parameter too, as core counts it, so
+`to: 'friends'` pins the operation's `$to` on that page, and one that
+nothing the route serves reads is refused. `DataSurfaceOperationForm`
+builds the context with the operation, renders the data surface, loads
+current values from the composed storage and submits through the
+pipeline to it. The route's
 requirement is the operation's access, which a route naming a resource
 and an operation has without saying it:
 
@@ -418,9 +425,14 @@ A locked identity key renders as a disabled element holding the value
 the operation knows, and extraction keeps that value whatever is
 posted. The cosmetic layer (`DataSurfaceFormCosmeticsInterface`), named
 by the route's optional `_data_surface_cosmetics`, is told the
-operation id as its `$operation` and the raw value of the operation's
-first route parameter. [Generated forms](forms.md#the-operation-form)
-has the rest.
+operation id as its `$operation` and the raw value of the first of the
+operation's parameters that is a variable of the route's path. A route
+may fix, fill or start the operation's keys on its page alone, and a
+value it fixes or fills may be `'{name}'`, a reference to a bounded
+variable of its path, read raw; a derived resource's id may hold such a
+variable too, so one route serves every bundle
+([A route that fixes or fills keys](forms.md#a-route-that-fixes-or-fills-keys)).
+[Generated forms](forms.md#the-operation-form) has the rest.
 
 ## Access
 

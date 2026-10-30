@@ -343,7 +343,7 @@ final class CatalogDocument {
     if ($refused === []) {
       return $document . "Nothing discovery found was refused: every operation of every resource and structure built.\n";
     }
-    $document .= "What discovery or a build refused, with the file the message points at.\n\n";
+    $document .= "What discovery or a build refused, and every route written wrong for the operation it serves, with the file the message points at.\n\n";
     $document .= "| Resource or structure | Operation | Message | File |\n| --- | --- | --- | --- |\n";
     foreach ($refused as $refusal) {
       $document .= sprintf(
@@ -426,8 +426,9 @@ route a module declares, the HTTP path and the React page
 One that changes a thing that exists, neither creating nor read only, is
 "read on its own" too, a read tool, `data_surface:<id>:<operation>:read`.
 A structure a plugin uses is configured through the plugin's host. Every
-operation is built for no account, and what did not build is listed
-last, under Refused. `docs/resources.md` says how each part works.
+operation is built for no account, and what did not build, with every
+route written wrong for the operation it serves, is listed last, under
+Refused. `docs/resources.md` says how each part works.
 
 
 MARKDOWN;

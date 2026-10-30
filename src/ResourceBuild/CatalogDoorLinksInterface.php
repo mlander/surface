@@ -31,8 +31,8 @@ interface CatalogDoorLinksInterface extends CatalogDoorsInterface {
    *
    * @return array<string, \Drupal\Core\Url>
    *   By the door's name (one of SiteCatalog::DOORS), each door with a
-   *   URL; a door whose path holds a parameter is left out, since no one
-   *   URL is it.
+   *   URL; a door whose path holds a parameter nothing fills is left out,
+   *   since no one URL is it.
    */
   public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array;
 

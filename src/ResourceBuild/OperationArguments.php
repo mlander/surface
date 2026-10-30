@@ -87,8 +87,9 @@ final class OperationArguments {
    *   The arguments, by parameter name, ready for the method.
    *
    * @throws \InvalidArgumentException
-   *   When a parameter that has to be given is not, or an id names no
-   *   entity.
+   *   When a parameter that has to be given is not.
+   * @throws \Drupal\data_surface\ResourceBuild\NamesNothingException
+   *   When an id names no entity, naming the parameter.
    */
   public function resolve(OperationDefinition $operation, array $arguments): array {
     $resolved = [];
@@ -151,8 +152,8 @@ final class OperationArguments {
    * @return mixed
    *   The argument.
    *
-   * @throws \InvalidArgumentException
-   *   When an id names no entity.
+   * @throws \Drupal\data_surface\ResourceBuild\NamesNothingException
+   *   When an id names no entity, naming the parameter.
    */
   protected function resolveOne(OperationDefinition $operation, OperationParameter $parameter, mixed $value): mixed {
     $entity_type_id = $this->entityTypeOf($parameter);
@@ -161,13 +162,13 @@ final class OperationArguments {
     }
     $entity = $this->entityTypeManager->getStorage($entity_type_id)->load($value);
     if ($entity === NULL) {
-      throw new \InvalidArgumentException(sprintf(
+      throw new NamesNothingException(sprintf(
         'The "%s" operation needs a %s as $%s, and there is none with the id "%s".',
         $operation->id,
         $entity_type_id,
         $parameter->name,
         $value,
-      ));
+      ), $parameter->name);
     }
     return $entity;
   }

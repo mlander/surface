@@ -202,9 +202,30 @@ would, a field whose view access is denied left out
 
 - **The form**: `/surface-entity/node/page/add` and
   `/surface-entity/node/{id}/edit`, the generic operation form with the
-  contract panel. The update route upcasts `{id}` to the node; a node of
-  another bundle is refused by the page's update operation, so the route
-  answers 403.
+  contract panel. The update route upcasts `{id}` to the node, so an id
+  no node has is core's 404, which the converter answers before access
+  is asked, to any account. A node of another bundle loads, and the
+  page's update operation refuses it as a value that names nothing here.
+  A derived content entity operation declares no permission, since
+  entity access decides per entity once the node is loaded, so no
+  account is let in before the value is read, and every door refuses
+  such a value alike, saying nothing of what it names: the form's route
+  with a 403 that gives no reason, the React page, the API and the tool
+  with their one fixed refusal. The 404 a form route gives an account
+  the operation lets in, for a value that names nothing, needs a
+  permission to ask first
+  ([forms](forms.md#refusal-by-who-chose-the-value); whether derived
+  operations should declare one is
+  [open](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)).
+- **One route for every bundle**: a module may serve every bundle's add
+  page at one route, the bundle in its path filling the resource's id,
+  `_data_surface_resource: 'entity.content:node.{node_type}'`, gated by
+  create access for that bundle
+  ([One route for every bundle](forms.md#one-route-for-every-bundle));
+  this module ships the basic page's two routes alone. An edit route for
+  every bundle puts the bundle in its path too,
+  `/{node_type}/{id}/edit`, since a node's bundle is known only once the
+  node is loaded, and refuses a node of another bundle as above.
 - **The tools**: `data_surface:entity.content:node.page:create`, `:update`
   and `:update:read`, derived like every other operation's. The field item
   structures have no storage, so they are no tools. Every bundle with a form

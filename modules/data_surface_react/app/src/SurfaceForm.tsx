@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createApi, pageOf, SEND_FINGERPRINT, type Fetcher, type Settings } from './api';
+import { createApi, pageOf, SEND_FINGERPRINT, startedPaths, startingValues, type Fetcher, type Settings } from './api';
 import type { Contract, Narrowed, Schema, Settled, Values, Violation } from './contract';
 import { ContractRefused, inlineSchema, isSuggested, joinedFetch, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed, withoutSuggested } from './contract';
 import { ContractPanel } from './ContractPanel';
@@ -70,6 +70,12 @@ function byPath(violations: Violation[]): Record<string, string[]> {
  * write's; a write that created something moves to the page where it
  * now lives. A document of any contract but 3 is refused, and the
  * refusal shown as the form's error.
+ *
+ * A page a module serves at a route of its own starts the values from
+ * more than the envelope: the route's defaults, then what a link sent,
+ * each over the last (startingValues()). Each is the page's answer, as a
+ * change is: it replaces a stale value at its path, and what depends on
+ * it is narrowed for it once the form is drawn, here or by asking.
  */
 export function SurfaceForm({
   settings,
@@ -119,6 +125,9 @@ export function SurfaceForm({
   // The full schema fetched for the choices made, which states the deferred
   // keys they choose; null until a choice needs one.
   const chosenFull = useRef<Schema | null>(null);
+  // The paths the page started from a value of its own that the envelope
+  // did not hold, each narrowed for once the form is drawn.
+  const started = useRef<string[]>([]);
 
   // Value-independent, so resolved once for the page.
   const full = useMemo(() => (fullDocument === null ? null : inlineSchema(fullDocument)), [fullDocument]);
@@ -153,7 +162,12 @@ export function SurfaceForm({
           fingerprint.current = loaded.etag;
           stored.current = loaded.document.values;
           setFullDocument(loadedFull);
-          show(loaded.document, loaded.document.values);
+          // What the page starts keys from over what is stored: an answer
+          // of the page's, which stands for no stale value.
+          const paths = startedPaths(loaded.document.values, settings);
+          show(loaded.document, startingValues(loaded.document.values, settings));
+          started.current = paths;
+          stale.current = stale.current.filter((dotted) => !paths.some((path) => dotted === path || dotted.startsWith(`${path}.`)));
         }
       },
       (error: Error) => live && setFailure(error.message),
@@ -162,7 +176,7 @@ export function SurfaceForm({
       live = false;
       clearTimeout(timer.current);
     };
-  }, [api, show]);
+  }, [api, show, settings]);
 
   const refine = useCallback(async () => {
     timer.current = undefined;
@@ -266,6 +280,52 @@ export function SurfaceForm({
     return paths;
   }, [schema, full, values]);
 
+  // Narrows the form for a change of a key something depends on: here,
+  // from the full schema or one fetched for a choice, or by asking.
+  const settle = useCallback(
+    (path: string) => {
+      const decided = decide(path);
+      if (decided.local) {
+        setNarrowing(narrowingStatus(decided));
+        settled.current = decided.settled;
+        current.current = decided.settled.values;
+        stale.current = decided.settled.stale;
+        setSchema(decided.settled.schema);
+        setValues(decided.settled.values);
+        return;
+      }
+      if (decided.marker === 'deferred' && decided.fetch !== undefined) {
+        void fetchChosen(path, decided).then((answered) => {
+          if (!answered.local && answered.marker !== 'pending') {
+            setNarrowing(narrowingStatus(answered));
+            clearTimeout(timer.current);
+            timer.current = setTimeout(() => void refine(), refineDelay);
+          }
+        });
+        return;
+      }
+      setNarrowing(narrowingStatus(decided));
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => void refine(), refineDelay);
+    },
+    [refine, refineDelay, decide, fetchChosen],
+  );
+
+  // What the page started from a value of its own is narrowed for once
+  // the form is drawn, as a change of it would be.
+  useEffect(() => {
+    if (contract === null || started.current.length === 0) {
+      return;
+    }
+    const paths = started.current;
+    started.current = [];
+    for (const path of paths) {
+      if (watched.has(path)) {
+        settle(path);
+      }
+    }
+  }, [contract, watched, settle]);
+
   const onChange = useCallback(
     (path: string, value: unknown) => {
       current.current = setAt(current.current, path, value);
@@ -291,32 +351,10 @@ export function SurfaceForm({
         return next;
       });
       if (watched.has(path)) {
-        const decided = decide(path);
-        if (decided.local) {
-          setNarrowing(narrowingStatus(decided));
-          settled.current = decided.settled;
-          current.current = decided.settled.values;
-          stale.current = decided.settled.stale;
-          setSchema(decided.settled.schema);
-          setValues(decided.settled.values);
-          return;
-        }
-        if (decided.marker === 'deferred' && decided.fetch !== undefined) {
-          void fetchChosen(path, decided).then((answered) => {
-            if (!answered.local && answered.marker !== 'pending') {
-              setNarrowing(narrowingStatus(answered));
-              clearTimeout(timer.current);
-              timer.current = setTimeout(() => void refine(), refineDelay);
-            }
-          });
-          return;
-        }
-        setNarrowing(narrowingStatus(decided));
-        clearTimeout(timer.current);
-        timer.current = setTimeout(() => void refine(), refineDelay);
+        settle(path);
       }
     },
-    [watched, refine, refineDelay, decide, fetchChosen],
+    [watched, settle],
   );
 
   const submit = useCallback(async () => {

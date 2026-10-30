@@ -133,6 +133,9 @@ final class ServedOperations {
   /**
    * Reads the operation's parameters off the React page's query string.
    *
+   * What the page's context is built from, and what its access check
+   * fills a `%key` permission from when the context cannot be built.
+   *
    * @param string $resource
    *   The resource's `#[Resource]` id, or its class.
    * @param string $operation
@@ -142,8 +145,11 @@ final class ServedOperations {
    *
    * @return array
    *   The parameters given, by name, as raw values.
+   *
+   * @throws \InvalidArgumentException
+   *   When the resource or the operation is not discovered.
    */
-  protected function parameters(string $resource, string $operation, Request $request): array {
+  public function parameters(string $resource, string $operation, Request $request): array {
     $found = $this->registry->getOperation($resource, $operation);
     $given = [];
     foreach ($found->parameters as $parameter) {

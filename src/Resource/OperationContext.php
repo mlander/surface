@@ -17,10 +17,13 @@ namespace Drupal\data_surface\Resource;
  * otherwise. Neither defineInputs() nor defineOutputs() receives it.
  * The framework applies it, once, when the resource or structure is
  * built:
- *   - each identity key it knows is locked to that value;
+ *   - each identity key it knows is locked to that value, and a context
+ *     that also fixes or fills one is refused;
  *   - each constraint it carries narrows that key; a Choice of one value
  *     that says it fixes the key (`data_surface_fixed`, as a route's
- *     `_data_surface_fixed` does) is drawn as that value, stated `const`;
+ *     `_data_surface_fixed` does) makes the key hold that value, a key
+ *     that may otherwise hold nothing included: drawn as the value, stated
+ *     `const`;
  *   - each default it carries is the value that key starts from in this
  *     build, over the declared one and the site's; only a context that
  *     creates carries any, since on an update the stored value stands;

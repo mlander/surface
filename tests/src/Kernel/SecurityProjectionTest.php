@@ -394,10 +394,11 @@ class SecurityProjectionTest extends DataSurfaceKernelTestBase {
 
     // An account holding the operation's permission hears why the rest
     // refused what the parameter names, and is let in where it may; a
-    // parameter naming nothing is still the one fixed reason.
+    // parameter naming nothing is let through, for the page to answer
+    // 404, as the API and the operation form's route answer it.
     $holder = $this->createUser(['administer data surface node type demo']);
     $this->assertSame([FALSE, 'The resource this page serves may not be written by this account.'], $this->reactAccess('node.type', 'update', ['type' => 'article'], $holder));
-    $this->assertSame([FALSE, ServedOperationAccessCheck::REFUSED], $this->reactAccess('node.type', 'update', ['type' => 'nothing_here'], $holder));
+    $this->assertSame([TRUE, ''], $this->reactAccess('node.type', 'update', ['type' => 'nothing_here'], $holder));
     $admin = $this->createUser(['administer data surface node type demo', 'administer content types']);
     $this->assertTrue($this->reactAccess('node.type', 'update', ['type' => 'article'], $admin)[0]);
   }

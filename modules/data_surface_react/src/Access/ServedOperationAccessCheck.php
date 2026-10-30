@@ -10,8 +10,8 @@ use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\DataSurfaceAccess;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\data_surface\Access\OperationGate;
+use Drupal\data_surface\ResourceBuild\NamesNothingException;
 use Drupal\data_surface_react\ProblemException;
 use Drupal\data_surface_react\ServedOperations;
 use Drupal\data_surface_react\ServedPaths;
@@ -37,8 +37,13 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * whether a parameter named nothing or the access class refused what it
  * named, so the reason never says whether an id exists, and the real one
  * goes to the log; only an account holding the operation's permission
- * for what the parameters name hears the access class's reason, and on
- * the API, that an id names nothing (404).
+ * for what the parameters name hears the access class's reason, and that
+ * a value names nothing: a 404 its controller answers. On the page, a
+ * resource or an operation its path names that discovery does not have
+ * is a 404 to any account, as the API answers a path that names nothing;
+ * a page that names nothing is let through only in the request's own
+ * dispatch, so no link to it is drawn. Both answers are the operation
+ * form's route's too (OperationGate).
  *
  * Decision: see
  * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
@@ -54,6 +59,8 @@ final class ServedOperationAccessCheck implements AccessInterface {
    *   What reads an API path.
    * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
    *   The request stack, for a check made with no request handed in.
+   * @param \Drupal\data_surface\Access\OperationGate $gate
+   *   The answers every door serving an operation gives alike.
    * @param \Psr\Log\LoggerInterface|null $logger
    *   Where the reason behind a refusal is written; NULL writes none.
    */
@@ -61,6 +68,7 @@ final class ServedOperationAccessCheck implements AccessInterface {
     protected readonly ServedOperations $servedOperations,
     protected readonly ServedPaths $servedPaths,
     protected readonly RequestStack $requestStack,
+    protected readonly OperationGate $gate,
     protected readonly ?LoggerInterface $logger = NULL,
   ) {}
 
@@ -84,26 +92,30 @@ final class ServedOperationAccessCheck implements AccessInterface {
    *
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The operation's answer. A resource, operation or parameter that
-   *   names nothing is refused rather than thrown: an access question is
-   *   never answered with an exception. An API path that names nothing,
-   *   or is gone, is let through for the controller to answer with its
-   *   problem (404, 405, 410); what a path names is the code's, never a
-   *   stored value. An id that names nothing is a 404 for an account that
-   *   holds the operation's permission, and the fixed refusal for any
-   *   other.
+   *   names nothing is refused or let through rather than thrown: an
+   *   access question is never answered with an exception. An API path
+   *   that names nothing, or is gone, is let through for the controller
+   *   to answer with its problem (404, 405, 410); what a path names is
+   *   the code's, never a stored value. An id that names nothing is a 404
+   *   for an account that holds the operation's permission, and the fixed
+   *   refusal for any other.
    */
   public function access(RouteMatchInterface $route_match, AccountInterface $account, ?Request $request = NULL): AccessResultInterface {
     // Access is also asked outside a request's own dispatch: a link, a
     // breadcrumb, a local task. The argument resolver then hands in no
-    // request, so the current one stands in for it.
+    // request, so the current one stands in for it, and a page that
+    // names nothing draws no link.
+    $dispatch = $request;
     $request ??= $this->requestStack->getCurrentRequest();
     if ($request === NULL) {
       return AccessResult::forbidden('No request to read the operation from.');
     }
     $resource = (string) $route_match->getRawParameter('resource');
     $operation = $route_match->getRawParameter('operation');
+    // The page names the operation in its path; the API, by the method.
+    $api = $operation === NULL;
     $parameters = NULL;
-    if ($operation === NULL) {
+    if ($api) {
       // The API: the operation is what the path and the method name.
       $segments = array_map(static fn (string $name): string => (string) $route_match->getRawParameter($name), ServedPaths::SEGMENTS);
       try {
@@ -117,18 +129,25 @@ final class ServedOperationAccessCheck implements AccessInterface {
       $resource = $target->definition->id;
       $operation = $target->operation->id;
       $parameters = $target->parameters;
+      // A client calls the API; no link the site draws points at it. What
+      // its path names, or does not, is its controller's to answer, as
+      // it answers a path that names nothing above.
+      $dispatch = $request;
     }
     $operation = (string) $operation;
     try {
-      $permission = $this->servedOperations->permissionAccess($resource, $operation, $account);
+      $permission = $this->gate->permission($resource, $operation, $account);
     }
-    catch (\InvalidArgumentException $e) {
-      return $this->refused($e->getMessage());
+    catch (\InvalidArgumentException) {
+      // The page's path names a resource or an operation discovery does
+      // not have: nothing is there, as the API answers such a path. Both
+      // controllers this check gates answer it with a page not found.
+      return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
     }
-    if ($permission !== NULL && !$permission->isAllowed()) {
+    if ($permission->isForbidden()) {
       // Which permission it takes is the operation's, the same for every
       // parameter, so saying it says nothing of what one names.
-      return DataSurfaceAccess::decisive($permission, $permission instanceof AccessResultReasonInterface ? $permission->getReason() : NULL);
+      return $permission;
     }
     // The context alone, built from the parameters: access is answered
     // from it, and nothing is built for a response the page cache answers.
@@ -140,18 +159,19 @@ final class ServedOperationAccessCheck implements AccessInterface {
     }
     catch (\InvalidArgumentException $e) {
       // A permission that names a parameter (`administer %entity_type
-      // fields`) is read off the parameters as sent.
+      // fields`) is read off the parameters as sent: the page's from its
+      // query string, the API's from its path.
       // Decision: see
       // docs/decisions.md#a-parameter-is-identity-the-caller-knows.
-      if ($parameters !== NULL && $permission === NULL) {
-        $permission = $this->servedOperations->permissionAccess($resource, $operation, $account, new OperationContext($operation, known: $parameters));
-        $permission = $permission?->isAllowed() ? $permission : NULL;
+      if (!$permission->isAllowed()) {
+        $permission = $this->gate->permission($resource, $operation, $account, $parameters ?? $this->servedOperations->parameters($resource, $operation, $request));
       }
-      if ($parameters !== NULL && $permission !== NULL) {
-        // The account holds the operation's permission for what the
-        // parameters name: it may hear that one names nothing, a 404 the
-        // controller answers.
-        return AccessResult::allowed()->setCacheMaxAge(0);
+      // The account holds the operation's permission for what the
+      // parameters name: it may hear that one names nothing, a 404 the
+      // controller answers. The API answers any parameter it cannot use
+      // so; the page, as the form's route, a value that names nothing.
+      if ($permission->isAllowed() && ($api || $e instanceof NamesNothingException)) {
+        return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
       }
       return $this->refused($e->getMessage());
     }

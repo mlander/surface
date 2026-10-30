@@ -74,15 +74,26 @@ services:
   data_surface.operation_arguments:
     class: Drupal\data_surface\ResourceBuild\OperationArguments
     arguments: ['@entity_type.manager']
+  # The two answers every door serving an operation gives alike: the
+  # operation's permission from the two ids, and a URL that names nothing.
+  data_surface.operation_gate:
+    class: Drupal\data_surface\Access\OperationGate
+    arguments: ['@data_surface.resources']
+  # Finds the key a dotted path names and holds a value to it: on a built
+  # resource, what a door starts keys from that no build was handed.
+  data_surface.key_paths:
+    class: Drupal\data_surface\ResourceBuild\KeyPaths
+    arguments: ['@typed_data_manager']
   # The route access check for a route served by an operation: the
   # operation's permission, then the resource's access class.
   data_surface.operation_access:
     class: Drupal\data_surface\Access\OperationAccessCheck
-    arguments: ['@data_surface.resources', '@data_surface.resource_registry', '@data_surface.operation_arguments']
+    arguments: ['@data_surface.resources', '@data_surface.resource_registry', '@data_surface.operation_arguments', '@data_surface.operation_gate']
     tags:
       - { name: access_check, applies_to: _data_surface_operation_access }
   # Adds that access check to every route naming a resource and an
-  # operation, so a routing file need not.
+  # operation, so a routing file need not, and refuses one written wrong
+  # in a way the route alone shows, which stops the router's rebuild.
   data_surface.operation_route_subscriber:
     class: Drupal\data_surface\Access\OperationRouteSubscriber
     tags:
@@ -136,7 +147,8 @@ services:
     arguments: ['@data_surface.resource_registry', '@data_surface.resource_plugins']
   # The live map of the site (drush surface:catalog): the static layer,
   # the doors each operation reaches as the modules tagged
-  # data_surface.catalog_doors name them, and every build refusal.
+  # data_surface.catalog_doors name them, every build refusal, and every
+  # route written wrong for the operation it serves.
   data_surface.site_catalog:
     class: Drupal\data_surface\ResourceBuild\SiteCatalog
     arguments:
@@ -149,6 +161,9 @@ services:
       - '%app.root%'
       - '@data_surface.site_list_budget'
       - '@plugin.manager.data_surface_widget'
+      - '@data_surface.form_route_doors'
+      - '@data_surface.operation_arguments'
+      - '@data_surface.key_paths'
   # The form routes a module declares for an operation.
   data_surface.form_route_doors:
     class: Drupal\data_surface\ResourceBuild\FormRouteDoors

@@ -11,9 +11,11 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
+use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\DefinitionTypedData;
 use Drupal\data_surface\Pipeline\Coercion;
+use Drupal\data_surface\Pipeline\DataSurfacePipeline;
 use Drupal\data_surface\Pipeline\ValueState;
 
 /**
@@ -36,8 +38,13 @@ use Drupal\data_surface\Pipeline\ValueState;
  * Each refusal names where the value came from, the resource, the key and
  * why: `$where` carries `resource` and `at` (the path its keys sit under
  * in the resource, with its trailing dot), `source` (who says it), `noun`
- * (what it is called) and `verb` (`sets`, `fixes`, or `narrows` for any
- * other constraint).
+ * (what it is called) and `verb` (`sets`, `fixes`, `starts` for a value a
+ * door starts a key from, or `narrows` for any other constraint).
+ *
+ * A door's own value, one a link or the code building a form starts a key
+ * from, is found on the sealed resource instead (reachedOn(), heldOn()),
+ * with the same reach, a map with keys of its own named key by key, and
+ * the same holding: it never enters a build.
  *
  * Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
  * Decision: see
@@ -257,7 +264,10 @@ final class KeyPaths {
    *   The value, in the key's type.
    *
    * @throws \LogicException
-   *   When the key takes no such value, or the value does not fit it.
+   *   When the key takes no such value: a secret, a computed key, or a
+   *   list or a map fixed.
+   * @throws \Drupal\data_surface\ResourceBuild\ValueNotAcceptedException
+   *   When the value does not fit the key.
    */
   public function held(DataDefinitionInterface $definition, mixed $raw, array $where, string $path): mixed {
     $fixing = $where['verb'] === 'fixes';
@@ -283,7 +293,8 @@ final class KeyPaths {
       $problem = $e->getMessage();
     }
     if ($problem !== NULL) {
-      throw $this->refusal(
+      // The value is wrong, and where it was given is not.
+      throw new ValueNotAcceptedException(sprintf(
         '%s %s "%s" on %s to %s, which the key does not accept: %s',
         $where['source'],
         $where['verb'],
@@ -291,9 +302,230 @@ final class KeyPaths {
         $where['resource'],
         (string) json_encode($raw, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
         $problem,
-      );
+      ));
     }
     return $value;
+  }
+
+  /**
+   * Finds the key a path names on a built resource, for a door's own value.
+   *
+   * What a form starts a key from that no build was handed: a value a link
+   * starts (a route's `_data_surface_query`), or one the code building the
+   * form hands it. The reach is a default's (assertReached()), read off the
+   * sealed resource rather than its builder: a key the resource declares, a
+   * key inside a map it declares, a key an alter mounts
+   * (`third_party_settings.<module>.<key>`), and a key of a structure
+   * attached at a fixed key or at an alter's mount, found in that
+   * structure's own frame; never inside variants, a collection's item or a
+   * map of keys from the site, never a secret or a computed key, and never
+   * an identity key the context knows, which is the operation's to say. A
+   * value is one key's: a structure, or a map with keys of its own, is
+   * named key by key, since a value laid over it whole would replace what
+   * the form is drawn with for each key inside it that the value leaves
+   * out, a stored one among them.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The built resource.
+   * @param string $path
+   *   The key's path.
+   * @param array{resource: string, at: string, source: string, noun: string, verb: string} $where
+   *   Where the value comes from, for the refusals.
+   * @param string[] $identity
+   *   The resource's identity keys its context knows.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
+   *   The key's definition; NULL when the build fixes or locks the key, or
+   *   a frame holding it, so what the build says stands and nothing
+   *   starts it.
+   *
+   * @throws \LogicException
+   *   When the path names no key such a value reaches, naming where the
+   *   value came from and the key.
+   */
+  public function reachedOn(DataSurfaceInterface $surface, string $path, array $where, array $identity = []): ?DataDefinitionInterface {
+    $segments = explode('.', $path);
+    $frame = $surface;
+    $depth = 0;
+    $settled = FALSE;
+    $definition = NULL;
+    while ($definition === NULL) {
+      $settled = $settled || $frame->lockedWhole() !== NULL;
+      $first = $segments[$depth];
+      $entry = $frame->getDefinitions()->entry($first);
+      if ($entry === NULL) {
+        throw $this->noKey($where, $path);
+      }
+      $kind = match (TRUE) {
+        $entry->variants !== NULL => 'variants',
+        $entry->list !== NULL => 'collection',
+        DefinitionMetadata::eachOf($entry->definition) !== NULL => 'site',
+        $entry->attachment !== NULL => 'child',
+        default => NULL,
+      };
+      if ($kind !== NULL && $kind !== 'child') {
+        // Named by its whole path, from the frame it sits in.
+        $within = $where;
+        $within['at'] .= $depth === 0 ? '' : implode('.', array_slice($segments, 0, $depth)) . '.';
+        $this->assertReached($within, implode('.', array_slice($segments, $depth)), [$first => $kind]);
+      }
+      $settled = $settled || $entry->locked;
+      if ($entry->attachment !== NULL) {
+        if (count($segments) === $depth + 1) {
+          throw $this->refusal('%s: "%s" on %s holds a structure: name each of its keys, as "%s.<key>".', $where['source'], $where['at'] . $path, $where['resource'], $where['at'] . $path);
+        }
+        // The structure's own frame, which may fix or lock its keys.
+        $frame = $entry->attachment->child;
+        $depth++;
+        continue;
+      }
+      if ($depth === 0 && in_array($first, $identity, TRUE)) {
+        throw $this->refusal('%s: "%s" on %s is an identity key the context knows: identity is the operation\'s to say, from its parameters, so no %s starts it.', $where['source'], $where['at'] . $path, $where['resource'], $where['noun']);
+      }
+      if ($first === 'third_party_settings') {
+        if (count($segments) < $depth + 3) {
+          // The mount, and each module's map in it, only group the keys
+          // alters add: a value names one by its module and its name, as a
+          // default does (resolve()).
+          throw $this->noKey($where, $path);
+        }
+        $mounted = $entry->mounted[$segments[$depth + 1]] ?? NULL;
+        if ($mounted !== NULL) {
+          // The structure an alter attached at its mount, in its own
+          // frame, which may fix or lock its keys.
+          $frame = $mounted->child;
+          $depth += 2;
+          continue;
+        }
+      }
+      $at = $entry->definition;
+      foreach (array_slice($segments, $depth + 1) as $segment) {
+        if ($at instanceof ListDataDefinitionInterface) {
+          throw $this->refusal('%s: "%s" on %s is inside a list, which a %s does not reach.', $where['source'], $where['at'] . $path, $where['resource'], $where['noun']);
+        }
+        $at = $at instanceof ComplexDataDefinitionInterface ? $at->getPropertyDefinition($segment) : NULL;
+        if ($at === NULL) {
+          throw $this->noKey($where, $path);
+        }
+      }
+      $definition = $at;
+    }
+    if (DefinitionMetadata::isSecret($definition)) {
+      throw $this->refusal('%s: "%s" on %s is a secret, which no form draws, so no %s starts it.', $where['source'], $where['at'] . $path, $where['resource'], $where['noun']);
+    }
+    $computed = Computed::of($definition);
+    if ($computed !== NULL) {
+      throw $this->refusal('%s: "%s" on %s is computed from %s, so no %s starts it.', $where['source'], $where['at'] . $path, $where['resource'], implode(', ', $computed->from), $where['noun']);
+    }
+    if ($definition instanceof ComplexDataDefinitionInterface && !$definition instanceof ListDataDefinitionInterface && $definition->getPropertyDefinitions() !== []) {
+      throw $this->refusal('%s: "%s" on %s holds a map: name each of its keys, as "%s.<key>".', $where['source'], $where['at'] . $path, $where['resource'], $where['at'] . $path);
+    }
+    return $settled || DefinitionMetadata::isFixed($definition) ? NULL : $definition;
+  }
+
+  /**
+   * Holds the values a door starts keys from to a built resource, by path.
+   *
+   * Every path is found first (reachedOn()), whether a value came for it or
+   * not, so one written wrong is refused on every request; then each value
+   * is read through the coercion table and held to its key (held()). What
+   * the build fixes or locks, a value that is nothing (NULL or the empty
+   * string), and a value its key refuses are left out, so the key starts
+   * from what is stored or declared, and nothing is said of it.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The built resource.
+   * @param array<string, mixed> $values
+   *   Each value as given, NULL where none came, by key path.
+   * @param array{resource: string, at: string, source: string, noun: string, verb: string} $where
+   *   Where the values come from, for the refusals.
+   * @param string[] $identity
+   *   The resource's identity keys its context knows.
+   *
+   * @return array<string, mixed>
+   *   Each value its key takes, in the key's type, by key path.
+   *
+   * @throws \LogicException
+   *   When a path names no key such a value reaches.
+   */
+  public function heldOn(DataSurfaceInterface $surface, array $values, array $where, array $identity = []): array {
+    $held = [];
+    foreach ($values as $path => $raw) {
+      $path = (string) $path;
+      $definition = $this->reachedOn($surface, $path, $where, $identity);
+      if ($definition === NULL || !ValueState::isConfigured($raw)) {
+        continue;
+      }
+      try {
+        $held[$path] = $this->held($definition, $raw, $where, $path);
+      }
+      catch (ValueNotAcceptedException) {
+        // A value its key refuses starts nothing.
+      }
+    }
+    return $held;
+  }
+
+  /**
+   * Names the key path of each value a values array holds for a resource.
+   *
+   * The values in the resource's own shape, nested as a door reads and
+   * writes them: a structure attached at a fixed key and a map with keys
+   * of its own (the mount of alters' keys among them) hold a value per key
+   * inside, each named by its path; any other key holds its value whole. A
+   * key nothing declares, and a structure or a map given anything but an
+   * array, is named as it is given, for reachedOn() to refuse.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The built resource, or a structure attached in it.
+   * @param array $values
+   *   The values.
+   * @param string $prefix
+   *   The path the frame's keys sit under, with its trailing dot.
+   *
+   * @return array<string, mixed>
+   *   Each value, by key path.
+   */
+  public static function pathsOf(DataSurfaceInterface $surface, array $values, string $prefix = ''): array {
+    $paths = [];
+    foreach ($values as $key => $value) {
+      $key = (string) $key;
+      $entry = $surface->getDefinitions()->entry($key);
+      $child = $entry !== NULL && $entry->variants === NULL && $entry->list === NULL && DefinitionMetadata::eachOf($entry->definition) === NULL ? $entry->attachment : NULL;
+      $paths += match (TRUE) {
+        $child !== NULL && is_array($value) => static::pathsOf($child->child, $value, $prefix . $key . '.'),
+        $entry !== NULL && $entry->attachment === NULL && $entry->variants === NULL && $entry->list === NULL => static::mapPaths($entry->definition, $value, $prefix . $key),
+        default => [$prefix . $key => $value],
+      };
+    }
+    return $paths;
+  }
+
+  /**
+   * Names the key path of each value a map's value holds, by its keys.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key's definition.
+   * @param mixed $value
+   *   Its value.
+   * @param string $path
+   *   Its path.
+   *
+   * @return array<string, mixed>
+   *   The value whole, by the path, for a key with no keys of its own or a
+   *   value that is no array; else each value inside, by its path.
+   */
+  protected static function mapPaths(DataDefinitionInterface $definition, mixed $value, string $path): array {
+    $properties = $definition instanceof ComplexDataDefinitionInterface && !$definition instanceof ListDataDefinitionInterface ? $definition->getPropertyDefinitions() : [];
+    if ($properties === [] || !is_array($value)) {
+      return [$path => $value];
+    }
+    $paths = [];
+    foreach ($value as $name => $inner) {
+      $property = $properties[(string) $name] ?? NULL;
+      $paths += $property === NULL ? [$path . '.' . $name => $inner] : static::mapPaths($property, $inner, $path . '.' . $name);
+    }
+    return $paths;
   }
 
   /**
@@ -308,7 +540,8 @@ final class KeyPaths {
    *   The value, coerced where the table reads it unambiguously.
    *
    * @throws \InvalidArgumentException
-   *   When a map is not an object, or names a key it does not declare.
+   *   When a map is not an object, or names a key it does not declare, or
+   *   a list or a map is given for a key that holds one value.
    */
   protected function accepted(DataDefinitionInterface $definition, mixed $raw): mixed {
     if (!ValueState::isConfigured($raw)) {
@@ -326,6 +559,12 @@ final class KeyPaths {
     }
     $properties = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinitions() : [];
     if ($properties === []) {
+      if (is_array($raw) && in_array($definition->getDataType(), DataSurfacePipeline::SCALAR_TYPES, TRUE)) {
+        // Refused before any constraint reads it, as the pipeline refuses
+        // it (Accepting::coerce()): a validator that reads one value
+        // throws for an array rather than saying it does not fit.
+        throw new \InvalidArgumentException(sprintf('it holds one %s, not a list or a map.', $definition->getDataType()));
+      }
       return is_array($raw) ? $raw : Coercion::scalar($definition, $raw);
     }
     $map = Coercion::decoded($raw, FALSE);

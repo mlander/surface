@@ -206,7 +206,18 @@ function hook_data_surface_options_resolver_info_alter(array &$definitions): voi
  * \Drupal\data_surface\Form\DataSurfaceOperationForm, from the route
  * defaults _data_surface_resource and _data_surface_operation, and gated by
  * the _data_surface_operation_access requirement, which every such route
- * has without saying it (OperationRouteSubscriber).
+ * has without saying it (OperationRouteSubscriber). The route's parameters
+ * are the operation's, by name: a variable of its path, or a default whose
+ * name has no leading underscore, which pins one. On that page alone,
+ * _data_surface_fixed fixes keys and _data_surface_defaults gives keys the
+ * values they start from, on an operation that creates, each a map of key
+ * paths to values; a value that is '{name}', whole, is a reference, the raw
+ * value of a variable of the path that a requirement or a converter bounds.
+ * _data_surface_query names the keys a link may start, each from a query
+ * parameter, as input the form starts from on its first draw and never as
+ * part of the operation's context. A derived resource's id may hold a
+ * variable of the path, entity.content:node.{node_type}, so one route
+ * serves every bundle.
  *
  * @see \Drupal\data_surface\Resource\ResourceInterface
  * @see \Drupal\data_surface\Resource\StructureInterface

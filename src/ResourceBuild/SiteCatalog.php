@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
+use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AccountSwitcherInterface;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -25,10 +26,12 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
  * static layer's facts (ResourceCatalog::describe()) and the doors it
  * reaches, as each module that opens doors names them
  * (CatalogDoorsInterface); every build refusal discovery or a build
- * raised, with its message and the file it points at; and one resource
- * in full, its keys as the build seals them. Every build is for no
- * account (ResourcesInterface::buildDeclared()), asked as the anonymous
- * one, as the tool listing is, so the map is the same whoever asks.
+ * raised, and every route written wrong for the operation it serves (an
+ * operation form's or a React page's a module serves), with its message
+ * and the file it points at; and one resource in full, its keys as the
+ * build seals them. Every build is for no account
+ * (ResourcesInterface::buildDeclared()), asked as the anonymous one, as
+ * the tool listing is, so the map is the same whoever asks.
  *
  * @see \Drupal\data_surface\Drush\Commands\CatalogCommand
  */
@@ -65,7 +68,7 @@ final class SiteCatalog {
   public const OPENAPI = 'openapi';
 
   /**
-   * The React page its form mounts on.
+   * The React page its form mounts on, and each one a module serves it at.
    */
   public const REACT = 'react';
 
@@ -91,6 +94,11 @@ final class SiteCatalog {
    * A refusal a build raised, of one resource or structure.
    */
   public const BUILD = 'build';
+
+  /**
+   * A refusal of a route, written wrong for the operation it serves.
+   */
+  public const ROUTE = 'route';
 
   /**
    * The catalog with doors, once read.
@@ -129,6 +137,14 @@ final class SiteCatalog {
    * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager|null $widgets
    *   The widget manager, which names the widget each key is drawn by;
    *   without it, none is named.
+   * @param \Drupal\data_surface\ResourceBuild\FormRouteDoors|null $forms
+   *   The routes modules serve operations at, an operation form's or a
+   *   React page's; with the two below, each is judged for the operation
+   *   it serves. Without them, none is.
+   * @param \Drupal\data_surface\ResourceBuild\OperationArguments|null $arguments
+   *   What maps a route's parameters onto the operation's.
+   * @param \Drupal\data_surface\ResourceBuild\KeyPaths|null $keyPaths
+   *   What finds the key a path names on a built resource.
    */
   public function __construct(
     protected readonly ResourceCatalog $catalog,
@@ -140,6 +156,9 @@ final class SiteCatalog {
     protected readonly string $root,
     protected readonly ?SiteListBudget $budget = NULL,
     protected readonly ?DataSurfaceWidgetManager $widgets = NULL,
+    protected readonly ?FormRouteDoors $forms = NULL,
+    protected readonly ?OperationArguments $arguments = NULL,
+    protected readonly ?KeyPaths $keyPaths = NULL,
   ) {}
 
   /**
@@ -215,14 +234,16 @@ final class SiteCatalog {
    * and in a context of its id alone when it needs a subject, as its tool
    * listing is; one with no operation is built as a host builds it
    * (ContractBaselines::ALONE). What discovery refuses is one refusal of
-   * the whole site, since nothing can be read past it.
+   * the whole site, since nothing can be read past it. Each route serving
+   * an operation that builds, a form's or a React page's, is judged beside
+   * it (routeRefusals()).
    *
    * @return list<array{resource: string|null, operation: string|null, stage: string, message: string, file: string|null}>
    *   Each refusal: the resource or structure and the operation it was
    *   raised for (NULL where it was the whole, or discovery), the stage
-   *   (DISCOVERY or BUILD), the message, and the file it points at, from
-   *   the Drupal root: the first class the message names, else the
-   *   resource's own class.
+   *   (DISCOVERY, BUILD or ROUTE), the message, which names the route for
+   *   a route's, and the file it points at, from the Drupal root: the
+   *   first class the message names, else the resource's own class.
    */
   public function refused(): array {
     if ($this->refusals !== NULL) {
@@ -256,15 +277,89 @@ final class SiteCatalog {
         }
         foreach ($operations as $operation) {
           try {
-            static::settle($this->resources->buildDeclared($name, $this->context($name, $operation)));
+            $context = $this->context($name, $operation);
+            $built = $this->resources->buildDeclared($name, $context);
+            static::settle($built);
           }
           catch (\Throwable $e) {
             $refusals[] = $this->refusal($definition, $operation->id, self::BUILD, $e);
+            continue;
+          }
+          foreach ($this->routeRefusals($definition, $operation, $context, $built) as $e) {
+            $refusals[] = $this->refusal($definition, $operation->id, self::ROUTE, $e);
           }
         }
       }
     });
     return $this->refusals = $refusals;
+  }
+
+  /**
+   * Judges what each route serving an operation says of its keys.
+   *
+   * A route whose path has no variable, and which fixes or fills keys or
+   * pins a parameter, is read as its access check reads it
+   * (OperationRoute::fromRouteMatch()), its plain defaults as core hands
+   * them: its literal values held once, by the declared build the bin
+   * keeps for the next request to read, and a refusal is the route's, as
+   * every visitor would hear it. A route with a variable is the URL's to
+   * finish, so it is listed and not held. Each key a route lets a link
+   * start is found on the operation's own declared build
+   * (KeyPaths::reachedOn()), whatever the route's path holds.
+   *
+   * Decision: see
+   * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   One of its operations.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context the catalog built it in.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The build, for no account.
+   *
+   * @return list<\Throwable>
+   *   What refused each route written wrong, one per route, its message
+   *   naming the route.
+   */
+  protected function routeRefusals(ResourceDefinition $definition, OperationDefinition $operation, OperationContext $context, DataSurfaceInterface $built): array {
+    if ($this->forms === NULL || $this->arguments === NULL || $this->keyPaths === NULL) {
+      return [];
+    }
+    $refusals = [];
+    foreach ($this->forms->served($definition, $operation) as $name => [$route]) {
+      $plain = array_filter($route->getDefaults(), static fn (string|int $default): bool => !str_starts_with((string) $default, '_'), ARRAY_FILTER_USE_KEY);
+      try {
+        $served = NULL;
+        $seeded = array_filter(
+          [$route->getDefault(OperationRoute::FIXED), $route->getDefault(OperationRoute::DEFAULTS)],
+          static fn (mixed $map): bool => !in_array($map, [NULL, []], TRUE),
+        ) !== [];
+        if ($route->compile()->getVariables() === [] && ($seeded || $plain !== [])) {
+          $served = OperationRoute::fromRouteMatch(new RouteMatch($name, $route, $plain, $plain), $this->registry, $this->arguments, $this->resources);
+        }
+        $query = OperationRoute::query($route, $name);
+        $known = array_map('strval', array_keys(($served->context ?? $context)->known));
+        $where = [
+          'resource' => $definition->id,
+          'at' => '',
+          'source' => sprintf('The %s route\'s "%s"', $name, OperationRoute::QUERY),
+          'noun' => 'prefill',
+          'verb' => 'starts',
+        ];
+        foreach (array_keys($query) as $path) {
+          $this->keyPaths->reachedOn($built, (string) $path, $where, array_values(array_intersect($definition->identity, $known)));
+        }
+      }
+      catch (\Throwable $e) {
+        // Every refusal names the route, as the access check's does.
+        $refusals[] = str_starts_with($e->getMessage(), sprintf('The %s route', $name))
+          ? $e
+          : new \InvalidArgumentException(sprintf('The %s route: %s', $name, $e->getMessage()), 0, $e);
+      }
+    }
+    return $refusals;
   }
 
   /**
@@ -488,7 +583,7 @@ final class SiteCatalog {
    * @param string|null $operation
    *   The operation, or NULL for the whole.
    * @param string $stage
-   *   DISCOVERY or BUILD.
+   *   DISCOVERY, BUILD or ROUTE.
    * @param \Throwable $e
    *   What was raised.
    *

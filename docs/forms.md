@@ -1,5 +1,7 @@
 # Generated forms
 
+<!-- cspell:ignore deparment -->
+
 A generated form is one more consumer of the pipeline, not a value path
 of its own. The widgets collect a raw submitted tree and
 `DataSurfacePipelineInterface::accept()` does the rest (coercion,
@@ -908,20 +910,43 @@ The defaults:
 
 | Default | Holds |
 | --- | --- |
-| `_data_surface_resource` | The resource class, or its `#[Resource]` id. |
+| `_data_surface_resource` | The resource class, or its `#[Resource]` id. A derived resource's id may hold a variable of the route's path, `entity.content:node.{node_type}`, so one route serves every bundle ([below](#one-route-for-every-bundle)). |
 | `_data_surface_operation` | One of its operation ids. |
 | `_data_surface_cosmetics` | Optional. A service id or class implementing `Form\DataSurfaceFormCosmeticsInterface`: a borrowed element, markup, the message and the redirect. Grouping and order are the keys' [arrangement](#arranging-the-keys). |
 | `_data_surface_panel` | Optional. A service id or class implementing `Form\DataSurfaceFormPanelInterface`: something shown inside the data surface's container, rebuilt with it. |
-| `_data_surface_fixed` | Optional. A map of key paths to values, each key fixed to its value on this page ([below](#a-route-that-fixes-or-fills-keys)). |
-| `_data_surface_defaults` | Optional. A map of key paths to values, each the value its key starts from on this page, for an operation that creates ([below](#a-route-that-fixes-or-fills-keys)). |
+| `_data_surface_fixed` | Optional. A map of key paths to values, each key fixed to its value on this page; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
+| `_data_surface_defaults` | Optional. A map of key paths to values, each the value its key starts from on this page, for an operation that creates; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
+| `_data_surface_query` | Optional. A map of key paths to query parameter names, each key a link may start from the parameter it names, `?subject=Pricing`, on any operation that draws values ([below](#keys-a-link-or-the-code-starts)). |
 
 The route's parameters are the operation method's, by name: an upcast
 entity parameter arrives as the entity, a plain one as its value, so
 `update(NodeTypeInterface $type)` is served by a route with a `{type}`
-parameter upcast to a node type. The defaults are underscore-prefixed
-because Drupal's routing treats such defaults as its own: no parameter
-converter tries to upcast them and no argument resolver tries to hand
-them to `buildForm()`.
+parameter upcast to a node type. The module's own defaults start with an
+underscore, which keeps each of them out of the route match's
+parameters and out of what `_title` substitutes. No converter runs for
+one, because none is declared for it under `options.parameters`, and
+`buildForm()` declares no parameter of its name, so none is handed to
+it.
+
+**A plain default is a route parameter.** Core counts a default whose
+name has no leading underscore as a parameter of the route, so
+`to: 'friends'` pins the operation's `$to` on that page as `{to}` in the
+path would: the by-name mapping reads it
+(`OperationArguments::fromRoute()`), and the operation judges it as it
+judges any parameter. A plain default
+that nothing the route serves reads is refused when the route is matched, so
+a misspelled one is never ignored: its readers are the operation's
+parameters and the parameters of the route's `_controller`, its
+`_form`'s `buildForm()`, its `_title_callback` and its `_custom_access`,
+since core hands route parameters to each by name (core's
+`EntityController::addBundleTitle()` reads `entity_type_id` and
+`bundle_parameter` that way); where reflection cannot read one of them,
+nothing is refused. One the operation refuses, or whose value names
+nothing, is the route written wrong, a 403 with the operation's reason
+on every URL. A plain default is never what the page is about: the
+subject a cosmetic layer is told is the first of the operation's
+parameters that is a variable of the path
+(why: [decision](decisions.md#a-plain-route-default-pins-an-operation-parameter)).
 
 The form builds the context with the operation, builds the resource in
 it, loads current values from the resource's composed storage, and
@@ -983,10 +1008,35 @@ Both sit under the one key, so one rebuild replaces both.
 
 ### A route that fixes or fills keys
 
-A route may serve an existing operation with some of its keys fixed or
-filled in, on that page alone, with no new operation. The case is an add
-page: a basic page whose title is set, or whose body starts with text,
-served by the generic `create`:
+A route may serve an existing operation with some of its keys fixed,
+filled or started, on that page alone, with no new operation. Who
+chooses a value decides how it reaches the operation, and one rule says
+which:
+
+> If the operation must know it, it is an operation parameter; if one
+> page states it for every visitor, it is a route seed, a literal or the
+> route's own path segment bounded by a converter or a requirement,
+> fixed when nobody may change it there and a default when they may; if
+> a link offers it and the visitor may change it, it is a query prefill
+> the route lists; if only code at request time can compute it, a
+> controller hands it to the form as a prefill. A bounded path segment
+> enters the context through a reference and nothing else from the
+> request does: a query value, a posted value and the clock never do.
+
+Three words name what a route says of the keys. A **seed** is a value a
+route puts into the operation's context: a fixed value or a default. A
+**prefill** is a value the form's elements start from that never enters
+the context: a value a link sends, or one the code building the form
+hands it. A **reference** is a seed whose whole value is a name in
+braces, `'{name}'` (it matches `^\{[A-Za-z_][A-Za-z0-9_]*\}$`), and
+whose value is the raw value of the route's path variable of that name.
+Any other value in braces is a literal, so a map's value written as
+JSON, `'{"format": "html"}'`, stays one. An operation parameter is
+none of the three: [the operation form](#the-operation-form) maps a
+variable of the path, or a plain default, onto it by name.
+
+The first case is an add page: a basic page whose title is set, or whose
+body starts with text, served by the generic `create`:
 
 ```yaml
 example.add_welcome:
@@ -1008,13 +1058,13 @@ after the operation has built its context, and applies them to it:
 - **`_data_surface_fixed`** narrows each key to its value:
   `withConstraint($path, 'Choice', ['choices' => [$value],
   'data_surface_fixed' => TRUE])`, the last option saying the Choice
-  fixes the key, which the build reads and takes off. A key fixed so
-  that holds a value (required, or always held by its storage) is drawn
-  as that value, an item that posts it, and both
-  documents state it as `const`, its label under `x-surface.fixed`. A
-  key that starts from another value starts from this one. Any other
-  value is refused by the key's name. An optional key may still be left
-  empty, so it stays a choice of the value or nothing.
+  fixes the key, which the build reads and takes off. A fixed key holds
+  its value: it starts from the value whatever default it declares, is
+  made required where it was optional, and is drawn as that value, an
+  item that posts it; both documents state it as `const`, its label
+  under `x-surface.fixed`, and list it as required. Any other value is
+  refused by the key's name, and a submission cannot leave the key
+  empty.
 - **`_data_surface_defaults`** gives each key the value it starts from in
   this build: `withDefaults([$path => $value])`. The form's element
   starts from it, both documents state it as `default`, and a create that
@@ -1026,7 +1076,10 @@ after the operation has built its context, and applies them to it:
 a string). Either way it is read through [the coercion
 table](semantics.md#the-coercion-table), so `copies: '3'` and `copies: 3`
 are the same integer, and held to the key's definition with typed data,
-its constraints included, before the build uses it.
+its constraints included, before the build uses it. A key that holds one
+value takes one: a list or a map given to it is refused before any
+constraint reads it, as a context's own default or fixed value is, and
+the message says "it holds one string, not a list or a map."
 
 **Reach.** A path reaches what [a site
 default](declaring-a-resource.md#a-sites-own-defaults) reaches: a key
@@ -1036,30 +1089,18 @@ the resource declares, a key inside a map it declares
 a key an alter mounts (`third_party_settings.<module>.<key>`). It does
 not reach a key inside variants, a collection's item or a map of keys
 from the site, a whole attached structure, a secret or a computed key,
-and a fixed value is one value, never a list or a map. Each is refused
-saying why.
+and a fixed value is one value, never a list or a map. Nor does it reach
+an identity key the context knows: which thing the page is about is the
+operation's to say, from its parameters, so a route and a parent context
+that fix or fill one are refused alike, before the context's values are
+written. Each is refused saying why.
 
-**Refusal.** The route builds the resource with its values once, for no
-account, when it is matched, and the build cache keeps that build for
-the next request. A path that names no key, a value its key
-refuses, or defaults on an operation that does not create, is refused
-the way a route parameter that names nothing is: the access check
-answers with a refusal whose reason names the route, the key and why,
-"The example.add_welcome route: The "create" operation sets "body.value"
-on entity.content:node.page to ..., which the key does not accept: ...",
-and the page is a 403, never an error.
-
-**Order.** The declared default, then the site's (`data_surface.defaults`),
-then the route's, each over the last.
-
-**What the page states.** The contract panel, and anything else built
-from the form's context, states the `const` and the `default`, since
-both come through the context the build read. The tool, the OpenAPI
-document and HTTP describe operations, not routes, and do not change.
-The React page, `/surface-react/{resource}/{operation}`, reads its
-operation from its own path and calls an API at another, so a route's
-two defaults do not reach it: a React page that fixes or fills keys
-would need the API to know which page it serves.
+**Order.** The declared default, then the site's
+(`data_surface.defaults`), then the operation's own `withDefaults()`,
+then the route's `_data_surface_defaults`, each over the last; a fixed
+value is what its key starts from over all of them. A prefill is laid
+over these as the element's starting input, the code's first and a
+link's over it, and what the visitor posts stands over both.
 
 **Not a gate.** The operation's permission and its access class gate the
 route as before. A fixed value is a convenience for that page: the
@@ -1068,13 +1109,402 @@ value the operation does. A value that must hold at every door is the
 operation's own constraint, or its access class's answer
 (why: [decision](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 
+#### A value from the route's path
+
+A seed may be a reference to a variable of the route's own path, so the
+URL says which value a key is fixed to or starts from. The inquiry's
+`department` is a key that refers to a term of the departments
+vocabulary (`'entity:taxonomy_term:departments'`):
+
+```yaml
+example.inquiry_department:
+  path: '/contact/{department}'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title_callback: '\Drupal\data_surface\Form\DataSurfaceOperationForm::title'
+    _data_surface_resource: 'example.inquiry'
+    _data_surface_operation: 'send'
+    _data_surface_fixed: { department: '{department}' }
+  requirements:
+    department: '\d+'
+  options:
+    parameters:
+      department:
+        type: 'entity:taxonomy_term'
+        bundle: [departments]
+```
+
+On `/contact/12` the department is drawn fixed to term 12 and stated
+`const: 12`, and a posted value other than 12 is refused. On
+`/contact/999` core's converter answers 404 before access is asked,
+since no term of the vocabulary has that id.
+
+- **The raw value.** A reference reads the variable as the URL carries
+  it, never the object a converter loads from it: the term arrives as
+  its id, read through the coercion table and held to the key as a
+  literal is.
+- **Bounded by the route.** The variable needs a requirement
+  (`requirements.<name>`) or a type a converter loads
+  (`options.parameters.<name>.type`), for which core writes the
+  converter it found under `options.parameters.<name>.converter`; a type
+  no converter loads leaves the raw text unbounded, and the route is
+  refused. The bound only has to exist, so `'.+'` passes: what holds the
+  value is the key, its type and its constraints, and a value the key
+  refuses names nothing on that page
+  ([below](#refusal-by-who-chose-the-value)).
+- **Named by the path.** A reference names a variable of the route's own
+  path. A name the path does not have is refused, so a misspelled
+  `'{deparment}'` is never a seed that sets nothing.
+- **A whole value.** `'Team {department}'` is text, not a reference: a
+  key reads one value of its type, and a fragment inside text could not
+  be held to it.
+- **An optional variable left out seeds nothing.** With `department: ~`
+  under defaults the route matches both `/contact` and `/contact/12`, and
+  the reference fixes the department only when the path names one. One
+  route then serves both URLs, so it takes the place of a route at
+  `/contact`, which would match the same path; its title must not read
+  the optional variable, which `_title` prints as written when the URL
+  leaves it out.
+
+A reference puts the visitor's value in the context, within the bound
+the route sets, on that page alone, and is no parameter: the subject a
+cosmetic layer is told is still the first of the operation's parameters
+the path carries. The PHP spelling of the same pin, for a department
+every door must see fixed, is a parameter,
+`send(?string $department = NULL)`, whose method fixes the key with
+`withConstraint()` when it is given: then the API, the tool and the
+React page carry the department too, and `const` is true at each. A
+route may not fix the key again over that method
+([below](#refusal-by-who-chose-the-value)).
+
+#### One route for every bundle
+
+A derived resource's id may hold a variable of the route's path, filled
+from its raw value before the resource is looked up, so one route serves
+every resource its path names:
+
+```yaml
+example.node_add:
+  path: '/example/node/{node_type}/add'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title_callback: '\Drupal\data_surface\Form\DataSurfaceOperationForm::title'
+    _data_surface_resource: 'entity.content:node.{node_type}'
+    _data_surface_operation: 'create'
+  options:
+    parameters:
+      node_type:
+        type: 'entity:node_type'
+```
+
+`/example/node/article/add` serves the create of
+`entity.content:node.article`, the id every other door already addresses
+that resource by. The variable is bounded as a reference's is, here by
+the `entity:node_type` converter, which loads its type where node is
+installed; a variable nothing bounds, or a `{name}` the path does not
+have, is refused. The converter answers 404 for a node type that does
+not exist. A node type the deriver lists no resource for, one with no
+stored default form display, fills an id no resource has: a page not
+found to any account, since there is no operation to ask a permission
+of. The context is the deriver's create, which knows the entity type and
+the bundle from its binding, so nothing in it is read from the request
+([below](#which-build-holds-a-routes-values)).
+
+`DataSurfaceOperationForm::title` titles the page with the operation's
+label, which a derived create already words for its bundle, "Add Basic
+page", and answers "Page not found" for an id the path fills that no
+resource has. It serves any route whose `_title` cannot say what it
+serves, such as one with an upcast placeholder, which `_title` would
+print as its raw id; for node, core's `NodeController::addPageTitle`
+serves too. The catalog lists the route under every derived resource
+whose id it fills, its path filled for each
+([The site's catalog](catalog-command.md#the-doors)).
+
+An edit route for every bundle cannot be written so: `/node/{node}/edit`
+names a node whose bundle is known only once it is loaded, and nothing
+answers which derived resource an entity belongs to. The bundle goes in
+the path, `/example/node/{node_type}/{id}/edit`, and the update refuses
+a node of another bundle as one that names nothing here
+([Content entities](entities.md#the-doors)).
+
+#### Keys a link or the code starts
+
+A route may list the keys a link may start, each from a query
+parameter:
+
+```yaml
+example.inquiry:
+  path: '/contact'
+  defaults:
+    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _title: 'Contact us'
+    _data_surface_resource: 'example.inquiry'
+    _data_surface_operation: 'send'
+    _data_surface_query: { subject: subject }
+```
+
+`/contact?subject=Pricing` draws the form with the subject starting as
+Pricing, and the visitor may change it. Each entry is a key path and the
+query parameter that starts it, a plain name of letters, digits, `_` and
+`-`, so a nested path takes a name of its own, `'body.value': body`: PHP
+renames `body.value` in a query string to `body_value` and reads `a[b]`
+as an array before the form reads either. A query parameter the route
+does not list is the page's own, and the form does not read it.
+
+- **The first draw only.** A prefill is laid over what is stored and
+  declared when the form is first drawn, before anything is submitted.
+  From then on input stands for itself: a rebuild, a validation round and
+  the submission read what was posted, and an element the post leaves
+  out takes what is stored or declared, never the prefill again, so a
+  select the visitor cleared stays cleared.
+- **Held to its key, dropped when refused.** Each value is read through
+  the coercion table and held to its key's definition, its constraints
+  included, as a seed is. A value the key refuses is left out, saying
+  nothing, and the element starts from what is stored or declared: a
+  crafted link cannot make the form show a value its key refuses, nor
+  turn the page into a 403 or a 404. A list or a map given to a key that
+  holds one value, `?subject[]=Pricing`, is such a value. An empty value,
+  `?subject=`, starts nothing, and a key the build fixes or locks keeps
+  what the build says.
+- **Never the context.** A prefill enters no build and no document. The
+  contract panel reads it as an answer in progress on the first draw, so
+  a key it narrows is shown narrowed, while the `default` the panel
+  states stays the declared or the route's; the tool, HTTP and the
+  OpenAPI document never see it. The page varies by each query parameter
+  the route lists, `url.query_args:<name>`, and by no other.
+- **Reach.** A seed's, with one more refusal: a map with keys of its own
+  is named key by key, never whole, since a value laid over it whole
+  would replace each key inside it the value leaves out, a stored one
+  among them; an identity key the context knows is refused as it is for
+  a seed. `third_party_settings.<module>.<key>` is reached; the
+  mount and a module's map in it are not.
+- **On any operation that draws values.** A link may start a key of an
+  update as well as of a create: what every visitor starts from is a
+  default, which only a create takes, while a prefill is one visitor's
+  input, judged on Save as any input is. A delete draws no values, so a
+  route serving one that lists query names is refused.
+
+A path no prefill reaches is the route written wrong: the form's first
+draw refuses it with a `\LogicException` naming the route and the key,
+whatever the link sends ("The example.inquiry route's
+"_data_surface_query": "code" on example.inquiry is a secret, which no
+form draws, so no prefill starts it."), and the catalog lists it before
+a visitor meets it. A query name no link can use fails the router
+rebuild: an empty one, one in braces (what a link sends is input, never
+a reference), one holding anything but letters, digits, `_` and `-`
+(PHP renames or splits it), one Drupal or this module reads for itself
+on a form page (`destination`, `token`, `_format`, `_wrapper_format`,
+`ajax_form`, `page`, `q`, `dryRun`), and one that is a variable or a
+default of the route, which a link built with `Url::fromRoute()` leaves
+out of its query.
+
+The code that builds the form may hand it values the same way, for a
+value only the request can give, such as today's date. The route keeps
+the two naming defaults, a `_controller` in place of `_form`, so the
+operation's access check still gates the page. A value of the URL that
+names nothing is then a 403 with no reason, not a 404: the access check
+lets such a URL through only to a controller it knows answers it with a
+page not found, the operation form as `_form` and a React page, and it
+cannot know what another controller does with the URL:
+
+```yaml
+example.report_add:
+  path: '/reports/add'
+  defaults:
+    _controller: '\Drupal\example\Controller\ReportController::add'
+    _title: 'Add a report'
+    _data_surface_resource: 'entity.content:node.report'
+    _data_surface_operation: 'create'
+```
+
+```php
+use Drupal\data_surface\Form\DataSurfaceOperationForm;
+
+public function add(): array {
+  return $this->formBuilder()->getForm(DataSurfaceOperationForm::class, [
+    'field_report_date' => ['value' => date('Y-m-d', $this->time->getRequestTime())],
+  ]);
+}
+```
+
+The values are in the resource's own shape, nested as a door sends them,
+and each is named by its key's path. They are held as a link's are and
+laid first, a link's over them, and a key no prefill reaches is the same
+`\LogicException`. The controller hands values, never a context: the
+route's access check and the form read the context through one reader,
+`OperationRoute`, so the two cannot disagree, and a date or an account
+in the context would key the build per day or per visitor and ride in
+the serialized form.
+
+#### Which build holds a route's values
+
+When a route that seeds is matched, its access check holds the seeds to
+the resource at once, by building it for no account, so a seed the
+resource refuses is refused before the page is drawn. Whether the build
+cache, `cache.data_surface_build`, keeps that build for the next request
+depends on what the context holds:
+
+- **Nothing read from the request.** Literal seeds and plain defaults,
+  on an operation handed no value of the path: the build is kept, tagged
+  with everything it read, one entry per seeded context and language, so
+  two routes seeding the same values on one operation share it. A route
+  serving every bundle is kept once per bundle: the path chooses the
+  resource, and the deriver's create knows its bundle from its binding.
+- **A value of the path.** An operation handed a value of the path, or a
+  reference read: the same build is held for this request alone
+  (`ResourcesInterface::holdDeclared()`), never read from the bin or
+  written to it, so the bin holds no entry per value a URL carries.
+
+A route that seeds nothing holds nothing when it is matched, and a
+prefill enters no build. Within a request the memo keeps the 32 builds
+asked for most recently, of either kind.
+
+#### Refusal, by who chose the value
+
+The route's access check asks in this order, and the first refusal is
+the answer:
+
+1. what the route alone shows to be written wrong, below, which reads
+   nothing of the URL;
+2. which resource and operation the route names, a `{name}` in the
+   resource's id filled from the path;
+3. the operation's permission, from those two ids alone;
+4. the context the route's parameters and seeds build;
+5. the access class, for that context.
+
+What it answers depends on who chose what is wrong:
+
+- **The route's author.** A route written wrong is refused with the
+  reason, and is never served. What the route alone shows is refused
+  when the router is rebuilt (`OperationRouteSubscriber`), with the
+  `\InvalidArgumentException` core throws for a reserved variable name
+  in a path: a `{name}` in the resource's id, or a reference, that names
+  no variable of the path or one nothing bounds; one path under both
+  `_data_surface_fixed` and `_data_surface_defaults`, since a fixed
+  value is also what its key starts from; a `_data_surface_query` that
+  is no map of key paths to query names, or names one no link can use;
+  and `_data_surface_fixed` on a React page
+  ([below](#what-the-page-states)). Such a refusal stops the rebuild for
+  the whole site, as core's own does: no route of any module is written
+  until the routing file is corrected, and the router serves the routes
+  of the last rebuild that finished. Each of these is asked again when
+  the route is matched, with the same words, for a route no rebuild saw.
+  The rest needs the operation or the resource built, and is refused
+  when the route is matched, a 403 that gives the reason: the shape of
+  `_data_surface_fixed` and `_data_surface_defaults`; a path that names
+  no key or that no seed reaches; a literal value its key refuses, "The
+  example.add_welcome route: The "create" operation sets "body.value" on
+  entity.content:node.page to ..., which the key does not accept: ...";
+  defaults on an operation that does not create; an identity key the
+  context knows, fixed or filled; a path the operation's own context
+  already narrows with a Choice, since the route's Choice would take its
+  place; a seed or a query entry on an operation that deletes; and a
+  plain default that nothing reads, that the operation refuses, or whose
+  value names nothing. What the route alone shows is refused before the
+  permission is asked, to any account, with the same words; past the
+  resource's id the permission is asked first, so an account it refuses
+  hears the permission's reason, whatever else the route gets wrong.
+- **The visitor.** A value of the URL that names nothing is a page not
+  found for an account the operation lets in, and tells no other account
+  anything. A converter that loads nothing answers core's 404 before
+  access is asked, to any account, as core's own routes do. A value no
+  converter saw reaches the access check, which asks the operation's
+  permission first: an account it refuses hears the permission's reason,
+  the same for every value. For an account it lets in (a `%key` in it
+  filled from the URL's parameters), a value names nothing when it is an
+  id no entity has, an entity the operation does not take as its own (a
+  node of another bundle), or a reference whose value its key refuses.
+  An operation method says so itself by throwing `NamesNothingException`
+  naming the parameter, as the content entity update does for a node of
+  another bundle; any other `\InvalidArgumentException` it throws is a
+  403 with its reason. In the request's own dispatch the access check
+  lets the request through, for this request alone, and the form answers
+  with a page not found, its exception carrying the reason, at a route
+  served by the operation form (`_form`, or a form extending it) or by a
+  React page (`ResourceReactPage::served()`); at a route any other
+  controller serves, it is refused with no reason, a 403, since the
+  check cannot know the controller reads what the value names; a thing
+  removed between the draw and the Save is a page not found on the Save
+  too. An id the path fills that no resource has is a page not found to
+  any account, since there is nothing to ask a permission of. Asked
+  about a link (`Url::access()`, a menu link, a local task, a
+  breadcrumb), each of these is refused with no reason, so no link to a
+  page not found is drawn. Only the value is the visitor's: a reference
+  written at a path where no value can go (a path that names no key, a
+  key out of reach, a secret, a computed key, a whole map, a known
+  identity key, a default on an update) is the route written wrong,
+  refused with the reason whatever the URL carries.
+- **The visitor, where the operation declares no permission.** Nothing
+  lets an account in before the value is read, so a value that names
+  nothing is refused to every account, for this request alone and with
+  no reason: that a value names nothing is told only to an account a
+  permission let in. A derived content entity operation is such an
+  operation, since entity access answers for it once the thing is loaded
+  ([Content entities](entities.md#the-doors)).
+- **Whoever wrote a link, or the code building the form.** A prefill
+  its key refuses is dropped, saying nothing
+  ([above](#keys-a-link-or-the-code-starts)), never a 403 or a 404. A
+  path no prefill reaches is the route or the code written wrong, the
+  first draw's `\LogicException`.
+
+#### What the page states
+
+On the form page, the contract panel and anything else built from the
+form's context state the route's seeds, since both come through the
+context the build read: a fixed key as `const`, its label under
+`x-surface.fixed`, and a filled key with `default`. A prefill is no
+seed, so no document states it. The tool, the OpenAPI document and HTTP
+describe operations, not routes, and do not change.
+
+A React page served at a module's own route takes a route's defaults and
+query prefills as starting values, and fixes nothing:
+
+```yaml
+example.card_app:
+  path: '/example/cards/app/{copies}'
+  defaults:
+    _controller: '\Drupal\data_surface_react\Controller\ResourceReactPage::served'
+    _title_callback: '\Drupal\data_surface_react\Controller\ResourceReactPage::servedTitle'
+    _data_surface_resource: 'example.card'
+    _data_surface_operation: 'create'
+    _data_surface_defaults: { title: 'Dear you', copies: '{copies}' }
+    _data_surface_query: { occasion: occasion }
+  requirements:
+    copies: '\d+'
+```
+
+The route names the resource and the operation as a form route does, and
+the same access check gates it. Beside what the generic page hands the
+app, this one hands it `seeds.defaults`, each key the route's defaults
+start, by its key's path and valued as the build holds it (`'{copies}'`
+at `/example/cards/app/4` starts the copies from the number 4), and
+`prefill`, each value a link sends, held to its key as the form holds it
+and dropped when refused; a key the build fixes or locks is left out of
+both. The app lays the stored values, then the defaults, then the
+prefill, each over the last, once, as it loads, and narrows for a
+started value something depends on as it narrows for a change. Nothing
+of the route reaches a document: the app's documents are the
+operation's, fetched from the API, which knows no route, so they state
+the operation's `default` and none of the route's. Its write goes to the
+operation's own API path, which holds a value to the operation's
+constraints alone, so a key the page stated fixed would take any value
+there, and `_data_surface_fixed` on such a route fails the router
+rebuild, naming the route. The page varies by each query parameter the
+route lists, as the form does, and `servedTitle()` titles it with the
+operation's label. The generic page,
+`/surface-react/{resource}/{operation}`, carries no seeds, and answers a
+URL that names nothing as the form's route does
+([React](../modules/data_surface_react/README.md#a-page-at-a-modules-route)).
+
 ### Access, twice
 
 The route's requirement, `_data_surface_operation_access`, is the
-operation's permission and then the resource's access class. A route
-whose defaults name a resource and an operation has it without saying it
-(`OperationRouteSubscriber` adds it); a routing file may still say
-`_data_surface_operation_access: 'TRUE'`. The form
+operation's permission and then the resource's access class, the
+permission asked from the two ids before anything the URL carries is
+read ([Refusal, by who chose the value](#refusal-by-who-chose-the-value)).
+A route whose defaults name a resource and an operation has it without
+saying it (`OperationRouteSubscriber` adds it); a routing file may still
+say `_data_surface_operation_access: 'TRUE'`. The form
 asks the same answer again on its way in, as the floor under the route
 for a caller that reached the form another way, and hands it to the
 pipeline on its way out. The second is the one that matters, for the
@@ -1098,8 +1528,11 @@ the whole of what a form class is still for:
 
 A route names one, in `_data_surface_cosmetics`. Each method is told the
 operation id, as `$operation`, and, as `$subject`, the raw value of the
-operation's first route parameter (the string in the path, before
-upcasting), or `NULL` when the operation takes none.
+first of the operation's parameters that is a variable of the route's
+path (the string in the path, before upcasting), or `NULL` when the path
+carries none. A parameter a plain default pins is never the subject: it
+is the same on every URL of the route, so it says nothing of which thing
+the page is about.
 
 Grouping, order, placeholders and help are not a cosmetic layer's: they
 are declared on the keys ([Arranging the keys](#arranging-the-keys)),

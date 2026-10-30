@@ -638,6 +638,11 @@ One page can start a key from a value of its own: a route's
 `_data_surface_defaults`, an operation context's `withDefaults()`, is
 written over the site's for that page alone, with the same reach and the
 same refusals ([A route that fixes or fills keys](forms.md#a-route-that-fixes-or-fills-keys)).
+A value a link sends for a key its route lists under
+`_data_surface_query`, or one the code building the form hands it, is
+no default: it is what the element starts from on that page's first
+draw, and no document states it
+([Keys a link or the code starts](forms.md#keys-a-link-or-the-code-starts)).
 
 ## Locking
 

@@ -17,6 +17,7 @@ use Drupal\data_surface\Resource\ResourceCallable;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Resource\KnowsDerivativeListTagsInterface;
 use Drupal\data_surface\Resource\ResourceDeriverInterface;
+use Drupal\data_surface\ResourceBuild\NamesNothingException;
 use Drupal\data_surface_entity\Access\ContentEntityAccess;
 use Drupal\data_surface_entity\FieldItemDerivation;
 use Drupal\data_surface_entity\Structure\Attribute\FieldItemStructure;
@@ -217,19 +218,23 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    * @return \Drupal\data_surface\Resource\OperationContext
    *   A context knowing which entity.
    *
+   * @throws \Drupal\data_surface\ResourceBuild\NamesNothingException
+   *   When the entity is of another type or bundle: it is no thing of this
+   *   resource, so a URL naming it names nothing here.
    * @throws \InvalidArgumentException
-   *   When the entity is not one of the bundle.
+   *   When what it was handed is no content entity.
    */
   public static function update(array $arguments, string $entity_type_id, string $bundle, string $id_type = 'string'): OperationContext {
     $entity = $arguments['id'];
     if (!$entity instanceof ContentEntityInterface || $entity->getEntityTypeId() !== $entity_type_id || $entity->bundle() !== $bundle) {
-      throw new \InvalidArgumentException(sprintf(
+      $message = sprintf(
         'The update operation of entity.content:%s.%s takes a %s of the %s bundle.',
         $entity_type_id,
         $bundle,
         $entity_type_id,
         $bundle,
-      ));
+      );
+      throw $entity instanceof ContentEntityInterface ? new NamesNothingException($message, 'id') : new \InvalidArgumentException($message);
     }
     return new OperationContext('update', known: [
       'entity_type' => $entity_type_id,

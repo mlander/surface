@@ -463,6 +463,51 @@ final class Declaring {
   }
 
   /**
+   * Refuses a context that fixes or fills an identity key it knows.
+   *
+   * Each identity key the context knows is set as that key's default and
+   * locked (applyContext()): which thing this is, is the operation's to
+   * say, from its parameters. A fixed value or a default on the same key
+   * would say it a second time, and nothing would refuse the two
+   * disagreeing, so a route and a parent are refused alike. Asked before
+   * either is written, so the refusal is this one whatever the value.
+   *
+   * Decision: see
+   * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   What is being built.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   The context it is built in.
+   * @param array<int, array<string, mixed>> $ancestry
+   *   The parents it is built inside, outermost first, for messages.
+   *
+   * @throws \LogicException
+   *   When the context fixes or fills an identity key it knows.
+   */
+  public function assertKnownIdentityKept(ResourceDefinition $definition, OperationContext $context, array $ancestry): void {
+    $constraints = $context->constraints();
+    $defaults = $context->defaults();
+    foreach ($definition->identity as $key) {
+      if (!array_key_exists($key, $context->known)) {
+        continue;
+      }
+      $fixes = array_filter($constraints[$key] ?? [], static fn (mixed $options, string|int $name): bool => static::fixes((string) $name, $options), ARRAY_FILTER_USE_BOTH) !== [];
+      if (!$fixes && !array_key_exists($key, $defaults)) {
+        continue;
+      }
+      $where = static::contextWhere($definition, $context, $ancestry, $fixes ? 'fixes' : 'sets');
+      throw new \LogicException(sprintf(
+        '%s %s "%s" on %s, an identity key the context knows: identity is the operation\'s to say, from its parameters, so neither a route nor a parent may fix or fill it.',
+        $where['source'],
+        $where['verb'],
+        $where['at'] . $key,
+        $where['resource'],
+      ));
+    }
+  }
+
+  /**
    * Writes the defaults the context carries over the site's and the declared.
    *
    * Each is what its key starts from in this build: read through the
@@ -582,10 +627,10 @@ final class Declaring {
    * (KeyPaths): a path into a structure attached at a fixed key is the
    * child's, handed to its context (handDown()). A Choice of one value
    * with the FIXED option fixes its key: the value is read through the
-   * coercion table and held
-   * to the key first, the key is drawn as that value and stated `const`
-   * wherever it holds a value, and a key that starts from another value
-   * starts from it.
+   * coercion table and held to the key first, and the key holds it. It
+   * starts from the value, whatever default it declares, and must hold
+   * one, though it may hold nothing where nothing fixes it, so it is drawn
+   * as the value and stated `const`.
    *
    * @param \Drupal\data_surface\ResourceBuild\Build $build
    *   The build: the builder holding the shape, the resource or
@@ -661,9 +706,19 @@ final class Declaring {
       }
       Narrowing::assertNarrows($key, sprintf('the "%s" operation', $context->id), $before, $target);
       if ($fixed !== []) {
+        // A fixed key holds its value: it starts from it, whether or not it
+        // declares a default, and may not be left empty, so a key that may
+        // hold nothing is made to hold one, and is drawn as the value and
+        // stated `const` and required as a key that must hold one is.
         DefinitionMetadata::setFixed($target);
+        if (!$target->isRequired()) {
+          if (!method_exists($target, 'setRequired')) {
+            throw new \LogicException(sprintf('The "%s" operation fixes "%s", a key that cannot be made to hold a value.', $context->id, $key));
+          }
+          $target->setRequired(TRUE);
+        }
         $starts = DefinitionMetadata::hasDefaultValue($target) ? DefinitionMetadata::getDefaultValue($target) : NULL;
-        if ($starts !== NULL && $starts !== $fixed[0]) {
+        if ($starts !== $fixed[0]) {
           $this->keyPaths()->setDefault($target, $ancestors, $fixed[0]);
         }
       }

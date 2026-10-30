@@ -10,14 +10,18 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\ResourceBuild\Declaring;
+use Drupal\data_surface\ResourceBuild\NamesNothingException;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
+use Drupal\data_surface\ResourceBuild\Resources;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_route_test\Storage\CardStorage;
+use Drupal\Tests\data_surface\Kernel\Fixture\RefusedRoutes;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * A route fixes or fills what the operation it serves asks for.
@@ -29,6 +33,14 @@ use Symfony\Component\HttpFoundation\Request;
  * site default reaches: a key of the card's, a key inside the map it
  * declares, a key of the structure it attaches.
  *
+ * A route's value may also come from its own path, by a reference, and a
+ * value of the path the key refuses names nothing; a plain default pins
+ * an operation parameter; and what a route may not say is refused as the
+ * route's: a plain default nothing reads, a fixed identity key, a key the
+ * operation narrows, values on a delete, one key fixed and filled, a
+ * query map no link can use. A build holding what the request read is
+ * never kept for the next one.
+ *
  * @see docs/forms.md#a-route-that-fixes-or-fills-keys
  * @see docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for
  */
@@ -36,6 +48,7 @@ use Symfony\Component\HttpFoundation\Request;
 #[RunTestsInSeparateProcesses]
 class RouteValuesTest extends DataSurfaceKernelTestBase {
 
+  use OperationRouteTrait;
   use UserCreationTrait;
 
   /**
@@ -100,28 +113,15 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Reads the operation the route on the stack serves.
+   * Puts one of the routes no routing file can carry on the stack.
    *
-   * @return \Drupal\data_surface\ResourceBuild\OperationRoute
-   *   The operation and its context.
+   * @param string $name
+   *   The route, less the module's prefix (RefusedRoutes).
    */
-  protected function served(): OperationRoute {
-    return OperationRoute::fromRouteMatch(
-      $this->container->get('current_route_match'),
-      $this->container->get('data_surface.resource_registry'),
-      $this->container->get('data_surface.operation_arguments'),
-      $this->resources(),
-    );
-  }
-
-  /**
-   * Builds the generic form as the route on the stack.
-   *
-   * @return array
-   *   The built form's data surface container.
-   */
-  protected function surfaceForm(): array {
-    return $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class)[DataSurfaceOperationForm::SURFACE_KEY];
+  protected function serveRefused(string $name): void {
+    $name = 'data_surface_route_test.' . $name;
+    [$route, $raw] = RefusedRoutes::all()[$name];
+    $this->serveBuilt($name, $route, $raw);
   }
 
   /**
@@ -197,27 +197,6 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Asserts the route on the stack is refused, saying why.
-   *
-   * @param string $message
-   *   The refusal.
-   */
-  protected function assertRouteRefused(string $message): void {
-    try {
-      $this->served();
-      $this->fail('The route was not refused.');
-    }
-    catch (\InvalidArgumentException $e) {
-      $this->assertSame($message, $e->getMessage());
-    }
-    // The access check answers it as it answers a parameter that names
-    // nothing: a refusal saying why, never an error.
-    $access = $this->container->get('data_surface.operation_access')->access($this->container->get('current_route_match'), $this->container->get('current_user'));
-    $this->assertTrue($access->isForbidden());
-    $this->assertSame($message, $access->getReason());
-  }
-
-  /**
    * A fixed key is drawn as its value and stated `const`, at every depth.
    */
   public function testFixedKeysAreDrawnFixedAndStatedConst(): void {
@@ -287,6 +266,47 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
   }
 
   /**
+   * A fixed key holds its value, a key that may otherwise hold nothing too.
+   *
+   * The card's occasion may be left out. Fixed, it starts from the fixed
+   * value, is drawn as it and stated `const` and required, and a card
+   * added at the page stores it, holds no other and cannot leave it empty.
+   */
+  public function testFixedOptionalKeyHoldsItsValue(): void {
+    $this->serveRoute('add');
+    $this->assertSame('select', $this->surfaceForm()['occasion']['#type']);
+    $this->assertNotContains('occasion', $this->fullSchema()['required'] ?? []);
+
+    $this->serveRoute('add_thanks');
+    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class)[DataSurfaceOperationForm::SURFACE_KEY];
+    $this->assertSame('item', $form['occasion']['#type']);
+    $this->assertSame('thanks', $form['occasion']['#value']);
+    $this->assertSame('thanks', $form['occasion']['#plain_text']);
+    // The contract panel beside the form states it so, in both documents.
+    foreach (['contract', 'full'] as $document) {
+      $schema = json_decode($form[DataSurfaceOperationForm::PANEL_KEY][$document]['json']['#code'], TRUE);
+      $occasion = static::property($schema, 'occasion');
+      $this->assertSame('thanks', $occasion['const'], $document);
+      $this->assertSame('thanks', $occasion['default'], $document);
+      $this->assertSame('thanks', $occasion['x-surface']['fixed'], $document);
+      $this->assertContains('occasion', $schema['required'], $document);
+    }
+
+    // Left out, the fixed value is stored; another value is refused.
+    $this->assertSame([], $this->submitForm(['card' => 'ten']));
+    $this->assertSame('thanks', \Drupal::state()->get(CardStorage::key('ten'))['occasion']);
+    $this->assertArrayHasKey('surface][occasion', $this->submitForm(['card' => 'eleven', 'occasion' => 'birthday']));
+    $this->assertNull(\Drupal::state()->get(CardStorage::key('eleven')));
+    // Through the pipeline, as any door sends it: left out, the fixed
+    // value; emptied, refused as a key that must hold a value.
+    $context = $this->served()->context;
+    $this->assertSame([], $this->submitThroughPipeline($context, ['card' => 'twelve']));
+    $this->assertSame('thanks', \Drupal::state()->get(CardStorage::key('twelve'))['occasion']);
+    $emptied = $this->submitThroughPipeline($context, ['card' => 'thirteen', 'occasion' => NULL]);
+    $this->assertSame(['occasion'], array_keys($emptied));
+  }
+
+  /**
    * A filled key starts from the route's value, and is stored if left.
    */
   public function testDefaultsAreWhatKeysStartFrom(): void {
@@ -347,6 +367,12 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
     $this->assertRefused(
       'The "create" operation sets "title" on route_test.card to "This title is longer than forty characters by far", which the key does not accept: This value is too long. It should have 40 characters or less.',
       $create->withDefaults(['title' => 'This title is longer than forty characters by far']),
+    );
+    // A list for a key that holds one value, refused before the key's
+    // length is read, which would throw for it.
+    $this->assertRefused(
+      'The "create" operation sets "title" on route_test.card to ["Hello","again"], which the key does not accept: it holds one string, not a list or a map.',
+      $create->withDefaults(['title' => ['Hello', 'again']]),
     );
     $this->assertRefused(
       'The "create" operation: route_test.card has no key "greeting.font". A default names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).',
@@ -442,6 +468,251 @@ class RouteValuesTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], (new OperationContext())->defaults());
     $this->expectException(\InvalidArgumentException::class);
     $context->withDefaults(['' => 1]);
+  }
+
+  /**
+   * A reference fixes a key to the path's value, drawn and stated so.
+   */
+  public function testReferenceFixesTheKeyToThePathsValue(): void {
+    $this->visit('/surface-test/card/add/cream');
+    $form = $this->surfaceForm();
+    $this->assertSame('item', $form['envelope']['color']['#type']);
+    $this->assertSame('cream', $form['envelope']['color']['#value']);
+    $color = static::property($this->fullSchema(), 'envelope', 'color');
+    $this->assertSame('cream', $color['const']);
+    $this->assertSame('cream', $color['default']);
+
+    // Another value of the path, another page.
+    $this->visit('/surface-test/card/add/white');
+    $this->assertSame('white', static::property($this->fullSchema(), 'envelope', 'color')['const']);
+  }
+
+  /**
+   * A reference fills a key from the path, read by the coercion table.
+   */
+  public function testReferenceFillsTheKeyFromThePath(): void {
+    $this->visit('/surface-test/card/add-copies/4');
+    $this->assertSame(4, $this->surfaceForm()['copies']['#default_value']);
+    $this->assertSame(4, static::property($this->fullSchema(), 'copies')['default']);
+    $this->assertSame([], $this->submitThroughPipeline($this->served()->context, ['card' => 'eight']));
+    $this->assertSame(4, \Drupal::state()->get(CardStorage::key('eight'))['copies']);
+  }
+
+  /**
+   * An optional placeholder the URL leaves out seeds nothing.
+   */
+  public function testAbsentOptionalReferenceSeedsNothing(): void {
+    $this->visit('/surface-test/card/add-optional');
+    $served = $this->served();
+    $this->assertSame([], $served->context->constraints());
+    $this->assertSame('select', $this->surfaceForm()['envelope']['color']['#type']);
+
+    $this->visit('/surface-test/card/add-optional/cream');
+    $this->assertSame('cream', $this->surfaceForm()['envelope']['color']['#value']);
+  }
+
+  /**
+   * A value of the path the key refuses names nothing: the page is not found.
+   */
+  public function testPathValueTheKeyRefusesNamesNothing(): void {
+    $message = 'The data_surface_route_test.add_colored route reads "{color}" from its path, and the value names nothing here: The "create" operation fixes "envelope.color" on route_test.card to "red", which the key does not accept: The value you selected is not a valid choice.';
+    $this->visit('/surface-test/card/add/red');
+    try {
+      $this->served();
+      $this->fail('A color the envelope does not come in was served.');
+    }
+    catch (NamesNothingException $e) {
+      $this->assertSame($message, $e->getMessage());
+      $this->assertSame('color', $e->parameter);
+    }
+    // The form's page is not found.
+    try {
+      $this->surfaceForm();
+      $this->fail('The form was built.');
+    }
+    catch (NotFoundHttpException $e) {
+      $this->assertSame($message, $e->getMessage());
+    }
+  }
+
+  /**
+   * A reference the route cannot read, or puts where no key is, is the route's.
+   */
+  public function testReferenceWrittenWrongIsTheRoutes(): void {
+    $this->serveRefused('add_misspelled');
+    $this->assertRouteRefused('The data_surface_route_test.add_misspelled route fixes "envelope.color" to "{hue}", which names no variable of its path /surface-test/card/add-misspelled/{color}: a reference reads a value of the route\'s own path.');
+
+    // Where it puts the value is wrong whatever the value, so a value
+    // the key would refuse is no page not found either.
+    $refusal = 'The data_surface_route_test.add_misplaced route: The "create" operation: route_test.card has no key "envelope.hue". A fixed value names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).';
+    foreach (['cream', 'red'] as $color) {
+      $this->visit('/surface-test/card/add-misplaced/' . $color);
+      $this->assertRouteRefused($refusal);
+    }
+  }
+
+  /**
+   * A plain default is the operation's parameter; the path's is the subject.
+   */
+  public function testPlainDefaultPinsTheOperationsParameter(): void {
+    $this->visit('/surface-test/card/send-friends');
+    $served = $this->served();
+    $this->assertSame('send', $served->operation->id);
+    $this->assertSame(['to' => 'friends'], $served->context->known);
+    // A pin is no subject: the page is about no one thing.
+    $this->assertNull($served->subject);
+    $this->assertSame('Dear friends', $this->surfaceForm()['title']['#default_value']);
+
+    // The path's value is the subject, though the pin is the first
+    // parameter.
+    $this->visit('/surface-test/card/send-from/grandma');
+    $served = $this->served();
+    $this->assertSame(['to' => 'friends', 'from' => 'grandma'], $served->context->known);
+    $this->assertSame('grandma', $served->subject);
+
+    \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored']);
+    $this->visit('/surface-test/card/six/in-cream');
+    $this->assertSame('six', $this->served()->subject);
+  }
+
+  /**
+   * A plain default nothing the route serves reads is refused, naming it.
+   */
+  public function testPlainDefaultNothingReadsIsRefused(): void {
+    $this->visit('/surface-test/card/send-misnamed');
+    $this->assertRouteRefused('The data_surface_route_test.send_misnamed route has the plain default "too", which nothing it serves reads: the "send" operation takes $to, $from. A default with no leading underscore is a route parameter, which the operation reads by its name.');
+  }
+
+  /**
+   * An identity key the context knows is the operation's alone to say.
+   */
+  public function testKnownIdentityKeyIsNeitherFixedNorFilled(): void {
+    \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored']);
+    $this->visit('/surface-test/card/six/rename');
+    $this->assertRouteRefused('The data_surface_route_test.edit_renamed route: The "update" operation fixes "card" on route_test.card, an identity key the context knows: identity is the operation\'s to say, from its parameters, so neither a route nor a parent may fix or fill it.');
+
+    // The same refusal for a context any parent hands, at the build.
+    $update = $this->resources()->operation(self::CARD, 'update', ['card' => 'six']);
+    $this->assertRefused(
+      'The "update" operation fixes "card" on route_test.card, an identity key the context knows: identity is the operation\'s to say, from its parameters, so neither a route nor a parent may fix or fill it.',
+      $update->withConstraint('card', 'Choice', ['choices' => ['other'], Declaring::FIXED => TRUE]),
+    );
+    $this->assertRefused(
+      'The "create" operation sets "card" on route_test.card, an identity key the context knows: identity is the operation\'s to say, from its parameters, so neither a route nor a parent may fix or fill it.',
+      (new OperationContext('create', creates: TRUE, known: ['card' => 'seven']))->withDefaults(['card' => 'eight']),
+    );
+  }
+
+  /**
+   * A key the operation narrows with a Choice is the operation's to fix.
+   */
+  public function testRouteMayNotFixWhatTheOperationNarrows(): void {
+    $this->visit('/surface-test/card/send-cream');
+    $this->assertRouteRefused('The data_surface_route_test.send_cream route fixes "envelope.color", which the "send" operation already narrows with a Choice of its own: the route\'s would take its place. A key the operation narrows to a list is the operation\'s to fix.');
+  }
+
+  /**
+   * A delete takes no values, so a route says nothing of its keys.
+   *
+   * Neither a seed nor a key a link may start: the delete page draws no
+   * key to start.
+   */
+  public function testDeleteTakesNoRouteValues(): void {
+    \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored']);
+    $this->visit('/surface-test/card/six/delete');
+    $this->assertRouteRefused('The data_surface_route_test.delete_titled route carries "_data_surface_fixed", and the "delete" operation it serves deletes: a delete takes no values, so there is no key to fix, fill or start.');
+
+    $queried = clone $this->container->get('router.route_provider')->getRouteByName('data_surface_route_test.delete_titled');
+    $queried->setDefaults([OperationRoute::QUERY => ['title' => 'title']] + array_diff_key($queried->getDefaults(), [OperationRoute::FIXED => TRUE]));
+    $this->serveBuilt('data_surface_route_test.delete_queried', $queried, ['card' => 'six']);
+    $this->assertRouteRefused('The data_surface_route_test.delete_queried route carries "_data_surface_query", and the "delete" operation it serves deletes: a delete takes no values, so there is no key to fix, fill or start.');
+  }
+
+  /**
+   * One key is fixed or filled, not both.
+   */
+  public function testOneKeyIsFixedOrFilled(): void {
+    $this->serveRefused('add_twice');
+    $this->assertRouteRefused('The data_surface_route_test.add_twice route both fixes and fills "title": a fixed value is also what its key starts from, so name it under "_data_surface_fixed" alone.');
+  }
+
+  /**
+   * A route lists the keys a link may start, refusing names no link can use.
+   */
+  public function testTheQueryMapNamesWhatLinksMayStart(): void {
+    $this->visit('/surface-test/card/add-subject');
+    $this->assertSame(['title' => 'subject', 'greeting.value' => 'greeting'], $this->served()->query);
+    // Read off the route, never the context.
+    $this->assertSame([], $this->served()->context->defaults());
+
+    foreach ([
+      'query_braced' => 'The data_surface_route_test.query_braced route starts "title" from the query parameter "{subject}": a query name is a plain name, never a reference, since what a link sends is input. Name another query parameter.',
+      'query_empty' => 'The data_surface_route_test.query_empty route\'s "_data_surface_query" is a map of key paths to query names, as { subject: subject }.',
+      'query_reserved' => 'The data_surface_route_test.query_reserved route starts "title" from the query parameter "destination": Drupal or this module reads that parameter for itself on a form page. Name another query parameter.',
+      'query_variable' => 'The data_surface_route_test.query_variable route starts "title" from the query parameter "color": that is a variable of the route\'s path too, and a link built for the route leaves it out of the query. Name another query parameter.',
+      'query_default' => 'The data_surface_route_test.query_default route starts "title" from the query parameter "to": that is a default of the route too, and a link built for the route leaves it out of the query. Name another query parameter.',
+    ] as $route => $refusal) {
+      // The router's rebuild refuses each, so each is matched by hand.
+      $this->serveRefused($route);
+      $this->assertRouteRefused($refusal);
+    }
+  }
+
+  /**
+   * A build holding what the request read is never kept for the next one.
+   *
+   * A route's held build is kept in the build cache when its context is the
+   * same on every request: the literal values, a parameter a plain default
+   * pins. A value of the path, handed to the operation or read by a
+   * reference, would be one more entry per value a URL carries.
+   */
+  public function testWhatThePathSuppliedIsNeverKept(): void {
+    $bin = $this->container->get('cache.data_surface_build');
+    $kept = function () use ($bin): bool {
+      $served = $this->served();
+      $resources = $this->resources();
+      assert($resources instanceof Resources);
+      $key = (new \ReflectionMethod(Resources::class, 'memoKey'))->invoke($resources, $served->resource, $served->context, TRUE, TRUE);
+      $cid = (new \ReflectionMethod(Resources::class, 'cacheId'))->invoke($resources, $served->resource, $key);
+      $this->assertIsString($cid);
+      return $bin->get($cid) !== FALSE;
+    };
+    $bin->deleteAll();
+    \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored']);
+
+    $this->serveRoute('add_welcome');
+    $this->assertTrue($kept(), 'A literal create route is kept.');
+    $this->visit('/surface-test/card/send-friends');
+    $this->assertTrue($kept(), 'A plain default is the same on every request, and kept.');
+    $this->visit('/surface-test/card/add/cream');
+    $this->assertFalse($kept(), 'A reference read from the path is not kept.');
+    $this->visit('/surface-test/card/six/in-cream');
+    $this->assertFalse($kept(), 'A route handing the operation a value of its path is not kept.');
+  }
+
+  /**
+   * A held build is the request's: asked again, the same, and never kept.
+   */
+  public function testHeldBuildIsTheRequestsAlone(): void {
+    $resources = $this->resources();
+    assert($resources instanceof Resources);
+    $bin = $this->container->get('cache.data_surface_build');
+    $bin->deleteAll();
+    $context = $resources->operation(self::CARD, 'update', ['card' => 'nine'])
+      ->withConstraint('envelope.color', 'Choice', ['choices' => ['cream'], Declaring::FIXED => TRUE]);
+    $held = $resources->holdDeclared(self::CARD, $context);
+    $counts = $resources->buildCounts();
+    $this->assertSame($held, $resources->holdDeclared(self::CARD, $context));
+    $after = $resources->buildCounts();
+    $this->assertSame($counts['built'], $after['built']);
+    $this->assertSame($counts['reused'] + 1, $after['reused']);
+    $this->assertSame($counts['cached'], $after['cached'], 'The memo answered: the bin was not read.');
+    $key = (new \ReflectionMethod(Resources::class, 'memoKey'))->invoke($resources, self::CARD, $context, TRUE, TRUE);
+    $this->assertFalse($bin->get((new \ReflectionMethod(Resources::class, 'cacheId'))->invoke($resources, self::CARD, $key)));
+    // The same build, declared, is kept.
+    $resources->forgetBuilds();
+    $resources->buildDeclared(self::CARD, $context);
+    $this->assertNotFalse($bin->get((new \ReflectionMethod(Resources::class, 'cacheId'))->invoke($resources, self::CARD, $key)));
   }
 
 }

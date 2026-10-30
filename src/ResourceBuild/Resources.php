@@ -98,15 +98,17 @@ use Drupal\data_surface\Storage\ConfigObjectStorage;
  * The engine's builder is the whole state of a build. A build for no
  * account (buildDeclared()) is kept across requests in the build cache,
  * under the tags of everything it was read from (keep()); what that state
- * is, a shape or an alter says with addCacheableDependency(). Two things
- * are kept within a request: a static access answer, an access class's
- * or an alter's, which by its own cacheability depends on nothing but the
- * account, asked once per context and account kind (the account's roles
- * and permissions) and reused; and each sealed build asked for at the top,
- * by resource, context, kind and account kind, reused while none of the
- * tags it read is invalidated, never when it expires or varies by more
- * than the account (memo()). Both are bounded, so a worker that outlives a
- * request keeps only the latest.
+ * is, a shape or an alter says with addCacheableDependency(). The same
+ * build of a context holding what a request read (holdDeclared()) is not
+ * written there, so the cache holds no entry per value a URL carried.
+ * Two things are kept within a request: a static access answer, an
+ * access class's or an alter's, which by its own cacheability depends on
+ * nothing but the account, asked once per context and account kind (the
+ * account's roles and permissions) and reused; and each sealed build
+ * asked for at the top, by resource, context, kind and account kind,
+ * reused while none of the tags it read is invalidated, never when it
+ * expires or varies by more than the account (memo()). Both are bounded,
+ * so a worker that outlives a request keeps only the latest.
  *
  * Each phase is a class of its own, which this one constructs and calls in
  * order; it keeps the order, the memo and the build cache:
@@ -360,6 +362,15 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function holdDeclared(string $resource, OperationContext $context): DataSurfaceInterface {
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    return $this->buildAs($resource, $context, TRUE, TRUE, keep: FALSE);
+  }
+
+  /**
    * Builds what a resource declares, for its config schema to be written from.
    *
    * What buildDeclared() builds, without holding the resource to the
@@ -401,11 +412,14 @@ final class Resources implements ResourcesInterface {
    *   TRUE to set a runtime answer aside (buildStatic()).
    * @param bool $declaring
    *   TRUE to set every answer aside, asking none (buildDeclared()).
+   * @param bool $keep
+   *   FALSE to keep a build for no account within this request alone, the
+   *   build cache neither read nor written (holdDeclared()).
    *
    * @return \Drupal\data_surface\DataSurfaceInterface
    *   The sealed data surface.
    */
-  protected function buildAs(string $resource, OperationContext $context, bool $alone, bool $declaring): DataSurfaceInterface {
+  protected function buildAs(string $resource, OperationContext $context, bool $alone, bool $declaring, bool $keep = TRUE): DataSurfaceInterface {
     if ($context->id === '') {
       throw new \LogicException(sprintf(
         'A context with no id was handed to build %s. An #[Operation] method may leave its id out for the attribute\'s to be stamped on it, so ask for the operation through operation() rather than calling its method.',
@@ -422,10 +436,11 @@ final class Resources implements ResourcesInterface {
       return $kept['surface'];
     }
     // A build for no account is the same in every request until a tag it
-    // was read from is invalidated: kept in the build cache.
+    // was read from is invalidated: kept in the build cache, unless its
+    // context holds what this request read.
     // Decision: see
     // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
-    $cid = $declaring && $key !== NULL ? $this->cacheId($resource, $key) : NULL;
+    $cid = $declaring && $keep && $key !== NULL ? $this->cacheId($resource, $key) : NULL;
     $built = $cid === NULL ? NULL : $this->cached($cid);
     if ($built !== NULL) {
       $this->buildCounts['cached']++;
@@ -918,10 +933,12 @@ final class Resources implements ResourcesInterface {
     // key is locked to what the context knows.
     // Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
     $childDefaults = $this->declaring->writeSiteDefaults($builder, $definition, $inputs, $top, $siteDefaults);
-    // Then the context's, over both, and what it narrows and fixes.
+    // Then the context's, over both, and what it narrows and fixes; never
+    // on an identity key it knows, which is the operation's to say.
     // Decision: see
     // docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
     $kinds = KeyPaths::kinds($inputs);
+    $this->declaring->assertKnownIdentityKept($definition, $context, $ancestry);
     $this->declaring->writeContextDefaults($builder, $definition, $context, $kinds, $ancestry);
     $build = new Build($builder, $definition, $context, $ancestry, $input_keys, $outputs->keys(), $attached, $lists, $inputs->ports());
     $this->declaring->applyContext($build, $kinds);
