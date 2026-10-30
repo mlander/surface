@@ -217,10 +217,8 @@ Read it top to bottom:
   tool and the schema's description, and the permission is the one the
   route and the tool both check (step 5).
 - **The constants** name each key once, and every later mention is the
-  constant, `self::SENDER_NAME`, so an editor can rename a key or find
-  its uses; the one place a name is still spelled as a string is the
-  parameter of a method that narrows one key by another's value, which
-  is matched to the key by name ([Your second resource](second-resource.md)).
+  constant, `self::SENDER_NAME`, so a key can be renamed or its uses
+  found ([Key names](declaring-a-resource.md#key-names)).
 - **`defineInputs()`** declares the keys. `add()` takes the key, its type
   (core's typed data types: `string`, `email`, `integer`, `boolean`,
   ...), its label and, optionally, a `default:`, and returns core's own
@@ -232,27 +230,14 @@ Read it top to bottom:
   description.
 - **What a key allows** is a constraint. `Length` becomes a maximum
   length, `Range` a number field bounded at 1 and 10000, and
-  `LabeledChoice` a select whose options are its labels. The select
-  comes from the list: a key whose constraint lists its allowed values
-  is drawn as a select, and stays one if a later rule empties the list,
-  offering only its empty option, since a text field there would invite
-  a value the constraint refuses. The form, the tool and the schema all
-  read the same constraint, and a value outside it is refused with the
-  constraint's message, wherever it came from.
-- **Everything is static.** The class is never instantiated, so there is
-  nothing to inject a translation service into: labels call the global
-  `t()` with a literal string. An attribute argument cannot call a
-  function, so the operation's label and description are
-  `new TranslatableMarkup()`. A method you add later to narrow one key
-  by another's value, as the second page does, is static for the same
-  reason: it reads only the keys its parameters name and holds no
-  service, so the schema can state its answer ahead of time. A rule that
-  must read the site or the account, such as a value in State, declares
-  `runtime: TRUE` and runs only against the values of a call
-  ([Enforcing the kind](refinement.md#enforcing-the-kind)). The module
-  refuses a method that is not static when it reads the class, and, with
-  PHP assertions on as under DDEV, stops a static one that asks for a
-  service, naming the method and the service.
+  `LabeledChoice` a select whose options are its labels. The form, the
+  tool and the schema all read the same constraint, and a value outside
+  it is refused with the constraint's message, wherever it came from.
+- **Everything is static.** The class is never instantiated, so labels
+  call the global `t()` and attribute arguments construct
+  `new TranslatableMarkup()`, and the module can read the class ahead of
+  any request ([Translatable strings](declaring-a-resource.md#translatable-strings),
+  [Nothing live in the blueprint](declaring-a-resource.md#nothing-live-in-the-blueprint)).
 
 ## 5. The permission
 
