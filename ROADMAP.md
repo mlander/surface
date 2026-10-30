@@ -114,8 +114,8 @@ Prerequisite, second half — DONE 2026-09-15. The triple is complete
 (`getSurfaceStorage()` on both provider contracts, the field-side
 accessor renamed to match), `SurfaceProviderForm` serves provider
 forms from route coordinates with a three-method cosmetics seam, and
-the node type demo's form class is gone, not shrunk: routing plus a
-small cosmetics class. The standalone State demo form deliberately
+the node type example's form class is gone, not shrunk: routing plus a
+small cosmetics class. The standalone State example form deliberately
 stays hand-written as the documented case of a surface paired with a
 target nobody owns. Original spec: **complete the per-operation triple on the
 provider contract.** Target acquisition currently has three spellings:
@@ -208,7 +208,7 @@ which serves the real contract.
    graph, access verbs, output schema), cheap because the attribute is
    harvestable and the factory is the one assembly point. Regenerated
    only from commit-side cache invalidation, never from a rehearsal.
-   Rider on discovery: **the demo block declares its outputs.** Its
+   Rider on discovery: **the example block declares its outputs.** Its
    output is a headline and a list of labeled lines, no fetching
    involved, so it splits a pure resolve step from `build()` the way
    the formatter split `formatValue()`, and `build()` assembles the

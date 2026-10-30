@@ -15,7 +15,7 @@ use Drupal\surface\Pipeline\Storage\StateStorage;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * A standalone form generated entirely from the demo block's structure.
+ * A standalone form generated entirely from the example block's structure.
  *
  * Two claims in one class. A plugin-hosted structure stays externally
  * consumable: this form never instantiates a form element of its own and
@@ -35,7 +35,7 @@ final class ExampleForm extends FormBase {
   use SurfaceHostTrait;
 
   /**
-   * The state key holding the demo values.
+   * The state key holding the example values.
    */
   protected const STATE_KEY = 'surface_examples_plugins.settings';
 
@@ -45,7 +45,7 @@ final class ExampleForm extends FormBase {
   protected const WRAPPER_KEY = 'surface-example-form';
 
   /**
-   * The block plugin manager, which hands over the demo block.
+   * The block plugin manager, which hands over the example block.
    */
   protected BlockManagerInterface $blockManager;
 
@@ -75,13 +75,13 @@ final class ExampleForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
-    $surface = $this->demoSurface();
+    $surface = $this->exampleSurface();
     // The pipeline's own merge rule, reused rather than restated: the
     // structure's defaults, then whatever the storage holds, then the
     // in-progress choice an AJAX rebuild is refining against.
     $values = $this->surfaceFormValues(
       $surface,
-      $this->surfacePipeline()->accept($surface, [], $this->demoStorage()->load($surface)),
+      $this->surfacePipeline()->accept($surface, [], $this->exampleStorage()->load($surface)),
       $form_state,
     );
     $form['surface'] = $this->surfaceFormBuilder()
@@ -100,12 +100,12 @@ final class ExampleForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
-    $surface = $this->demoSurface();
+    $surface = $this->exampleSurface();
     $builder = $this->surfaceFormBuilder();
     // What State already holds goes with the form: a key with no
     // rendered element has said nothing and must keep its stored value
     // rather than fall back to its declared default.
-    $current = $this->demoStorage()->load($surface);
+    $current = $this->exampleStorage()->load($surface);
     $values = $builder->extractSurfaceValues(
       $surface,
       $form['surface'],
@@ -119,9 +119,9 @@ final class ExampleForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
-    $surface = $this->demoSurface();
+    $surface = $this->exampleSurface();
     $builder = $this->surfaceFormBuilder();
-    $storage = $this->demoStorage();
+    $storage = $this->exampleStorage();
     $values = $builder->extractSurfaceValues($surface, $form['surface'], $form_state, $storage->load($surface));
     $result = $this->surfacePipeline()->submit($surface, $values, $storage);
     if (!$result->isValid()) {
@@ -140,15 +140,15 @@ final class ExampleForm extends FormBase {
   }
 
   /**
-   * Reads the demo block's built structure through the plugin manager.
+   * Reads the example block's built structure through the plugin manager.
    *
    * @return \Drupal\surface\SurfaceInterface
    *   The block's built structure, refiners bound.
    *
    * @throws \LogicException
-   *   When the plugin behind the demo ID is not a data surface block.
+   *   When the plugin behind the example ID is not a data surface block.
    */
-  protected function demoSurface(): SurfaceInterface {
+  protected function exampleSurface(): SurfaceInterface {
     $block = $this->blockManager->createInstance('surface_examples_plugins');
     if (!$block instanceof TypedBlockBase) {
       throw new \LogicException('The surface_examples_plugins block is not a data surface block.');
@@ -162,7 +162,7 @@ final class ExampleForm extends FormBase {
    * @return \Drupal\surface\Pipeline\Storage\StateStorage
    *   The State storage.
    */
-  protected function demoStorage(): StateStorage {
+  protected function exampleStorage(): StateStorage {
     return new StateStorage($this->state, self::STATE_KEY);
   }
 

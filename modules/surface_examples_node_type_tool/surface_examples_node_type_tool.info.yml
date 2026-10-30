@@ -1,9 +1,10 @@
-name: Surface API Demo - Node type tool
+name: 'Surface API examples: content type tools compared'
 type: module
-description: 'The recorded comparison between the content type tool generated from the node type resource and the tool an agent has without Surface API, once another module has extended content types.'
-package: Surface API
+description: 'The recorded comparison of two tools for adding a content type once surface_examples_extras has extended content types: surface:node.type:create, derived from the node type resource, and Tool Belt''s tool_belt:entity_bundle_add, with core''s form beside them. No code of its own. It applies the pattern to core''s content types to test it, and is not part of the project in this form.'
+package: 'Surface API examples'
 lifecycle: experimental
-lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#the-examples'
 core_version_requirement: ^11.3 || ^12
 dependencies:
   - surface:surface_examples_node_type
+  - tool:tool

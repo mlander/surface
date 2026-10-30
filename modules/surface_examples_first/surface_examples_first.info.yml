@@ -1,9 +1,9 @@
-name: Surface API - Your first resource
+name: 'Surface API examples: your first resource'
 type: module
 description: 'The code of the docs page "Your first resource": a newsletter settings page, its form, its tool and its schema, from one resource class. And "Your second resource", a store location whose region depends on its country.'
-package: Surface API
+package: 'Surface API examples'
 lifecycle: experimental
-lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#the-examples'
 core_version_requirement: ^11.3 || ^12
 dependencies:
   - surface:surface

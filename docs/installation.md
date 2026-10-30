@@ -109,11 +109,13 @@ a free-form map.
 
 ## Experimental submodules
 
-Every submodule is marked `lifecycle: experimental`. They are where the
-architectural decisions are visible in practice, and they double as the
-fixtures the tests run against, so they are supported, but their APIs
-and their configuration may change without a deprecation path, and none
-of them is meant to replace core's own forms on a production site.
+Every submodule is an example. The base module, `surface`, is the
+project and the only thing meant to ship; read, install and remove the
+examples as you like. Each is marked `lifecycle: experimental`: they
+double as the fixtures the tests run against, so they are supported,
+but their APIs and their configuration may change without a deprecation
+path, and none of them is meant to replace core's own forms on a
+production site.
 
 Each row is one submodule: its install command, what it shows, and what
 it opens on a site. A submodule that needs a contributed module needs
@@ -121,47 +123,58 @@ its `composer require` first, as under
 [Optional integrations](#optional-integrations). What each example
 teaches, in reading order, is in [Examples](examples/index.md).
 
+### Learn the pattern
+
 | Install | Shows | Opens |
 | --- | --- | --- |
 | `drush pm:install surface_examples_first` | The code of [Your first resource](first-resource.md) and [Your second resource](second-resource.md): a newsletter settings page and a store location, held to the pages by a test. Adds its own permission. | `/admin/config/services/surface-newsletter`, `/admin/config/services/surface-store` |
-| `drush pm:install surface_examples_performance` | Three settings of core's performance form, the page cache maximum age and asset aggregation, as one resource stored in core's `system.performance`, each key at core's path, held to core's config schema unchanged: the title, the description and the list of periods are declared once and read by the form, the tool and both documents. Uses core's "administer site configuration". | `/admin/config/development/surface-performance` |
-| `drush pm:install surface_examples_plugins` | Two structures and three hosts, in the two spellings: `DemoBlockStructure`, a class of its own, drives a block and a standalone form, and the field formatter is its own structure. | `/admin/config/development/surface-example-form`; the block and the formatter where you place them |
+| `drush pm:install surface_examples_plugins` | Two structures and three hosts, in the two spellings: `ExampleBlockStructure`, a class of its own, drives a block and a standalone form, and the field formatter is its own structure. | `/admin/config/development/surface-example-form`; the block and the formatter where you place them |
 | `drush pm:install surface_examples_classic` | The same block and the same formatter written the classic way, by hand, without Surface API, with a parity test holding the two to the same behavior and a README counting what each costs. Depends on nothing from Surface API. | The classic block and formatter, for the side-by-side comparison |
-| `drush pm:install surface_examples_extras` | A third-party module extending someone else's resources and structures through alters, with no form alter anywhere; and, for content types, the same two settings added to core's own form the classic way, so the two can be compared. | The demo's formatter settings and core's content type form, extended |
-| `drush pm:install surface_examples_node_type` | One resource serving a create form and an update form through two operations, with storage of its own, and two routes that name the generic operation form rather than a form class. Adds its own permission ([below](#the-node-type-demo-permission)). | `/admin/structure/types/surface-add`, `/admin/structure/types/manage/{type}/surface-edit` |
-| `drush pm:install surface_examples_address` | A contributed field type adopting a resource for its settings without being forked. Needs [Address](#address). | Field UI's settings form for an address field |
-| `drush pm:install surface_examples_field` | Core's field instance and field storage settings as resources, `field.instance` and `field.storage`, each field type's settings a variant read from its settings class or its config schema; with [Tool](#tool), the field tools, and a generated comparison of them against Tool Belt's. | The field tools, for an agent, MCP, ECA and Drush |
-| `drush pm:install surface_examples_entity` | A resource derived for every content entity bundle with a form display, one structure per field derived from its typed data, field access as each child's access, and storage that validates the entity; a basic page added and edited through it. Needs `node`; see [Content entities](entities.md). | `/surface-entity` |
-| `drush pm:install surface_examples_node_type_tool` | No code of its own, only the generated comparison between `surface:node.type:create`, the tool derived from the content type resource, and Tool Belt's bundle tool and core's form, once another module has extended content types. Needs Tool. | No page: the recorded comparison and its test, in its README |
+| `drush pm:install surface_examples_extras` | A third-party module extending someone else's resources and structures through alters, with no form alter anywhere; and, for content types, the same two settings added to core's own form the classic way, so the two can be compared. | The example formatter's settings and core's content type form, extended |
 | `drush pm:install surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, then a small resource per later concept; examples 16 and 17 are in submodules of their own. Needs Tool. | `/surface-examples` |
 | `drush pm:install surface_examples_compliance` | Example 4: a compliance structure and the one alter that attaches it to example 3's resource, which does not know it, and nothing else. | `/surface-examples/4` |
 | `drush pm:install surface_examples_workflow` | Example 10, extended: two alters that answer access for the program and its fees, which do not know them, with no change to the program: the fees left out for an account that may not see them, and the program fixed once its workflow publishes it. | `/surface-examples/10` |
 | `drush pm:install surface_examples_keys` | Example 14: a module that manages keys, standing in for the Key module: a list of named keys, the constraint and resolver that offer them, and an alter that offers one on a resource that takes a pasted key, ruling the pasted key out once one is chosen. | `/surface-examples/14`, `/surface-examples/14/webhook` |
 | `drush pm:install surface_examples_references` | Example 16: keys that refer to an entity, declared by the data type string of what they refer to: a venue, a user, an article and an entity of any type, listed while the site has few and looked up past that. Needs node; ships the article and page bundles for a site that has neither, and writes three nodes its calls name. | `/surface-examples/16` |
 | `drush pm:install surface_examples_retitle` | Example 17: a bulk retitle of nodes with keys, storage and a permission of its own, which borrows each node's update access and its title's edit access as gates, asked per node, a refusal on the node's own item. Needs node; ships the page bundle for a site that has none, two roles, and writes three pages its calls name. | `/surface-examples/17` |
+| `drush pm:install surface_examples_react` | An example client of the HTTP door: a React app that renders an operation's form from the served contract, narrows it as answers change, rehearses the write with a dry run and writes through `/surface-api`. Its built app is committed, so it needs no Node. | `/surface-react/{resource}/{operation}` |
+
+### The pattern on Drupal's own things
+
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
+
+| Install | Shows | Opens |
+| --- | --- | --- |
+| `drush pm:install surface_examples_performance` | Three settings of core's performance form, the page cache maximum age and asset aggregation, as one resource stored in core's `system.performance`, each key at core's path, held to core's config schema unchanged: the title, the description and the list of periods are declared once and read by the form, the tool and both documents. Uses core's "administer site configuration". | `/admin/config/development/surface-performance` |
+| `drush pm:install surface_examples_node_type` | One resource serving a create form and an update form through two operations, with storage of its own, and two routes that name the generic operation form rather than a form class. Adds its own permission ([below](#the-content-types-example-permission)). | `/admin/structure/types/surface-add`, `/admin/structure/types/manage/{type}/surface-edit` |
+| `drush pm:install surface_examples_address` | A contributed field type adopting a resource for its settings without being forked. Needs [Address](#address). | Field UI's settings form for an address field |
+| `drush pm:install surface_examples_field` | Core's field instance and field storage settings as resources, `field.instance` and `field.storage`, each field type's settings a variant read from its settings class or its config schema; with [Tool](#tool), the field tools, and a generated comparison of them against Tool Belt's. | The field tools, for an agent, MCP, ECA and Drush |
+| `drush pm:install surface_examples_entity` | A resource derived for every content entity bundle with a form display, one structure per field derived from its typed data, field access as each child's access, and storage that validates the entity; a basic page added and edited through it. Needs `node`; see [Content entities](entities.md). | `/surface-entity` |
+| `drush pm:install surface_examples_node_type_tool` | No code of its own, only the generated comparison between `surface:node.type:create`, the tool derived from the content type resource, and Tool Belt's bundle tool and core's form, once another module has extended content types. Needs Tool. | No page: the recorded comparison and its test, in its README |
 | `drush pm:install surface_examples_component_block` | Example 13: a block, "Component", that embeds a single-directory component: the component chosen from those the site has and its props read from the schema it declares, example 12's two lines named by `#[UsesStructure]`, so the block's form, validation and storage come from them, placed through the placement resource of `surface_examples_block`. Needs `block`. | `/surface-examples/13` |
 | `drush pm:install surface_examples_block` | A placed block as a resource, `block.placement`, by its machine name: its plugin chooses its settings (a plugin's declared structure, or its config schema read), its theme its region, and its visibility is a list of conditions. Placed, configured, read and removed through four tools, HTTP (`DELETE` removes) and a form. Needs `block`. | `/admin/structure/block/surface/add` |
-| `drush pm:install surface_examples_react` | An example client of the HTTP door: a React app that renders an operation's form from the served contract, narrows it as answers change, rehearses the write with a dry run and writes through `/surface-api`. Its built app is committed, so it needs no Node. | `/surface-react/{resource}/{operation}` |
 
 Each submodule's own README says what it shows, how to try it, and which
 tests gate it.
 
-### The node type demo permission
+### The content types example permission
 
 `surface_examples_node_type` also defines
-`administer data surface node type demo`, which is granted *in addition
+`administer surface examples content types`, which is granted *in addition
 to* the content type permission rather than instead of it: holding it
 alone opens nothing. See that submodule's README for the full matrix.
 
 ## Verify the install
 
-Install the demo modules:
+Install the example modules:
 
 ```bash
 drush pm:install surface_examples_plugins surface_examples_extras surface_examples_classic
 ```
 
-Place the demo block, or visit the standalone demo form at
+Place the example block, or visit the standalone example form at
 `/admin/config/development/surface-example-form`, and change the entity type
 select. The bundle and field selects rebuild over AJAX from the structure's
 refinement map, which is the shortest proof that the whole chain is
@@ -172,7 +185,7 @@ modules declare, with the doors each operation reaches, and `drush
 surface:catalog --refused` what did not build, with the file to open
 ([The site's catalog](catalog-command.md)). The same listing, each door
 linked, is the page at `/admin/config/development/surfaces`, for a role
-with "View the data surface catalog" ([the catalog page](catalog-command.md#the-catalog-page)). To hold your own resources
+with "View the Surface API catalog" ([the catalog page](catalog-command.md#the-catalog-page)). To hold your own resources
 to the invariants from your module's tests, see [Testing a resource](testing-a-resource.md).
 
 The examples, in the order they are written to be shown and with the

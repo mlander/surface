@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Functional;
 
 use Drupal\surface_examples\CodeLines;
+use Drupal\surface_examples\ExampleModules;
 use Drupal\surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\surface_examples\Series;
@@ -168,7 +169,8 @@ class ExamplesRoutesTest extends BrowserTestBase {
    * Tests that each example on the landing page says what it introduces.
    *
    * One line per example, from Series: the concept, the docs page, the
-   * decision and the file count; and the intro says where to start.
+   * decision and the file count; the intro says where to start; and every
+   * example module is listed in its group with its install command.
    */
   public function testTheLandingPageSaysWhatEachExampleIntroduces(): void {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
@@ -194,6 +196,29 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('under each heading is the idea it introduces, the page that explains it, the decision that says why, and how many files it is made of');
     $assert->linkByHrefExists(Series::url('docs/first-resource.md', Series::BRANCH));
     $assert->linkByHrefExists(Series::url('docs/concepts.md', Series::BRANCH));
+
+    // Below the examples, every example module in its group, enabled or
+    // not, with its install command; the groups hold every directory
+    // under modules/ once.
+    $directories = array_map(static fn (string $info): string => basename(dirname($info)), glob(__DIR__ . '/../../../modules/*/*.info.yml') ?: []);
+    $listed = array_merge(ExampleModules::LEARN, ExampleModules::OWN_THINGS);
+    sort($directories);
+    $sorted = $listed;
+    sort($sorted);
+    $this->assertSame($directories, $sorted, 'ExampleModules lists every example module once.');
+    $this->assertCount(count($listed), array_unique($listed));
+    $assert->elementTextContains('css', '.surface-example-modules [data-group="learn"] h3', 'Learn the pattern');
+    $assert->elementTextContains('css', '.surface-example-modules [data-group="own"] h3', "The pattern on Drupal's own things");
+    $assert->elementTextContains('css', '.surface-example-modules [data-group="own"]', 'These examples apply the pattern to things Drupal and a contrib module already have, to test it across scenarios; they are not part of the project and will not ship in this form.');
+    $assert->elementsCount('css', '.surface-example-modules [data-group="learn"] li', count(ExampleModules::LEARN));
+    $assert->elementsCount('css', '.surface-example-modules [data-group="own"] li', count(ExampleModules::OWN_THINGS));
+    $assert->elementTextContains('css', '.surface-example-modules [data-group="learn"] li[data-module="surface_examples"]', 'surface_examples, enabled.');
+    $assert->elementTextContains('css', '.surface-example-modules [data-group="learn"] li[data-module="surface_examples_compliance"]', 'surface_examples_compliance, not enabled. Example 4 of the examples');
+    $assert->elementTextContains('css', '.surface-example-modules [data-group="learn"] li[data-module="surface_examples_compliance"] code', 'drush pm:install surface_examples_compliance');
+    $assert->elementTextContains('css', '.surface-example-modules [data-group="own"] li[data-module="surface_examples_block"]', 'Surface API examples: block placement, surface_examples_block, not enabled.');
+    $assert->elementTextContains('css', '.surface-example-modules [data-group="own"] li[data-module="surface_examples_block"] code', 'drush pm:install surface_examples_block');
+    $assert->elementTextContains('css', '.surface-example-modules [data-group="own"] li[data-module="surface_examples_address"]', 'Install: composer require drupal/address, then drush pm:install surface_examples_address');
+    $assert->linkByHrefExists(Series::url('modules/surface_examples_block/README.md', Series::BRANCH));
   }
 
   /**

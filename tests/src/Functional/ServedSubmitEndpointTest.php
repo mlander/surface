@@ -203,7 +203,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
   public function testCreateAnswersWhereTheCreatedTypeLives(): void {
     $this->drupalLogin($this->drupalCreateUser([
       'administer content types',
-      'administer data surface node type demo',
+      'administer surface examples content types',
     ]));
     // What the app does: the collection's envelope, the create's declared
     // defaults, two of them answered.

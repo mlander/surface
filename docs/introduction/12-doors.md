@@ -3,8 +3,8 @@
 A door is a place that asks for an operation's values and hands them to
 the module. The module makes every door of an operation from its
 resource, so you write no form, tool or endpoint by hand. Each door is
-a Drupal mechanism you may already know, and this module or a
-submodule turns operations into it.
+a Drupal mechanism you may already know, and this module or an
+example module turns operations into it.
 
 ![One resource, block.placement, with its create operation, and arrows to four doors: the form, a Tool API tool that the command line, ECA, MCP and AI agents run, HTTP with an OpenAPI document, and a React page](images/12-doors.svg)
 
@@ -33,7 +33,7 @@ drush pm:install tool surface_examples_react
 ## One operation, every door
 
 The placed block, `block.placement` in the `surface_examples_block`
-submodule, has a `create` operation. With no code added for any door,
+example module, has a `create` operation. With no code added for any door,
 it is served at each of these:
 
 | Door | Where |

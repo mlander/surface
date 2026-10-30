@@ -1,4 +1,4 @@
-# Surface API Examples - Workflow
+# Surface API examples: workflow
 
 Example 10 of [the examples](../surface_examples/README.md),
 extended: another module answers access for a resource it does not own.

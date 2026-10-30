@@ -16,6 +16,7 @@ use Drupal\surface_examples\ConceptPanel;
 use Drupal\surface_examples\ConfigSchemaPanel;
 use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\ExampleCalls;
+use Drupal\surface_examples\ExampleModules;
 use Drupal\surface_examples\FilesPanel;
 use Drupal\surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\surface_examples\Form\RegistrationStep2ClassicForm;
@@ -250,7 +251,80 @@ final class ExamplesController extends ControllerBase {
         'link' => Link::fromTextAndUrl($this->t('Reset to defaults'), Url::fromRoute('surface_examples.reset'))->toRenderable(),
         'why' => ['#markup' => ' ' . $this->t('puts every example back to the settings the module ships with, for a retake.')],
       ],
-    ] + $steps;
+    ] + $steps + ['modules' => $this->modules()];
+  }
+
+  /**
+   * Lists every example module, enabled or not, in its group.
+   *
+   * Each with its name, description and dependencies read from its info
+   * file, whether it is enabled, and the command that installs it, after
+   * the composer require of a contributed module it needs.
+   *
+   * @return array
+   *   A render array: the two groups, each a heading and a list.
+   */
+  protected function modules(): array {
+    $groups = [
+      'learn' => [
+        'title' => $this->t('Learn the pattern'),
+        'intro' => $this->t('The examples above and the modules that teach one idea each outside this page.'),
+        'modules' => ExampleModules::LEARN,
+      ],
+      'own' => [
+        'title' => $this->t("The pattern on Drupal's own things"),
+        'intro' => $this->t('These examples apply the pattern to things Drupal and a contrib module already have, to test it across scenarios; they are not part of the project and will not ship in this form.'),
+        'modules' => ExampleModules::OWN_THINGS,
+      ],
+    ];
+    $branch = Series::branch();
+    $build = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['surface-example-modules']],
+      'heading' => [
+        '#markup' => '<h2>' . $this->t('Every example module') . '</h2><p>' . $this->t('The base module, surface, is the project and the only thing meant to ship. Every other module is an example: install it, read it and remove it as you like.') . '</p>',
+      ],
+    ];
+    // Every module the site's code base has, enabled or not.
+    $available = $this->moduleList->getAllAvailableInfo();
+    foreach ($groups as $id => $group) {
+      $items = [];
+      foreach ($group['modules'] as $module) {
+        if (!isset($available[$module])) {
+          continue;
+        }
+        $info = $available[$module];
+        $projects = [];
+        foreach ($info['dependencies'] ?? [] as $dependency) {
+          $project = explode(':', (string) $dependency)[0];
+          if (!in_array($project, ['drupal', 'surface'], TRUE)) {
+            $projects[] = 'drupal/' . $project;
+          }
+        }
+        $arguments = [
+          ':readme' => Series::url('modules/' . $module . '/README.md', $branch),
+          '@name' => $info['name'],
+          '@module' => $module,
+          '@status' => $this->moduleHandler()->moduleExists($module) ? $this->t('enabled') : $this->t('not enabled'),
+          '@description' => $info['description'] ?? '',
+          '@install' => 'drush pm:install ' . $module,
+          '@require' => 'composer require ' . implode(' ', $projects),
+        ];
+        $items[] = [
+          '#markup' => $projects === []
+            ? $this->t('<a href=":readme">@name</a>, @module, @status. @description Install: <code>@install</code>', $arguments)
+            : $this->t('<a href=":readme">@name</a>, @module, @status. @description Install: <code>@require</code>, then <code>@install</code>', $arguments),
+          '#wrapper_attributes' => ['data-module' => $module],
+        ];
+      }
+      $build[$id] = [
+        '#type' => 'container',
+        '#attributes' => ['data-group' => $id],
+        'title' => ['#markup' => '<h3>' . $group['title'] . '</h3><p>' . $group['intro'] . '</p>'],
+        'list' => ['#theme' => 'item_list', '#items' => $items],
+      ];
+    }
+    return $build;
   }
 
   /**

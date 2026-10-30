@@ -135,10 +135,11 @@ install; read it first.
 
 ## Examples
 
-[Examples](examples/index.md): the example and demo modules, one row
-each, with the concept it shows, its install command, its page on a
-site and the page that explains the idea. Neither the introduction nor
-the build pages need them.
+[Examples](examples/index.md): every example module, one row each, in
+two groups: the modules that teach the pattern, and the pattern applied
+to things Drupal already has. Each row gives the concept it shows, its
+install command, its page on a site and the page that explains the
+idea. Neither the introduction nor the build pages need them.
 
 ## Project records
 

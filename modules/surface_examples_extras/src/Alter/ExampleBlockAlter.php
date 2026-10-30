@@ -11,18 +11,18 @@ use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\RefinesInput;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
-use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
 
 /**
- * This module's additions to the demo block.
+ * This module's additions to the example block.
  *
- * Both of an alter's jobs, side by side with DemoFormatterAlter, which
- * does the same for the demo formatter:
+ * Both of an alter's jobs, side by side with ExampleFormatterAlter, which
+ * does the same for the example formatter:
  *
  * - It adds a key. A badge, the block twin of the formatter's, which the
  *   build mounts under this module's name, at
  *   third_party_settings.surface_examples_extras.badge, so the block's
- *   configuration and schema hold it without the demo module knowing.
+ *   configuration and schema hold it without the example module knowing.
  * - It tightens an owner's key against a sibling. A grid stays short.
  * - It rewords an owner's key with describe(), the one change to an
  *   existing key an alter may make: the headline's help text mentions
@@ -37,10 +37,10 @@ use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
  * so it is translated through the injected service like any other class
  * of ours the container builds. Nothing registers it.
  *
- * @see \Drupal\surface_examples_extras\Alter\DemoFormatterAlter
+ * @see \Drupal\surface_examples_extras\Alter\ExampleFormatterAlter
  */
-#[Alters(DemoBlockStructure::class)]
-final class DemoBlockAlter implements AltersInputsInterface {
+#[Alters(ExampleBlockStructure::class)]
+final class ExampleBlockAlter implements AltersInputsInterface {
 
   use StringTranslationTrait;
 
@@ -50,7 +50,7 @@ final class DemoBlockAlter implements AltersInputsInterface {
   public const GRID_LIMIT = 20;
 
   /**
-   * Constructs a DemoBlockAlter.
+   * Constructs a ExampleBlockAlter.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.

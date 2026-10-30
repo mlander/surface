@@ -487,7 +487,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     $matrix = [
       'nobody' => [[], FALSE],
       'content types only' => [['administer content types'], FALSE],
-      'demo permission only' => [[NodeTypeResourceHooks::PERMISSION], FALSE],
+      'example permission only' => [[NodeTypeResourceHooks::PERMISSION], FALSE],
       'both' => [['administer content types', NodeTypeResourceHooks::PERMISSION], TRUE],
     ];
     $add = $this->resources()->operation(NodeTypeResource::class, 'create');

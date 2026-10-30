@@ -11,7 +11,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
- * The demo formatter, written the way formatters were written before.
+ * The example formatter, written the way formatters were written before.
  *
  * Behaviorally identical to `surface_examples_plugins_string`: the same three
  * settings, the same defaults, the same casing-narrows-variant chain
@@ -28,10 +28,10 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  */
 #[FieldFormatter(
   id: 'surface_examples_classic_string',
-  label: new TranslatableMarkup('Data surface demo formatter (classic)'),
+  label: new TranslatableMarkup('Surface API example formatter (classic)'),
   field_types: ['string'],
 )]
-final class ClassicDemoFormatter extends FormatterBase {
+final class ClassicExampleFormatter extends FormatterBase {
 
   /**
    * The prefix every variant class carries.

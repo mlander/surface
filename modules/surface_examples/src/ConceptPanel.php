@@ -50,7 +50,7 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
  * Says what one of examples 7 to 17 shows, above its contract panel.
  *
  * Each of those examples is one small resource for one or two concepts,
- * so its page says in one paragraph what it demonstrates and where the
+ * so its page says in one paragraph what it shows and where the
  * docs explain it, then shows the part of its documents the concept is
  * about, read from them as they are emitted now, never written down. Last
  * come the tool calls ConceptCalls writes down for it, none of which

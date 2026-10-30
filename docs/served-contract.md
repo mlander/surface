@@ -973,7 +973,7 @@ no round trip to `POST .../schema`.
 - **The combinations are capped**, at 64 per key
   (`ContractEmitter::ENUMERATION_CAP`): the product of the watched
   siblings' lists, read in declaration order, each under the values
-  before it, so the demo block's `field` is enumerated per entity type
+  before it, so the example block's `field` is enumerated per entity type
   and, under each, per bundle. Above the cap, or with a sibling that
   cannot be listed, the key is not enumerated and is marked
   `x-surface.refine: true` instead: its schema is the unrefined one and
@@ -1020,7 +1020,7 @@ no round trip to `POST .../schema`.
   listable key is enumerated, always.
 - **The lists are dependencies.** Every option list and every refined
   data surface a conditional was read from is merged into the contract's
-  cacheability (the demo block's static contract depends on
+  cacheability (the example block's static contract depends on
   `entity_bundles`).
 
 ### A list the site decides
@@ -1071,9 +1071,9 @@ narrowing tool's answer) the template is its query alone,
 
 In the shipped resources and structures, described for no values:
 example 2's and example 3's room (per venue, 3 conditionals) and
-capacity (per room, 6); the demo block's `bundle` (per entity type) and
-`field` (per entity type and bundle); the demo formatter's `variant`
-(per casing); the demo extras' `limit` (per presentation; only the grid
+capacity (per room, 6); the example block's `bundle` (per entity type) and
+`field` (per entity type and bundle); the example formatter's `variant`
+(per casing); the extras example's `limit` (per presentation; only the grid
 writes one). Declared: example 4's capacity, whose ceiling without a
 license is a rule declared as data, stated as written beside its six
 conditionals per room. Marked `refine`: example 4's stewards, in the

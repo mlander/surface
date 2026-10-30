@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DemoFormTest extends SurfaceKernelTestBase {
+class StandaloneExampleFormTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -38,7 +38,7 @@ class DemoFormTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * The state key the demo form writes to.
+   * The state key the example form writes to.
    */
   protected const STATE_KEY = 'surface_examples_plugins.settings';
 
@@ -53,7 +53,7 @@ class DemoFormTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Submits the demo form with the given structure values.
+   * Submits the example form with the given structure values.
    *
    * @param array $values
    *   Raw values keyed by structure key, as a browser would submit them.

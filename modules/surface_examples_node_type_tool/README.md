@@ -1,4 +1,9 @@
-# Surface API Demo - Node type tool
+# Surface API examples: content type tools compared
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 The recorded comparison between `surface:node.type:create`, the tool
 generated from the content type resource's create operation, and the tool an
@@ -105,7 +110,7 @@ thing, so it was written to be:
   meaning: the key is `review_deadline`, not named for its unit, the
   schema does not say the integer is seconds, and how an amount and a
   unit become the integer lives only in the form's validation callback.
-- **The demo does not rest on obscurity.** A capable agent reading only
+- **The comparison does not rest on obscurity.** A capable agent reading only
   the schema will recognize 3600 and 2592000 as an hour and thirty days
   in seconds, guess the unit, and send 604800 for a week, and be
   right. The claim is not that it cannot; it is that it has to infer.

@@ -7,7 +7,7 @@ namespace Drupal\surface_examples_plugins;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 
 /**
- * The display variants this demo owns, written down once.
+ * The display variants this example owns, written down once.
  *
  * A vocabulary is wanted in at least two places: the declaration, which
  * says what the key allows and what each value means, and the code that
@@ -27,13 +27,13 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
  * own value, and the owner's enum is not where that value lives — that
  * is the point of a contribution, not an oversight. So code acting on a
  * stored variant takes the string it was handed rather than
- * `DemoVariant::from()`-ing it, and only the owner's own half of the
+ * `ExampleVariant::from()`-ing it, and only the owner's own half of the
  * vocabulary is enumerated.
  *
  * @see \Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter
- * @see \Drupal\surface_examples_extras\Alter\DemoFormatterAlter
+ * @see \Drupal\surface_examples_extras\Alter\ExampleFormatterAlter
  */
-enum DemoVariant: string {
+enum ExampleVariant: string {
 
   case Bold = 'bold';
   case Strong = 'strong';
@@ -103,7 +103,7 @@ enum DemoVariant: string {
   /**
    * Maps cases to their labels, keyed by value.
    *
-   * @param \Drupal\surface_examples_plugins\DemoVariant[] $cases
+   * @param \Drupal\surface_examples_plugins\ExampleVariant[] $cases
    *   The cases to project.
    *
    * @return array<string, \Drupal\Core\StringTranslation\TranslatableMarkup>

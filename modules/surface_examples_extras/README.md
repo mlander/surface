@@ -1,4 +1,4 @@
-# Surface API Demo Extras
+# Surface API examples: extras
 
 What a third-party module can do to another module's contract without
 touching a form (and, for content types, the same extension written
@@ -6,7 +6,7 @@ both ways, so the two can be compared).
 
 ## What it shows
 
-- It mounts a `badge` setting under its own namespace on the demo
+- It mounts a `badge` setting under its own namespace on the example
   formatter's structure, with a default and a labeled choice. The setting
   is advertised, validated and rendered like any other, where the
   form-alter era gave an element no machine could see.
@@ -15,7 +15,7 @@ both ways, so the two can be compared).
   method of its own to say when that value is offered: here, only in
   upper case.
 
-Both live in one alter, `Alter\DemoFormatterAlter`,
+Both live in one alter, `Alter\ExampleFormatterAlter`,
 carrying `#[Alters(ExampleFormatter::class)]`: the
 formatter is its own structure, so the alter names the formatter's class.
 Nothing registers it; discovery finds it and builds it as an autowired service.
@@ -38,12 +38,12 @@ narrowed to:
 | `uppercase` | bold, strong | ribbon | bold, strong, ribbon |
 | `lowercase` | quiet, muted | none | quiet, muted |
 
-## The demo block
+## The example block
 
-The demo block's configuration is a structure class,
-`DemoBlockStructure`, and this module alters it the same way: one class in
-`src/Alter`, `DemoBlockAlter`, carrying
-`#[Alters(DemoBlockStructure::class)]`. Nothing registers it;
+The example block's configuration is a structure class,
+`ExampleBlockStructure`, and this module alters it the same way: one class in
+`src/Alter`, `ExampleBlockAlter`, carrying
+`#[Alters(ExampleBlockStructure::class)]`. Nothing registers it;
 discovery finds it and builds it as an autowired service.
 
 - `alterInputs()` adds the same `badge` the formatter gets, which the
@@ -69,7 +69,7 @@ of audience tags.
 
 - **As contract**, in `Alter\NodeTypeAlter`, carrying
   `#[Alters(NodeTypeResource::class)]`: discovery finds it, and
-  skips it on a site without the node type demo, so nothing here
+  skips it on a site without the node type example, so nothing here
   depends on that module. The deadline is asked for as an amount and a
   unit (hours, days, weeks or business days) with a constraint on the
   pair that refuses anything past thirty days on the amount, and
@@ -113,7 +113,7 @@ records what an agent's tool can see and do with each.
 drush pm:install surface_examples_extras
 ```
 
-Open the **Data surface demo formatter**'s settings on any bundle's
+Open the **Surface API example formatter**'s settings on any bundle's
 manage display page. Before this module: four variants and no badge.
 After: a badge select that no module the formatter knows about declared,
 and a variant list that gains `ribbon` exactly when the casing is upper
@@ -127,7 +127,7 @@ title `NodeTypeAlter` gives its mount.
 
 ## What gates it
 
-`Kernel\DemoFormatterTest` installs this module alongside the demo and
+`Kernel\ExampleFormatterTest` installs this module alongside the example and
 asserts the mounted key, the contributed value, and the union each casing
 produces. `Kernel\NodeTypeToolComparisonTest` covers both content type
 extensions: the classic form for a person, the resource's form, and what

@@ -27,8 +27,8 @@ final class ConfigurableHostPlugin implements ConfigurableInterface {
    */
   public function __construct(
     protected array $configuration = [
-      'id' => 'demo_block',
-      'label' => 'Demo',
+      'id' => 'example_block',
+      'label' => 'Example',
       'provider' => 'surface',
       'title' => 'Stored title',
       'count' => 3,

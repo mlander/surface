@@ -1582,7 +1582,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
    * stated as `oneOf` read from the source its validator reads; a
    * PluginExists that allows a fallback accepts any id, so it offers no
    * list and the schema stays as wide as the validator. UniqueItems, which
-   * started here as the demo's constraint, has a keyword: `uniqueItems`,
+   * started here as the example's constraint, has a keyword: `uniqueItems`,
    * as narrow as its validator.
    */
   public function testConstraintsWithNoKeyword(): void {

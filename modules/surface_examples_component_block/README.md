@@ -1,4 +1,9 @@
-# Surface API component block
+# Surface API examples: component block
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 A block, "Component", that embeds a single-directory component: the
 component chosen from those the site has, its props read from the JSON

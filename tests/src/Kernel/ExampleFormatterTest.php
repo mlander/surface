@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests the demo formatter and the third-party module extending it.
+ * Tests the example formatter and the third-party module extending it.
  *
  * Two claims at once. The formatter writes no defaultSettings(): the
  * base class derives the static array Field UI prunes against from the
@@ -29,7 +29,7 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DemoFormatterTest extends SurfaceKernelTestBase {
+class ExampleFormatterTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -46,7 +46,7 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * Creates the demo formatter for a plain string field.
+   * Creates the example formatter for a plain string field.
    *
    * @param array $settings
    *   Formatter settings.
@@ -56,8 +56,8 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
    */
   protected function createFormatter(array $settings = []): ExampleFormatter {
     $field_definition = BaseFieldDefinition::create('string')
-      ->setName('field_demo')
-      ->setLabel('Demo');
+      ->setName('field_example')
+      ->setLabel('Example');
     $formatter = $this->container->get('plugin.manager.field.formatter')->createInstance('surface_examples_plugins_string', [
       'field_definition' => $field_definition,
       'settings' => $settings,
@@ -324,7 +324,7 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
    * setting mounted at runtime is still there after a save.
    */
   public function testDisplaySaveKeepsTheMountedKey(): void {
-    $this->installDemoField();
+    $this->installExampleField();
     $entity_type_manager = $this->container->get('entity_type.manager');
 
     $display = $entity_type_manager->getStorage('entity_view_display')->create([
@@ -333,7 +333,7 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
       'mode' => 'default',
       'status' => TRUE,
     ]);
-    $display->setComponent('field_demo', [
+    $display->setComponent('field_example', [
       'type' => 'surface_examples_plugins_string',
       'settings' => [
         'prefix' => '>> ',
@@ -348,7 +348,7 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
 
     $settings = $entity_type_manager->getStorage('entity_view_display')
       ->loadUnchanged($display->id())
-      ->getComponent('field_demo')['settings'];
+      ->getComponent('field_example')['settings'];
     $this->assertSame('uppercase', $settings['casing']);
     $this->assertSame(
       ['surface_examples_extras' => ['badge' => 'flame']],
@@ -418,8 +418,8 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
    * test is this loop with the fixtures filled in.
    */
   public function testFormatValueConformsPerDelta(): void {
-    $this->installDemoField(2);
-    $entity = EntityTest::create(['field_demo' => ['one', 'two']]);
+    $this->installExampleField(2);
+    $entity = EntityTest::create(['field_example' => ['one', 'two']]);
     $formatter = $this->createFormatter([
       'prefix' => '>> ',
       'casing' => 'uppercase',
@@ -429,7 +429,7 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
     $surface = $formatter->getSurface();
 
     $emitted = [];
-    foreach ($entity->get('field_demo') as $delta => $item) {
+    foreach ($entity->get('field_example') as $delta => $item) {
       $emitted[$delta] = $formatter->formatValue($item, $settings);
       $this->assertCount(
         0,
@@ -452,11 +452,11 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
    * "classes: []" would be claiming the second.
    */
   public function testAnUnchosenVariantEmitsNoClassesAtAll(): void {
-    $this->installDemoField();
-    $entity = EntityTest::create(['field_demo' => 'plain']);
+    $this->installExampleField();
+    $entity = EntityTest::create(['field_example' => 'plain']);
     $formatter = $this->createFormatter(['casing' => 'none']);
 
-    $data = $formatter->formatValue($entity->get('field_demo')->first(), $formatter->getSettings());
+    $data = $formatter->formatValue($entity->get('field_example')->first(), $formatter->getSettings());
 
     $this->assertTrue(NotEmitted::is($data['classes']));
     $this->assertSame(['text' => 'plain'], NotEmitted::strip($data));
@@ -472,11 +472,11 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
    * and escaping included.
    */
   public function testTheGenericAssemblyMatchesTheOldMarkup(): void {
-    $this->installDemoField();
-    $entity = EntityTest::create(['field_demo' => 'loud']);
+    $this->installExampleField();
+    $entity = EntityTest::create(['field_example' => 'loud']);
 
     $elements = $this->createFormatter(['casing' => 'uppercase', 'variant' => 'bold'])
-      ->viewElements($entity->get('field_demo'), 'en');
+      ->viewElements($entity->get('field_example'), 'en');
     $this->assertSame('html_tag', $elements[0]['#type']);
     $this->assertSame('span', $elements[0]['#tag']);
     $this->assertSame(['class' => ['surface-variant-bold']], $elements[0]['#attributes']);
@@ -484,7 +484,7 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
 
     // No variant means no class attribute, not an empty one.
     $plain = $this->createFormatter(['casing' => 'none'])
-      ->viewElements($entity->get('field_demo'), 'en');
+      ->viewElements($entity->get('field_example'), 'en');
     $this->assertSame([], $plain[0]['#attributes']);
   }
 
@@ -498,11 +498,11 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
    * core's own StringFormatter does with the same field type.
    */
   public function testFieldTextIsEscapedRatherThanFiltered(): void {
-    $this->installDemoField();
-    $entity = EntityTest::create(['field_demo' => '<em>loud</em>']);
+    $this->installExampleField();
+    $entity = EntityTest::create(['field_example' => '<em>loud</em>']);
 
     $elements = $this->createFormatter(['prefix' => '>> ', 'casing' => 'uppercase'])
-      ->viewElements($entity->get('field_demo'), 'en');
+      ->viewElements($entity->get('field_example'), 'en');
 
     $this->assertArrayNotHasKey('#value', $elements[0]);
     $this->assertSame('>> <EM>LOUD</EM>', $elements[0]['text']['#plain_text']);
@@ -519,17 +519,17 @@ class DemoFormatterTest extends SurfaceKernelTestBase {
    *   How many values the field holds, so a test that is about what
    *   happens per delta has more than one delta to look at.
    */
-  protected function installDemoField(int $cardinality = 1): void {
+  protected function installExampleField(int $cardinality = 1): void {
     $this->installEntitySchema('entity_test');
     $entity_type_manager = $this->container->get('entity_type.manager');
     $entity_type_manager->getStorage('field_storage_config')->create([
-      'field_name' => 'field_demo',
+      'field_name' => 'field_example',
       'entity_type' => 'entity_test',
       'type' => 'string',
       'cardinality' => $cardinality,
     ])->save();
     $entity_type_manager->getStorage('field_config')->create([
-      'field_name' => 'field_demo',
+      'field_name' => 'field_example',
       'entity_type' => 'entity_test',
       'bundle' => 'entity_test',
     ])->save();

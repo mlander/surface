@@ -1,4 +1,9 @@
-# Surface API block placement
+# Surface API examples: block placement
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 A placed block as a resource: `block.placement`, the block config entity
 `block.block.<id>` by its machine name, whose plugin chooses its
@@ -32,7 +37,7 @@ $inputs->attachList('visibility', VisibilityConditionStructure::class)
 - **The plugin chooses the settings.** `Variants\BlockPluginStructures`
   lists the plugins the block layout offers, less any plugin that reads
   a context, which is not offered yet. A plugin whose class names its
-  settings with `#[UsesStructure]` (the component block, the demo block)
+  settings with `#[UsesStructure]` (the component block, the example block)
   is that structure, built as declared. Any other is read from its
   config schema, `block.settings.<plugin id>`, less the keys every block
   has, written as JSON Schema by `Contract\ConfigSchemaDocument` and

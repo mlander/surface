@@ -1,9 +1,9 @@
-name: Surface API block placement
+name: 'Surface API examples: block placement'
 type: module
-description: 'A placed block as a resource: placed, configured, moved and removed through the tool door, HTTP and a form, its settings the variant its plugin chooses.'
-package: Surface API
+description: 'A placed block as a resource: placed, configured, moved and removed through the tool door, HTTP and a form, its settings the variant its plugin chooses. It applies the pattern to core''s placed blocks to test it, and is not part of the project in this form.'
+package: 'Surface API examples'
 lifecycle: experimental
-lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#the-examples'
 core_version_requirement: ^11.3 || ^12
 dependencies:
   - surface:surface

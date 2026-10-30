@@ -12,7 +12,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests a declared arrangement is drawn by every host, not one form.
  *
  * The same reading of the keys' arrangements on two hosts: the operation
- * form serving the studio, and the block form of the demo block, a plugin
+ * form serving the studio, and the block form of the example block, a plugin
  * host no cosmetic layer reaches. Each draws its groups as fieldsets or
  * details holding their keys, orders keys by weight, and draws the input
  * texts; every key still posts at its own path, so a save stores what it
@@ -147,13 +147,13 @@ class ArrangementFormTest extends BrowserTestBase {
     $assert_session->elementAttributeContains('css', 'input[name="settings[headline]"]', 'placeholder', 'For example, Quarterly report');
 
     $this->submitForm([
-      'id' => 'arranged_demo',
+      'id' => 'arranged_example',
       'region' => 'content',
       'settings[headline]' => 'Arranged',
       'settings[limit]' => '7',
     ], 'Save block');
     $assert_session->pageTextContains('The block configuration has been saved.');
-    $settings = $this->config('block.block.arranged_demo')->get('settings');
+    $settings = $this->config('block.block.arranged_example')->get('settings');
     $this->assertSame('Arranged', $settings['headline']);
     $this->assertSame(7, $settings['limit']);
     $this->assertSame('user', $settings['entity_type']);

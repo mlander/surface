@@ -17,7 +17,7 @@ use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
-use Drupal\surface_examples_plugins\DemoVariant;
+use Drupal\surface_examples_plugins\ExampleVariant;
 
 /**
  * A field formatter that is its own structure.
@@ -30,9 +30,9 @@ use Drupal\surface_examples_plugins\DemoVariant;
  * from it. Its id is
  * field_formatter:surface_examples_plugins_string, from the plugin, and an
  * alter names it by this class. No defaultSettings, no settingsForm, no
- * settingsSummary, and no render array. The classic demo writes them
- * out; see modules/surface_examples_classic. The demo block keeps its
- * structure in a class of its own, DemoBlockStructure, the other spelling.
+ * settingsSummary, and no render array. The classic example writes them
+ * out; see modules/surface_examples_classic. The example block keeps its
+ * structure in a class of its own, ExampleBlockStructure, the other spelling.
  *
  * No storage and no operations: the host supplies both, and the entity
  * view display it sits on is what stores the settings. Outputs are never
@@ -44,7 +44,7 @@ use Drupal\surface_examples_plugins\DemoVariant;
  */
 #[FieldFormatter(
   id: 'surface_examples_plugins_string',
-  label: new TranslatableMarkup('Data surface demo formatter'),
+  label: new TranslatableMarkup('Surface API example formatter'),
   field_types: ['string'],
 )]
 #[UsesStructure]
@@ -76,7 +76,7 @@ final class ExampleFormatter extends TypedFormatterBase implements StructureInte
 
     $inputs->add('variant', 'string', t('Variant'))
       ->setDescription(t('The variants the chosen casing offers.'))
-      ->addConstraint('LabeledChoice', ['choices' => DemoVariant::choices()]);
+      ->addConstraint('LabeledChoice', ['choices' => ExampleVariant::choices()]);
   }
 
   /**
@@ -101,7 +101,7 @@ final class ExampleFormatter extends TypedFormatterBase implements StructureInte
    */
   #[RefinesInput('variant')]
   public static function variantsOfCasing(DataDefinitionInterface $variant, string $casing): DataDefinitionInterface {
-    $offered = DemoVariant::choicesFor($casing);
+    $offered = ExampleVariant::choicesFor($casing);
     if ($offered === []) {
       return $variant;
     }

@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Tests that the demo block can be constructed on a site without node.
+ * Tests that the example block can be constructed on a site without node.
  *
  * A declared default has to satisfy the key's own constraints, and for
  * this plugin type it has to do so at construction: BlockPluginTrait's
@@ -27,7 +27,7 @@ use PHPUnit\Framework\Attributes\Group;
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DemoBlockWithoutNodeTest extends SurfaceKernelTestBase {
+class ExampleBlockWithoutNodeTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}

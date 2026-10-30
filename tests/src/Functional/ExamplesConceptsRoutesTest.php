@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * On a fresh site with only the examples enabled: every route answers an
  * administrator and refuses anonymous, the landing page lists each, and
- * each page shows what it demonstrates above its contract and saves
+ * each page says what it shows above its contract and saves
  * through its form.
  */
 #[Group('surface')]

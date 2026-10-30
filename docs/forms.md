@@ -145,7 +145,7 @@ prevent.
 
 How a form is laid out is declared once, on the keys, and every door
 that draws them reads it: the operation form, each plugin host (a
-block, a condition, a formatter, a field type), the demo's standalone
+block, a condition, a formatter, a field type), the example's standalone
 form, and the React app through the served contract
 (why: [decision](decisions.md#arrangement-is-declared-once)).
 `$inputs->describe()`, called after the key is declared, says the group
@@ -213,7 +213,7 @@ as `x-surface.arrangement` only when a renderer asks for the widget
 hints ([The served contract](served-contract.md#x-surface)).
 
 What stays for a [cosmetic layer](#the-cosmetic-seam) is what is truly
-one form's: a borrowed element (the content type demo puts the three
+one form's: a borrowed element (the content type example puts the three
 groups its resource declares into core's vertical tabs, reaching each by
 `@group.<id>`), markup, the message and the redirect.
 
@@ -318,7 +318,7 @@ that refine against those, until nothing new is reached: the same
 closure the [discard cascade](#the-in-form-half-discarding-orphaned-input)
 walks. In the registration example, the venue replaces the room and the
 capacity; the room replaces the capacity; the pricing replaces the
-ticket variants. In the demo block, the entity type replaces the bundle and
+ticket variants. In the example block, the entity type replaces the bundle and
 the field, and the bundle replaces the field. Replacing the whole
 container, as the form once did, redrew the select the person had just
 changed and left the real change (a maximum moving on another field)
@@ -707,7 +707,7 @@ Three rules keep it honest:
   new. Each round adds a key to one of the two sets and none takes one
   away, so it ends within the depth of the longest chain. Changing the
   first of three links resets all three in the one rebuild the person is
-  waiting on: the demo block's entity type moved with a bundle and field
+  waiting on: the example block's entity type moved with a bundle and field
   still posted leaves the bundle standing for the stored one and the
   field open again, refined against no bundle at all.
   `Extracting::settleFrame()` is the loop, per frame, and a
@@ -976,7 +976,7 @@ changes nothing is offered under its own label, "Check a program", not
 was written. The form id is
 `surface_operation_form_<route name>`, so an alter hook can name
 one route's form and two of them on one page cannot share a form state.
-The content type demo's two routes are the worked example, and
+The content type example's two routes are the worked example, and
 [Routes from operations](resources.md#routes-from-operations) shows one.
 
 The data surface's container is built under the `surface` key, which is
@@ -1587,17 +1587,17 @@ form class in the module at all.
 
 ### When a hand-written form is still right
 
-Three cases, and the demo module is the second one:
+Three cases, and the example module is the second one:
 
 1. **The page is not one operation's page.** A form collecting a data
    surface beside several unrelated things (a confirmation step, a
    batch, an entity form it rides inside) is a form, and it composes the
    data surface's container itself.
 2. **The structure and the destination belong to different owners.**
-   `surface_examples_plugins` renders the demo block's structure into a
+   `surface_examples_plugins` renders the example block's structure into a
    `StateStorage`, which is exactly the claim it exists to make: a
    structure is independent of where its values are stored. An operation
-   route writes to the resource's own storage, and the demo block's
+   route writes to the resource's own storage, and the example block's
    structure names none, because its host stores it; serving it at a route would
    mean giving it a destination that is not its own.
 3. **The host protocol is not a route.** Field UI, the block layout
@@ -1646,5 +1646,5 @@ public function submitForm(array &$form, FormStateInterface $form_state): void {
 
 A data surface plus storage is a complete configurable thing.
 `surface_examples_plugins` ships exactly this against a `StateStorage`, asking
-the block manager for the demo block and reading its data surface rather
+the block manager for the example block and reading its data surface rather
 than repeating its keys, which is what any other consumer would do.

@@ -19,8 +19,8 @@ machine name, is saved as `block.block.<id>`, and can be added, edited
 and removed. The plugin's settings are saved inside the placement,
 under its `settings`.
 
-So the placement is the resource. The `surface_examples_block` submodule
-makes core's block config entity the resource `block.placement`, and
+So the placement is the resource. The `surface_examples_block` example
+module makes core's block config entity the resource `block.placement`, and
 the teaser's settings are a structure that `block.placement` holds
 under `settings`. Any other place that uses a block holds its settings
 inside what it saves in the same way.

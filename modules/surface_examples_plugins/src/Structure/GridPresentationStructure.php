@@ -11,14 +11,14 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 
 /**
- * What the demo block needs to know when it renders a grid.
+ * What the example block needs to know when it renders a grid.
  *
  * The other variant of the block's presentation settings.
  *
- * @see \Drupal\surface_examples_plugins\Structure\DemoBlockStructure
+ * @see \Drupal\surface_examples_plugins\Structure\ExampleBlockStructure
  */
 #[Structure('block.surface_examples_plugins.presentation.grid')]
-#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
+#[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 final class GridPresentationStructure implements StructureInterface {
 
   /**

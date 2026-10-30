@@ -251,7 +251,7 @@ class RouteAccessTest extends SurfaceKernelTestBase {
     $holder = $this->createUser([NodeTypeResource::PERMISSION]);
     foreach (['article', 'ghost'] as $type) {
       $this->serveBuilt('surface_route_test.edit_type', static::editTypeRoute(), ['type' => $type]);
-      $this->assertSame(['forbidden', "The 'administer data surface node type demo' permission is required.", -1], static::answer($this->formAccess($stranger)), $type);
+      $this->assertSame(['forbidden', "The 'administer surface examples content types' permission is required.", -1], static::answer($this->formAccess($stranger)), $type);
     }
     // The account the permission lets in hears that the id names nothing.
     $this->assertSame(['allowed', '', 0], static::answer($this->formAccess($holder)));

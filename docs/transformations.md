@@ -63,7 +63,7 @@ idempotent, so the second pass changes nothing.
 A layout is two pure functions, `toStorage()` and `fromStorage()`, with
 no services and no site state, because the same values must translate
 the same way for a form, a tool, a config action and a test. The
-extras demo asks for a content type's review deadline as an amount and
+extras example asks for a content type's review deadline as an amount and
 a unit, and stores seconds:
 
 <!-- excerpt: modules/surface_examples_extras/src/ReviewDeadlineLayout.php -->

@@ -90,7 +90,7 @@ Every class of the module a snippet in these pages names, beside the
 `use` line that imports it. A snippet that quotes a whole file carries
 its own `use` lines; the others leave them out and link here, from the
 section they sit in. A class a snippet borrows from a submodule or an
-example (`NewsletterStorage`, `DemoBlockStructure`) is in that module's
+example (`NewsletterStorage`, `ExampleBlockStructure`) is in that module's
 `src/`, by the same rule: the namespace is the module's, then the
 directory. `NamespacesDocsTest` fails when a snippet names a class of
 the module that it does not import and this table does not list.

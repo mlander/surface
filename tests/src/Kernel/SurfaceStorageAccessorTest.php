@@ -125,8 +125,8 @@ class SurfaceStorageAccessorTest extends SurfaceKernelTestBase {
    */
   public function testFormatterNamesNoStorage(): void {
     $definition = BaseFieldDefinition::create('string')
-      ->setName('field_demo')
-      ->setLabel('Demo');
+      ->setName('field_example')
+      ->setLabel('Example');
     $formatter = $this->container->get('plugin.manager.field.formatter')->createInstance(
       'surface_test_formatter',
       [

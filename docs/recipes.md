@@ -253,7 +253,7 @@ each row's field, and a refused keyword is marked on its own row. The
 served contract says `x-surface.widget: "list"`. A text area of one
 keyword per line, or a comma separated list, is still a widget of your
 own if you want one ([Writing a widget](widgets.md#writing-a-widget));
-the demo extras module ships the second, `CommaSeparatedListWidget`.
+the extras example module ships the second, `CommaSeparatedListWidget`.
 
 ## One key per thing the site has
 

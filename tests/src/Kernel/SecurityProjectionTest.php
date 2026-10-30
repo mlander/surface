@@ -364,7 +364,7 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
     $missing = $this->reactAccess('node.type', 'update', ['type' => 'nothing_here']);
     $this->assertFalse($there[0]);
     $this->assertSame($there, $missing);
-    $this->assertStringContainsString('administer data surface node type demo', $there[1]);
+    $this->assertStringContainsString('administer surface examples content types', $there[1]);
 
     // A permission only the subject names: the subject is read, and a
     // refusal says the same whether it was there.
@@ -395,10 +395,10 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
     // refused what the parameter names, and is let in where it may; a
     // parameter naming nothing is let through, for the page to answer
     // 404, as the API and the operation form's route answer it.
-    $holder = $this->createUser(['administer data surface node type demo']);
+    $holder = $this->createUser(['administer surface examples content types']);
     $this->assertSame([FALSE, 'The resource this page serves may not be written by this account.'], $this->reactAccess('node.type', 'update', ['type' => 'article'], $holder));
     $this->assertSame([TRUE, ''], $this->reactAccess('node.type', 'update', ['type' => 'nothing_here'], $holder));
-    $admin = $this->createUser(['administer data surface node type demo', 'administer content types']);
+    $admin = $this->createUser(['administer surface examples content types', 'administer content types']);
     $this->assertTrue($this->reactAccess('node.type', 'update', ['type' => 'article'], $admin)[0]);
   }
 

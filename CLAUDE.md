@@ -217,7 +217,7 @@ the record of the rework that brought the module to the pattern.
   config schema type for the pattern and length, `SurfaceUnique` added
   to the identity key of every `creates` operation (the storage answers
   `exists()`), and core's machine name element as the widget (example 15's
-  id, the content type demo,
+  id, the content type example,
   `docs/decisions.md#a-machine-name-is-a-computed-identity`).
   A key **resolved** at use is asked and stored as declared, and read
   otherwise by the code that uses the resource: `$inputs->resolve('api_key',
@@ -299,7 +299,7 @@ or, with no argument, is its own structure: the plugin class implements
 `StructureInterface`, is found through its plugin definition
 (`ResourcePlugins::ownStructures()`), gets the id
 `<host type>:<plugin id>` unless it carries `#[Structure]`, and alters
-name it by the plugin class (the demo formatter). Everything else is
+name it by the plugin class (the example formatter). Everything else is
 discovered by `ResourceBuild\ResourceCollectorPass` and built by the
 `surface.resources` service (`ResourcesInterface::build($resource,
 $context)`), which writes the blueprint, the alters, the context and the
@@ -538,7 +538,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1798, Assertions: 41037, Errors: 0, Failures: 0, Skipped: 3. Classes: 250 of 250, 8 at a time, browser classes 4.
+phpunit: Tests: 1805, Assertions: 41159, Errors: 0, Failures: 0, Skipped: 3. Classes: 252 of 252, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -558,8 +558,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1690, Assertions: 37019, Skipped: 3, Deprecations: 130. Classes:
-201, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1697, Assertions: 37139, Skipped: 3, Deprecations: 130. Classes:
+203, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -839,10 +839,35 @@ src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constrain
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Nineteen experimental submodules; each has its own README.
+modules/                 Nineteen example submodules, each with its own README,
+                         in two groups (below).
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```
+
+The base module is the project and the only thing meant to ship: the
+framework and its doors, the form, the Tool API tool and with it the
+command line (where the tool module is installed), and HTTP with its
+OpenAPI document. Every submodule is an example, in the package
+`Surface API examples` and `lifecycle: experimental`, in one of two
+groups, which
+`surface_examples`' `ExampleModules` (the landing page's list),
+`docs/examples/index.md`, `docs/installation.md` and README.md's "The
+examples" give alike:
+
+- **Learn the pattern:** `surface_examples` and the numbered series'
+  submodules (`surface_examples_compliance`, `_workflow`, `_keys`,
+  `_references`, `_retitle`), `surface_examples_first`, `_plugins`,
+  `_classic`, `_extras` and `_react`.
+- **The pattern on Drupal's own things:** `surface_examples_block`,
+  `_component_block`, `_entity`, `_node_type`, `_node_type_tool`,
+  `_performance`, `_field` and `_address`. They try the pattern on
+  what Drupal and a contrib module already have; they are not part of
+  the project and will not ship in this form, and each one's
+  description and README say so.
+
+A new example goes into one group in all four places;
+`ExamplesRoutesTest` fails when `ExampleModules` misses a directory.
 
 A module that declares its own puts resources in `src/Resource/`,
 structures in `src/Structure/`, shapes in `src/Shape/`, alters in

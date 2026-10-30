@@ -1,4 +1,4 @@
-# Surface API Examples - Compliance
+# Surface API examples: compliance
 
 Example 4 of [the examples](../surface_examples/README.md): another
 module has a say in a resource it does not own.

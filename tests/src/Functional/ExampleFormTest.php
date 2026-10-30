@@ -9,7 +9,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the standalone demo form through a browser.
+ * Tests the standalone example form through a browser.
  *
  * The third kind of host, and the one with no plugin behind it: an
  * ordinary FormBase that reads a structure off a block plugin and commits
@@ -38,7 +38,7 @@ class ExampleFormTest extends BrowserTestBase {
   protected $defaultTheme = 'stark';
 
   /**
-   * The route the demo form is served at.
+   * The route the example form is served at.
    */
   protected const FORM_ROUTE = 'admin/config/development/surface-example-form';
 

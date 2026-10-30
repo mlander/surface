@@ -369,7 +369,7 @@ class OperationToolsTest extends SurfaceKernelTestBase {
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertNull(NodeType::load('refused'));
 
-    $this->setUpCurrentUser([], ['administer content types', 'administer data surface node type demo']);
+    $this->setUpCurrentUser([], ['administer content types', 'administer surface examples content types']);
     $tool = $this->tool('surface:node.type:create');
     $tool->setInputValue(OperationInputs::VALUES, ['name' => 'Allowed', 'type' => 'allowed'] + self::NODE_TYPE_REQUIRED);
     $this->assertTrue($tool->access());

@@ -20,7 +20,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the registry (eca_tool's, through the tool deriver) asked it while they
  * were being read. The registry was answered with no plugin that is its
  * own structure, memoized that for the request, and wrote it to the
- * discovery bin: 90 definitions on the site instead of 91, the demo
+ * discovery bin: 90 definitions on the site instead of 91, the example
  * formatter missing. The fixture's deriver asks the same way, and the
  * sticky note block is the plugin that is its own structure.
  */

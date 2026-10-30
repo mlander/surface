@@ -1,4 +1,9 @@
-# Surface API - Content entities
+# Surface API examples: content entities
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 A content entity's create and update form, said as a resource, derived
 from the bundle's fields: the example that pokes holes in the pattern.

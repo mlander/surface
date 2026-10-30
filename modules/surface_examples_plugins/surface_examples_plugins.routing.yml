@@ -2,6 +2,6 @@ surface_examples_plugins.form:
   path: '/admin/config/development/surface-example-form'
   defaults:
     _form: 'Drupal\surface_examples_plugins\Form\ExampleForm'
-    _title: 'Data surface demo'
+    _title: 'Surface API example'
   requirements:
     _permission: 'administer site configuration'

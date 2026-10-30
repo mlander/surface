@@ -15,7 +15,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 
 /**
- * What the demo block can be configured with.
+ * What the example block can be configured with.
  *
  * No storage and no operations: the block host supplies both, because
  * only it holds the plugin instance. Its presentation settings are
@@ -36,7 +36,7 @@ use Drupal\surface\Resource\StructureInterface;
  * @see \Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock
  */
 #[Structure('block.surface_examples_plugins')]
-final class DemoBlockStructure implements StructureInterface {
+final class ExampleBlockStructure implements StructureInterface {
 
   /**
    * {@inheritdoc}

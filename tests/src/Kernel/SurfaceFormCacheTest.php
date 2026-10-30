@@ -66,7 +66,7 @@ class SurfaceFormCacheTest extends SurfaceKernelTestBase {
    */
   public function testFormatterSettingsElementRoundTrips(): void {
     $formatter = $this->container->get('plugin.manager.field.formatter')->createInstance('surface_test_formatter', [
-      'field_definition' => BaseFieldDefinition::create('string')->setName('field_demo')->setLabel('Demo'),
+      'field_definition' => BaseFieldDefinition::create('string')->setName('field_example')->setLabel('Example'),
       'settings' => ['casing' => 'uppercase'],
       'label' => 'above',
       'view_mode' => 'default',
@@ -77,7 +77,7 @@ class SurfaceFormCacheTest extends SurfaceKernelTestBase {
     // Everything the element carries for the callback is a string or an
     // array, so what comes back is the element that went in.
     $this->assertSame('surface_test_formatter', $element['#surface']);
-    $this->assertSame('field_demo', $element['#surface_field_name']);
+    $this->assertSame('field_example', $element['#surface_field_name']);
     $this->assertSame(
       ['casing' => 'uppercase', 'prefix' => NULL, 'variant' => NULL],
       $element['#surface_current'],

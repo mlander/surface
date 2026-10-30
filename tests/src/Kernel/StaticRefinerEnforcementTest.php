@@ -7,7 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
 use Drupal\surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface_examples_compliance\Alter\RegistrationComplianceAlter;
@@ -215,14 +215,14 @@ class StaticRefinerEnforcementTest extends SurfaceKernelTestBase {
   /**
    * Tests the fixtures with enumerated keys agree too.
    *
-   * The demo block (bundles per entity type, fields per bundle), the
+   * The example block (bundles per entity type, fields per bundle), the
    * stockroom (a static and a runtime refiner on one key) and the crate
    * (a key enumerated inside a variant).
    */
   public function testTheFixturesAgree(): void {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
     StockroomStructure::$closed = ['north_2'];
-    foreach ([DemoBlockStructure::class, StockroomStructure::class, CrateStructure::class] as $class) {
+    foreach ([ExampleBlockStructure::class, StockroomStructure::class, CrateStructure::class] as $class) {
       $surface = $this->configure($class);
       $count = $this->assertStaticRefinersAgree($surface, NULL, $class)
         + $this->assertStaticRefinersAgree($surface, [], $class);

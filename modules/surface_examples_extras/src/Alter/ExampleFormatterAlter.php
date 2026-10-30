@@ -14,7 +14,7 @@ use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
 
 /**
- * This module's additions to the demo formatter.
+ * This module's additions to the example formatter.
  *
  * The formatter is its own structure, so this alter names the formatter's
  * class, the way an alter of a structure in src/Structure names that class.
@@ -25,7 +25,7 @@ use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter
  * - It adds a key. A badge, which the build mounts under this module's
  *   name, at third_party_settings.surface_examples_extras.badge, so the
  *   display stores it in the formatter's settings and this module's
- *   schema describes it without the demo module knowing.
+ *   schema describes it without the example module knowing.
  * - It offers one more value on a key the formatter owns: a ribbon
  *   variant. The value is this module's, recorded as its contribution,
  *   and this module answers for it: its own #[RefinesInput] method on
@@ -41,7 +41,7 @@ use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter
  *   Where this module is the worked example.
  */
 #[Alters(ExampleFormatter::class)]
-final class DemoFormatterAlter implements AltersInputsInterface {
+final class ExampleFormatterAlter implements AltersInputsInterface {
 
   use StringTranslationTrait;
 
@@ -51,7 +51,7 @@ final class DemoFormatterAlter implements AltersInputsInterface {
   public const RIBBON = 'ribbon';
 
   /**
-   * Constructs a DemoFormatterAlter.
+   * Constructs a ExampleFormatterAlter.
    *
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.

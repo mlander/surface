@@ -54,7 +54,7 @@ use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
  * content type's storage writes them there without knowing this module.
  * Nothing here is refined: neither key depends on another.
  *
- * Named by class, so this module reads the node type demo's resource
+ * Named by class, so this module reads the node type example's resource
  * without depending on it: discovery skips an alter of a resource whose
  * module is not enabled.
  *

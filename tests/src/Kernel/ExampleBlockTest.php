@@ -11,7 +11,7 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\surface\Widget\SurfaceWidgetBase;
 use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
-use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 
 /**
- * Tests the demo block: one declaration, live options, one pipeline.
+ * Tests the example block: one declaration, live options, one pipeline.
  *
  * The block authors no form elements and no storage code. What is proven
  * here is that the declaration alone is enough: a constraint naming a
@@ -31,7 +31,7 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DemoBlockTest extends SurfaceKernelTestBase {
+class ExampleBlockTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -59,7 +59,7 @@ class DemoBlockTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Creates the demo block through the block manager.
+   * Creates the example block through the block manager.
    *
    * A plugin-hosted structure is read the way any consumer would read it:
    * through the manager that owns the plugin, not by constructing the
@@ -170,7 +170,7 @@ class DemoBlockTest extends SurfaceKernelTestBase {
    * being refined against an entity type that does not exist.
    */
   public function testAnInvalidEntityTypeLeavesTheBundleUnrefined(): void {
-    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $surface = $this->container->get('surface.resources')->build(ExampleBlockStructure::class, new OperationContext('configure'));
     $advertised = $surface->getDefinition('bundle');
     $bundle = $surface->refine(['entity_type' => 'no_such_type'])->getDefinition('bundle');
     $this->assertArrayNotHasKey('EntityBundleExists', $bundle->getConstraints());
@@ -574,15 +574,15 @@ class DemoBlockTest extends SurfaceKernelTestBase {
     $this->config('system.theme')->set('default', 'stark')->save();
     $stored = ['headline' => 'Featured', 'entity_type' => 'user', 'bundle' => 'user', 'limit' => 5];
     $entity = Block::create([
-      'id' => 'demo',
+      'id' => 'example',
       'theme' => 'stark',
       'region' => 'content',
       'plugin' => 'surface_examples_plugins',
-      'settings' => ['label' => 'Demo', 'label_display' => '0'] + $stored,
+      'settings' => ['label' => 'Example', 'label_display' => '0'] + $stored,
     ]);
     $entity->save();
 
-    $request = Request::create('/admin/structure/block/manage/demo', 'POST');
+    $request = Request::create('/admin/structure/block/manage/example', 'POST');
     $request->setSession(new Session(new MockArraySessionStorage()));
     $this->container->get('request_stack')->push($request);
     $form_object = $this->container->get('entity_type.manager')->getFormObject('block', 'default')->setEntity($entity);
@@ -590,7 +590,7 @@ class DemoBlockTest extends SurfaceKernelTestBase {
     $form_state->setUserInput([
       'form_id' => $form_object->getFormId(),
       'settings' => [
-        'label' => 'Demo',
+        'label' => 'Example',
         'label_display' => '0',
         'headline' => 'Featured',
         // Both moved, together, and the pair is valid.
@@ -600,7 +600,7 @@ class DemoBlockTest extends SurfaceKernelTestBase {
         'limit' => '5',
         'presentation' => 'list',
       ],
-      'id' => 'demo',
+      'id' => 'example',
       'region' => 'content',
       'op' => 'Save block',
     ]);
@@ -622,7 +622,7 @@ class DemoBlockTest extends SurfaceKernelTestBase {
       ['' => TRUE],
     )));
     // Nothing was written.
-    $settings = Block::load('demo')->get('settings');
+    $settings = Block::load('example')->get('settings');
     $this->assertSame('user', $settings['entity_type']);
     $this->assertSame('user', $settings['bundle']);
     // The structure itself accepts the pair: the refusal is the host's.

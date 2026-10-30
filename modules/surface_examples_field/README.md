@@ -1,4 +1,9 @@
-# Surface API examples - Field settings
+# Surface API examples: field settings
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 Core's field instance and field storage settings as resources:
 `field.instance`, a field on a bundle, and `field.storage`, the storage

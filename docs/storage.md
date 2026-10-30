@@ -291,7 +291,7 @@ Core's `node.type.*`, or an adopter's schema written by hand, says what
 storage refuses, and a resource stored to it must not advertise more. A
 storage holding what it writes to a config schema implements
 `Resource\HeldToConfigSchemaInterface`, as `ConfigObjectStorage` does
-and as the node type demo's `NodeTypeStorage` does for `node.type.*`,
+and as the node type example's `NodeTypeStorage` does for `node.type.*`,
 most simply with `Storage\HeldToConfigSchemaTrait`, and the build asks it
 once per resource and context. It holds each key to what the schema
 states for it:
@@ -785,7 +785,7 @@ and nothing would have been stored.
 
 A create operation knows no identity, because the thing it creates does
 not exist to be named, and yet its destination may depend on what is
-being created. The node type demo is the worked example: a content
+being created. The node type example is the worked example: a content
 type's base field overrides belong to a bundle, and the bundle IS the
 machine name being submitted.
 
@@ -850,7 +850,7 @@ accepted values instead (why: [decision](decisions.md#every-door-projects-what-t
 | --- | --- | --- | --- |
 | `ConfigObjectStorage` | One simple config object, named by a subclass, laid out by its `layout()`, a key kept under a path by its `STORED_AT`. A `ResourceStorageInterface`, named by a resource. | The values to write, in storage layout, a key kept under a path by that path, references to content by uuid, plus the language code when the schema asks for one. | the examples, `surface_examples_first`, `surface_examples_performance` |
 | `ConfigEntityStorage` | One config entity, named by a subclass with its properties, plus core's third party settings. A `ResourceStorageInterface` that can delete, named by a resource. | The entity's exported array, references to content by uuid, its dependencies calculated, those of what its keys refer to among them. | `BlockPlacementStorage`, `NodeTypeStorage` |
-| `StateStorage` | One State key. | The accepted values. | the demo form |
+| `StateStorage` | One State key. | The accepted values. | the example form |
 | `FieldSettingsStorage` | One field instance's settings. | The settings array. | the field type host |
 | `BaseFieldOverrideStorage` | A bundle's overrides of an entity type's base fields. | The overrides to save, as exported arrays, and the fields whose override goes. | `NodeTypeStorage` |
 | `PluginConfigurationStorage` | A plugin's configuration array. | The complete configuration. | the plugin hosts |

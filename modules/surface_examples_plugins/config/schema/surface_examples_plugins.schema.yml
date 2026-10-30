@@ -1,6 +1,6 @@
 block.settings.surface_examples_plugins:
   type: block_settings
-  label: 'Data surface demo block settings'
+  label: 'Surface API example block settings'
   constraints:
     FullyValidatable: ~
   mapping:
@@ -57,7 +57,7 @@ block.settings.surface_examples_plugins.presentation.grid:
 
 field.formatter.settings.surface_examples_plugins_string:
   type: mapping
-  label: 'Data surface demo formatter settings'
+  label: 'Surface API example formatter settings'
   mapping:
     prefix:
       type: string

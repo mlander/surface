@@ -38,12 +38,14 @@ The attribute's first argument is the resource's id. The settings of
 The second attribute, `#[Operation]`, and the `storage:` argument are
 the ideas of [Operations](09-operations.md) and [Storage](10-storage.md).
 
-The module ships resources for things core already has. The
-`surface_examples_node_type` submodule's `NodeTypeResource` makes a
-content type the resource `node.type`. The `surface_examples_block`
-submodule's `BlockPlacementResource` makes core's placed block config
-entity, `block`, the resource `block.placement`, and ships the routes
-that serve it. Later pages show parts of both.
+The content type and the placed block are resources because two
+example modules make them so, to try the pattern on things core already
+has; the base module does not. The `surface_examples_node_type`
+example's `NodeTypeResource` makes a content type the resource
+`node.type`. The `surface_examples_block` example's
+`BlockPlacementResource` makes core's placed block config entity,
+`block`, the resource `block.placement`, and ships the routes that serve
+it. Later pages show parts of both.
 
 The module finds the class the way core finds a hook class in
 `src/Hook`, so nothing is registered in a services file. It never

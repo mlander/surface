@@ -48,7 +48,7 @@ class ServedPathsTest extends BrowserTestBase {
     $this->drupalLogin($this->drupalCreateUser([
       'administer site configuration',
       'administer content types',
-      'administer data surface node type demo',
+      'administer surface examples content types',
     ]));
   }
 

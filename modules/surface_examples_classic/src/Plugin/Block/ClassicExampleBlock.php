@@ -17,7 +17,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * The demo block, written the way blocks were written before Surface API.
+ * The example block, written the way blocks were written before Surface API.
  *
  * Behaviorally identical to `surface_examples_plugins`: the same settings, the
  * same defaults, the same entity-type-to-bundle-to-field narrowing over
@@ -36,9 +36,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  */
 #[Block(
   id: 'surface_examples_classic',
-  admin_label: new TranslatableMarkup('Data surface demo (classic)'),
+  admin_label: new TranslatableMarkup('Surface API example (classic)'),
 )]
-final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPluginInterface {
+final class ClassicExampleBlock extends BlockBase implements ContainerFactoryPluginInterface {
 
   /**
    * The id of the element the AJAX rebuild replaces.
@@ -46,7 +46,7 @@ final class ClassicDemoBlock extends BlockBase implements ContainerFactoryPlugin
   protected const WRAPPER_ID = 'surface-example-classic-settings';
 
   /**
-   * Constructs a ClassicDemoBlock.
+   * Constructs a ClassicExampleBlock.
    *
    * @param array $configuration
    *   The plugin configuration.

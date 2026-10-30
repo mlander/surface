@@ -1,4 +1,4 @@
-# Surface API Examples
+# Surface API examples
 
 One resource that grows, one idea per example. The thing being described is
 the settings of an event registration: a title, how many people, where,

@@ -26,7 +26,7 @@ and field storage settings as resources
   and `Plugin\tool\Tool\ResourceOperationTool`, with `Tool\OperationInputs`
   describing them. The field example adds `surface:field.instance:create`,
   `:reuse` and `:update` and `surface:field.storage:update`; the node
-  type demo adds `surface:node.type:create` and `:update`, and
+  type example adds `surface:node.type:create` and `:update`, and
   `surface_examples_entity` one `create` and one `update` per content entity
   bundle with a form display, `surface:entity.content:node.page:create`. The inputs
   are the operation's parameters (an entity parameter as its id; a
@@ -391,7 +391,7 @@ entity type.`
 The operation's permission is also the tool's declared permission
 (`ToolDefinition::getPermission()`), so `tool:info` prints it and the
 Tool API checks it before reading any input, when it is one permission
-as written: `surface:node.type:create` declares the node type demo's
+as written: `surface:node.type:create` declares the node type example's
 permission. A permission with a `%key` placeholder, as the field tools'
 `administer %entity_type fields`, names a different permission for
 each call, and the Tool API has no place for one that depends on the

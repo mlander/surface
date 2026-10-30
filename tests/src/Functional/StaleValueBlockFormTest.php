@@ -31,7 +31,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * it was handed, whether or not anybody touched it.
  *
  * @see \Drupal\Tests\surface\Kernel\StaleValueTest
- * @see \Drupal\Tests\surface\Kernel\DemoBlockTest
+ * @see \Drupal\Tests\surface\Kernel\ExampleBlockTest
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -57,7 +57,7 @@ class StaleValueBlockFormTest extends BrowserTestBase {
   /**
    * The id the placed block is saved under.
    */
-  protected const BLOCK_ID = 'stale_demo';
+  protected const BLOCK_ID = 'stale_example';
 
   /**
    * {@inheritdoc}

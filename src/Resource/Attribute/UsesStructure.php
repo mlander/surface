@@ -7,9 +7,10 @@ namespace Drupal\surface\Resource\Attribute;
 /**
  * On a plugin class: its configuration is this structure.
  *
- * Two spellings. Naming a class, #[UsesStructure(DemoBlockStructure::class)],
- * points at a structure in src/Structure like any other, so it reads the
- * same and alters find it the same way. With no argument, #[UsesStructure],
+ * Two spellings. Naming a class,
+ * #[UsesStructure(ExampleBlockStructure::class)], points at a structure in
+ * src/Structure like any other, so it reads the same and alters find it
+ * the same way. With no argument, #[UsesStructure],
  * the plugin class is its own structure: it implements StructureInterface,
  * with its static defineInputs() and its static #[RefinesInput] methods
  * beside the plugin's own code, and the host builds it from the plugin

@@ -46,8 +46,8 @@ class TypedFormatterBaseTest extends SurfaceKernelTestBase {
    */
   protected function createFormatter(array $settings = []): SurfaceTestFormatter {
     $field_definition = BaseFieldDefinition::create('string')
-      ->setName('field_demo')
-      ->setLabel('Demo');
+      ->setName('field_example')
+      ->setLabel('Example');
     $formatter = $this->container->get('plugin.manager.field.formatter')->createInstance('surface_test_formatter', [
       'field_definition' => $field_definition,
       'settings' => $settings,
@@ -148,7 +148,7 @@ class TypedFormatterBaseTest extends SurfaceKernelTestBase {
       '#type' => 'form',
       '#tree' => FALSE,
       '#attributes' => ['id' => 'field-display-overview'],
-      'fields' => ['field_demo' => ['#type' => 'container']],
+      'fields' => ['field_example' => ['#type' => 'container']],
       'refresh_rows' => ['#type' => 'submit'],
     ];
 
@@ -216,7 +216,7 @@ class TypedFormatterBaseTest extends SurfaceKernelTestBase {
   public function testDeeplyNestedExtraction(): void {
     $element = $this->createFormatter()->settingsForm([], new FormState());
 
-    $parents = ['fields', 'field_demo', 'settings_edit_form', 'settings'];
+    $parents = ['fields', 'field_example', 'settings_edit_form', 'settings'];
     $assign = function (array &$element, array $parents) use (&$assign): void {
       $element['#parents'] = $parents;
       foreach ($element as $key => &$child) {

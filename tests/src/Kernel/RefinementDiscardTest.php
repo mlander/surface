@@ -140,7 +140,7 @@ class RefinementDiscardTest extends SurfaceKernelTestBase {
    * the AJAX layer names it, and the container that comes back.
    */
   public function testTheReportedScenarioFlagsNothingAndFollowsTheNewParent(): void {
-    $request = Request::create('/demo', 'POST');
+    $request = Request::create('/example', 'POST');
     $request->setSession(new Session(new MockArraySessionStorage()));
     $this->container->get('request_stack')->push($request);
 
@@ -482,7 +482,7 @@ class RefinementDiscardTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Posts the demo form as an AJAX request naming a trigger does.
+   * Posts the example form as an AJAX request naming a trigger does.
    *
    * @param array $surface
    *   The structure's input, keyed by structure key.
@@ -495,8 +495,8 @@ class RefinementDiscardTest extends SurfaceKernelTestBase {
    * @return \Drupal\Core\Form\FormStateInterface
    *   The form state after the request.
    */
-  protected function postDemo(array $surface, string $trigger, ?string $build_id = NULL): FormStateInterface {
-    $request = Request::create('/demo', 'POST');
+  protected function postExample(array $surface, string $trigger, ?string $build_id = NULL): FormStateInterface {
+    $request = Request::create('/example', 'POST');
     $request->setSession(new Session(new MockArraySessionStorage()));
     $this->container->get('request_stack')->push($request);
     $form_state = new FormState();
@@ -517,15 +517,15 @@ class RefinementDiscardTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the demo's three-level chain replaces what each link moves.
+   * Tests the example's three-level chain replaces what each link moves.
    *
    * The entity type narrows the bundle, and the two together narrow the
    * field: changing the entity type moves both, changing the bundle
    * moves the field alone. The element touched is never replaced, and
    * the container around them never is.
    */
-  public function testTheDemoChainReplacesOnlyWhatEachLinkMoves(): void {
-    $state = $this->postDemo(['entity_type' => 'node', 'bundle' => 'user', 'field' => ''], 'entity_type');
+  public function testTheExampleChainReplacesOnlyWhatEachLinkMoves(): void {
+    $state = $this->postExample(['entity_type' => 'node', 'bundle' => 'user', 'field' => ''], 'entity_type');
     $container = $state->getCompleteForm()['surface'];
     $response = $this->ajaxResponse($state);
     $this->assertSame([
@@ -540,7 +540,7 @@ class RefinementDiscardTest extends SurfaceKernelTestBase {
     // The next request is processed against the form this one rebuilt,
     // from the form cache, as a browser's is: the bundle select it holds
     // offers node's bundles.
-    $state = $this->postDemo(['entity_type' => 'node', 'bundle' => 'article', 'field' => ''], 'bundle', $state->getCompleteForm()['#build_id']);
+    $state = $this->postExample(['entity_type' => 'node', 'bundle' => 'article', 'field' => ''], 'bundle', $state->getCompleteForm()['#build_id']);
     $container = $state->getCompleteForm()['surface'];
     $response = $this->ajaxResponse($state);
     $replaced = $this->ajaxSelectors($response, 'replaceWith');
@@ -552,7 +552,12 @@ class RefinementDiscardTest extends SurfaceKernelTestBase {
     $this->assertNotContains('#' . $container['#attributes']['id'], $replaced);
 
     // The presentation decides variants: their own wrapper goes, whole.
-    $state = $this->postDemo(['entity_type' => 'node', 'bundle' => 'article', 'field' => '', 'presentation' => 'grid'], 'presentation', $state->getCompleteForm()['#build_id']);
+    $state = $this->postExample([
+      'entity_type' => 'node',
+      'bundle' => 'article',
+      'field' => '',
+      'presentation' => 'grid',
+    ], 'presentation', $state->getCompleteForm()['#build_id']);
     $container = $state->getCompleteForm()['surface'];
     $response = $this->ajaxResponse($state);
     $this->assertSame([$this->wrapperSelector($container['presentation_settings'])], $this->ajaxSelectors($response, 'replaceWith'));

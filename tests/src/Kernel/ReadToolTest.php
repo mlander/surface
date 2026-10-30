@@ -398,11 +398,11 @@ class ReadToolTest extends SurfaceKernelTestBase {
       $this->assertSame([], $read['values'], $id . ': nothing read, in the one result shape.');
     }
 
-    // The content type's operation asks for the demo's permission beside
+    // The content type's operation asks for the example's permission beside
     // core's, so core's alone is not enough, here as for a write.
     $this->setUpCurrentUser([], ['administer content types']);
     $this->assertFalse($this->runTool('surface:node.type:update:read', ['type' => 'article'])['tool']->access());
-    $this->setUpCurrentUser([], ['administer content types', 'administer data surface node type demo']);
+    $this->setUpCurrentUser([], ['administer content types', 'administer surface examples content types']);
     $read = $this->runTool('surface:node.type:update:read', ['type' => 'article']);
     $this->assertTrue($read['tool']->access());
     $this->assertTrue($read['success'], $read['message']);

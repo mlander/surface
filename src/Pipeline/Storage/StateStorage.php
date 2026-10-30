@@ -14,7 +14,7 @@ use Drupal\surface\Pipeline\PreparedValues;
  * Stores a data surface's values under one State key.
  *
  * The simplest storage there is: the artifact is the accepted values
- * themselves. Handy for a standalone demo and for tests that need a real
+ * themselves. Handy for a standalone example and for tests that need a real
  * write without a config object or an entity behind it.
  *
  * @see docs/storage.md

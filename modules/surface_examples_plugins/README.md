@@ -1,4 +1,4 @@
-# Surface API Demo
+# Surface API examples: plugin settings
 
 Three adoptions of one layer, each reduced to what only it can say: a
 block plugin, a field formatter, and a standalone form. The block and
@@ -10,7 +10,7 @@ a structure class of its own, the formatter is its own structure.
 ### The block: `surface_examples_plugins`
 
 The plugin only renders; its
-configuration is `Structure\DemoBlockStructure`, which the plugin names with
+configuration is `Structure\ExampleBlockStructure`, which the plugin names with
 `#[UsesStructure]`, and it writes no form code at all: no
 `defaultConfiguration()`,
 no `blockForm()`, no `blockValidate()`, no `blockSubmit()`. The entity
@@ -50,7 +50,7 @@ advertised open whatever variant is chosen.
 
 ### Which spelling, when
 
-The block keeps its structure in `Structure\DemoBlockStructure` because
+The block keeps its structure in `Structure\ExampleBlockStructure` because
 the structure is large: six keys, two refiners and two variants that
 are structures of their own. A separate class reads better
 there: the plugin stays a page of rendering, and the structure is one
@@ -78,9 +78,9 @@ drush pm:install surface_examples_plugins
 
 | Where | What to look at |
 | --- | --- |
-| `/admin/structure/block` | Place the **Data surface demo** block. Change the entity type and watch bundle and field rebuild over AJAX. |
+| `/admin/structure/block` | Place the **Surface API example** block. Change the entity type and watch bundle and field rebuild over AJAX. |
 | `/admin/config/development/surface-example-form` | The same structure as a standalone form, writing to State instead of block configuration. Needs `administer site configuration`. |
-| Manage display, on any bundle with a string field | Choose the **Data surface demo formatter** and open its settings. |
+| Manage display, on any bundle with a string field | Choose the **Surface API example formatter** and open its settings. |
 
 `surface_examples_classic` ships the same block and the same formatter
 written the classic way, by hand. Install it beside this module to
@@ -97,9 +97,9 @@ setting.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\DemoBlockTest` | The block's structure, refinement and configuration round trip. |
-| `Kernel\DemoFormatterTest` | The formatter's settings protocol, the host reading `#[UsesStructure]`, and the extras module's contribution. |
+| `Kernel\ExampleBlockTest` | The block's structure, refinement and configuration round trip. |
+| `Kernel\ExampleFormatterTest` | The formatter's settings protocol, the host reading `#[UsesStructure]`, and the extras module's contribution. |
 | `Kernel\UsesStructureHostsTest` | Every plugin host reading its structure from the attribute. |
-| `Kernel\DemoFormTest` | The standalone form against `StateStorage`. |
+| `Kernel\StandaloneExampleFormTest` | The standalone form against `StateStorage`. |
 | `Kernel\ClassicParityTest` | That the block and the formatter still match their hand-written twins. |
 | `FunctionalJavascript\SurfaceRefinementTest` | The AJAX rebuild in a real browser: the chain, an entity type change replacing the bundle and the field and nothing else, and an orphaned bundle reset silently or, when stored, refused on save. |

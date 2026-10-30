@@ -1,9 +1,9 @@
-name: Surface API Demo - Classic
+name: 'Surface API examples: plugin settings, classic'
 type: module
-description: 'The demo block and the demo formatter written the classic way, by hand, so the two can be read side by side. Depends on nothing from Surface API.'
-package: Surface API
+description: 'The block and the formatter of surface_examples_plugins written the classic way, by hand, so the two can be read side by side. Depends on nothing from Surface API.'
+package: 'Surface API examples'
 lifecycle: experimental
-lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#the-examples'
 core_version_requirement: ^11.3 || ^12
 dependencies:
   - drupal:block

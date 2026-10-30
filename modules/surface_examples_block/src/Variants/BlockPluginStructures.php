@@ -25,7 +25,7 @@ use Drupal\surface\Resource\SiteListInterface;
  * What each one's settings are:
  *
  * - **A structure the plugin declares.** A plugin whose class names its
- *   settings with #[UsesStructure] (the component block, the demo block)
+ *   settings with #[UsesStructure] (the component block, the example block)
  *   is that structure, built as declared, its refiners, children and
  *   variants with it.
  * - **Its config schema, read.** Any other plugin's settings are what

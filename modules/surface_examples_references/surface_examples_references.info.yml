@@ -1,9 +1,9 @@
 name: 'Surface API examples: references'
 type: module
 description: 'Example 16 of the examples: a key that refers to an entity, declared by its data type string, listed while the site has few enough and looked up above that.'
-package: Surface API
+package: 'Surface API examples'
 lifecycle: experimental
-lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#the-examples'
 core_version_requirement: ^11.3 || ^12
 dependencies:
   - surface:surface_examples

@@ -16,7 +16,7 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Tests the per bundle overrides of an entity type's base fields.
  *
- * The node type demo exercises this storage through a composite, which is
+ * The node type example exercises this storage through a composite, which is
  * how it is used in practice and not where its own edges are visible.
  * Two of those edges cost data if they are wrong: an override a caller
  * cannot remove is an override a site builder is stuck with, and a map

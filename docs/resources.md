@@ -94,13 +94,13 @@ The API is in `Drupal\surface\Resource`; the attributes in
 | **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module** | `alterInputs($inputs)` | `#[RefinesInput('key')]` methods |
 
-The demo block's configuration, `DemoBlockStructure` in the demo module,
+The example block's configuration, `ExampleBlockStructure` in the example module,
 is the first one written this way. It is a structure: the block holds
 it, and the block's host stores it.
 
 ```php
 #[Structure('block.surface_examples_plugins')]
-final class DemoBlockStructure implements StructureInterface {
+final class ExampleBlockStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('entity_type', 'string', t('Entity type'), default: 'user')
@@ -164,7 +164,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **A refiner never calls a service.** A list that depends on a value
   is a constraint whose options resolver fetches it, handed the value as
   an option. The refiner points; the resolver fetches. Core's
-  `EntityBundleExists` is one; the demo brings `SurfaceExamplesBundleField`
+  `EntityBundleExists` is one; the example brings `SurfaceExamplesBundleField`
   for a bundle's fields.
 - **The framework checks every refinement is narrower**, so a refiner
   cannot widen, retype, or turn off required. The two type changes it
@@ -954,8 +954,8 @@ editing), because only it holds the instance. The structure is a class
 in `src/Structure/` the attribute names:
 
 ```php
-#[Block(id: 'surface_examples_plugins', admin_label: new TranslatableMarkup('Data surface demo'))]
-#[UsesStructure(DemoBlockStructure::class)]
+#[Block(id: 'surface_examples_plugins', admin_label: new TranslatableMarkup('Surface API example'))]
+#[UsesStructure(ExampleBlockStructure::class)]
 final class ExampleBlock extends TypedBlockBase {
 
   public function build(): array { /* ... */ }
@@ -967,7 +967,7 @@ or, with no argument, the plugin class itself, which implements
 `StructureInterface` with the same static methods a structure class has:
 
 ```php
-#[FieldFormatter(id: 'surface_examples_plugins_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
+#[FieldFormatter(id: 'surface_examples_plugins_string', label: new TranslatableMarkup('Surface API example formatter'), field_types: ['string'])]
 #[UsesStructure]
 final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
@@ -1048,8 +1048,8 @@ by.
   that structure in the form's operation and stores into the
   configuration array.
 
-The demo block, the demo formatter, the address field type and every
-plugin in the test module are written this way; the demo formatter and
+The example block, the example formatter, the address field type and every
+plugin in the test module are written this way; the example formatter and
 the test module's sticky note block are their own structure. What a
 plugin holds is never a tool (see Tools).
 
@@ -1115,7 +1115,7 @@ alter's module's contribution, advertised under its name, and an
 `#[RefinesInput]` method of the same alter on that key is that
 contribution's refiner: it is handed the alter's values only, the
 owner's methods never see them, and what is offered is the union.
-`DemoFormatterAlter` offers a ribbon variant on the demo formatter and
+`ExampleFormatterAlter` offers a ribbon variant on the example formatter and
 keeps it to upper case.
 
 Mounted keys need config schema, since the owner's storage holds every
@@ -1127,13 +1127,13 @@ module key, and the mounting module's declares its part, both written
 from the resources when generated; `ConfigObjectStorage` refuses a mount
 no schema describes ([Storage](storage.md#keys-another-module-mounts)).
 
-`DemoBlockAlter` in the demo extras module does the three things most
+`ExampleBlockAlter` in the extras example module does the three things most
 alters do: it adds a badge, rewords the headline's help text with
 `describe()`, and caps the number of items while the block is a grid.
 
 ```php
-#[Alters(DemoBlockStructure::class)]
-final class DemoBlockAlter implements AltersInputsInterface {
+#[Alters(ExampleBlockStructure::class)]
+final class ExampleBlockAlter implements AltersInputsInterface {
 
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
@@ -1619,14 +1619,14 @@ both contracts and the tool state it as an object with no properties.
 `DigestResource` in the resource test module is the fixture; one class
 per value, since `#[Variant]` names one value.
 
-The demo block's presentation has two variants, its two presentation
+The example block's presentation has two variants, its two presentation
 structures, which say the presentation's values and what each is
 called; the field instance resource attaches its storage, a resource of
 its own, and its settings are variants each field type's module adds,
 as are the storage's own settings:
 
 ```php
-// DemoBlockStructure
+// ExampleBlockStructure
 $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
   ->setRequired(TRUE);
 
@@ -1636,10 +1636,10 @@ $inputs->attachVariants('presentation_settings', by: 'presentation')
 
 // ListPresentationStructure and GridPresentationStructure, beside it
 #[Structure('block.surface_examples_plugins.presentation.list')]
-#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
+#[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
 
 #[Structure('block.surface_examples_plugins.presentation.grid')]
-#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
+#[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 
 // FieldInstanceResource, in surface_examples_field
 $inputs->attach('storage', FieldStorageResource::class)

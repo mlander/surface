@@ -10,7 +10,7 @@ and what a working module looks like.
 ## Install it
 
 [Installation](../installation.md) lists the requirements, the Composer
-and Drush commands, and the optional submodules. The form needs only
+and Drush commands, and the example modules. The form needs only
 the base module, and so do HTTP and the OpenAPI document. The tool
 needs the `tool` module, and the React page is the
 `surface_examples_react` example.
@@ -33,10 +33,11 @@ when a build page links you there or when you need one detail.
 
 ## Try the examples
 
-[The examples](../examples/index.md) list the shipped example modules:
-what each one shows, the command that installs it, and the page on the
-site where you can try it. Nothing in this series or the build pages
-depends on them.
+[The examples](../examples/index.md) list the example modules in two
+groups, those that teach the pattern and those that try it on things
+Drupal already has: what each one shows, the command that installs it,
+and the page on the site where you can try it. Nothing in this series
+or the build pages depends on them.
 
 ## The words
 
