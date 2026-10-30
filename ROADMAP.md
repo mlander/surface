@@ -1522,6 +1522,35 @@ renames sit in A because they are cheapest before new code exists.
     reaches); a refusal naming the variants that declare a stray key
     builds every variant (`Variants::owners()`).
 
+31. **A route seeds the operation it serves.** DONE 2026-10-29
+    (`docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for`,
+    `docs/decisions.md#a-plain-route-default-pins-an-operation-parameter`,
+    `docs/forms.md#a-route-that-fixes-or-fills-keys`). Since 2026-10-28 a
+    route fixed and filled keys with literals, `_data_surface_fixed` and
+    `_data_surface_defaults`. A value may now be `'{name}'`, the raw value
+    of a bounded variable of the route's path; a derived resource's id may
+    hold one, so one route serves every bundle; a plain default pins an
+    operation parameter; `_data_surface_query` and the values code hands
+    `getForm()` start keys as prefills, held to the key and dropped when
+    refused, never in the context; a fixed key holds its value; and a React
+    page at a module's route starts keys and fixes none. The permission is
+    asked first, a value that names nothing is a 404 for an account it lets
+    in, a held build is kept in the build cache only when nothing in its
+    context came from the request, and what the route alone shows to be
+    wrong fails the router rebuild. Held by `RouteValuesTest`,
+    `RouteAccessTest`, `RoutePrefillTest`, `RouteCatalogTest`,
+    `ReactRoutePageTest` and `ContentEntityRouteValuesTest`. Open: a
+    route-scoped write, so a React page could fix keys; the edit route for
+    every bundle; the request memo's limit of 32 builds; whether derived
+    content entity operations declare a permission, which would make the 404
+    reachable for them; a fixed reference key past the reference list limit
+    labeled by its id; a route default on a key the operation itself fixes,
+    overridden without a refusal; a route default on an operation that
+    neither creates nor updates and whose storage stores nothing, such as a
+    check or a report run; a route marker by which a `_controller` that
+    builds the operation form could opt in to the 404 for a names-nothing
+    URL, which today only the form class and the React page answer.
+
 ## Maintenance
 
 - **Functional tests convert to kernel tests as units touch them**, by

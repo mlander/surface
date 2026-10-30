@@ -13,9 +13,10 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Answers the schema of one operation for the values sent; writes nothing.
  *
- * Beside the write tool of every operation whose listing states a key
- * open because the site's list for it is past the budget (a component's
- * props when a theme has hundreds of components),
+ * Beside the write tool of every operation whose listing leaves a key's
+ * entries out (InputDefinitions::deferred()): variants the site lists,
+ * such as a component's props, whatever their count, and a map of keys
+ * from the site past the budget,
  * `data_surface:<resource>:<operation>:schema`: the tool door's
  * `POST /surface-api/{resource}/schema`. An agent chooses the deciding
  * key, sends what it has so far, and reads the chosen variant's keys.

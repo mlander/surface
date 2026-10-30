@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface_tool\Resource;
 
+use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\data_surface\Resource\Attribute\Operation;
 use Drupal\data_surface\Resource\Attribute\Resource;
@@ -18,12 +19,15 @@ use Drupal\field\FieldStorageConfigInterface;
 /**
  * What every bundle using a field shares: its storage.
  *
- * Attached by FieldInstanceResource at `storage`. Its one identity key is
- * the field type, which chooses its settings: which storage it is, is
- * otherwise the field's identity, which the field hands it: in its own
- * context when the field's operation knows the storage, and otherwise as
- * the field's accepted identity when it is committed. Nothing here
- * depends on anything entered, so there is no #[RefinesInput] method.
+ * Attached by FieldInstanceResource at `storage`, and edited on its own.
+ * Its identity is core's for a field storage: the entity type and the
+ * field's machine name, then the field type, which follows from them and
+ * chooses the settings. On its own, its update names the entity type and
+ * the field name, `/surface-api/field.storage/node/body`. As the field's
+ * child it is handed what the field knows: all three on reuse and update,
+ * the entity type on create, and otherwise the field's accepted identity
+ * when it is committed. Nothing here depends on anything entered, so
+ * there is no #[RefinesInput] method.
  *
  * The settings are variants the field type chooses between, as the
  * field's own settings are: a field type's module marks a storage
@@ -32,16 +36,18 @@ use Drupal\field\FieldStorageConfigInterface;
  * config schema, `field.storage_settings.<field type>`.
  *
  * @code
- *                     add       edit
- *   field_type        open      locked
- *   cardinality       open      open; may not shrink once there is data
- *   translatable      open      open
- *   settings          by type   fixed by the known type; the schema may
- *                               not change once there is data
+ *                     add            edit
+ *   entity_type       the field's    locked
+ *   field_name        the field's    locked
+ *   field_type        open           locked
+ *   cardinality       open           open; may not shrink once there is data
+ *   translatable      open           open
+ *   settings          by type        fixed by the known type; the schema may
+ *                                    not change once there is data
  * @endcode
  */
 #[Resource('field.storage',
-  identity: ['field_type'],
+  identity: ['entity_type', 'field_name', 'field_type'],
   storage: FieldStorageStorage::class,
 )]
 final class FieldStorageResource implements ResourceInterface {
@@ -56,7 +62,7 @@ final class FieldStorageResource implements ResourceInterface {
   #[Operation('create',
     label: new TranslatableMarkup('New field storage'),
     description: new TranslatableMarkup('Creates the storage of a field being added; asked only by the field that uses it.'),
-    permission: 'administer %entity_type_id fields',
+    permission: 'administer %entity_type fields',
     creates: TRUE,
   )]
   public static function create(): OperationContext {
@@ -64,7 +70,7 @@ final class FieldStorageResource implements ResourceInterface {
   }
 
   /**
-   * An existing field storage.
+   * An existing field storage, named by its entity type and field name.
    *
    * Once the field holds data, cardinality may not shrink. That depends
    * on the storage, not on anything entered, so the operation says it,
@@ -73,18 +79,20 @@ final class FieldStorageResource implements ResourceInterface {
    * unlimited". A settings change the database could not take with data
    * in it is the storage class's to refuse, at prepare, because only the
    * field storage knows which settings reach the schema.
+   *
+   * @throws \InvalidArgumentException
+   *   When the entity type or the field name names nothing, saying which.
    */
   #[Operation('update',
     label: new TranslatableMarkup('Edit a field storage'),
-    description: new TranslatableMarkup('Changes a field storage, named by its id; once the field holds data, its number of values may not shrink.'),
-    permission: 'administer %entity_type_id fields',
+    description: new TranslatableMarkup('Changes a field storage, named by its entity type and field name; once the field holds data, its number of values may not shrink.'),
+    permission: 'administer %entity_type fields',
   )]
-  public static function update(FieldStorageConfigInterface $storage): OperationContext {
-    // The field type is identity, so it is locked; the entity type and
-    // the name are no keys here, known for the storage to load by.
+  public static function update(string $entity_type, string $field_name): OperationContext {
+    $storage = self::load($entity_type, $field_name);
     $context = new OperationContext('update', known: [
-      'entity_type_id' => $storage->getTargetEntityTypeId(),
-      'field_name' => $storage->getName(),
+      'entity_type' => $entity_type,
+      'field_name' => $field_name,
       'field_type' => $storage->getType(),
     ]);
     // hasData() is the config entity's, not its interface's.
@@ -98,10 +106,43 @@ final class FieldStorageResource implements ResourceInterface {
   }
 
   /**
+   * Loads the storage an entity type and a field name name.
+   *
+   * @param string $entity_type
+   *   The entity type's machine name.
+   * @param string $field_name
+   *   The field's machine name.
+   *
+   * @return \Drupal\field\FieldStorageConfigInterface
+   *   The storage.
+   *
+   * @throws \InvalidArgumentException
+   *   When the entity type is no fieldable one, or has no such field,
+   *   saying which part names nothing.
+   */
+  private static function load(string $entity_type, string $field_name): FieldStorageConfigInterface {
+    $definition = \Drupal::entityTypeManager()->getDefinition($entity_type, FALSE);
+    if ($definition === NULL || !$definition->entityClassImplements(FieldableEntityInterface::class)) {
+      throw new \InvalidArgumentException(sprintf('entity_type "%s" names no entity type that has fields.', $entity_type));
+    }
+    $storage = FieldStorageConfig::loadByName($entity_type, $field_name);
+    if (!$storage instanceof FieldStorageConfigInterface) {
+      throw new \InvalidArgumentException(sprintf('field_name "%s" names no field of the %s entity type.', $field_name, $entity_type));
+    }
+    return $storage;
+  }
+
+  /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    // Which storage this is, beyond what the field hands it.
+    // Which storage this is: the field's, which hands it to its storage.
+    $inputs->add('entity_type', 'string', t('Entity type'))
+      ->setDescription(t('The machine name of the entity type the field is on.'));
+
+    $inputs->add('field_name', 'string', t('Machine name'))
+      ->setDescription(t('The machine name of the field, for example field_tags.'));
+
     $inputs->add('field_type', 'string', t('Field type'))
       ->setDescription(t("The field type, which decides what the storage settings are. The same as the field's."));
 

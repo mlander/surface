@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace Drupal\Tests\data_surface\Kernel;
 
 use Drupal\Core\Session\AnonymousUserSession;
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\data_surface\DataSurface;
+use Drupal\data_surface\DefinitionMap;
 use Drupal\data_surface\Pipeline\StorageViolationsException;
 use Drupal\data_surface\Resource\OperationContext;
 use Drupal\data_surface\Storage\ConfigObjectStorage;
+use Drupal\data_surface_storage_test\Storage\NestedSettingsStorage;
 use Drupal\data_surface_storage_test\Storage\PlainSettingsStorage;
 use Drupal\data_surface_storage_test\Storage\TranslatableSettingsStorage;
 use Drupal\data_surface_storage_test\Storage\MissingSchemaSettingsStorage;
@@ -20,8 +24,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * What the most common resource, a settings page, is stored with: the
  * object read less what the storage owns, the whole object held to its
  * schema in prepare() with every violation filed under the key being
- * written, the language code core asks for kept by the storage, and a
- * mounted module's settings refused when no schema describes them.
+ * written, the language code core asks for kept by the storage, a
+ * mounted module's settings refused when no schema describes them, and a
+ * key kept under a path read, judged and written there.
  */
 #[Group('data_surface')]
 #[RunTestsInSeparateProcesses]
@@ -170,6 +175,45 @@ class ConfigObjectStorageTest extends DataSurfaceKernelTestBase {
       'third_party_settings' => ['data_surface_storage_test' => ['note' => 'Lost']],
     ]);
     $this->assertSame(['third_party_settings'], array_keys($refusals), 'An owner that declares no third party settings refuses every mount, under that key.');
+  }
+
+  /**
+   * Tests a key kept under a path, beside a sibling no resource declares.
+   */
+  public function testKeyStoredUnderPath(): void {
+    $this->config(NestedSettingsStorage::CONFIG)->setData([
+      'outer' => ['inner' => ['limit' => 3, 'note' => 'Kept']],
+      'title' => 'First',
+    ])->save();
+    $storage = $this->storage(NestedSettingsStorage::class);
+    $account = new AnonymousUserSession();
+
+    $this->assertSame(['title' => 'First', 'limit' => 3], $storage->load($this->context()), 'Read from its path, the map around it left out.');
+
+    $prepared = $storage->prepare($this->context(), ['limit' => 7, 'title' => 'Second'], $account);
+    $this->assertSame(['outer.inner.limit' => 7, 'title' => 'Second'], $prepared, 'Prepared at its path.');
+    $refusals = $this->refusals($storage, ['limit' => 11]);
+    $this->assertSame(['limit'], array_keys($refusals), 'The schema at the path judged it, filed under the key.');
+    $this->assertStringContainsString('between 0 and 10', $refusals['limit']);
+
+    $storage->commit($this->context(), $prepared, $account);
+    $this->assertSame([
+      'outer' => ['inner' => ['limit' => 7, 'note' => 'Kept']],
+      'title' => 'Second',
+    ], $this->config(NestedSettingsStorage::CONFIG)->getRawData(), 'The sibling is kept.');
+
+    $this->assertFalse($storage->mayClear($this->context(), 'limit'), 'The schema at the path does not call it nullable.');
+    $this->assertTrue($storage->mayClear($this->context(), 'title'));
+
+    $surface = static fn (int $max): DataSurface => new DataSurface(DefinitionMap::fromArrays(definitions: [
+      'limit' => DataDefinition::create('integer')
+        ->setLabel('Limit')
+        ->setRequired(TRUE)
+        ->addConstraint('Range', ['min' => 0, 'max' => $max]),
+      'title' => DataDefinition::create('string')->setLabel('Title'),
+    ]));
+    $this->assertSame([], $storage->widerThanSchema($surface(10)), 'Held to the property at its path.');
+    $this->assertSame(['limit' => 'it may be more than 10, which the schema refuses'], $storage->widerThanSchema($surface(20)));
   }
 
   /**

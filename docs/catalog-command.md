@@ -1,13 +1,22 @@
 # The site's catalog
 
+The catalog is a command, not a concept: it lists what a site has,
+every resource and structure the module finds, each operation with the
+doors it reaches, and what failed to build. Run it after
+[Your first resource](first-resource.md) to check that your resource is
+found and which doors it reaches. [Resources](introduction/02-resources.md),
+[Operations](introduction/07-operations.md) and
+[Doors](introduction/11-doors.md) introduce the words it prints.
+
 `drush surface:catalog` (alias `data_surface:catalog`) prints the live
 map of a site: every resource and structure discovery finds, from any
-module, derived and read-back ones included; per operation its id,
-kind, label, permission, parameters and the doors it reaches; and every
-refusal discovery or a build raised, with its message and the file it
-points at. [The catalog](catalog.md) is this command's markdown for the
-modules in this repository, and [the catalog page](#the-catalog-page)
-shows the same on the site, each door linked.
+module, derived and read-back ones included; per operation its id, kind,
+label, permission, parameters and the doors it reaches; and every
+refusal discovery or a build raised, and every route written wrong for
+the operation it serves, with its message and the file it points at.
+[The catalog](catalog.md) is this command's markdown for the modules in
+this repository, and [the catalog page](#the-catalog-page) shows the
+same on the site, each door linked.
 
 ```
 drush surface:catalog                         # a table, one row per operation
@@ -24,19 +33,21 @@ where the module that opens it is installed:
 
 | Door | What it is | Module |
 | --- | --- | --- |
-| `form` | The path of each form route a module declares for the operation, and the route's name. | any (`_data_surface_resource` on the route) |
+| `form` | The path of each form route a module declares for the operation and the route's name, then in brackets what the route says of the operation's keys beside its two naming defaults: `/contact/support (example.support) [pins to: support; fixes department: 3; fills subject: Support request; starts message from ?message]`, each parameter a plain default pins, each key it fixes or fills with the value as written (a reference as `{name}`), and each key a link may start with the query parameter it reads. A route whose resource id holds a variable of its path is listed under every resource whose id it fills, its path filled for each. | any (`_data_surface_resource` on the route) |
 | `http` | The method and path that run it under contract 3: `PATCH /surface-api/first.store`, a listing's `GET` on the collection. | `data_surface_react` |
 | `tool` | The derived tool, `data_surface:<id>:<operation>`. | `data_surface_tool` |
 | `read tool` | The read tool beside it, for an operation that changes a thing that exists. | `data_surface_tool` |
-| `schema tool` | The narrowing tool beside it, `data_surface:<id>:<operation>:schema`, where its listing states a key open because the site's list for it is past the budget (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). | `data_surface_tool` |
+| `schema tool` | The narrowing tool beside it, `data_surface:<id>:<operation>:schema`, where its listing leaves a key's entries out: variants the site lists, or a map of keys from the site past the budget (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). | `data_surface_tool` |
 | `openapi` | The OpenAPI operation that runs it: `<id>:<operation>:write`, a listing's `:list`. | `data_surface_openapi` |
-| `react` | The React page its form mounts on, `/surface-react/<id>/<operation>`. | `data_surface_react` |
+| `react` | The React page its form mounts on, `/surface-react/<id>/<operation>`, then each page a module serves it at, a route whose controller is `ResourceReactPage::served()`, named as the `form` door names a route. | `data_surface_react` |
 
-Only an operation that can be asked on its own reaches the HTTP, tool,
-OpenAPI and React doors: its resource names storage, no plugin's
-configuration is it, and its permission names no placeholder its
-parameters cannot fill. A structure a plugin uses has none; its
-plugin's host configures it. A module that opens a door of its own
+Only an operation that can be asked on its own reaches the HTTP, tool
+and OpenAPI doors and a React page of its own: its resource names
+storage, no plugin's configuration is it, and its permission names no
+placeholder its parameters cannot fill. A structure a plugin uses has
+none; its plugin's host configures it. A route a module declares is
+listed for any operation it serves, under `form`, or under `react` for
+a React page. A module that opens a door of its own
 implements `ResourceBuild\CatalogDoorsInterface` as a service tagged
 `data_surface.catalog_doors`, and `ResourceBuild\CatalogDoorLinksInterface`
 beside it to link the door on the catalog page.
@@ -48,11 +59,12 @@ surface catalog"), for a role with the restricted permission "View the
 data surface catalog" (`access data surface catalog`), shows what the
 table lists, from the same `SiteCatalog` data: one row per operation
 with its kind, permission and parameters, and its doors, each linked
-where it has a URL: the form route, the HTTP path (one that names no
-parameter), the React page, and the OpenAPI operation in the API
-reference (`/surface-api/redoc#operation/<operationId>`); a tool id is
-shown as text. A second table, Refused, lists every message and the file
-it points at. Each resource or structure links to its own page,
+where it has a URL: the form route (the first whose every path variable
+the resource's id fills or a default gives), the HTTP path (one that
+names no parameter), the React page, and the OpenAPI operation in the
+API reference (`/surface-api/redoc#operation/<operationId>`); a tool id
+is shown as text. A second table, Refused, lists every message and the
+file it points at. Each resource or structure links to its own page,
 `/admin/config/development/surfaces/<id>`, which shows what `--resource`
 does: its facts, its operations and doors, and every key. The listing is
 built for no account, and the page says so: the documents a request
@@ -99,7 +111,7 @@ for a placed block on a site with 312 components
 (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). Each
 variant's structure is still listed under "Read from a schema".
 
-## What did not build
+## What was refused
 
 Every operation of every resource and structure is built, as its tool
 listing is: in its own context when it needs nothing, in a context of
@@ -108,8 +120,27 @@ with its message and the file the message points at, the first class it
 names, else the resource's own class, from the Drupal root. A refusal
 discovery raises (an attribute misplaced, two classes claiming one id)
 is one refusal of the whole site, since nothing can be read past it.
-`--refused` lists only these and exits 1 when it lists any, so a check
-can run it.
+
+Every route that serves an operation that builds is judged beside it,
+and a route written wrong is listed under Refused (its stage `route` in
+the JSON, beside `discovery` and `build`), its message naming the route
+as every visitor of it is refused. A route whose path has no variable,
+and which fixes or fills keys or pins a parameter, is read as its access
+check reads it: its literal seeds are held once, by the build the build
+cache keeps, so the first request to the page reads what the catalog
+held, and a seed the resource refuses, a plain default nothing reads or
+one the operation refuses is listed. A route with a variable in its
+path is the URL's to finish, so it is listed among the doors and not
+held: what it gets wrong for some value is refused when that URL is
+matched. Each key a route lets a link start is found on the operation's
+build, whatever the route's path holds, so a query path that names no
+key, is out of a prefill's reach or names a secret is listed before a
+visitor meets it; a query naming an identity key that the path of an
+update supplies is the exception, since the catalog's build knows no
+subject, and the form's first draw refuses it
+([forms](forms.md#refusal-by-who-chose-the-value)). `--refused` lists
+only what was refused, routes included, and exits 1 when it lists any,
+so a check can run it.
 
 Every build is for no account, asked as the anonymous one, as the tool
 listing is (why: [decision](decisions.md#a-static-tool-definition-is-no-accounts)), so

@@ -114,14 +114,14 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
    * Tests the first derivation rule: a permission nothing can name.
    *
    * The field storage's create operation needs nothing, and its permission
-   * names %entity_type_id, which no parameter supplies: nothing a caller
+   * names %entity_type, which no parameter supplies: nothing a caller
    * sends could name the permission, so it could never be allowed, and
-   * it is no tool. Its edit takes the storage, an entity whose operation
-   * knows the entity type, so it is one.
+   * it is no tool. Its edit takes the entity type and the field name, so
+   * it is one.
    */
   public function testUnnameablePermissionIsNoTool(): void {
     $registry = $this->container->get('data_surface.resource_registry');
-    $this->assertSame(['entity_type_id'], $registry->getOperation('field.storage', 'create')->unresolvablePlaceholders());
+    $this->assertSame(['entity_type'], $registry->getOperation('field.storage', 'create')->unresolvablePlaceholders());
     $this->assertSame([], $registry->getOperation('field.storage', 'update')->unresolvablePlaceholders());
     $this->assertSame([], $registry->getOperation('field.instance', 'create')->unresolvablePlaceholders());
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
@@ -195,22 +195,33 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
     $this->assertStringNotContainsString('keeps its value', (string) $add->getDescription());
     $this->assertSame([OperationInputs::VALUES => ['type']], $edit->getInputDefinitionRefiners());
 
-    // A field: add takes the entity type and bundle, reuse a storage and
-    // a bundle, edit the field, and each leaves out what it knows.
+    // A field: add takes the entity type and bundle, reuse and edit the
+    // entity type, bundle and field name, and each leaves out what it
+    // knows.
     $field_add = $manager->getDefinition('data_surface:field.instance:create');
-    $this->assertSame(['entity_type_id', 'bundle', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($field_add->getInputDefinitions()));
+    $this->assertSame(['entity_type', 'bundle', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($field_add->getInputDefinitions()));
     $this->assertSame(
       ['field_type', 'field_name', 'label', 'description', 'required', 'storage', 'settings'],
       array_keys($field_add->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()),
     );
     $reuse = $manager->getDefinition('data_surface:field.instance:reuse');
-    $this->assertSame(['storage', 'bundle', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($reuse->getInputDefinitions()));
+    $this->assertSame(['entity_type', 'bundle', 'field_name', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($reuse->getInputDefinitions()));
     $this->assertSame(
       ['label', 'description', 'required', 'storage', 'settings'],
       array_keys($reuse->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()),
     );
     $field_edit = $manager->getDefinition('data_surface:field.instance:update');
-    $this->assertSame(['field', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($field_edit->getInputDefinitions()));
+    $this->assertSame(['entity_type', 'bundle', 'field_name', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($field_edit->getInputDefinitions()));
+    $this->assertSame(
+      ['label', 'description', 'required', 'storage', 'settings'],
+      array_keys($field_edit->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()),
+      'An edit names the whole field: the field type it leaves out follows from it.',
+    );
+    // Each part says what it is, as the key of the same name does.
+    $this->assertSame('The machine name of the entity type the field is on.', (string) $field_edit->getInputDefinition('entity_type')->getDescription());
+    $this->assertSame('The bundle the field is on, for example article or page.', (string) $field_edit->getInputDefinition('bundle')->getDescription());
+    $this->assertSame('The machine name of the field storage, for example field_tags.', (string) $field_edit->getInputDefinition('field_name')->getDescription());
+    $this->assertSame(['entity_type', 'field_name', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($manager->getDefinition('data_surface:field.storage:update')->getInputDefinitions()));
   }
 
   /**
@@ -232,7 +243,9 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
       'label' => 'Address',
     ])->save();
     $tool = $this->tool('data_surface:field.instance:update');
-    $tool->setInputValue('field', 'entity_test.entity_test.field_address');
+    $tool->setInputValue('entity_type', 'entity_test');
+    $tool->setInputValue('bundle', 'entity_test');
+    $tool->setInputValue('field_name', 'field_address');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $settings = $values->getPropertyDefinitions()['settings'];
@@ -373,8 +386,9 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
   public function testFieldToolsReuseAndEditTheStorage(): void {
     FieldStorageConfig::create(['field_name' => 'field_address', 'entity_type' => 'entity_test', 'type' => 'address'])->save();
     $tool = $this->tool('data_surface:field.instance:reuse');
-    $tool->setInputValue('storage', 'entity_test.field_address');
+    $tool->setInputValue('entity_type', 'entity_test');
     $tool->setInputValue('bundle', 'entity_test');
+    $tool->setInputValue('field_name', 'field_address');
     $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Address', 'storage' => ['cardinality' => 3]]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
@@ -388,7 +402,9 @@ class OperationToolsTest extends DataSurfaceKernelTestBase {
       ],
     ])->save();
     $tool = $this->tool('data_surface:field.instance:update');
-    $tool->setInputValue('field', 'entity_test.entity_test.field_address');
+    $tool->setInputValue('entity_type', 'entity_test');
+    $tool->setInputValue('bundle', 'entity_test');
+    $tool->setInputValue('field_name', 'field_address');
     $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Address', 'storage' => ['cardinality' => 2]]);
     $tool->execute();
     // Refused when the tool runs: the pipeline holds the values to the

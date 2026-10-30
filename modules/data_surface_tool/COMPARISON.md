@@ -10,20 +10,20 @@ rather than a quiet fork.
 
 Both documents below are the settings input of a tool adding a field to
 a bundle on an existing storage, for the `address` field type on
-`entity_test`, once the tool knows which storage and which bundle. Both
+`entity_test`, once the tool knows which field and which bundle. Both
 were produced by the Tool API's own definition serializer normalizing
 the tool's inputs to JSON Schema, which is the document an MCP client or
 a function calling model is handed.
 
 The first is `data_surface:field.instance:reuse`, the tool generated
 from the `reuse` operation of the field instance resource: its inputs
-are the operation's parameters (`storage`, `bundle`), `values` and
-`dry_run`, and what is shown is `values.settings`, the settings variant
-the address module's settings resource declares. It replaces the
-hand-written `data_surface:field_add`, which this module no longer
-ships; the settings it advertises are the same. The second is
-`settings` of `tool_belt:field_add`, which takes the entity type,
-bundle and field name and refines its settings from the field type's
+are the operation's parameters (`entity_type`, `bundle`, `field_name`),
+`values` and `dry_run`, and what is shown is `values.settings`, the
+settings variant the address module's settings resource declares. It
+replaces the hand-written `data_surface:field_add`, which this module no
+longer ships; the settings it advertises are the same. The second is
+`settings` of `tool_belt:field_add`, which takes the entity type, bundle
+and field name too and refines its settings from the field type's
 config schema.
 
 What to look at:

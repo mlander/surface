@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 210" role="img" aria-labelledby="t">
+  <title id="t">Three resources side by side, each a thing the site keeps values for: node.type, a content type; block.placement, a placed block; system.performance, the performance settings; each with two of its stored values</title>
+  <style>
+    .bg { fill: #F6F8FA; }
+    .ink { fill: #1F2328; }
+    .muted { fill: #59636E; }
+    .line { stroke: #D1D9E0; stroke-width: 1; }
+    .resource { fill: none; stroke: #0969DA; stroke-width: 2; }
+    .resource-label { fill: #0969DA; }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .bold { font-weight: 600; }
+    .small { font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151B23; }
+      .ink { fill: #F0F6FC; }
+      .muted { fill: #9198A1; }
+      .line { stroke: #3D444D; }
+      .resource { stroke: #4493F8; }
+      .resource-label { fill: #4493F8; }
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="720" height="210" rx="12"/>
+
+  <!-- A content type -->
+  <rect class="resource" x="24" y="30" width="216" height="150" rx="10"/>
+  <text class="resource-label bold code" x="40" y="58" font-size="15">node.type</text>
+  <text class="muted small" x="40" y="78">a content type</text>
+  <line class="line" x1="40" y1="94" x2="224" y2="94"/>
+  <text class="ink code small" x="40" y="122">name: "Article"</text>
+  <text class="ink code small" x="40" y="146">type: "article"</text>
+
+  <!-- A placed block -->
+  <rect class="resource" x="252" y="30" width="216" height="150" rx="10"/>
+  <text class="resource-label bold code" x="268" y="58" font-size="15">block.placement</text>
+  <text class="muted small" x="268" y="78">a placed block</text>
+  <line class="line" x1="268" y1="94" x2="452" y2="94"/>
+  <text class="ink code small" x="268" y="122">theme: "olivero"</text>
+  <text class="ink code small" x="268" y="146">region: "content"</text>
+
+  <!-- The performance settings -->
+  <rect class="resource" x="480" y="30" width="216" height="150" rx="10"/>
+  <text class="resource-label bold code" x="496" y="58" font-size="15">system.performance</text>
+  <text class="muted small" x="496" y="78">the performance settings</text>
+  <line class="line" x1="496" y1="94" x2="680" y2="94"/>
+  <text class="ink code small" x="496" y="122">max_age: 0</text>
+  <text class="ink code small" x="496" y="146">css_preprocess: true</text>
+</svg>

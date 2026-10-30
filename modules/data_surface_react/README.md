@@ -6,7 +6,7 @@ the operation (contract 3):
 
 | | Method and path | What it does |
 | --- | --- | --- |
-| Page | `GET /surface-react/{resource}/{operation}` | Mounts the React app, titled with the operation's label. |
+| Page | `GET /surface-react/{resource}/{operation}` | Mounts the React app, titled with the operation's label; a module may serve the same page at a route of its own ([below](#a-page-at-a-modules-route)). |
 | Read | `GET /surface-api/{resource}[/{id}]` | The envelope: the schema for the values the form opens with, the values, the stale paths and their `notes`; the stored values' fingerprint as its `ETag`, the full schema as its `Link`. |
 | Full schema | `GET .../schema` | The schema for any values itself, `application/schema+json`: every listable dependency a conditional, the rest `refine` or `live`, a list the site decides past its limit `deferred`; no values. Cacheable, its `ETag` a hash of its bytes, 304 to `If-None-Match`. |
 | Fetch per choice | `GET .../schema?choose=/props=<value>` | The full schema with each choice of a `deferred` key stated in full, as under the limit: once per `choose`, a nested key named with the choice on the way (`choose=/settings=data_surface_component&choose=/settings/props=<value>`); 404 naming the pointer for a choice of nothing ([the fetch per choice](../../docs/served-contract.md#the-fetch-per-choice)). |
@@ -38,6 +38,18 @@ as a refusal. The permission is asked first, before a parameter is read,
 and a refusal past it gives one fixed reason, so it never says whether
 an id exists
 (why: [decision](../../docs/decisions.md#every-door-projects-what-the-read-tool-projects)).
+Only an account the permission lets in, for what the parameters name,
+hears more: the access class's reason, and that a value names nothing,
+a 404 at the API and at the page alike. The page lets such a URL
+through in the request's own dispatch alone, for its controller to
+answer 404; asked about a link (a menu link, a local task, a
+breadcrumb), it refuses with no reason, so no link to a page not found
+is drawn. A page path that names no resource or no operation is a 404
+to any account, as the API answers a path that names nothing, and a
+page URL that leaves out a parameter the operation needs still gets the
+fixed refusal. The operation form's route answers the same way, through
+the same gate (`OperationGate`;
+[decision](../../docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 A POST, a PATCH or a DELETE wants the session's CSRF token from `/session/token`
 in an `X-CSRF-Token` header.
 
@@ -66,6 +78,58 @@ drush pm:install data_surface_react
 With `data_surface_examples` enabled, the landing page links each of
 examples 1 to 3 "In React": `/surface-react/registration.step1/configure`
 and so on.
+
+## A page at a module's route
+
+A module may serve an operation's React page at a route of its own, as
+it serves the operation form: the route names the resource and the
+operation, its parameters are the operation's by name, and the operation
+form's access check gates it.
+
+```yaml
+example.card_app:
+  path: '/example/cards/app/{copies}'
+  defaults:
+    _controller: '\Drupal\data_surface_react\Controller\ResourceReactPage::served'
+    _title_callback: '\Drupal\data_surface_react\Controller\ResourceReactPage::servedTitle'
+    _data_surface_resource: 'example.card'
+    _data_surface_operation: 'create'
+    _data_surface_defaults: { title: 'Dear you', copies: '{copies}' }
+    _data_surface_query: { occasion: occasion }
+  requirements:
+    copies: '\d+'
+```
+
+`ResourceReactPage::served()` hands the app what the generic page hands
+it, and what the values start from on this page:
+
+- `seeds.defaults`: each key the route's `_data_surface_defaults` names,
+  by its key's path and valued as the build holds it, so `'{copies}'` at
+  `/example/cards/app/4` starts the copies from the number 4, and a map
+  the route names whole appears key by key;
+- `prefill`: the value a link sends for each key the route's
+  `_data_surface_query` lists, held to its key as the operation form
+  holds it, and left out when the key refuses it or the value is empty.
+
+A key the build fixes or locks is left out of both. The app lays the
+envelope's values, then the defaults, then the prefill, each over the
+last, once, as it loads, and narrows for a started value that something
+depends on as it narrows for a change: here, from the full schema, or by
+asking `POST .../schema`. The page varies by each query parameter the
+route lists (`url.query_args:<name>`). `servedTitle()` titles it with the
+operation's label, or "Page not found" for a resource id its path fills
+that no resource has, and a value of its URL that names nothing is a 404,
+as at the form's route.
+
+Both are values to start from and nothing more. The app's documents are
+the operation's, fetched from the API, which knows no route, so they
+state the operation's `default`, and the write goes to the operation's
+own path, which holds a value to the operation's constraints alone. So
+the page fixes no key: `_data_surface_fixed` on its route fails the
+router rebuild, naming the route, since a key the page stated fixed
+would take any value at the write
+([forms](../../docs/forms.md#what-the-page-states)). The catalog lists
+such a route under the `react` door, after the operation's own page.
 
 ## What it does and does not
 
@@ -159,8 +223,8 @@ row per key, as the PHP contract panel shows it, then the JSON of the
 last envelope served and of the full schema.
 
 `drush surface:catalog` lists, per operation, the method and path that
-run it and its React page, beside its other doors ([The site's
-catalog](../../docs/catalog-command.md)).
+run it and its React page, then each page a module serves it at, beside
+its other doors ([The site's catalog](../../docs/catalog-command.md)).
 
 ## The app
 
@@ -185,6 +249,7 @@ Run them on the host, not inside ddev. The library
 | --- | --- |
 | `Kernel\ServedContractTest` | The main module's emitter over examples 1 to 3, the content type resource and the demo block structure: labels, `oneOf` titles, bounds, the venue to room dependency, the ticket variants' conditional, the locked machine name on edit, the widget hints off by default and on for this submodule's endpoint; each part defined once under `$defs` and referred to, one def per class attached twice, a site narrowing its def only where it differs, and each document's verdicts on example 3 held to the pipeline's; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
 | `Functional\ServedContractEndpointsTest` | The envelope's shape, `ETag`, `Link` and `HEAD`; 403 and 404 as problem details; the page's `endpoints`; the full schema as `application/schema+json`, cacheable and the same across two stored states; `POST .../schema` narrowing the room by the venue, the stale room round-tripped in `X-Surface-Stale`, a partial document; a dry run refusing a wrong room and a capacity over the room's (422) and accepting a valid document, nothing written; the landing page's React links. |
+| `Kernel\ReactRoutePageTest` | The page at a module's route: the route's defaults by key path and a link's prefill handed to the app, a value its key refuses left out, a URL that names nothing a 404, the request's own dispatch through the HTTP kernel (200, 404, 403), the route's parameters, the title from the operation's label, and the catalog listing the route under the `react` door. `Kernel\RouteAccessTest` holds the page and the operation form's route to one answer for a URL that names nothing. |
 | `Functional\ServedSubmitEndpointTest` | `PATCH` writing example 2 and answering the fresh envelope and `ETag`, by JSON Pointer; a wrong room refused (422) with nothing written; anonymous, token-less, malformed and wrong-media-type writes, and a `POST` on a singleton (405); a stale `If-Match` refused (412), a weakened tag and `*` matching, and none meaning the last write wins; a content type created with `POST` (201, `Location`), read and edited at its path, a locked key's note. |
 | `Kernel\ResultPointersTest` | Every path a result carries is a JSON Pointer at every door: the tool's result and its text, an HTTP result and problem details, the envelope's `stale` and `notes`, a narrowing's `discarded` and the `X-Surface-Stale` header; RFC 6901 escaping and its reading back. |
 | `Functional\ServedPathsTest` | Every path form: a custom method (`event.program:check`) read, its schema, narrowed and run without writing, 405 for `PATCH`; a collection and an item, their schemas and methods; 404 for an id, a path or an operation naming nothing; 410 for every contract 2 path, naming its replacement. |
@@ -192,4 +257,4 @@ Run them on the host, not inside ddev. The library
 | `app/src/test/narrow.test.ts` | The page's narrowing held to recorded narrowing answers (`fixtures/refine-*.json`) for chains of changes on example 2 and example 3, compliance off and on: schema, values and stale paths equal keyword for keyword, each local step continuing from the last; the changes asked named by key and marker; a stale value only the server knows, and frames it cannot read, asked. Example 4's declared license rule as the compliance full schema states it, its `if` read by JSON Schema's rules, and narrowed here for a license and a room change (`fixtures/refine-example3-license.json`) once the stewards' `refine` marker is set aside. Example 12 past the site list limit (`fixtures/deferred-spotlight.json`): a deferred key naming the URL to fetch for the value chosen (its `deferred.fetch`), the hero narrowed here from the fetched schema as the server narrows it, a map of keys from the site asked, and a template filled and joined. A key a runtime access answer marks `live`: what the server settled stands, left out or locked, and a change it depends on is asked. Every schema narrowed here is written as the server writes contract 4's, each keyword only where it says something. |
 | `app/src/test/contract.test.ts` | The resolver: a reference with keywords beside it, an `allOf` narrowing, a def inside a def, two sites sharing one def, a recursive reference kept, the JSON Pointer escaping; example 3's served contract defining its parts once and read inline; contract 4: a document or a bare full schema of another version refused, each `within` entry put back at its pointer (a property left out and a `true` made an object again), the conditionals `rules` lists marked declared, a key's union of its variants and a def's own title dropped. |
 | `app/src/test/widgets.test.tsx` | Each widget from a schema fragment, the empty option rule, locked, choosing a variant and locking it with its key, the list; a placed fieldset drawn after the sibling it names, its values sent under its group; the panel's message for each constraint only the server checks. |
-| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server, keyed by method and path, serving the emitter's own contracts: the envelope and the full schema fetched once, together; narrowing here with no request (example 2's venue and room, example 3's venue and pricing), the orphaned room stale and sent back by its path, example 3 with compliance asking on the venue and the license, the panel's line; with no full schema, a narrowing on a dependency, the stale room in `X-Surface-Stale` as pointers, a dry run with `dryRun=true` and its inline and summary messages; a write's success with stale warnings and the re-render, a 422 refusal, the `ETag` sent as `If-Match` and the 412, the toggle off, and the move to a created thing's page on a 201; every path answered read from a JSON Pointer; example 3's parts drawn from their defs, the paid ticket on a pricing change, a refusal on the contact's email shown on that field, and its Compliance fieldset right after the capacity; contract 4 only: an envelope, a full schema, a narrowing, a write or a problem of another contract refused, by the document or by the `Contract-Version` header, and shown as the form's error; a key deferred for its size fetched with `choose` rather than narrowed, each fetch kept for the page, and asked of the narrowing when the fetch fails. |
+| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server, keyed by method and path, serving the emitter's own contracts: the envelope and the full schema fetched once, together; narrowing here with no request (example 2's venue and room, example 3's venue and pricing), the orphaned room stale and sent back by its path, example 3 with compliance asking on the venue and the license, the panel's line; with no full schema, a narrowing on a dependency, the stale room in `X-Surface-Stale` as pointers, a dry run with `dryRun=true` and its inline and summary messages; a write's success with stale warnings and the re-render, a 422 refusal, the `ETag` sent as `If-Match` and the 412, the toggle off, and the move to a created thing's page on a 201; every path answered read from a JSON Pointer; example 3's parts drawn from their defs, the paid ticket on a pricing change, a refusal on the contact's email shown on that field, and its Compliance fieldset right after the capacity; contract 4 only: an envelope, a full schema, a narrowing, a write or a problem of another contract refused, by the document or by the `Contract-Version` header, and shown as the form's error; a key deferred for its size fetched with `choose` rather than narrowed, each fetch kept for the page, and asked of the narrowing when the fetch fails; a page at a module's route starting from the envelope's values, then the route's defaults, then a link's prefill, by key path, narrowing for a started value here or asking the server, and a started value taking the place of a stale stored one. |

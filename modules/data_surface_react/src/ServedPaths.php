@@ -19,19 +19,26 @@ use Symfony\Component\HttpFoundation\Request;
  * Contract 3 addresses a resource, not an operation: the operation is the
  * HTTP method. A singleton, a resource with no identity keys, is
  * `/surface-api/{resource}`; a thing with identity is
- * `/surface-api/{resource}/{id}`, the parameters of the operation that
- * addresses it as path segments, in declaration order, joined by `/`
- * when there is more than one. A create is POSTed to the collection,
- * `/surface-api/{resource}`. Which operation a method means:
+ * `/surface-api/{resource}/{key}/...`, the operation's parameters named
+ * for identity keys as path segments, in identity order, joined by `/`
+ * (ResourceDefinition::identityParameters()); any other parameter is in
+ * the query string. A create is POSTed to the path of the parent it adds
+ * to: `/surface-api/{resource}` when it takes no identity,
+ * `/surface-api/field.instance/node/article` for a field added to a
+ * bundle, the field's own `/node/article/body` its edit's path. Which
+ * operation a method means:
  *
- * - `GET` the path's default update, else its default read, else, on a
- *   collection, its default create: the envelope, what is stored and the
- *   schema for it (a create's: the declared defaults). On the collection
- *   of a resource with identity, a default read is a listing: `GET` runs
- *   it, its query string the values, and answers its outputs;
+ * - `GET` the path's default update, else its default read, else its
+ *   default create: the envelope, what is stored and the schema for it
+ *   (a create's: the declared defaults). On the collection of a resource
+ *   with identity, a default read is a listing: `GET` runs it, its query
+ *   string the values, and answers its outputs;
  * - `PATCH` the path's default update; the collection of a resource with
- *   identity has none, since no operation there changes every thing;
- * - `POST` the collection's default create;
+ *   identity has none, since no operation there changes every thing, nor
+ *   has a path shorter than the deepest one the resource's operations
+ *   are addressed at, the thing's own;
+ * - `POST` the path's default create, which a path an edit is served at
+ *   has none of: a create there is a custom method;
  * - `DELETE` the path's default delete: an operation that removes the
  *   thing, its body empty;
  * - `GET .../schema` the full schema of the operation `GET` serves, and
@@ -84,16 +91,6 @@ final class ServedPaths {
    * `stale`, sent empty, stands for the stored value again.
    */
   public const STALE_HEADER = 'X-Surface-Stale';
-
-  /**
-   * A path of a collection: a singleton, or where a create is POSTed.
-   */
-  public const COLLECTION = 'collection';
-
-  /**
-   * A path of one thing: the collection and the thing's identity.
-   */
-  public const ITEM = 'item';
 
 
   /**
@@ -196,17 +193,22 @@ final class ServedPaths {
     if ($segments !== [] && $definition->identity === []) {
       throw $this->notFound($this->t('The @resource resource is a singleton: its path carries no identity.', ['@resource' => $definition->id]));
     }
-    $placement = $segments === [] ? self::COLLECTION : self::ITEM;
+    $depth = count($segments);
+    if ($depth > count($definition->identity)) {
+      throw $this->notFound($this->t('This path carries more identity segments than @resource has identity keys: @keys.', [
+        '@resource' => $definition->id,
+        '@keys' => implode(', ', $definition->identity),
+      ]));
+    }
     if ($named === self::LOOKUP && !isset($operations[$named])) {
-      return $this->lookupTarget($request, $definition, $operations, $segments, $placement, $method, $schema);
+      return $this->lookupTarget($request, $definition, $operations, $segments, $method, $schema);
     }
     if ($named !== NULL) {
       $named_args = ['@resource' => $definition->id, '@operation' => $named];
       $operation = $operations[$named] ?? throw $this->notFound($this->t('The @resource resource has no @operation operation.', $named_args));
-      if ($this->placement($definition, $operation) !== $placement) {
-        throw $this->notFound($placement === self::ITEM
-          ? $this->t('The @operation operation of @resource does not address one thing: name it on the collection, /surface-api/@resource:@operation.', $named_args)
-          : $this->t("The @operation operation of @resource addresses one thing: name it on that thing's path, after its identity.", $named_args));
+      if ($this->depth($definition, $operation) !== $depth) {
+        [$path] = $this->template($definition, $operation, TRUE);
+        throw $this->notFound($this->t('The @operation operation of @resource is not addressed at this path: it is @path.', $named_args + ['@path' => $path]));
       }
       // The method says the kind: a run of an update is a PATCH, as the
       // default update's is, and of any other operation a POST.
@@ -220,12 +222,12 @@ final class ServedPaths {
       };
     }
     else {
-      $defaults = $this->defaults($definition)[$placement];
-      $read = $this->readDefault($defaults, $placement);
+      $defaults = $this->defaults($definition)[$depth];
+      $read = $this->readDefault($defaults);
       $allowed = $schema ? ($read === NULL ? [] : ['GET', 'POST']) : array_keys(array_filter([
         'GET' => $read,
         'PATCH' => $defaults[OperationDefinition::UPDATE],
-        'POST' => $placement === self::COLLECTION ? $defaults[OperationDefinition::CREATE] : NULL,
+        'POST' => $defaults[OperationDefinition::CREATE],
         'DELETE' => $defaults[OperationDefinition::DELETE],
       ]));
       $listing = $this->listing($definition);
@@ -234,7 +236,7 @@ final class ServedPaths {
         $schema && $method === 'POST' => [$read, ServedTarget::NARROW],
         // Decision: see
         // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
-        !$schema && $method === 'GET' && $placement === self::COLLECTION && $listing !== NULL => [
+        !$schema && $method === 'GET' && $depth === 0 && $listing !== NULL => [
           $listing,
           ServedTarget::LIST,
         ],
@@ -242,21 +244,24 @@ final class ServedPaths {
         !$schema && $method === 'PATCH' => [$defaults[OperationDefinition::UPDATE], ServedTarget::WRITE],
         // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
         !$schema && $method === 'DELETE' => [$defaults[OperationDefinition::DELETE], ServedTarget::WRITE],
-        !$schema && $method === 'POST' && $placement === self::COLLECTION => [
-          $defaults[OperationDefinition::CREATE],
-          ServedTarget::WRITE,
-        ],
+        !$schema && $method === 'POST' => [$defaults[OperationDefinition::CREATE], ServedTarget::WRITE],
         default => [NULL, NULL],
       };
       if ($action === NULL || ($id === NULL && $allowed !== [])) {
         throw $this->notAllowed($method, $allowed);
       }
       if ($id === NULL) {
-        throw $this->notFound($this->t('No operation of @resource is served at this path without a name: add :{operation} to it.', ['@resource' => $definition->id]));
+        throw $this->notFound($this->addressedAt($definition, $depth)
+          ? $this->t('No operation of @resource is served at this path without a name: add :{operation} to it.', ['@resource' => $definition->id])
+          : $this->t('No operation of @resource is addressed at this path: its paths carry @depths identity segments, @keys in that order.', [
+            '@resource' => $definition->id,
+            '@depths' => implode(' or ', $this->depths($definition)),
+            '@keys' => implode(', ', $definition->identity),
+          ]));
       }
       $operation = $operations[$id];
     }
-    return new ServedTarget($definition, $operation, $this->parameters($request, $operation, $segments), $action, $named !== NULL);
+    return new ServedTarget($definition, $operation, $this->parameters($request, $definition, $operation, $segments), $action, $named !== NULL);
   }
 
   /**
@@ -273,8 +278,6 @@ final class ServedPaths {
    *   Its operations.
    * @param string[] $segments
    *   The identity segments.
-   * @param string $placement
-   *   COLLECTION or ITEM.
    * @param string $method
    *   The request's method.
    * @param bool $schema
@@ -287,16 +290,15 @@ final class ServedPaths {
    *   405 for any method but GET, or a schema; 404 when no operation is
    *   served at the path.
    */
-  protected function lookupTarget(Request $request, ResourceDefinition $definition, array $operations, array $segments, string $placement, string $method, bool $schema): ServedTarget {
+  protected function lookupTarget(Request $request, ResourceDefinition $definition, array $operations, array $segments, string $method, bool $schema): ServedTarget {
     if ($method !== 'GET' || $schema) {
       throw $this->notAllowed($method, $schema ? [] : ['GET']);
     }
-    $defaults = $this->defaults($definition)[$placement];
-    $id = $this->readDefault($defaults, $placement);
+    $id = $this->readDefault($this->defaults($definition)[count($segments)]);
     if ($id === NULL) {
       throw $this->notFound($this->t('No operation of @resource is served at this path, so it has no keys to look a value up for.', ['@resource' => $definition->id]));
     }
-    return new ServedTarget($definition, $operations[$id], $this->parameters($request, $operations[$id], $segments), ServedTarget::LOOKUP, TRUE);
+    return new ServedTarget($definition, $operations[$id], $this->parameters($request, $definition, $operations[$id], $segments), ServedTarget::LOOKUP, TRUE);
   }
 
   /**
@@ -358,35 +360,40 @@ final class ServedPaths {
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request.
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param string[] $segments
-   *   The identity segments, in the operation's parameter order.
+   *   The identity segments, in identity order.
    *
    * @return array<string, string>
    *   The parameters by name: the path's, then the query string's.
    *
    * @throws \Drupal\data_surface_react\ProblemException
    *   404 when the path carries more or fewer segments than the operation
-   *   takes, 400 when a parameter it needs is given nowhere.
+   *   takes, 400 when a parameter it needs is not in the query string.
    */
-  protected function parameters(Request $request, OperationDefinition $operation, array $segments): array {
-    $required = count(array_filter($operation->parameters, static fn ($parameter): bool => !$parameter->optional));
-    if ($segments !== [] && (count($segments) < $required || count($segments) > count($operation->parameters))) {
-      throw $this->notFound($this->t('The @operation operation takes @count identity segments.', [
+  protected function parameters(Request $request, ResourceDefinition $definition, OperationDefinition $operation, array $segments): array {
+    $path = $definition->identityParameters($operation);
+    if (count($segments) !== count($path)) {
+      throw $this->notFound($this->t('The @operation operation is named by its path as @keys.', [
         '@operation' => $operation->id,
-        '@count' => $required,
+        '@keys' => $path === [] ? (string) $this->t('no identity segment') : implode(', ', $path),
       ]));
     }
-    $given = [];
+    $given = array_combine($path, array_map('strval', $segments));
     $query = $request->query->all();
-    foreach (array_values($operation->parameters) as $delta => $parameter) {
-      $value = $segments[$delta] ?? $query[$parameter->name] ?? NULL;
+    foreach ($operation->parameters as $parameter) {
+      if (isset($given[$parameter->name])) {
+        continue;
+      }
+      $value = $query[$parameter->name] ?? NULL;
       if (is_scalar($value) && (string) $value !== '') {
         $given[$parameter->name] = (string) $value;
       }
       elseif (!$parameter->optional) {
-        $detail = (string) $this->t('The @operation operation needs its @parameter parameter, in the path or the query string.', [
+        $detail = (string) $this->t('The @operation operation needs its @parameter parameter, in the query string.', [
           '@operation' => $operation->id,
           '@parameter' => $parameter->name,
         ]);
@@ -402,17 +409,21 @@ final class ServedPaths {
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    *
-   * @return array<string, array<string, string|null>>
-   *   By placement (COLLECTION, ITEM), by kind, the default operation's
-   *   id, or NULL where there is none.
+   * @return array<int, array<string, string|null>>
+   *   By depth, the number of identity segments a path carries (0 for the
+   *   collection, up to one per identity key), by kind, the default
+   *   operation's id, or NULL where there is none.
    */
   public function defaults(ResourceDefinition $definition): array {
-    $placed = [self::COLLECTION => [], self::ITEM => []];
+    $placed = array_fill(0, count($definition->identity) + 1, []);
+    $deepest = 0;
     foreach ($this->registry->getOperations($definition->name()) as $id => $operation) {
-      $placed[$this->placement($definition, $operation)][$operation->kind()][] = (string) $id;
+      $depth = $this->depth($definition, $operation);
+      $placed[$depth][$operation->kind()][] = (string) $id;
+      $deepest = max($deepest, $depth);
     }
     $defaults = [];
-    foreach ($placed as $placement => $kinds) {
+    foreach ($placed as $depth => $kinds) {
       foreach (array_keys(OperationDefinition::STANDARD_IDS) as $kind) {
         $candidates = $kinds[$kind] ?? [];
         $named = array_values(array_intersect($candidates, OperationDefinition::defaultIds($kind, $definition->identity === [])));
@@ -421,21 +432,65 @@ final class ServedPaths {
           $named === [] && count($candidates) === 1 => $candidates[0],
           default => NULL,
         };
-        if ($kind === OperationDefinition::READ && ($defaults[$placement][OperationDefinition::UPDATE] ?? NULL) !== NULL) {
+        if ($kind === OperationDefinition::READ && ($defaults[$depth][OperationDefinition::UPDATE] ?? NULL) !== NULL) {
           $default = NULL;
         }
         // PATCH on the collection of things with identity would change
         // every thing, which no operation there means: an update over the
-        // collection is a custom method.
+        // collection is a custom method. So is one over a parent's
+        // things, at a path short of the one the thing's own operations
+        // are addressed at.
         // Decision: see
         // docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
-        if ($kind === OperationDefinition::UPDATE && $placement === self::COLLECTION && $definition->identity !== []) {
+        if ($kind === OperationDefinition::UPDATE && (($depth === 0 && $definition->identity !== []) || $depth < $deepest)) {
           $default = NULL;
         }
-        $defaults[$placement][$kind] = $default;
+        $defaults[$depth][$kind] = $default;
+      }
+      // A path an edit is served at names a thing: a create there (a
+      // field added on a storage that exists) is a custom method, and POST
+      // on it means nothing.
+      // Decision: see
+      // docs/decisions.md#a-parameter-is-identity-the-caller-knows.
+      if ($depth > 0 && $defaults[$depth][OperationDefinition::UPDATE] !== NULL) {
+        $defaults[$depth][OperationDefinition::CREATE] = NULL;
       }
     }
     return $defaults;
+  }
+
+  /**
+   * Answers whether any operation is addressed at a depth.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param int $depth
+   *   The number of identity segments.
+   *
+   * @return bool
+   *   TRUE when an operation's path carries that many.
+   */
+  protected function addressedAt(ResourceDefinition $definition, int $depth): bool {
+    return in_array($depth, $this->depths($definition), TRUE);
+  }
+
+  /**
+   * Lists the depths a resource's operations are addressed at.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   *
+   * @return int[]
+   *   The numbers of identity segments its paths carry, ascending.
+   */
+  protected function depths(ResourceDefinition $definition): array {
+    $depths = [];
+    foreach ($this->registry->getOperations($definition->name()) as $operation) {
+      $depths[] = $this->depth($definition, $operation);
+    }
+    $depths = array_values(array_unique($depths));
+    sort($depths);
+    return $depths;
   }
 
   /**
@@ -459,25 +514,26 @@ final class ServedPaths {
     if ($definition->identity === []) {
       return NULL;
     }
-    $defaults = $this->defaults($definition)[self::COLLECTION];
+    $defaults = $this->defaults($definition)[0];
     return $defaults[OperationDefinition::UPDATE] === NULL ? $defaults[OperationDefinition::READ] : NULL;
   }
 
   /**
-   * Says where an operation is addressed.
+   * Says where an operation is addressed: how deep its path is.
    *
    * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    *
-   * @return string
-   *   ITEM for one that does not create, of a resource with identity, and
-   *   that needs parameters: they name the thing. COLLECTION for any
-   *   other: a singleton's, a create's, one that needs nothing.
+   * @return int
+   *   The number of identity segments its path carries: one per parameter
+   *   named for an identity key (ResourceDefinition::identityParameters()),
+   *   0 for the collection, a singleton's, a create that takes no
+   *   identity, one that needs nothing.
    */
-  public function placement(ResourceDefinition $definition, OperationDefinition $operation): string {
-    return $definition->identity !== [] && !$operation->creates && !$operation->needsNothing() ? self::ITEM : self::COLLECTION;
+  public function depth(ResourceDefinition $definition, OperationDefinition $operation): int {
+    return count($definition->identityParameters($operation));
   }
 
   /**
@@ -485,17 +541,15 @@ final class ServedPaths {
    *
    * @param array<string, string|null> $defaults
    *   The path's defaults, by kind.
-   * @param string $placement
-   *   The path's placement.
    *
    * @return string|null
-   *   The default update, else the default read, else on a collection the
-   *   default create; NULL when there is none.
+   *   The default update, else the default read, else the default create;
+   *   NULL when there is none.
    */
-  protected function readDefault(array $defaults, string $placement): ?string {
+  protected function readDefault(array $defaults): ?string {
     return $defaults[OperationDefinition::UPDATE]
       ?? $defaults[OperationDefinition::READ]
-      ?? ($placement === self::COLLECTION ? $defaults[OperationDefinition::CREATE] : NULL);
+      ?? $defaults[OperationDefinition::CREATE];
   }
 
   /**
@@ -511,8 +565,7 @@ final class ServedPaths {
    *   they are at its custom method's.
    */
   public function readsPlain(ResourceDefinition $definition, OperationDefinition $operation): bool {
-    $placement = $this->placement($definition, $operation);
-    return $this->readDefault($this->defaults($definition)[$placement], $placement) === $operation->id;
+    return $this->readDefault($this->defaults($definition)[$this->depth($definition, $operation)]) === $operation->id;
   }
 
   /**
@@ -525,20 +578,19 @@ final class ServedPaths {
    *
    * @return array{0: string, 1: bool}
    *   `PATCH` on the plain path for the default update, `DELETE` on it for
-   *   the default delete, `POST` on the collection for the default create,
+   *   the default delete, `POST` on it for the default create,
    *   and on the custom method `PATCH` for any other update and `POST` for
    *   any other operation; and whether the path names the operation.
    */
   public function writes(ResourceDefinition $definition, OperationDefinition $operation): array {
-    $placement = $this->placement($definition, $operation);
-    $defaults = $this->defaults($definition)[$placement];
+    $defaults = $this->defaults($definition)[$this->depth($definition, $operation)];
     if ($defaults[OperationDefinition::UPDATE] === $operation->id) {
       return ['PATCH', FALSE];
     }
     if ($defaults[OperationDefinition::DELETE] === $operation->id) {
       return ['DELETE', FALSE];
     }
-    if ($placement === self::COLLECTION && $defaults[OperationDefinition::CREATE] === $operation->id) {
+    if ($defaults[OperationDefinition::CREATE] === $operation->id) {
       return ['POST', FALSE];
     }
     return [$operation->kind() === OperationDefinition::UPDATE ? 'PATCH' : 'POST', TRUE];
@@ -645,26 +697,20 @@ final class ServedPaths {
    *   Whether the path names the operation.
    * @param bool $schema
    *   Whether it is the schema's path.
+   * @param bool $query
+   *   Whether to write the parameters that are not identity too, as
+   *   `?name={name}`: the whole URL a caller fills in, as a tool names it.
+   *   OpenAPI names the path alone, the query its parameters' own.
    *
    * @return array{0: string, 1: string[], 2: \Drupal\Core\GeneratedUrl}
    *   The path, each identity segment a `{parameter}`; the names of the
    *   parameters in the path; and the generated URL it was written from,
    *   for its cacheability.
    */
-  public function template(ResourceDefinition $definition, OperationDefinition $operation, bool $named, bool $schema = FALSE): array {
-    $markers = [];
-    $parameters = [];
-    if ($this->placement($definition, $operation) === self::ITEM) {
-      foreach (array_values($operation->parameters) as $delta => $parameter) {
-        if ($parameter->optional) {
-          break;
-        }
-        $markers['placeholder' . $delta] = '{' . $parameter->name . '}';
-        $parameters[$parameter->name] = 'placeholder' . $delta;
-      }
-    }
+  public function template(ResourceDefinition $definition, OperationDefinition $operation, bool $named, bool $schema = FALSE, bool $query = FALSE): array {
+    [$markers, $parameters, $path] = $this->placeholders($definition, $operation, $query);
     $url = $this->url($definition, $operation, $parameters, $named, $schema);
-    return [strtr($url->getGeneratedUrl(), $markers), array_keys($parameters), $url];
+    return [strtr($url->getGeneratedUrl(), $markers), $path, $url];
   }
 
   /**
@@ -679,19 +725,41 @@ final class ServedPaths {
    *   As template() answers, for `.../{x}:lookup`.
    */
   public function lookupTemplate(ResourceDefinition $definition, OperationDefinition $operation): array {
+    [$markers, $parameters, $path] = $this->placeholders($definition, $operation, FALSE);
+    $url = $this->lookupUrl($definition, $operation, $parameters);
+    return [strtr($url->getGeneratedUrl(), $markers), $path, $url];
+  }
+
+  /**
+   * Stands a placeholder in for each parameter a template writes.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   * @param bool $query
+   *   Whether the parameters that are not identity are written too.
+   *
+   * @return array{0: array<string, string>, 1: array<string, string>, 2: string[]}
+   *   The `{name}` each placeholder becomes; the placeholders by
+   *   parameter name, to build the URL with; the names in the path.
+   */
+  protected function placeholders(ResourceDefinition $definition, OperationDefinition $operation, bool $query): array {
     $markers = [];
     $parameters = [];
-    if ($this->placement($definition, $operation) === self::ITEM) {
-      foreach (array_values($operation->parameters) as $delta => $parameter) {
-        if ($parameter->optional) {
-          break;
-        }
-        $markers['placeholder' . $delta] = '{' . $parameter->name . '}';
-        $parameters[$parameter->name] = 'placeholder' . $delta;
+    $path = $definition->identityParameters($operation);
+    $written = $path;
+    if ($query) {
+      foreach ($operation->parameters as $parameter) {
+        $written[] = $parameter->name;
       }
+      $written = array_unique($written);
     }
-    $url = $this->lookupUrl($definition, $operation, $parameters);
-    return [strtr($url->getGeneratedUrl(), $markers), array_keys($parameters), $url];
+    foreach (array_values($written) as $delta => $name) {
+      $markers['placeholder' . $delta] = '{' . $name . '}';
+      $parameters[$name] = 'placeholder' . $delta;
+    }
+    return [$markers, $parameters, $path];
   }
 
   /**
@@ -705,18 +773,16 @@ final class ServedPaths {
    *   Its parameters by name.
    *
    * @return array{0: string[], 1: array<string, string>}
-   *   The identity segments, in declaration order, and the rest.
+   *   The identity segments, in identity order, and the rest.
    */
   protected function split(ResourceDefinition $definition, OperationDefinition $operation, array $parameters): array {
     $segments = [];
-    if ($this->placement($definition, $operation) === self::ITEM) {
-      foreach ($operation->parameters as $parameter) {
-        if (!isset($parameters[$parameter->name])) {
-          break;
-        }
-        $segments[] = (string) $parameters[$parameter->name];
-        unset($parameters[$parameter->name]);
+    foreach ($definition->identityParameters($operation) as $name) {
+      if (!isset($parameters[$name])) {
+        break;
       }
+      $segments[] = (string) $parameters[$name];
+      unset($parameters[$name]);
     }
     $query = [];
     foreach ($operation->parameters as $parameter) {

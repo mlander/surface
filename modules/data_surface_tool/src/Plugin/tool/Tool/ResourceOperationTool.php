@@ -12,6 +12,7 @@ use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
 use Drupal\data_surface\Pipeline\ResultDocument;
 use Drupal\data_surface\Pipeline\Violation;
 use Drupal\data_surface\ResourceBuild\OperationDefinition;
+use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\StorageAdapter;
 use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\data_surface_tool\InputDefinitions;
@@ -107,11 +108,15 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * Before any parameter arrives: the derived definition is cached for
    * every account, built for whichever one discovered it, and access in a
    * listing is the account's, its static answers stated and its runtime
-   * ones marked (OperationInputs::listedValues()). A definition that
-   * cannot be built keeps the cached one; building it reported why.
+   * ones marked (OperationInputs::listedValues()). For an operation that
+   * needs nothing to start from and changes what exists, open to the
+   * account, it reads what is stored, so a key whose variants the site
+   * lists states the stored choice's keys. A definition that cannot be
+   * built keeps the cached one; building it reported why.
    *
    * Decision: see
-   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
+   * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability,
+   * and docs/decisions.md#a-budget-for-what-the-site-decides.
    */
   protected function listValuesForTheAccount(): void {
     $inputs = $this->getInputDefinitions(TRUE);
@@ -120,12 +125,39 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     }
     try {
       [$resource, $operation] = $this->found();
-      $inputs[OperationInputs::VALUES] = $this->operationInputs->listedValues($resource, $operation);
+      $inputs[OperationInputs::VALUES] = $this->operationInputs->listedValues($resource, $operation, $this->mayListStored($resource, $operation));
     }
     catch (\InvalidArgumentException | \LogicException) {
       return;
     }
     $this->inputDefinitions = $inputs;
+  }
+
+  /**
+   * Answers whether the listing may read what is stored, for the account.
+   *
+   * Nothing is loaded for an account the operation is not open to, as
+   * refineInputDefinition() loads nothing for one.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return bool
+   *   TRUE for an operation that needs nothing to start from and changes
+   *   what exists, when the account may run it.
+   */
+  protected function mayListStored(ResourceDefinition $resource, OperationDefinition $operation): bool {
+    if (!$operation->needsNothing() || !$this->operationInputs->changesWhatExists($resource, $operation)) {
+      return FALSE;
+    }
+    $permission = $this->permissionAccess($this->currentUser);
+    if ($permission !== NULL && !$permission->isAllowed()) {
+      return FALSE;
+    }
+    [, , $context] = $this->operation([]);
+    return $this->operationAccess($resource, $context, $this->currentUser)->isAllowed();
   }
 
   /**

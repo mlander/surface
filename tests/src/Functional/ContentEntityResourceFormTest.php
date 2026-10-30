@@ -106,7 +106,9 @@ class ContentEntityResourceFormTest extends BrowserTestBase {
     $assert_session->pageTextContains('Left out');
     $assert_session->pageTextContains('the language field type is not covered yet');
 
-    // An article is no page: the page's update operation refuses it.
+    // An article is no page: the page's update operation refuses it. That
+    // the refusal says nothing of what the id names is RouteAccessTest's to
+    // hold, since core's 403 page prints no reason.
     $this->drupalCreateContentType(['type' => 'article', 'name' => 'Article']);
     $article = Node::create(['type' => 'article', 'title' => 'Not a page']);
     $article->save();

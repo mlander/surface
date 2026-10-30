@@ -1,5 +1,14 @@
 # Resources and structures as classes
 
+This page is the full reference for what a resource or structure class
+can declare beyond its keys: operations, other modules' changes, the
+structures it holds, access, and the tools made from it. Use it when a
+build page links a section here, or when you need an option no build
+page shows. [Operations](introduction/07-operations.md),
+[Resources made of structures](introduction/10-putting-together.md),
+[Other modules](introduction/12-other-modules.md) and
+[Access](introduction/14-access.md) introduce its ideas.
+
 A resource or structure is a class of its own: one static method that
 declares its keys, and one named static method per key whose allowed
 values depend on another key. A resource is a thing with identity and
@@ -57,8 +66,7 @@ module the way core scans `src/Hook`:
   structure, found through its plugin definition rather than a
   directory ([Plugins](#plugins)).
 - A class in `src/Shape/` carrying `#[Shape]` is a shape: one scalar
-  value, declared once and used at many keys ([Named
-  shapes](declaring-a-resource.md#named-shapes)).
+  value, declared once and used at many keys ([Named shapes](declaring-a-resource.md#named-shapes)).
 - A class in `src/Alter/` carrying `#[Alters]` is an alter. It is
   registered as an autowired service, so it may hold services.
 - `#[Operation]` on a resource's or structure's class, or on a static
@@ -161,8 +169,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **The framework checks every refinement is narrower**, so a refiner
   cannot widen, retype, or turn off required. The two type changes it
   accepts are away from `any` and to a derivative of the type
-  (`entity` to `entity:node` to `entity:node:article`); see [the
-  narrowing table](refinement.md#the-narrowing-table).
+  (`entity` to `entity:node` to `entity:node:article`); see [the narrowing table](refinement.md#the-narrowing-table).
 
 ## Reading a class
 
@@ -213,16 +220,31 @@ already known, and that is a **context**, an `OperationContext`:
 - The context is `new OperationContext(known: [])`: the identity keys
   it knows, each with its value. The plugin hosts build their own,
   `new OperationContext('configure')`, under a verb that no operation
-  declares. `withConstraint()` and `withChild()` return a copy that
-  says more.
+  declares. `withConstraint()`, `withDefaults()` and `withChild()`
+  return a copy that says more.
 - An operation stands on its resource's or structure's own class; one
   on any other class is refused at discovery. Two declarations of one
   id are refused, naming both.
 - A context may also narrow a key (`withConstraint()`, checked
-  narrower). It may hand a child a context of its own, or name the child's
-  own operation to invoke (`withChild()`, see [Child
-  operations](#child-operations)). What depends on where you are is the
-  operation's; what depends on what was entered is a refiner's.
+  narrower); a Choice of one value with `'data_surface_fixed' => TRUE`
+  fixes it: the key holds that value, made required where it was
+  optional, drawn as it and stated `const`. It may give keys the values
+  they start from in this build (`withDefaults()`), over the declared
+  default and the site's; only a context that creates takes them, since
+  on an update the stored value stands, so a context that does not
+  create and carries defaults is refused when the resource is built,
+  naming the operation. Both name a key by path, with
+  [a site default's](declaring-a-resource.md#a-sites-own-defaults)
+  reach: a path into a structure attached at a fixed key (`title.value`)
+  is handed to that child's own context. Neither may name an identity
+  key the context knows, which is the operation's to say: a context that
+  fixes or fills one is refused when the resource is built. A route uses
+  both to fix or fill keys on one page
+  ([forms](forms.md#a-route-that-fixes-or-fills-keys)). It may hand a
+  child a context of its own, or name the child's own operation to
+  invoke (`withChild()`, see [Child operations](#child-operations)).
+  What depends on where you are is the operation's; what depends on
+  what was entered is a refiner's.
 - An operation states how a call behaves, for a client deciding
   whether to ask before calling and whether a retry is safe:
   `#[Operation(readOnly: TRUE)]` for one that changes nothing,
@@ -298,13 +320,17 @@ final class NewsletterResource implements ResourceInterface {
 ```
 
 and the field instance resource has three, each knowing more than the
-last: `create($entity_type_id, $bundle)`, `reuse($storage, $bundle)` (a
-create for the field and, through `withChild('storage',
-FieldStorageResource::update($storage))`, an update for its storage) and
-`update($field)`. The storage's update operation narrows cardinality not to
-shrink once the field has data, with `withConstraint()`, and knows the
-field type, its one identity key, which locks its settings to that
-type's.
+last: `create($entity_type, $bundle)`, `reuse($entity_type, $bundle,
+$field_name)` (a create for the field and, through `withChild('storage',
+FieldStorageResource::update($entity_type, $field_name))`, an update for
+its storage) and `update($entity_type, $bundle, $field_name)`, each
+taking the field by its parts, never by a composite id such as
+`node.article.body`
+([decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
+The storage's update operation narrows cardinality not to shrink once
+the field has data, with `withConstraint()`, and knows the storage's
+identity, the entity type, the field name and the field type, which
+locks its settings to that type's.
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
@@ -376,11 +402,15 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ### Routes from operations
 
-A route names a resource class and an operation, and its parameters are
-the operation method's, by name; an upcast entity parameter arrives as
-the entity. `DataSurfaceOperationForm` builds the context with the
-operation, renders the data surface, loads current values from the
-composed storage and submits through the pipeline to it. The route's
+A route names a resource class (or a resource's id) and an operation,
+and its parameters are the operation method's, by name; an upcast entity
+parameter arrives as the entity. A route default whose name has no
+leading underscore is a route parameter too, as core counts it, so
+`to: 'friends'` pins the operation's `$to` on that page, and one that
+nothing the route serves reads is refused. `DataSurfaceOperationForm`
+builds the context with the operation, renders the data surface, loads
+current values from the composed storage and submits through the
+pipeline to it. The route's
 requirement is the operation's access, which a route naming a resource
 and an operation has without saying it:
 
@@ -402,9 +432,14 @@ A locked identity key renders as a disabled element holding the value
 the operation knows, and extraction keeps that value whatever is
 posted. The cosmetic layer (`DataSurfaceFormCosmeticsInterface`), named
 by the route's optional `_data_surface_cosmetics`, is told the
-operation id as its `$operation` and the raw value of the operation's
-first route parameter. [Generated forms](forms.md#the-operation-form)
-has the rest.
+operation id as its `$operation` and the raw value of the first of the
+operation's parameters that is a variable of the route's path. A route
+may fix, fill or start the operation's keys on its page alone, and a
+value it fixes or fills may be `'{name}'`, a reference to a bounded
+variable of its path, read raw; a derived resource's id may hold such a
+variable too, so one route serves every bundle
+([A route that fixes or fills keys](forms.md#a-route-that-fixes-or-fills-keys)).
+[Generated forms](forms.md#the-operation-form) has the rest.
 
 ## Access
 
@@ -416,7 +451,7 @@ may answer after both ([An alter's answer](#an-alters-answer)):
 - **The operation's permission**, on `#[Operation(permission:)]`: the
   static part, answerable with nothing loaded. A `%key` in it is filled
   from the identity the context knows
-  (`administer %entity_type_id fields`); a placeholder the context does
+  (`administer %entity_type fields`); a placeholder the context does
   not know is refused. The permission is the module's own, declared in
   its `MODULE.permissions.yml` as any permission is (or one another
   module declares, such as `administer site configuration`); an
@@ -656,7 +691,7 @@ says on it that whether it may be changed is decided once the thing is
 known. The tool listing declares only the operation's own permission.
 
 The worked example is example 17, a bulk retitle of nodes
-([its README](../modules/data_surface_examples/README.md#example-17-retitle-in-bulk-access-borrowed)),
+([its README](https://github.com/mlander/data_surface/blob/main/modules/data_surface_examples/README.md#example-17-retitle-in-bulk-access-borrowed)),
 and the fixture the test module's notes (`GatesTest`).
 
 ## Storage
@@ -796,10 +831,10 @@ own is a tool, `data_surface:<resource id>:<operation id>`, derived by
 | --- | --- |
 | `data_surface:node.type:create` | `values` (every key, `type` unique), `dry_run` |
 | `data_surface:node.type:update` | `type` (the content type's id), `values` (every key but `type`), `dry_run` |
-| `data_surface:field.instance:create` | `entity_type_id`, `bundle`, `values`, `dry_run` |
-| `data_surface:field.instance:reuse` | `storage` (its id), `bundle`, `values`, `dry_run` |
-| `data_surface:field.instance:update` | `field` (its id), `values`, `dry_run` |
-| `data_surface:field.storage:update` | `storage` (its id), `values`, `dry_run` |
+| `data_surface:field.instance:create` | `entity_type`, `bundle`, `values`, `dry_run` |
+| `data_surface:field.instance:reuse` | `entity_type`, `bundle`, `field_name`, `values`, `dry_run` |
+| `data_surface:field.instance:update` | `entity_type`, `bundle`, `field_name`, `values`, `dry_run` |
+| `data_surface:field.storage:update` | `entity_type`, `field_name`, `values`, `dry_run` |
 
 - **Inputs** are the operation's parameters, by name (an entity
   parameter as the entity's id, resolved when the tool runs; a scalar
@@ -866,7 +901,7 @@ two (`ResourceCatalog::standalone()`):
    a `%key` placeholder that none of its parameters can supply (one
    named for it, or an entity its operation reads identity off) could
    never be allowed, so it is no tool. `field.storage`'s `create` needs
-   nothing and asks `administer %entity_type_id fields`: only a field
+   nothing and asks `administer %entity_type fields`: only a field
    adding its storage can ask it, as that field's child.
 2. **Something a host or a parent stores.** A class with no storage of
    its own (every structure), or one any plugin names with
@@ -1541,10 +1576,12 @@ What that means, end to end:
   parent under its key. `ResourcesInterface::storage()` builds the
   composed storage (see Storage, above).
 - **Emission.** The tool bridge converts an attached child to a nested
-  map input, and variants nothing has chosen yet to the widest honest
-  map: every variant's keys, none required and none with a default,
-  each annotated with the values it belongs to, the table in the
-  description. The Tool API cannot say a union keyed by a sibling. The
+  map input, and variants a class declares that nothing has chosen yet
+  to the widest honest map: every variant's keys, none required and none
+  with a default, each annotated with the values it belongs to, the
+  table in the description. The Tool API cannot say a union keyed by a
+  sibling. Variants the site lists state only the keys of the one the
+  stored values choose ([Variants from the site](#variants-from-the-site)). The
   served contract can, and writes each child once, as a def under
   `$defs` that every place it is used refers to: the wall is where a
   reference starts ([reusable subschemas](served-contract.md#reusable-subschemas)).
@@ -1714,8 +1751,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   stated at the site, on the container's `allOf`, an `if` on the
   container's key and a `then` reaching into the structure where it
   sits; the site's `x-surface.reads` says which key each port reads, and
-  its `dependsOn` names those keys ([the served
-  contract](served-contract.md#a-port-is-stated-at-its-site)).
+  its `dependsOn` names those keys ([the served contract](served-contract.md#a-port-is-stated-at-its-site)).
 
 The test module's seating structure reads a layout (required) and a
 number of guests (optional); the venue attaches it at `seating`, wiring
@@ -1991,14 +2027,19 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   variant, but component chose data_surface_examples:card.`
 - **Past the site list limit, deferred.** While the provider lists at
   most `data_surface.settings:site_list_limit` variants (20 as shipped),
-  both documents and the tool listing state each. Past it, the full
-  schema and the listing state the key open, marked `deferred`, the
-  deciding key still listing every value; the full schema fetched with
-  a value chosen, `GET .../schema?choose=/props=<value>`, and the schema
-  for these answers state the variant chosen, and the narrowing tool,
-  `data_surface:<resource>:<operation>:schema`, answers it to an agent
-  that asks with values
+  both documents state each. Past it, the full schema states the key
+  open, marked `deferred`, the deciding key still listing every value;
+  the full schema fetched with a value chosen,
+  `GET .../schema?choose=/props=<value>`, and the schema for these
+  answers state the variant chosen
   (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)).
+- **Never spelled out in a tool's listing.** Whatever the limit, the
+  tool listing states the keys of the variant the stored values choose
+  and no other, the deciding key still listing every value, and names
+  the fetch and the narrowing tool,
+  `data_surface:<resource>:<operation>:schema`, which answers the chosen
+  variant to an agent that asks with values
+  (why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
 - **Fewer components than the site has.** `ComponentProps` and
   `ComponentSlots` list the components `data_surface.settings:components_offered`
   allows: an entry with a colon is a component id (`provider:name`), one
@@ -2234,8 +2275,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   draws: the form, the envelope over HTTP, the React page, and what the
   pipeline accepts and validates. A locked entry that starts checked is
   drawn checked. A save leaves the entry unstored until a caller sends
-  another value, since [a default storage never held is not
-  written](decisions.md#absent-keeps-null-clears), and the read tool,
+  another value, since [a default storage never held is not written](decisions.md#absent-keeps-null-clears), and the read tool,
   which answers what storage holds, leaves it out; no door reads it as
   `null` (why: [decision](decisions.md#defaults-follow-the-definitions-under-a-stored-value)).
 - **When.** The build step asks the provider every time the resource is
@@ -2326,8 +2366,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   apply when on_sale.student is off.`).
 - **What depends on it is stated per entry**, on the owner's `allOf`: an
   `if` on `on_sale.<id>` and a `then` reaching into `limits.<id>`, a
-  locked entry's too ([the served
-  contract](served-contract.md#a-port-is-stated-at-its-site)). The
+  locked entry's too ([the served contract](served-contract.md#a-port-is-stated-at-its-site)). The
   schema for these answers settles each entry, and the React page
   narrows each one from the full schema with no request.
 - **Refused** when the structure does not read the port; when the
@@ -2443,7 +2482,6 @@ what is derived from what, and where core's APIs fell short.
 ## Not built yet
 
 A collection whose items choose their own child (`attachListBy()`),
-input shapes, and options sources with their alters are deferred; [the
-pattern](pattern.md#deferred) records the position each is held to.
+input shapes, and options sources with their alters are deferred; [the pattern](pattern.md#deferred) records the position each is held to.
 Until options sources exist, a live list is a constraint with an
 options resolver.

@@ -689,6 +689,9 @@ final class Drawing {
         if (isset($group['weight'])) {
           $drawn['#weight'] = $group['weight'];
         }
+        if (isset($group['description'])) {
+          $drawn['#description'] = $group['description'];
+        }
         if ($members[$group['id']] === 1 && is_array($value) && ($value['#type'] ?? NULL) === 'details' && !isset($value[self::LIST_KEY])) {
           // A map alone in its group: one details, the group's.
           $drawn += array_intersect_key($value, array_flip(['#description', '#required']));

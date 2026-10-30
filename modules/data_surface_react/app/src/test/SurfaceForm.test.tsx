@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createApi, dottedToPointer, lookupOf, pageOf, pointerToDotted, type Endpoints, type Settings } from '../api';
+import { createApi, dottedToPointer, lookupOf, pageOf, pointerToDotted, startedPaths, startingValues, type Endpoints, type Settings } from '../api';
 import type { Contract, Schema } from '../contract';
 import { ContractRefused, getAt } from '../contract';
 import { SurfaceForm } from '../SurfaceForm';
@@ -1001,5 +1001,86 @@ describe('a key deferred for its size', () => {
     await userEvent.selectOptions(await screen.findByLabelText(/^Component/), 'Hero');
     await waitFor(() => expect(narrows(calls)).toHaveLength(1));
     expect(fetches(calls)).toHaveLength(1);
+  });
+});
+
+describe('the values a page served at a module\'s route starts from', () => {
+  // As the envelope holds them: a key of the resource and a key of a part
+  // it attaches.
+  const envelope = { title: 'Stored title', copies: 1, envelope: { color: 'white', stamps: 1 } };
+
+  it('lays the envelope\'s values, then the route\'s defaults, then a link\'s prefill, each over the last', () => {
+    expect(
+      startingValues(envelope, {
+        seeds: { defaults: { title: 'Dear you', copies: 4 } },
+        prefill: { title: 'Pricing' },
+      }),
+    ).toEqual({ title: 'Pricing', copies: 4, envelope: { color: 'white', stamps: 1 } });
+  });
+
+  it('lays each by its key path, inside a part the envelope already fills', () => {
+    expect(
+      startingValues(envelope, {
+        seeds: { defaults: { 'greeting.value': 'Start here.' } },
+        prefill: { 'envelope.stamps': 3 },
+      }),
+    ).toEqual({ title: 'Stored title', copies: 1, envelope: { color: 'white', stamps: 3 }, greeting: { value: 'Start here.' } });
+    // The envelope's values are left as they were.
+    expect(envelope.envelope.stamps).toBe(1);
+  });
+
+  it('starts from the envelope alone when the page says nothing, an empty list as PHP writes an empty map included', () => {
+    expect(startingValues(envelope, {})).toEqual(envelope);
+    const nothing = [] as unknown as Record<string, unknown>;
+    expect(startingValues(envelope, { seeds: { defaults: nothing }, prefill: nothing })).toEqual(envelope);
+  });
+
+  it('names each path started from a value the envelope does not hold there', () => {
+    expect(startedPaths(envelope, { seeds: { defaults: { copies: 1, title: 'Dear you' } }, prefill: { 'envelope.stamps': 3, title: 'Pricing' } })).toEqual(['title', 'envelope.stamps']);
+  });
+});
+
+describe('a page served at a module\'s route', () => {
+  it('draws the form from the values it starts, asks nothing for keys nothing depends on, and writes them', async () => {
+    const { calls, fetcher } = server({ [step2.read]: () => example2, [step2.write]: () => nothing });
+    const started: Settings = { ...settings, seeds: { defaults: { title: 'Route title', capacity: 60 } }, prefill: { title: 'Link title' } };
+    render(<SurfaceForm settings={started} fetcher={fetcher} refineDelay={0} />);
+    expect(await screen.findByLabelText(/Event title/)).toHaveValue('Link title');
+    expect(screen.getByLabelText(/Capacity/)).toHaveValue(60);
+    expect(narrows(calls)).toHaveLength(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(writes(calls)).toHaveLength(1));
+    expect(bodyOf(writes(calls)[0])).toMatchObject({ title: 'Link title', capacity: 60 });
+  });
+
+  it('narrows what depends on a value it starts here, as for a change, with no request', async () => {
+    const { calls, fetcher } = recordedServer(narrowed2 as unknown as Recorded, 'registration.step2');
+    render(<SurfaceForm settings={{ ...settings, prefill: { venue: 'library' } }} fetcher={fetcher} refineDelay={0} />);
+    await waitFor(() => expect(within(screen.getByLabelText(/Room/)).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Reading room', 'Garden room']));
+    expect(screen.getByLabelText(/Venue/)).toHaveDisplayValue('Old Library');
+    expect(screen.getByLabelText(/Capacity/)).not.toHaveAttribute('max');
+    expect(narrowingLine()).toBe('Narrowed here: room, capacity.');
+    expect(narrows(calls)).toHaveLength(0);
+  });
+
+  it('asks the server to narrow for a value it starts that the page cannot narrow for', async () => {
+    // No full schema: every narrowing is the server's.
+    const { calls, fetcher } = server({ [step2.narrow]: refined, [step2.read]: () => example2 });
+    render(<SurfaceForm settings={{ ...settings, prefill: { venue: 'library' } }} fetcher={fetcher} refineDelay={0} />);
+    await waitFor(() => expect(narrows(calls)).toHaveLength(1));
+    expect(bodyOf(narrows(calls)[0])).toMatchObject({ venue: 'library', room: 'riverside_main' });
+    await waitFor(() => expect(within(screen.getByLabelText(/Room/)).getAllByRole('option').map((option) => option.textContent)).toEqual(['- Select -', 'Reading room', 'Garden room']));
+  });
+
+  it('takes a value it starts for the stored one a stale key stood for', async () => {
+    const recorded = narrowed2 as unknown as Recorded;
+    const stale: Recorded = { ...recorded, contract: { ...recorded.contract, values: { ...recorded.contract.values, room: null }, stale: ['/room'] } };
+    const { calls, fetcher } = recordedServer(stale, 'registration.step2', { [step2.write]: () => nothing });
+    render(<SurfaceForm settings={{ ...settings, prefill: { room: 'riverside_east' } }} fetcher={fetcher} refineDelay={0} />);
+    expect(await screen.findByLabelText(/Room/)).toHaveDisplayValue('East room');
+    await userEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(writes(calls)).toHaveLength(1));
+    expect(headersOf(writes(calls)[0])).not.toHaveProperty('X-Surface-Stale');
+    expect(bodyOf(writes(calls)[0]).room).toBe('riverside_east');
   });
 });

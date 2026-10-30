@@ -4,19 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\data_surface\ResourceBuild;
 
-use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\Computed;
 use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\DefinitionTypedData;
-use Drupal\data_surface\Pipeline\Coercion;
-use Drupal\data_surface\Pipeline\ValueState;
 
 /**
  * The defaults a site sets on a resource's keys, over the declared ones.
@@ -95,16 +86,14 @@ final class SiteDefaults {
    * A path is a key of the frame, a key of a map it declares (`a.b`), a
    * key an alter mounted (`third_party_settings.<module>.<key>`), or a key
    * of a structure attached at a fixed key, which is handed back for that
-   * child's build to write in its own frame.
+   * child's build to write in its own frame (KeyPaths).
    *
    * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
    *   The frame's builder, its keys and its alters' declared.
    * @param array{resource: string, at: string, values: array<string, mixed>} $defaults
    *   What of() answered, or what a parent's write() handed this frame.
    * @param array<string, string> $kinds
-   *   The frame's keys that hold no plain value, by key: `child` for a
-   *   structure attached at a fixed key, `variants`, `collection` or
-   *   `site` for keys from the site.
+   *   The frame's keys that hold no plain value (KeyPaths::kinds()).
    *
    * @return array<string, array{resource: string, at: string, values: array<string, mixed>}>
    *   The defaults for each attached child, by its key.
@@ -114,249 +103,22 @@ final class SiteDefaults {
    *   not fit its key.
    */
   public function write(DataSurfaceBuilderInterface $builder, array $defaults, array $kinds): array {
+    $where = [
+      'resource' => $defaults['resource'],
+      'at' => $defaults['at'],
+      'source' => self::CONFIG,
+      'noun' => 'site default',
+      'verb' => 'sets',
+    ];
     $children = [];
-    foreach ($defaults['values'] as $path => $raw) {
-      $path = (string) $path;
-      $segments = explode('.', $path);
-      $first = $segments[0];
-      $kind = $kinds[$first] ?? NULL;
-      if ($kind === 'child') {
-        if (count($segments) === 1) {
-          throw $this->refusal('%s: "%s" on %s holds a structure: set each of its keys, as "%s.<key>".', self::CONFIG, $defaults['at'] . $path, $defaults['resource'], $defaults['at'] . $path);
-        }
-        $children[$first] ??= [
-          'resource' => $defaults['resource'],
-          'at' => $defaults['at'] . $first . '.',
-          'values' => [],
-        ];
-        $children[$first]['values'][implode('.', array_slice($segments, 1))] = $raw;
-        continue;
-      }
-      if ($kind !== NULL) {
-        throw $this->refusal(
-          '%s: "%s" on %s is inside "%s", %s, so a site default does not reach it.',
-          self::CONFIG,
-          $defaults['at'] . $path,
-          $defaults['resource'],
-          $defaults['at'] . $first,
-          match ($kind) {
-            'variants' => 'a key with variants, each starting from its own defaults',
-            'collection' => 'a collection, each item starting from its structure\'s defaults',
-            default => 'a map of keys from the site, which its provider starts',
-          },
-        );
-      }
-      [$definition, $ancestors] = $this->resolve($builder, $segments, $defaults, $path);
-      $value = $this->held($definition, $raw, $defaults, $path);
-      DefinitionMetadata::setDefaultValue($definition, $value);
-      // A map that declares a default holding the key would mask the
-      // key's own: the site's is written there too.
-      $below = [];
-      foreach (array_reverse($ancestors) as [$ancestor, $name]) {
-        array_unshift($below, $name);
-        if (DefinitionMetadata::hasDefaultValue($ancestor) && is_array($held = DefinitionMetadata::getDefaultValue($ancestor)) && NestedArray::keyExists($held, $below)) {
-          NestedArray::setValue($held, $below, $value);
-          DefinitionMetadata::setDefaultValue($ancestor, $held);
-        }
-      }
+    foreach ((new KeyPaths($this->typedDataManager))->writeDefaults($builder, $where, $defaults['values'], $kinds) as $key => $values) {
+      $children[$key] = [
+        'resource' => $defaults['resource'],
+        'at' => $defaults['at'] . $key . '.',
+        'values' => $values,
+      ];
     }
     return $children;
-  }
-
-  /**
-   * Finds the definition a path names in a frame.
-   *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
-   *   The frame's builder.
-   * @param string[] $segments
-   *   The path, split.
-   * @param array{resource: string, at: string, values: array<string, mixed>} $defaults
-   *   The frame's defaults, for the refusal.
-   * @param string $path
-   *   The path, for the refusal.
-   *
-   * @return array{0: \Drupal\Core\TypedData\DataDefinitionInterface, 1: list<array{0: \Drupal\Core\TypedData\DataDefinitionInterface, 1: string}>}
-   *   The definition, and each map above it with the name it holds the
-   *   next one under.
-   *
-   * @throws \LogicException
-   *   When the path names no key, or names an item of a list.
-   */
-  protected function resolve(DataSurfaceBuilderInterface $builder, array $segments, array $defaults, string $path): array {
-    $definition = NULL;
-    $rest = $segments;
-    if ($segments[0] === 'third_party_settings' && count($segments) >= 3) {
-      $definition = $builder->getThirdPartyDefinition($segments[1], $segments[2]);
-      $rest = array_slice($segments, 3);
-    }
-    else {
-      $definition = $builder->getDefinition($segments[0]);
-      $rest = array_slice($segments, 1);
-    }
-    $ancestors = [];
-    foreach ($rest as $segment) {
-      if ($definition instanceof ListDataDefinitionInterface) {
-        throw $this->refusal('%s: "%s" on %s is inside a list, whose default is set whole: name the list and write it as JSON, ["a","b"].', self::CONFIG, $defaults['at'] . $path, $defaults['resource']);
-      }
-      $property = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinition($segment) : NULL;
-      if ($property === NULL) {
-        $definition = NULL;
-        break;
-      }
-      $ancestors[] = [$definition, $segment];
-      $definition = $property;
-    }
-    if ($definition === NULL) {
-      throw $this->refusal('%s: %s has no key "%s". A site default names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).', self::CONFIG, $defaults['resource'], $defaults['at'] . $path);
-    }
-    return [$definition, $ancestors];
-  }
-
-  /**
-   * Reads a site's value through the coercion table and holds it to its key.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition.
-   * @param mixed $raw
-   *   The value as stored: text, as a form posts it.
-   * @param array{resource: string, at: string, values: array<string, mixed>} $defaults
-   *   The frame's defaults, for the refusal.
-   * @param string $path
-   *   The path, for the refusal.
-   *
-   * @return mixed
-   *   The value, in the key's type.
-   *
-   * @throws \LogicException
-   *   When the key takes no default, or the value does not fit it.
-   */
-  protected function held(DataDefinitionInterface $definition, mixed $raw, array $defaults, string $path): mixed {
-    if (DefinitionMetadata::isSecret($definition)) {
-      throw $this->refusal('%s: "%s" on %s is a secret: both documents state a default, and a secret is never read back, so it takes none.', self::CONFIG, $defaults['at'] . $path, $defaults['resource']);
-    }
-    $computed = Computed::of($definition);
-    if ($computed !== NULL) {
-      throw $this->refusal('%s: "%s" on %s is computed from %s, so it takes no default.', self::CONFIG, $defaults['at'] . $path, $defaults['resource'], implode(', ', $computed->from));
-    }
-    $value = NULL;
-    $problem = NULL;
-    try {
-      $value = $this->accepted($definition, $raw);
-      $problem = $this->violation($definition, $value);
-    }
-    catch (\InvalidArgumentException $e) {
-      $problem = $e->getMessage();
-    }
-    if ($problem !== NULL) {
-      throw $this->refusal(
-        '%s sets "%s" on %s to %s, which the key does not accept: %s',
-        self::CONFIG,
-        $defaults['at'] . $path,
-        $defaults['resource'],
-        (string) json_encode($raw, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-        $problem,
-      );
-    }
-    return $value;
-  }
-
-  /**
-   * Reads a stored value in its key's shape, by the coercion table.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition.
-   * @param mixed $raw
-   *   The value as stored.
-   *
-   * @return mixed
-   *   The value, coerced where the table reads it unambiguously.
-   *
-   * @throws \InvalidArgumentException
-   *   When a map is not an object, or names a key it does not declare.
-   */
-  protected function accepted(DataDefinitionInterface $definition, mixed $raw): mixed {
-    if (!ValueState::isConfigured($raw)) {
-      return NULL;
-    }
-    if ($definition instanceof ListDataDefinitionInterface) {
-      $items = Coercion::decoded($raw, TRUE);
-      $values = [];
-      foreach (is_array($items) ? $items : [$items] as $item) {
-        if (ValueState::isConfigured($item)) {
-          $values[] = $this->accepted($definition->getItemDefinition(), $item);
-        }
-      }
-      return $values;
-    }
-    $properties = $definition instanceof ComplexDataDefinitionInterface ? $definition->getPropertyDefinitions() : [];
-    if ($properties === []) {
-      return is_array($raw) ? $raw : Coercion::scalar($definition, $raw);
-    }
-    $map = Coercion::decoded($raw, FALSE);
-    if (!is_array($map)) {
-      throw new \InvalidArgumentException('it holds a map, written as a JSON object.');
-    }
-    $unknown = array_diff(array_map('strval', array_keys($map)), array_map('strval', array_keys($properties)));
-    if ($unknown !== []) {
-      throw new \InvalidArgumentException(sprintf('it declares no key "%s".', reset($unknown)));
-    }
-    $values = [];
-    foreach ($map as $name => $value) {
-      $values[$name] = $this->accepted($properties[$name], $value);
-    }
-    return $values;
-  }
-
-  /**
-   * Holds a value to its key's definition, as the pipeline would.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key's definition.
-   * @param mixed $value
-   *   The value, coerced.
-   *
-   * @return string|null
-   *   The first violation's message, or NULL when the value fits.
-   */
-  protected function violation(DataDefinitionInterface $definition, mixed $value): ?string {
-    $properties = $definition instanceof ComplexDataDefinitionInterface && !$definition instanceof ListDataDefinitionInterface ? $definition->getPropertyDefinitions() : [];
-    if ($properties !== [] && is_array($value)) {
-      // A map is held key by key: what it leaves out starts from its
-      // keys' own defaults.
-      foreach ($value as $name => $held) {
-        $problem = $this->violation($properties[$name], $held);
-        if ($problem !== NULL) {
-          return $problem;
-        }
-      }
-      return NULL;
-    }
-    if (is_array($value) && $definition->isRequired() && method_exists($definition, 'setRequired')) {
-      // Required means configured, and the empty list is, as the pipeline
-      // reads it; core's NotNull reads it as null.
-      // Decision: see docs/decisions.md#required-means-must-hold-a-value.
-      $definition = (clone $definition)->setRequired(FALSE);
-    }
-    foreach (DefinitionTypedData::create($this->typedDataManager, $definition, $value)->validate() as $violation) {
-      $at = (string) $violation->getPropertyPath();
-      return ($at === '' ? '' : $at . ': ') . strip_tags((string) $violation->getMessage());
-    }
-    return NULL;
-  }
-
-  /**
-   * Makes the refusal of one entry.
-   *
-   * @param string $format
-   *   The message, its arguments filled by sprintf().
-   * @param string ...$arguments
-   *   The arguments.
-   *
-   * @return \LogicException
-   *   The refusal.
-   */
-  protected function refusal(string $format, string ...$arguments): \LogicException {
-    return new \LogicException(vsprintf($format, $arguments));
   }
 
 }

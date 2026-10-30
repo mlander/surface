@@ -22,7 +22,8 @@ use Drupal\Core\Session\AccountInterface;
  * A field storage's values live on its field storage config entity.
  *
  * Loads by the identity its context knows: the entity type and the field
- * name, handed to it by the field it belongs to. Committed before that
+ * name, its update's parameters, or handed to it by the field it belongs
+ * to. Committed before that
  * field, because a field cannot be created on a storage that does not
  * exist yet. A storage whose values did not move is not saved. Its
  * settings, whichever variant described them, are stored here under
@@ -57,6 +58,8 @@ final class FieldStorageStorage implements ResourceStorageInterface {
   public function load(OperationContext $context): array {
     $storage = $this->storage($context->known);
     return $storage === NULL ? [] : [
+      'entity_type' => $storage->getTargetEntityTypeId(),
+      'field_name' => $storage->getName(),
       'field_type' => $storage->getType(),
       'cardinality' => $storage->getCardinality(),
       'translatable' => $storage->isTranslatable(),
@@ -81,7 +84,7 @@ final class FieldStorageStorage implements ResourceStorageInterface {
    */
   public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     $original = $this->storage($context->known);
-    $this->assertSameType($context, $original, $values['field_type'] ?? NULL);
+    $this->assertSameIdentity($context, $original, $values);
     $storage = $original === NULL ? $this->create($context, NULL, $values['field_type'] ?? NULL) : clone $original;
     $this->apply($storage, $values);
     $record = $storage->toArray();
@@ -140,33 +143,45 @@ final class FieldStorageStorage implements ResourceStorageInterface {
   }
 
   /**
-   * Refuses a field type other than the one the storage is for.
+   * Refuses an identity other than the one the storage is for.
    *
-   * The field hands its storage its own type as identity when it is
-   * prepared; a caller adding a field names the type on the field and,
-   * to describe the storage's settings, on the storage as well. Two
-   * different types would be a storage its field cannot be built on.
+   * The field hands its storage its own identity when it is prepared; a
+   * caller adding a field names the type on the field and, to describe
+   * the storage's settings, may name it on the storage as well. A storage
+   * named for another entity type, field name or type would be one its
+   * field cannot be built on.
    *
    * @param \Drupal\data_surface\Resource\OperationContext $context
-   *   The context, which may know the type.
+   *   The context, which may know the identity.
    * @param \Drupal\field\FieldStorageConfigInterface|null $original
    *   The stored storage, if there is one.
-   * @param mixed $type
-   *   The type the values name, if any.
+   * @param array $values
+   *   The accepted values, which may name the identity.
    *
    * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
    *   When the two differ.
    */
-  protected function assertSameType(OperationContext $context, ?FieldStorageConfigInterface $original, mixed $type): void {
-    $expected = $original?->getType() ?? $context->known['field_type'] ?? NULL;
-    if (!is_string($type) || $type === '' || $expected === NULL || $type === $expected) {
-      return;
+  protected function assertSameIdentity(OperationContext $context, ?FieldStorageConfigInterface $original, array $values): void {
+    $expected = [
+      'entity_type' => $original?->getTargetEntityTypeId() ?? $context->known['entity_type'] ?? NULL,
+      'field_name' => $original?->getName() ?? $context->known['field_name'] ?? NULL,
+      'field_type' => $original?->getType() ?? $context->known['field_type'] ?? NULL,
+    ];
+    $violations = [];
+    foreach ($expected as $key => $value) {
+      $sent = $values[$key] ?? NULL;
+      if (!is_string($sent) || $sent === '' || $value === NULL || $sent === $value) {
+        continue;
+      }
+      $arguments = ['%expected' => $value, '%sent' => $sent];
+      $message = $key === 'field_type'
+        ? $this->t('The storage is for a %expected field, not %sent: the storage and its field have one type.', $arguments)
+        : $this->t('The storage is named %expected, not %sent: a storage is named as its field is.', $arguments);
+      $violations[] = new Violation($key, '', $message, $key === 'field_type' ? Violation::TYPE_MISMATCH : Violation::LOCKED);
     }
-    $message = $this->t('The storage is for a %expected field, not %type: the storage and its field have one type.', [
-      '%expected' => $expected,
-      '%type' => $type,
-    ]);
-    throw new StorageViolationsException(new ViolationSet([new Violation('field_type', '', $message, Violation::TYPE_MISMATCH)]));
+    if ($violations !== []) {
+      throw new StorageViolationsException(new ViolationSet($violations));
+    }
   }
 
   /**
@@ -215,7 +230,7 @@ final class FieldStorageStorage implements ResourceStorageInterface {
    */
   protected function create(OperationContext $context, ?string $uuid = NULL, mixed $type = NULL): FieldStorageConfigInterface {
     $known = $context->known + (is_string($type) && $type !== '' ? ['field_type' => $type] : []);
-    if (!$context->creates || !isset($known['entity_type_id'], $known['field_name'], $known['field_type'])) {
+    if (!$context->creates || !isset($known['entity_type'], $known['field_name'], $known['field_type'])) {
       throw new \InvalidArgumentException(sprintf(
         'A field storage is written for a field, which says which one: the "%s" context knows no %s.',
         $context->id,
@@ -223,7 +238,7 @@ final class FieldStorageStorage implements ResourceStorageInterface {
       ));
     }
     $storage = $this->entityTypeManager->getStorage('field_storage_config')->create(array_filter([
-      'entity_type' => $known['entity_type_id'],
+      'entity_type' => $known['entity_type'],
       'field_name' => $known['field_name'],
       'type' => $known['field_type'],
       'uuid' => $uuid,
@@ -235,17 +250,17 @@ final class FieldStorageStorage implements ResourceStorageInterface {
    * Loads the storage some identity names.
    *
    * @param array $known
-   *   The identity: entity_type_id and field_name.
+   *   The identity: entity_type and field_name.
    *
    * @return \Drupal\field\FieldStorageConfigInterface|null
    *   The storage, or NULL when the identity names none that exists.
    */
   protected function storage(array $known): ?FieldStorageConfigInterface {
-    if (!isset($known['entity_type_id'], $known['field_name'])) {
+    if (!isset($known['entity_type'], $known['field_name'])) {
       return NULL;
     }
     $storage = $this->entityTypeManager->getStorage('field_storage_config')
-      ->load($known['entity_type_id'] . '.' . $known['field_name']);
+      ->load($known['entity_type'] . '.' . $known['field_name']);
     return $storage instanceof FieldStorageConfigInterface ? $storage : NULL;
   }
 

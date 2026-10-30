@@ -18,6 +18,7 @@ use Drupal\data_surface\ResourceBuild\ResourceDefinition;
 use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Drupal\data_surface_tool\OperationInputs;
+use Drupal\data_surface_tool\PlainTextMarkup;
 use Drupal\tool\ExecutableResult;
 use Drupal\tool\FailureCategory;
 use Drupal\tool\Tool\ToolBase;
@@ -107,6 +108,12 @@ abstract class ResourceOperationToolBase extends ToolBase {
         $held = $this->resources->permissionAccess($resource->name(), $operation->id, $account, $context)?->isAllowed() ?? FALSE;
       }
       catch (\InvalidArgumentException $e) {
+        // A permission that names a parameter (`administer %entity_type
+        // fields`) is read off the parameters as sent, so an account that
+        // holds it for what they name hears which part names nothing.
+        // Decision: see
+        // docs/decisions.md#a-parameter-is-identity-the-caller-knows.
+        $permitted ??= $this->sentPermissionAccess($values, $account);
         if ($permitted !== NULL && $permitted->isAllowed()) {
           $result = AccessResult::allowed()->addCacheableDependency($permitted)->setCacheMaxAge(0);
           return $return_as_object ? $result : TRUE;
@@ -144,7 +151,10 @@ abstract class ResourceOperationToolBase extends ToolBase {
    *   The failure, in the input category.
    */
   protected function notFound(\InvalidArgumentException $e): ExecutableResult {
-    return $this->refused($this->t('Not found: @reason', ['@reason' => $e->getMessage()]), Violation::NOT_FOUND, FailureCategory::Input);
+    // Plain text, as every machine document carries: a reason quoting the
+    // part that names nothing keeps its quotation marks.
+    // Decision: see docs/decisions.md#a-machine-document-carries-plain-text.
+    return $this->refused(PlainTextMarkup::translatable($this->t('Not found: @reason', ['@reason' => $e->getMessage()])), Violation::NOT_FOUND, FailureCategory::Input);
   }
 
   /**
@@ -212,6 +222,35 @@ abstract class ResourceOperationToolBase extends ToolBase {
     catch (\InvalidArgumentException | \LogicException) {
       return AccessResult::forbidden();
     }
+  }
+
+  /**
+   * Answers the operation's permission filled from the parameters sent.
+   *
+   * @param array $values
+   *   The tool's input values.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface|null
+   *   As ResourcesInterface::permissionAccess() answers for a context that
+   *   knows each scalar parameter as sent; NULL when a placeholder is no
+   *   parameter sent, or the tool is not one of the derived ones.
+   */
+  protected function sentPermissionAccess(array $values, AccountInterface $account): ?AccessResultInterface {
+    try {
+      [$resource, $operation] = $this->found();
+    }
+    catch (\InvalidArgumentException | \LogicException) {
+      return NULL;
+    }
+    $sent = [];
+    foreach ($operation->parameters as $parameter) {
+      if (!$parameter->takesObject() && is_scalar($values[$parameter->name] ?? NULL)) {
+        $sent[$parameter->name] = $values[$parameter->name];
+      }
+    }
+    return $this->resources->permissionAccess($resource->name(), $operation->id, $account, new OperationContext($operation->id, known: $sent));
   }
 
   /**

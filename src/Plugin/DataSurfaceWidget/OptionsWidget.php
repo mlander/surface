@@ -117,8 +117,9 @@ final class OptionsWidget extends ChoiceWidgetBase {
   /**
    * Answers whether a key is drawn as the one value it may hold.
    *
-   * A deciding key whose variants offer one value, which may not hold
-   * nothing, holding that value or nothing yet: there is nothing to
+   * A deciding key whose variants offer one value, or a key its
+   * operation's context fixed to one, which may not hold nothing,
+   * holding that value or nothing yet: there is nothing to
    * choose, so it is drawn as the value, not as a select of one. A stored
    * value the list no longer offers is drawn as a select, under the empty
    * option rule, so a save that leaves it keeps it.
@@ -138,7 +139,7 @@ final class OptionsWidget extends ChoiceWidgetBase {
    */
   public static function drawsFixed(DataDefinitionInterface $definition, OptionSet $set, mixed $value): bool {
     return !$definition instanceof ListDataDefinitionInterface
-      && DefinitionMetadata::isOneVariant($definition)
+      && (DefinitionMetadata::isOneVariant($definition) || DefinitionMetadata::isFixed($definition))
       && DefinitionMetadata::holdsValue($definition)
       && count($set->options) === 1
       && (!ValueState::isConfigured($value) || $set->allows($value));

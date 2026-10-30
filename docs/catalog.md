@@ -24,8 +24,9 @@ route a module declares, the HTTP path and the React page
 One that changes a thing that exists, neither creating nor read only, is
 "read on its own" too, a read tool, `data_surface:<id>:<operation>:read`.
 A structure a plugin uses is configured through the plugin's host. Every
-operation is built for no account, and what did not build is listed
-last, under Refused. `docs/resources.md` says how each part works.
+operation is built for no account, and what did not build, with every
+route written wrong for the operation it serves, is listed last, under
+Refused. `docs/resources.md` says how each part works.
 
 | Resource or structure | Class | Identity | Operations |
 | --- | --- | --- | --- |
@@ -55,9 +56,9 @@ last, under Refused. `docs/resources.md` says how each part works.
 | [`event.venue.reorder`](#eventvenuereorder) | `VenueReorderStructure` | none | none |
 | [`event.venue.room`](#eventvenueroom) | `VenueRoomStructure` | none | none |
 | [`event.webhook`](#eventwebhook) | `WebhookResource` | none | `configure` |
-| [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type_id`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update` |
+| [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update` |
 | [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
-| [`field.storage`](#fieldstorage) | `FieldStorageResource` | `field_type` | `create`, `update` |
+| [`field.storage`](#fieldstorage) | `FieldStorageResource` | `entity_type`, `field_name`, `field_type` | `create`, `update` |
 | [`field_formatter:data_surface_demo_string`](#field_formatterdata_surface_demo_string) | `DataSurfaceDemoFormatter` | none | none |
 | [`first.newsletter`](#firstnewsletter) | `NewsletterResource` | none | `configure` |
 | [`first.store`](#firststore) | `StoreResource` | none | `configure` |
@@ -69,6 +70,7 @@ last, under Refused. `docs/resources.md` says how each part works.
 | [`registration.step3`](#registrationstep3) | `RegistrationStep3Resource` | none | `configure` |
 | [`registration.step3.ticket.free`](#registrationstep3ticketfree) | `FreeTicketStructure` | none | none |
 | [`registration.step3.ticket.paid`](#registrationstep3ticketpaid) | `PaidTicketStructure` | none | none |
+| [`system.performance`](#systemperformance) | `PerformanceResource` | none | `configure` |
 
 ## block.data_surface_component
 
@@ -127,8 +129,8 @@ last, under Refused. `docs/resources.md` says how each part works.
 | `update` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | yes | `BlockPlacementResource::update()` (`data_surface_block`) |
 | `delete` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | no: it deletes | `BlockPlacementResource::delete()` (`data_surface_block`) |
 
-- `create` reaches form `/admin/structure/block/surface/add (data_surface_block.create)`, http `POST /surface-api/block.placement`, tool `data_surface:block.placement:create`, openapi `block.placement:create:write`, react `/surface-react/block.placement/create`.
-- `update` reaches form `/admin/structure/block/surface/{id} (data_surface_block.update)`, http `PATCH /surface-api/block.placement/{id}`, tool `data_surface:block.placement:update`, read tool `data_surface:block.placement:update:read`, openapi `block.placement:update:write`, react `/surface-react/block.placement/update`.
+- `create` reaches form `/admin/structure/block/surface/add (data_surface_block.create)`, http `POST /surface-api/block.placement`, tool `data_surface:block.placement:create`, schema tool `data_surface:block.placement:create:schema`, openapi `block.placement:create:write`, react `/surface-react/block.placement/create`.
+- `update` reaches form `/admin/structure/block/surface/{id} (data_surface_block.update)`, http `PATCH /surface-api/block.placement/{id}`, tool `data_surface:block.placement:update`, read tool `data_surface:block.placement:update:read`, schema tool `data_surface:block.placement:update:schema`, openapi `block.placement:update:write`, react `/surface-react/block.placement/update`.
 - `delete` reaches form `/admin/structure/block/surface/{id}/delete (data_surface_block.delete)`, http `DELETE /surface-api/block.placement/{id}`, tool `data_surface:block.placement:delete`, openapi `block.placement:delete:write`, react `/surface-react/block.placement/delete`.
 
 ## block.placement.condition
@@ -209,7 +211,7 @@ last, under Refused. `docs/resources.md` says how each part works.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `configure` | Configure the mailer | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on MailerResource` (`data_surface_examples`) |
 
-- `configure` reaches form `/surface-examples/14 (data_surface_examples.step14)`, http `PATCH /surface-api/event.mailer`, tool `data_surface:event.mailer:configure`, read tool `data_surface:event.mailer:configure:read`, openapi `event.mailer:configure:write`, react `/surface-react/event.mailer/configure`.
+- `configure` reaches form `/surface-examples/14 (data_surface_examples.step14)`, http `PATCH /surface-api/event.mailer`, tool `data_surface:event.mailer:configure`, read tool `data_surface:event.mailer:configure:read`, schema tool `data_surface:event.mailer:configure:schema`, openapi `event.mailer:configure:write`, react `/surface-react/event.mailer/configure`.
 
 ## event.mailer.credential.managed
 
@@ -309,7 +311,7 @@ last, under Refused. `docs/resources.md` says how each part works.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `configure` | Configure the spotlight | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on SpotlightResource` (`data_surface_examples`) |
 
-- `configure` reaches form `/surface-examples/12 (data_surface_examples.step12)`, http `PATCH /surface-api/event.spotlight`, tool `data_surface:event.spotlight:configure`, read tool `data_surface:event.spotlight:configure:read`, openapi `event.spotlight:configure:write`, react `/surface-react/event.spotlight/configure`.
+- `configure` reaches form `/surface-examples/12 (data_surface_examples.step12)`, http `PATCH /surface-api/event.spotlight`, tool `data_surface:event.spotlight:configure`, read tool `data_surface:event.spotlight:configure:read`, schema tool `data_surface:event.spotlight:configure:schema`, openapi `event.spotlight:configure:write`, react `/surface-react/event.spotlight/configure`.
 
 ## event.ticket_limit
 
@@ -399,19 +401,19 @@ last, under Refused. `docs/resources.md` says how each part works.
 `Drupal\data_surface_tool\Resource\FieldInstanceResource`, in `data_surface_tool`.
 
 - Kind: resource
-- Identity: `entity_type_id`, `bundle`, `field_name`, `field_type`
+- Identity: `entity_type`, `bundle`, `field_name`, `field_type`
 - Storage: `Drupal\data_surface_tool\Storage\FieldInstanceStorage`
 - Access: `Drupal\data_surface_tool\Access\FieldInstanceAccess`
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a field to a bundle | `string $entity_type_id`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::create()` (`data_surface_tool`) |
-| `reuse` | Add an existing field to another bundle | `FieldStorageConfigInterface $storage`, `string $bundle` | yes | `administer %entity_type_id fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`data_surface_tool`) |
-| `update` | Edit a field | `FieldConfigInterface $field` | no | `administer %entity_type_id fields` | yes | yes | `FieldInstanceResource::update()` (`data_surface_tool`) |
+| `create` | Add a field to a bundle | `string $entity_type`, `string $bundle` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::create()` (`data_surface_tool`) |
+| `reuse` | Add an existing field to another bundle | `string $entity_type`, `string $bundle`, `string $field_name` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`data_surface_tool`) |
+| `update` | Edit a field | `string $entity_type`, `string $bundle`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldInstanceResource::update()` (`data_surface_tool`) |
 
-- `create` reaches http `POST /surface-api/field.instance`, tool `data_surface:field.instance:create`, schema tool `data_surface:field.instance:create:schema`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
-- `reuse` reaches http `POST /surface-api/field.instance:reuse`, tool `data_surface:field.instance:reuse`, schema tool `data_surface:field.instance:reuse:schema`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
-- `update` reaches http `PATCH /surface-api/field.instance/{field}`, tool `data_surface:field.instance:update`, read tool `data_surface:field.instance:update:read`, schema tool `data_surface:field.instance:update:schema`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
+- `create` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}`, tool `data_surface:field.instance:create`, schema tool `data_surface:field.instance:create:schema`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
+- `reuse` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}/{field_name}:reuse`, tool `data_surface:field.instance:reuse`, schema tool `data_surface:field.instance:reuse:schema`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
+- `update` reaches http `PATCH /surface-api/field.instance/{entity_type}/{bundle}/{field_name}`, tool `data_surface:field.instance:update`, read tool `data_surface:field.instance:update:read`, schema tool `data_surface:field.instance:update:schema`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
 
 - Variants at `settings`: `address` → `Drupal\data_surface_address\Resource\AddressFieldSettingsResource`.
 
@@ -430,16 +432,16 @@ last, under Refused. `docs/resources.md` says how each part works.
 `Drupal\data_surface_tool\Resource\FieldStorageResource`, in `data_surface_tool`.
 
 - Kind: resource
-- Identity: `field_type`
+- Identity: `entity_type`, `field_name`, `field_type`
 - Storage: `Drupal\data_surface_tool\Storage\FieldStorageStorage`
 - Access: the operation's permission alone
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | New field storage | nothing | yes | `administer %entity_type_id fields` | no: nothing supplies `%entity_type_id` | no: not on its own | `FieldStorageResource::create()` (`data_surface_tool`) |
-| `update` | Edit a field storage | `FieldStorageConfigInterface $storage` | no | `administer %entity_type_id fields` | yes | yes | `FieldStorageResource::update()` (`data_surface_tool`) |
+| `create` | New field storage | nothing | yes | `administer %entity_type fields` | no: nothing supplies `%entity_type` | no: not on its own | `FieldStorageResource::create()` (`data_surface_tool`) |
+| `update` | Edit a field storage | `string $entity_type`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldStorageResource::update()` (`data_surface_tool`) |
 
-- `update` reaches http `PATCH /surface-api/field.storage/{storage}`, tool `data_surface:field.storage:update`, read tool `data_surface:field.storage:update:read`, schema tool `data_surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
+- `update` reaches http `PATCH /surface-api/field.storage/{entity_type}/{field_name}`, tool `data_surface:field.storage:update`, read tool `data_surface:field.storage:update:read`, schema tool `data_surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
 
 ## field_formatter:data_surface_demo_string
 
@@ -586,6 +588,21 @@ last, under Refused. `docs/resources.md` says how each part works.
 - Identity: none
 - Storage: none; its host or its parent stores it
 - Access: the operation's permission alone
+
+## system.performance
+
+`Drupal\data_surface_performance\Resource\PerformanceResource`, in `data_surface_performance`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\data_surface_performance\Storage\PerformanceStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure performance | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on PerformanceResource` (`data_surface_performance`) |
+
+- `configure` reaches form `/admin/config/development/surface-performance (data_surface_performance.configure)`, http `PATCH /surface-api/system.performance`, tool `data_surface:system.performance:configure`, read tool `data_surface:system.performance:configure:read`, openapi `system.performance:configure:write`, react `/surface-react/system.performance/configure`.
 
 ## Derivers
 

@@ -117,6 +117,11 @@ interface ResourcesInterface {
    * (buildStatic()). Options it enumerates are the current account's, so
    * a caller wanting no account's view asks it as the anonymous one.
    *
+   * Kept across requests in the build cache, so it is for a context that
+   * is the same on every request: one that holds anything read from the
+   * request (a path's value, an id) is held with holdDeclared(), which
+   * the cache never sees.
+   *
    * Decision: see
    * docs/decisions.md#a-static-tool-definition-is-no-accounts.
    *
@@ -134,6 +139,34 @@ interface ResourcesInterface {
    *   When it fails a seal-time check, naming the offender.
    */
   public function buildDeclared(string $resource, OperationContext $context): DataSurfaceInterface;
+
+  /**
+   * Builds what buildDeclared() builds, kept for this request alone.
+   *
+   * For a context that holds something read from the request, which a
+   * route's values are held in when its path supplied one: each value it
+   * could hold would be another entry in the build cache, kept until a tag
+   * of it is invalidated. Asked again in the same request, with the same
+   * context, it is the same build; the build cache is neither read nor
+   * written.
+   *
+   * Decision: see
+   * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+   *
+   * @param string $resource
+   *   The class, or its #[Resource] or #[Structure] id.
+   * @param \Drupal\data_surface\Resource\OperationContext $context
+   *   Where it is being asked for.
+   *
+   * @return \Drupal\data_surface\DataSurfaceInterface
+   *   The sealed data surface.
+   *
+   * @throws \InvalidArgumentException
+   *   When nothing by that name was discovered.
+   * @throws \LogicException
+   *   When it fails a seal-time check, naming the offender.
+   */
+  public function holdDeclared(string $resource, OperationContext $context): DataSurfaceInterface;
 
   /**
    * Builds the context one operation describes.

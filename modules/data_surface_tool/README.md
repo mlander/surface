@@ -20,9 +20,20 @@ document. What a caller sends moved:
 
 | Was | Is | Inputs |
 | --- | --- | --- |
-| `data_surface:field_add` (an existing storage) | `data_surface:field.instance:reuse` | `storage` (`<entity type>.<field name>`), `bundle`, `values` |
-| — (a new storage) | `data_surface:field.instance:create` | `entity_type_id`, `bundle`, `values` (with `field_type`, `field_name`, `storage`) |
-| `data_surface:field_update` | `data_surface:field.instance:update` | `field` (`<entity type>.<bundle>.<field name>`), `values` |
+| `data_surface:field_add` (an existing storage) | `data_surface:field.instance:reuse` | `entity_type`, `bundle`, `field_name`, `values` |
+| — (a new storage) | `data_surface:field.instance:create` | `entity_type`, `bundle`, `values` (with `field_type`, `field_name`, `storage`) |
+| `data_surface:field_update` | `data_surface:field.instance:update` | `entity_type`, `bundle`, `field_name`, `values` |
+
+Each tool takes the field by its parts, the names core's field config
+stores them under: create the bundle it adds to, reuse and update the
+whole field, `data_surface:field.storage:update` the entity type and the
+field name. A parameter is identity the caller knows, so no tool asks
+for a composite id such as `node.article.body`, and each part says what
+it is, as the key of the same name does
+([decision](../../docs/decisions.md#a-parameter-is-identity-the-caller-knows)).
+A part that names nothing is refused naming it, to an account holding
+the field permission for the entity type sent; any other gets the one
+fixed refusal.
 
 `values` holds what used to be top-level inputs (`label`,
 `description`, `required`, `settings`) beside `storage` (cardinality,
@@ -71,9 +82,11 @@ Five pieces:
   `settings` are variants chosen by `field_type`: the settings class a
   field type's module marks with `#[Variant]` (the address module's, and
   the test module's gated one), and for every other field type the one
-  `FieldSettingsSchemaVariants` derives. `reuse($storage, $bundle)` is a create for the
-  field and an update for its storage; the storage's update operation knows
-  the field type, which locks its settings to that type's, and refuses
+  `FieldSettingsSchemaVariants` derives. `reuse($entity_type, $bundle,
+  $field_name)` is a create for the field and an update for its storage;
+  the storage's update operation, `update($entity_type, $field_name)`,
+  knows the storage's identity, the field type among it, which locks its
+  settings to that type's, and refuses
   shrinking its cardinality once the field has data. Adding a field
   leaves the type open on the storage as on the field: a caller setting
   storage settings names it on both, and the storage refuses a type
@@ -96,7 +109,7 @@ Five pieces:
   scalar one named for a resource key described as that key), the
   resource's keys the operation does not know as `values`, and
   `dry_run`; see `docs/resources.md`, Tools. Two rules leave an operation
-  out: `field.storage`'s `create` asks `administer %entity_type_id fields`
+  out: `field.storage`'s `create` asks `administer %entity_type fields`
   and no parameter supplies the entity type, so it could never be
   allowed and is only ever a field's; and a structure a plugin names
   with `#[UsesStructure]` is configured through the plugin's host. Only
@@ -115,8 +128,11 @@ Five pieces:
   `field.storage_settings.<field type>` and the field type's default
   storage settings. A variant from the site has no storage of its own,
   so the field, or the storage, stores it. It is a list the site
-  decides: past `data_surface.settings:site_list_limit` field types the
-  tools state `settings` open and `deferred`, fetched per field type.
+  decides: past `data_surface.settings:site_list_limit` field types both
+  documents state `settings` open and `deferred`, fetched per field type,
+  and the tools never spell it out: they state the stored field type's
+  settings, once a field is named, and name the fetch and the narrowing
+  tool for any other.
 - `InputDefinitions`: converts core data definitions into the
   Tool API's input definitions: type, label, description, required,
   default value and constraints, with maps and lists becoming the Tool
@@ -252,17 +268,18 @@ shows an agent's retries. Once a tool that needs a subject has its
 parameters, its refined `values` defaults each key to what is stored
 now, for that one call, and on an edit requires nothing, as its listing
 and its door do. The `values` input's `settings` carry every field type's
-settings until the storage is known, and refine into the address
-settings once `storage` names an address storage. Compare with
+settings until the field is known, and refine into the address
+settings once `entity_type` and `field_name` name an address storage. Compare with
 `drush tool:info tool_belt:field_add` on the same site, or read
 [`COMPARISON.md`](COMPARISON.md), which has both.
 
 `tool:info` shows the Tool API's rendering of an operation, not the
 resource's whole contract. The Tool API cannot say a structure chosen by a
-sibling key, so variants are flattened to one map: the variant the stored
-values choose (example 3's ticket, as the free ticket while `pricing`
-is `free`), or every variant's keys with none required before anything
-chooses. The full contract, with an `if`/`then` per variant on the key
+sibling key, so variants a class declares are flattened to one map: the
+variant chosen where the deciding key is locked, or every variant's keys
+with none required (example 3's ticket). Variants the site lists state
+the keys of the variant the stored values choose and no other
+([the narrowing tool](#the-narrowing-tool)). The full contract, with an `if`/`then` per variant on the key
 that chooses it, is the main module's `data_surface.contract_emitter`:
 see it in the contract panel below, or, with `data_surface_react`
 enabled, at `/surface-api/{resource}`
@@ -283,14 +300,15 @@ base plugin id:
 | Read tool | Inputs |
 | --- | --- |
 | `data_surface:node.type:update:read` | `type` |
-| `data_surface:field.instance:update:read` | `field` |
-| `data_surface:field.storage:update:read` | `storage` |
+| `data_surface:field.instance:update:read` | `entity_type`, `bundle`, `field_name` |
+| `data_surface:field.storage:update:read` | `entity_type`, `field_name` |
 | `data_surface:registration.step1:configure:read`, `step2`, `step3` | nothing |
 | `data_surface:entity.content:<entity type>.<bundle>:update:read`, with `data_surface_entity` | `id` |
 
 - **Which operations.** One that needs nothing and whose context does
   not create, and one that needs a subject and whose parameters name one
-  thing whole: a single entity, or a scalar for every identity key.
+  thing whole: a single entity, or a scalar per identity key, a key
+  they leave out following from the rest, as a field's type does.
   `node.type:create`, `field.instance:create` and `field.instance:reuse`
   create, and have none. `ResourceCatalog::reads()` decides, and the
   catalog lists it ("Read on its own"); a context that turns out to
@@ -339,20 +357,32 @@ serializer emits, and what an MCP client sees as `outputSchema`.
 
 ## The narrowing tool
 
-A key whose list the site decides (a component per single-directory
-component, a key per thing a provider lists) is spelled out in the
-listing while the site lists at most `data_surface.settings:site_list_limit`
-entries, 20 as shipped. Past it, the full schema marks the key
-`deferred` and the write tool lists it as an open map, the deciding key
-keeps its enum, and the key's description names two ways to learn its
-keys: the full schema fetched with the choice stated, once per value,
-where the site serves its API (data_surface_react on), and a third tool
-beside the write and read tools, asked with the values:
+Variants the site lists (a component per single-directory component, a
+field type's settings, a block plugin's) are never spelled out in a
+tool's listing, whatever `data_surface.settings:site_list_limit` says:
+the listing is sent with every request that offers the tool, and the
+Tool API cannot say which keys a sibling chooses, so every variant's
+keys would be one map with none required, 1.6 MB for example 12 with
+312 components. The deciding key keeps its enum. The key holds the keys
+of the variant the stored values choose, where the listing reads what
+is stored (an operation that needs nothing to start from, or the refined
+`values` once the parameters arrive), and none otherwise, and its
+description names two ways to learn the keys of any other: the full
+schema fetched with the choice stated, once per value, where the site
+serves its API (data_surface_react on), and a third tool beside the
+write and read tools, asked with the values:
 
-> Too many to list: choose component, then fetch GET
+> Its keys depend on component: listed here are those of
+> data_surface_examples:card, the component stored. For another
+> component, fetch GET
 > /surface-api/event.spotlight/schema?choose=/props={component} once per
 > component, or call data_surface:event.spotlight:configure:schema with
 > your values, to get this key's schema.
+
+So a prop of the stored component changes in one call. A map of keys
+from the site (a key per thing a provider lists) is spelled out while
+the site lists at most the limit, 20 as shipped, and past it is an open
+map whose description names the same two ways.
 
 A key inside a variant names the choice on the way,
 `?choose=/settings=data_surface_component&choose=/settings/props={component}`;
@@ -366,9 +396,10 @@ changes. The narrowing tool's own description says both.
 | --- | --- | --- |
 | `data_surface:<resource>:<operation>:schema` | the operation's parameters; `values`, optional and open | `schema`, `values` |
 
-- **Which operations.** One whose listing has such a key, at any depth
-  (`OperationInputs::narrows()`); a resource whose lists are all spelled
-  out adds no tool. A delete has none.
+- **Which operations.** One whose listing leaves such a key out, at any
+  depth (`OperationInputs::narrows()`): every operation with variants
+  the site lists, and one with a map of keys from the site past the
+  limit. A delete has none.
 - **What it answers.** What `POST /surface-api/{resource}/schema`
   answers for the same values and account, with no widget hints: the
   schema for these answers, which states the chosen variant's keys
@@ -448,10 +479,10 @@ destroys nothing, and the access answer has to be the real one, and a
 read tool asks the same question. A delete, such as
 `data_surface:block.placement:delete` from `data_surface_block`, is a
 destructive `Write` whose inputs are its parameters and `dry_run`, with
-no `values` and no read tool beside it. It is the operation's permission, `administer %entity_type_id
+no `values` and no read tool beside it. It is the operation's permission, `administer %entity_type
 fields`, named from the identity the operation's context knows (the
-entity type the create tool is given, or the one the storage or field it
-names is on), then `FieldInstanceAccess`, which refuses a locked
+entity type every field tool is given), then `FieldInstanceAccess`,
+which refuses a locked
 storage, then the access class of the settings variant the field type
 chose, which may refuse (the gated test field type does). A tool asks a
 permission as written first, from its id alone, before it reads a
@@ -465,14 +496,18 @@ parameters name hears the access class's own reason, and the rest is
 logged to the tool channel. An account holding a permission as written
 (one with no `%key`) is let through when a parameter names nothing, and
 the call fails as input to correct, "Not found: there is none with the
-id ...", not as access denied, which reads as final.
+id ...", not as access denied, which reads as final. So is an account
+holding a `%key` permission filled from the parameters as sent, since
+naming nothing builds no context to fill it from: `administer node
+fields` hears `Not found: field_name "nope" names no field of the node
+entity type.`
 
 The operation's permission is also the tool's declared permission
 (`ToolDefinition::getPermission()`), so `tool:info` prints it and the
 Tool API checks it before reading any input, when it is one permission
 as written: `data_surface:node.type:create` declares the node type demo's
 permission. A permission with a `%key` placeholder, as the field tools'
-`administer %entity_type_id fields`, names a different permission for
+`administer %entity_type fields`, names a different permission for
 each call, and the Tool API has no place for one that depends on the
 input: such a tool declares none, `tool:info` prints "Permission:
 None", and the tool's own access, which fills the placeholder from the
@@ -608,7 +643,7 @@ changing the Tool API.
 - **A declared permission cannot depend on the input.**
   `ToolDefinition::setPermission()` takes one route-style string, checked
   before any input is read, so a permission named from what a call is
-  about (`administer %entity_type_id fields`) has nowhere to go: those
+  about (`administer %entity_type fields`) has nowhere to go: those
   tools declare none, and `tool:info` prints "Permission: None" for a
   tool its own `checkAccess()` gates. A permission callback, or
   placeholders filled from named inputs, would let them say it.

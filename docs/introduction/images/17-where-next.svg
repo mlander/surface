@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 220">
+  <title>The introduction, where you are, then the documentation's four other sections: install, build, the reference, and the examples beside them</title>
+  <style>
+    .bg { fill: #F6F8FA; }
+    .ink { fill: #1F2328; }
+    .muted { fill: #59636E; }
+    .line { stroke: #D1D9E0; }
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; }
+    .b { font-weight: 600; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+    .sealed { fill: none; stroke: #0969DA; stroke-width: 3; }
+    .lock-fill { fill: #0969DA; }
+    .lock-line { fill: none; stroke: #0969DA; stroke-width: 2; }
+    .owner { fill: none; stroke: #0969DA; stroke-width: 1.5; }
+    .alter { fill: none; stroke: #9A6700; stroke-width: 1.5; }
+    .site { fill: none; stroke: #59636E; stroke-width: 1.5; }
+    .access { fill: none; stroke: #8250DF; stroke-width: 1.5; }
+    .key { fill: none; stroke: #1F2328; stroke-width: 1.2; }
+    .rule { fill: none; stroke: #BF3989; stroke-width: 1.5; }
+    .rule-text { fill: #BF3989; }
+    .door { fill: none; stroke: #BC4C00; stroke-width: 1.5; }
+    .door-text { fill: #BC4C00; }
+    .box { fill: none; stroke: #D1D9E0; stroke-width: 1.5; }
+    .here { fill: none; stroke: #1F2328; stroke-width: 2; }
+    .dashed { stroke-dasharray: 6 4; }
+    .arrow { stroke: #59636E; stroke-width: 1.5; fill: none; }
+    .head { fill: #59636E; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151B23; }
+      .ink { fill: #F0F6FC; }
+      .muted { fill: #9198A1; }
+      .line { stroke: #3D444D; }
+      .sealed { stroke: #4493F8; }
+      .lock-fill { fill: #4493F8; }
+      .lock-line { stroke: #4493F8; }
+      .owner { stroke: #4493F8; }
+      .alter { stroke: #D29922; }
+      .site { stroke: #9198A1; }
+      .access { stroke: #AB7DF8; }
+      .key { stroke: #F0F6FC; }
+      .rule { stroke: #E267A8; }
+      .rule-text { fill: #E267A8; }
+      .door { stroke: #F0883E; }
+      .door-text { fill: #F0883E; }
+      .box { stroke: #3D444D; }
+      .here { stroke: #F0F6FC; }
+      .arrow { stroke: #9198A1; }
+      .head { fill: #9198A1; }
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="720" height="220" rx="12"/>
+  <rect class="here" x="24" y="70" width="120" height="80" rx="8"/>
+  <text class="t b ink" x="38" y="104">introduction</text>
+  <text class="t muted" x="38" y="128">you are here</text>
+  <line class="arrow" x1="144" y1="110" x2="154" y2="110"/>
+  <path class="head" d="M 162 110 l -9 -5 v 10 z"/>
+  <rect class="box" x="164" y="70" width="112" height="80" rx="8"/>
+  <text class="t b ink" x="178" y="104">install</text>
+  <text class="t muted" x="178" y="128">requirements</text>
+  <line class="arrow" x1="276" y1="110" x2="286" y2="110"/>
+  <path class="head" d="M 294 110 l -9 -5 v 10 z"/>
+  <rect class="box" x="296" y="70" width="130" height="80" rx="8"/>
+  <text class="t b ink" x="310" y="104">build</text>
+  <text class="t muted" x="310" y="128">first resource</text>
+  <line class="arrow" x1="426" y1="110" x2="436" y2="110"/>
+  <path class="head" d="M 444 110 l -9 -5 v 10 z"/>
+  <rect class="box" x="446" y="70" width="112" height="80" rx="8"/>
+  <text class="t b ink" x="460" y="104">reference</text>
+  <text class="t muted" x="460" y="128">every detail</text>
+  <rect class="box dashed" x="578" y="70" width="118" height="80" rx="8"/>
+  <text class="t b ink" x="592" y="104">examples</text>
+  <text class="t muted" x="592" y="128">modules to try</text>
+  <text class="t muted" x="24" y="186">Read left to right. The examples sit beside the path: open them at any point.</text>
+</svg>

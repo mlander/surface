@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace Drupal\data_surface\Form;
 
 use Drupal\Component\Utility\Html;
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResultReasonInterface;
+use Drupal\Core\Cache\Cache;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\data_surface\DataSurfaceAccess;
 use Drupal\data_surface\DataSurfaceHostTrait;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
+use Drupal\data_surface\ResourceBuild\KeyPaths;
+use Drupal\data_surface\ResourceBuild\NamesNothingException;
 use Drupal\data_surface\ResourceBuild\OperationArguments;
 use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface\ResourceBuild\OperationRoute;
@@ -20,6 +25,7 @@ use Drupal\data_surface\ResourceBuild\ResourceRegistry;
 use Drupal\data_surface\ResourceBuild\ResourcesInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Serves a resource in one of its operations as a page, from the route.
@@ -54,13 +60,30 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
  * the operation knows, and extraction keeps that value whatever is
  * submitted for it. A cosmetic layer, named by the optional
  * `_data_surface_cosmetics` default as a service id or a class, is told
- * the operation id as the operation and the raw value of the operation's
- * first route parameter as the subject. A panel, named the same way by the
- * optional `_data_surface_panel` default, is placed inside the data
- * surface container and rebuilt with it (DataSurfaceFormPanelInterface).
- * The defaults are underscore-prefixed because Drupal's routing treats
- * such defaults as its own business: no parameter converter tries to
- * upcast them and no argument resolver tries to hand them to buildForm().
+ * the operation id as the operation and, as the subject, the raw value of
+ * the first of the operation's parameters that is a variable of the
+ * route's path; a parameter a plain default pins is never the subject
+ * (OperationRoute). A panel, named the same way by the optional
+ * `_data_surface_panel` default, is placed inside the data surface
+ * container and rebuilt with it (DataSurfaceFormPanelInterface). The
+ * leading underscore keeps each of these defaults out of the route
+ * match's parameters and out of what `_title` substitutes; no converter
+ * runs for one, since none is declared for it under `options.parameters`,
+ * and buildForm() declares no parameter of its name, so none is handed to
+ * it.
+ *
+ * On the first draw, before anything is submitted, the elements start
+ * from more than what is stored and declared: the values the code that
+ * builds the form hands it, `getForm(DataSurfaceOperationForm::class,
+ * $values)` in the resource's values shape, then the values a link sends
+ * for the keys the route lists under `_data_surface_query`. Each is held
+ * to its key and dropped when its key refuses it. Both are input, judged
+ * on Save as any input; neither enters the operation's context, so no
+ * document states them, and a key the build fixes or locks keeps what the
+ * build says.
+ *
+ * A route whose `_title` cannot name what it serves names title() as its
+ * `_title_callback`, which answers the operation's label.
  *
  * ## Access
  *
@@ -130,12 +153,16 @@ class DataSurfaceOperationForm extends FormBase {
    *   What discovery found.
    * @param \Drupal\data_surface\ResourceBuild\OperationArguments $operationArguments
    *   What maps the route's parameters onto the operation's.
+   * @param \Drupal\data_surface\ResourceBuild\KeyPaths $keyPaths
+   *   What finds the key a path names on the built resource, and holds a
+   *   value to it.
    */
   public function __construct(
     protected readonly ClassResolverInterface $classResolver,
     protected readonly ResourcesInterface $resources,
     protected readonly ResourceRegistry $surfaceRegistry,
     protected readonly OperationArguments $operationArguments,
+    protected readonly KeyPaths $keyPaths,
   ) {
   }
 
@@ -152,7 +179,53 @@ class DataSurfaceOperationForm extends FormBase {
       $container->get('data_surface.resources'),
       $container->get('data_surface.resource_registry'),
       $container->get('data_surface.operation_arguments'),
+      $container->get('data_surface.key_paths'),
     );
+  }
+
+  /**
+   * Titles a page served by an operation with the operation's label.
+   *
+   * A route's title callback, for a page whose `_title` cannot say what it
+   * serves: one whose path holds an upcast placeholder, which `_title`
+   * prints as its raw id, and one route serving every bundle, whose
+   * derived create is labeled "Add <bundle>" already. The React page
+   * served at a module's route is titled the same way
+   * (OperationRoute::label()).
+   *
+   * @code
+   * example.node_add:
+   *   path: '/example/node/{node_type}/add'
+   *   defaults:
+   *     _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+   *     _title_callback: '\Drupal\data_surface\Form\DataSurfaceOperationForm::title'
+   *     _data_surface_resource: 'entity.content:node.{node_type}'
+   *     _data_surface_operation: 'create'
+   *   options:
+   *     parameters:
+   *       node_type:
+   *         type: 'entity:node_type'
+   * @endcode
+   *
+   * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
+   *   The route match.
+   *
+   * @return string|\Stringable
+   *   The operation's label; for a URL that names nothing, whose page is
+   *   not found, "Page not found".
+   *
+   * @throws \InvalidArgumentException
+   *   When the route is written wrong, which is no page not found: the
+   *   route's access check refuses it before any title is asked.
+   */
+  public static function title(RouteMatchInterface $route_match): string|\Stringable {
+    try {
+      // A title callback is asked statically, so the registry is fetched.
+      return OperationRoute::label($route_match, \Drupal::service('data_surface.resource_registry'));
+    }
+    catch (NamesNothingException) {
+      return t('Page not found');
+    }
   }
 
   /**
@@ -188,6 +261,14 @@ class DataSurfaceOperationForm extends FormBase {
     // Decision: see
     // docs/decisions.md#defaults-follow-the-definitions-under-a-stored-value.
     $values = $this->surfaceFormValues($surface, $surface->withDefaults($this->storedSurfaceValues($surface, $storage)), $form_state);
+    if (!$form_state->isProgrammed() && $form_state->getUserInput() === []) {
+      // The first draw, which no submission, rebuild or validation round
+      // is: input sent after it stands for itself, and an element it leaves
+      // out takes what is stored or declared, never the prefill again.
+      // Decision: see
+      // docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+      $values = $this->prefilled($served, $surface, $values, $form_state);
+    }
     $builder = $this->surfaceFormBuilder();
     $form[static::SURFACE_KEY] = $builder->buildSurfaceForm(
       $surface,
@@ -195,6 +276,14 @@ class DataSurfaceOperationForm extends FormBase {
       $form_state,
       $this->surfaceWrapperKey($operation, $served->subject),
     );
+    if ($served->query !== []) {
+      // The page varies by each query parameter a link may start a key
+      // from, and by no other.
+      $form['#cache']['contexts'] = Cache::mergeContexts(
+        $form['#cache']['contexts'] ?? [],
+        array_map(static fn (string $name): string => 'url.query_args:' . $name, array_values($served->query)),
+      );
+    }
     $panel = $this->surfacePanel();
     if ($panel !== NULL) {
       // Inside the container and placed as refreshed, so every rebuild a
@@ -375,17 +464,89 @@ class DataSurfaceOperationForm extends FormBase {
   }
 
   /**
+   * Lays what the form starts keys from over the values it is drawn with.
+   *
+   * Asked on the first draw alone. First the values the code building the
+   * form hands it (getForm(DataSurfaceOperationForm::class, $values)), in
+   * the resource's own values shape; then the value a link sends for each
+   * key the route lists (`_data_surface_query`), over them. Each is read
+   * through the coercion table and held to its key, and left out, saying
+   * nothing, when its key refuses it: an element drawn from a value it
+   * does not offer would stand for it as a stored value no longer offered,
+   * and a crafted link could show a value the key would refuse. A key the
+   * build fixes or locks keeps what the build says. Neither enters the
+   * context or the build, so no document states them.
+   *
+   * Decision: see
+   * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationRoute $served
+   *   The operation and its context.
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The resource built for it.
+   * @param array $values
+   *   The values the elements are drawn with: what is stored, the defaults
+   *   under it.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state, whose build arguments carry the code's values.
+   *
+   * @return array
+   *   The values, each key a prefill starts holding its value.
+   *
+   * @throws \LogicException
+   *   When either names a key no such value reaches (a key the resource
+   *   does not declare, one inside variants, a collection or a map from
+   *   the site, a whole structure or a whole map with keys of its own, a
+   *   secret, a computed key, or an identity key the context knows),
+   *   naming the route and the key: the route or the code is written
+   *   wrong.
+   */
+  protected function prefilled(OperationRoute $served, DataSurfaceInterface $surface, array $values, FormStateInterface $form_state): array {
+    $name = (string) $this->getRouteMatch()->getRouteName();
+    $resource = $this->surfaceRegistry->getDefinition($served->resource);
+    $identity = array_values(array_intersect($resource->identity, array_map('strval', array_keys($served->context->known))));
+    $where = ['resource' => $resource->id, 'at' => '', 'noun' => 'prefill', 'verb' => 'starts'];
+    $handed = $form_state->getBuildInfo()['args'][0] ?? NULL;
+    $prefills = [
+      [
+        is_array($handed) ? KeyPaths::pathsOf($surface, $handed) : [],
+        ['source' => sprintf('The values handed to the form at the %s route', $name)] + $where,
+      ],
+      [
+        $served->queried($this->getRequest()),
+        ['source' => sprintf('The %s route\'s "%s"', $name, OperationRoute::QUERY)] + $where,
+      ],
+    ];
+    foreach ($prefills as [$given, $from]) {
+      foreach ($this->keyPaths->heldOn($surface, $given, $from, $identity) as $path => $value) {
+        NestedArray::setValue($values, explode('.', (string) $path), $value, TRUE);
+      }
+    }
+    return $values;
+  }
+
+  /**
    * Builds what a route served by an operation serves.
    *
    * Asked afresh at every stage: the data surface describes live site
-   * state, and nothing built from it rides along on a cached form.
+   * state, and nothing built from it rides along on a cached form. A value
+   * of the URL that names nothing, or no longer does (the thing was
+   * removed between the draw and the save), is a page not found.
    *
    * @return array{0: \Drupal\data_surface\ResourceBuild\OperationRoute, 1: \Drupal\data_surface\DataSurfaceInterface, 2: \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface, 3: \Drupal\Core\Access\AccessResultInterface}
    *   The operation and its context, the resource built in it, the storage
    *   composed for it, and the access answer for the current user.
+   *
+   * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+   *   When a value the URL carries names nothing.
    */
   protected function operationServed(): array {
-    $served = OperationRoute::fromRouteMatch($this->getRouteMatch(), $this->surfaceRegistry, $this->operationArguments, $this->resources);
+    try {
+      $served = OperationRoute::fromRouteMatch($this->getRouteMatch(), $this->surfaceRegistry, $this->operationArguments, $this->resources);
+    }
+    catch (NamesNothingException $e) {
+      throw new NotFoundHttpException($e->getMessage(), $e);
+    }
     $surface = $this->resources->build($served->resource, $served->context);
     return [
       $served,

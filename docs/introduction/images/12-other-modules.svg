@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" role="img" aria-labelledby="t">
+  <title id="t">The teaser block's structure from its owner, with headline and limit, the limit allowing 1 to 50; another module's alter adds a badge key and tightens the limit to at most 20 when a badge is set</title>
+  <style>
+    .bg { fill: #F6F8FA; }
+    .ink { fill: #1F2328; }
+    .muted { fill: #59636E; }
+    .structure { fill: none; stroke: #1A7F64; stroke-width: 2; stroke-dasharray: 7 5; }
+    .structure-label { fill: #1A7F64; }
+    .key { fill: none; stroke: #1F2328; stroke-width: 1.25; }
+    .rule { fill: none; stroke: #BF3989; stroke-width: 1.5; }
+    .rule-label { fill: #BF3989; }
+    .alter { fill: none; stroke: #9A6700; stroke-width: 2; }
+    .alter-label { fill: #9A6700; }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .bold { font-weight: 600; }
+    .small { font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151B23; }
+      .ink { fill: #F0F6FC; }
+      .muted { fill: #9198A1; }
+      .structure { stroke: #3FB993; }
+      .structure-label { fill: #3FB993; }
+      .key { stroke: #F0F6FC; }
+      .rule { stroke: #E267A8; }
+      .rule-label { fill: #E267A8; }
+      .alter { stroke: #D29922; }
+      .alter-label { fill: #D29922; }
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="720" height="280" rx="12"/>
+
+  <!-- The owner's structure -->
+  <rect class="structure" x="24" y="20" width="672" height="240" rx="10"/>
+  <text class="structure-label bold code" x="42" y="46" font-size="15">block.my_teaser</text>
+  <text class="muted small" x="560" y="46">from the owner</text>
+
+  <!-- The owner's keys -->
+  <rect class="key" x="42" y="62" width="230" height="26" rx="13"/>
+  <text class="ink code" x="56" y="80">headline</text>
+  <text class="muted small" x="140" y="80">string</text>
+
+  <rect class="key" x="42" y="102" width="230" height="26" rx="13"/>
+  <text class="ink code" x="56" y="120">limit</text>
+  <text class="muted small" x="140" y="120">integer</text>
+
+  <!-- The owner's rule on limit -->
+  <rect class="rule" x="282" y="104" width="78" height="22" rx="4"/>
+  <text class="rule-label small" x="294" y="120">1 to 50</text>
+
+  <!-- The alter's tighter rule on limit -->
+  <rect class="alter" x="370" y="104" width="196" height="22" rx="4"/>
+  <text class="alter-label small" x="381" y="120">at most 20 with a badge</text>
+
+  <!-- The alter's own key, under its module's name -->
+  <rect class="alter" x="42" y="152" width="524" height="92" rx="8"/>
+  <text class="alter-label bold" x="58" y="176">my_badges alter</text>
+  <text class="alter-label code small" x="186" y="176">third_party_settings.my_badges</text>
+  <rect class="key" x="58" y="196" width="230" height="26" rx="13"/>
+  <text class="ink code" x="72" y="214">badge</text>
+  <text class="muted small" x="156" y="214">string</text>
+</svg>

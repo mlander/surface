@@ -67,7 +67,7 @@ class PerformanceBudgetTest extends DataSurfaceKernelTestBase {
     $before = $this->resources()->buildCounts()['built'];
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
     $built = $this->resources()->buildCounts()['built'] - $before;
-    $writes = array_filter(array_keys($definitions), static fn (string $id): bool => str_starts_with($id, 'data_surface:') && !str_ends_with($id, ':read'));
+    $writes = array_filter(array_keys($definitions), static fn (string $id): bool => str_starts_with($id, 'data_surface:') && !str_ends_with($id, ':read') && !str_ends_with($id, ':schema'));
     $this->assertCount(8, $writes);
     $this->assertLessThanOrEqual(count($writes) + 2, $built);
   }

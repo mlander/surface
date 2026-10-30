@@ -1,11 +1,21 @@
 # Installation
 
+This page installs the module and each submodule, and says what each
+submodule adds. To learn what the module does before you install it,
+read [the introduction](introduction/index.md) first: nothing there
+needs a site. [Doors](introduction/11-doors.md) says which submodule
+opens which door.
+
 ## Requirements
 
 - Drupal 11.3 or 12.
 - PHP 8.3 or newer.
+- [opis/json-schema](https://github.com/opis/json-schema) (Apache-2.0),
+  which checks what a structure read from a JSON Schema keeps of it
+  ([Reading a schema](reading-a-schema.md#what-is-kept)). Composer
+  installs it with the module.
 
-The base module has no dependencies beyond Drupal core and ships no
+Beyond these, the base module has no dependencies and ships no
 configuration of its own.
 
 ## Install the module
@@ -96,58 +106,39 @@ fixtures the tests run against, so they are supported, but their APIs
 and their configuration may change without a deprecation path, and none
 of them is meant to replace core's own forms on a production site.
 
-| Submodule | Shows |
-| --- | --- |
-| `data_surface_first` | The code of [Your first resource](first-resource.md) and [Your second resource](second-resource.md): a newsletter settings page and a store location, held to the pages by a test. Adds its own permission. |
-| `data_surface_demo` | Two structures and three hosts: `DemoBlockStructure` drives a block and a standalone form, and the field formatter is its own structure. |
-| `data_surface_demo_classic` | The same block and formatter written the usual way, without Data Surface, for the side-by-side comparison. Depends on nothing from Data Surface. |
-| `data_surface_demo_extras` | A third-party module extending someone else's resources and structures with alters, with no form alter; and, for content types, the same two settings added to core's own form the classic way, for comparison. |
-| `data_surface_demo_node_type` | One resource serving an add form and an edit form through two operations, with storage of its own. Adds its own permission. |
-| `data_surface_address` | A contributed field type adopting a resource without being forked. Needs Address. |
-| `data_surface_tool` | The same resources serving a non-form caller. Needs Tool. |
-| `data_surface_entity` | A resource derived for every content entity bundle with a form display, one structure per field, and a basic page added and edited through it at `/surface-entity`. Needs `node` and Tool; see [Content entities](entities.md). |
-| `data_surface_demo_node_type_tool` | A content type create tool whose input is the content type resource, compared with Tool Belt's bundle tool once another module has extended content types. Needs Tool. |
-| `data_surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, at `/surface-examples`: declaring, refining, parts, and the same contract as a tool. Needs Tool. |
-| `data_surface_examples_compliance` | Example 4: a compliance structure, and one alter that attaches it to example 3's resource, and nothing else. |
-| `data_surface_examples_workflow` | Example 10, extended: two alters that answer access for the program and its fees, with no change to the program, and nothing else. |
-| `data_surface_examples_keys` | Example 14: a module that manages keys, standing in for the Key module: a list of named keys, the constraint and resolver that offer them, and an alter that offers one on a resource that takes a pasted key. |
-| `data_surface_component_block` | Example 13: a block, "Component", that embeds a single-directory component, its settings example 12's two lines named by `#[UsesStructure]`. Needs `block`. |
-| `data_surface_block` | A placed block as a resource, `block.placement`: its plugin chooses its settings, its theme its region, its visibility a list of conditions; placed, configured, read and removed through four tools, HTTP and a form. Needs `block`. |
-| `data_surface_react` | The served contract: a resource over HTTP at `/surface-api/{resource}`, the method its operation, as JSON Schema with a narrowing and a dry run, and a React form rendered from it at `/surface-react/{resource}/{operation}`. Its built app is committed, so it needs no Node. |
-| `data_surface_openapi` | An OpenAPI 3.1 document of every operation's paths at `/surface-api/openapi.json` (and `.yaml`), for any OpenAPI client, generator or UI, with Swagger UI at `/surface-api/docs` and Redoc at `/surface-api/redoc`. Needs `data_surface_react`. |
+Each row is one submodule: its install command, what it shows, and what
+it opens on a site. A submodule that needs a contributed module needs
+its `composer require` first, as under
+[Optional integrations](#optional-integrations). What each example
+teaches, in reading order, is in [Examples](examples/index.md).
+
+| Install | Shows | Opens |
+| --- | --- | --- |
+| `drush pm:install data_surface_first` | The code of [Your first resource](first-resource.md) and [Your second resource](second-resource.md): a newsletter settings page and a store location, held to the pages by a test. Adds its own permission. | `/admin/config/services/surface-newsletter`, `/admin/config/services/surface-store` |
+| `drush pm:install data_surface_performance` | Three settings of core's performance form, the page cache maximum age and asset aggregation, as one resource stored in core's `system.performance`, each key at core's path, held to core's config schema unchanged: the title, the description and the list of periods are declared once and read by the form, the tool and both documents. Uses core's "administer site configuration". | `/admin/config/development/surface-performance` |
+| `drush pm:install data_surface_demo` | Two structures and three hosts, in the two spellings: `DemoBlockStructure`, a class of its own, drives a block and a standalone form, and the field formatter is its own structure. | `/admin/config/development/data-surface-demo`; the block and the formatter where you place them |
+| `drush pm:install data_surface_demo_classic` | The same block and the same formatter written the classic way, by hand, without Data Surface, with a parity test holding the two to the same behavior and a README counting what each costs. Depends on nothing from Data Surface. | The classic block and formatter, for the side-by-side comparison |
+| `drush pm:install data_surface_demo_extras` | A third-party module extending someone else's resources and structures through alters, with no form alter anywhere; and, for content types, the same two settings added to core's own form the classic way, so the two can be compared. | The demo's formatter settings and core's content type form, extended |
+| `drush pm:install data_surface_demo_node_type` | One resource serving a create form and an update form through two operations, with storage of its own, and two routes that name the generic operation form rather than a form class. Adds its own permission ([below](#the-node-type-demo-permission)). | `/admin/structure/types/surface-add`, `/admin/structure/types/manage/{type}/surface-edit` |
+| `drush pm:install data_surface_address` | A contributed field type adopting a resource for its settings without being forked. Needs [Address](#address). | Field UI's settings form for an address field |
+| `drush pm:install data_surface_tool` | The same resources serving a non-form caller: one derived tool per operation of every resource that names storage and that no plugin uses, `data_surface:<id>:<operation>`; the field resources, with their settings derived from config schema; the contract panel; and a generated comparison of the field tools against Tool Belt's. Needs [Tool](#tool). | The tools, for an agent, MCP, ECA and Drush |
+| `drush pm:install data_surface_entity` | A resource derived for every content entity bundle with a form display, one structure per field derived from its typed data, field access as each child's access, and storage that validates the entity; a basic page added and edited through it. Needs `node` and `data_surface_tool`; see [Content entities](entities.md). | `/surface-entity` |
+| `drush pm:install data_surface_demo_node_type_tool` | No code of its own, only the generated comparison between `data_surface:node.type:create`, the tool derived from the content type resource, and Tool Belt's bundle tool and core's form, once another module has extended content types. Needs Tool. | No page: the recorded comparison and its test, in its README |
+| `drush pm:install data_surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, then a small resource per later concept; examples 16 and 17 are in submodules of their own. Needs Tool. | `/surface-examples` |
+| `drush pm:install data_surface_examples_compliance` | Example 4: a compliance structure and the one alter that attaches it to example 3's resource, which does not know it, and nothing else. | `/surface-examples/4` |
+| `drush pm:install data_surface_examples_workflow` | Example 10, extended: two alters that answer access for the program and its fees, which do not know them, with no change to the program: the fees left out for an account that may not see them, and the program fixed once its workflow publishes it. | `/surface-examples/10` |
+| `drush pm:install data_surface_examples_keys` | Example 14: a module that manages keys, standing in for the Key module: a list of named keys, the constraint and resolver that offer them, and an alter that offers one on a resource that takes a pasted key, ruling the pasted key out once one is chosen. | `/surface-examples/14`, `/surface-examples/14/webhook` |
+| `drush pm:install data_surface_examples_references` | Example 16: keys that refer to an entity, declared by the data type string of what they refer to: a venue, a user, an article and an entity of any type, listed while the site has few and looked up past that. Needs node; ships the article and page bundles for a site that has neither, and writes three nodes its calls name. | `/surface-examples/16` |
+| `drush pm:install data_surface_examples_retitle` | Example 17: a bulk retitle of nodes with keys, storage and a permission of its own, which borrows each node's update access and its title's edit access as gates, asked per node, a refusal on the node's own item. Needs node; ships the page bundle for a site that has none, two roles, and writes three pages its calls name. | `/surface-examples/17` |
+| `drush pm:install data_surface_component_block` | Example 13: a block, "Component", that embeds a single-directory component: the component chosen from those the site has and its props read from the schema it declares, example 12's two lines named by `#[UsesStructure]`, so the block's form, validation and storage come from them, placed through the placement resource of `data_surface_block`. Needs `block`. | `/surface-examples/13` |
+| `drush pm:install data_surface_block` | A placed block as a resource, `block.placement`, by its machine name: its plugin chooses its settings (a plugin's declared structure, or its config schema read), its theme its region, and its visibility is a list of conditions. Placed, configured, read and removed through four tools, HTTP (`DELETE` removes) and a form. Needs `block`. | `/admin/structure/block/surface/add` |
+| `drush pm:install data_surface_react` | The served contract: an operation as JSON Schema 2020-12 with an `x-surface` extension, served over HTTP, the method its operation (`GET` reads, `PATCH` updates, `POST` creates, `DELETE` removes), with a narrowing that re-narrows it as answers change and a dry run that rehearses the write, and a React app that renders the form from it. Its built app is committed, so it needs no Node. | `/surface-api/{resource}`, `/surface-react/{resource}/{operation}` |
+| `drush pm:install data_surface_openapi` | An OpenAPI 3.1 document of every operation's paths (and `.yaml`), each operation's full schema as components, built for no account so it is the same for everyone, for any OpenAPI client, generator or UI. Needs `data_surface_react`. | `/surface-api/openapi.json`, Swagger UI at `/surface-api/docs`, Redoc at `/surface-api/redoc` |
 
 Each submodule's own README says what it shows, how to try it, and which
 tests gate it.
 
-```bash
-drush pm:install data_surface_demo data_surface_demo_extras data_surface_demo_classic
-```
-
-The examples run on a fresh site with nothing else, and are written to
-be shown: start at `/surface-examples`, enable the compliance module
-when you reach example 4, and the workflow module once example 10 has
-been shown without it.
-
-```bash
-drush pm:install data_surface_examples
-drush pm:install data_surface_examples_compliance
-drush pm:install data_surface_examples_workflow
-```
-
-With `data_surface_react` enabled as well, the landing page links each
-of examples 1 to 3 in React, rendered from the contract it serves:
-
-```bash
-drush pm:install data_surface_react
-```
-
-With `data_surface_openapi` as well, `/surface-api/openapi.json` describes
-every operation's paths for an OpenAPI client, and the landing page
-links it under example 6:
-
-```bash
-drush pm:install data_surface_openapi
-```
+### The node type demo permission
 
 `data_surface_demo_node_type` also defines
 `administer data surface node type demo`, which is granted *in addition
@@ -155,6 +146,12 @@ to* the content type permission rather than instead of it: holding it
 alone opens nothing. See that submodule's README for the full matrix.
 
 ## Verify the install
+
+Install the demo modules:
+
+```bash
+drush pm:install data_surface_demo data_surface_demo_extras data_surface_demo_classic
+```
 
 Place the demo block, or visit the standalone demo form at
 `/admin/config/development/data-surface-demo`, and change the entity type
@@ -167,7 +164,8 @@ modules declare, with the doors each operation reaches, and `drush
 surface:catalog --refused` what did not build, with the file to open
 ([The site's catalog](catalog-command.md)). The same listing, each door
 linked, is the page at `/admin/config/development/surfaces`, for a role
-with "View the data surface catalog" ([the catalog
-page](catalog-command.md#the-catalog-page)). To hold your own resources
-to the invariants from your module's tests, see [Testing a
-resource](testing-a-resource.md).
+with "View the data surface catalog" ([the catalog page](catalog-command.md#the-catalog-page)). To hold your own resources
+to the invariants from your module's tests, see [Testing a resource](testing-a-resource.md).
+
+The examples, in the order they are written to be shown and with the
+submodules each one needs, are in [Examples](examples/index.md).

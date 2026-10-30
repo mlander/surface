@@ -6,7 +6,7 @@ services:
   # answers with; the deriver writes it statically, the tool refines it.
   data_surface_tool.operation_inputs:
     class: Drupal\data_surface_tool\OperationInputs
-    arguments: ['@data_surface.resources', '@data_surface.operation_arguments', '@data_surface_tool.input_definitions', '@string_translation', '@module_handler', '@data_surface.site_list_budget', '@?data_surface_react.served_paths']
+    arguments: ['@data_surface.resources', '@data_surface.operation_arguments', '@data_surface_tool.input_definitions', '@string_translation', '@module_handler', '@?data_surface_react.served_paths']
   # The field instance resource's and the field storage resource's
   # settings variants, one per UI field type, read from its config schema:
   # providers their attachVariants(from:) names.

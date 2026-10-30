@@ -105,8 +105,9 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
   protected function tool(string $id) {
     $tool = $this->toolManager->createInstance($id);
     if ($id === self::SURFACE_TOOL) {
-      $tool->setInputValue('storage', 'entity_test.field_address');
+      $tool->setInputValue('entity_type', 'entity_test');
       $tool->setInputValue('bundle', 'entity_test');
+      $tool->setInputValue('field_name', 'field_address');
       return $tool;
     }
     $tool->setInputValue('entity_type_id', 'entity_test');
@@ -181,15 +182,15 @@ class FieldToolsComparisonTest extends DataSurfaceKernelTestBase {
    */
   public function testTheDerivedToolsSayAtLeastWhatTheRetiredOnesDid(): void {
     $add = $this->toolManager->createInstance('data_surface:field.instance:create');
-    $add->setInputValue('entity_type_id', 'entity_test');
+    $add->setInputValue('entity_type', 'entity_test');
     $add->setInputValue('bundle', 'entity_test');
     $schema = $this->container->get('tool.definition_serializer')->normalizeInputSchema($add);
     // An operation parameter named for a resource key is that key.
-    $entity_type = $schema['properties']['entity_type_id'];
+    $entity_type = $schema['properties']['entity_type'];
     $this->assertSame('Entity type', $entity_type['title']);
     $this->assertStringContainsString('The machine name of the entity type', $entity_type['description']);
     $this->assertContains('entity_test', $entity_type['enum']);
-    $this->assertSame(['entity_type_id', 'bundle', OperationInputs::VALUES], $schema['required']);
+    $this->assertSame(['entity_type', 'bundle', OperationInputs::VALUES], $schema['required']);
     $values = $schema['properties'][OperationInputs::VALUES]['properties'];
     // Every field type in the UI: address's own settings resource, the
     // rest derived from config schema.

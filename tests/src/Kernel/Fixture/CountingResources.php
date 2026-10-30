@@ -71,6 +71,14 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
+  public function holdDeclared(string $resource, OperationContext $context): DataSurfaceInterface {
+    $this->builds[] = $resource;
+    return $this->inner->holdDeclared($resource, $context);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function operation(string $resource, string $operation, array $arguments = []): OperationContext {
     return $this->inner->operation($resource, $operation, $arguments);
   }

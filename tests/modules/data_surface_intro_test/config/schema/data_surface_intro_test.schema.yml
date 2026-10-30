@@ -1,0 +1,11 @@
+# The teaser block's settings, as every block plugin with settings has.
+block.settings.my_teaser:
+  type: block_settings
+  label: 'Teaser block settings'
+  mapping:
+    headline:
+      type: string
+      label: 'Headline'
+    limit:
+      type: integer
+      label: 'Number of items'

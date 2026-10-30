@@ -577,7 +577,7 @@ final class OpenApiDocument {
       $cacheability->addCacheableDependency($url);
       $lookup = $this->lookup($definition, $common, $references, $denied);
       $lookup['get']['parameters'] = [
-        ...$this->operationParameters($operation, $names),
+        ...$this->operationParameters($operation, $names, $built),
         ...$lookup['get']['parameters'],
       ];
       $paths[$path] = $lookup;
@@ -586,7 +586,10 @@ final class OpenApiDocument {
       [$path, $names, $url] = $this->paths->template($definition, $operation, $custom, $isSchema);
       $cacheability->addCacheableDependency($url);
       foreach ($calls as $verb => $call) {
-        $call['parameters'] = [...$this->operationParameters($operation, $names), ...($call['parameters'] ?? [])];
+        $call['parameters'] = [
+          ...$this->operationParameters($operation, $names, $built),
+          ...($call['parameters'] ?? []),
+        ];
         if ($call['parameters'] === []) {
           unset($call['parameters']);
         }
@@ -787,25 +790,39 @@ final class OpenApiDocument {
   /**
    * Writes an operation's own parameters: in the path, then the query.
    *
+   * A parameter named for one of the resource's identity keys is in the
+   * path (ServedPaths::template()); any other is in the query. One that
+   * takes a value and is named for a key the resource declares says what
+   * that key says, as its tool input does; any other says what it is.
+   *
+   * Decision: see docs/decisions.md#a-parameter-is-identity-the-caller-knows.
+   *
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param string[] $inPath
    *   The names its path carries as `{name}`.
+   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   *   The resource, built as the operation's tool listing is, whose keys a
+   *   parameter of the same name is.
    *
    * @return list<array>
    *   The parameter objects.
    */
-  protected function operationParameters(OperationDefinition $operation, array $inPath): array {
+  protected function operationParameters(OperationDefinition $operation, array $inPath, DataSurfaceInterface $built): array {
     $parameters = [];
     foreach ($operation->parameters as $parameter) {
       $path = in_array($parameter->name, $inPath, TRUE);
+      $key = $parameter->takesObject() ? NULL : $built->getDefinition($parameter->name);
+      $said = $key === NULL ? '' : (string) ($key->getDescription() ?? $key->getLabel() ?? '');
       $parameters[] = [
         'name' => $parameter->name,
         'in' => $path ? 'path' : 'query',
         'required' => $path || !$parameter->optional,
-        'description' => $path
-          ? (string) $this->t('The identity of the thing: the @name the operation takes.', ['@name' => $parameter->name])
-          : (string) $this->t('The @name the operation takes.', ['@name' => $parameter->name]),
+        'description' => match (TRUE) {
+          $said !== '' => $said,
+          $path => (string) $this->t('The identity of the thing: the @name the operation takes.', ['@name' => $parameter->name]),
+          default => (string) $this->t('The @name the operation takes.', ['@name' => $parameter->name]),
+        },
         'schema' => ['type' => 'string'],
       ];
     }

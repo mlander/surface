@@ -38,18 +38,18 @@ forms are built that way ([Generated forms](forms.md)).
 ## The module in brief
 
 Only what the "Here today" lines need. A
-[definition](../README.md#glossary) is core's `DataDefinitionInterface`,
-unchanged. A [resource](../README.md#glossary) is a PHP class that
+[definition](https://github.com/mlander/data_surface/blob/main/README.md#glossary) is core's `DataDefinitionInterface`,
+unchanged. A [resource](https://github.com/mlander/data_surface/blob/main/README.md#glossary) is a PHP class that
 declares a group of definitions for one thing with identity (the keys
 that say which one it is: a content type's machine name; a settings
 page has none, since there is one of it) and
-[storage](../README.md#glossary), the class that loads and saves its
+[storage](https://github.com/mlander/data_surface/blob/main/README.md#glossary), the class that loads and saves its
 values, such as one simple config object. A
-[structure](../README.md#glossary) is a group of definitions with no
+[structure](https://github.com/mlander/data_surface/blob/main/README.md#glossary) is a group of definitions with no
 storage of its own, such as a block's settings, which the block plugin
 stores in its configuration; the module calls that plugin the
-structure's [host](../README.md#glossary). A resource is asked for
-through its [operations](../README.md#glossary) (`configure`, `create`,
+structure's [host](https://github.com/mlander/data_surface/blob/main/README.md#glossary). A resource is asked for
+through its [operations](https://github.com/mlander/data_surface/blob/main/README.md#glossary) (`configure`, `create`,
 `update`), each carrying a permission, and from each operation the module
 generates a route with a form, a tool for the contributed Tool API
 (which agents, MCP clients and Drush call) and two JSON Schema
@@ -58,17 +58,16 @@ documents, written by the module's emitter
 own, `x-surface`. Each of these ways in (the form, the tool, an HTTP
 API, a test) the module calls a door.
 
-A [refiner](../README.md#glossary) is a static method that returns a
+A [refiner](https://github.com/mlander/data_surface/blob/main/README.md#glossary) is a static method that returns a
 narrower definition for one key given the values of the siblings it
-reads. Another module's [alter](../README.md#glossary) adds keys to a
+reads. Another module's [alter](https://github.com/mlander/data_surface/blob/main/README.md#glossary) adds keys to a
 resource it does not own and may narrow it, never widen it. Narrowing is
 checked on every call (`src/Refinement/Narrowing.php`), so every value
 later accepted is one the schema read before allowed. Every door's
 values go through one pipeline: access; accept, which coerces (`"5"` to
 `5`); validate; prepare, a dry run in which the storage builds what it
 would write and runs its own checks, with no side effect and no lock;
-and commit ([The pipeline](pipeline.md)). [Your first
-resource](first-resource.md) is the whole of it for a settings page.
+and commit ([The pipeline](pipeline.md)). [Your first resource](first-resource.md) is the whole of it for a settings page.
 
 ## Step 1: facts on a data definition
 
@@ -275,7 +274,7 @@ with two optional options, `labels` and `descriptions`, which play no
 part in validation, so code that recognizes a `Choice` with `instanceof`
 recognizes this one too; code that matches the plugin id `Choice` does
 not (`src/Plugin/Validation/Constraint/LabeledChoiceConstraint.php`,
-`LabeledChoiceTest`). A [resolver](../README.md#glossary) reads one
+`LabeledChoiceTest`). A [resolver](https://github.com/mlander/data_surface/blob/main/README.md#glossary) reads one
 constraint, a `LabeledChoice` or the `LanguageExists` of 1.5, as a list
 of values with labels, so the list that validates is the list a form
 offers and the schema writes as `oneOf` of `const` and `title`
@@ -321,8 +320,7 @@ property, and replacing the options of any other constraint are
 refused, so two `Regex` patterns or a contributed constraint's options
 are never compared, only kept or refused
 (`src/Refinement/Narrowing.php`, whose docblock is the full table;
-`NarrowingTypesTest`, `NarrowingInsideMapsTest`; [the narrowing
-table](refinement.md#the-narrowing-table)).
+`NarrowingTypesTest`, `NarrowingInsideMapsTest`; [the narrowing table](refinement.md#the-narrowing-table)).
 
 **The core change.** The same comparison as a typed data service,
 conservative by design: a wrong "narrower" is worse than a refused
@@ -362,12 +360,10 @@ required, or "this key does not apply here"), held to 1.7's check when
 the class is first built, so a widening rule never runs. Validation
 enforces it, and both schemas write it as one `if`/`then`
 (`src/Refinement/Condition.php`, `src/Refinement/Rule.php`,
-`DeclaredNarrowingTest`; [Declaring a
-rule](refinement.md#declaring-a-rule); why: [decision](decisions.md#a-rule-declared-as-data)).
+`DeclaredNarrowingTest`; [Declaring a rule](refinement.md#declaring-a-rule); why: [decision](decisions.md#a-rule-declared-as-data)).
 In the honeypot port described at the end of this page, the settings
 form's `#states` dependency became one such rule, stated in the schema
-and refused by name at the form, the tool and the HTTP API alike ([the
-log](adopters-2026-10-19.md#what-was-expressed-better)).
+and refused by name at the form, the tool and the HTTP API alike ([the log](adopters-2026-10-19.md#what-was-expressed-better)).
 
 **The core change.** `ComplexDataDefinitionInterface` gains
 `addCondition(when:, then:, required:)`: `when` maps a property name to
@@ -516,12 +512,10 @@ anything else (a cache tag, which means it read stored data that can
 change while the account does not; the `user` context; a max-age other
 than permanent) is
 runtime, and is marked there and settled when the thing is loaded
-(`AccessAnswer::kindOf()`, `StaticRuntimeAccessTest`; [Static and
-runtime access](resources.md#static-and-runtime-access)). A write
+(`AccessAnswer::kindOf()`, `StaticRuntimeAccessTest`; [Static and runtime access](resources.md#static-and-runtime-access)). A write
 validates the whole config object against its schema before anything is
 saved (`ConfigObjectStorage::prepare()` in
-`src/Storage/ConfigObjectStorage.php`; [A simple config
-object](storage.md#a-simple-config-object)). In the honeypot port, three
+`src/Storage/ConfigObjectStorage.php`; [A simple config object](storage.md#a-simple-config-object)). In the honeypot port, three
 `validateForm()` rules that used to run only in the form, and one
 permission, now hold at the route, the form, the tool and the HTTP API
 alike ([the log](adopters-2026-10-19.md#what-was-expressed-better)).
@@ -606,8 +600,7 @@ send a valid write finds the rules by being refused.
 
 **Here today.** From one resource built for one operation, the emitter
 writes two JSON Schema 2020-12 documents by one code path
-(`ContractEmitter::emit()` and `emitFull()`; [Two
-documents](served-contract.md#two-documents)):
+(`ContractEmitter::emit()` and `emitFull()`; [Two documents](served-contract.md#two-documents)):
 
 - **The schema for these answers**, for one set of values: each list
   narrowed for the siblings as they stand (the rooms of the venue
@@ -628,8 +621,7 @@ evaluator to draw from.
 
 Neither is ever stricter than the pipeline, judged on what the pipeline
 accepts after coercion; where a rule is only marked, the schema is
-wider, never narrower ([Never stricter than the
-runtime](served-contract.md#never-stricter-than-the-runtime)). An audit
+wider, never narrower ([Never stricter than the runtime](served-contract.md#never-stricter-than-the-runtime)). An audit
 written on 2026-10-18 found where that failed and recorded what each
 case became ([the audit](audit-never-stricter.md)), and matrix tests run
 each example's accepted and refused documents through the pipeline and
@@ -637,8 +629,7 @@ both schemas with a standard validator
 (`tests/src/Kernel/Matrix/AdvertisedSchemaAcceptanceTest.php`,
 `tests/src/Kernel/Matrix/InputCoercionMatrixTest.php`). A React app
 renders a form from these documents alone (`modules/data_surface_react`),
-and committed baselines catch a breaking change to them ([Evolving a
-resource](evolution.md)).
+and committed baselines catch a breaking change to them ([Evolving a resource](evolution.md)).
 
 **The core change.** For an operation from step 2, compose a schema of
 what it accepts from the definitions step 1 enriched (keywords, labels,
@@ -674,13 +665,11 @@ alone, asked for with a setting where the definition does not settle it
 (`setSetting('widget', 'radios')`; [Widgets](widgets.md);
 why: [decision](decisions.md#a-widget-is-chosen-from-the-definition)). A key
 another depends on gets `#ajax`, and a change replaces only the
-elements that depend on it ([Wrapper ids and
-AJAX](forms.md#wrapper-ids-and-ajax)). Presentation (grouping, sizes, a
+elements that depend on it ([Wrapper ids and AJAX](forms.md#wrapper-ids-and-ajax)). Presentation (grouping, sizes, a
 borrowed element) lives in a separate layer that cannot change what a
 value means ([The cosmetic seam](forms.md#the-cosmetic-seam)).
 
-Counted in code lines without blanks or comments ([line
-counts](adopters-2026-10-19.md#line-counts)): honeypot's form class was
+Counted in code lines without blanks or comments ([line counts](adopters-2026-10-19.md#line-counts)): honeypot's form class was
 201 lines and its port is 216 lines of PHP, of which the resource class
 is 48. Pathauto's was 195 and its port is 441, most of it code that
 lists keys from site state (one per entity type, one per punctuation
@@ -703,13 +692,11 @@ works around rather than through:
   definition the rule.
 - **Extraction owned by the element.** `#parents` are absolute from the
   form's root while a subform state reads relative to its fragment, so a
-  value read through the wrong one comes back `NULL`, silently ([The
-  SubformState lesson](forms.md#the-subformstate-lesson)); and an element
+  value read through the wrong one comes back `NULL`, silently ([The SubformState lesson](forms.md#the-subformstate-lesson)); and an element
   swapped for another (checkboxes for a select) posts a different
   structure. An element that reads its own value back in the structure
   its definition describes, wherever it sits, is what lets one
-  definition render the same way everywhere ([Extraction returns raw
-  values](widgets.md#extraction-returns-raw-shapes)).
+  definition render the same way everywhere ([Extraction returns raw values](widgets.md#extraction-returns-raw-shapes)).
 
 **Carried by.** Not drafted. Three drafts name its first follow-ups: the
 conditions draft (1.8) and the `refined_by` draft (1.9) both name

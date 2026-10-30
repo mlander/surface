@@ -12,6 +12,7 @@ use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\data_surface\Form\DataSurfaceOperationForm;
+use Drupal\data_surface\ResourceBuild\OperationRoute;
 use Drupal\data_surface_examples\ConceptPanel;
 use Drupal\data_surface_examples\ExamplePanels;
 use Drupal\data_surface_examples_references\Resource\SponsorshipResource;
@@ -25,6 +26,7 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Route;
 
 /**
  * Tests a key that refers to an entity: example 16's sponsorship.
@@ -44,6 +46,7 @@ use Symfony\Component\HttpFoundation\Request;
 #[RunTestsInSeparateProcesses]
 class ReferenceKeysTest extends DataSurfaceKernelTestBase {
 
+  use OperationRouteTrait;
   use UserCreationTrait;
 
   /**
@@ -535,6 +538,56 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($account->hasPermission('set event sponsorship'));
     $this->assertFalse($account->hasPermission('bypass node access'));
     $this->assertInstanceOf(MapDataDefinition::class, $this->built()->getDefinition('thing'));
+  }
+
+  /**
+   * Tests a reference key a route fixes, under the limit and past it.
+   *
+   * What is drawn today, pinned for the maintainer to decide on. A fixed
+   * key holds its value, so the venue, which must hold one, and the
+   * contact, which may hold nothing where nothing fixes it, are each
+   * drawn as the one value and stated `const`, by the label it is listed
+   * with under the limit and by its id past it, where its one option is
+   * the Choice's value and no candidate is read.
+   */
+  public function testFixedReferenceKeyUnderAndPastTheLimit(): void {
+    $this->serveBuilt('data_surface_examples.sponsorship_fixed', new Route('/surface-test/sponsorship/fixed', [
+      '_form' => DataSurfaceOperationForm::class,
+      '_title' => 'Configure the sponsorship',
+      OperationRoute::RESOURCE => SponsorshipResource::class,
+      OperationRoute::OPERATION => 'configure',
+      OperationRoute::FIXED => ['venue' => 'riverside', 'contact' => 1],
+    ]));
+    $resources = $this->container->get('data_surface.resources');
+    $emitter = $this->container->get('data_surface.contract_emitter');
+    $drawn = function () use ($resources, $emitter): array {
+      $resources->forgetBuilds();
+      $served = $this->served();
+      $form = $this->surfaceForm();
+      $full = $emitter->emitFull($resources->buildStatic($served->resource, $served->context), 'event.sponsorship', 'configure')->document['schema'];
+      return [
+        'venue' => [
+          $form['venue']['#type'],
+          $form['venue']['#plain_text'] ?? NULL,
+          $full['properties']['venue']['const'] ?? NULL,
+          $full['properties']['venue']['x-surface']['fixed'] ?? NULL,
+        ],
+        'contact' => [
+          $form['contact']['#type'],
+          $form['contact']['#plain_text'] ?? NULL,
+          $full['properties']['contact']['const'] ?? NULL,
+          $full['properties']['contact']['x-surface']['fixed'] ?? NULL,
+        ],
+      ];
+    };
+    $this->assertSame([
+      'venue' => ['item', 'Riverside Hall', 'riverside', 'Riverside Hall'],
+      'contact' => ['item', 'admin', 1, 'admin'],
+    ], $drawn(), 'Under the limit.');
+    $this->assertSame([
+      'venue' => ['item', 'riverside', 'riverside', 'riverside'],
+      'contact' => ['item', '1', 1, '1'],
+    ], $this->container->get('data_surface.references')->withLimit(1, $drawn), 'Past the limit.');
   }
 
 }

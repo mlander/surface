@@ -47,3 +47,34 @@ data_surface_storage_test.plain:
     limit:
       type: integer
       label: 'Limit'
+
+# A fully validatable object keeping the limit under a path, beside a
+# note no resource declares, for ConfigObjectStorage's STORED_AT.
+data_surface_storage_test.nested:
+  type: config_object
+  label: 'Nested settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    outer:
+      type: mapping
+      label: 'Outer'
+      mapping:
+        inner:
+          type: mapping
+          label: 'Inner'
+          mapping:
+            limit:
+              type: integer
+              label: 'Limit'
+              constraints:
+                Range:
+                  min: 0
+                  max: 10
+            note:
+              type: string
+              label: 'Note'
+    title:
+      type: string
+      label: 'Title'
+      nullable: true

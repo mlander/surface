@@ -1,5 +1,13 @@
 # The served contract
 
+This page covers the HTTP door: the JSON document that describes an
+operation, the endpoints that narrow and check values before a write,
+and the React form drawn from that document. Use it when a client
+without PHP, such as a JavaScript app, reads or writes a resource.
+[Doors](introduction/11-doors.md) introduces HTTP and React as doors,
+and [Sealed](introduction/15-sealed.md) why the document matches the
+form.
+
 A resource built in one of its operations, served as a JSON document a
 client with no PHP can render a form from, re-narrow as answers change,
 rehearse a write against before anything is written, and then write
@@ -49,10 +57,13 @@ JSON Schema cannot say them. This one can.
   enabled: the whole document, widget hints included. The full schema is
   `GET .../schema` beside it ([the API](#the-api)).
 - **Not `drush tool:info`.** That prints the Tool API's rendering of the
-  derived tool, which cannot say keys a sibling chooses: variants are
-  flattened to one map, the variant the stored values choose, or every
-  variant's keys with none required before anything chooses
-  ([resources](resources.md), "Emission"). The `allOf` of `if`/`then`
+  derived tool, which cannot say keys a sibling chooses: variants a class
+  declares are flattened to one map, the variant chosen, or every
+  variant's keys with none required before anything chooses; of variants
+  the site lists it states only the keys of the one the stored values
+  choose, whatever the site list limit says
+  ([resources](resources.md), "Emission";
+  [the tool door](#asking-again-at-the-tool-door)). The `allOf` of `if`/`then`
   below is only in this contract, for variants and for
   [an enumerated key](#exact-where-it-can-be) alike: a Tool API context
   definition has no conditional, so the tool's schema stays as loose as
@@ -423,7 +434,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a key with variants | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, no `type` beside it; each variant stated exactly by a conditional on the parent ([below](#variants-are-conditionals)) |
 | a key that refers to an entity, `entity:<type>[:<bundle>]` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `data_surface.settings:reference_list_limit`, and `DataSurfaceValidReference` under `checkedOnServer`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
 | a key of any entity type, `entity` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string marked `reference: {by: "entity_type"}`, `enumerated`, its candidates per entity type one conditional on the def |
-| a deciding key whose variants offer one value | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)) |
+| a deciding key that holds a value and whose variants offer one value, or a key its operation's context fixes to one (fixing makes it hold a value) | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter), [a route that fixes a key](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)) |
 | a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
 | a list | `type: array`, `items`, never null: an empty item is dropped before anything reads the list (why: [decision](decisions.md#an-item-is-never-null)) |
 | a collection | `type: array`, `items` a reference to the child's def, narrowed by composition only where every item differs from it (a key the child's operation locked, a locked list), `minItems` and `maxItems` from its Count as the parent's refiners left it, and `x-surface.collection: true` ([below](#collections)) |
@@ -440,15 +451,15 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | Keyword | Holds |
 | --- | --- |
 | `contract` | At the top always, first: the version of the wire format the document is written in, `4` ([Contract 4](#contract-4)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
-| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
+| `widget` | Only when the caller asks for widget hints (`data_surface_react` does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, or a key its operation's context fixes to one, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
 | `dependsOn` | Only where it names one: the sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Only when `true`, in the schema for these answers: the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | Only when `true`, in the schema for these answers: the stored value is no longer offered; the key is shown on its empty option, standing for it. |
 | `emptyOption` | On a single select or radios: `{show, label}`: always for a select that may be cleared (`- None -`), for one that holds a value (required, or always held by its storage) only while no valid choice is selected (`- Select -`) (why: [decision](decisions.md#the-empty-option-rule), [decision](decisions.md#a-key-its-storage-always-holds)); a select `stale` on a stored value says it keeps it, `- Keep riverside_main (no longer offered) -`, and an orphan of the edit says `- Select -` or `- None -`, since a save refuses it. On radios: `show` is whether a `- None -` radio is drawn, only where the key may be cleared; one that holds a value shows nothing checked while no valid choice is. |
 | `multiple` | With the widget hints, on a list of allowed values drawn as a select: a multiple select. A list drawn as checkboxes says `checkboxes` and no `multiple`. |
-| `arrangement` | With the widget hints, on a key that declares one ([Arranging the keys](forms.md#arranging-the-keys)): how it is drawn, never what it accepts. Only what was declared: `group` (`{id, label, as: "fieldset" \| "details", collapsed, weight}`, `collapsed` only when `true` and `weight` only when declared: the keys of one object naming one `id` are drawn in one group, where the first of them is), `weight` (among the object's keys, or the group's; lighter first, declaration order between equals), `placeholder`, `prefix`, `suffix` and `help` (said after the description, and no part of what the key means), all plain text: `{"group": {"id": "pricing", "label": "Pricing", "as": "details", "collapsed": true}, "placeholder": "For example, 40", "prefix": "$"}`. Additive in contract 2: a client that does not read it draws the keys in order. |
+| `arrangement` | With the widget hints, on a key that declares one ([Arranging the keys](forms.md#arranging-the-keys)): how it is drawn, never what it accepts. Only what was declared: `group` (`{id, label, as: "fieldset" \| "details", collapsed, weight, description}`, `collapsed` only when `true`, `weight` and `description` only when declared: the keys of one object naming one `id` are drawn in one group, where the first of them is), `weight` (among the object's keys, or the group's; lighter first, declaration order between equals), `placeholder`, `prefix`, `suffix` and `help` (said after the description, and no part of what the key means), all plain text: `{"group": {"id": "pricing", "label": "Pricing", "as": "details", "collapsed": true}, "placeholder": "For example, 40", "prefix": "$"}`. Additive in contract 2: a client that does not read it draws the keys in order. |
 | `by`, `variants`, `chosen` | On a key with variants: the deciding key; a map from each value that chooses a variant to its def's pointer, `{"free": "#/$defs/registration.step3.ticket.free", "paid": "#/$defs/registration.step3.ticket.paid"}` (a list of the values in contract 1), absent where no variant is declared; and the value chosen now, absent while none is. |
-| `fixed` | On a deciding key whose variants offer one value, beside its `const`: the label that value is offered as, which a renderer draws in place of a select of one. Additive in contract 3. |
+| `fixed` | On a deciding key whose variants offer one value, or a key its operation's context fixes to one, beside its `const`: the label that value is offered as, which a renderer draws in place of a select of one. Additive in contract 3. |
 | `reference` | On a key that refers to an entity, in both documents, listed or not: what it refers to, `{"entityType": "node", "bundles": ["article"]}` (`bundles` only where the key names any), or for the id of a key of any entity type `{"by": "entity_type"}`, its entity type the sibling's value. The value is the id. A client finds an id at the resource's lookup ([below](#a-lookup)). Additive in contract 3 (why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)). |
 | `computed` | On a computed key, in both documents, beside `readOnly: true`: the keys it is computed from and when, `{"from": ["label"], "when": "create"}`, `create` for once, while storage holds nothing for it, `change` for again on every write that changes one of them. Nobody types it: a client shows it, narrows with `POST .../schema` when a key in `from` changes, which answers the value it would compute, and leaves it out of a write; a value sent equal to what it holds is noted, code `computed`, and any other refused. Additive in contract 3 (why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)). `unless_sent`, with no `readOnly`, for a key computed as `create` computes it only when a write leaves it out or sends it empty: a client shows the narrowing's value as a suggestion, sends it once the person typed over it, and a value sent is kept (why: [decision](decisions.md#a-machine-name-is-a-computed-identity)). |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
@@ -612,24 +623,27 @@ its def, so every reference is bare:
 
 A narrowing, from the full schema of `field.instance:update` for a long
 text field: the field's storage is attached in the storage's own `update`
-context, which knows its field type and locks it, while the
-`field.storage` def is the storage as declared, with the field type
-open:
+context, which knows its identity, the entity type, the field name and
+the field type, and locks it, while the `field.storage` def is the
+storage as declared, with its identity open:
 
 ```json
 "storage": {
   "title": "Field storage", "description": "What every bundle using this field shares.",
   "allOf": [
     {"$ref": "#/$defs/field.storage"},
-    {"type": "object", "properties": {"field_type": {"default": "string_long", "readOnly": true, "const": "string_long"}}}
+    {"type": "object", "properties": {
+      "entity_type": {"default": "node", "readOnly": true, "const": "node"},
+      "field_name": {"default": "field_description", "readOnly": true, "const": "field_description"},
+      "field_type": {"default": "string_long", "readOnly": true, "const": "string_long"}}}
   ]
 }
 ```
 
 The narrowing states `"type": "object"` beside its `properties`, the
-def's own type, which narrows nothing. The field type is locked by
-`readOnly` and `const`; its `x-surface` says nothing the def does not,
-so the site carries none. Where a narrowed key's `x-surface` does
+def's own type, which narrows nothing. The identity is locked by
+`readOnly` and `const`; the keys' `x-surface` says nothing the def does
+not, so the site carries none. Where a narrowed key's `x-surface` does
 differ, it is said on the site, in `within`, by the pointer from the
 site to the key's narrowing (contract 3 also wrote `{"locked": true}`
 there).
@@ -1139,7 +1153,7 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | a key a module's widget claims, unless its owner asks for a widget | that widget's element | its plugin ID | the stock field for the key's JSON type (`stockWidget()`) |
 | any key whose constraints resolve to a list, an empty one included | `select`, empty option by the rule | `select` | `SelectField` |
 | such a key that asks for radios, `setSetting('widget', 'radios')` | `radios`, a `- None -` radio only where the key may be cleared | `radios` | `RadiosField` |
-| a deciding key whose variants offer one value, holding it or nothing | `item`: the value's label, the value posted, no AJAX trigger | `fixed` | `FixedField` |
+| a deciding key that holds a value and whose variants offer one value, or a key its operation's context fixes to one (fixing makes it hold a value), while what is stored is that value or nothing | `item`: the value's label, the value posted, no AJAX trigger | `fixed` | `FixedField` |
 | a key that refers to an entity, past the limit, and a bare reference's id | core's `entity_autocomplete`, its selection settings the key's; a select while its candidates are listed | `autocomplete` | `AutocompleteField`: a select while the schema lists the candidates, else a text input whose suggestions the lookup answers |
 | a key that does not apply | nothing but its wrapper | (no property) | nothing |
 | a list of such values offering at most twelve, or asking for checkboxes | `checkboxes`, never `#required` | `checkboxes` | `CheckboxesField` |
@@ -1184,6 +1198,7 @@ route, `data_surface_react.api`, answers every path below;
 | `GET /surface-api/{resource}` | A singleton's envelope: what is stored and the schema for it. On a collection, the listing where the resource declares one, a read only operation that names no thing: its query string the values, its outputs the answer ([a listing](#a-listing)). Else the default create's envelope: its declared defaults and the schema a `POST` takes. |
 | `PATCH /surface-api/{resource}` | A singleton's default update. A collection has none. |
 | `POST /surface-api/{resource}` | The default create, on the collection of a resource with identity. |
+| `GET` and `POST /surface-api/{resource}/{parent}` | A create that names the parent it adds to, its envelope and a run of it: `POST /surface-api/field.instance/node/article` adds a field to the article bundle. |
 | `GET /surface-api/{resource}/{id}` | One thing's envelope, its default update's (or default read's). |
 | `PATCH /surface-api/{resource}/{id}` | One thing's default update. |
 | `DELETE /surface-api/{resource}/{id}` | One thing's default delete: removes it, with no body. |
@@ -1196,18 +1211,26 @@ route, `data_surface_react.api`, answers every path below;
 | `GET` and `POST .../{x}:{operation}/schema` | Its full schema, and its schema for values. |
 | `GET .../{x}:lookup` | The candidates of one key that refers to an entity, of the operation `GET` serves at the path, by label: the lookup ([below](#a-lookup)). A resource that declares an operation named `lookup` has that operation there instead. |
 
-`{id}` is the identity: the parameters of the operation that addresses
-one thing, as path segments in declaration order, joined by `/` when
-there is more than one (up to four). It is the identity key where the
-operation is asked by it (`/surface-api/node.type/recipe`) and the
-thing's own id where it is asked by that
-(`/surface-api/entity.content:node.page/12`,
-`/surface-api/field.instance/node.article.field_x`). An operation
-addresses one thing when its resource has identity keys, it does not
-create, and it needs a parameter; any other, a create and every
-operation of a singleton, is addressed at `/surface-api/{resource}`.
-An operation's parameters that are not in the path arrive in the query
-string: `POST /surface-api/field.instance?entity_type_id=node&bundle=article`.
+`{id}` is the identity: an operation's parameters named for the
+resource's identity keys, as path segments in the order
+`#[Resource(identity:)]` lists the keys, from the first key on, joined
+by `/` (up to four). A parameter is identity the caller knows before the
+call, so it is in the path at every operation that takes it, named as
+the key is: `/surface-api/node.type/recipe`,
+`/surface-api/entity.content:node.page/12`, and for the field instance,
+whose identity is `entity_type`, `bundle`, `field_name`, `field_type`,
+`/surface-api/field.instance/node/article/field_x`. A create names the
+parent it adds to, and leaves the keys it chooses to the body: the field
+instance's create is `POST /surface-api/field.instance/node/article`, its
+machine name and type in the body. An edit names the whole thing; an
+identity key it leaves out follows from the rest (a field's type from
+the field). A create that takes no identity, and every operation of a
+singleton, is addressed at `/surface-api/{resource}`. An identity key no
+operation takes as a parameter has no segment: a content entity
+resource's entity type and bundle are in its id. A parameter named for
+no identity key arrives in the query string
+(`ResourceDefinition::identityParameters()`, why:
+[decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
 
 **Which operation is the default.** At each path, of each kind: the
 operation whose id is the kind's standard one (`create`, `update`,
@@ -1220,17 +1243,21 @@ the standard id. A read is a
 default only where no update is, and the collection of a resource with
 identity has no default update: `PATCH` there would change every thing,
 which no operation means, so an update over the collection, example
-15's reorder, is a custom method. `GET` serves the default update, else
-the default read, else, on a collection, the default create; on the
-collection of a resource with identity, a default read is its listing,
-which `GET` runs. `PATCH` is the default update; `POST` on the
-collection is the default create; `DELETE` is the default delete. Every
-other operation is a custom method, `:{operation}` after the last
-segment of the path it addresses, run with `PATCH` when it is an update
-and `POST` otherwise: example 10's `check`, read-only beside the
-program's `configure`, is `POST /surface-api/event.program:check`; the
-field instance's `reuse`, a second create beside `create`, is `POST
-/surface-api/field.instance:reuse`; example 15's `reorder` is `PATCH
+15's reorder, is a custom method, as is an update at a path shorter
+than the deepest one the resource's operations are addressed at. A path
+an update is served at names a thing, so it has no default create. `GET`
+serves the default update,
+else the default read, else the default create; on the collection of a
+resource with identity, a default read is its listing, which `GET` runs.
+`PATCH` is the default update; `POST` is the default create; `DELETE` is
+the default delete. Every other operation is a custom method,
+`:{operation}` after the last segment of the path it addresses, run with
+`PATCH` when it is an update and `POST` otherwise: example 10's `check`,
+read-only beside the program's `configure`, is `POST
+/surface-api/event.program:check`; the field instance's `reuse`, a
+create that names the whole field, at the path its edit is served at,
+is `POST /surface-api/field.instance/node/page/body:reuse`; example
+15's `reorder` is `PATCH
 /surface-api/event.venue:reorder`. A resource id with a colon of its own,
 `entity.content:node.page`, is read whole first. A default may be named
 the same way.
@@ -1678,11 +1705,10 @@ parameter loads what its id names), its context must not create, and
 every identity key it knows must equal what was written. The content
 type's `update(NodeTypeInterface $type)` is answered by the `type` the
 write accepted, and its read is the `Location`. A field added at
-`field.instance:create` gets `null` and no `Location`: its
-`update(FieldConfigInterface $field)` takes the field's own id
-(`node.article.field_x`), which neither its outputs (it declares none)
-nor its identity keys carry by that name; declaring a `field` output
-would answer it. Example 2's `configure` creates nothing, so `null`.
+`field.instance:create` lives at its `update(string $entity_type, string
+$bundle, string $field_name)`, answered by the identity the write
+accepted: `Location: /surface-api/field.instance/node/article/field_x`.
+Example 2's `configure` creates nothing, so `null`.
 
 ### If-Match
 
@@ -1879,17 +1905,32 @@ narrowing; choosing it again fetches nothing.
 
 ## Asking again at the tool door
 
-A key `deferred` because its list is past the site list limit is listed
-open by the write tool too, and its description names both ways to
-learn its keys: "Too many to list: choose component, then fetch GET
+The write tool never spells out variants the site lists, whatever the
+site list limit says: the limit governs the two documents above and
+nothing at the tool door. A tool's definition is sent with every request
+that offers the tool, and the Tool API cannot say which keys a sibling
+chooses, so spelled out, every variant's keys would be one map with none
+required: 1.6 MB for example 12 on a site with 312 components
+(why: [decision](decisions.md#a-budget-for-what-the-site-decides)). The
+key states the keys of the variant the stored values choose and no
+other, where the listing reads what is stored (an operation that needs
+nothing to start from, or the refined `values` once the parameters
+arrive), and none where nothing chooses one, and its description names
+both ways to learn the keys of any other: "Its keys depend on component:
+listed here are those of data_surface_examples:card, the component
+stored. For another component, fetch GET
 /surface-api/event.spotlight/schema?choose=/props={component} once per
 component, or call data_surface:event.spotlight:configure:schema with
-your values, to get this key's schema." The fetch is named where the
-site serves the API (data_surface_react on), and answers
+your values, to get this key's schema." So changing a prop of the stored
+component is one call. A map of keys from the site past the limit is
+listed open too, its description naming the fetch of an entry and the
+narrowing tool. The fetch is named where the site serves the API
+(data_surface_react on), and answers
 [the fetch per choice](#the-fetch-per-choice), which an agent with an
-HTTP client keeps per component; the narrowing tool is the tool door's
-`POST .../schema`, derived beside the write tool only where the
-operation's listing has such a key
+HTTP client keeps per component; under the limit it answers the full
+schema, which states every variant already. The narrowing tool is the
+tool door's `POST .../schema`, derived beside the write tool wherever
+the operation's listing leaves such a key out
 (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)):
 
 | | |
@@ -1931,8 +1972,9 @@ What this list asked for before Submit was wired, and where each is now:
 - An operation that creates (`create`) answering where the created thing
   now lives, so the app can move to its `update` operation's page. **Done**
   for any resource whose non-creating operation's parameters the outputs
-  or identity answer (the content type); not for the field instance,
-  [above](#where-a-created-thing-lives).
+  or identity answer: the content type, and since its edit takes the
+  field by its parts, the field instance
+  ([above](#where-a-created-thing-lives)).
 - A decision on concurrent edits. **Done**: the opt-in
   [`If-Match`](#if-match); without it the last write wins, as on the
   form.

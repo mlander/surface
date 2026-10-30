@@ -196,6 +196,100 @@ final class ResourceDefinition {
   }
 
   /**
+   * Names the parameters of an operation that are identity.
+   *
+   * A parameter named for one of the identity keys is identity the caller
+   * knows before the call, and every door names it in one place: the
+   * path, in the order the identity lists the keys, from the first key on,
+   * as far as the operation names them. Any other parameter (named for no
+   * identity key, optional, or named for a key after the first key the
+   * operation leaves out) is not identity, and goes in the query string.
+   * A create names the parent it adds to; an edit names the thing. An
+   * identity key no operation takes as a parameter is the resource's own
+   * (a content entity resource's entity type and bundle, which its id
+   * names) and has no segment.
+   *
+   * Decision: see docs/decisions.md#a-parameter-is-identity-the-caller-knows.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   One of its operations.
+   *
+   * @return list<string>
+   *   The parameter names, which are identity keys, in identity order.
+   */
+  public function identityParameters(OperationDefinition $operation): array {
+    $taken = [];
+    foreach ($this->operations as $any) {
+      $taken += self::requiredParameters($any);
+    }
+    $required = self::requiredParameters($operation);
+    $named = [];
+    foreach ($this->identity as $key) {
+      if (!isset($taken[$key])) {
+        continue;
+      }
+      if (!isset($required[$key])) {
+        break;
+      }
+      $named[] = (string) $key;
+    }
+    return $named;
+  }
+
+  /**
+   * Lists the parameters an operation cannot be asked without.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return array<string, true>
+   *   TRUE by parameter name.
+   */
+  private static function requiredParameters(OperationDefinition $operation): array {
+    $required = [];
+    foreach ($operation->parameters as $parameter) {
+      if (!$parameter->optional) {
+        $required[$parameter->name] = TRUE;
+      }
+    }
+    return $required;
+  }
+
+  /**
+   * Answers whether an operation's parameters name one whole thing.
+   *
+   * TRUE for one that does not create and takes identity: what it changes
+   * exists, so its whole identity is known, the keys its parameters leave
+   * out too (a field's type follows from the field). TRUE as well for one
+   * that creates and takes as much identity as such an operation does: it
+   * names the thing it makes, and leaves no identity key open in its body
+   * (a field added to a bundle on a storage that exists).
+   *
+   * Decision: see docs/decisions.md#a-parameter-is-identity-the-caller-knows.
+   *
+   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   *   One of its operations.
+   *
+   * @return bool
+   *   Whether every identity key is known once its parameters arrive.
+   */
+  public function namesWholeThing(OperationDefinition $operation): bool {
+    $named = count($this->identityParameters($operation));
+    if ($named === 0) {
+      return FALSE;
+    }
+    if (!$operation->creates) {
+      return TRUE;
+    }
+    foreach ($this->operations as $other) {
+      if (!$other->creates && count($this->identityParameters($other)) === $named) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
    * Returns a copy with discovery's other findings attached.
    *
    * @param \Drupal\data_surface\ResourceBuild\OperationDefinition[] $operations

@@ -6,6 +6,7 @@ namespace Drupal\data_surface\Contract;
 
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\data_surface\Attachment;
 use Drupal\data_surface\DataSurfaceInterface;
 use Drupal\data_surface\DefinitionMetadata;
 use Drupal\data_surface\Entry;
@@ -17,14 +18,15 @@ use Drupal\data_surface\Variants;
  * Two kinds of key take their list from the site, not the code: variants
  * from the site (`attachVariants(from:)`, and the variants inside a
  * structure read from a schema, a component in a slot), and keys from the
- * site (`addEach()`, `attachEach()`). Each is enumerated into the full
- * schema and the tool listing while its list has at most
+ * site (`addEach()`, `attachEach()`). Each is spelled out in the full
+ * schema and the schema for these answers while its list has at most
  * `data_surface.settings:site_list_limit` entries. Past it, the full
- * schema states the key open and marks it `refine`, and the tool listing
- * names the narrowing tool; the chooser's own options are listed whatever
- * the count, since they are one id and one label each. Each key is counted
- * at its own level: a component in a slot counts the components it may be,
- * not the ones above it.
+ * schema states the key open and marks it `deferred`; the chooser's own
+ * options are listed whatever the count, since they are one id and one
+ * label each. Each key is counted at its own level: a component in a slot
+ * counts the components it may be, not the ones above it. The tool door
+ * counts only keys from the site: it leaves out the variants the site
+ * lists whatever their count (InputDefinitions::deferred()).
  *
  * Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
  */
@@ -168,48 +170,70 @@ final class SiteListBudget {
   /**
    * Answers whether any key, at any depth, is the site's and over the limit.
    *
-   * Walks attached children, collections' items and every variant; a key
-   * over the limit answers at once, and a child met twice is read once.
-   *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The built resource or structure.
    *
    * @return bool
-   *   TRUE when its listing has a key marked `refine` for its count, so
-   *   the operation has a narrowing tool.
+   *   TRUE when its full schema has a key marked `deferred` for its count.
    */
   public function anyOver(DataSurfaceInterface $surface): bool {
-    $seen = [];
-    return $this->overIn($surface, $seen);
+    return static::anyKey($surface, fn (Entry $entry): bool => $this->over($entry));
   }
 
   /**
-   * Walks one frame for anyOver().
+   * Answers whether any key, at any depth, passes a test.
+   *
+   * Walks attached children, collections' items and variants; a key that
+   * passes answers at once, so nothing below it is read, and a child met
+   * twice is read once.
+   *
+   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   *   The built resource or structure.
+   * @param callable(\Drupal\data_surface\Entry): bool $test
+   *   The test.
+   * @param (callable(\Drupal\data_surface\Entry, \Drupal\data_surface\Attachment): bool)|null $walks
+   *   Which of a key's variants to walk into; NULL for every one.
+   *
+   * @return bool
+   *   TRUE when a key passes.
+   */
+  public static function anyKey(DataSurfaceInterface $surface, callable $test, ?callable $walks = NULL): bool {
+    $seen = [];
+    return static::anyIn($surface, $test, $walks, $seen);
+  }
+
+  /**
+   * Walks one frame for anyKey().
    *
    * @param \Drupal\data_surface\DataSurfaceInterface $surface
    *   The frame.
+   * @param callable(\Drupal\data_surface\Entry): bool $test
+   *   The test.
+   * @param (callable(\Drupal\data_surface\Entry, \Drupal\data_surface\Attachment): bool)|null $walks
+   *   Which of a key's variants to walk into.
    * @param array<int, true> $seen
    *   The frames read, by object id.
    *
    * @return bool
-   *   TRUE when a key in it or below it is over the limit.
+   *   TRUE when a key in it or below it passes.
    */
-  protected function overIn(DataSurfaceInterface $surface, array &$seen): bool {
+  protected static function anyIn(DataSurfaceInterface $surface, callable $test, ?callable $walks, array &$seen): bool {
     if (isset($seen[spl_object_id($surface)])) {
       return FALSE;
     }
     $seen[spl_object_id($surface)] = TRUE;
     foreach ($surface->getDefinitions()->entries() as $entry) {
-      if ($this->over($entry)) {
+      if ($test($entry)) {
         return TRUE;
       }
+      $variants = array_filter($entry->variants->variants ?? [], static fn (Attachment $variant): bool => $walks === NULL || $walks($entry, $variant));
       $children = [
         ...($entry->attachment === NULL ? [] : [$entry->attachment->child]),
         ...($entry->list === NULL ? [] : [$entry->list->child()]),
-        ...array_map(static fn ($variant): DataSurfaceInterface => $variant->child, array_values($entry->variants->variants ?? [])),
+        ...array_map(static fn (Attachment $variant): DataSurfaceInterface => $variant->child, array_values($variants)),
       ];
       foreach ($children as $child) {
-        if ($this->overIn($child, $seen)) {
+        if (static::anyIn($child, $test, $walks, $seen)) {
           return TRUE;
         }
       }

@@ -36,8 +36,9 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
  * A budget for what the site decides, and the tool that asks again.
  *
  * A list the site decides, variants from the site or keys from the site,
- * is spelled out in the full schema and the tool listing while it has at
- * most `data_surface.settings:site_list_limit` entries (20). Past it the
+ * is spelled out in the full schema while it has at most
+ * `data_surface.settings:site_list_limit` entries (20), and so is a map
+ * of keys from the site in the tool listing. Past it the
  * full schema states the key open and `deferred`, an object holding a
  * `fetch` template, the deciding key keeps its options, and the keys from
  * the site are named under `x-surface.deferred.entries`;
@@ -389,14 +390,18 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the narrowing tool: derived only where a key is past the limit.
+   * Tests the narrowing tool: derived only where a key is left out.
+   *
+   * Variants the site lists are left out of the listing whatever their
+   * count (SiteListToolDoorTest); a map of keys from the site, past the
+   * limit alone.
    */
   public function testTheNarrowingToolIsDerivedOnlyWhereSomeKeyIsOpen(): void {
     $manager = $this->tools();
-    $this->assertFalse($manager->hasDefinition(self::POSTER_SCHEMA), 'Three layouts: no narrowing tool.');
-    $this->assertFalse($manager->hasDefinition('data_surface:resource_test.workshop:configure:schema'));
-    $panels = $manager->getDefinition('data_surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['panels'];
-    $this->assertNotSame([], $panels->getPropertyDefinitions());
+    $this->assertTrue($manager->hasDefinition(self::POSTER_SCHEMA), 'Three layouts the site lists: a narrowing tool.');
+    $this->assertFalse($manager->hasDefinition('data_surface:resource_test.workshop:configure:schema'), 'Three benches: no narrowing tool.');
+    $lights = $manager->getDefinition('data_surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['lights'];
+    $this->assertNotSame([], $lights->getPropertyDefinitions());
 
     $this->layouts(25);
     $manager = $this->tools();
@@ -419,7 +424,7 @@ class SiteListBudgetTest extends DataSurfaceKernelTestBase {
     $panels = $manager->getDefinition('data_surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['panels'];
     $this->assertInstanceOf(MapInputDefinition::class, $panels);
     $this->assertSame([], $panels->getPropertyDefinitions());
-    $this->assertStringEndsWith("Too many to list: choose layout, then fetch GET /surface-api/resource_test.poster/schema?choose=/panels={layout} once per layout, or call data_surface:resource_test.poster:configure:schema with your values, to get this key's schema.", (string) $panels->getDescription());
+    $this->assertStringEndsWith("Its keys depend on layout and are not listed here: choose layout, then fetch GET /surface-api/resource_test.poster/schema?choose=/panels={layout} once per layout, or call data_surface:resource_test.poster:configure:schema with your values, to get this key's schema.", (string) $panels->getDescription());
     $this->assertStringContainsString('fetch GET /surface-api/resource_test.poster/schema?choose={key}={value} once per value and keep the answer', (string) $definition->getDescription());
     $this->assertStringContainsString('or send your values here', (string) $definition->getDescription());
     $this->assertCount(25, $manager->getDefinition('data_surface:resource_test.poster:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['layout']->getConstraint('Choice')['choices'] ?? []);

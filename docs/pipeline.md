@@ -1,5 +1,11 @@
 # The pipeline
 
+This page covers what happens to values after a door receives them,
+step by step, and how to submit values from your own code. Use it when
+you call the pipeline yourself, or need to know at which step a value
+is refused. [A value sent in](introduction/16-a-value-sent-in.md)
+introduces the steps in plain words.
+
 `data_surface.pipeline` (`Pipeline\DataSurfacePipelineInterface`) is the
 one entry point from raw values to stored values. Whether values arrive
 through Form API, a service endpoint, a config action, or an agent, they

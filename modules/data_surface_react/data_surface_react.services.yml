@@ -13,7 +13,7 @@ services:
   # then the resource's access class.
   data_surface_react.access:
     class: Drupal\data_surface_react\Access\ServedOperationAccessCheck
-    arguments: ['@data_surface_react.served_operations', '@data_surface_react.served_paths', '@request_stack', '@logger.channel.data_surface']
+    arguments: ['@data_surface_react.served_operations', '@data_surface_react.served_paths', '@request_stack', '@data_surface.operation_gate', '@logger.channel.data_surface']
     tags:
       - { name: access_check, applies_to: _data_surface_react_access }
   # Answers every HTTP error of the API as problem details.
@@ -26,10 +26,10 @@ services:
     class: Drupal\data_surface_react\EventSubscriber\SchemaTagSubscriber
     tags:
       - { name: event_subscriber }
-  # The HTTP path and the React page an operation reaches, for the site
-  # catalog.
+  # The HTTP path and the React pages an operation reaches, its own and
+  # those modules serve it at, for the site catalog.
   data_surface_react.catalog_doors:
     class: Drupal\data_surface_react\ServedDoors
-    arguments: ['@data_surface_react.served_paths']
+    arguments: ['@data_surface_react.served_paths', '@data_surface.form_route_doors']
     tags:
       - { name: data_surface.catalog_doors, priority: 30 }

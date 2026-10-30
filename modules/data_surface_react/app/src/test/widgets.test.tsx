@@ -776,6 +776,16 @@ describe('the arrangement a key declares (x-surface.arrangement)', () => {
     expect(Array.from(details.querySelectorAll('input')).map((input) => input.getAttribute('name'))).toEqual(['deposit', 'rate']);
   });
 
+  it('draws what a group says its keys are for, under its legend', () => {
+    const bandwidth = { id: 'bandwidth', label: 'Bandwidth optimization', as: 'details' as const, description: 'External resources can be optimized automatically.' };
+    const schema = object({
+      css: { title: 'Aggregate CSS files', type: 'boolean', 'x-surface': x('checkbox', { arrangement: { group: bandwidth } }) },
+    });
+    const { container } = render(<Form schema={schema} initial={{ css: true }} />);
+    const details = container.querySelector('details') as HTMLDetailsElement;
+    expect(details.querySelector(':scope > summary + .dsr-description')).toHaveTextContent('External resources can be optimized automatically.');
+  });
+
   it('draws the placeholder, the prefix, the suffix and the help it declares', () => {
     render(<Form schema={studio} initial={{ name: '', opens: '09:00', closes: '17:00', rate: null, deposit: false, notes: null }} />);
     const rate = screen.getByLabelText('Hourly rate');

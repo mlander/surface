@@ -1,5 +1,13 @@
 # Declaring a resource or structure
 
+This page is the reference for the class you write: its attribute, its
+keys, and what a key can say beyond its type and label. Use it when
+[Your first resource](first-resource.md) does not show the option you
+need. [Resources](introduction/02-resources.md),
+[Keys](introduction/03-keys.md),
+[Rules on a key](introduction/04-rules-on-a-key.md) and
+[Structures](introduction/09-structures.md) introduce its ideas.
+
 A resource or structure is declared in one place: a class in a module's
 `src/Resource/` or `src/Structure/` carrying `#[Resource]` or
 `#[Structure]`. The attribute decides the kind, not the directory.
@@ -145,8 +153,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 A constraint's message is a sentence a person reads, so a translator
 should find it beside every label: a message option may be written with
 `t()`, as the license's is; the build hands Symfony its source string,
-which core's validator translates when it refuses a value ([Violation
-messages are objects](semantics.md#violation-messages-are-objects)).
+which core's validator translates when it refuses a value ([Violation messages are objects](semantics.md#violation-messages-are-objects)).
 
 A `Regex` reaches both JSON Schema documents as `pattern` only when it
 stays inside the subset PHP and a JavaScript engine read alike: no
@@ -382,6 +389,30 @@ a tool address a resource the same way: by its id and an operation id,
 `data_surface:node.type:update`, with the operation's parameters saying
 which content type.
 
+A parameter is identity the caller already knows before the call; the
+body is what the call decides. So an operation takes identity as
+parameters named for the identity keys, never as a composite id the
+caller has to assemble, and every door names each key the same way: the
+route, the OpenAPI document, the tool and the React page. An add names
+the parent it adds to and leaves the keys it chooses open in the body;
+an edit names the whole thing. The field instance, identity `entity_type`,
+`bundle`, `field_name`, `field_type`, the names core's field config
+stores them under:
+
+```php
+public static function create(string $entity_type, string $bundle): OperationContext
+public static function update(string $entity_type, string $bundle, string $field_name): OperationContext
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+Its create is `POST /surface-api/field.instance/node/article`, the field's
+machine name and type in the body; its edit is `PATCH
+/surface-api/field.instance/node/article/body`, the field type following
+from the field. A parameter named for an identity key is a path segment,
+in identity order; any other is in the query string
+([decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
+
 ## Names
 
 Four naming rules, so that a reader who has only a grep finds the rest
@@ -574,8 +605,7 @@ drush config:set data_surface.defaults defaults.1 \
 drush config:delete data_surface.defaults defaults.1
 ```
 
-The value is text. The build reads it through [the coercion
-table](semantics.md#the-coercion-table), as a form's values are read:
+The value is text. The build reads it through [the coercion table](semantics.md#the-coercion-table), as a form's values are read:
 `40` is an integer for an integer key, `true` or `false` a boolean, a
 JSON list `["a","b"]` a list, a JSON object a map, and an empty value
 none. Quote it in YAML, so `false` stays the word and not a boolean
@@ -609,6 +639,16 @@ and the catalog lists the refusal:
 Every build carries the config object's cache tag,
 `config:data_surface.defaults`, so a change reaches every door at the
 next request (why: [decision](decisions.md#a-site-sets-a-default-in-configuration)).
+
+One page can start a key from a value of its own: a route's
+`_data_surface_defaults`, an operation context's `withDefaults()`, is
+written over the site's for that page alone, with the same reach and the
+same refusals ([A route that fixes or fills keys](forms.md#a-route-that-fixes-or-fills-keys)).
+A value a link sends for a key its route lists under
+`_data_surface_query`, or one the code building the form hands it, is
+no default: it is what the element starts from on that page's first
+draw, and no document states it
+([Keys a link or the code starts](forms.md#keys-a-link-or-the-code-starts)).
 
 ## Locking
 

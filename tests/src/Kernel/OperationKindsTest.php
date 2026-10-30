@@ -10,6 +10,7 @@ use Drupal\data_surface\ResourceBuild\OperationDefinition;
 use Drupal\data_surface_tool\OperationInputs;
 use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationReadTool;
+use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationSchemaTool;
 use Drupal\data_surface_tool_test\Resource\VaultResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -93,7 +94,7 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
     $prefix = OperationInputs::TOOL . ':';
     $kinds = [];
     foreach ($manager->getDefinitions() as $id => $definition) {
-      if (!str_starts_with($id, $prefix) || str_ends_with($id, ResourceOperationReadTool::SUFFIX)) {
+      if (!str_starts_with($id, $prefix) || str_ends_with($id, ResourceOperationReadTool::SUFFIX) || str_ends_with($id, ResourceOperationSchemaTool::SUFFIX)) {
         continue;
       }
       $derivative = substr($id, strlen($prefix));

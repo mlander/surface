@@ -206,7 +206,7 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests the tool lists every layout's panels, and the read tool reads them.
+   * Tests the tool and the read tool for the layouts the site lists.
    */
   public function testTools(): void {
     $manager = $this->container->get('plugin.manager.tool');
@@ -216,9 +216,15 @@ class VariantsFromSiteTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['layout', 'panels'], array_keys($properties));
     $panels = $properties['panels'];
     $this->assertInstanceOf(MapInputDefinition::class, $panels);
-    // Every layout's panels, none required before a layout is chosen, as
-    // for a class's variants.
-    $this->assertSame(['headline', 'columns', 'gap', 'caption', 'tags'], array_keys($panels->getPropertyDefinitions()));
+    // The layouts the site lists are left out of the cached definition,
+    // which reads nothing stored; the listing for the account states the
+    // stored grid's panels, none required, as for a class's variants.
+    $this->assertSame([], $panels->getPropertyDefinitions());
+    $listed = $manager->createInstance('data_surface:resource_test.poster:configure')->getInputDefinitions()[OperationInputs::VALUES];
+    $this->assertInstanceOf(MapInputDefinition::class, $listed);
+    $panels = $listed->getPropertyDefinition('panels');
+    $this->assertInstanceOf(MapInputDefinition::class, $panels);
+    $this->assertSame(['columns', 'gap'], array_keys($panels->getPropertyDefinitions()));
     $this->assertContains(PosterLayouts::TAG, $this->container->get('state')->get('data_surface_tool.listed_cache_tags'));
 
     $read = $manager->createInstance('data_surface:resource_test.poster:configure:read');

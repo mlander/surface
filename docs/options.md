@@ -1,5 +1,12 @@
 # Options and resolvers
 
+This page covers keys whose value must be one of a list: how the list is
+declared once and serves as both the check and the form's choices, and
+how the site can supply the list. Use it when a key's choices are more
+than a fixed list in the class.
+[Rules on a key](introduction/04-rules-on-a-key.md) introduces a list of
+allowed values as a rule.
+
 A list of allowed values is needed twice: once as a constraint (is this
 value allowed?) and once as form `#options` (what do the values mean?).
 Written twice, the two can drift. Core has the same split:
@@ -349,7 +356,7 @@ it `x-surface.reference`. The room keeps what no stock constraint
 says, a room of one of the site's venues: one constraint with its
 validator and its resolver, and a narrower one its refiner adds for the
 venue chosen
-([example 2](../modules/data_surface_examples/README.md#example-2-answers-depend-on-answers)).
+([example 2](https://github.com/mlander/data_surface/blob/main/modules/data_surface_examples/README.md#example-2-answers-depend-on-answers)).
 
 ## A key that refers to an entity
 
@@ -439,10 +446,13 @@ A reference key's limit has a sibling for variants and keys the site
 lists: `data_surface.settings:site_list_limit`, 20 as shipped. A key
 whose variants come from the site (`attachVariants(from:)`, a component
 per single-directory component) or whose keys do (`addEach()`,
-`attachEach()`) is spelled out in the full schema and the tool listing
-while the site lists at most that many; past it, both state the key
-open and mark it `deferred`, and the deciding key keeps its list of ids
-and labels (why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
+`attachEach()`) is spelled out in the full schema while the site lists
+at most that many; past it, the full schema states the key open and
+marks it `deferred`, and the deciding key keeps its list of ids and
+labels. The tool listing follows the limit for keys from the site
+alone: it never spells out variants the site lists, and states the keys
+of the variant the stored values choose, if any
+(why: [decision](decisions.md#a-budget-for-what-the-site-decides)).
 Where a reference key past its limit is looked up by label, such a key
 is fetched per choice: choose the deciding key, then fetch the full
 schema with that choice stated, `GET .../schema?choose=/props=<value>`,

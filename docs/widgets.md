@@ -1,5 +1,11 @@
 # Widgets
 
+Use this page when a key needs a form element the stock widgets do not
+draw, or to find which element a key gets.
+[Keys](introduction/03-keys.md) and
+[Rules on a key](introduction/04-rules-on-a-key.md) introduce what a
+widget reads.
+
 A widget maps one data definition to a form element, and reads the
 submitted value back. It is a plugin type: classes live in
 `Plugin/DataSurfaceWidget` and are declared with the
@@ -261,8 +267,7 @@ come back `NULL`, which the data surface reports as "not configured": a
 spurious violation for a required key, and a stored value silently
 replaced by nothing for an optional one.
 
-`DataSurfaceWidgetBase::rawValue()` handles it ([the SubformState
-lesson](forms.md#the-subformstate-lesson) is the whole story), and a
+`DataSurfaceWidgetBase::rawValue()` handles it ([the SubformState lesson](forms.md#the-subformstate-lesson) is the whole story), and a
 widget that overrides `extractValue()` should go through it rather than
 reading `$form_state` directly. An absolute path is read against the complete
 form state it is absolute in; an element with no `#parents` has not been

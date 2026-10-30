@@ -454,10 +454,10 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
   /**
    * Derives the narrowing tool beside an operation's write tool, if any.
    *
-   * Only where the operation's listing states a key open, its list the
-   * site's and past the budget (OperationInputs::narrows()): a resource
-   * whose every list is spelled out adds no tool. Read only and
-   * idempotent, so the MCP bridge annotates it so.
+   * Only where the operation's listing leaves a key's entries out
+   * (OperationInputs::narrows()): a resource with no variants the site
+   * lists, and every map of keys from the site spelled out, adds no tool.
+   * Read only and idempotent, so the MCP bridge annotates it so.
    *
    * Decision: see docs/decisions.md#a-budget-for-what-the-site-decides.
    *

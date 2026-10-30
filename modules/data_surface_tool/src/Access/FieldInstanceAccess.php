@@ -31,11 +31,11 @@ final class FieldInstanceAccess implements OperationAccessInterface {
    */
   public function access(OperationContext $context, AccountInterface $account): AccessResultInterface {
     $known = $context->known;
-    if (!isset($known['entity_type_id'], $known['field_name'])) {
+    if (!isset($known['entity_type'], $known['field_name'])) {
       return AccessResult::allowed();
     }
     $storage = $this->entityTypeManager->getStorage('field_storage_config')
-      ->load($known['entity_type_id'] . '.' . $known['field_name']);
+      ->load($known['entity_type'] . '.' . $known['field_name']);
     $locked = $storage !== NULL && $storage->isLocked();
     // Allowed rather than neutral when the storage is open: the
     // operation's permission is joined to this answer with andIf(), and

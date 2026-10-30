@@ -1,13 +1,18 @@
 # Performance
 
+This page says what the module computes once and keeps, what it
+computes on each request, and how long each takes. Read it when a page
+that uses resources is slow, or before you run the module under load.
+[Sealed](introduction/15-sealed.md) introduces the build whose cost it
+measures.
+
 What a request pays, and what is paid once. The build of a resource for
 no account is kept across requests; a variant the site lists is built
 only when a door reads it; the operation form prepares a write once; the
 OpenAPI document is kept and served with an `ETag`. Every other build is
 per request, kept by the request's memo. The reasons are in
 [Decisions](decisions.md#the-static-build-is-cached-the-rest-is-per-request);
-what was paid once before this is in [What is paid once and what per
-request](decisions.md#what-is-paid-once-and-what-per-request).
+what was paid once before this is in [What is paid once and what per request](decisions.md#what-is-paid-once-and-what-per-request).
 
 ## Method
 
@@ -107,7 +112,8 @@ A variant the site lists is built the first time a door reads it:
 
 | Door | Builds |
 | --- | --- |
-| The full schema, the tool listing | the variants it states: all of them within the site's list limit, none past it |
+| The full schema | the variants it states: all of them within the site's list limit, none past it |
+| The tool listing | the one the stored values choose, where it reads what is stored; none otherwise, whatever the limit |
 | The schema for values, `?choose=`, the narrowing tool | the chosen one |
 | The form | the chosen one, to draw it |
 | The pipeline | every variant at a key it judges whose document may state a secret: a secret any of them declares is never returned under that key; one read from a document that states none is not built |

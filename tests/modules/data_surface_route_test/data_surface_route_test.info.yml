@@ -1,0 +1,8 @@
+name: Data Surface Route Test
+type: module
+description: 'Test support for a route that fixes or fills what an operation asks for: a card resource with a declared map, an attached structure, a collection, variants and a secret, and the routes that serve its operations.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - data_surface:data_surface

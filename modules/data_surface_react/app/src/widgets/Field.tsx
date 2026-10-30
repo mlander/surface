@@ -259,6 +259,7 @@ function ArrangedGroup({ group, id, children }: { group: ArrangementGroup; id: s
     return (
       <details className="dsr-details" id={id} open={!group.collapsed}>
         <summary className="dsr-summary">{group.label}</summary>
+        {group.description ? <div className="dsr-description">{group.description}</div> : null}
         {children}
       </details>
     );
@@ -266,6 +267,7 @@ function ArrangedGroup({ group, id, children }: { group: ArrangementGroup; id: s
   return (
     <fieldset className="dsr-fieldset dsr-arranged" id={id}>
       <legend className="dsr-legend">{group.label}</legend>
+      {group.description ? <div className="dsr-description">{group.description}</div> : null}
       {children}
     </fieldset>
   );

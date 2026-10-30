@@ -59,6 +59,9 @@ use Drupal\Core\Session\AccountInterface;
  * - layout() says how the object keeps a key it stores otherwise than it
  *   is asked for; load() and prepare() translate through it, and
  *   translatedKeys() tells the check and the generator its stored schema.
+ * - STORED_AT says where the object keeps a key deeper than its own name,
+ *   by dotted path, beside keys the resource does not declare; every
+ *   method above reads and writes the key there, and keeps the rest.
  *
  * A key that refers to a content entity is stored by its uuid, which the
  * engine translates outside this class (ReferenceStorageLayout), so the
@@ -100,6 +103,24 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
    * @see docs/decisions.md#a-key-its-storage-always-holds
    */
   public const ALWAYS_HELD = [];
+
+  /**
+   * Where the object keeps a key not at its own name: a dotted path, by key.
+   *
+   * A key the resource declares by its own name and the object keeps
+   * deeper, beside keys the resource does not declare (core's
+   * system.performance keeps the page cache's maximum age at
+   * cache.page.max_age, beside css.compress). load() reads the key from
+   * its path; prepare() lays it in at its path before the schema judges
+   * the object and files what the schema says there under the key;
+   * commit() sets the path alone, so what the object holds around it is
+   * kept; mayClear() and the build's check read the schema at the path.
+   * The config schema generator writes no schema for such an object: it is
+   * one its owner wrote.
+   *
+   * @see docs/storage.md#a-key-stored-under-a-path
+   */
+  public const STORED_AT = [];
 
   /**
    * The keys the storage owns and a resource never declares.
@@ -178,7 +199,17 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
    * {@inheritdoc}
    */
   public function load(OperationContext $context): array {
-    $values = array_diff_key($this->stored(), array_flip(static::OWNED));
+    $stored = $this->stored();
+    $values = array_diff_key($stored, array_flip(static::OWNED));
+    foreach (static::STORED_AT as $path) {
+      unset($values[explode('.', $path)[0]]);
+    }
+    foreach (static::STORED_AT as $key => $path) {
+      $value = NestedArray::getValue($stored, explode('.', $path), $exists);
+      if ($exists) {
+        $values[$key] = $value;
+      }
+    }
     return $this->layout()?->fromStorage($values) ?? $values;
   }
 
@@ -186,7 +217,7 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
    * {@inheritdoc}
    *
    * Returns the values to write, plus the language code when the schema
-   * asks for one.
+   * asks for one; a key kept under a path (STORED_AT) by that path.
    *
    * @throws \LogicException
    *   When no config schema describes the object: the storage exists to
@@ -197,16 +228,29 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
     if (!$this->typedConfig->hasConfigSchema($name)) {
       throw new \LogicException(sprintf('No config schema describes %s, which %s stores in. Declare it in the module\'s config/schema/*.schema.yml.', $name, static::class));
     }
-    $prepared = array_diff_key($values, array_flip(static::OWNED));
-    $prepared = $this->layout()?->toStorage($prepared) ?? $prepared;
+    $asked = array_diff_key($values, array_flip(static::OWNED));
+    $asked = $this->layout()?->toStorage($asked) ?? $asked;
     $stored = $this->stored();
-    $whole = $prepared + array_diff_key($stored, array_flip(static::OWNED));
+    // Each key at the path the object keeps it at, and the path's schema
+    // violations filed under the key.
+    $prepared = $paths = $deeper = [];
+    foreach ($asked as $key => $value) {
+      $path = $this->storedPath((string) $key);
+      $prepared[$path] = $value;
+      $paths[$path] = (string) $key;
+      if ($path !== (string) $key) {
+        $deeper[$path] = $value;
+      }
+    }
+    $whole = array_diff_key($prepared, $deeper) + array_diff_key($stored, array_flip(static::OWNED));
+    foreach ($deeper as $path => $value) {
+      NestedArray::setValue($whole, explode('.', $path), $value, TRUE);
+    }
     if ($this->typed($name, $whole)?->hasTranslatableElements()) {
       $prepared['langcode'] = $stored['langcode'] ?? $this->languageManager->getDefaultLanguage()->getId();
       $whole['langcode'] = $prepared['langcode'];
     }
-    $keys = array_map('strval', array_keys(array_diff_key($prepared, ['langcode' => TRUE])));
-    $violations = SchemaViolations::collect($this->typedConfig, $name, $whole, array_combine($keys, $keys));
+    $violations = SchemaViolations::collect($this->typedConfig, $name, $whole, $paths);
     $undeclared = $this->mountsWithoutSchema($name, $whole, $prepared);
     if (!$violations->isEmpty() || $undeclared !== []) {
       throw new StorageViolationsException(new ViolationSet([...$violations, ...$undeclared]));
@@ -216,12 +260,15 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
 
   /**
    * {@inheritdoc}
+   *
+   * Each key is set at its path, a key kept under a path (STORED_AT) by
+   * that path alone, so what the object holds beside it stays as it is.
    */
   public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $config = $this->configFactory->getEditable($this->name());
     $before = $config->getRawData();
-    foreach ($prepared as $key => $value) {
-      $config->set((string) $key, $value);
+    foreach ($prepared as $path => $value) {
+      $config->set((string) $path, $value);
     }
     if (!array_key_exists('langcode', $prepared)) {
       // Core's rule: no language code on an object with nothing
@@ -245,7 +292,8 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
    * object's schema is fully validatable (the `FullyValidatable`
    * constraint at its root) and the key's schema does not say
    * `nullable: true`. There, the schema refuses NULL, and so the key is
-   * always held. A key no schema describes is not known.
+   * always held. A key no schema describes is not known. A key kept under
+   * a path (STORED_AT) is read at that path.
    *
    * Decision: see docs/decisions.md#a-key-its-storage-always-holds.
    */
@@ -262,11 +310,12 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
       // the schema still answers for it.
       $data = $stored;
       $parents = explode('.', $path);
+      $parents = [...explode('.', $this->storedPath($parents[0])), ...array_slice($parents, 1)];
       if (!NestedArray::keyExists($data, $parents) && $this->mapsAlong($data, $parents)) {
         NestedArray::setValue($data, $parents, NULL);
       }
       try {
-        $element = $this->typed($name, $data)?->get($path);
+        $element = $this->typed($name, $data)?->get(implode('.', $parents));
         if ($element !== NULL && !$element instanceof Undefined) {
           $answer = !$element->getDataDefinition()->isRequired();
         }
@@ -311,6 +360,15 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
       }
     }
     return TRUE;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The path STORED_AT names for the key, else its own name.
+   */
+  protected function storedPath(string $key): string {
+    return static::STORED_AT[$key] ?? $key;
   }
 
   /**

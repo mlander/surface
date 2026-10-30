@@ -53,7 +53,15 @@ the record of the rework that brought the module to the pattern.
   `creates` stamped on it and a context saying otherwise refused
   (`docs/decisions.md#an-operation-on-the-class`); only ever on its
   resource's or structure's own class. Its context adds `known`
-  identity, `withConstraint()` and `withChild()`; a child with operations
+  identity, `withConstraint()` (a Choice of one value with `data_surface_fixed`
+  fixes the key),
+  `withDefaults()` (what keys start from, only on a context that
+  creates) and `withChild()`, the first two by key path, a path into a
+  fixed child handed to its context, never an identity key it knows; a
+  route fixes or fills keys of the operation it serves with them,
+  `_data_surface_fixed` and `_data_surface_defaults`, and a fixed key
+  holds its value (required, drawn fixed, `const`)
+  (`docs/forms.md#a-route-that-fixes-or-fills-keys`); a child with operations
   is invoked through the one its parent names, else the one with its
   parent's id, else the one of its parent operation's kind. It states how a call
   behaves, `readOnly:` and `destructive:`, and idempotence, derived
@@ -325,6 +333,53 @@ parameters onto the operation's by name (`OperationRoute`), gated by
 `_data_surface_operation_access`, which `OperationRouteSubscriber` adds
 to every such route (a routing file may still say it);
 `DataSurfaceOperationForm` serves it.
+
+A route's seeds, `_data_surface_fixed` and `_data_surface_defaults`, are
+literals or references: `'{name}'` whole (`OperationRoute::REFERENCE`),
+the raw value of a variable of the route's path that a requirement or a
+converter bounds, left out when an optional placeholder is absent, and
+one its key refuses names nothing (`NamesNothingException`). A derived
+resource's id may hold such a variable, `entity.content:node.{node_type}`,
+filled at match (`OperationRoute::named()`), so one route serves every
+bundle (`docs/forms.md#a-value-from-the-routes-path`).
+
+`_data_surface_query: { '<key path>': '<query name>' }` lists the keys a
+link may start, each name plain (`[A-Za-z0-9_-]`, since PHP renames a
+`.` and splits a `[`): prefills, laid on the form's first draw only,
+held to the key and dropped without a word when it refuses them
+(`KeyPaths::heldOn()`), never in the context, a build or a document; the
+page varies by `url.query_args:<name>`. Code hands the form the same,
+`getForm(DataSurfaceOperationForm::class, $values)`. A React page a
+module serves at its own route (`ResourceReactPage::served()`, told
+apart by `OperationRoute::reactPage()`) starts keys from both and fixes
+none (`docs/forms.md#keys-a-link-or-the-code-starts`).
+
+A default with no leading underscore is a route parameter, core's own:
+`to: 'friends'` pins the operation's `$to`. One that nothing reads (the
+operation's parameters, `_controller`, `_form`'s `buildForm()`,
+`_title_callback`, `_custom_access`) is refused at match. A plain default
+is never the subject, which is the first of the operation's parameters
+that is a path variable with a value
+(`docs/decisions.md#a-plain-route-default-pins-an-operation-parameter`).
+
+What the route alone shows to be wrong (a `{name}` naming no bounded
+variable, one path both fixed and filled, a query map no link can use,
+`_data_surface_fixed` on a React page) fails the router rebuild for the
+whole site (`OperationRoute::assertWritten()`, from
+`OperationRouteSubscriber` at ALTER -230, after core's converters at
+-220) and is refused again at match, and by the access check before the
+permission. Three answers changed on 2026-10-29: the access check asks
+the permission from the two ids before reading the URL; a value of the
+URL that names nothing is a 404 for an account the permission lets in,
+let through in the request's own dispatch, only to the operation form
+(`_form`) or a React page (any other `_controller` gets a 403 with no
+reason), and refused with no reason for a link (`OperationGate`), and,
+at the form's route, refused with no reason to all where the operation
+declares no permission (`OperationAccessCheck`); and a route's held build is kept in the build cache
+only when nothing in its context came from the request, else held for
+the request alone (`ResourcesInterface::holdDeclared()`)
+(`docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for`).
+
 `data_surface_tool` derives one tool per operation that can be asked
 on its own, `data_surface:<id>:<operation>`: its resource names storage,
 no plugin uses it, and every `%key` in its permission can be supplied by
@@ -333,13 +388,18 @@ operation that changes a thing that exists it derives a read tool,
 `data_surface:<id>:<operation>:read`, taking the parameters and
 answering with the stored values less secrets
 (`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Where an
-operation's listing has a key whose list the site decides (variants or
-keys from the site) past `data_surface.settings:site_list_limit`, which
-the full schema and the listing state open and `deferred`, it derives a
-narrowing tool too, `data_surface:<id>:<operation>:schema`, answering
-what `POST .../schema` answers for the values sent, and the key's
-description names the fetch beside it, `GET .../schema?choose=<pointer>=<value>`
-(`OperationInputs::narrows()`, `ResourceOperationSchemaTool`,
+operation's listing leaves a key's entries out, it derives a narrowing
+tool too, `data_surface:<id>:<operation>:schema`, answering what
+`POST .../schema` answers for the values sent, and the key's description
+names the fetch beside it, `GET .../schema?choose=<pointer>=<value>`. The
+listing leaves out variants the site lists whatever
+`data_surface.settings:site_list_limit` says, stating the keys of the
+variant the stored values choose and no other (the listing of an
+operation that needs nothing reads what is stored, for an account it is
+open to), and a map of keys from the site past the limit; the limit
+governs the two schema documents otherwise
+(`InputDefinitions::deferred()`, `OperationInputs::narrows()`,
+`ResourceOperationSchemaTool`,
 `docs/decisions.md#a-budget-for-what-the-site-decides`). Both declare
 the operation's permission to the Tool API, unless it has a `%key`
 (`ResourceOperationToolDeriver::declaredPermission()`). A tool's title
@@ -352,7 +412,9 @@ hand-written `field_add` / `field_update` are gone.
 `data_surface.resource_catalog` lists the static layer;
 `data_surface.site_catalog` adds each operation's doors (each module
 that opens one names it, a `CatalogDoorsInterface` service tagged
-`data_surface.catalog_doors`) and every build refusal, which `drush
+`data_surface.catalog_doors`; a route's `form` or `react` line says
+what it pins, fixes, fills and starts) and every build refusal and
+route written wrong (stage `route`), which `drush
 surface:catalog` prints and the page `/admin/config/development/surfaces`
 shows, its doors linked (`Controller\CatalogController`,
 `docs/catalog-command.md`); `docs/catalog.md`
@@ -475,7 +537,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1701, Assertions: 38988, Errors: 0, Failures: 0, Skipped: 3. Classes: 238 of 238, 8 at a time, browser classes 4.
+phpunit: Tests: 1793, Assertions: 40933, Errors: 0, Failures: 0, Skipped: 3. Classes: 250 of 250, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -590,7 +652,12 @@ the default create (201 with `Location`), `:{operation}` any other,
 `?dryRun=true` a run that writes nothing, `If-Match` a 412 when storage
 changed since, a refusal 422 problem details, every path a JSON Pointer
 and every contract 2 path a 410.
-`/surface-react/{resource}/{operation}` renders it with a React app.
+`/surface-react/{resource}/{operation}` renders it with a React app,
+which answers a URL that names nothing as the form's route does; a
+module's own route serves the same page with `ResourceReactPage::served()`
+and `servedTitle()`, handing the app `seeds.defaults` and `prefill`, the
+values the app starts from over the stored ones, and fixing nothing
+(`modules/data_surface_react/README.md`).
 `docs/served-contract.md` has the format, with children and variants
 as `$defs` that the properties reference; `docs/decisions.md` (Served
 contract) has the points it settled.
@@ -754,7 +821,7 @@ src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constrain
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Nineteen experimental submodules; each has its own README.
+modules/                 Twenty experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```

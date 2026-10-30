@@ -1,5 +1,14 @@
 # Generating a resource
 
+Read this page after you have written
+[Your first resource](first-resource.md) by hand, when you want a
+command to write the same files for the next one. The command asks for
+the keys, their rules, the operation and the storage, which
+[Keys](introduction/03-keys.md),
+[Rules on a key](introduction/04-rules-on-a-key.md),
+[Operations](introduction/07-operations.md) and
+[Storage](introduction/08-storage.md) introduce.
+
 `drush generate surface:resource` (also `data_surface:resource`) writes
 the files [Your first resource](first-resource.md) shows: the
 permission, the route, the resource class, its storage, and the config
@@ -154,8 +163,7 @@ vocabulary `narrow()->when()`. The config object is a new one of the
 module's, so its schema entry and install file are written.
 
 A `oneOf` of titled constants is a `LabeledChoice` written as its
-`labels` alone, each value a key ([Three ways to write
-it](options.md#three-ways-to-write-it)). Where a value is a numeric
+`labels` alone, each value a key ([Three ways to write it](options.md#three-ways-to-write-it)). Where a value is a numeric
 string, PHP would key it as an integer (`'1'` as `1`), so the values stay
 in `choices` with the `labels` beside them:
 

@@ -16,9 +16,8 @@ use Drupal\data_surface\Resource\ResourceInterface;
 use Drupal\data_surface_tool\Access\FieldInstanceAccess;
 use Drupal\data_surface_tool\FieldSettingsSchemaVariants;
 use Drupal\data_surface_tool\Storage\FieldInstanceStorage;
+use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\field\FieldConfigInterface;
-use Drupal\field\FieldStorageConfigInterface;
 
 /**
  * A field on a bundle. Generic: knows nothing of any field type.
@@ -38,18 +37,22 @@ use Drupal\field\FieldStorageConfigInterface;
  *
  * Create, reuse and update are not three resources. They are how much is
  * already known, so they are the three ways to ask for this resource, below.
+ * Each names what it knows by its parts, the words core's field config
+ * stores them under: create names the bundle it adds to, reuse and update
+ * the field itself, `/surface-api/field.instance/node/article/body`.
  *
  * @code
  *                              create   reuse    update
- *   entity_type_id, bundle     locked   locked   locked
- *   field_type, field_name     open     locked   locked
+ *   entity_type, bundle        locked   locked   locked
+ *   field_name                 open     locked   locked
+ *   field_type                 open     locked   locked
  *   label, description, ...    open     open     open, current values loaded
  *   storage, its own           create   update   update
  *   settings                   by type  fixed by the known type
  * @endcode
  */
 #[Resource('field.instance',
-  identity: ['entity_type_id', 'bundle', 'field_name', 'field_type'],
+  identity: ['entity_type', 'bundle', 'field_name', 'field_type'],
   storage: FieldInstanceStorage::class,
   access: FieldInstanceAccess::class,
 )]
@@ -58,19 +61,20 @@ final class FieldInstanceResource implements ResourceInterface {
   /**
    * Adds a field to a bundle, with a storage of its own.
    *
-   * The caller names the field, so the same call twice leaves what the
-   * first left: idempotent, though it creates.
+   * Names the bundle it adds to; the caller chooses the field's machine
+   * name and type in the body. The caller names the field, so the same
+   * call twice leaves what the first left: idempotent, though it creates.
    */
   #[Operation('create',
     label: new TranslatableMarkup('Add a field to a bundle'),
     description: new TranslatableMarkup('Adds a new field, with a storage of its own, to a bundle of an entity type, under a machine name the caller chooses.'),
-    permission: 'administer %entity_type_id fields',
+    permission: 'administer %entity_type fields',
     creates: TRUE,
     idempotent: TRUE,
   )]
-  public static function create(string $entity_type_id, string $bundle): OperationContext {
+  public static function create(string $entity_type, string $bundle): OperationContext {
     return self::handSettingsTheField(new OperationContext('create', creates: TRUE, known: [
-      'entity_type_id' => $entity_type_id,
+      'entity_type' => $entity_type,
       'bundle' => $bundle,
     ]));
   }
@@ -78,36 +82,50 @@ final class FieldInstanceResource implements ResourceInterface {
   /**
    * Adds an existing storage's field to another bundle.
    *
-   * A create for the field, an update for its storage: parent and child
-   * see different operations. The caller names the field, as for create.
+   * Names the whole field: the storage by its entity type and machine
+   * name, and the bundle it goes on; the field type follows from the
+   * storage. A create for the field, an update for its storage: parent
+   * and child see different operations. Idempotent, as create is.
+   *
+   * @throws \InvalidArgumentException
+   *   When the entity type or the field name names nothing, saying which.
    */
   #[Operation('reuse',
     label: new TranslatableMarkup('Add an existing field to another bundle'),
     description: new TranslatableMarkup('Adds a field whose storage already exists to another bundle of the same entity type, sharing that storage.'),
-    permission: 'administer %entity_type_id fields',
+    permission: 'administer %entity_type fields',
     creates: TRUE,
     idempotent: TRUE,
   )]
-  public static function reuse(FieldStorageConfigInterface $storage, string $bundle): OperationContext {
-    return self::handSettingsTheField(self::create($storage->getTargetEntityTypeId(), $bundle)
+  public static function reuse(string $entity_type, string $bundle, string $field_name): OperationContext {
+    $storage = FieldStorageResource::update($entity_type, $field_name);
+    return self::handSettingsTheField(self::create($entity_type, $bundle)
       ->withId('reuse')
-      ->withKnown(['field_type' => $storage->getType(), 'field_name' => $storage->getName()]))
-      ->withChild('storage', FieldStorageResource::update($storage));
+      ->withKnown(['field_type' => $storage->known['field_type'], 'field_name' => $field_name]))
+      ->withChild('storage', $storage);
   }
 
   /**
    * Edits a field. Everything that says which field it is, is known.
+   *
+   * @throws \InvalidArgumentException
+   *   When a part names nothing, or the field is not on the bundle,
+   *   saying which.
    */
   #[Operation('update',
     label: new TranslatableMarkup('Edit a field'),
-    description: new TranslatableMarkup('Changes a field and its storage; the field is named by its id, which stays as it is.'),
-    permission: 'administer %entity_type_id fields',
+    description: new TranslatableMarkup('Changes a field and its storage; the field is named by its entity type, bundle and machine name, which stay as they are.'),
+    permission: 'administer %entity_type fields',
   )]
-  public static function update(FieldConfigInterface $field): OperationContext {
-    $storage = $field->getFieldStorageDefinition();
-    assert($storage instanceof FieldStorageConfigInterface);
-    return self::handSettingsTheField(self::reuse($storage, $field->getTargetBundle())
-      ->withId('update', creates: FALSE));
+  public static function update(string $entity_type, string $bundle, string $field_name): OperationContext {
+    $context = self::reuse($entity_type, $bundle, $field_name)->withId('update', creates: FALSE);
+    if (FieldConfig::loadByName($entity_type, $bundle, $field_name) === NULL) {
+      $bundles = \Drupal::service('entity_type.bundle.info')->getBundleInfo($entity_type);
+      throw new \InvalidArgumentException(isset($bundles[$bundle])
+        ? sprintf('field_name "%s" names no field on the %s bundle of the %s entity type; the reuse operation adds it there.', $field_name, $bundle, $entity_type)
+        : sprintf('bundle "%s" names no bundle of the %s entity type.', $bundle, $entity_type));
+    }
+    return self::handSettingsTheField($context);
   }
 
   /**
@@ -127,7 +145,7 @@ final class FieldInstanceResource implements ResourceInterface {
     return $context->withChild('settings', new OperationContext(
       $context->id,
       $context->creates,
-      array_intersect_key($context->known, array_flip(['entity_type_id', 'bundle', 'field_name'])),
+      array_intersect_key($context->known, array_flip(['entity_type', 'bundle', 'field_name'])),
     ));
   }
 
@@ -136,7 +154,7 @@ final class FieldInstanceResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which field this is.
-    $inputs->add('entity_type_id', 'string', t('Entity type'))->setRequired(TRUE)
+    $inputs->add('entity_type', 'string', t('Entity type'))->setRequired(TRUE)
       ->setDescription(t('The machine name of the entity type the field is on.'))
       ->addConstraint('PluginExists', [
         'manager' => 'entity_type.manager',
@@ -183,8 +201,8 @@ final class FieldInstanceResource implements ResourceInterface {
    * The bundle must belong to the chosen entity type.
    */
   #[RefinesInput('bundle')]
-  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type_id): DataDefinitionInterface {
-    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type_id]);
+  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
+    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
   }
 
 }

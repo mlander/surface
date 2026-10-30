@@ -112,6 +112,7 @@ abstract class DataSurfaceWidgetBase extends PluginBase implements DataSurfaceWi
         'as' => $arrangement->group->as,
         'collapsed' => $arrangement->group->collapsed,
         'weight' => $arrangement->group->weight,
+        'description' => $arrangement->group->description,
       ];
     }
     if (!empty($element[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {

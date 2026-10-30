@@ -92,6 +92,11 @@ use Symfony\Component\Yaml\Yaml;
  * default is in the layout it is asked for; see
  * docs/recipes.md#asked-as-checkboxes-stored-as-a-list-of-ids.
  *
+ * A storage that keeps a key under a dotted path (ConfigObjectStorage's
+ * STORED_AT) stores to a schema written by hand, beside keys the resource
+ * does not declare, so describe() refuses it rather than write each key at
+ * its own name; see docs/storage.md#a-key-stored-under-a-path.
+ *
  * A file's entries the resource does not describe are kept as they are,
  * and so are the comments above an entry; each written entry says it was
  * generated on the line above it. What the resource does not say, the
@@ -375,6 +380,10 @@ final class ConfigSchemaGenerator {
    *   The object's name, each schema entry with the module it is written
    *   in, and the values it is installed with; for a config entity type,
    *   the name of its entry and no install values.
+   *
+   * @throws \LogicException
+   *   When its storage keeps a key under a dotted path, whose schema this
+   *   does not write.
    */
   public function describe(ResourceDefinition $definition): array {
     $type = $this->entityType($definition);
@@ -382,6 +391,11 @@ final class ConfigSchemaGenerator {
       return $this->describeEntityType($definition, $type);
     }
     $config = (string) constant($definition->storage . '::CONFIG');
+    $stored_at = (array) constant($definition->storage . '::STORED_AT');
+    if ($stored_at !== []) {
+      $key = (string) array_key_first($stored_at);
+      throw new \LogicException(sprintf('%s keeps %s at %s in %s, and this writes each key at its own name, so it writes no schema for the %s resource. Write the schema of a key kept under a path by hand; the build holds the resource to it.', $definition->storage, $key, $stored_at[$key], $config, $definition->id));
+    }
     $built = $this->resources->declaration($definition->name(), $this->context($definition));
     $existing = $this->existing($definition->module, $config);
     $always_held = array_map('strval', (array) constant($definition->storage . '::ALWAYS_HELD'));

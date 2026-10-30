@@ -86,8 +86,9 @@ These keep the word, as product names or on-the-wire identifiers:
 - route names, the route keys (`_data_surface_resource`,
   `_data_surface_operation`, `_data_surface_operation_access`,
   `_data_surface_panel`, `_data_surface_cosmetics`,
-  `_data_surface_react_access`) and URL paths (`/surface-api/...`,
-  `/surface-react/...`, `/surface-examples/...`);
+  `_data_surface_fixed`, `_data_surface_defaults`,
+  `_data_surface_query`, `_data_surface_react_access`) and URL paths
+  (`/surface-api/...`, `/surface-react/...`, `/surface-examples/...`);
 - config names and State keys;
 - the served contract's `x-surface` keyword, because clients already
   read it; the document's own keys for the resource's id and the
@@ -228,7 +229,7 @@ label, the `committed` output's title, now "Committed" (A6).
 | Attribute arguments | 42 | 39 |
 | Blueprint methods | 17 | 15 |
 | Interfaces an author implements or names | 24 | 20 |
-| `OperationContext` public methods | 9 | 8, beside `constraints()`, the build's |
+| `OperationContext` public methods | 9 | 8, beside `constraints()`, the build's; 9 since 2026-10-28 |
 | Settings | 2 | 2 |
 | `x-surface` keywords | 35 | 35, 30 since contract 4 |
 | Module result codes | 20 | 20 |
@@ -245,6 +246,13 @@ one definition setting a claim reads, `format`, and one config object,
 ([A site sets a default in configuration](#a-site-sets-a-default-in-configuration)).
 The widget attribute is in `src/Attribute/`, which `PublicSurfaceTest`
 does not count, so its pins are unchanged.
+
+*Grown 2026-10-28,* by one method: `OperationContext::withDefaults()`,
+beside `defaults()`, the build's, restored for a route that fills keys
+on one page, the shipped use C5 found missing
+([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
+The table's row says it; `PublicSurfaceTest` does not count a
+context's methods, so its pins are unchanged.
 
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 31
@@ -320,7 +328,11 @@ What changed, old → new, to grep:
   one that says it is read the same. Every shipped routing file dropped
   the line (42 entries; the resource test module's larder route keeps it,
   to show it is still accepted), and the first page's quoted route with
-  them, two lines shorter, its concepts still four.
+  them, two lines shorter, its concepts still four. *Amended
+  2026-10-29:* the subscriber also refuses, when the router is rebuilt,
+  a route written wrong in a way the route alone shows ([A route may
+  fill or fix what an operation asks
+  for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 - **C1.** `BlueprintAdditionsInterface::with()`, the deprecated alias of
   `mixIn()`, removed.
 - **C2.** `BlueprintInterface::fromSchema()` removed; a document is read
@@ -336,6 +348,10 @@ What changed, old → new, to grep:
   the constructor takes `id`, `creates` and `known`, the rest the
   withers, and starting values are gone
   ([Starting values without creating](#starting-values-without-creating)).
+  *Restored 2026-10-28:* `withDefaults()`, with its rule, for a route
+  that fills keys on one page; the constructor still takes `id`,
+  `creates` and `known`
+  ([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 - **C6.** `#[Operation(of:)]` removed: an operation stands on its
   resource's or structure's own class, and one on any other class is
   refused.
@@ -908,7 +924,12 @@ static permission alone, which `permissionAccess()` now allows: an
 access class or an alter may answer at run time, and only the context
 can ask them; what the permission alone decides, it still decides
 first, before a parameter is read. The operation form's route check
-already asked with the context alone.
+already asked with the context alone. *Amended 2026-10-29:* a form
+route that fixes or fills keys holds them to the resource with one
+build for no account when it is matched, kept in the build cache only
+when nothing in its context came from the request; one that seeds
+nothing holds nothing there ([A route may fill or fix what an
+operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 (`Resources::buildAs()`, `Resources::keepable()`,
 `ServedOperationAccessCheck`, `BuildMemoTest`,
 `LongLivedWorkerMemoryTest::testKeptBuildsStayBoundedAcrossContexts()`)
@@ -1002,6 +1023,11 @@ through the wall
 between parent and child. (`Declaring::applyContext()`) *Changed
 2026-10-24:* starting values, `OperationContext::withDefaults()`, are
 gone, and so is this entry's half about them ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+*Amended 2026-10-28:* a constraint or a default the parent's context
+names by a path into the child (`title.value`) is handed to the child's
+context, by the path below the key, so the child is still narrowed by
+its own context alone; the key itself is still refused
+([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 
 ### Starting values without creating
 
@@ -1010,11 +1036,17 @@ one that does not create, until `OperationContext::withDefaults()` and
 the constructor's `defaults:` were removed with no shipped use: no
 shipped operation starts a new thing from values (a clone). Bringing a
 clone back is additive ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+*Restored 2026-10-28:* `withDefaults()` is back with its one rule, for
+a route that fills keys on one page: a context that does not create and
+carries defaults is refused when the resource is built ([A route may
+fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 
 ### Starting values are defaults
 
 *Withdrawn 2026-10-24* with starting values: a starting value was the
 key's declared default for that build only ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
+*Restored 2026-10-28:* so it is again, written over the site's default
+too ([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 
 ### A site sets a default in configuration
 
@@ -1073,6 +1105,308 @@ each a resource id, a key path and a value.
   site's.
 
 (`SiteDefaults`, `Declaring::writeSiteDefaults()`, `SiteDefaultsTest`)
+*Amended 2026-10-28:* `withDefaults()` is back, for a context that
+creates; its values are written over the site's, with the same reach and
+the same holding, both in `KeyPaths`
+([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
+
+### A route may fill or fix what an operation asks for
+
+Decided 2026-10-28, from a site's add page: a basic page whose title is
+set, or whose body starts with text, served by the generic `create` of
+`entity.content:node.page`, with no operation of its own. A route says
+it with two defaults, `_data_surface_fixed` and `_data_surface_defaults`,
+each a map of key paths to values, which `OperationRoute` applies to the
+context the operation built ([forms](forms.md#a-route-that-fixes-or-fills-keys)).
+
+- **Filling is a form's matter, so a route is its level.** A tool call
+  and an API write send their values; only a person on a page starts
+  from what the page shows. A default at a route changes what one page
+  starts from and no other door's contract, so parity between doors is
+  not at stake. It is `OperationContext::withDefaults()`, restored with
+  this as its use: each value is what its key starts from in this build,
+  written over the declared default and the site's, read through the
+  coercion table and held to the key, with a site default's reach
+  ([A site sets a default in configuration](#a-site-sets-a-default-in-configuration)).
+- **Only a context that creates carries defaults.** On an update the
+  stored value stands, so a default would be stated and never used. A
+  context that does not create and carries defaults is refused when the
+  resource is built, naming the operation, and at a route, naming the
+  route. *Open:* whether a route may give defaults to an operation that
+  neither creates nor updates and whose storage stores nothing, such as
+  a check or a report run; until the maintainer decides, the rule holds,
+  and `_data_surface_query` starts such a key from a link.
+- **Fixing narrows the contract, so at a route it is true on that page
+  only.** A fixed value is `withConstraint($path, 'Choice', ['choices' =>
+  [$value], 'data_surface_fixed' => TRUE])`, nothing new in either
+  document's vocabulary: a key fixed so is drawn as that value and
+  stated `const` with `x-surface.fixed`, as a deciding key with one
+  variant is, and starts from it (a fixed key holds its value, below).
+  The option says the Choice fixes the key, and the build
+  takes it off before core sees the Choice. The value is held
+  to the key first, so one the key refuses is refused naming the key.
+  The operation's other doors still accept any value it does: a value
+  that must hold at every door is the operation's own constraint, or its
+  access class's answer, and a fact nobody should see or send, such as
+  who a message goes to, belongs in storage keyed by the operation, never
+  in a key a route fixes.
+- **A path into a child is the child's context.** A constraint or a
+  default at `title.value` is handed to the context of the structure
+  attached at `title` (`Declaring::handDown()`), so a child is still
+  narrowed by its own context alone ([Constraints and starting values for
+  an attached key](#constraints-and-starting-values-for-an-attached-key)).
+  One at a key of a map the resource declares narrows that key in place.
+- **A refusal is the route's, said as a parameter's.** The route builds
+  the resource with its values once, for no account, when it is matched.
+  A refusal of them becomes the route's `InvalidArgumentException`, which
+  the access check answers with a refusal saying why, as it answers a
+  route parameter that names nothing. A refusal the operation meets
+  without the route's values stays the operation's. *Amended
+  2026-10-29:* a value of the URL that names nothing is no longer
+  answered as the route's refusal. The access check asks the operation's
+  permission first (below), so an account without it hears the
+  permission's reason, the same for every value. A resource id the path
+  fills that no resource has is a page not found to any account, answered
+  before the permission is asked: without the resource there is no
+  operation whose permission to ask. For an account the permission lets
+  in, a value that names nothing (`NamesNothingException`: an id no
+  entity has, an entity the operation does not take as its own, a
+  reference whose value its key refuses) is let through in the request's own dispatch,
+  for this request alone, and the form answers 404, at a route the
+  operation form (`_form`) or a React page serves; at a route another
+  controller serves, it is refused with no reason, since the check
+  cannot know that controller reads what the value names and would
+  otherwise serve it past the access class; asked about a link
+  (`Url::access()`, a menu link, a local task, a breadcrumb), the check
+  answers forbidden with no reason, so no link to a page not found is
+  drawn (`OperationGate::namesNothing()`). Why: core answers a URL that
+  names nothing with 404 and hides a link whose converter loads nothing,
+  and the API door already answered 404 to an account holding the
+  permission. A refusal of where the route puts a value, and of a plain
+  default, stays the route's 403 with its reason, whatever the URL
+  carries: only the value is the visitor's. A value a converter loads
+  nothing for is core's 404 to any account, before access is asked, as
+  before. The gate writes nothing to the log: core's breadcrumb asks
+  about every path above the one requested, so a URL anyone may type
+  would write a line per request.
+- **A React page starts keys and fixes none.** *Changed 2026-10-29:*
+  the React page was left out, with a React page that fixes or fills
+  keys open, since the generic page reads its operation from its own
+  path and calls an API at another. A module now serves an operation's
+  React page at a route of its own (`ResourceReactPage::served()`),
+  which names the resource and the operation as a form route does and is
+  gated by the same check. Its defaults and query prefills are values
+  the page hands the app to start from, held as the form holds them; the
+  app's documents and its write are the operation's own, at the API, so
+  they state and hold nothing of the route. `_data_surface_fixed` on
+  such a route fails the router rebuild: the write at the operation's
+  own path holds a value to the operation's constraints alone, so a key
+  the page stated `const` would take any value there, the property this
+  entry refuses for a value a query sends. Carrying the route's values
+  to the API, by a token, a header or the app sending them again, was
+  weighed and refused: the API would read where it was called from
+  ([Nothing an operation runs reads the
+  request](#nothing-an-operation-runs-reads-the-request)), and one
+  operation would answer two contracts at one path. *Open:* a
+  route-scoped write, an endpoint that holds a page's write to the
+  route's context, the one reader serving the access check, the page and
+  the write; it would let a React page fix keys, and gives one operation
+  a second write path, which is the maintainer's to want.
+
+- **Fixing says so.** A Choice of one value alone is not a fixed key.
+  Two shipped operations narrow a key that way, a placed block's update
+  its theme and a field storage's update an unlimited cardinality once
+  the field has data, and both are drawn as a select of one and stated
+  as a `oneOf` of one, which the block's pinned documents hold. Drawing
+  every Choice of one value fixed would change those documents, so the
+  route's says it fixes the key, and an operation's own may say it too.
+  *Open:* whether those two should.
+
+(`OperationContext::withDefaults()`, `OperationRoute::withRouteValues()`,
+`Declaring::applyContext()`, `Declaring::writeContextDefaults()`,
+`KeyPaths`, `DefinitionMetadata::setFixed()`, `RouteValuesTest`,
+`ContentEntityRouteValuesTest`)
+
+*Amended 2026-10-29,* from the plan for seeding an operation from a
+route: a page whose seed comes from its own path, a link that starts a
+key, one page every bundle shares, and what each door answers when a
+value is wrong. Who chooses a value says how it reaches the operation
+([forms](forms.md#a-route-that-fixes-or-fills-keys)): a parameter when
+the operation must know it, a seed (a fixed value or a default) when one
+page states it for every visitor, a prefill when a link offers it or
+code computes it at request time. The choices, and why:
+
+- **A seed's value may come from the route's own path.** A value of
+  `_data_surface_fixed` or `_data_surface_defaults` that is `'{name}'`,
+  whole, is a reference: the raw value of the route's path variable of
+  that name, read through the coercion table and held to the key as a
+  literal is, and left out when the URL carries none, so one route with
+  an optional trailing variable serves two URLs. The variable must be a
+  variable of the path, bounded by a requirement or a converter, or the
+  route is refused. Why: the page's address is what the page is about,
+  and the route that bounds the segment is its author's, so a value read
+  from it is still the author's choice, within a bound the author set,
+  and the key's own constraints hold it. A reference inside text,
+  `'Hello {name}'`, is a literal: the key judges a whole value of its
+  type, never a fragment of text. Refusing references, so that every
+  value from a path is an operation parameter, was weighed and refused:
+  a site builder would write PHP in a class they may not own to fix a
+  key on one page.
+- **One route may serve every bundle.** A derived resource's id may hold
+  a bounded variable of the path, `entity.content:node.{node_type}`,
+  filled from its raw value before the registry is asked, so one routing
+  entry serves every bundle's add page, where every bundle had tools and
+  only the basic page a form. The bundle fills the id rather than a key
+  because every other door addresses the resource by that id. A filled
+  id no resource has is a page not found to any account: without the
+  resource there is no permission to ask. *Open:* the edit route for
+  every bundle. `/node/{node}/edit` names a node whose bundle is known
+  only once it is loaded, and nothing answers which derived resource an
+  entity belongs to, so for now the bundle goes in the path; a deriver
+  method answering the derivative of an upcast entity, or routes a
+  deriver declares (`pages:` on `DerivedResource`, compiled by a route
+  provider and rebuilt when the list of bundles changes), would serve
+  the edit route itself.
+- **What the route alone shows is refused when the router is rebuilt.**
+  A `{name}` in the resource's id or a reference that names no variable
+  of the path, or one nothing bounds; one path both fixed and filled; a
+  query map no link can use; and fixed keys on a React page fail the
+  rebuild (`OperationRouteSubscriber`, after core has written each
+  parameter's converter), with the class core throws for a reserved
+  variable name in a path, `\InvalidArgumentException`, naming the route
+  and the fix. Each is asked again when the route is matched, with the
+  same words, for a route no rebuild saw. Why: a typo in a routing file
+  is found by whoever installs it, at once, rather than by the first
+  visitor; what needs the resource built stays at match, so one bad
+  route fails as few rebuilds as possible. The cost is the whole router,
+  as core's own check costs it: a failed rebuild writes no route of any
+  module until the file is corrected.
+- **A visitor's query value is input, never the context.**
+  `_data_surface_query` names each key a link may start and the query
+  parameter it reads; the form lays the value on its first draw, held to
+  the key and dropped without a word when the key refuses it, and puts
+  nothing in the context. Why: what is in the context the page states,
+  as `const` or `default`, and a query string has no bound the route
+  sets, so a crafted link would make the page state a value of its
+  choosing; the build cache would gain an entry per value a link sent;
+  and what was entered is judged where entered values are judged, on
+  Save. A dropped value is never a 403 or a 404, since anyone may write
+  a link, and is not logged, since a crafted link may not write a log
+  line per request. The keys are listed by name, never the whole query:
+  the page reads `destination` and others for itself, and a reader of
+  the route sees which links it honors. The values code hands the form
+  through `getForm()` are held by the same rule, and code hands values,
+  never a context, so the access check and the form read one context
+  through one reader.
+- **The build that holds a route's values, and which the bin keeps.** The
+  access check holds a route's seeds to the resource with a build for no
+  account. The build cache keeps it only when the context holds nothing
+  read from the request, no value of the path handed to the operation
+  and no reference read; otherwise the same build is held for the
+  request alone (`ResourcesInterface::holdDeclared()`). Why: a kept build
+  stays until a tag it read is invalidated, so a route whose context held
+  a value of its path would write a lasting entry per value a URL
+  carried, an update route one per thing visited; a literal seed is the
+  same on every request, and its kept build is what the next request
+  reads. *Open:* the request memo's limit of 32 builds, now that a route
+  with a reference holds a build per value, in link access checks too;
+  keep it, and measure on the block placement and node pages before
+  raising it.
+- **The permission is asked first.** At the operation form's route, the
+  operation's permission is asked from the resource and operation ids
+  alone, before the operation is invoked or anything the URL carries is
+  read, as the React page, the API and the tool ask it ([Every door
+  projects what the read tool
+  projects](#every-door-projects-what-the-read-tool-projects)). Before,
+  the context was built first, so an account without the permission was
+  told that an id named no entity, or why the route's seeds were wrong.
+  Why: what a URL names is told only to an account that may ask the
+  operation; any other hears the permission's reason, the same for
+  every value. What the route alone shows to be written wrong
+  (`OperationRoute::assertWritten()`) is refused before the permission,
+  to any account, as the rebuild refuses it: it reads nothing of the
+  URL, so it tells nothing of what a value names, and a route no rebuild
+  saw is refused in the rebuild's order.
+- **Identity is the operation's to say.** Each identity key the context
+  knows is set as the key's default and locked, so a context that also
+  fixes or fills it is refused, a route's and a parent's alike, before
+  the context's values are written
+  (`Declaring::assertKnownIdentityKept()`): "The example.rename route:
+  The "update" operation fixes "card" on example.card, an identity key
+  the context knows: ...". Why: which thing the page is about comes from
+  the operation's parameters, and a second statement of it could
+  disagree with nothing to refuse the two; asked before any value is
+  written, the refusal is this one whatever the value, never a value
+  refusal a reference would read as naming nothing. A prefill naming
+  one is refused too, on the first draw.
+- **A fixed key is one per key.** A key is fixed by the operation's own
+  context or by the route, never both: a route fixing a path the
+  operation's context already narrows with a Choice is refused when the
+  route is matched. Why: a context keeps one constraint of a name at a
+  path (`withConstraint()`), so the route's Choice would take the place
+  of the operation's, and the page would state a value the operation's
+  other doors refuse. One path both fixed and filled by a route is
+  refused for the same reason in another form: a fixed value is also
+  what its key starts from, so the default would be ignored without a
+  word. *Open:* a route's `_data_surface_defaults` on a key the
+  operation's own context fixes is overridden by the fixed value with no
+  refusal, at the form and at a React page; refusing it as the route's
+  would say so.
+- **A fixed key holds its value.** A key a route or a parent context
+  fixes starts from the fixed value whatever default it declares, is made
+  required where it was optional, is drawn fixed and stated `const`,
+  required in both documents, and a submission cannot leave it empty.
+  Why: a value nobody may change on the page cannot be one the visitor
+  may clear; an optional key fixed was drawn as a choice of the value or
+  nothing and stated as either, which fixed nothing. This amends the
+  bullet above under which a key fixed so was drawn fixed only where it
+  held a value. *Open:* a reference key fixed past
+  `data_surface.settings:reference_list_limit` is labeled by its id on
+  the form's item and under `x-surface.fixed`, since past the limit the
+  key lists no candidate to read a label from; whether a fixed reference
+  looks its label up is the maintainer's.
+- **The two page doors answer alike.** The generic React page answers a
+  URL that names nothing as the form's route does: let through to a 404
+  in the request's own dispatch for an account the permission lets in,
+  a 404 to any account for a page path that names no resource or no
+  operation, and no link drawn to either. Both access checks ask one
+  gate (`OperationGate`) for the operation's permission and for the
+  answer to a URL that names nothing; each check writes the order it
+  asks them in, and the permission asked again of the URL's values,
+  itself. Why: two pages of one operation that answered one URL
+  differently would tell a visitor at one what the other hides, and one
+  gate keeps the two answers from drifting apart. The API door's
+  answers are unchanged.
+- **An operation with no permission tells no one what a value names.** A
+  derived content entity operation declares no permission: entity access
+  decides per entity, once the thing is loaded. Nothing then lets an
+  account in before a value of the URL is read, so a node of another
+  bundle is refused to every account at every door, as is an id no node
+  has wherever no converter answers it first, with no reason at the
+  form's route and the one fixed refusal at the React page, the API and
+  the tool. Why: passing the permission step where none is declared
+  would tell any account, anonymous included, what a value names.
+  *Open:* whether derived operations should declare permissions, which
+  would make the 404 reachable for them; that is a security change,
+  outside this entry.
+- **What the page is about is a value of its path.** The subject a
+  cosmetic layer is told, which also names the form's AJAX wrapper and a
+  delete's confirmation, is the first of the operation's parameters that
+  is a variable of the path with a value, never a plain default ([A
+  plain route default pins an operation
+  parameter](#a-plain-route-default-pins-an-operation-parameter)).
+
+(`OperationRoute::named()`, `OperationRoute::assertWritten()`,
+`OperationRoute::withRouteValues()`, `OperationRoute::queried()`,
+`OperationRouteSubscriber`, `OperationAccessCheck`, `OperationGate`,
+`NamesNothingException`, `Declaring::assertKnownIdentityKept()`,
+`Declaring::applyContext()`, `Resources::holdDeclared()`,
+`KeyPaths::heldOn()`, `DataSurfaceOperationForm::prefilled()`,
+`DataSurfaceOperationForm::title()`, `ResourceReactPage::served()`,
+`ServedOperationAccessCheck`, `FormRouteDoors`,
+`SiteCatalog::routeRefusals()`, `RouteValuesTest`, `RouteAccessTest`,
+`RoutePrefillTest`, `RouteCatalogTest`, `ReactRoutePageTest`,
+`ContentEntityRouteValuesTest`, `ReferenceKeysTest`)
 
 ### Known keys that are not identity
 
@@ -1083,7 +1417,10 @@ field name this way, which `FieldStorageStorage` loads by, while
 `field_type`, its one
 identity key, is locked. (Before storage settings existed, the field
 type was known the same way; it became identity when it started
-choosing between the settings variants.)
+choosing between the settings variants.) *Amended 2026-10-28:* the storage's entity type and field name are
+identity too, beside its field type ([A parameter is identity the caller
+knows](#a-parameter-is-identity-the-caller-knows)); a field's settings
+child still knows the field's bundle this way.
 
 ### An entity parameter given as an id
 
@@ -1092,6 +1429,154 @@ entity interface is loaded by the one entity type whose class satisfies
 that type; a type several entity types satisfy is taken only as an
 object. A guess between entity types would load the wrong thing.
 (`OperationArguments`)
+
+### A parameter is identity the caller knows
+
+Decided 2026-10-28, the owner's rule: a parameter is identity the caller
+already knows before the call, and the body is what the call decides. An
+add names the parent it adds to and leaves the keys it chooses open in
+the body; an edit names the whole identity. Every identity key is named
+the same way at every door (route, OpenAPI document, tool, React page),
+with the words a person uses, never a composite id a caller has to
+assemble.
+
+- **Parts, not a composite id.** The field instance's reuse took
+  `FieldStorageConfigInterface $storage`, core's `node.body`, and its
+  update `FieldConfigInterface $field`, `node.article.body`: ids that
+  join identity keys with dots, which a caller had to know how to
+  build. Both take `string $entity_type, string $bundle, string
+  $field_name` now, load what they name and refuse, naming the part,
+  when it names nothing; `field.storage`'s update takes `$entity_type,
+  $field_name`. A parameter named for a resource's one identity key and
+  typed as the entity (`node.type`'s `type`, `block.placement`'s `id`)
+  is that key already, and stays.
+- **One name for the entity type, `entity_type`.** The field resources
+  called it `entity_type_id`, the content entity resources
+  `entity_type`. `entity_type` is the name core's field config stores
+  it under (`field.field.node.page.body` holds `entity_type`, `bundle`,
+  `field_name` and `field_type`, the field instance's four identity
+  keys), the name the content entity resources, the reference key's two
+  parts, a gate's `entity_type` and `id` pair and the demo block already
+  used, and the words a person says; `entity_type_id` is core's name
+  for a PHP variable holding it. So the field resources moved and
+  nothing else did: no stored value changed, and the content entity
+  resources' documents did not move. The permission is `administer
+  %entity_type fields`.
+- **The storage's identity is core's.** `field.storage` named only
+  `field_type`, the key that chooses its settings, and knew the entity
+  type and the field name as keys that were no identity. Its identity
+  is `entity_type`, `field_name`, `field_type` now, each a declared key,
+  locked wherever its context knows it; as the field's child they are
+  the field's, handed in its context on reuse and update, the entity
+  type on create, and otherwise learned from the field's accepted
+  identity when it is committed. A storage value naming another is
+  refused. This amends [Known keys that are not
+  identity](#known-keys-that-are-not-identity).
+- **The path.** A parameter named for one of the resource's identity
+  keys is a path segment, in identity order, from the first key on, as
+  far as the operation names them; any other parameter is in the query
+  string. One rule at every door: the route reads it, the OpenAPI
+  document writes a path parameter for it, the tool names its fetch
+  with it, and the React page reads its endpoints off it. A create
+  names its parent's path, `POST /surface-api/field.instance/node/article`;
+  a path an update is served at names a thing, so a create there is a
+  custom method, `POST .../node/article/body:reuse`. The deepest path
+  any operation of the resource is addressed at is the thing's, and an
+  update at a shorter one, over a parent's things as the venues' reorder
+  is over all of them, is a custom method. An identity key no operation
+  takes as a parameter is the resource's own and has no segment: a
+  content entity resource's entity type and bundle, which its id names,
+  `/surface-api/entity.content:node.page/12`. A resource with one
+  identity key came out the same: its operations' parameters were
+  already named for it. This amends [Contract
+  3](#contract-3-the-operation-is-the-method), whose path held the
+  parameters of the operation that addresses one thing, in declaration
+  order, and put a create's in the query.
+- **What a static tool definition knows.** An operation whose
+  parameters name a whole thing (an edit, or a create that names as
+  much identity as an edit does, the field's reuse) knows every
+  identity key, those it leaves out too, so its `values` lists none of
+  them. This amends [Identity before the
+  parameters](#identity-before-the-parameters).
+- **Who hears that a part names nothing.** When the parameters build no
+  context, a permission with a `%key` placeholder is filled from the
+  parameters as sent: an account holding `administer node fields`
+  hears `field_name "nope" names no field of the node entity type.`, at
+  the tool and over HTTP (404); any other account gets the one fixed
+  refusal, as before.
+- **What it closed.** The fetch a tool names carries every parameter,
+  `GET /surface-api/field.instance/{entity_type}/{bundle}/schema?choose=/settings={field_type}`,
+  where it named the path without them and answered 400 (the open
+  point of [A budget for what the site
+  decides](#a-budget-for-what-the-site-decides)). A field added over
+  HTTP answers 201 with its edit's path as `Location`, which its
+  composite id could not give.
+
+*Open:* the field's storage child still repeats the field's identity
+keys in its body (`storage.entity_type`, `storage.field_name`,
+`storage.field_type`): optional, locked where its context knows them,
+and refused when they name another field. An engine rule that a
+child's identity key named as one of its parent's identity keys is the
+parent's, never asked in the child, would drop them.
+
+(`ResourceDefinition::identityParameters()`,
+`ResourceDefinition::namesWholeThing()`, `ServedPaths::depth()`,
+`ServedPaths::defaults()`, `OpenApiDocument::operationParameters()`,
+`OperationInputs::schemaPath()`,
+`ResourceOperationToolBase::sentPermissionAccess()`,
+`ServedOperationAccessCheck::access()`, `FieldInstanceResourceTest`,
+`IdentityPathsTest`)
+
+### A plain route default pins an operation parameter
+
+Decided 2026-10-29, from a support page: one send operation, one route
+per channel, the channel a parameter no key holds. A route default
+whose name has no leading underscore is a route parameter, as core
+counts it: core copies it into the route match's raw parameters, and
+`OperationArguments::fromRoute()` reads each of the operation's
+parameters by its name, so `to: 'support'` in a routing file is handed
+to the operation's method as `$to = 'support'`, as a path variable would
+be, and the method says what its context knows
+([forms](forms.md#the-operation-form)).
+
+- **The plain default, not a second spelling.** A `_data_surface_known`
+  default naming the pinned parameters was weighed and refused: the
+  plain default is what core's own routes write (an entity's add page
+  names its entity type and its bundle parameter this way), the catalog
+  prints it as `pins`, and a second spelling for one fact is one more
+  thing to learn.
+- **One that nothing reads is refused.** A plain default that is no
+  variable of the path and no parameter of the operation was ignored in
+  silence, so a misspelled `too: 'support'` left the operation's `$to`
+  at its own default on every request. It is refused when the route is
+  matched, naming the default and the operation's parameters, unless a
+  callable core hands route parameters to by name reads it: the route's
+  `_controller`, its `_form`'s `buildForm()`, its `_title_callback` or
+  its `_custom_access`, read by reflection, so core's
+  `EntityController::addBundleTitle()`, which reads `entity_type_id` and
+  `bundle_parameter`, still serves. Where one of them cannot be read,
+  nothing is refused. An access check of another kind is not read, so a
+  plain default only its `access()` reads is refused.
+- **One the operation refuses is the route's.** The operation judges a
+  plain default as it judges any parameter, and its refusal is the route
+  written wrong, a 403 with the operation's reason on every URL. One
+  whose value names nothing, a pinned id no entity has, is the route's
+  too and never a page not found: the value is the route's literal, so
+  no URL can correct it.
+- **It is never the subject.** What a page is about is a value of its
+  path: the subject a cosmetic layer is told is the first of the
+  operation's parameters that is a variable of the path with a value. A
+  plain default is the same on every URL of the route, and the route
+  match a link's access check builds holds the caller's parameters alone
+  among its raw ones, so a pinned parameter taken for the subject would
+  name a thing in the request's own dispatch and none in a link check.
+
+(`OperationRoute::assertPlainDefaultsRead()`,
+`OperationRoute::fromRouteMatch()`, `OperationArguments::fromRoute()`,
+`FormRouteDoors`,
+`RouteValuesTest::testPlainDefaultPinsTheOperationsParameter()`,
+`RouteValuesTest::testPlainDefaultNothingReadsIsRefused()`,
+`RouteAccessTest::testPlainDefaultTheOperationRefusesIsTheRoutes()`)
 
 ### One context per walk, not a parameter list
 
@@ -1400,7 +1885,7 @@ is invisible until the refiner runs, and the full schema and the tool's
 listing must know before anything runs which keys may not apply, or a
 `refine` or `live` key required in them would be stricter than the
 pipeline. A blueprint declaration, `add(..., appliesWhen:)`, is
-declarative narrowing ([ROADMAP](../ROADMAP.md) item 3), which cannot
+declarative narrowing ([ROADMAP](https://github.com/mlander/data_surface/blob/main/ROADMAP.md) item 3), which cannot
 state a runtime rule; it has since landed as a refiner too, whose
 `doesNotApply()` gives this same answer ([A rule declared as
 data](#a-rule-declared-as-data)). The
@@ -2307,8 +2792,7 @@ context is carried (`Collection::contextFor()`), and nothing reads an
 item's delta yet: a child that names storage of its own is not routed
 per item, and the parent stores the list. A child may hold a collection
 of its own: every door recurses, and the form draws a list inside an
-item as a list in its place ([A collection on a
-form](forms.md#a-collection-on-a-form), decided 2026-10-19). *Open:*
+item as a list in its place ([A collection on a form](forms.md#a-collection-on-a-form), decided 2026-10-19). *Open:*
 routing an item to its child's storage, which needs an identity key on
 the child to say which stored item it is. (`Resources::buildResource()`,
 `Collection`, `Form\Drawing::buildCollection()`)
@@ -2406,8 +2890,7 @@ The resource definition is the single description of a config object,
 and its config schema is derived from it, as a stepping stone until core
 can read a data definition as the schema. Decided by the owner on
 2026-10-20, from the first change three reviews proposed (laravel,
-creative-generalist, drupal-architecture; [synthesis
-3.1](reviews-2026-10-20/synthesis.md)): the first settings page declared
+creative-generalist, drupal-architecture; [synthesis 3.1](reviews-2026-10-20/synthesis.md)): the first settings page declared
 each key twice and two defaults three times. Seeding the class from the
 schema, the architecture review's direction, was rejected: it would
 entrench what the module means to retire, a second declaration in the
@@ -2920,6 +3403,55 @@ still its own override.
 `HeldToConfigSchemaTrait::translatedKeys()`, `ConfigSchemaGenerator::translated()`,
 `Resources::storageInstance()`, `ReferenceStorageTest`,
 `ConfigSchemaCheckTest`)
+
+### A resource may hold some keys of a config object it does not own
+
+Decided 2026-10-28, with `data_surface_performance`. Core's config
+objects keep settings several forms edit, at paths:
+`system.performance` keeps the page cache's maximum age at
+`cache.page.max_age`, beside `css.compress`, `js.compress` and
+`fast_404.*`, which no form of core's performance page edits. A
+`ConfigObjectStorage` stored each key at its own top-level name, and the
+check resolved one level of the schema, so such an object could not be a
+resource's.
+
+- **The resource declares the keys it edits, by their own names.** A
+  name is what every door shows (`max_age` in the tool, the document and
+  the form), and a dotted name would read as a nested key.
+- **The storage says where each one lives**: `STORED_AT`, a dotted path
+  by key, beside `CONFIG`. `load()` reads it there, `prepare()` lays it
+  into the whole object there and files the schema's violations under
+  the key, `commit()` sets the path alone, and `mayClear()` reads the
+  schema there. A dry run reports the key by its path, which is the
+  storage layout.
+- **What it does not declare is kept byte for byte**: nothing sets the
+  map a path runs through, only the path, so `css.compress` and
+  `fast_404` stay as stored.
+- **The check holds each key to the property at its path.**
+  `HeldToConfigSchemaTrait` follows a dotted path through each nested
+  `mapping`, for `STORED_AT` and for `configSchemaPaths()` alike, so the
+  resource cannot offer a value the schema refuses and a refusal names
+  the key.
+- **No schema is generated for it.** The object's schema is its owner's;
+  the generator writes each key at its own name, so it refuses a storage
+  with `STORED_AT` by name rather than write a wrong one.
+
+What it shows: core's schema says only `type: integer, label: 'Max
+age'`. The resource declares the title, the description and the list of
+fourteen periods with their labels once; the form, the tool, the MCP
+listing, the OpenAPI document and the React page read them from it, and
+core's schema stays as core wrote it. Rejected: a layout
+(`StorageLayoutInterface`) that moves keys, which works on the values
+alone and cannot keep the siblings, and cannot tell the check where to
+look; a constant naming the map the keys share, which a key at another
+depth (`cache.page.max_age` beside `css.preprocess`) does not fit.
+
+This answers the open point of [A layout is the storage's one word on
+its shape](#a-layout-is-the-storages-one-word-on-its-shape) for a config
+object; `ConfigEntityStorage` still answers `configSchemaPaths()` itself.
+(`ConfigObjectStorage::STORED_AT`, `HeldToConfigSchemaTrait::schemaAt()`,
+`ConfigSchemaGenerator::describe()`, `PerformanceStorage`,
+`ConfigObjectStorageTest`, `PerformanceSurfaceTest`)
 
 ### A config object stores a reference by uuid
 
@@ -3570,7 +4102,13 @@ leaves a secret out" are promises about every door, or about none.
   let through and answers "Not found: ..." as input to correct, not
   "access denied", which an agent reads as final (decided 2026-10-20,
   B13; `ResourceOperationToolBase::notFound()`). Every other account
-  still hears the one fixed reason.
+  still hears the one fixed reason. *Amended 2026-10-29:* the operation
+  form's route asks in the same order, and both page doors, it and the
+  React page, let an account the permission lets in through to a 404
+  for a value of the URL that names nothing, in the request's own
+  dispatch alone, through one gate (`OperationGate`; [A route may fill
+  or fix what an operation asks
+  for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 - **A refusal no input can change is access.** The write tool answers a
   permission refusal, an access refusal inside the pipeline and a
   resource locked whole in the Tool API's `Access` failure category,
@@ -3956,7 +4494,12 @@ off its signature: a scalar parameter supplies its own name, an entity
 parameter every identity key no scalar names. The tool then refines
 `values` to the real context once the parameters arrive. What an
 operation knows is only on the context it returns, and a static
-definition cannot call it. (`OperationInputs::inputs()`)
+definition cannot call it. (`OperationInputs::inputs()`) *Amended
+2026-10-28:* an operation whose parameters name a whole thing, an edit
+or a create that names as much identity as an edit does, supplies every
+identity key ([A parameter is identity the caller
+knows](#a-parameter-is-identity-the-caller-knows)).
+(`ResourceDefinition::namesWholeThing()`)
 
 ### A parameter named for a key
 
@@ -4857,7 +5400,7 @@ value as JSON for an `any` key holding no variants and a list the list
 widget refuses, decoded on save and accepted and validated as any value,
 text that is not JSON an error on the element. It is the worst
 acceptable form of an editable key, and it is marked for replacement
-([roadmap](../ROADMAP.md), item 29): a text field for a value of several
+([roadmap](https://github.com/mlander/data_surface/blob/main/ROADMAP.md), item 29): a text field for a value of several
 scalar types, and rows for a list of maps. The served contract names no
 widget for it, since it says nothing about the key.
 
@@ -4966,8 +5509,7 @@ page never saw the content type's groups, and a block had none to give.
   cosmetic layer. A group of several keys, or of one key that is not a
   map, draws as before, so no shipped form's markup moved. The React app
   still draws the map's fieldset inside the group's details.
-- **One spelling, `describe()`** (*amended 2026-10-27*, from [the
-  adopter log of 2026-10-26](adopters-2026-10-26.md), where the owner's
+- **One spelling, `describe()`** (*amended 2026-10-27*, from [the adopter log of 2026-10-26](adopters-2026-10-26.md), where the owner's
   `DefinitionMetadata::setArrangement($definition, new Arrangement(...))`
   beside each key read worse than the Form API form it replaced). An
   owner and an alter arrange a key the same way, `$inputs->describe('key',
@@ -5000,6 +5542,13 @@ Declined, each in a line:
   `_data_surface_cosmetics` is a route key, which [the product keeps its
   name](#the-product-keeps-its-name) holds to, and with the arrangement
   gone from it, what is left is cosmetic.
+
+*Amended 2026-10-28:* a group may say what its keys are for,
+`ArrangementGroup::details(..., description:)` (or `fieldset()`), drawn
+under its summary or legend on the form and the React page, and stated
+as plain text in `x-surface.arrangement.group.description`, only when
+declared. Core's performance form says one sentence of its bandwidth
+settings, which `data_surface_performance` declares once.
 
 ### The form builder draws, extracts and refreshes
 
@@ -5390,6 +5939,15 @@ backend, so each request derives every tool again
 (`EntrySchemasInterface`, `SiteEntries`, `SchemaReader::prepared()`,
 `SchemaReader::holdsNoSecret()`, `Resources::keepable()`,
 `Resources::languages()`, `ManyListedVariantsTest`, `LanguageMemoTest`)
+
+*Amended 2026-10-29:* a build for no account whose context holds what a
+request read, a route's value of its path or a reference read from it,
+is held for that request alone (`ResourcesInterface::holdDeclared()`):
+the build cache is neither read nor written for it, so the cache holds
+no entry per value a URL carried, which an update's route that fixes a
+key would otherwise write for every thing visited ([A route may fill or fix
+what an operation asks
+for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 
 ### The catalog is the site's live map
 
@@ -6619,7 +7177,7 @@ counted; the build of a resource still reads every variant. *Closed
 2026-10-24:* a field type's settings, derived until then and not
 counted, come from a provider and are counted
 ([Derived variants](#derived-variants)). (`Contract\SiteListBudget`, `ContractEmitter::variants()`,
-`InputDefinitions::tooMany()`, `OperationInputs::narrows()`,
+`InputDefinitions::leftOut()`, `OperationInputs::narrows()`,
 `ResourceOperationSchemaTool`, `SiteCatalog::keys()`,
 `SiteListBudgetTest`, `CatalogMemoryTest`,
 `AdvertisedSchemaAcceptanceTest::testListsPastTheSiteListLimit()`)
@@ -6636,6 +7194,68 @@ allowlist leaves out stays stored and readable: the chooser stands for
 it on its empty option and a save that leaves it keeps it, as any
 stored value the list no longer offers; its props are not drawn until
 it is offered again. (`ComponentsOfferedTest`)
+
+*Amended 2026-10-28, the owner's decision:* the tool door leaves out
+the variants the site lists whatever `site_list_limit` says. The limit
+governs the two schema documents, the full schema and the schema for
+these answers, and nothing else of variants. There is no new setting.
+
+- **The rule.** In a tool's listing, a key whose variants the site lists
+  (`attachVariants(from:)`, a field type's settings, the variants inside
+  a structure read from a schema, a component in a slot) holds the keys
+  of the variant the stored values choose, each saying "Only when" that
+  value, as a class's variants say it, and no other. Where nothing
+  stored chooses one (the cached definition, a create, an operation with
+  parameters before they arrive) it holds no key. The deciding key keeps
+  every value. The description names the two ways the past-limit path
+  named: the full schema fetched with the choice, once per value, and
+  the narrowing tool, which every such operation now has. Variants the
+  build chose, their deciding key locked, are one shape and stated
+  whole, as before. Variants a class declares keep the one map. A map
+  of keys from the site still follows the limit at the tool door, since
+  it is stated exactly key by key.
+- **Why.** A tool's definition is sent to the model in every request
+  that lists it. Measured on the development site for
+  `data_surface:event.spotlight:configure` with 312 components: left
+  out, its normalized input schema is 8 KB; spelled out with the limit
+  raised to 1000, 1.6 MB. Twenty spelled-out components would be about
+  100 KB per turn. And the Tool API cannot state a shape chosen by a
+  sibling key, so under the limit the tool showed every variant's keys
+  as one map with none required: large and loose at once. The HTTP
+  document is the opposite case: fetched once, cacheable by the site's
+  tags, stating the conditional exactly, so a limit there is a real
+  trade.
+- **One call for the stored choice.** The listing of an operation that
+  needs nothing to start from and changes what exists reads what is
+  stored, for an account the operation is open to, and the refined
+  `values` of an operation with parameters reads it once they arrive. So
+  changing a prop of the stored component is one call; choosing another
+  is two, the fetch or the narrowing, then the write. Only the stored
+  choice is built: no other entry's schema is read
+  (`InputDefinitions::deferred()`, `InputDefinitions::anyDeferred()`).
+- **What moved on the development site.** The tool documents alone, no
+  schema document: example 12's spotlight now states the stored card's
+  props and slots (8,075 bytes before, 9,221 after; 1,620,895 bytes
+  before with the limit at 1000, 9,221 after); example 14's mailer
+  states the stored source's credential keys and gains a narrowing tool
+  (1,664 to 1,645 bytes); the placed block's visibility conditions, five
+  plugins, are left out (create 5,696 to 4,668 bytes); and the field
+  tools state no field type's settings until a field is named, each
+  gaining a narrowing tool (`field.instance:create` 11,870 to 3,845
+  bytes). Example 9's ticket types are keys from the site, not variants,
+  and did not move (2,094 bytes).
+
+*Closed 2026-10-28:* the fetch a create with parameters named omitted
+them (`GET /surface-api/field.instance/schema?choose=...` answered 400
+until the entity type and the bundle were added to the query). The
+fetch now carries every parameter, the identity in the path and any
+other in the query,
+`GET /surface-api/field.instance/{entity_type}/{bundle}/schema?choose=/settings={field_type}`
+([A parameter is identity the caller
+knows](#a-parameter-is-identity-the-caller-knows)).
+(`InputDefinitions::deferred()`, `InputDefinitions::leftOut()`,
+`OperationInputs::listedValues()`, `ResourceOperationTool::mayListStored()`,
+`SiteListBudget::anyKey()`, `SiteListToolDoorTest`)
 
 ### A list left out for size is deferred, not refined
 
@@ -6711,7 +7331,7 @@ it was written from; the page leaves out the declared rules a slot's def
 carries in the narrowing's answer, as it does from a full schema that
 lists every component. (`Contract\Choices`, `ContractEmitter::fetch()`,
 `ContractEmitter::variants()`, `ResourceApiController::schema()`,
-`SchemaTagSubscriber`, `InputDefinitions::tooMany()`,
+`SchemaTagSubscriber`, `InputDefinitions::leftOut()`,
 `OperationInputs::schemaDescription()`, `SiteListBudgetTest`)
 
 ### A served contract is never stored
@@ -7355,7 +7975,14 @@ door spells a path. The endpoint table is in
   create, and it needs a parameter; any other is addressed at the
   collection, `/surface-api/{resource}`, its parameters in the query
   string (`field.instance`'s create, `?entity_type_id=node&bundle=article`).
-  (`ServedPaths::placement()`)
+  (`ServedPaths::placement()`) *Amended 2026-10-28:* the path holds an
+  operation's parameters named for identity keys, in identity order,
+  and any other parameter is in the query; the field instance's
+  operations take the field by its parts, so its create is `POST
+  /surface-api/field.instance/node/article` and its edit `PATCH
+  /surface-api/field.instance/node/article/field_x`
+  ([A parameter is identity the caller
+  knows](#a-parameter-is-identity-the-caller-knows); `ServedPaths::depth()`).
 - **The method is the operation.** At each path, `GET` reads, `PATCH` is
   the default update and `POST` on the collection the default create.
   The default of a kind is the operation whose id is the kind's standard
@@ -7546,8 +8173,7 @@ a flag. (`ServedPaths`, `ServedTarget`, `ResourceApiController`,
 
 ### Contract 4: fewer keywords, nothing new on the wire
 
-Decided 2026-10-24, by the owner, from group D of [the API
-consolidation review](reviews-2026-10-24/api-consolidation.md) (section
+Decided 2026-10-24, by the owner, from group D of [the API consolidation review](reviews-2026-10-24/api-consolidation.md) (section
 2.5, D1 to D5), held when groups A to C were built
 ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 `ContractEmitter::CONTRACT` is 4, the `Contract-Version` header says
@@ -7953,8 +8579,7 @@ stricter than the pipeline, judged on the accepted document after stored
 values are converted. Any other change is breaking, and a breaking
 change is made in the open: the version of what owns it is raised and
 its stored values are migrated, or its contract baseline records why it
-was accepted. The table, change by change, is [Evolving a
-resource](evolution.md#compatible-and-breaking). Each choice, and why:
+was accepted. The table, change by change, is [Evolving a resource](evolution.md#compatible-and-breaking). Each choice, and why:
 
 - **Judged by the pipeline, the authority.** What a client asked for is
   what value semantics already say: a key left out keeps what it holds,
@@ -8194,5 +8819,4 @@ every check.
 `FirstResourceInvariantsTest`, `ExamplesSecretsInvariantsTest`,
 `Traits\NeverStricterTrait`,
 `Traits\SchemaRoundTripTrait`, `SchemaRoundTripTest`,
-`ResourceOperationTool::execute()`, [Testing a
-resource](testing-a-resource.md))
+`ResourceOperationTool::execute()`, [Testing a resource](testing-a-resource.md))

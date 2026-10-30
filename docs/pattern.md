@@ -1,5 +1,13 @@
 # The resource pattern
 
+This page explains why a resource is written the way it is: one class
+declares the keys, a storage class keeps the values, and operations say
+how they are asked for. Read it after [the introduction](introduction/index.md)
+when you want the reasons behind that shape;
+[Resources](introduction/02-resources.md),
+[Structures](introduction/09-structures.md) and
+[Sealed](introduction/15-sealed.md) define its words.
+
 A resource is a thing with identity and storage that operations read and
 write; the form, the tool and the schema are derived from it. Before
 anything is saved, a person, a route, a tool or an agent can ask it what
@@ -22,9 +30,7 @@ storage of its own, held by a parent (attached or as a variant) or a
 plugin's host.
 
 This page is the pattern: what an author writes, where it goes, and why
-it is shaped that way. [Resources and structures as
-classes](resources.md) is the reference for each part, [How it
-fits](how-it-fits.md) walks one build from caller to sealed data
+it is shaped that way. [Resources and structures as classes](resources.md) is the reference for each part, [How it fits](how-it-fits.md) walks one build from caller to sealed data
 surface, and [Decisions](decisions.md) lists the points the pattern left
 open and how the module settled them.
 
@@ -146,7 +152,7 @@ method.
 
 ```php
 #[Resource('field.instance',
-  identity: ['entity_type_id', 'bundle', 'field_name', 'field_type'],
+  identity: ['entity_type', 'bundle', 'field_name', 'field_type'],
   storage: FieldInstanceStorage::class,
   access: FieldInstanceAccess::class,
 )]
@@ -154,7 +160,7 @@ final class FieldInstanceResource implements ResourceInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     // Which field this is.
-    $inputs->add('entity_type_id', 'string', t('Entity type'))->setRequired(TRUE);
+    $inputs->add('entity_type', 'string', t('Entity type'))->setRequired(TRUE);
 
     $inputs->add('bundle', 'string', t('Bundle'))->setRequired(TRUE);
 
@@ -181,8 +187,8 @@ final class FieldInstanceResource implements ResourceInterface {
    * The bundle must belong to the chosen entity type.
    */
   #[RefinesInput('bundle')]
-  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type_id): DataDefinitionInterface {
-    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type_id]);
+  public static function bundleOfEntityType(DataDefinitionInterface $bundle, string $entity_type): DataDefinitionInterface {
+    return $bundle->addConstraint('EntityBundleExists', ['entityTypeId' => $entity_type]);
   }
 
 }
@@ -318,6 +324,13 @@ not which keys there are. It is how much is already known.
   an `OperationContext` and knows more than the last; what it needs is
   its own signature. Whether it creates is on the attribute, stamped on
   the context, where the storage reads it.
+- **A parameter is identity the caller knows.** An operation takes the
+  identity keys it knows as parameters of the same names, never as a
+  composite id: `create(string $entity_type, string $bundle)` names the
+  bundle a field is added to, `update(string $entity_type, string
+  $bundle, string $field_name)` the field, and every door names them
+  alike, in the path in identity order
+  ([decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
 - **On the owner's class only.** An operation stands on its
   resource's or structure's own class, found the way a hook method is,
   no interface needed; one on any other class is refused at discovery.
@@ -454,7 +467,7 @@ Two tiers, and alters touch neither.
 
 - **Static**: the permission on each `#[Operation]`, answerable with no
   subject. A `%key` in it is filled from the identity the context knows
-  (`administer %entity_type_id fields`).
+  (`administer %entity_type fields`).
 - **Run time**: `access:` on `#[Resource]` or `#[Structure]`, an
   `OperationAccessInterface` that may hold services, asked once the
   permission allows. `FieldInstanceAccess` refuses a locked storage;
@@ -603,9 +616,10 @@ concept. The naming of sources and resolvers is undecided.
    dependency the address module already has on fields, and a class
    name is what makes the parent's key one click away.
 3. **Create-only keys that are not identity.** No new verb.
-   `withConstraint()` with a one-value `Choice` is a lock in every way
-   that matters: the form renders it fixed, the pipeline refuses
-   anything else, the schema says one value.
+   `withConstraint()` with a one-value `Choice` that says it fixes the
+   key (`data_surface_fixed`) is a lock in every way that matters: the
+   key holds the value, the form renders it fixed, the pipeline refuses
+   anything else, both documents state it `const`.
 4. **May an options alter remove entries?** Yes, under the stale rule
    (see [Options](#options)), once options alters exist.
 5. **Parent and child.** Keep the wall, with one door: identity in the

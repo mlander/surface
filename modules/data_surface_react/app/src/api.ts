@@ -1,5 +1,5 @@
 import type { Contract, Created, Schema, Submission, Values, Violation } from './contract';
-import { assertContract, assertSchema, CONTRACT, ContractRefused } from './contract';
+import { assertContract, assertSchema, CONTRACT, ContractRefused, getAt, setAt } from './contract';
 
 /**
  * Whether a write sends the ETag the contract was loaded with.
@@ -38,6 +38,19 @@ export interface Candidate {
   label: string;
 }
 
+/**
+ * What a page a module serves at a route of its own starts keys from.
+ *
+ * The route's `_data_surface_defaults`, each the value the server's build
+ * holds for its key, by key path; none for a key the build fixes or
+ * locks. A page served at a module's route fixes no key: its write goes
+ * through the operation's own path, which holds a value to the
+ * operation's constraints alone.
+ */
+export interface Seeds {
+  defaults?: Record<string, unknown>;
+}
+
 /** What the page hands the app in drupalSettings.dataSurfaceReact. */
 export interface Settings {
   apiBase: string;
@@ -51,6 +64,39 @@ export interface Settings {
   mount?: string;
   /** Overrides SEND_FINGERPRINT. */
   sendFingerprint?: boolean;
+  /** What a module's route starts keys from: its defaults, by key path. */
+  seeds?: Seeds;
+  /**
+   * What a link starts keys from, by key path: the value it sent for each
+   * key the module's route lists, held to its key by the server.
+   */
+  prefill?: Record<string, unknown>;
+}
+
+/** Each value a page starts a key from, by key path: the route's defaults, then a link's prefill. */
+function startedBy(settings: Pick<Settings, 'seeds' | 'prefill'>): [string, unknown][] {
+  return [...Object.entries(settings.seeds?.defaults ?? {}), ...Object.entries(settings.prefill ?? {})];
+}
+
+/**
+ * The values the form starts from.
+ *
+ * The envelope's values, then the route's defaults, then a link's
+ * prefill, each over the last, each laid by its key path into the values
+ * as the form keeps them: `envelope.stamps` sets the stamps inside the
+ * envelope's own values. Neither layer is in any document: the documents
+ * are the operation's, and state its own defaults.
+ */
+export function startingValues(values: Values, settings: Pick<Settings, 'seeds' | 'prefill'>): Values {
+  return startedBy(settings).reduce<Values>((started, [path, value]) => setAt(started, path, value), values);
+}
+
+/** The paths the page starts from a value the values do not already hold there. */
+export function startedPaths(values: Values, settings: Pick<Settings, 'seeds' | 'prefill'>): string[] {
+  const started = startingValues(values, settings);
+  return [...new Set(startedBy(settings).map(([path]) => path))].filter(
+    (path) => JSON.stringify(getAt(values, path)) !== JSON.stringify(getAt(started, path)),
+  );
 }
 
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;

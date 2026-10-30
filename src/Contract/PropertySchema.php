@@ -380,10 +380,13 @@ final class PropertySchema {
         $extension['reference'] = $reference;
       }
       if ($fixed) {
-        // A deciding key whose variants offer one value: that value, and
-        // the label it is offered as, which the form draws fixed.
+        // A deciding key whose variants offer one value, or a key its
+        // context fixed to one: that value, and the label it is offered
+        // as, which the form draws fixed.
         // Decision: see
         // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+        // Decision: see
+        // docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
         $only = $this->choices($set, $definition)[0];
         $schema['const'] = $only['const'];
         $extension['fixed'] = $only['title'];
@@ -1159,6 +1162,9 @@ final class PropertySchema {
     $arranged = $arrangement->toArray();
     if ($arrangement->group !== NULL) {
       $arranged['group']['label'] = PlainText::of($arrangement->group->label);
+      if (isset($arranged['group']['description'])) {
+        $arranged['group']['description'] = PlainText::of((string) $arrangement->group->description);
+      }
     }
     foreach (Arrangement::TEXTS as $text) {
       if (isset($arranged[$text])) {

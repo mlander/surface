@@ -125,9 +125,9 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   protected function createTool(string $id) {
     $tool = $this->toolManager->createInstance($id);
     $parameters = match ($id) {
-      self::ADD => ['entity_type_id' => 'entity_test', 'bundle' => 'entity_test'],
-      self::REUSE => ['storage' => 'entity_test.field_address', 'bundle' => 'entity_test'],
-      self::EDIT => ['field' => 'entity_test.entity_test.field_address'],
+      self::ADD => ['entity_type' => 'entity_test', 'bundle' => 'entity_test'],
+      self::REUSE => ['entity_type' => 'entity_test', 'bundle' => 'entity_test', 'field_name' => 'field_address'],
+      self::EDIT => ['entity_type' => 'entity_test', 'bundle' => 'entity_test', 'field_name' => 'field_address'],
       default => throw new \InvalidArgumentException($id . ' is not a field tool.'),
     };
     foreach ($parameters as $name => $value) {
@@ -522,7 +522,9 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('string', FieldStorageConfig::loadByName('entity_test', 'field_plain')?->getType());
 
     $tool = $this->toolManager->createInstance(self::EDIT);
-    $tool->setInputValue('field', 'entity_test.entity_test.field_plain');
+    $tool->setInputValue('entity_type', 'entity_test');
+    $tool->setInputValue('bundle', 'entity_test');
+    $tool->setInputValue('field_name', 'field_plain');
     $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Plainer', 'required' => TRUE]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
@@ -549,7 +551,9 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(' items', $settings['suffix']);
 
     $tool = $this->toolManager->createInstance(self::EDIT);
-    $tool->setInputValue('field', 'entity_test.entity_test.field_count');
+    $tool->setInputValue('entity_type', 'entity_test');
+    $tool->setInputValue('bundle', 'entity_test');
+    $tool->setInputValue('field_name', 'field_count');
     $tool->setInputValue(OperationInputs::VALUES, ['label' => 'Count', 'settings' => ['max' => 'ten']]);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
@@ -589,7 +593,8 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    */
   protected function editCodeStorage(array $values) {
     $tool = $this->toolManager->createInstance('data_surface:field.storage:update');
-    $tool->setInputValue('storage', 'entity_test.field_code');
+    $tool->setInputValue('entity_type', 'entity_test');
+    $tool->setInputValue('field_name', 'field_code');
     $tool->setInputValue(OperationInputs::VALUES, $values);
     $tool->execute();
     return $tool;
@@ -620,7 +625,8 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $storage = $values->getPropertyDefinitions()['storage'];
     $this->assertInstanceOf(MapInputDefinition::class, $storage);
-    $this->assertSame(['field_type', 'cardinality', 'translatable', 'settings'], array_keys($storage->getPropertyDefinitions()));
+    // The storage's identity is the field's, which it is handed.
+    $this->assertSame(['entity_type', 'field_name', 'field_type', 'cardinality', 'translatable', 'settings'], array_keys($storage->getPropertyDefinitions()));
 
     $tool = $this->addShortStringField();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResultMessage());
@@ -637,6 +643,20 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('field_type', (string) $tool->getResultMessage());
     $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'field_mixed'));
+
+    // So is a storage named for another field.
+    $tool = $this->createTool(self::ADD);
+    $tool->setInputValue(OperationInputs::VALUES, [
+      'field_type' => 'string',
+      'field_name' => 'field_mixed',
+      'label' => 'Mixed',
+      'storage' => ['field_name' => 'field_other'],
+    ]);
+    $tool->execute();
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertStringContainsString('/storage/field_name: The storage is named field_mixed, not field_other', (string) $tool->getResultMessage());
+    $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'field_mixed'));
+    $this->assertNull(FieldStorageConfig::loadByName('entity_test', 'field_other'));
   }
 
   /**
@@ -649,7 +669,8 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->addShortStringField();
 
     $tool = $this->toolManager->createInstance('data_surface:field.storage:update');
-    $tool->setInputValue('storage', 'entity_test.field_code');
+    $tool->setInputValue('entity_type', 'entity_test');
+    $tool->setInputValue('field_name', 'field_code');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $this->assertSame(['cardinality', 'translatable', 'settings'], array_keys($values->getPropertyDefinitions()));
@@ -730,27 +751,39 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($edit->access($account));
     // The two that create take values whose keys are required, so their
     // own access check is asked directly, with the parameters alone.
-    $this->assertTrue($this->toolAccess(self::ADD, ['entity_type_id' => 'entity_test', 'bundle' => 'entity_test'], $account)->isAllowed());
-    $reuse = ['storage' => 'entity_test.field_address', 'bundle' => 'entity_test'];
+    $this->assertTrue($this->toolAccess(self::ADD, ['entity_type' => 'entity_test', 'bundle' => 'entity_test'], $account)->isAllowed());
+    $reuse = ['entity_type' => 'entity_test', 'bundle' => 'entity_test', 'field_name' => 'field_address'];
     $this->assertTrue($this->toolAccess(self::REUSE, $reuse, $account)->isAllowed());
   }
 
   /**
-   * Tests that a subject naming nothing is refused, not spelled.
+   * Tests that a subject naming nothing is said only to who may hear it.
    *
-   * The permission is named from the identity the operation's context
-   * knows. An entity type that does not exist names a permission nobody
-   * holds; a field or a storage that does not exist builds no context at
-   * all, and the refusal says nothing about why.
+   * The permission names the entity type, `administer %entity_type
+   * fields`, which the parameters carry as sent. An entity type that
+   * does not exist names a permission nobody holds, and the refusal says
+   * nothing about why. A field that does not exist builds no context, and
+   * an account holding the permission for its entity type is let through
+   * to hear which part names nothing; one without it learns nothing.
    */
   public function testAccessIsDeniedForAnUnknownSubject(): void {
     $account = $this->createUser([self::PERMISSION]);
 
-    $add = ['entity_type_id' => 'no_such_entity_type', 'bundle' => 'entity_test'];
+    $add = ['entity_type' => 'no_such_entity_type', 'bundle' => 'entity_test'];
     $this->assertTrue($this->toolAccess(self::ADD, $add, $account)->isForbidden());
-    $reuse = ['storage' => 'entity_test.field_nothing', 'bundle' => 'entity_test'];
-    $this->assertTrue($this->toolAccess(self::REUSE, $reuse, $account)->isForbidden());
-    $this->assertTrue($this->toolAccess(self::EDIT, ['field' => 'entity_test.entity_test.field_nothing'], $account)->isForbidden());
+    $missing = ['entity_type' => 'entity_test', 'bundle' => 'entity_test', 'field_name' => 'field_nothing'];
+    foreach ([self::REUSE, self::EDIT] as $id) {
+      $this->assertTrue($this->toolAccess($id, $missing, $account)->isAllowed(), $id);
+      $this->assertTrue($this->toolAccess($id, $missing, $this->createUser())->isForbidden(), $id);
+      $tool = $this->toolManager->createInstance($id);
+      foreach ($missing + [OperationInputs::VALUES => ['label' => 'Nothing']] as $name => $value) {
+        $tool->setInputValue($name, $value);
+      }
+      $this->setCurrentUser($account);
+      $tool->execute();
+      $this->assertFalse($tool->getResult()->isSuccess(), $id);
+      $this->assertSame('Not found: field_name "field_nothing" names no field of the entity_test entity type.', (string) $tool->getResult()->getMessage(), $id);
+    }
   }
 
   /**

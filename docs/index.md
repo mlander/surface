@@ -1,252 +1,182 @@
-# Data Surface
+# Data Surface documentation
 
-A data surface is what a resource accepts, settled in layers and then
-sealed: the owner declares the keys and the rules between them, other
-modules contribute under names of their own with rules that may narrow
-the owner's keys but never widen them, declared rules and refiners
-settle what applies ahead of time or per request, and access locks keys
-or leaves them out for the account. Every door (the form, the tool, MCP,
-ECA, HTTP and OpenAPI, the React page) reads that one sealed data
-surface and nothing else, which is why they agree, and the alter
-contract is why a module can change all of them at once without
-touching any.
+Every page of the documentation, in four sections and the project's own
+records. This page only points; each linked page explains its idea.
 
-A resource is a thing with identity and storage that operations read and
-write: a site's registration settings, a content type, a field, a basic
-page. Its form, its tool
-and its schema are derived from it, so a person, a route, a tool and an
-agent ask it the same questions before anything is saved (what it will
-accept right now, on this site, for this thing) and get the same answer.
+## Introduction
 
-| | Blueprint | Values |
-| --- | --- | --- |
-| **Owner**, a `#[Resource]` or `#[Structure]` class in `src/Resource/` or `src/Structure/`, or a plugin that is its own structure | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | rules declared with `$inputs->narrow('key')`, static `#[RefinesInput('key')]` methods |
-| **Another module**, an `#[Alters]` class in `src/Alter/` | `alterInputs($inputs)` | rules declared with `$inputs->narrow('key')`, `#[RefinesInput('key')]` methods |
+[The introduction](introduction/index.md): short pages, one idea each,
+for a Drupal developer who has never used the module. Nothing to
+install; read it first.
 
-**Start with [Your first resource](first-resource.md).** A settings page
-needs four things: a resource class, an operation on it, a storage class
-for its config object, and its keys declared with `add()`; plus the
-route, the permission and the config schema any Drupal settings page
-has. Nothing else on this page is needed for it. [Your second
-resource](second-resource.md) adds one key that depends on another, and
-[Concepts](concepts.md) lists every other idea with the question that
-makes you need it.
+## Build
 
-To see them on a site, enable the examples module and visit
-`/surface-examples` (its README is
-`modules/data_surface_examples/README.md`). Examples 1 to 6 grow one
-registration form, one idea at a time; examples 7 to 12 are a small
-resource each, for a rule written as data, one part used twice, keys
-that come from the site, access and how an operation behaves, the
-stock widgets with what a key left out, null or a value means, and a
-JSON Schema read into a structure: a component's props. Example 13 is
-those two lines as a block's settings, with the block in a submodule of
-its own. Example 14 is an optional extension: a credential pasted as a
-secret, or a key the site manages once a module that manages keys is
-on, built once by the owner and once by another module's alter. Example
-15 is a config entity type of the module's own, a venue, with a resource
-over it from the start: one venue added, edited and removed, the venues
-listed a page at a time and reordered in one write. Example 16 is a key
-that refers to an entity, declared by the data type string of what it
-refers to, listed while the site has few and looked up past that, in a
-submodule that needs node.
+- [Your first resource](first-resource.md): a settings page from a
+  resource, an operation, a storage and `add()`, pinned to the shipped
+  module `data_surface_first`.
+- [Your second resource](second-resource.md): one key whose allowed
+  values depend on another's, with one refiner.
+- [A plugin's settings](plugin-settings.md): give a block, formatter or
+  condition plugin a generated settings form.
+- [Testing a resource](testing-a-resource.md): `ResourceTestBase`, the
+  invariants (never stricter, the round trip, static agreement, every
+  door, the baseline) held for your own resources from one kernel test.
+- [Generating a resource](generating.md): `drush generate
+  surface:resource`, the first page's files from an interview, a config
+  schema entry or a JSON Schema document, and the comments it leaves for
+  what it cannot write.
+- [Common settings recipes](recipes.md): a time of day, a multi-select,
+  a text area and the other keys a settings page often asks for, one
+  snippet each.
+- [See what your site has](catalog-command.md): `drush surface:catalog`,
+  every resource and structure on a site, each operation's doors, one in
+  full, and what did not build.
 
-Read in this order: [Your first resource](first-resource.md), then the
-examples 1 to 16 in order, with [Concepts](concepts.md) as the map. The
-examples index, `/surface-examples`, lists each example's concept, docs
-page, decision and files, and each example's page lists its files.
+## Reference
 
-[The pattern](pattern.md) is the whole of what an author writes, and
-why; [How it fits](how-it-fits.md) follows one request through the
-build step. The rest of this page is the module around it.
+### Look up a term or a concept
 
-## Resources and structures
+- [Glossary](glossary.md): every term, its plain and its precise
+  definition.
+- [Concepts](concepts.md): every concept, the question that makes you
+  need it, when to skip it, and the page that shows it; its
+  [Namespaces](concepts.md#namespaces) table gives each class's `use`
+  line.
+- [The pattern](pattern.md): what an author writes, where it goes, and
+  why it is shaped that way.
+- [How it fits](how-it-fits.md): one build followed from the caller to
+  a sealed data surface.
+- [Transformations](transformations.md): a value asked for one way and
+  stored another (coercion, layouts, the doors' wire forms), what runs
+  because something was saved, and a value nobody types.
 
-A *resource* is a thing with identity and storage that operations read
-and write. Its identity is the keys that say which one it is: a content
-type's machine name, a field's entity type, bundle and name. Its storage
-is where its values live, and a resource may live anywhere: in a config
-object, a config entity, State, a plugin's settings or a content entity.
-Only its storage knows which; nothing else about the resource changes
-with it. Its operations are the ways it is asked for (create, update, reuse),
-each saying how much of its identity is already known. The form, the
-tool and the schema are not written beside it; they are derived from it.
+### Writing a resource
 
-The examples' registration settings are the plainest case: one config
-object, `RegistrationStep1Resource` with `RegistrationStep1Storage`, and
-one operation, `configure`. It names no identity keys, because there is
-only one of it: a resource with no identifiers, such as a settings
-object, is a *singleton* resource. A content type is a resource with an
-identity key, `type`, stored as a config entity, and asked for through
-`create` and `update`. A basic page is the same shape applied to content: the
-derived resource `entity.content:node.page`, whose identity is the
-entity type, the bundle and the id, and whose storage is the content
-entity.
+- [Declaring a resource or structure](declaring-a-resource.md): the
+  class, adopting it [on a plugin](declaring-a-resource.md#on-a-plugin),
+  defaults, locking, secrets, required.
+- [Resources and structures](resources.md): [which way to compose](resources.md#which-way-to-compose), operations, alters,
+  attached structures and variants, variants from the site, ports,
+  mixins, collections, keys from the site, access, storage, tools, the
+  catalog.
+- [Reading a schema](reading-a-schema.md): a JSON Schema read into a
+  structure: the mapping, what is kept and checked on the server, what
+  is noted and refused, older drafts, the round trip.
+- [Refinement](refinement.md): an alter offering values and a refiner
+  narrowing them, a rule declared as data, a key that does not apply,
+  the narrowing table, cacheability, a worked example, and what it does
+  not reach yet.
+- [Options and resolvers](options.md): `LabeledChoice`, the resolver
+  plugin type, the stock resolvers.
+- [Storage](storage.md): what storage is, prepare and commit, the
+  engine storage classes (a simple config object first), config schema,
+  settings layouts, secrets, the serialization rule.
+- [Outputs](outputs.md): declaring what a host emits, the `NotEmitted`
+  sentinel, conformance, its two consumers, an alter's outputs.
+- [Widgets](widgets.md): the widget plugin type, and writing one.
+- [Generated forms](forms.md): host families, the merge rule, AJAX,
+  extraction, stale values, the operation form with its panel and
+  cosmetic seam.
+- [Content entities](entities.md): a content entity's create and update
+  form as a derived resource, one structure per field, field access as
+  each child's access.
+- [Evolving a resource](evolution.md): which changes are compatible, the
+  version, stored-value migrations as designed, and the contract diff
+  that holds a module to its baselines.
+- `data_surface.api.php`, beside the module's README: resource and
+  structure classes, alters and the two plugin types, for the API
+  reference.
 
-A *structure* is a group of keys, and nothing more: no identity and
-no storage of its own. It is only ever held by something else. It is
-attached to a parent, or is one of the variants at a key, or is the
-configuration of a plugin, whose host supplies the operation and the
-storage. A block's settings, a field type's settings and a contact's
-details are structures.
+### The doors
 
-Both describe a group of values the same way: what each value is
-called, what it means, what type it is, what it may contain, what it
-defaults to, and which of its values depend on which others. Drupal core
-already has a vocabulary for all of that in its typed data definitions.
-What core has never had is a place to keep a group of them, hand that
-group to one caller after another, and have every caller agree about
-what was accepted.
+- [The served contract](served-contract.md): an operation as JSON Schema
+  with `x-surface`, its refine and validate endpoints, and the React form
+  rendered from it.
+- [The pipeline](pipeline.md): access, accept, validate, prepare,
+  commit; dry runs; exceptions.
+- [Value semantics](semantics.md): configured or not, the coercion
+  table (the Tool API's), secrets, stale values, type mismatches,
+  required, locked keys.
+- [The Tool API bridge](https://github.com/mlander/data_surface/blob/main/modules/data_surface_tool/README.md): one
+  tool per operation and a read tool beside it, who may run them, the
+  contract panel, and what MCP and the Tool API are told. Enabling it:
+  [Installation: Tool](installation.md#tool), for an agent, MCP and
+  Drush.
+- [The React app](https://github.com/mlander/data_surface/blob/main/modules/data_surface_react/README.md): the served
+  contract's endpoints and the React form drawn from them.
+- [The OpenAPI document](https://github.com/mlander/data_surface/blob/main/modules/data_surface_openapi/README.md):
+  every operation's endpoints as OpenAPI 3.1, for any OpenAPI client,
+  generator or UI.
+- [The component block](https://github.com/mlander/data_surface/blob/main/modules/data_surface_component_block/README.md):
+  a block that embeds a single-directory component, its settings a
+  structure.
+- [Block placement](https://github.com/mlander/data_surface/blob/main/modules/data_surface_block/README.md): a placed
+  block of any plugin as a resource, placed, configured and removed
+  through a tool, HTTP and a form.
 
-This module is that place. A resource or structure is built once, in a
-context, into a *data surface*: sealed, and then only read. A generated
-form renders it, a pipeline accepts and validates values against it, and
-storage writes the accepted values where they live. The same data
-surface answers a form submit, a Drush command, a config action, an
-agent call and a test, without any of them owning a second copy of the
-rules.
+### Running it
 
-When a value depends on another (a bundle list that only makes sense
-once an entity type is chosen), a refiner narrows the definition, and
-the generated form rebuilds that part of itself over AJAX rather than
-the host re-implementing the dependency. The rule the module holds
-itself to is that refinement may only *narrow*: whatever a data surface
-advertises when it is sealed stays true of everything it accepts
-afterwards, so a caller that read it once, or a machine-readable
-contract emitted from it, is never contradicted later.
+- [Installation](installation.md): install, production settings,
+  integrations, and every submodule with its install command.
+- [Catalog](catalog.md): every resource and structure the modules here
+  declare, with each operation's doors, as `drush surface:catalog
+  --format=markdown` writes it for this repository.
+- [Performance](performance.md): what is kept across requests, what each
+  door builds, and the numbers.
 
-That narrowing rule is the property that makes a data surface worth
-having over a form array, and it is the property the module exists to
-prove out for [the core issue behind
-it](https://www.drupal.org/project/drupal/issues/3622144).
+### Detailed diagrams
 
-## The pieces, and where they live
+- [Visuals](visuals/index.html): seven small drawings, one relationship
+  each: resource, structure and shape; who may ask; the layers; the
+  markers; six ways to compose; the doors; the pipeline. Open the file
+  in a browser.
 
-| Concept | What it is | In the code |
-| --- | --- | --- |
-| **Resource class** | A thing with identity and storage, in one class: its identity keys, storage and access class on the attribute, its keys in static `defineInputs()` (and `defineOutputs()`), one static `#[RefinesInput]` method per rule that reads another key, and its operations. It may live in a config object, a config entity, State, a plugin's settings or a content entity; only its storage knows which. Never instantiated: no constructor, no service. A resource with no identity keys, such as a settings object, is a singleton resource. | `#[Resource(id, identity:, storage:, access:)]` on a class implementing `Resource\ResourceInterface`, in `src/Resource/` or `src/Structure/` |
-| **Structure class** | A group of keys with no identity or storage, held by something else: a parent (attached, or as a variant), or a plugin's host. Static `defineInputs()` and refiners, as a resource's; it may still declare operations for its container to choose between. | `#[Structure(id, access:)]` on a class implementing `Resource\StructureInterface`, in either directory; or a plugin that is its own structure, `#[UsesStructure]` with no argument |
-| **Data surface** | What the build step seals from a resource or structure and a context: an immutable group of data definitions, the map of which key depends on which, and the refiners that narrow them. What the pipeline, the form, the widgets and the emitter read. | `DataSurfaceInterface`, built by `ResourceBuild\ResourcesInterface` (`data_surface.resources`) |
-| **Definition map** | Everything a data surface advertises, as one ordered, validated collection: one entry per key, in declaration order. | `DefinitionMap` of `Entry` |
-| **Definition** | One core `DataDefinitionInterface`: type, label, description, constraints, required, plus the interim default and example metadata. | core, plus `DefinitionMetadata` |
-| **Refinement** | A narrower definition for one key, given the values of the siblings it watches. Checked narrower on every run. | rules declared with `narrow('key')`, `#[RefinesInput('key')]` methods |
-| **Operation** | One way a resource is asked for (create, update, reuse), returning a context that says what is already known. The context's id is the operation's. Routes and tools are generated from them. | `#[Operation]` static methods, `Resource\OperationContext` |
-| **Alter** | Another module's class that adds keys to a resource or structure, rewords a label, offers more values on a fixed list, and narrows with its own refinements. Never removes. | `#[Alters]` on a class in `src/Alter/` |
-| **Attached structure** | A child at a key, its own class with its own keys: `attach()` for a fixed child, `attachVariants()` for variants a sibling key chooses between. A child may be a resource with storage of its own (a field's storage). | `Resource\BlueprintInterface`, `Attachment`, `Variants` |
-| **Collection** | A list of child instances at a key, `attachList()`: the list and its Count the parent's, each item the child's. | `Resource\BlueprintInterface`, `Collection` |
-| **Variants** | A tagged union whose tag is a sibling key: structures attached at one key, of which the sibling's value (the deciding key) chooses one. Always open: the parent names no variant, and any module may declare one. Until the deciding key holds a value, the key is an `any` placeholder; once it does, the key is the chosen variant's map. | `attachVariants($key, by: $sibling)`, `Variants` |
-| **Variant** | One structure among the variants at a key, for one value of its deciding key. | `#[Variant(of:, at:, for:)]` |
-| **Variants from the site** | Variants a provider lists, one per thing the site has, each read from its JSON Schema or a structure class, beside every `#[Variant]`: a component's props, a block plugin's or a field type's settings. | `attachVariants($key, by:, from:)`, `Resource\SiteListInterface`, `Resource\SiteList` |
-| **Derived resource** | A resource or structure whose keys are the site's, made at discovery by a deriver from facts a class cannot know: a resource per content entity bundle, a structure per field. It has no class; it is `<base>:<derivative>`. | `#[DerivesResources]` on a `Resource\ResourceDeriverInterface` in `src/Resource/`, returning `Resource\DerivedResource`; [Content entities](entities.md) |
-| **Output definitions** | The other half of the contract: what a host's execution emits, in the same vocabulary and the same collection type as the inputs, with an absent-rather-than-NULL rule. Never refined. | `defineOutputs()`, `DataSurfaceInterface::getOutputDefinitions()`, `Pipeline\NotEmitted` |
-| **Pipeline** | Access, accept, validate, prepare, commit: the one road from raw input to storage. | `Pipeline\DataSurfacePipelineInterface` |
-| **Storage** | Where a resource's accepted values are written (a config object, a config entity, State, a plugin's settings, a content entity), and the translation between the resource's layout and storage's own. The one part of a resource that knows where it lives. | `#[Resource(storage:)]` naming a `Resource\ResourceStorageInterface` in `src/Storage/`; `Pipeline\DataSurfaceStorageInterface` |
-| **Access class** | What may refuse once the operation's permission allows: the part of access that depends on the thing itself. At a child, whether its keys are open, locked or omitted. | `access:` on `#[Resource]` or `#[Structure]`, naming a `Resource\OperationAccessInterface` in `src/Access/` |
-| **Host** | The plugin whose configuration a structure is: a block, a formatter, a condition, an action, a field type, any configurable plugin. It supplies the context and the storage, because only it holds the instance. | `#[UsesStructure]` on the plugin, naming a structure or, with no argument, being one; the `Plugin/*Base` classes, `Form\*` traits |
-| **Operation form** | The generic form that serves a resource in one of its operations from a route, with no form class of its own. | `Form\DataSurfaceOperationForm`, `Form\DataSurfaceFormCosmeticsInterface` |
-| **Widget** | Maps one definition to a form element and back. A plugin type. | `Widget\DataSurfaceWidgetInterface`, `Plugin/DataSurfaceWidget/*` |
-| **Options resolver** | Reads one validation constraint as the list of values it allows, with labels and cacheability. A plugin type. | `Options\DataSurfaceOptionsResolverInterface`, `Plugin/DataSurfaceOptionsResolver/*` |
-| **Catalog** | Every discovered resource and structure, with its kind, read from the static layer without building anything; on a site, with each operation's doors and every build refusal. | `data_surface.resource_catalog`, `data_surface.site_catalog`, `drush surface:catalog`, [The site's catalog](catalog-command.md), [catalog.md](catalog.md) |
+## Examples
 
-Read the architecture as three layers that never reach into each other.
-A data surface is pure data: it holds definitions and refiners, reaches
-no service, and can therefore ride along in a cached form or be read by
-a caller with no container. The pipeline is the only thing that needs
-services, because running constraints needs the typed data manager. The
-form layer is one more consumer of the pipeline, not a value path of its
-own: the widgets collect a raw tree and `accept()` does the rest, which
-is what keeps a generated form and a JSON payload from drifting apart.
+[Examples](examples/index.md): the example and demo modules, one row
+each, with the concept it shows, its install command, its page on a
+site and the page that explains the idea. Neither the introduction nor
+the build pages need them.
 
-## Contracts are objects, payloads are arrays
+## Project records
 
-One rule settles what is typed and what is not.
+The project's own records: why each rule is what it is, what it was
+held to, and what it proposes for core. None of it is needed to use the
+module.
 
-**What a data surface says is objects.** It is a `DefinitionMap` of
-`Entry` value objects, one per key, each carrying its definition,
-who introduced it, whether it is locked, what it refines against and
-whose values it offers. What a run refused is a `ViolationSet` of
-`Violation` objects. A resolved list of allowed values is an
-`OptionSet`. These are read, never assembled by a caller, and the type
-is what stops two parts of the module disagreeing about a shape.
-
-**What flows through the pipeline is arrays.** The values that reach
-`accept()`, `validate()`, `prepare()` and `commit()` are plain PHP
-arrays, and they stay that way: a form submission, a JSON payload, a
-config action and a stored settings array are all the same kind of
-thing, and wrapping them would buy nothing and cost every caller a
-conversion.
-
-**Authoring syntax is arrays too.** A resource or structure class hands
-core's definitions plain arrays (a constraint's options, a choice list
-with its labels) and names what a refinement reads in the method's own
-signature. Declaring one never means constructing an object graph by
-hand.
-
-## Where to start
-
-The pages fall in the same groups as the README's documentation table.
-
-- **Start here**: [Your first resource](first-resource.md), [Your
-  second resource](second-resource.md), [Concepts](concepts.md) (with
-  [seven small drawings](visuals/index.html), one relationship each)
-  and [Transformations](transformations.md) (a value asked one way and
-  stored another, what runs because something was saved, a value nobody
-  types), [Common settings recipes](recipes.md), and [the
-  examples](../modules/data_surface_examples/README.md) at
-  `/surface-examples`.
-- **Writing a resource**: [Declaring a resource](declaring-a-resource.md)
-  (and [on a plugin](declaring-a-resource.md#on-a-plugin)), [Resources
-  and structures](resources.md), which opens with [Which way to
-  compose](resources.md#which-way-to-compose), then
-  [Refinement](refinement.md), [Reading a schema](reading-a-schema.md),
-  [Options](options.md),
-  [Storage](storage.md), [Outputs](outputs.md), [Widgets](widgets.md),
-  [Generated forms](forms.md) and [Content entities](entities.md).
-- **The doors**: [The served contract](served-contract.md), [The
-  pipeline](pipeline.md), [Value semantics](semantics.md), [the Tool API
-  bridge](../modules/data_surface_tool/README.md), [the React
-  app](../modules/data_surface_react/README.md), [the Tool
-  integration](installation.md#tool) for an agent, MCP and Drush, and
-  [One resource, every door](every-door/index.html).
-- **The engine and the record**: [The pattern](pattern.md), [How it
-  fits](how-it-fits.md), [Decisions](decisions.md) (the reasons behind
-  each rule, for a reader who wants the why; nothing on it is needed to
-  build: a page states the rule and links its reason as `(why:
-  decision)`, which you may skip), the [Catalog](catalog.md) and [the site's
-  catalog](catalog-command.md) (`drush surface:catalog`), [Evolving a
-  resource](evolution.md), [Testing a resource](testing-a-resource.md)
-  (the invariants, held for your own resources by one base class),
-  [Performance](performance.md) (what is kept across requests, what each
-  door builds, and the numbers) and [Installation](installation.md).
-- **Evidence**: the logs and the audit [below](#evidence).
-- **The proposal**: [Core gaps](core-gaps.md), then the [Adoption
-  catalog](adoption.md).
-
-The module ships no resources of its own on a production site. It
-provides the model, the pipeline, the two plugin types and the host
-adoption layer; resources and structures come from the modules that
-declare them. Nineteen experimental submodules demonstrate the model and
-double as the fixtures the tests run against: see
-[Installation](installation.md).
-
-## Evidence
-
-What the module was held to: by people and agents who did not write it,
-each a log of what they met, kept as written, and by an audit of the
-promise its two schema documents make:
-
-- [Fresh eyes, 2026-10-18](fresh-eyes-2026-10-18.md): a newcomer builds
-  a newsletter settings page from the documentation alone.
-- [Fresh eyes, 2026-10-19](fresh-eyes-2026-10-19.md): a second newcomer
-  builds a library's opening hours, a reused structure and an alter.
-- [Fresh eyes three, 2026-10-19](fresh-eyes-2026-10-19b.md): a third
-  newcomer builds a newsletter digest from the documentation alone.
-- [Two adopters, 2026-10-19](adopters-2026-10-19.md): two contributed
-  modules' settings forms, pathauto's and honeypot's, ported as
-  resources.
-- [Pathauto again, 2026-10-26](adopters-2026-10-26.md): the same
-  settings form re-ported on today's branch from the docs alone, as a
-  size measurement and a fourth newcomer run.
+- [Decisions](decisions.md): the points the pattern left open, and how
+  the module settled them. Every page states a rule itself and links its
+  reason in one form, `(why: decision)`, which you may skip.
+- [Core gaps](core-gaps.md): the core proposal: what core lacks,
+  bottom-up in the order it could be added, each step with its issue and
+  what it gives alone.
+- [Adoption catalog](adoption.md): where core can adopt this, group by
+  group.
 - [Audit: never stricter than the runtime](audit-never-stricter.md):
   where the schema could be stricter than the pipeline, case by case,
   each verdict pinned by a test.
+
+Logs of people and agents who did not write the module, each kept as
+written:
+
+- [Fresh eyes, 2026-10-18](fresh-eyes-2026-10-18.md): a newcomer builds
+  a settings page from the documentation alone.
+- [Fresh eyes, 2026-10-19](fresh-eyes-2026-10-19.md): a second newcomer
+  builds a library's opening hours, a reused structure and an alter.
+- [Fresh eyes three, 2026-10-19](fresh-eyes-2026-10-19b.md): a third
+  newcomer builds a digest's settings from the documentation alone.
+- [Fresh eyes four, 2026-10-21](fresh-eyes-2026-10-21.md): a fourth
+  newcomer builds a rental's settings, with a shape, a port and an alter,
+  from the docs alone.
+- [Two adopters, 2026-10-19](adopters-2026-10-19.md): two contributed
+  modules' settings forms, pathauto's and honeypot's, ported as
+  resources.
+- [Pathauto again, 2026-10-26](adopters-2026-10-26.md): pathauto's
+  settings form re-ported a week later from the docs alone, as a size
+  measurement and a fourth newcomer run: the line counts side by side,
+  and what the form builder still gets wrong.
+- [Reviews, 2026-10-20](reviews-2026-10-20/synthesis.md): the synthesis
+  of thirteen developer-experience reviews; each review is in
+  [the same directory](reviews-2026-10-20/).
+- [API consolidation, 2026-10-24](reviews-2026-10-24/api-consolidation.md):
+  a decision list of renames, merges and drops across the API.

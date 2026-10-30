@@ -1,5 +1,10 @@
 # Evolving a resource
 
+Read this page before you change a resource that has shipped: some
+changes keep stored values and clients working, and some break them.
+[Keys](introduction/03-keys.md) and [Storage](introduction/08-storage.md)
+introduce what such a change touches.
+
 A resource or structure is a promise twice over: to the values already
 stored for it, and to every client that read its contract. This page
 says which changes keep both promises, which break one, what a
@@ -55,8 +60,7 @@ and the full schema is still never stricter than the pipeline, judged
 on the accepted document after stored values are converted. Otherwise
 it is **breaking**.
 
-"What a client asked for" is read from [value
-semantics](semantics.md#absent-null-or-a-value): a key left out keeps
+"What a client asked for" is read from [value semantics](semantics.md#absent-null-or-a-value): a key left out keeps
 what it holds (its declared default on a create, what is stored on an
 edit, and its default again for a stored value that predates the key),
 `null` clears it, and the pipeline, not the client, fills defaults. A
@@ -329,8 +333,7 @@ on a declaration with no baseline. Compatible changes pass; the
 baseline is the promise last made, and it is pinned again when a change
 is accepted. An adopter gets the same test, per resource, from
 `ResourceTestBase`: `$baselines` names its directory, and
-`DATA_SURFACE_BASELINES_WRITE=1` pins today's ([Testing a
-resource](testing-a-resource.md#the-baselines)).
+`DATA_SURFACE_BASELINES_WRITE=1` pins today's ([Testing a resource](testing-a-resource.md#the-baselines)).
 
 **The command.**
 
