@@ -9,6 +9,12 @@ shipped code that does it. Every quote of shipped code is pinned by
 does not; the one snippet of code that does not exist yet says so. The concepts are documented elsewhere and linked from each
 section; nothing here is a concept of its own.
 
+Read this page when the value you store differs from the value a person
+enters, or when code must run after a save.
+[Storage](introduction/08-storage.md) and
+[A value sent in](introduction/16-a-value-sent-in.md) introduce the
+steps it describes.
+
 ## Representation: asked one way, stored another, sent a third
 
 A value crosses up to three layers between a caller and storage, and

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 270" role="img" aria-labelledby="t">
+  <title id="t">The block.placement resource with a plugin key and a settings key; the value of plugin chooses which structure settings holds: my_teaser, with headline and limit, or system_branding_block, with use_site_logo and use_site_name</title>
+  <style>
+    .bg { fill: #F6F8FA; }
+    .ink { fill: #1F2328; }
+    .muted { fill: #59636E; }
+    .resource { fill: none; stroke: #0969DA; stroke-width: 2; }
+    .resource-label { fill: #0969DA; }
+    .structure { fill: none; stroke: #1A7F64; stroke-width: 2; stroke-dasharray: 7 5; }
+    .structure-label { fill: #1A7F64; }
+    .key { fill: none; stroke: #1F2328; stroke-width: 1.25; }
+    .arrow { stroke: #59636E; stroke-width: 1.5; fill: none; }
+    .arrowhead { fill: #59636E; }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .bold { font-weight: 600; }
+    .small { font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151B23; }
+      .ink { fill: #F0F6FC; }
+      .muted { fill: #9198A1; }
+      .resource { stroke: #4493F8; }
+      .resource-label { fill: #4493F8; }
+      .structure { stroke: #3FB993; }
+      .structure-label { fill: #3FB993; }
+      .key { stroke: #F0F6FC; }
+      .arrow { stroke: #9198A1; }
+      .arrowhead { fill: #9198A1; }
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="720" height="270" rx="12"/>
+
+  <!-- The resource, its plugin key and its settings key -->
+  <rect class="resource" x="24" y="24" width="300" height="196" rx="10"/>
+  <text class="resource-label bold code" x="40" y="50" font-size="15">block.placement</text>
+  <rect class="key" x="40" y="70" width="190" height="26" rx="13"/>
+  <text x="54" y="88"><tspan class="ink code small">plugin</tspan><tspan class="muted small"> string</tspan></text>
+  <rect class="structure" x="40" y="116" width="268" height="84" rx="10"/>
+  <text class="structure-label bold code small" x="56" y="142">settings</text>
+  <text class="muted small" x="56" y="166">chosen by the value of plugin</text>
+
+  <!-- The two structures plugin can choose -->
+  <rect class="structure" x="420" y="24" width="276" height="84" rx="10"/>
+  <text class="structure-label bold code small" x="436" y="52">my_teaser</text>
+  <text class="muted code small" x="436" y="80">headline, limit</text>
+
+  <rect class="structure" x="420" y="136" width="276" height="84" rx="10"/>
+  <text class="structure-label bold code small" x="436" y="164">system_branding_block</text>
+  <text class="muted code small" x="436" y="192">use_site_logo, use_site_name</text>
+
+  <path class="arrow" d="M308 150 C 360 150, 360 66, 410 66"/>
+  <path class="arrowhead" d="M419 66 L409 61 L409 71 Z"/>
+  <path class="arrow" d="M308 166 C 360 166, 360 178, 410 178"/>
+  <path class="arrowhead" d="M419 178 L409 173 L409 183 Z"/>
+
+  <text class="ink" x="24" y="250">Variants: the value of plugin chooses the structure under settings.</text>
+</svg>

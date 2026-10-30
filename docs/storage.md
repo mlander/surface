@@ -1,5 +1,10 @@
 # Storage
 
+Use this page when a resource's values live anywhere other than one
+simple config object, or when you need to know exactly when they are
+written. [Storage](introduction/08-storage.md) introduces the idea in
+plain words.
+
 A resource says what a thing accepts. Its storage says where that thing
 is kept. Keeping them apart is what lets one resource describe a node
 type whether a form, a config action, a test or an agent is doing the

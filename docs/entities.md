@@ -1,5 +1,13 @@
 # Content entities
 
+This page covers content entities, such as nodes: how the module
+derives a resource for each bundle's create and update form, with one
+structure per field. Use it when you want an entity's form, tool or API
+from the module instead of from a class you write.
+[Storage](introduction/08-storage.md) and
+[Access](introduction/14-access.md) introduce a content entity as
+storage and field access as access.
+
 A content entity's create and update form, said as a resource. It is
 the example meant to find where the pattern is thin: field types
 already describe their values as typed data, which is less than a

@@ -1,5 +1,13 @@
 # The resource pattern
 
+This page explains why a resource is written the way it is: one class
+declares the keys, a storage class keeps the values, and operations say
+how they are asked for. Read it after [the introduction](introduction/index.md)
+when you want the reasons behind that shape;
+[Resources](introduction/02-resources.md),
+[Structures](introduction/09-structures.md) and
+[Sealed](introduction/15-sealed.md) define its words.
+
 A resource is a thing with identity and storage that operations read and
 write; the form, the tool and the schema are derived from it. Before
 anything is saved, a person, a route, a tool or an agent can ask it what

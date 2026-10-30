@@ -1,5 +1,12 @@
 # Your second resource
 
+A rule between keys makes what one key allows depend on another key's
+value. When that answer has to be computed, you write it as a refiner:
+a static method that takes the key's definition and the values of the
+keys it watches, and returns a narrower definition.
+[Rules between keys](introduction/05-rules-between-keys.md) introduces
+both, and the rules you can declare without a method.
+
 [Your first resource](first-resource.md) had keys that stand alone. Most
 settings pages have at least one that does not: a region is only a
 region of the chosen country. This page adds exactly that, one key whose

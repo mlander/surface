@@ -15,7 +15,7 @@ use Drupal\filter\FilterFormatRepositoryInterface;
  * The item structure lists every format the field allows, whoever asks:
  * that is what the full schema can say. Which of them this account may
  * use is a fact about the account, so it is a runtime refiner, never run
- * ahead of time; the contract marks the key `runtime`, and the pipeline
+ * ahead of time; the contract marks the key `live`, and the pipeline
  * holds a submission to it. Core's text format element answers the same
  * question the same way.
  *

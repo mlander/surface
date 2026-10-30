@@ -1,5 +1,13 @@
 # Refinement, contributions, and cacheability
 
+This page is the reference for rules between keys and for how other
+modules may tighten a resource's rules: who may change what, when, and
+how long an answer stays valid. Use it after
+[Your second resource](second-resource.md), when a rule needs more than
+one refiner. [Rules between keys](introduction/05-rules-between-keys.md)
+and [Other modules](introduction/12-other-modules.md) introduce the
+ideas.
+
 A resource or structure says what a key may hold. Refinement says what
 it may hold *given what the other keys hold*: which variants exist for
 the chosen casing, which bundles exist for the chosen entity type, which

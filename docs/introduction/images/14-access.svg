@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 300" role="img" aria-labelledby="t">
+  <title id="t">An account asks for an operation; the operation's permission is checked first, then the access class, which answers open, locked or omitted for the keys</title>
+  <style>
+    .bg { fill: #F6F8FA; }
+    .ink { fill: #1F2328; }
+    .muted { fill: #59636E; }
+    .access { fill: none; stroke: #8250DF; stroke-width: 2; }
+    .access-label { fill: #8250DF; }
+    .key { fill: none; stroke: #1F2328; stroke-width: 1.25; }
+    .key-gone { fill: none; stroke: #59636E; stroke-width: 1.25; stroke-dasharray: 4 4; }
+    .arrow { stroke: #59636E; stroke-width: 1.5; fill: none; }
+    .arrowhead { fill: #59636E; }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .bold { font-weight: 600; }
+    .small { font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151B23; }
+      .ink { fill: #F0F6FC; }
+      .muted { fill: #9198A1; }
+      .access { stroke: #AB7DF8; }
+      .access-label { fill: #AB7DF8; }
+      .key { stroke: #F0F6FC; }
+      .key-gone { stroke: #9198A1; }
+      .arrow { stroke: #9198A1; }
+      .arrowhead { fill: #9198A1; }
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="720" height="300" rx="12"/>
+
+  <!-- The account -->
+  <rect class="access" x="24" y="122" width="112" height="56" rx="28"/>
+  <text class="access-label bold" x="80" y="155" text-anchor="middle">Account</text>
+
+  <!-- Step 1: the operation's permission -->
+  <rect class="access" x="168" y="114" width="132" height="72" rx="6"/>
+  <text class="access-label bold" x="184" y="142">1. Permission</text>
+  <text class="muted small" x="184" y="166">may it ask?</text>
+
+  <!-- Step 2: the access class -->
+  <rect class="access" x="332" y="114" width="140" height="72" rx="6"/>
+  <text class="access-label bold" x="348" y="142">2. Access class</text>
+  <text class="muted small" x="348" y="166">which keys?</text>
+
+  <path class="arrow" d="M136 150 H160"/>
+  <path class="arrowhead" d="M168 150 L158 145 L158 155 Z"/>
+  <path class="arrow" d="M300 150 H324"/>
+  <path class="arrowhead" d="M332 150 L322 145 L322 155 Z"/>
+
+  <!-- The three answers -->
+  <path class="arrow" d="M472 150 C 500 150, 504 60, 528 60"/>
+  <path class="arrowhead" d="M536 60 L526 55 L526 65 Z"/>
+  <path class="arrow" d="M472 150 H528"/>
+  <path class="arrowhead" d="M536 150 L526 145 L526 155 Z"/>
+  <path class="arrow" d="M472 150 C 500 150, 504 240, 528 240"/>
+  <path class="arrowhead" d="M536 240 L526 235 L526 245 Z"/>
+
+  <text class="access-label bold" x="540" y="38">open</text>
+  <rect class="key" x="540" y="47" width="156" height="26" rx="13"/>
+  <text class="ink code" x="554" y="65">name</text>
+  <text class="muted small" x="604" y="65">may change</text>
+
+  <text class="access-label bold" x="540" y="128">locked</text>
+  <rect class="key" x="540" y="137" width="156" height="26" rx="13"/>
+  <text class="ink code" x="554" y="155">name</text>
+  <text class="muted small" x="604" y="155">shown, fixed</text>
+
+  <text class="access-label bold" x="540" y="218">omitted</text>
+  <rect class="key-gone" x="540" y="227" width="156" height="26" rx="13"/>
+  <text class="muted code" x="554" y="245">name</text>
+  <text class="muted small" x="604" y="245">not there</text>
+</svg>

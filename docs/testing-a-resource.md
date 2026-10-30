@@ -1,5 +1,11 @@
 # Testing a resource
 
+Read this page once a resource of yours works, to add one kernel test
+that keeps it working as the code changes. The test checks what the
+introduction promises: every door reads the same sealed result and gives
+the same answer to the same values ([Sealed](introduction/15-sealed.md),
+[A value sent in](introduction/16-a-value-sent-in.md)).
+
 The pattern is safe to adopt because of a few invariants: the schema a
 caller reads is never stricter than what the pipeline accepts, every
 door gives the same answer, a static refiner and a static access answer

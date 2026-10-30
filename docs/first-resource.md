@@ -1,25 +1,21 @@
 # Your first resource
 
-**The one command.** `drush generate surface:resource` writes every file
-on this page from an interview: the module (any in the code base), the
-resource's id and label, the operation, the config object, the
-permission and the route path, then each key in turn, with its type,
-label, whether it is required, its default and what it allows. An answer
-can be given ahead, in the order asked, with `--answer`: `drush generate
-surface:resource --answer=data_surface_first --answer=first.newsletter
---answer='Newsletter settings'` asks only from the class name on, and
-`--dry-run` prints the files without writing them. A routing or
-permissions file the module has gains the new entry and keeps every
-other. This page still shows each file in full and stays the source of
-truth: a test answers the interview as the newsletter needs and fails
-when a single byte it writes differs from the files below. The keys can
-also come from a config schema entry or a JSON Schema document
-([Generating a resource](generating.md)).
-
 A settings page, from nothing: a newsletter's sender, how often it goes
 out and how many recipients one send reaches. You write one class that
 says what the settings are, and the module derives the form, the tool an
 agent calls and the JSON Schema from it.
+
+A resource, its keys, an operation and a storage are each introduced in
+plain words on a page of their own:
+[Resources](introduction/02-resources.md),
+[Keys](introduction/03-keys.md), [Operations](introduction/07-operations.md)
+and [Storage](introduction/08-storage.md). This page shows every file
+in full, so you see each piece. You write the resource, the storage,
+the permission and the route. The config schema and the install file
+are generated from the resource class by a command, which also fails
+when they drift from it, so they repeat the class's facts without being
+a second description. A command that writes all of the files for you
+from an interview follows, at the end of step 7.
 
 This page uses four things and nothing else:
 
@@ -208,8 +204,11 @@ final class NewsletterResource implements ResourceInterface {
 Read it top to bottom:
 
 - **`#[Resource('first.newsletter', storage: ...)]`** names the resource
-  and its storage. The class goes in `src/Resource/`, where it is found;
-  nothing is registered by hand.
+  and its storage. The id is the resource's own machine name and needs
+  no module prefix; the config object is `data_surface_first.newsletter`
+  because Drupal requires a module's config object names to start with
+  the module's name. The class goes in `src/Resource/`, where it is
+  found; nothing is registered by hand.
 - **`#[Operation('configure', ...)]`** is the one way it is asked for,
   on the class beside `#[Resource]`. There is only one newsletter, so
   asking for it needs nothing more than the attribute says, and there is
@@ -369,8 +368,26 @@ and anonymous does not have the permission.
 You wrote no form, no validation handler, no tool and no schema: the
 form, the tool and the schema came for free, from the one class.
 
+**The one command.** `drush generate surface:resource` writes every file
+on this page from an interview: the module (any in the code base), the
+resource's id and label, the operation, the config object, the
+permission and the route path, then each key in turn, with its type,
+label, whether it is required, its default and what it allows. An answer
+can be given ahead, in the order asked, with `--answer`: `drush generate
+surface:resource --answer=data_surface_first --answer=first.newsletter
+--answer='Newsletter settings'` asks only from the class name on, and
+`--dry-run` prints the files without writing them. A routing or
+permissions file the module has gains the new entry and keeps every
+other. This page still shows each file in full and stays the source of
+truth: a test answers the interview as the newsletter needs and fails
+when a single byte it writes differs from the files above. The keys can
+also come from a config schema entry or a JSON Schema document
+([Generating a resource](generating.md)).
+
 ## Next
 
+- [The site's catalog](catalog-command.md): check that the resource is
+  found and see which doors it reaches.
 - [Your second resource](second-resource.md): one key whose allowed
   values depend on another's.
 - [Concepts](concepts.md): every other idea in the module, the question

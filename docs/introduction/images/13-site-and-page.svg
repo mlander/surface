@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 280" role="img" aria-labelledby="t">
+  <title id="t">A placed block's keys and where each starting value comes from: label_display from the site default false, theme fixed to olivero by the route, region started at sidebar by the route</title>
+  <style>
+    .bg { fill: #F6F8FA; }
+    .ink { fill: #1F2328; }
+    .muted { fill: #59636E; }
+    .source { fill: none; stroke: #59636E; stroke-width: 1.5; }
+    .resource { fill: none; stroke: #0969DA; stroke-width: 2; }
+    .resource-label { fill: #0969DA; }
+    .key { fill: none; stroke: #1F2328; stroke-width: 1.25; }
+    .arrow { stroke: #59636E; stroke-width: 1.5; fill: none; }
+    .arrowhead { fill: #59636E; }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .bold { font-weight: 600; }
+    .small { font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151B23; }
+      .ink { fill: #F0F6FC; }
+      .muted { fill: #9198A1; }
+      .source { stroke: #9198A1; }
+      .resource { stroke: #4493F8; }
+      .resource-label { fill: #4493F8; }
+      .key { stroke: #F0F6FC; }
+      .arrow { stroke: #9198A1; }
+      .arrowhead { fill: #9198A1; }
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="720" height="280" rx="12"/>
+
+  <!-- Where the values come from -->
+  <rect class="source" x="24" y="40" width="236" height="64" rx="8"/>
+  <text class="ink bold" x="40" y="64">The site</text>
+  <text class="muted code small" x="40" y="88">data_surface.defaults</text>
+
+  <rect class="source" x="24" y="152" width="236" height="88" rx="8"/>
+  <text class="ink bold" x="40" y="176">The route, on its page</text>
+  <text class="muted code small" x="40" y="200">_data_surface_fixed</text>
+  <text class="muted code small" x="40" y="224">_data_surface_defaults</text>
+
+  <!-- The resource and its keys -->
+  <rect class="resource" x="340" y="24" width="356" height="232" rx="10"/>
+  <text class="resource-label bold code" x="358" y="52" font-size="15">block.placement</text>
+
+  <rect class="key" x="358" y="70" width="320" height="26" rx="13"/>
+  <text class="ink code" x="372" y="88">label_display</text>
+  <text class="muted small" x="500" y="88">starts false</text>
+
+  <rect class="key" x="358" y="140" width="320" height="26" rx="13"/>
+  <text class="ink code" x="372" y="158">theme</text>
+  <text class="muted small" x="500" y="158">fixed to olivero</text>
+
+  <rect class="key" x="358" y="200" width="320" height="26" rx="13"/>
+  <text class="ink code" x="372" y="218">region</text>
+  <text class="muted small" x="500" y="218">starts at sidebar</text>
+
+  <!-- Arrows -->
+  <path class="arrow" d="M260 72 C 300 72, 310 83, 348 83"/>
+  <path class="arrowhead" d="M356 83 L346 78 L346 88 Z"/>
+  <path class="arrow" d="M260 188 C 300 188, 310 153, 348 153"/>
+  <path class="arrowhead" d="M356 153 L346 148 L346 158 Z"/>
+  <path class="arrow" d="M260 212 C 300 212, 310 213, 348 213"/>
+  <path class="arrowhead" d="M356 213 L346 208 L346 218 Z"/>
+</svg>

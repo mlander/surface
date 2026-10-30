@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 378">
+  <title>Who has a say, in order: six bands inside one sealed data surface, the owner, other modules, the site, the operation, the page and access, with a lock on the frame for the seal; an arrow leads to every door</title>
+  <style>
+    .bg { fill: #F6F8FA; }
+    .ink { fill: #1F2328; }
+    .muted { fill: #59636E; }
+    .line { stroke: #D1D9E0; }
+    .t { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; }
+    .b { font-weight: 600; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+    .sealed { fill: none; stroke: #0969DA; stroke-width: 3; }
+    .lock-fill { fill: #0969DA; }
+    .lock-line { fill: none; stroke: #0969DA; stroke-width: 2; }
+    .owner { fill: none; stroke: #0969DA; stroke-width: 1.5; }
+    .alter { fill: none; stroke: #9A6700; stroke-width: 1.5; }
+    .site { fill: none; stroke: #59636E; stroke-width: 1.5; }
+    .access { fill: none; stroke: #8250DF; stroke-width: 1.5; }
+    .key { fill: none; stroke: #1F2328; stroke-width: 1.2; }
+    .rule { fill: none; stroke: #BF3989; stroke-width: 1.5; }
+    .rule-text { fill: #BF3989; }
+    .door { fill: none; stroke: #BC4C00; stroke-width: 1.5; }
+    .door-text { fill: #BC4C00; }
+    .box { fill: none; stroke: #D1D9E0; stroke-width: 1.5; }
+    .here { fill: none; stroke: #1F2328; stroke-width: 2; }
+    .dashed { stroke-dasharray: 6 4; }
+    .arrow { stroke: #59636E; stroke-width: 1.5; fill: none; }
+    .head { fill: #59636E; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151B23; }
+      .ink { fill: #F0F6FC; }
+      .muted { fill: #9198A1; }
+      .line { stroke: #3D444D; }
+      .sealed { stroke: #4493F8; }
+      .lock-fill { fill: #4493F8; }
+      .lock-line { stroke: #4493F8; }
+      .owner { stroke: #4493F8; }
+      .alter { stroke: #D29922; }
+      .site { stroke: #9198A1; }
+      .access { stroke: #AB7DF8; }
+      .key { stroke: #F0F6FC; }
+      .rule { stroke: #E267A8; }
+      .rule-text { fill: #E267A8; }
+      .door { stroke: #F0883E; }
+      .door-text { fill: #F0883E; }
+      .box { stroke: #3D444D; }
+      .here { stroke: #F0F6FC; }
+      .arrow { stroke: #9198A1; }
+      .head { fill: #9198A1; }
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="720" height="378" rx="12"/>
+  <rect class="sealed" x="24" y="24" width="452" height="330" rx="10"/>
+  <text class="t b ink" x="44" y="54">data surface</text>
+  <path class="lock-line" d="M 447 46 v -3 a 5 5 0 0 1 10 0 v 3"/><rect class="lock-fill" x="444" y="46" width="16" height="12" rx="2"/>
+  <rect class="owner" x="44" y="70" width="412" height="36" rx="8"/>
+  <text class="t ink" x="60" y="93"><tspan class="b">1</tspan>  the owner declares keys and rules</text>
+  <rect class="alter" x="44" y="114" width="412" height="36" rx="8"/>
+  <text class="t ink" x="60" y="137"><tspan class="b">2</tspan>  other modules alter: add keys, tighten rules</text>
+  <rect class="site" x="44" y="158" width="412" height="36" rx="8"/>
+  <text class="t ink" x="60" y="181"><tspan class="b">3</tspan>  the site sets its defaults</text>
+  <rect class="owner" x="44" y="202" width="412" height="36" rx="8"/>
+  <text class="t ink" x="60" y="225"><tspan class="b">4</tspan>  the operation adds what it knows</text>
+  <rect class="site" x="44" y="246" width="412" height="36" rx="8"/>
+  <text class="t ink" x="60" y="269"><tspan class="b">5</tspan>  the page seeds keys from its route</text>
+  <rect class="access" x="44" y="290" width="412" height="36" rx="8"/>
+  <text class="t ink" x="60" y="313"><tspan class="b">6</tspan>  access for the account: lock or leave out</text>
+  <line class="arrow" x1="476" y1="189" x2="518" y2="189"/>
+  <path class="head" d="M 526 189 l -9 -5 v 10 z"/>
+  <path class="door" d="M 528 144 h 166 l 10 45 l -10 45 h -166 z"/>
+  <text class="t b door-text" x="542" y="174">every door</text>
+  <text class="t muted" x="542" y="198">form, tool, MCP, ECA,</text>
+  <text class="t muted" x="542" y="218">HTTP, React page</text>
+</svg>

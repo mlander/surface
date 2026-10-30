@@ -13,7 +13,9 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * A snippet that names one of the module's classes either imports it, a
  * `use` line inside the snippet, or finds it in the "Namespaces" table on
- * the concepts page, which the section the snippet sits in links. The
+ * the concepts page, which the section the snippet sits in links: from
+ * `docs/`, `concepts.md#namespaces`; from a section below it, the
+ * introduction or the examples, `../concepts.md#namespaces`. The
  * third fresh-eyes run found `KeysFromSiteInterface` and `KeyedList` with
  * no namespace in any doc and had to search `src/` (its log, entry 16).
  *
@@ -29,10 +31,19 @@ class NamespacesDocsTest extends UnitTestCase {
   protected const ROOT = __DIR__ . '/../../..';
 
   /**
-   * The page holding the table, and the link to it.
+   * The page holding the table, and the link to it from beside it.
    */
   protected const TABLE = 'docs/concepts.md';
   protected const LINK = 'concepts.md#namespaces';
+
+  /**
+   * The directories whose pages are held, and the path from each to docs/.
+   */
+  protected const DIRECTORIES = [
+    'docs' => '',
+    'docs/introduction' => '../',
+    'docs/examples' => '../',
+  ];
 
   /**
    * The dated records, by file name.
@@ -122,11 +133,19 @@ class NamespacesDocsTest extends UnitTestCase {
     $classes = static::moduleClasses();
     $unlisted = [];
     $unlinked = [];
-    foreach (glob(self::ROOT . '/docs/*.md') as $file) {
-      if (preg_match(self::RECORDS, basename($file))) {
+    $pages = [];
+    foreach (self::DIRECTORIES as $directory => $up) {
+      $files = glob(self::ROOT . '/' . $directory . '/*.md');
+      $this->assertNotEmpty($files, $directory);
+      foreach ($files as $file) {
+        $pages[$directory . '/' . basename($file)] = $up;
+      }
+    }
+    foreach ($pages as $page => $up) {
+      if (preg_match(self::RECORDS, basename($page))) {
         continue;
       }
-      $page = 'docs/' . basename($file);
+      $file = self::ROOT . '/' . $page;
       $text = (string) file_get_contents($file);
       // Headings are read where no fence is: a `#[Resource]` line or a
       // YAML comment inside one is no heading.
@@ -165,7 +184,9 @@ class NamespacesDocsTest extends UnitTestCase {
         $from = max((int) strrpos($before, "\n#"), 0);
         $to = strpos($prose, "\n#", $offset);
         $section = substr($prose, $from, $to === FALSE ? NULL : $to - $from);
-        if (!str_contains($section, self::LINK)) {
+        // The link as a link, relative to the page: a subdirectory's page
+        // linking `concepts.md#namespaces` leads nowhere.
+        if (!str_contains($section, '](' . $up . self::LINK . ')')) {
           preg_match('/^#+ (.*)$/m', substr($prose, $from + 1), $heading);
           $unlinked[] = sprintf('%s, "%s" (%s)', $page, $heading[1] ?? '', implode(', ', $named));
         }

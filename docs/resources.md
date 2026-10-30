@@ -1,5 +1,14 @@
 # Resources and structures as classes
 
+This page is the full reference for what a resource or structure class
+can declare beyond its keys: operations, other modules' changes, the
+structures it holds, access, and the tools made from it. Use it when a
+build page links a section here, or when you need an option no build
+page shows. [Operations](introduction/07-operations.md),
+[Resources made of structures](introduction/10-putting-together.md),
+[Other modules](introduction/12-other-modules.md) and
+[Access](introduction/14-access.md) introduce its ideas.
+
 A resource or structure is a class of its own: one static method that
 declares its keys, and one named static method per key whose allowed
 values depend on another key. A resource is a thing with identity and

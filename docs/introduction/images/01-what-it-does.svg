@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 330" role="img" aria-labelledby="t">
+  <title id="t">The performance settings, system.performance, described once with three values on the left; arrows to a form, a Tool API tool, an HTTP API and a React page on the right, each asking for the same three values</title>
+  <style>
+    .bg { fill: #F6F8FA; }
+    .ink { fill: #1F2328; }
+    .muted { fill: #59636E; }
+    .line { stroke: #D1D9E0; }
+    .resource { fill: none; stroke: #0969DA; stroke-width: 2; }
+    .resource-label { fill: #0969DA; }
+    .key { fill: none; stroke: #1F2328; stroke-width: 1.25; }
+    .door { fill: none; stroke: #BC4C00; stroke-width: 2; }
+    .door-label { fill: #BC4C00; }
+    .arrow { stroke: #59636E; stroke-width: 1.5; fill: none; }
+    .arrowhead { fill: #59636E; }
+    text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .bold { font-weight: 600; }
+    .small { font-size: 13px; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #151B23; }
+      .ink { fill: #F0F6FC; }
+      .muted { fill: #9198A1; }
+      .line { stroke: #3D444D; }
+      .resource { stroke: #4493F8; }
+      .resource-label { fill: #4493F8; }
+      .key { stroke: #F0F6FC; }
+      .door { stroke: #F0883E; }
+      .door-label { fill: #F0883E; }
+      .arrow { stroke: #9198A1; }
+      .arrowhead { fill: #9198A1; }
+    }
+  </style>
+  <rect class="bg" x="0" y="0" width="720" height="330" rx="12"/>
+
+  <!-- The thing, described once, with its three values -->
+  <rect class="resource" x="24" y="80" width="260" height="172" rx="10"/>
+  <text class="resource-label bold code" x="40" y="106" font-size="15">system.performance</text>
+  <text class="muted small" x="40" y="126">the performance settings</text>
+
+  <rect class="key" x="40" y="140" width="228" height="26" rx="13"/>
+  <text x="54" y="158"><tspan class="ink code small">max_age</tspan><tspan class="muted small"> integer</tspan></text>
+  <rect class="key" x="40" y="174" width="228" height="26" rx="13"/>
+  <text x="54" y="192"><tspan class="ink code small">css_preprocess</tspan><tspan class="muted small"> boolean</tspan></text>
+  <rect class="key" x="40" y="208" width="228" height="26" rx="13"/>
+  <text x="54" y="226"><tspan class="ink code small">js_preprocess</tspan><tspan class="muted small"> boolean</tspan></text>
+
+  <!-- Arrows to each place that asks for the values -->
+  <path class="arrow" d="M284 166 C 330 166, 330 58, 362 58"/>
+  <path class="arrowhead" d="M370 58 L360 53 L360 63 Z"/>
+  <path class="arrow" d="M284 166 C 330 166, 330 130, 362 130"/>
+  <path class="arrowhead" d="M370 130 L360 125 L360 135 Z"/>
+  <path class="arrow" d="M284 166 C 330 166, 330 202, 362 202"/>
+  <path class="arrowhead" d="M370 202 L360 197 L360 207 Z"/>
+  <path class="arrow" d="M284 166 C 330 166, 330 274, 362 274"/>
+  <path class="arrowhead" d="M370 274 L360 269 L360 279 Z"/>
+
+  <!-- Each asks for the same three values -->
+  <path class="door" d="M376 30 H676 L696 58 L676 86 H376 Z"/>
+  <text class="door-label bold" x="392" y="52">The form</text>
+  <text class="muted code small" x="392" y="72">max_age  css_preprocess  js_preprocess</text>
+
+  <path class="door" d="M376 102 H676 L696 130 L676 158 H376 Z"/>
+  <text class="door-label bold" x="392" y="124">A Tool API tool</text>
+  <text class="muted code small" x="392" y="144">max_age  css_preprocess  js_preprocess</text>
+
+  <path class="door" d="M376 174 H676 L696 202 L676 230 H376 Z"/>
+  <text class="door-label bold" x="392" y="196">An HTTP API</text>
+  <text class="muted code small" x="392" y="216">max_age  css_preprocess  js_preprocess</text>
+
+  <path class="door" d="M376 246 H676 L696 274 L676 302 H376 Z"/>
+  <text class="door-label bold" x="392" y="268">A React page</text>
+  <text class="muted code small" x="392" y="288">max_age  css_preprocess  js_preprocess</text>
+</svg>

@@ -1,5 +1,13 @@
 # The site's catalog
 
+The catalog is a command, not a concept: it lists what a site has,
+every resource and structure the module finds, each operation with the
+doors it reaches, and what failed to build. Run it after
+[Your first resource](first-resource.md) to check that your resource is
+found and which doors it reaches. [Resources](introduction/02-resources.md),
+[Operations](introduction/07-operations.md) and
+[Doors](introduction/11-doors.md) introduce the words it prints.
+
 `drush surface:catalog` (alias `data_surface:catalog`) prints the live
 map of a site: every resource and structure discovery finds, from any
 module, derived and read-back ones included; per operation its id, kind,

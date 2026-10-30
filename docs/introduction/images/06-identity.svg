@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 296" role="img" aria-labelledby="t">
+<title id="t">A singleton, system.performance, beside node.type, which exists many times and is told apart by its identity key type</title>
+<style>
+.bg{fill:#F6F8FA}
+.ink{fill:#1F2328}
+.muted{fill:#59636E}
+.res{fill:none;stroke:#0969DA;stroke-width:2}
+.resource-fill{fill:#F6F8FA;stroke:#0969DA;stroke-width:2}
+.resT{fill:#0969DA}
+.str{fill:none;stroke:#1A7F64;stroke-width:2;stroke-dasharray:6 4}
+.strT{fill:#1A7F64}
+.key{fill:#F6F8FA;stroke:#1F2328;stroke-width:1.25}
+.box{fill:none;stroke:#1F2328;stroke-width:1.5}
+.door{fill:none;stroke:#BC4C00;stroke-width:2}
+.doorT{fill:#BC4C00}
+.arrow{fill:none;stroke:#59636E;stroke-width:1.5}
+.head{fill:#59636E}
+.rule{fill:none;stroke:#D1D9E0;stroke-width:1}
+text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+.b{font-weight:600}
+.s{font-size:13px}
+@media (prefers-color-scheme: dark){
+.bg{fill:#151B23}
+.ink{fill:#F0F6FC}
+.muted{fill:#9198A1}
+.res{stroke:#4493F8}
+.resource-fill{fill:#151B23;stroke:#4493F8}
+.resT{fill:#4493F8}
+.str{stroke:#3FB993}
+.strT{fill:#3FB993}
+.key{fill:#151B23;stroke:#F0F6FC}
+.box{stroke:#F0F6FC}
+.door{stroke:#F0883E}
+.doorT{fill:#F0883E}
+.arrow{stroke:#9198A1}
+.head{fill:#9198A1}
+.rule{stroke:#3D444D}
+}
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<rect class="bg" x="0" y="0" width="720" height="296" rx="12"/>
+<rect class="res" x="24" y="56" width="300" height="160" rx="10"/><text class="resT b mono" x="38" y="80">system.performance</text>
+<rect class="key" x="44" y="96" width="230" height="26" rx="13"/><text x="58" y="114"><tspan class="mono ink">max_age</tspan><tspan class="mono muted" dx="8">integer</tspan></text>
+<rect class="key" x="44" y="132" width="230" height="26" rx="13"/><text x="58" y="150"><tspan class="mono ink">css_preprocess</tspan><tspan class="mono muted" dx="8">boolean</tspan></text>
+<rect class="key" x="44" y="168" width="230" height="26" rx="13"/><text x="58" y="186"><tspan class="mono ink">js_preprocess</tspan><tspan class="mono muted" dx="8">boolean</tspan></text>
+<text class="ink" x="24" y="246">singleton: no identity keys, exists once</text>
+<rect class="res" x="400" y="36" width="296" height="160" rx="10"/><text class="resT b mono" x="414" y="60"></text>
+<rect class="resource-fill" x="390" y="46" width="296" height="160" rx="10"/><text class="resT b mono" x="404" y="70"></text>
+<rect class="resource-fill" x="380" y="56" width="296" height="160" rx="10"/><text class="resT b mono" x="394" y="80">node.type</text>
+<rect class="key" x="400" y="96" width="184" height="26" rx="13"/><text x="414" y="114"><tspan class="mono ink">type</tspan><tspan class="mono muted" dx="8">string</tspan></text>
+<text class="resT b" x="596" y="114">identity</text>
+<rect class="key" x="400" y="132" width="184" height="26" rx="13"/><text x="414" y="150"><tspan class="mono ink">name</tspan><tspan class="mono muted" dx="8">string</tspan></text>
+<rect class="key" x="400" y="168" width="184" height="26" rx="13"/><text x="414" y="186"><tspan class="mono ink">description</tspan><tspan class="mono muted" dx="8">string</tspan></text>
+<text class="ink" x="380" y="246">many: one per value of type</text>
+<text class="mono muted" x="380" y="268">article, page, ...</text>
+
+</svg>

@@ -1,5 +1,11 @@
 # Common settings recipes
 
+Each section below declares one kind of key that settings pages often
+need, for when [Your first resource](first-resource.md) does not show
+the key you want. A key and its rules are introduced in
+[Keys](introduction/03-keys.md) and
+[Rules on a key](introduction/04-rules-on-a-key.md).
+
 Nine things a resource often asks for that no other page shows end to
 end. The snippets of the first six are keys of the test module's
 opening hours (`resource_test.opening_hours`, in
