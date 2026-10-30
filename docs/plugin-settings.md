@@ -3,9 +3,9 @@
 Read this page when a block, formatter or condition plugin of yours
 builds its settings form by hand. The plugin names a structure instead,
 and the module draws the form, checks the values and stores them in the
-plugin's configuration. [Structures](introduction/09-structures.md)
-introduces the idea, and [Keys](introduction/03-keys.md) and
-[Rules on a key](introduction/04-rules-on-a-key.md) the lines inside it.
+plugin's configuration. [Structures](introduction/03-structures.md)
+introduces the idea, and [Keys](introduction/05-keys.md) and
+[Rules on a key](introduction/06-rules-on-a-key.md) the lines inside it.
 
 A block, a formatter or a condition has settings but no storage of its
 own. Declare the structure as a class, name it on the plugin whose values

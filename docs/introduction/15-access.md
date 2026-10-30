@@ -6,7 +6,7 @@ whether an account may use an operation at all. Access then says, for
 that account and that thing, whether the keys are open, locked or left
 out.
 
-![An account asks for an operation; the operation's permission is checked first, then the access class, which answers open, locked or omitted for the keys](images/14-access.svg)
+![An account asks for an operation; the operation's permission is checked first, then the access class, which answers open, locked or omitted for the keys](images/15-access.svg)
 
 ## Two steps
 
@@ -23,7 +23,7 @@ never allows more than core's own content type form does:
 ```php
 #[Resource('node.type',
   identity: ['type'],
-  // ...
+  storage: NodeTypeStorage::class,
   access: NodeTypeAccess::class,
 )]
 ```
@@ -31,14 +31,23 @@ never allows more than core's own content type form does:
 ```php
 final class NodeTypeAccess implements OperationAccessInterface {
 
-  // The constructor takes the entity type manager.
+  public function __construct(
+    protected readonly EntityTypeManagerInterface $entityTypeManager,
+  ) {}
 
   public function access(OperationContext $context, AccountInterface $account): AccessResultInterface {
     if ($context->creates) {
       return $this->entityTypeManager->getAccessControlHandler('node_type')
         ->createAccess(NULL, $account, [], TRUE);
     }
-    // ... load the content type the operation names, as $type.
+    $id = $context->known['type'] ?? NULL;
+    $type = is_string($id) ? $this->entityTypeManager->getStorage('node_type')->load($id) : NULL;
+    if (!$type instanceof NodeTypeInterface) {
+      // Refused, and cacheable until a content type is created, so the
+      // answer stops being no the moment it exists.
+      return AccessResult::forbidden(sprintf('There is no "%s" content type to configure.', is_scalar($id) ? (string) $id : ''))
+        ->addCacheTags(['config:node_type_list']);
+    }
     return $type->access('update', $account, TRUE);
   }
 
@@ -48,7 +57,10 @@ final class NodeTypeAccess implements OperationAccessInterface {
 Where each class lives: [Namespaces](../concepts.md#namespaces).
 
 `$context->creates` is `TRUE` when the operation creates the thing, so
-there is no content type to load yet.
+there is no content type to load yet. Otherwise `$context->known['type']`
+is the machine name the operation knows; a content type that does not
+exist is refused, and one that does answers with core's own update
+access.
 
 Both steps must allow. Holding the operation's permission without
 core's content type access opens nothing, and the form, the tool, HTTP
@@ -84,7 +96,7 @@ Access only says whether keys may be changed, seen, or neither. An
 account that may choose from fewer values is a refiner's job, which
 narrows the key's rules for that account.
 
-Next: [Sealed](15-sealed.md)
+Next: [Sealed](16-sealed.md)
 
 Build it: [Access](../resources.md#access) and [Static and runtime access](../resources.md#static-and-runtime-access)
 

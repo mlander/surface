@@ -4,12 +4,12 @@ Some resources exist once on a site. Others exist many times, and a
 request has to say which one it is about. The keys that say which one
 are the resource's **identity**.
 
-![Two resources side by side: system.performance, one box, marked as a singleton that exists once; node.type, a stack of boxes, one per content type, each told apart by its identity key type](images/06-identity.svg)
+![Two resources side by side: my_module.settings, one box, marked as a singleton that exists once; node.type, a stack of boxes, one per content type, each told apart by its identity key type](images/08-identity.svg)
 
 ## Once, or many times
 
-The performance settings exist once. `system.performance` is one
-config object, so there is nothing to choose between. A resource with
+Your module's settings exist once. `my_module.settings` is one config
+object, so there is nothing to choose between. A resource with
 no identity keys is a **singleton**.
 
 A content type exists many times: Article, Basic page, and any other a
@@ -17,26 +17,28 @@ site adds. Each has a machine name, `article` or `page`, and the
 machine name says which content type a request is about. So `type`, the
 machine name, is the content type resource's identity key.
 
-A resource names its identity keys on its `#[Resource]` attribute:
+A resource names its identity keys on its `#[Resource]` attribute.
+These are the two attributes in full, the settings' from
+`MySettingsResource` and the content type's from `NodeTypeResource`:
 
 ```php
-#[Resource('system.performance',
-  // ...
-)]
-final class PerformanceResource implements ResourceInterface {
-  // defineInputs() declares max_age, css_preprocess and js_preprocess.
-}
+#[Resource('my_module.settings', storage: MySettingsStorage::class)]
+```
 
+```php
 #[Resource('node.type',
   identity: ['type'],
-  // ...
+  storage: NodeTypeStorage::class,
+  access: NodeTypeAccess::class,
 )]
-final class NodeTypeResource implements ResourceInterface {
-  // defineInputs() declares type, name, description and the rest.
-}
 ```
 
 Where each class lives: [Namespaces](../concepts.md#namespaces).
+
+The settings name no `identity`, so they are a singleton. The content
+type names `type`. The other arguments name the class that saves the
+values and the class that decides who may change them, which later
+pages show ([Storage](10-storage.md), [Access](15-access.md)).
 
 `type` is still a key, declared in `defineInputs()` with a type, a label
 and its rules. The attribute only says it is the key that tells content
@@ -57,7 +59,7 @@ each under its own name. These are the HTTP paths it makes for editing
 each of the two:
 
 ```text
-PATCH /surface-api/system.performance
+PATCH /surface-api/my_module.settings
 PATCH /surface-api/node.type/{type}
 ```
 
@@ -70,10 +72,10 @@ Identity also decides what may change. When a request edits the
 `article` content type, `type` is already known, so it is locked to
 `article`: the edit cannot rename the machine name. When a request adds
 a content type, `type` is not known yet, so it is open and the caller
-chooses it. [The next page](07-operations.md) shows how each way of
+chooses it. [The next page](09-operations.md) shows how each way of
 asking says what it already knows.
 
-Next: [Operations](07-operations.md)
+Next: [Operations](09-operations.md)
 
 Build it: [Operations and identity](../declaring-a-resource.md#operations-and-identity)
 

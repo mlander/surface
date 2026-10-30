@@ -13,7 +13,7 @@ to read the introduction.
 ### Resource
 
 A resource is a thing your site keeps values for, that can be asked for
-on its own: a content type, a placed block, the performance settings.
+on its own: a content type, a placed block, a module's settings.
 
 Precisely: a thing with identity and storage that operations read and
 write; the form, the tool and the schema are derived from it. Declared
@@ -28,6 +28,45 @@ Introduced in [Resources](introduction/02-resources.md). Reference:
 [Declaring a resource or structure](declaring-a-resource.md),
 [Resources and structures as classes](resources.md).
 
+### Structure
+
+A structure is a group of keys with no identity, storage or operations
+of its own, only ever held by something else: a block plugin's
+settings, held by the placed block, which is the resource.
+
+Precisely: a group of keys with no identity or storage of its own, only
+ever held by something else: attached to a parent, one of the variants
+at a key, or configuring a plugin, whose host supplies the operation,
+its permission and the storage. It has no permission of its own; it may
+answer access for its keys. Declared as a class carrying
+`#[Structure(id, access:)]`, implementing `Resource\StructureInterface`;
+or a plugin that is its own structure, `#[UsesStructure]` with no
+argument. The six ways one is made of others are side by side in
+[Which way to compose](resources.md#which-way-to-compose).
+
+Introduced in [Structures](introduction/03-structures.md). Reference:
+[On a plugin](declaring-a-resource.md#on-a-plugin),
+[Children](resources.md#children).
+
+### Shape
+
+A shape is one value declared once, as a class (its type, label,
+description, what it allows and an example), and used at many keys, so
+it reads the same everywhere and tightening it tightens every key.
+
+Precisely: a named type, in Smithy's sense, of which there are three
+kinds: a resource, a structure, and a named scalar shape, one value
+(its type, label, description, constraints, examples) declared once
+and used at many keys. The third is the one the attribute names: a
+class in `src/Shape/` carrying `#[Shape(id)]`, whose static `define()`
+returns a plain data definition, used in the type position of `add()`;
+each key may only narrow it, an alter of it tightens it at every key,
+and the served contract writes it once, as a def. Never the blueprint
+or the layout.
+
+Introduced in [Shapes](introduction/04-shapes.md). Reference:
+[Named shapes](declaring-a-resource.md#named-shapes).
+
 ### Key
 
 A key is one value a resource or structure holds, with a type, a label
@@ -37,7 +76,7 @@ Precisely: one entry of a resource's or structure's declaration, added
 with `$inputs->add($key, $type, $label, default:)` in its static
 `defineInputs()`. What the key accepts is its definition.
 
-Introduced in [Keys](introduction/03-keys.md). Reference:
+Introduced in [Keys](introduction/05-keys.md). Reference:
 [The class](declaring-a-resource.md#the-class),
 [Key names](declaring-a-resource.md#key-names).
 
@@ -51,7 +90,7 @@ in static `defineInputs()` (and `defineOutputs()` for what it emits).
 The declaration is static, asked of the class, so the class is never
 constructed.
 
-Introduced in [Keys](introduction/03-keys.md). Reference:
+Introduced in [Keys](introduction/05-keys.md). Reference:
 [Declaring a resource or structure](declaring-a-resource.md).
 
 ### Rule
@@ -64,7 +103,7 @@ with `addConstraint()`, or the key's required flag, set with
 `setRequired()`. A list of allowed values is a constraint too, which an
 options resolver reads as the list it offers.
 
-Introduced in [Rules on a key](introduction/04-rules-on-a-key.md).
+Introduced in [Rules on a key](introduction/06-rules-on-a-key.md).
 Reference: [Required](declaring-a-resource.md#required),
 [Which constraint to write](options.md#which-constraint-to-write).
 
@@ -78,7 +117,7 @@ siblings it watches, written as a declared rule or a refiner. It may
 only narrow what the key allows, never widen it, and the answer is
 checked narrower on every run.
 
-Introduced in [Rules between keys](introduction/05-rules-between-keys.md).
+Introduced in [Rules between keys](introduction/07-rules-between-keys.md).
 Reference: [Refinement](refinement.md).
 
 ### Declared rule
@@ -92,7 +131,7 @@ state, written in the blueprint beside the keys it is about,
 refiner by construction that only tightens, stated by the full schema
 as written.
 
-Introduced in [Rules between keys](introduction/05-rules-between-keys.md).
+Introduced in [Rules between keys](introduction/07-rules-between-keys.md).
 Reference: [Declaring a rule](refinement.md#declaring-a-rule).
 
 ### Refiner
@@ -108,7 +147,7 @@ It is static unless declared runtime: a static refiner reads only the
 values, a runtime one may read the site and is asked when the request
 comes in.
 
-Introduced in [Rules between keys](introduction/05-rules-between-keys.md).
+Introduced in [Rules between keys](introduction/07-rules-between-keys.md).
 Reference: [Refining](refinement.md#refining),
 [Static and runtime refiners](refinement.md#static-and-runtime-refiners).
 
@@ -122,17 +161,17 @@ machine name, a field's entity type, bundle and name. A context says
 which of them it knows; an identity key the context knows is locked to
 that value, and one it does not know stays open.
 
-Introduced in [Which one: identity](introduction/06-identity.md).
+Introduced in [Which one: identity](introduction/08-identity.md).
 Reference: [Operations and identity](declaring-a-resource.md#operations-and-identity).
 
 ### Singleton
 
-A singleton is a resource that exists once, such as the performance
+A singleton is a resource that exists once, such as a module's
 settings.
 
 Precisely: a resource with no identity keys, such as a settings object.
 
-Introduced in [Which one: identity](introduction/06-identity.md).
+Introduced in [Which one: identity](introduction/08-identity.md).
 Reference: [A simple config object](storage.md#a-simple-config-object).
 
 ### Operation
@@ -157,7 +196,7 @@ pipeline consults that answer before it reads or writes anything, so a
 form, a tool and the agent or Drush command calling it resolve one gate
 rather than several.
 
-Introduced in [Operations](introduction/07-operations.md). Reference:
+Introduced in [Operations](introduction/09-operations.md). Reference:
 [Operations: create, update, and the rest](resources.md#operations-create-update-and-the-rest).
 
 ### Storage
@@ -174,28 +213,8 @@ write, no side effects) and `commit()`; a plugin's host supplies one of
 the engine's (plugin configuration, field settings) for what it holds.
 Storage composes along the tree of attached children.
 
-Introduced in [Storage](introduction/08-storage.md). Reference:
+Introduced in [Storage](introduction/10-storage.md). Reference:
 [Storage](storage.md), [What storage is](storage.md#what-storage-is).
-
-### Structure
-
-A structure is a group of keys with no storage or operations of its
-own, held by something else: a block plugin's settings, held by the
-placed block.
-
-Precisely: a group of keys with no identity or storage of its own, only
-ever held by something else: attached to a parent, one of the variants
-at a key, or configuring a plugin, whose host supplies the operation,
-its permission and the storage. It has no permission of its own; it may
-answer access for its keys. Declared as a class carrying
-`#[Structure(id, access:)]`, implementing `Resource\StructureInterface`;
-or a plugin that is its own structure, `#[UsesStructure]` with no
-argument. The six ways one is made of others are side by side in
-[Which way to compose](resources.md#which-way-to-compose).
-
-Introduced in [Structures](introduction/09-structures.md). Reference:
-[On a plugin](declaring-a-resource.md#on-a-plugin),
-[Children](resources.md#children).
 
 ### Attach
 
@@ -208,7 +227,7 @@ variants a sibling key chooses between. A child may be a resource with
 storage of its own (a field's storage). Declared on the
 `Resource\BlueprintInterface`; the build records it as an `Attachment`.
 
-Introduced in [Resources made of structures](introduction/10-putting-together.md).
+Introduced in [Resources made of structures](introduction/11-resources-made-of-structures.md).
 Reference: [Children](resources.md#children).
 
 ### Variants
@@ -223,7 +242,7 @@ parent names no variant, and any module may declare one. Until the
 deciding key holds a value, the key is an `any` placeholder; once it
 does, the key is the chosen variant's map.
 
-Introduced in [Resources made of structures](introduction/10-putting-together.md).
+Introduced in [Resources made of structures](introduction/11-resources-made-of-structures.md).
 Reference: [Variants](resources.md#variants).
 
 ### Door
@@ -238,7 +257,7 @@ document, and the React page. That is why they agree on what is
 accepted, and why one module can change all of them at once without
 touching any.
 
-Introduced in [Doors](introduction/11-doors.md). Reference:
+Introduced in [Doors](introduction/12-doors.md). Reference:
 [The doors](catalog-command.md#the-doors),
 [The served contract](served-contract.md),
 [Tools](resources.md#tools).
@@ -260,7 +279,7 @@ removes a key or a value from the declaration, never retypes, adds no
 output (what a call answers is its operation's), and attaches a
 structure only at its own mount.
 
-Introduced in [Other modules](introduction/12-other-modules.md).
+Introduced in [Other modules](introduction/13-other-modules.md).
 Reference: [Alters](resources.md#alters),
 [A whole alter](resources.md#a-whole-alter).
 
@@ -275,7 +294,7 @@ contributor: its keys and its `#[RefinesInput]` methods are
 contribution number one, and they are held to the same rules as
 everybody who arrives later.
 
-Introduced in [Other modules](introduction/12-other-modules.md).
+Introduced in [Other modules](introduction/13-other-modules.md).
 Reference: [The two roles](refinement.md#the-two-roles).
 
 ### Site default
@@ -290,7 +309,7 @@ owner's default. Each entry names the resource (or a plugin's
 structure, by the id the catalog lists), a key path from it, and the
 value as a form posts it.
 
-Introduced in [The site and the page](introduction/13-site-and-page.md).
+Introduced in [The site and the page](introduction/14-site-and-page.md).
 Reference: [A site's own defaults](declaring-a-resource.md#a-sites-own-defaults).
 
 ### Seed
@@ -303,7 +322,7 @@ that never enters the context. A reference is a seed whose whole value
 is a name in braces, `'{name}'`, whose value is the raw value of the
 route's path variable of that name.
 
-Introduced in [The site and the page](introduction/13-site-and-page.md).
+Introduced in [The site and the page](introduction/14-site-and-page.md).
 Reference: [A route that fixes or fills keys](forms.md#a-route-that-fixes-or-fills-keys).
 
 ### Access
@@ -326,7 +345,7 @@ child, whether its keys are open, locked or omitted. Named by `access:`
 on `#[Resource]` or `#[Structure]`, a `Resource\OperationAccessInterface`
 in `src/Access/`.
 
-Introduced in [Access](introduction/14-access.md). Reference:
+Introduced in [Access](introduction/15-access.md). Reference:
 [Access](resources.md#access),
 [Static and runtime access](resources.md#static-and-runtime-access).
 
@@ -347,7 +366,7 @@ a form submit, a Drush command, a config action, an agent call and a
 test, without any of them owning a second copy of the rules. In the
 code, `DataSurfaceInterface`.
 
-Introduced in [Sealed](introduction/15-sealed.md). Reference:
+Introduced in [Sealed](introduction/16-sealed.md). Reference:
 [The build step](how-it-fits.md#the-build-step).
 
 ### Sealed
@@ -363,7 +382,7 @@ is sealed stays true of everything it accepts afterwards, so a caller
 that read it once, or a machine-readable contract emitted from it, is
 never contradicted later.
 
-Introduced in [Sealed](introduction/15-sealed.md). Reference:
+Introduced in [Sealed](introduction/16-sealed.md). Reference:
 [The narrowing table](refinement.md#the-narrowing-table),
 [Never stricter than the runtime](served-contract.md#never-stricter-than-the-runtime).
 
@@ -378,29 +397,10 @@ class and a context into a sealed `DataSurfaceInterface`. The blueprint
 is filled once at build, then sealed; the context is applied once by
 the build step.
 
-Introduced in [Sealed](introduction/15-sealed.md). Reference:
+Introduced in [Sealed](introduction/16-sealed.md). Reference:
 [The build step](how-it-fits.md#the-build-step).
 
 ## Terms in the reference
-
-### Shape
-
-A shape is a named kind of thing the module declares; the one the
-`#[Shape]` attribute names is a single value declared once and used at
-many keys.
-
-Precisely: a named type, in Smithy's sense, of which there are three
-kinds: a resource, a structure, and a named scalar shape, one value
-(its type, label, description, constraints, examples) declared once
-and used at many keys. The third is the one the attribute names: a
-class in `src/Shape/` carrying `#[Shape(id)]`, whose static `define()`
-returns a plain data definition, used in the type position of `add()`;
-each key may only narrow it, an alter of it tightens it at every key,
-and the served contract writes it once, as a def. Never the blueprint
-or the layout.
-
-Not in the introduction. Reference:
-[Named shapes](declaring-a-resource.md#named-shapes).
 
 ### Blueprint
 
@@ -495,7 +495,7 @@ interface for both, a service implementing `SiteListInterface`, whose
 `list()` answers a `SiteList`, asked at every build; a closed one,
 `ClosedSiteListInterface`, names every structure it may list.
 
-Named in [Resources made of structures](introduction/10-putting-together.md).
+Named in [Resources made of structures](introduction/11-resources-made-of-structures.md).
 Reference: [Keys that come from the site](resources.md#keys-that-come-from-the-site),
 [Variants from the site](resources.md#variants-from-the-site).
 
@@ -539,7 +539,7 @@ Precisely: a list of child instances at a key, declared with
 are the parent's, and each item is the child's, refined and validated
 in its own frame.
 
-Named in [Resources made of structures](introduction/10-putting-together.md).
+Named in [Resources made of structures](introduction/11-resources-made-of-structures.md).
 Reference: [Collections](resources.md#collections).
 
 ### Mixin
@@ -553,7 +553,7 @@ refined in the owner's frame, and emitted as `allOf` of its def and the
 owner's properties. Nest for a thing of its own, mix in for shared
 members that are part of this thing.
 
-Named in [Resources made of structures](introduction/10-putting-together.md).
+Named in [Resources made of structures](introduction/11-resources-made-of-structures.md).
 Reference: [Mixins](resources.md#mixins).
 
 ### Port
@@ -567,7 +567,7 @@ whatever attaches it, `attach($key, Child::class, reads: [$port =>
 $key])`. A live sibling value its rules watch, never stored or drawn by
 the structure.
 
-Named in [Resources made of structures](introduction/10-putting-together.md).
+Named in [Resources made of structures](introduction/11-resources-made-of-structures.md).
 Reference: [Ports](resources.md#ports).
 
 ### Derived resource
@@ -615,7 +615,7 @@ form layer is one more consumer of the pipeline, not a value path of its
 own: the widgets collect a raw tree and `accept()` does the rest, which
 is what keeps a generated form and a JSON payload from drifting apart.
 
-Named in [A value sent in](introduction/16-a-value-sent-in.md).
+Named in [A value sent in](introduction/17-a-value-sent-in.md).
 Reference: [The pipeline](pipeline.md).
 
 ### Contract and payload

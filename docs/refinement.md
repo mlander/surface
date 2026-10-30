@@ -4,8 +4,8 @@ This page is the reference for rules between keys and for how other
 modules may tighten a resource's rules: who may change what, when, and
 how long an answer stays valid. Use it after
 [Your second resource](second-resource.md), when a rule needs more than
-one refiner. [Rules between keys](introduction/05-rules-between-keys.md)
-and [Other modules](introduction/12-other-modules.md) introduce the
+one refiner. [Rules between keys](introduction/07-rules-between-keys.md)
+and [Other modules](introduction/13-other-modules.md) introduce the
 ideas.
 
 A resource or structure says what a key may hold. Refinement says what

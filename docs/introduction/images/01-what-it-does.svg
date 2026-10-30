@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 330" role="img" aria-labelledby="t">
-  <title id="t">The performance settings, system.performance, described once with three values on the left; arrows to a form, a Tool API tool, an HTTP API and a React page on the right, each asking for the same three values</title>
+  <title id="t">A module's settings, my_module.settings, described once with five values on the left; arrows to a form, a Tool API tool, an HTTP API and a React page on the right, each asking for the same five values</title>
   <style>
     .bg { fill: #F6F8FA; }
     .ink { fill: #1F2328; }
@@ -32,17 +32,20 @@
   </style>
   <rect class="bg" x="0" y="0" width="720" height="330" rx="12"/>
 
-  <!-- The thing, described once, with its three values -->
-  <rect class="resource" x="24" y="80" width="260" height="172" rx="10"/>
-  <text class="resource-label bold code" x="40" y="106" font-size="15">system.performance</text>
-  <text class="muted small" x="40" y="126">the performance settings</text>
-
-  <rect class="key" x="40" y="140" width="228" height="26" rx="13"/>
-  <text x="54" y="158"><tspan class="ink code small">max_age</tspan><tspan class="muted small"> integer</tspan></text>
-  <rect class="key" x="40" y="174" width="228" height="26" rx="13"/>
-  <text x="54" y="192"><tspan class="ink code small">css_preprocess</tspan><tspan class="muted small"> boolean</tspan></text>
-  <rect class="key" x="40" y="208" width="228" height="26" rx="13"/>
-  <text x="54" y="226"><tspan class="ink code small">js_preprocess</tspan><tspan class="muted small"> boolean</tspan></text>
+  <!-- The thing, described once, with its five values -->
+  <rect class="resource" x="24" y="44" width="260" height="244" rx="10"/>
+  <text class="resource-label bold code" x="40" y="70" font-size="15">my_module.settings</text>
+  <text class="muted small" x="40" y="90">your module's settings</text>
+  <rect class="key" x="40" y="104" width="228" height="26" rx="13"/>
+  <text x="54" y="122"><tspan class="ink code small">title</tspan><tspan class="muted small"> string</tspan></text>
+  <rect class="key" x="40" y="138" width="228" height="26" rx="13"/>
+  <text x="54" y="156"><tspan class="ink code small">items_per_page</tspan><tspan class="muted small"> integer</tspan></text>
+  <rect class="key" x="40" y="172" width="228" height="26" rx="13"/>
+  <text x="54" y="190"><tspan class="ink code small">show_author</tspan><tspan class="muted small"> boolean</tspan></text>
+  <rect class="key" x="40" y="206" width="228" height="26" rx="13"/>
+  <text x="54" y="224"><tspan class="ink code small">notify_email</tspan><tspan class="muted small"> email</tspan></text>
+  <rect class="key" x="40" y="240" width="228" height="26" rx="13"/>
+  <text x="54" y="258"><tspan class="ink code small">layout</tspan><tspan class="muted small"> string</tspan></text>
 
   <!-- Arrows to each place that asks for the values -->
   <path class="arrow" d="M284 166 C 330 166, 330 58, 362 58"/>
@@ -54,20 +57,20 @@
   <path class="arrow" d="M284 166 C 330 166, 330 274, 362 274"/>
   <path class="arrowhead" d="M370 274 L360 269 L360 279 Z"/>
 
-  <!-- Each asks for the same three values -->
+  <!-- Each asks for the same five values -->
   <path class="door" d="M376 30 H676 L696 58 L676 86 H376 Z"/>
   <text class="door-label bold" x="392" y="52">The form</text>
-  <text class="muted code small" x="392" y="72">max_age  css_preprocess  js_preprocess</text>
+  <text class="muted small" x="392" y="72">the same five values</text>
 
   <path class="door" d="M376 102 H676 L696 130 L676 158 H376 Z"/>
   <text class="door-label bold" x="392" y="124">A Tool API tool</text>
-  <text class="muted code small" x="392" y="144">max_age  css_preprocess  js_preprocess</text>
+  <text class="muted small" x="392" y="144">the same five values</text>
 
   <path class="door" d="M376 174 H676 L696 202 L676 230 H376 Z"/>
   <text class="door-label bold" x="392" y="196">An HTTP API</text>
-  <text class="muted code small" x="392" y="216">max_age  css_preprocess  js_preprocess</text>
+  <text class="muted small" x="392" y="216">the same five values</text>
 
   <path class="door" d="M376 246 H676 L696 274 L676 302 H376 Z"/>
   <text class="door-label bold" x="392" y="268">A React page</text>
-  <text class="muted code small" x="392" y="288">max_age  css_preprocess  js_preprocess</text>
+  <text class="muted small" x="392" y="288">the same five values</text>
 </svg>

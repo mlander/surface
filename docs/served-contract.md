@@ -4,8 +4,8 @@ This page covers the HTTP door: the JSON document that describes an
 operation, the endpoints that narrow and check values before a write,
 and the React form drawn from that document. Use it when a client
 without PHP, such as a JavaScript app, reads or writes a resource.
-[Doors](introduction/11-doors.md) introduces HTTP and React as doors,
-and [Sealed](introduction/15-sealed.md) why the document matches the
+[Doors](introduction/12-doors.md) introduces HTTP and React as doors,
+and [Sealed](introduction/16-sealed.md) why the document matches the
 form.
 
 A resource built in one of its operations, served as a JSON document a

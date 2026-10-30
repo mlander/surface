@@ -9,7 +9,7 @@ use Drupal\data_surface\Resource\BlueprintInterface;
 use Drupal\data_surface\Resource\StructureInterface;
 
 /**
- * The teaser block's settings, as docs/introduction/09-structures.md shows.
+ * The teaser block's settings, as docs/introduction/03-structures.md shows.
  *
  * IntroductionDocsTest holds the page's snippet to these lines, and
  * IntroductionExcerptsTest produces what the pages quote from them.

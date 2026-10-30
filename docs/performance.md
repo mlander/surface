@@ -3,7 +3,7 @@
 This page says what the module computes once and keeps, what it
 computes on each request, and how long each takes. Read it when a page
 that uses resources is slow, or before you run the module under load.
-[Sealed](introduction/15-sealed.md) introduces the build whose cost it
+[Sealed](introduction/16-sealed.md) introduces the build whose cost it
 measures.
 
 What a request pays, and what is paid once. The build of a resource for

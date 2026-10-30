@@ -50,6 +50,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
     'data_surface_first',
     'data_surface_resource_test',
     'data_surface_reference_test',
+    'my_module',
   ];
 
   /**
@@ -62,6 +63,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
     'data_surface_first',
     'data_surface_resource_test',
     'data_surface_reference_test',
+    'my_module',
   ];
 
   /**
@@ -75,6 +77,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
       'data_surface_first',
       'data_surface_resource_test',
       'data_surface_reference_test',
+      'my_module',
     ]);
     $this->setUpCurrentUser(admin: TRUE);
   }
@@ -135,6 +138,7 @@ class ConfigSchemaDriftTest extends DataSurfaceKernelTestBase {
     $this->assertContains('data_surface_examples.registration_step3', $checked);
     $this->assertContains('data_surface_resource_test.opening_hours', $checked);
     $this->assertContains('data_surface_reference_test.settings', $checked, 'Its references to content typed uuid, installed holding none.');
+    $this->assertContains('my_module.settings', $checked, 'The introduction\'s own settings.');
     $this->assertContains('data_surface_examples.event_venue.riverside', $checked, 'A config entity type the module declares: each thing it ships.');
   }
 

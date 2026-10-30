@@ -4,8 +4,8 @@ This page covers the form door: how the module draws a form from a
 resource or a plugin's structure, reads the submitted values back, and
 redraws it as answers change. Use it when you put a generated form into
 a plugin, an entity form or a route of your own, or arrange its keys.
-[Doors](introduction/11-doors.md) and
-[Structures](introduction/09-structures.md) introduce the ideas.
+[Doors](introduction/12-doors.md) and
+[Structures](introduction/03-structures.md) introduce the ideas.
 
 <!-- cspell:ignore deparment -->
 

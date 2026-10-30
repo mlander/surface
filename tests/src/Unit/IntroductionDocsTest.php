@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Holds the introduction series to the rules it was written by.
  *
- * `docs/introduction/` is seventeen short pages, one idea each, for a
+ * `docs/introduction/` is eighteen short pages, one idea each, for a
  * Drupal developer who knows none of this module's words. What keeps it
  * readable in order is checked here, from the files:
  *
@@ -25,9 +25,14 @@ use PHPUnit\Framework\Attributes\Group;
  * - Structure: one title, one picture, the closing links, pictures that
  *   are well-formed SVG with a title, and an index listing every page.
  * - No em-dash or en-dash.
- * - The teaser block and the badge alter the pages show are
- *   data_surface_intro_test's code, line for line; IntroductionExcerptsTest
- *   runs it and finds what the pages quote of its output.
+ * - Real code: every PHP snippet is a class's code, line for line,
+ *   with nothing elided. A snippet that declares a class is that class's
+ *   file; one that does not is a run of lines of some file of the
+ *   module, unless it is one of the few sketches named here. Only a
+ *   comment saying a non-surface part is unchanged may stand for code.
+ *   my_module and data_surface_intro_test hold the code the pages show of
+ *   a developer's own module; IntroductionExcerptsTest runs it and finds
+ *   what the pages quote of its output.
  */
 #[Group('data_surface')]
 final class IntroductionDocsTest extends UnitTestCase {
@@ -103,13 +108,43 @@ final class IntroductionDocsTest extends UnitTestCase {
   ];
 
   /**
-   * The teaser classes the pages show, by the test module file holding each.
+   * The directories that hold the classes the pages show.
    */
-  private const TEASER = [
-    'TeaserBlockStructure' => 'tests/modules/data_surface_intro_test/src/Structure/TeaserBlockStructure.php',
-    'TeaserBlock' => 'tests/modules/data_surface_intro_test/src/Plugin/Block/TeaserBlock.php',
-    'TeaserBadgeAlter' => 'tests/modules/data_surface_intro_test/src/OutsideDiscovery/TeaserBadgeAlter.php',
+  private const SOURCES = ['src', 'modules/*/src', 'tests/modules/*/src'];
+
+  /**
+   * The classes the pages show whole, which no shipped module has.
+   *
+   * Each is a developer's own code in a test module, so the pages show it
+   * in full; a page that stops showing one loses its pin.
+   */
+  private const OWN_CLASSES = [
+    'MySettingsResource',
+    'MySettingsStorage',
+    'HexColor',
+    'MyColorsResource',
+    'TeaserBlockStructure',
+    'TeaserBlock',
+    'TeaserBadgeAlter',
   ];
+
+  /**
+   * The first line of each PHP snippet that is no file's code, by design.
+   *
+   * A declared rule over made-up keys (page 7), and calling code that
+   * asks the module for a data surface (page 16) or runs the pipeline
+   * (page 17), which IntroductionExcerptsTest runs as written.
+   */
+  private const SKETCHES = [
+    "\$inputs->narrow('end_date')",
+    "\$resources = \\Drupal::service('data_surface.resources');",
+    '// $block is the teaser block plugin.',
+  ];
+
+  /**
+   * A comment that stands for a non-surface part of an existing class.
+   */
+  private const UNCHANGED = '/^\s*\/\/ .*\bunchanged\.$/';
 
   /**
    * Lists the pages of the series, in order.
@@ -238,27 +273,28 @@ final class IntroductionDocsTest extends UnitTestCase {
     $terms = self::terms();
     $expected = [
       'resource' => '02',
-      'key' => '03',
-      'declare' => '03',
-      'rule' => '04',
-      'declared rule' => '05',
-      'refiner' => '05',
-      'identity' => '06',
-      'singleton' => '06',
-      'operation' => '07',
-      'storage' => '08',
-      'structure' => '09',
-      'attach' => '10',
-      'variants' => '10',
-      'door' => '11',
-      'alter' => '12',
-      'owner' => '12',
-      'site default' => '13',
-      'seed' => '13',
-      'access' => '14',
-      'data surface' => '15',
-      'sealed' => '15',
-      'build' => '15',
+      'structure' => '03',
+      'shape' => '04',
+      'key' => '05',
+      'declare' => '05',
+      'rule' => '06',
+      'declared rule' => '07',
+      'refiner' => '07',
+      'identity' => '08',
+      'singleton' => '08',
+      'operation' => '09',
+      'storage' => '10',
+      'attach' => '11',
+      'variants' => '11',
+      'door' => '12',
+      'alter' => '13',
+      'owner' => '13',
+      'site default' => '14',
+      'seed' => '14',
+      'access' => '15',
+      'data surface' => '16',
+      'sealed' => '16',
+      'build' => '16',
     ];
     foreach ($expected as $term => $number) {
       $this->assertArrayHasKey($term, $terms, sprintf('The glossary says where "%s" is introduced.', $term));
@@ -280,18 +316,18 @@ final class IntroductionDocsTest extends UnitTestCase {
    * Tests the check finds a term used early, and lets a forward link pass.
    *
    * A scratch copy of the series, in memory, with one sentence added to
-   * page 3.
+   * page 5.
    */
   public function testAnEarlyTermIsFound(): void {
     $pages = self::pages();
     $terms = self::terms();
-    $keys = $pages['03-keys.md'];
-    $pages['03-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nAn alter may add a key here.\n", $keys);
-    $this->assertSame(['03-keys.md uses "alter", defined in 12-other-modules.md: An alter may add a key here.'], self::earlyUses($pages, $terms));
-    $pages['03-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nAn [alter](12-other-modules.md) may add a key here.\n", $keys);
+    $keys = $pages['05-keys.md'];
+    $pages['05-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nAn alter may add a key here.\n", $keys);
+    $this->assertSame(['05-keys.md uses "alter", defined in 13-other-modules.md: An alter may add a key here.'], self::earlyUses($pages, $terms));
+    $pages['05-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nAn [alter](13-other-modules.md) may add a key here.\n", $keys);
     $this->assertSame([], self::earlyUses($pages, $terms), 'A forward link in the sentence lets it pass.');
-    $pages['03-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nA site builder calls buildForm() for each variant.\n", $keys);
-    $this->assertSame(['03-keys.md uses "variants", defined in 10-putting-together.md: A site builder calls buildForm() for each variant.'], self::earlyUses($pages, $terms), 'Whole words: neither a site builder nor buildForm() is the build, and a singular is found.');
+    $pages['05-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nA site builder calls buildForm() for each variant.\n", $keys);
+    $this->assertSame(['05-keys.md uses "variants", defined in 11-resources-made-of-structures.md: A site builder calls buildForm() for each variant.'], self::earlyUses($pages, $terms), 'Whole words: neither a site builder nor buildForm() is the build, and a singular is found.');
   }
 
   /**
@@ -320,7 +356,7 @@ final class IntroductionDocsTest extends UnitTestCase {
    */
   public function testEachPageHasItsParts(): void {
     $pages = self::pages();
-    $this->assertCount(17, $pages);
+    $this->assertCount(18, $pages);
     $names = array_keys($pages);
     $pictures = [];
     foreach ($names as $position => $name) {
@@ -353,7 +389,7 @@ final class IntroductionDocsTest extends UnitTestCase {
    */
   public function testEachPictureIsSvgWithTitle(): void {
     $files = glob(self::ROOT . '/' . self::SERIES . '/images/*.svg');
-    $this->assertCount(17, $files);
+    $this->assertCount(18, $files);
     $previous = libxml_use_internal_errors(TRUE);
     foreach ($files as $file) {
       $document = new \DOMDocument();
@@ -378,7 +414,7 @@ final class IntroductionDocsTest extends UnitTestCase {
     $index = (string) file_get_contents(self::ROOT . '/' . self::SERIES . '/index.md');
     preg_match_all('/^(\d+)\. \[[^\]]+\]\(([\w-]+\.md)\)/m', $index, $listed);
     $this->assertSame(array_keys(self::pages()), $listed[2]);
-    $this->assertSame(array_map('strval', range(1, 17)), $listed[1]);
+    $this->assertSame(array_map('strval', range(1, 18)), $listed[1]);
   }
 
   /**
@@ -398,34 +434,129 @@ final class IntroductionDocsTest extends UnitTestCase {
   }
 
   /**
-   * Tests the teaser snippets are the test module's code, line for line.
+   * Lists the PHP files a snippet may come from, by class name.
    *
-   * Every line of a snippet but its blank lines and its comments, which
-   * stand for what the page leaves out, is a line of the class's file,
-   * in the same order.
+   * @return array<string, string[]>
+   *   Each class's files, relative to the module root, by the class name.
    */
-  public function testTheTeaserSnippetsAreTheTestModulesCode(): void {
-    $shown = [];
-    foreach (self::pages() as $name => $page) {
-      preg_match_all('/^```php\n(.*?)\n```$/ms', $page, $blocks);
-      foreach ($blocks[1] as $block) {
-        if (!preg_match('/^final class (Teaser\w+) /m', $block, $class) || !isset(self::TEASER[$class[1]])) {
-          continue;
-        }
-        $shown[] = $class[1];
-        $file = explode("\n", (string) file_get_contents(self::ROOT . '/' . self::TEASER[$class[1]]));
-        $at = 0;
-        foreach (explode("\n", $block) as $line) {
-          if (trim($line) === '' || str_starts_with(ltrim($line), '//')) {
-            continue;
+  public static function sources(): array {
+    $files = [];
+    foreach (self::SOURCES as $glob) {
+      foreach (array_filter(glob(self::ROOT . '/' . $glob), 'is_dir') as $directory) {
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS));
+        foreach ($iterator as $file) {
+          if ($file->getExtension() === 'php') {
+            $files[$file->getBasename('.php')][] = substr($file->getPathname(), strlen(self::ROOT) + 1);
           }
-          $found = array_search($line, array_slice($file, $at, NULL, TRUE), TRUE);
-          $this->assertNotFalse($found, sprintf('%s shows "%s" in %s, which %s does not have there; the page and the test module say the same.', $name, trim($line), $class[1], self::TEASER[$class[1]]));
-          $at = (int) $found + 1;
         }
       }
     }
-    $this->assertSame(array_keys(self::TEASER), $shown, 'The pages show each teaser class once, and the test module holds it.');
+    return $files;
+  }
+
+  /**
+   * Says whether a snippet's lines are a file's lines, in order.
+   *
+   * @param string[] $lines
+   *   The snippet's lines, blank lines and unchanged comments left out.
+   * @param string[] $file
+   *   The file's lines.
+   * @param string $indent
+   *   What each snippet line is indented by in the file.
+   *
+   * @return string|null
+   *   NULL when every line is found in order, or the first line that is
+   *   not.
+   */
+  public static function missing(array $lines, array $file, string $indent = ''): ?string {
+    $at = 0;
+    foreach ($lines as $line) {
+      $found = array_search($indent . $line, array_slice($file, $at, NULL, TRUE), TRUE);
+      if ($found === FALSE) {
+        return $line;
+      }
+      $at = (int) $found + 1;
+    }
+    return NULL;
+  }
+
+  /**
+   * Lists the PHP snippets of the pages.
+   *
+   * @return array<int, array{string, string}>
+   *   Each snippet: the page's file name, and the snippet's text.
+   */
+  public static function snippets(): array {
+    $snippets = [];
+    foreach (self::pages() as $name => $page) {
+      preg_match_all('/^```php\n(.*?)\n```$/ms', $page, $blocks);
+      foreach ($blocks[1] as $block) {
+        $snippets[] = [$name, $block];
+      }
+    }
+    return $snippets;
+  }
+
+  /**
+   * Tests no snippet elides code.
+   *
+   * What a page shows of a class's surface, it shows whole: its
+   * attributes, its keys and their rules, its methods. A comment saying
+   * a non-surface part is unchanged is the one stand-in.
+   */
+  public function testNoSnippetElides(): void {
+    $found = [];
+    foreach (self::snippets() as [$name, $block]) {
+      foreach (explode("\n", $block) as $line) {
+        if (str_contains($line, '/* ... */') || preg_match('/^\s*\/\/\s*\.\.\./', $line)) {
+          $found[] = sprintf('%s: %s', $name, trim($line));
+        }
+      }
+    }
+    $this->assertSame([], $found, 'Show the code whole, or show a smaller class whole.');
+  }
+
+  /**
+   * Tests every snippet is the module's code, line for line.
+   *
+   * A snippet that declares a class is held to that class's file: every
+   * line but its blank lines and its unchanged comments is a line of the
+   * file, in the same order. One that declares none, such as a method or
+   * an attribute, is held the same way to the file that has it, indented
+   * as the file indents it; a sketch is the only exception.
+   */
+  public function testEverySnippetIsTheModulesCode(): void {
+    $sources = self::sources();
+    $shown = [];
+    $sketches = [];
+    foreach (self::snippets() as [$name, $block]) {
+      $lines = array_values(array_filter(explode("\n", $block), static fn (string $line): bool => trim($line) !== '' && !preg_match(self::UNCHANGED, $line)));
+      if (preg_match('/^(?:final |abstract )?class (\w+) /m', $block, $class)) {
+        $this->assertCount(1, $sources[$class[1]] ?? [], sprintf('%s shows the class %s, which one file of the module must hold.', $name, $class[1]));
+        $path = $sources[$class[1]][0];
+        $missing = self::missing($lines, explode("\n", (string) file_get_contents(self::ROOT . '/' . $path)));
+        $this->assertNull($missing, sprintf('%s shows "%s" in %s, which %s does not have there; the page and the code say the same.', $name, trim((string) $missing), $class[1], $path));
+        $shown[] = $class[1];
+        continue;
+      }
+      if (in_array($lines[0], self::SKETCHES, TRUE)) {
+        $sketches[] = $lines[0];
+        continue;
+      }
+      $held = NULL;
+      foreach (array_merge(...array_values($sources)) as $path) {
+        $file = explode("\n", (string) file_get_contents(self::ROOT . '/' . $path));
+        foreach (['', '  ', '    '] as $indent) {
+          if (self::missing($lines, $file, $indent) === NULL) {
+            $held = $path;
+            break 2;
+          }
+        }
+      }
+      $this->assertNotNull($held, sprintf('%s shows code no file of the module has, starting "%s"; copy it from the class again, or name it in SKETCHES.', $name, trim($lines[0])));
+    }
+    $this->assertSame([], array_diff(self::OWN_CLASSES, $shown), 'The pages show each of the developer\'s own classes.');
+    $this->assertSame(self::SKETCHES, $sketches, 'Each sketch is shown once.');
   }
 
 }

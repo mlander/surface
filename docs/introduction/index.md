@@ -12,33 +12,36 @@ pages then show how to write one.
    React page accept the same values.
 2. [Resources](02-resources.md): a thing your site keeps values for
    that can be asked for on its own.
-3. [Keys](03-keys.md): one value a resource holds, with a type, a label
-   and a default.
-4. [Rules on a key](04-rules-on-a-key.md): what a key allows, such as
+3. [Structures](03-structures.md): a group of values held by something
+   else, such as a block plugin's settings, held by the placed block.
+4. [Shapes](04-shapes.md): one value declared once and used under many
+   names.
+5. [Keys](05-keys.md): one value a resource or structure holds, with a
+   type, a label and a default.
+6. [Rules on a key](06-rules-on-a-key.md): what a key allows, such as
    required, a length or a range.
-5. [Rules between keys](05-rules-between-keys.md): what one key allows
+7. [Rules between keys](07-rules-between-keys.md): what one key allows
    can depend on another key's value.
-6. [Which one: identity](06-identity.md): the keys that say which one,
+8. [Which one: identity](08-identity.md): the keys that say which one,
    and the resources that exist once.
-7. [Operations](07-operations.md): one way of asking for a resource,
+9. [Operations](09-operations.md): one way of asking for a resource,
    each with its permission.
-8. [Storage](08-storage.md): where the values are saved, which the
-   resource does not depend on.
-9. [Structures](09-structures.md): a group of keys held by something
-   else, such as a block plugin's settings.
-10. [Resources made of structures](10-putting-together.md): a structure
-    held under one key, or one of several chosen by another key.
-11. [Doors](11-doors.md): the form, the tool, MCP, ECA, HTTP and the
+10. [Storage](10-storage.md): where the values are saved, which the
+    resource does not depend on.
+11. [Resources made of structures](11-resources-made-of-structures.md):
+    a structure held under one key, or one of several chosen by another
+    key.
+12. [Doors](12-doors.md): the form, the tool, MCP, ECA, HTTP and the
     React page, and the submodule that opens each.
-12. [Other modules](12-other-modules.md): a module adds keys to a
+13. [Other modules](13-other-modules.md): a module adds keys to a
     resource it does not own, or tightens its rules.
-13. [The site and the page](13-site-and-page.md): a site's own defaults,
+14. [The site and the page](14-site-and-page.md): a site's own defaults,
     and values a route starts or fixes.
-14. [Access](14-access.md): which keys an account may change or see.
-15. [Sealed](15-sealed.md): who has a say in what an operation
+15. [Access](15-access.md): which keys an account may change or see.
+16. [Sealed](16-sealed.md): who has a say in what an operation
     accepts, in order, and why that answer stops changing before the
     form, the tool or HTTP reads it.
-16. [A value sent in](16-a-value-sent-in.md): the steps every value
+17. [A value sent in](17-a-value-sent-in.md): the steps every value
     takes, and why every door refuses it with the same message.
-17. [Where next](17-where-next.md): install it, build your first
+18. [Where next](18-where-next.md): install it, build your first
     resource, look things up, try the examples.

@@ -11,8 +11,8 @@ section; nothing here is a concept of its own.
 
 Read this page when the value you store differs from the value a person
 enters, or when code must run after a save.
-[Storage](introduction/08-storage.md) and
-[A value sent in](introduction/16-a-value-sent-in.md) introduce the
+[Storage](introduction/10-storage.md) and
+[A value sent in](introduction/17-a-value-sent-in.md) introduce the
 steps it describes.
 
 ## Representation: asked one way, stored another, sent a third

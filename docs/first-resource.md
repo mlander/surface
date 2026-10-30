@@ -8,8 +8,8 @@ agent calls and the JSON Schema from it.
 A resource, its keys, an operation and a storage are each introduced in
 plain words on a page of their own:
 [Resources](introduction/02-resources.md),
-[Keys](introduction/03-keys.md), [Operations](introduction/07-operations.md)
-and [Storage](introduction/08-storage.md). This page shows every file
+[Keys](introduction/05-keys.md), [Operations](introduction/09-operations.md)
+and [Storage](introduction/10-storage.md). This page shows every file
 in full, so you see each piece. You write the resource, the storage,
 the permission and the route. The config schema and the install file
 are generated from the resource class by a command, which also fails

@@ -4,7 +4,7 @@ This page covers keys whose value must be one of a list: how the list is
 declared once and serves as both the check and the form's choices, and
 how the site can supply the list. Use it when a key's choices are more
 than a fixed list in the class.
-[Rules on a key](introduction/04-rules-on-a-key.md) introduces a list of
+[Rules on a key](introduction/06-rules-on-a-key.md) introduces a list of
 allowed values as a rule.
 
 A list of allowed values is needed twice: once as a constraint (is this

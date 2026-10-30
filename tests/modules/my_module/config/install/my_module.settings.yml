@@ -1,0 +1,5 @@
+title: 'Latest content'
+items_per_page: 10
+show_author: true
+notify_email: admin@example.com
+layout: list

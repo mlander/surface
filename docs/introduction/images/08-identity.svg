@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 296" role="img" aria-labelledby="t">
-<title id="t">A singleton, system.performance, beside node.type, which exists many times and is told apart by its identity key type</title>
+<title id="t">A singleton, my_module.settings, beside node.type, which exists many times and is told apart by its identity key type</title>
 <style>
 .bg{fill:#F6F8FA}
 .ink{fill:#1F2328}
@@ -40,10 +40,10 @@ text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,san
 </style>
 <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker></defs>
 <rect class="bg" x="0" y="0" width="720" height="296" rx="12"/>
-<rect class="res" x="24" y="56" width="300" height="160" rx="10"/><text class="resT b mono" x="38" y="80">system.performance</text>
-<rect class="key" x="44" y="96" width="230" height="26" rx="13"/><text x="58" y="114"><tspan class="mono ink">max_age</tspan><tspan class="mono muted" dx="8">integer</tspan></text>
-<rect class="key" x="44" y="132" width="230" height="26" rx="13"/><text x="58" y="150"><tspan class="mono ink">css_preprocess</tspan><tspan class="mono muted" dx="8">boolean</tspan></text>
-<rect class="key" x="44" y="168" width="230" height="26" rx="13"/><text x="58" y="186"><tspan class="mono ink">js_preprocess</tspan><tspan class="mono muted" dx="8">boolean</tspan></text>
+<rect class="res" x="24" y="56" width="300" height="160" rx="10"/><text class="resT b mono" x="38" y="80">my_module.settings</text>
+<rect class="key" x="44" y="96" width="230" height="26" rx="13"/><text x="58" y="114"><tspan class="mono ink">title</tspan><tspan class="mono muted" dx="8">string</tspan></text>
+<rect class="key" x="44" y="132" width="230" height="26" rx="13"/><text x="58" y="150"><tspan class="mono ink">items_per_page</tspan><tspan class="mono muted" dx="8">integer</tspan></text>
+<rect class="key" x="44" y="168" width="230" height="26" rx="13"/><text x="58" y="186"><tspan class="mono ink">layout</tspan><tspan class="mono muted" dx="8">string</tspan></text>
 <text class="ink" x="24" y="246">singleton: no identity keys, exists once</text>
 <rect class="res" x="400" y="36" width="296" height="160" rx="10"/><text class="resT b mono" x="414" y="60"></text>
 <rect class="resource-fill" x="390" y="46" width="296" height="160" rx="10"/><text class="resT b mono" x="404" y="70"></text>

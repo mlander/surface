@@ -6,7 +6,7 @@ resource, so you write no form, tool or endpoint by hand. Each door is
 a Drupal mechanism you may already know, and a submodule turns
 operations into it.
 
-![One resource, block.placement, with its create operation, and arrows to four doors: the form, a Tool API tool that MCP and ECA call, HTTP with an OpenAPI document, and a React page](images/11-doors.svg)
+![One resource, block.placement, with its create operation, and arrows to four doors: the form, a Tool API tool that MCP and ECA call, HTTP with an OpenAPI document, and a React page](images/12-doors.svg)
 
 | Door | What it is in Drupal | Opened by |
 | --- | --- | --- |
@@ -41,7 +41,7 @@ it is served at each of these:
 | A React page | `/surface-react/block.placement/create` |
 
 This is the input the tool takes to place a teaser block like the one
-on [Structures](09-structures.md):
+on [Structures](03-structures.md):
 
 ```json
 {
@@ -60,9 +60,9 @@ The form draws an element for each of these keys, and the HTTP door's
 JSON Schema lists the same keys with the same rules. A `limit` of 60 is
 refused at every door with the same message, at `/settings/limit`,
 because every door reads the one description the resource gives. A
-later page shows [what happens to a value sent in](16-a-value-sent-in.md).
+later page shows [what happens to a value sent in](17-a-value-sent-in.md).
 
-Next: [Other modules](12-other-modules.md)
+Next: [Other modules](13-other-modules.md)
 
 Build it: [Routes from operations](../resources.md#routes-from-operations) and [Tools](../resources.md#tools)
 

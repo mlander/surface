@@ -4,10 +4,10 @@ This page is the full reference for what a resource or structure class
 can declare beyond its keys: operations, other modules' changes, the
 structures it holds, access, and the tools made from it. Use it when a
 build page links a section here, or when you need an option no build
-page shows. [Operations](introduction/07-operations.md),
-[Resources made of structures](introduction/10-putting-together.md),
-[Other modules](introduction/12-other-modules.md) and
-[Access](introduction/14-access.md) introduce its ideas.
+page shows. [Operations](introduction/09-operations.md),
+[Resources made of structures](introduction/11-resources-made-of-structures.md),
+[Other modules](introduction/13-other-modules.md) and
+[Access](introduction/15-access.md) introduce its ideas.
 
 A resource or structure is a class of its own: one static method that
 declares its keys, and one named static method per key whose allowed

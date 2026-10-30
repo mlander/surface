@@ -1,0 +1,51 @@
+# Generated from the my_module.settings resource by drush data_surface:config-schema.
+my_module.settings:
+  type: config_object
+  label: 'My module settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+      constraints:
+        Length:
+          max: 64
+    items_per_page:
+      type: integer
+      label: 'Items per page'
+      constraints:
+        Range:
+          min: 1
+          max: 50
+    show_author:
+      type: boolean
+      label: 'Show the author'
+      nullable: true
+    notify_email:
+      type: email
+      label: 'Email for notices'
+      nullable: true
+    layout:
+      type: string
+      label: 'Layout'
+
+# Generated from the my_module.colors resource by drush data_surface:config-schema.
+my_module.colors:
+  type: config_object
+  label: 'my_module.colors'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    link_color:
+      type: string
+      label: 'Link color'
+      constraints:
+        Regex:
+          pattern: '/^#[0-9A-Fa-f]{6}$/D'
+    background_color:
+      type: string
+      label: 'Background color'
+      constraints:
+        Regex:
+          pattern: '/^#[0-9A-Fa-f]{6}$/D'

@@ -6,7 +6,7 @@ of Olivero, `sidebar_first` is not. Some of these answers are known
 ahead of time from the values alone. Others need the site, and are
 worked out when the request comes in.
 
-![The block.placement resource with two keys, theme and region; an arrow from theme to a rule on region that says a region of the theme chosen, worked out from the value of theme alone](images/05-rules-between-keys.svg)
+![The block.placement resource with two keys, theme and region; an arrow from theme to a rule on region that says a region of the theme chosen, worked out from the value of theme alone](images/07-rules-between-keys.svg)
 
 ## A refiner
 
@@ -42,7 +42,7 @@ its regions):
 ```
 
 Send `sidebar_first` with the theme `olivero`, and the tool refuses it
-with the same inner object [the previous page](04-rules-on-a-key.md)
+with the same inner object [the previous page](06-rules-on-a-key.md)
 showed. The message's last sentence names the condition that made the
 rule apply:
 
@@ -85,7 +85,7 @@ worked out when the request comes in, with that request's values, and
 the JSON Schema marks the key `live`
 ([Static and runtime refiners](../refinement.md#static-and-runtime-refiners)).
 
-Next: [Which one: identity](06-identity.md)
+Next: [Which one: identity](08-identity.md)
 
 Build it: [Declaring a rule](../refinement.md#declaring-a-rule), then [Static and runtime refiners](../refinement.md#static-and-runtime-refiners)
 

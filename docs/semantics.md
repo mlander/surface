@@ -4,7 +4,7 @@ This page lists the exact rules for one value on its way in: when it
 counts as set, how a text becomes a number or a boolean, what required
 means, and what is refused. Use it when a door accepts or refuses a
 value you did not expect.
-[A value sent in](introduction/16-a-value-sent-in.md) introduces the
+[A value sent in](introduction/17-a-value-sent-in.md) introduces the
 steps these rules belong to.
 
 <!-- cspell:ignore nmae -->

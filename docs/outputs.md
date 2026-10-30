@@ -3,7 +3,7 @@
 This page covers what an operation returns after it runs, as opposed
 to what it accepts, and how that is declared and checked. Most
 resources need none of it: a settings page returns nothing beyond the
-values it saved. [Operations](introduction/07-operations.md) introduces
+values it saved. [Operations](introduction/09-operations.md) introduces
 what runs.
 
 A data surface has two halves. The definitions a host **accepts** are the

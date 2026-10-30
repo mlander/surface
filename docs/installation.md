@@ -3,7 +3,7 @@
 This page installs the module and each submodule, and says what each
 submodule adds. To learn what the module does before you install it,
 read [the introduction](introduction/index.md) first: nothing there
-needs a site. [Doors](introduction/11-doors.md) says which submodule
+needs a site. [Doors](introduction/12-doors.md) says which submodule
 opens which door.
 
 ## Requirements
