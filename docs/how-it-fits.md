@@ -3,7 +3,7 @@
 This page follows one build from the code that asks for a resource to
 the sealed result every door reads. Read it when you call the build
 yourself, or need to know what runs and in what order before a form or
-a tool appears. [Sealed](introduction/15-sealed.md) introduces the build
+a tool appears. [Sealed](introduction/16-sealed.md) introduces the build
 and its result in plain words.
 
 Three parties, in order:

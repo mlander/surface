@@ -4,9 +4,9 @@ This page is the reference for the class you write: its attribute, its
 keys, and what a key can say beyond its type and label. Use it when
 [Your first resource](first-resource.md) does not show the option you
 need. [Resources](introduction/02-resources.md),
-[Keys](introduction/03-keys.md),
-[Rules on a key](introduction/04-rules-on-a-key.md) and
-[Structures](introduction/09-structures.md) introduce its ideas.
+[Keys](introduction/05-keys.md),
+[Rules on a key](introduction/06-rules-on-a-key.md) and
+[Structures](introduction/03-structures.md) introduce its ideas.
 
 A resource or structure is declared in one place: a class in a module's
 `src/Resource/` or `src/Structure/` carrying `#[Resource]` or

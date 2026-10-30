@@ -4,7 +4,7 @@ Some resources exist once on a site. Others exist many times, and a
 request has to say which one it is about. The keys that say which one
 are the resource's **identity**.
 
-![Two resources side by side: my_module.settings, one box, marked as a singleton that exists once; node.type, a stack of boxes, one per content type, each told apart by its identity key type](images/06-identity.svg)
+![Two resources side by side: my_module.settings, one box, marked as a singleton that exists once; node.type, a stack of boxes, one per content type, each told apart by its identity key type](images/08-identity.svg)
 
 ## Once, or many times
 
@@ -38,7 +38,7 @@ Where each class lives: [Namespaces](../concepts.md#namespaces).
 The settings name no `identity`, so they are a singleton. The content
 type names `type`. The other arguments name the class that saves the
 values and the class that decides who may change them, which later
-pages show ([Storage](08-storage.md), [Access](14-access.md)).
+pages show ([Storage](10-storage.md), [Access](15-access.md)).
 
 `type` is still a key, declared in `defineInputs()` with a type, a label
 and its rules. The attribute only says it is the key that tells content
@@ -72,10 +72,10 @@ Identity also decides what may change. When a request edits the
 `article` content type, `type` is already known, so it is locked to
 `article`: the edit cannot rename the machine name. When a request adds
 a content type, `type` is not known yet, so it is open and the caller
-chooses it. [The next page](07-operations.md) shows how each way of
+chooses it. [The next page](09-operations.md) shows how each way of
 asking says what it already knows.
 
-Next: [Operations](07-operations.md)
+Next: [Operations](09-operations.md)
 
 Build it: [Operations and identity](../declaring-a-resource.md#operations-and-identity)
 

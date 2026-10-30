@@ -29,3 +29,23 @@ my_module.settings:
     layout:
       type: string
       label: 'Layout'
+
+# Generated from the my_module.colors resource by drush data_surface:config-schema.
+my_module.colors:
+  type: config_object
+  label: 'my_module.colors'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    link_color:
+      type: string
+      label: 'Link color'
+      constraints:
+        Regex:
+          pattern: '/^#[0-9A-Fa-f]{6}$/D'
+    background_color:
+      type: string
+      label: 'Background color'
+      constraints:
+        Regex:
+          pattern: '/^#[0-9A-Fa-f]{6}$/D'

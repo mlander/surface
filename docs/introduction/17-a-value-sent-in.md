@@ -6,7 +6,7 @@ against the sealed data surface, and then refuses it or saves it
 through the storage. The steps are the same and the data surface is the
 same, so one wrong value gets one message at every door.
 
-![One value, limit 60, sent through the form and through the tool, two of the doors; both answer with the same message: This value should be between 1 and 50.](images/16-a-value-sent-in.svg)
+![One value, limit 60, sent through the form and through the tool, two of the doors; both answer with the same message: This value should be between 1 and 50.](images/17-a-value-sent-in.svg)
 
 ## The steps
 
@@ -53,7 +53,7 @@ Number of items: This value should be between 1 and 50.
 
 The tool that places the block answers the same value with the same
 message, at the key's path under the placed block's `settings`. The
-object inside is the one [Rules on a key](04-rules-on-a-key.md) showed,
+object inside is the one [Rules on a key](06-rules-on-a-key.md) showed,
 in the tool's `violations` envelope (an excerpt of its answer):
 
 ```json
@@ -70,7 +70,7 @@ HTTP refuses it with status 422 and the same object in its `errors`.
 No door wrote this message. The Range rule on the sealed data surface
 did, once, and the one service carried it to whichever door asked.
 
-Next: [Where next](17-where-next.md)
+Next: [Where next](18-where-next.md)
 
 Build it: [The stages](../pipeline.md#the-stages)
 

@@ -29,16 +29,18 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
 /**
  * Produces what the introduction quotes of a developer's own code.
  *
- * Pages 1 to 4 and 6 describe my_module's settings, and pages 9, 11, 12
- * and 16 a teaser block and a badge alter, that no shipped module has;
- * my_module and data_surface_intro_test hold them as the pages show them
+ * Pages 1, 2, 5, 6 and 8 describe my_module's settings, page 4 its
+ * colors and the shape they share, and pages 3, 12, 13 and 17 a teaser
+ * block and a badge alter, that no shipped module has; my_module and
+ * data_surface_intro_test hold them as the pages show them
  * (IntroductionDocsTest holds the snippets to their lines). Each test
  * here runs the code, takes what it answers, and asserts the page says
  * that text: the settings' form, tool and HTTP path (page 1), their JSON
- * Schema (pages 3 and 4), their refusals (page 4) and their path (page
- * 6); the form drawn from the structure (page 9), the input the
- * placement tool takes (page 11), the refusal of a loosening alter (page
- * 12), and one refused value at the form, the tool and HTTP (page 16).
+ * Schema (pages 5 and 6), their refusals (page 6) and their path (page
+ * 8); the form drawn from the structure (page 3); the shape's def, the
+ * two keys that refer to it and their refusals (page 4); the input the
+ * placement tool takes (page 12), the refusal of a loosening alter (page
+ * 13), and one refused value at the form, the tool and HTTP (page 17).
  * The output is the authority: a page that drifts from it fails.
  */
 #[Group('data_surface')]
@@ -177,13 +179,13 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Gets the input page 11 places the teaser with.
+   * Gets the input page 12 places the teaser with.
    *
    * @return array
    *   The tool's input, as the page writes it.
    */
   protected function placement(): array {
-    return json_decode($this->block('11-doors.md', '"plugin": "my_teaser"'), TRUE, 512, JSON_THROW_ON_ERROR);
+    return json_decode($this->block('12-doors.md', '"plugin": "my_teaser"'), TRUE, 512, JSON_THROW_ON_ERROR);
   }
 
   /**
@@ -205,14 +207,17 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Gets the JSON Schema of the settings, as the HTTP door serves it.
+   * Gets a configure operation's JSON Schema, as the HTTP door serves it.
+   *
+   * @param string $resource
+   *   The resource's id: my_module's settings unless named.
    *
    * @return array
    *   The schema of the values, through JSON and back.
    */
-  protected function settingsSchema(): array {
+  protected function settingsSchema(string $resource = 'my_module.settings'): array {
     $served = $this->container->get('data_surface_react.served_operations');
-    $operation = $served->resolve('my_module.settings', 'configure', []);
+    $operation = $served->resolve($resource, 'configure', []);
     $contract = $this->container->get('data_surface.contract_emitter')->emit(
       $operation->surface,
       $served->current($operation),
@@ -232,9 +237,11 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
    *   The page's file name.
    * @param string $holding
    *   Text the excerpt holds.
+   * @param string $resource
+   *   The resource whose configure operation is served.
    */
-  protected function assertSchemaExcerpt(string $page, string $holding): void {
-    $schema = $this->settingsSchema();
+  protected function assertSchemaExcerpt(string $page, string $holding, string $resource = 'my_module.settings'): void {
+    $schema = $this->settingsSchema($resource);
     $quoted = json_decode('{' . $this->block($page, $holding) . '}', TRUE, 512, JSON_THROW_ON_ERROR);
     foreach ($quoted as $key => $value) {
       if ($key === 'required') {
@@ -252,12 +259,14 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
    *
    * @param array $values
    *   The values sent.
+   * @param string $resource
+   *   The resource: my_module's settings unless named.
    *
    * @return array
    *   `success`, then every output.
    */
-  protected function configure(array $values): array {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:my_module.settings:configure');
+  protected function configure(array $values, string $resource = 'my_module.settings'): array {
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:' . $resource . ':configure');
     $tool->setInputValue(OperationInputs::VALUES, $values);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
@@ -274,7 +283,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     $types = array_map(static fn (string $key): string => $form[$key]['#type'], $keys);
     $this->assertSame(['textfield', 'number', 'checkbox', 'email', 'select'], $types);
     $this->assertPageSays('01-what-it-does.md', '| A form | a text field, a number field, a checkbox, an email field and a select |');
-    $this->assertPageSays('03-keys.md', 'a text field for `title`, a number field for `items_per_page`, a checkbox for `show_author` and an email field for `notify_email`.');
+    $this->assertPageSays('05-keys.md', 'a text field for `title`, a number field for `items_per_page`, a checkbox for `show_author` and an email field for `notify_email`.');
 
     $this->assertTrue($this->container->get('plugin.manager.tool')->hasDefinition('data_surface:my_module.settings:configure'));
     $this->assertPageSays('01-what-it-does.md', '`data_surface:my_module.settings:configure`');
@@ -287,29 +296,29 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     $path = $method . ' ' . $paths->url($definition, $operation, [], $named, FALSE)->getGeneratedUrl();
     $this->assertSame('PATCH /surface-api/my_module.settings', $path);
     $this->assertPageSays('01-what-it-does.md', '`' . $path . '`');
-    $this->assertStringContainsString($path, $this->block('06-identity.md', 'PATCH /surface-api/node.type/{type}'));
+    $this->assertStringContainsString($path, $this->block('08-identity.md', 'PATCH /surface-api/node.type/{type}'));
   }
 
   /**
-   * Tests pages 3 and 4: the JSON Schema they quote is the served one.
+   * Tests pages 5 and 6: the JSON Schema they quote is the served one.
    */
   public function testTheSchemaTheyQuote(): void {
-    $this->assertSchemaExcerpt('03-keys.md', '"items_per_page"');
-    $this->assertSchemaExcerpt('04-rules-on-a-key.md', '"oneOf"');
+    $this->assertSchemaExcerpt('05-keys.md', '"items_per_page"');
+    $this->assertSchemaExcerpt('06-rules-on-a-key.md', '"oneOf"');
   }
 
   /**
-   * Tests page 4: the form's rules and the tool's refusals.
+   * Tests page 6: the form's rules and the tool's refusals.
    */
   public function testTheRulesRefuse(): void {
     $form = $this->settingsForm();
     $this->assertSame(['list' => 'List', 'grid' => 'Grid'], array_map('strval', $form['layout']['#options']));
     $this->assertSame([1, 50], [$form['items_per_page']['#min'], $form['items_per_page']['#max']]);
-    $this->assertPageSays('04-rules-on-a-key.md', 'The form reads the rules to draw the fields: `layout` becomes a select of List and Grid, `items_per_page` a number field from 1 to 50');
+    $this->assertPageSays('06-rules-on-a-key.md', 'The form reads the rules to draw the fields: `layout` becomes a select of List and Grid, `items_per_page` a number field from 1 to 50');
 
     $refused = $this->configure(['title' => NULL]);
     $this->assertFalse($refused['success']);
-    $quoted = json_decode($this->block('04-rules-on-a-key.md', '"path": "/title"'), TRUE, 512, JSON_THROW_ON_ERROR);
+    $quoted = json_decode($this->block('06-rules-on-a-key.md', '"path": "/title"'), TRUE, 512, JSON_THROW_ON_ERROR);
     $this->assertSame([$quoted], $refused['violations']);
     // The form, posted with no title: the same message, at the field.
     $form_state = new FormState();
@@ -325,16 +334,16 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
     $errors = array_map(static fn ($message): string => strip_tags((string) $message), $form_state->getErrors());
     $this->assertSame([$quoted['message']], array_values($errors));
-    $this->assertPageSays('04-rules-on-a-key.md', 'The form says "' . $quoted['message'] . '" at the field.');
+    $this->assertPageSays('06-rules-on-a-key.md', 'The form says "' . $quoted['message'] . '" at the field.');
 
     $refused = $this->configure(['layout' => 'table']);
     $this->assertFalse($refused['success']);
     $this->assertSame(['/layout'], array_column($refused['violations'], 'path'));
-    $this->assertPageSays('04-rules-on-a-key.md', 'the message lists the allowed values instead: "' . $refused['violations'][0]['message'] . '"');
+    $this->assertPageSays('06-rules-on-a-key.md', 'the message lists the allowed values instead: "' . $refused['violations'][0]['message'] . '"');
   }
 
   /**
-   * Tests page 9: the form is drawn from the structure's keys and rules.
+   * Tests page 3: the form is drawn from the structure's keys and rules.
    */
   public function testTheFormIsDrawnFromTheStructure(): void {
     $form = $this->teaser()->buildConfigurationForm([], new FormState());
@@ -346,11 +355,25 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(1, $form['limit']['#min']);
     $this->assertSame(50, $form['limit']['#max']);
     $this->assertSame(10, $form['limit']['#default_value']);
-    $this->assertPageSays('09-structures.md', 'a text field with a maximum length of 50 for the headline, and a number field bounded at 1 and 50 for the limit, each starting from its key\'s default.');
+    $this->assertPageSays('03-structures.md', 'a text field with a maximum length of 50 for the headline, and a number field bounded at 1 and 50 for the limit, each starting from the default the structure gives it.');
   }
 
   /**
-   * Tests page 12: the badge tightens the limit, and loosening is refused.
+   * Tests page 4: one shape, one def, two keys, one message at both.
+   */
+  public function testOneShapeAtTwoKeys(): void {
+    $this->assertSchemaExcerpt('04-shapes.md', '"background_color"', 'my_module.colors');
+    $def = json_decode('{' . $this->block('04-shapes.md', '"pattern"') . '}', TRUE, 512, JSON_THROW_ON_ERROR);
+    $this->assertSame($this->settingsSchema('my_module.colors')['$defs'], $def, 'The page quotes the one def whole.');
+
+    $refused = $this->configure(['link_color' => 'blue', 'background_color' => '#fff'], 'my_module.colors');
+    $this->assertFalse($refused['success']);
+    $quoted = json_decode('{' . $this->block('04-shapes.md', '"violations"') . '}', TRUE, 512, JSON_THROW_ON_ERROR);
+    $this->assertSame($quoted['violations'], $refused['violations']);
+  }
+
+  /**
+   * Tests page 13: the badge tightens the limit, and loosening is refused.
    */
   public function testAnAlterTightensAndMayNotLoosen(): void {
     $resources = $this->container->get('data_surface.resources');
@@ -373,12 +396,12 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
       $this->fail('An alter loosening the limit was built.');
     }
     catch (\LogicException $e) {
-      $this->assertSame(self::flat($this->block('12-other-modules.md', 'widens what')), $e->getMessage());
+      $this->assertSame(self::flat($this->block('13-other-modules.md', 'widens what')), $e->getMessage());
     }
   }
 
   /**
-   * Tests page 11: the tool places the teaser from the page's input.
+   * Tests page 12: the tool places the teaser from the page's input.
    */
   public function testTheToolTakesThePagesInput(): void {
     $placed = $this->call('create', $this->placement() + [OperationInputs::DRY_RUN => TRUE]);
@@ -389,7 +412,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests page 16: one refused value, one message at every door.
+   * Tests page 17: one refused value, one message at every door.
    */
   public function testOneValueOneAnswer(): void {
     // Code with no door: the page's call, as it writes it.
@@ -429,14 +452,14 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     $current->setAccount($account);
     $errors = array_map(static fn ($message): string => strip_tags((string) $message), $form_state->getErrors());
     $this->assertSame(['settings][limit'], array_keys($errors));
-    $this->assertSame(trim($this->block('16-a-value-sent-in.md', 'Number of items:')), $errors['settings][limit']);
+    $this->assertSame(trim($this->block('17-a-value-sent-in.md', 'Number of items:')), $errors['settings][limit']);
 
     // The tool that places the block.
     $values = $this->placement()['values'];
     $values['settings']['limit'] = 60;
     $refused = $this->call('create', [OperationInputs::VALUES => $values, OperationInputs::DRY_RUN => TRUE]);
     $this->assertFalse($refused['success']);
-    $quoted = json_decode('{' . $this->block('16-a-value-sent-in.md', '"violations"') . '}', TRUE, 512, JSON_THROW_ON_ERROR);
+    $quoted = json_decode('{' . $this->block('17-a-value-sent-in.md', '"violations"') . '}', TRUE, 512, JSON_THROW_ON_ERROR);
     $this->assertSame($quoted['violations'], $refused['violations']);
 
     // HTTP: status 422 and the same object in its errors.
@@ -444,7 +467,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(422, $problem['status'] ?? NULL, print_r($problem, TRUE));
     $said = array_flip(['path', 'code', 'message']);
     $this->assertSame($quoted['violations'], array_map(static fn (array $error): array => array_intersect_key($error, $said), $problem['errors']));
-    $this->assertPageSays('16-a-value-sent-in.md', 'HTTP refuses it with status 422 and the same object in its `errors`.');
+    $this->assertPageSays('17-a-value-sent-in.md', 'HTTP refuses it with status 422 and the same object in its `errors`.');
   }
 
 }

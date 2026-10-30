@@ -5,7 +5,7 @@ documentation has four sections beside this one, each for a different
 question: how to install it, how to build with it, how a detail works,
 and what a working module looks like.
 
-![The introduction, where you are, then the four other sections in a row: install, the requirements; build, your first resource; the reference, every detail; and beside them the examples, modules to try](images/17-where-next.svg)
+![The introduction, where you are, then the four other sections in a row: install, the requirements; build, your first resource; the reference, every detail; and beside them the examples, modules to try](images/18-where-next.svg)
 
 ## Install it
 

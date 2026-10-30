@@ -7,7 +7,7 @@ collects their answers. When the last party has answered, the build
 seals the data surface: no key can be added and no rule loosened after
 that. Every door reads that one sealed data surface.
 
-![Six bands stacked inside one sealed data surface, in order: the owner, other modules, the site, the operation, the page, access; a lock on the frame marks the seal, and an arrow leads from the data surface to every door](images/15-sealed.svg)
+![Six bands stacked inside one sealed data surface, in order: the owner, other modules, the site, the operation, the page, access; a lock on the frame marks the seal, and an arrow leads from the data surface to every door](images/16-sealed.svg)
 
 ## Who has a say, in order
 
@@ -26,7 +26,7 @@ that. Every door reads that one sealed data surface.
    out.
 
 Then the build seals the result. Steps 1, 3, 4 and 5 give a key its
-starting value in the order [The site and the page](13-site-and-page.md)
+starting value in the order [The site and the page](14-site-and-page.md)
 showed.
 Each party works on what the earlier ones left, so a later one can
 tighten further but never undo an earlier tightening.
@@ -52,13 +52,13 @@ sent in asks it again. At the build, its answer decides which keys are
 locked or left out of the sealed data surface, so every door draws the
 same keys. When values arrive, the pipeline asks it again for the thing
 the values are about, since only then is that thing loaded
-([A value sent in](16-a-value-sent-in.md)).
+([A value sent in](17-a-value-sent-in.md)).
 
 ## Why the doors agree
 
 Rules between keys whose answers are known from the values alone are
 written into the sealed data surface ahead of time, as
-[Rules between keys](05-rules-between-keys.md) showed. When values
+[Rules between keys](07-rules-between-keys.md) showed. When values
 arrive, the pipeline applies those same answers to the values sent, and
 runs the runtime refiners then. The module checks that each answer is
 narrower than what the key already allowed. So nothing after the seal
@@ -71,7 +71,7 @@ carries the tighter rule to every door at once. And because nothing
 widens after the seal, what a door told a caller, such as a maximum or
 a list of choices, is still true when the values come back.
 
-Next: [A value sent in](16-a-value-sent-in.md)
+Next: [A value sent in](17-a-value-sent-in.md)
 
 Build it: [The build step](../how-it-fits.md#the-build-step)
 

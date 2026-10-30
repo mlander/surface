@@ -2,7 +2,7 @@
 
 Read this page before you change a resource that has shipped: some
 changes keep stored values and clients working, and some break them.
-[Keys](introduction/03-keys.md) and [Storage](introduction/08-storage.md)
+[Keys](introduction/05-keys.md) and [Storage](introduction/10-storage.md)
 introduce what such a change touches.
 
 A resource or structure is a promise twice over: to the values already

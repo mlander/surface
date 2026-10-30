@@ -6,7 +6,7 @@ held to a list of choices. Rules are Drupal's validation constraints:
 the same `Length`, `Range` and `Choice` that entity fields and config
 schema already use.
 
-![The my_module.settings resource with three of its keys and their rules: title, a string, is required and at most 64 characters; items_per_page, an integer, is required and between 1 and 50; layout, a string, is required and one of list or grid](images/04-rules-on-a-key.svg)
+![The my_module.settings resource with three of its keys and their rules: title, a string, is required and at most 64 characters; items_per_page, an integer, is required and between 1 and 50; layout, a string, is required and one of list or grid](images/06-rules-on-a-key.svg)
 
 ## Adding rules
 
@@ -101,7 +101,7 @@ the form's message at the field. The path, the code and the message
 inside are the same everywhere, and later pages show only that inner
 object.
 
-Next: [Rules between keys](05-rules-between-keys.md)
+Next: [Rules between keys](07-rules-between-keys.md)
 
 Build it: [Declaring a resource or structure: required](../declaring-a-resource.md#required), then [Options and resolvers](../options.md) for lists of choices
 

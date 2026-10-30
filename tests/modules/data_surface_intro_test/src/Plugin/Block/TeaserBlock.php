@@ -11,7 +11,7 @@ use Drupal\data_surface\Resource\Attribute\UsesStructure;
 use Drupal\data_surface_intro_test\Structure\TeaserBlockStructure;
 
 /**
- * The teaser block, as docs/introduction/09-structures.md shows it.
+ * The teaser block, as docs/introduction/03-structures.md shows it.
  *
  * Its settings are TeaserBlockStructure's; the page leaves build() out as
  * unchanged, the one method a block keeps when it adopts the module.

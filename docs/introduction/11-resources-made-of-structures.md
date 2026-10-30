@@ -1,10 +1,12 @@
 # Resources made of structures
 
-A resource or structure can hold other structures at its keys. This
-page shows the two ways a Drupal developer meets first, attach and
-variants, and shows variants on the placed block.
+A resource or structure can hold other structures at its keys.
+[Structures](03-structures.md) showed one held this way: a teaser
+block's settings, held by the placed block under `settings`. This page
+names the two ways a Drupal developer meets first, attach and variants,
+and shows variants on the placed block.
 
-![The block.placement resource with a plugin key and a settings key; the plugin's value chooses which structure the settings key holds: my_teaser with headline and limit, or system_branding_block with use_site_logo and use_site_name](images/10-putting-together.svg)
+![The block.placement resource with a plugin key and a settings key; the plugin's value chooses which structure the settings key holds: my_teaser with headline and limit, or system_branding_block with use_site_logo and use_site_name](images/11-resources-made-of-structures.svg)
 
 ## Attach and variants
 
@@ -23,8 +25,8 @@ puts all six side by side, with the question each one answers.
 ## Variants: a placed block's settings
 
 A placed block shows one block plugin, and each plugin has its own
-settings. The teaser block of the previous page takes a `headline` and
-a `limit`; the site branding block takes `use_site_logo`, `use_site_name` and
+settings. The teaser block of [Structures](03-structures.md) takes a
+`headline` and a `limit`; the site branding block takes `use_site_logo`, `use_site_name` and
 `use_site_slogan`. So the placed block's `settings` key cannot hold one
 fixed structure. Its `plugin` key chooses which one. These are the two
 keys in `BlockPlacementResource`'s `defineInputs()`, in full:
@@ -70,7 +72,7 @@ The form draws the chosen plugin's settings when the plugin is chosen,
 and every other place that asks for the values accepts only the chosen
 plugin's keys under `settings`.
 
-Next: [Doors](11-doors.md)
+Next: [Doors](12-doors.md)
 
 Build it: [Which way to compose](../resources.md#which-way-to-compose)
 

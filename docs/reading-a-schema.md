@@ -3,9 +3,9 @@
 Read this page when you already have a JSON Schema document and want
 the module to build keys and rules from it instead of from a class. It
 lists what the module keeps from a document, what it checks on the
-server, and what it refuses. [Keys](introduction/03-keys.md),
-[Rules on a key](introduction/04-rules-on-a-key.md) and
-[Structures](introduction/09-structures.md) introduce what a document
+server, and what it refuses. [Keys](introduction/05-keys.md),
+[Rules on a key](introduction/06-rules-on-a-key.md) and
+[Structures](introduction/03-structures.md) introduce what a document
 becomes.
 
 The emitter writes a resource or structure as JSON Schema 2020-12

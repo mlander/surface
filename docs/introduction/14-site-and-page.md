@@ -7,7 +7,7 @@ route sets for the page it serves: it either starts a key from a value
 the visitor may change, or fixes the key to a value nobody may change
 there.
 
-![A placed block's keys and where each starting value comes from: label_display from the site default false, theme fixed to olivero by the route, region started at sidebar by the route](images/13-site-and-page.svg)
+![A placed block's keys and where each starting value comes from: label_display from the site default false, theme fixed to olivero by the route, region started at sidebar by the route](images/14-site-and-page.svg)
 
 ## The site's defaults
 
@@ -72,7 +72,7 @@ before it:
 
 1. the default the owner declares;
 2. the site default;
-3. values the operation's own code sets ([Operations](07-operations.md));
+3. values the operation's own code sets ([Operations](09-operations.md));
 4. the route's `_data_surface_defaults`.
 
 A fixed value is laid over all of them.
@@ -80,10 +80,10 @@ A fixed value is laid over all of them.
 A seed holds on its page alone. The tool, HTTP and every other route
 still accept any theme the operation accepts. A value that must hold at
 every door belongs in the resource's own rules
-([Rules on a key](04-rules-on-a-key.md)), or in an alter's
-([Other modules](12-other-modules.md)).
+([Rules on a key](06-rules-on-a-key.md)), or in an alter's
+([Other modules](13-other-modules.md)).
 
-Next: [Access](14-access.md)
+Next: [Access](15-access.md)
 
 Build it: [A site's own defaults](../declaring-a-resource.md#a-sites-own-defaults) and [A route that fixes or fills keys](../forms.md#a-route-that-fixes-or-fills-keys)
 

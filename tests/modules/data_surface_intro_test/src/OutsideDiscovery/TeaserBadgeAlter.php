@@ -12,7 +12,7 @@ use Drupal\data_surface\Resource\BlueprintAdditionsInterface;
 use Drupal\data_surface_intro_test\Structure\TeaserBlockStructure;
 
 /**
- * The badge alter, as docs/introduction/12-other-modules.md shows it.
+ * The badge alter, as docs/introduction/13-other-modules.md shows it.
  *
  * Adds a badge to the teaser block's settings and caps the number of
  * items at 20 while a badge is set. The page puts it in a module named

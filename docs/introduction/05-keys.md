@@ -1,10 +1,10 @@
 # Keys
 
-A key is one value a resource holds. Each key has a name, a type, a
-label and, where it needs one, a default. You declare a key by adding
+A key is one value a resource or a structure holds. Each key has a
+name, a type, a label and, where it needs one, a default. You declare a key by adding
 it with `add()` in the resource class's static `defineInputs()` method.
 
-![The my_module.settings resource with its five keys, each with its type, label and default: title, a string labeled Title; items_per_page, an integer labeled Items per page; show_author, a boolean; notify_email, an email; layout, a string](images/03-keys.svg)
+![The my_module.settings resource with its five keys, each with its type, label and default: title, a string labeled Title; items_per_page, an integer labeled Items per page; show_author, a boolean; notify_email, an email; layout, a string](images/05-keys.svg)
 
 ## Declaring keys
 
@@ -50,7 +50,8 @@ say what the key allows: the next page's idea.
 
 - **Name**: what the value is sent and read under, `items_per_page`.
 - **Type**: a Drupal typed data type: `string`, `integer`, `boolean`
-  and `email` here, and also `float` or `uri`. A value sent as the text
+  and `email` here, and also `float` or `uri`; or a shape's class, as
+  `HexColor::class` on [Shapes](04-shapes.md). A value sent as the text
   `"20"` to the `integer` key `items_per_page` is accepted as the
   integer `20`.
 - **Label**: the form element's title, the tool's property title and
@@ -64,7 +65,7 @@ the methods the next page uses for what a key allows.
 
 `defineInputs()` is static and runs with no values, so it cannot read
 what another key holds. A key whose allowed values depend on another
-key is a later page's idea ([Rules between keys](05-rules-between-keys.md)).
+key is a later page's idea ([Rules between keys](07-rules-between-keys.md)).
 
 ## What you get
 
@@ -79,7 +80,7 @@ and defaults (trimmed to two keys and those three facts):
 "items_per_page": {"title": "Items per page", "type": "integer", "default": 10}
 ```
 
-Next: [Rules on a key](04-rules-on-a-key.md)
+Next: [Rules on a key](06-rules-on-a-key.md)
 
 Build it: [Declaring a resource or structure: the class](../declaring-a-resource.md#the-class)
 

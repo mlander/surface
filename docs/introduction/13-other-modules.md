@@ -8,7 +8,7 @@ refused, whichever modules are enabled. Unlike a `hook_*_alter()`,
 which may change anything, an alter here may only add keys under its
 own module's name and tighten rules.
 
-![The teaser block's structure from its owner, with headline and limit, the limit allowing 1 to 50; another module's alter adds a badge key and tightens the limit to at most 20 when a badge is set](images/12-other-modules.svg)
+![The teaser block's structure from its owner, with headline and limit, the limit allowing 1 to 50; another module's alter adds a badge key and tightens the limit to at most 20 when a badge is set](images/13-other-modules.svg)
 
 ## Writing an alter
 
@@ -67,7 +67,7 @@ This is what lets the owner promise something. Code that reads a
 `limit` from the teaser block can rely on 1 to 50, whatever alters a
 site enables.
 
-Next: [The site and the page](13-site-and-page.md)
+Next: [The site and the page](14-site-and-page.md)
 
 Build it: [Alters](../resources.md#alters)
 

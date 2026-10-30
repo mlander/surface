@@ -6,7 +6,7 @@ permission an account needs to ask it. The module makes routes and
 tools from operations, so a resource is reachable only through the
 operations it declares.
 
-![The block.placement resource with three operations, create, update and delete, each asking the permission administer blocks; arrows lead from the operations to a route and a tool](images/07-operations.svg)
+![The block.placement resource with three operations, create, update and delete, each asking the permission administer blocks; arrows lead from the operations to a route and a tool](images/09-operations.svg)
 
 ## Declaring them
 
@@ -129,10 +129,10 @@ refused for the machine name the first one took and changes nothing.
 `deletes: TRUE` makes the call take no values, only the parameters that
 name the thing; the module requires `destructive: TRUE` beside it,
 which tells a client to ask before it calls. A later page shows how
-[access](14-access.md) decides, beyond the permission, which keys an
+[access](15-access.md) decides, beyond the permission, which keys an
 account may change.
 
-Next: [Storage](08-storage.md)
+Next: [Storage](10-storage.md)
 
 Build it: [Operations: create, update, and the rest](../resources.md#operations-create-update-and-the-rest)
 

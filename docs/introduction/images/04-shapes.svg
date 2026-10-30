@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 260" role="img" aria-labelledby="t">
+<title id="t">One shape, my_module.hex_color, a string of # and six hexadecimal digits, used by two values of the my_module.colors resource, link_color and background_color</title>
+<style>
+.bg{fill:#F6F8FA}
+.ink{fill:#1F2328}
+.muted{fill:#59636E}
+.res{fill:none;stroke:#0969DA;stroke-width:2}
+.resT{fill:#0969DA}
+.shape{fill:none;stroke:#1F2328;stroke-width:2}
+.key{fill:#F6F8FA;stroke:#1F2328;stroke-width:1.25}
+.tag{fill:none;stroke:#BF3989;stroke-width:1.25}
+.tagT{fill:#BF3989}
+.arrow{fill:none;stroke:#59636E;stroke-width:1.5}
+.head{fill:#59636E}
+text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;font-size:14px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
+.b{font-weight:600}
+.s{font-size:13px}
+@media (prefers-color-scheme: dark){
+.bg{fill:#151B23}
+.ink{fill:#F0F6FC}
+.muted{fill:#9198A1}
+.res{stroke:#4493F8}
+.resT{fill:#4493F8}
+.shape{stroke:#F0F6FC}
+.key{fill:#151B23;stroke:#F0F6FC}
+.tag{stroke:#E267A8}
+.tagT{fill:#E267A8}
+.arrow{stroke:#9198A1}
+.head{fill:#9198A1}
+}
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path class="head" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+<rect class="bg" x="0" y="0" width="720" height="260" rx="12"/>
+
+<!-- The shape, declared once -->
+<rect class="shape" x="24" y="60" width="270" height="110" rx="8"/>
+<text class="ink b" x="40" y="86">shape</text>
+<text class="ink mono" x="40" y="110">my_module.hex_color</text>
+<text class="muted mono" x="40" y="132">string</text>
+<rect class="tag" x="40" y="142" width="176" height="20" rx="4"/>
+<text class="tagT s" x="48" y="157"># and six hex digits</text>
+
+<!-- The resource that uses it twice -->
+<rect class="res" x="400" y="40" width="296" height="150" rx="10"/>
+<text class="resT b mono" x="416" y="66">my_module.colors</text>
+<rect class="key" x="416" y="84" width="264" height="26" rx="13"/><text x="430" y="102"><tspan class="mono ink">link_color</tspan><tspan class="mono muted" dx="8">hex_color</tspan></text>
+<rect class="key" x="416" y="138" width="264" height="26" rx="13"/><text x="430" y="156"><tspan class="mono ink">background_color</tspan><tspan class="mono muted" dx="8">hex_color</tspan></text>
+
+<path class="arrow" d="M294 104 C 350 104, 360 97, 410 97" marker-end="url(#ah)"/>
+<path class="arrow" d="M294 128 C 350 128, 360 151, 410 151" marker-end="url(#ah)"/>
+
+<text class="ink" x="24" y="228">Declared once, used under two names: both take the same pattern and message.</text>
+</svg>

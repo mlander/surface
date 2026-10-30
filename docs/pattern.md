@@ -5,8 +5,8 @@ declares the keys, a storage class keeps the values, and operations say
 how they are asked for. Read it after [the introduction](introduction/index.md)
 when you want the reasons behind that shape;
 [Resources](introduction/02-resources.md),
-[Structures](introduction/09-structures.md) and
-[Sealed](introduction/15-sealed.md) define its words.
+[Structures](introduction/03-structures.md) and
+[Sealed](introduction/16-sealed.md) define its words.
 
 A resource is a thing with identity and storage that operations read and
 write; the form, the tool and the schema are derived from it. Before

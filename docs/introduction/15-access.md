@@ -6,7 +6,7 @@ whether an account may use an operation at all. Access then says, for
 that account and that thing, whether the keys are open, locked or left
 out.
 
-![An account asks for an operation; the operation's permission is checked first, then the access class, which answers open, locked or omitted for the keys](images/14-access.svg)
+![An account asks for an operation; the operation's permission is checked first, then the access class, which answers open, locked or omitted for the keys](images/15-access.svg)
 
 ## Two steps
 
@@ -96,7 +96,7 @@ Access only says whether keys may be changed, seen, or neither. An
 account that may choose from fewer values is a refiner's job, which
 narrows the key's rules for that account.
 
-Next: [Sealed](15-sealed.md)
+Next: [Sealed](16-sealed.md)
 
 Build it: [Access](../resources.md#access) and [Static and runtime access](../resources.md#static-and-runtime-access)
 

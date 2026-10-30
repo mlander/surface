@@ -5,7 +5,7 @@ config entity or a content entity. A resource names one storage class,
 and that class reads and writes the values for it. The resource's keys
 and rules stay the same whichever storage holds them.
 
-![The my_module.settings resource with its five keys, each with an arrow to the same name in the my_module.settings config object, which MySettingsStorage reads and writes](images/08-storage.svg)
+![The my_module.settings resource with its five keys, each with an arrow to the same name in the my_module.settings config object, which MySettingsStorage reads and writes](images/10-storage.svg)
 
 ## What a storage class does
 
@@ -74,7 +74,7 @@ storage class also serves every operation of its resource: the same
 because the operation tells it which block, through the identity it
 knows.
 
-Next: [Structures](09-structures.md)
+Next: [Resources made of structures](11-resources-made-of-structures.md)
 
 Build it: [A simple config object](../storage.md#a-simple-config-object) and [A config entity](../storage.md#a-config-entity)
 

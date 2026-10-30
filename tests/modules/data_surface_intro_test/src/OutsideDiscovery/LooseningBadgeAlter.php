@@ -15,7 +15,7 @@ use Drupal\data_surface_intro_test\Structure\TeaserBlockStructure;
  * The badge alter loosening the teaser's limit, which the build refuses.
  *
  * A maximum of 100 where the owner caps the limit at 50: the refusal
- * docs/introduction/12-other-modules.md quotes. Outside discovery, since
+ * docs/introduction/13-other-modules.md quotes. Outside discovery, since
  * every build of the teaser would be refused; IntroductionExcerptsTest
  * registers it by hand.
  */

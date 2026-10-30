@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Holds the introduction series to the rules it was written by.
  *
- * `docs/introduction/` is seventeen short pages, one idea each, for a
+ * `docs/introduction/` is eighteen short pages, one idea each, for a
  * Drupal developer who knows none of this module's words. What keeps it
  * readable in order is checked here, from the files:
  *
@@ -121,6 +121,8 @@ final class IntroductionDocsTest extends UnitTestCase {
   private const OWN_CLASSES = [
     'MySettingsResource',
     'MySettingsStorage',
+    'HexColor',
+    'MyColorsResource',
     'TeaserBlockStructure',
     'TeaserBlock',
     'TeaserBadgeAlter',
@@ -129,9 +131,9 @@ final class IntroductionDocsTest extends UnitTestCase {
   /**
    * The first line of each PHP snippet that is no file's code, by design.
    *
-   * A declared rule over made-up keys (page 5), and calling code that
-   * asks the module for a data surface (page 15) or runs the pipeline
-   * (page 16), which IntroductionExcerptsTest runs as written.
+   * A declared rule over made-up keys (page 7), and calling code that
+   * asks the module for a data surface (page 16) or runs the pipeline
+   * (page 17), which IntroductionExcerptsTest runs as written.
    */
   private const SKETCHES = [
     "\$inputs->narrow('end_date')",
@@ -271,27 +273,28 @@ final class IntroductionDocsTest extends UnitTestCase {
     $terms = self::terms();
     $expected = [
       'resource' => '02',
-      'key' => '03',
-      'declare' => '03',
-      'rule' => '04',
-      'declared rule' => '05',
-      'refiner' => '05',
-      'identity' => '06',
-      'singleton' => '06',
-      'operation' => '07',
-      'storage' => '08',
-      'structure' => '09',
-      'attach' => '10',
-      'variants' => '10',
-      'door' => '11',
-      'alter' => '12',
-      'owner' => '12',
-      'site default' => '13',
-      'seed' => '13',
-      'access' => '14',
-      'data surface' => '15',
-      'sealed' => '15',
-      'build' => '15',
+      'structure' => '03',
+      'shape' => '04',
+      'key' => '05',
+      'declare' => '05',
+      'rule' => '06',
+      'declared rule' => '07',
+      'refiner' => '07',
+      'identity' => '08',
+      'singleton' => '08',
+      'operation' => '09',
+      'storage' => '10',
+      'attach' => '11',
+      'variants' => '11',
+      'door' => '12',
+      'alter' => '13',
+      'owner' => '13',
+      'site default' => '14',
+      'seed' => '14',
+      'access' => '15',
+      'data surface' => '16',
+      'sealed' => '16',
+      'build' => '16',
     ];
     foreach ($expected as $term => $number) {
       $this->assertArrayHasKey($term, $terms, sprintf('The glossary says where "%s" is introduced.', $term));
@@ -313,18 +316,18 @@ final class IntroductionDocsTest extends UnitTestCase {
    * Tests the check finds a term used early, and lets a forward link pass.
    *
    * A scratch copy of the series, in memory, with one sentence added to
-   * page 3.
+   * page 5.
    */
   public function testAnEarlyTermIsFound(): void {
     $pages = self::pages();
     $terms = self::terms();
-    $keys = $pages['03-keys.md'];
-    $pages['03-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nAn alter may add a key here.\n", $keys);
-    $this->assertSame(['03-keys.md uses "alter", defined in 12-other-modules.md: An alter may add a key here.'], self::earlyUses($pages, $terms));
-    $pages['03-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nAn [alter](12-other-modules.md) may add a key here.\n", $keys);
+    $keys = $pages['05-keys.md'];
+    $pages['05-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nAn alter may add a key here.\n", $keys);
+    $this->assertSame(['05-keys.md uses "alter", defined in 13-other-modules.md: An alter may add a key here.'], self::earlyUses($pages, $terms));
+    $pages['05-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nAn [alter](13-other-modules.md) may add a key here.\n", $keys);
     $this->assertSame([], self::earlyUses($pages, $terms), 'A forward link in the sentence lets it pass.');
-    $pages['03-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nA site builder calls buildForm() for each variant.\n", $keys);
-    $this->assertSame(['03-keys.md uses "variants", defined in 10-putting-together.md: A site builder calls buildForm() for each variant.'], self::earlyUses($pages, $terms), 'Whole words: neither a site builder nor buildForm() is the build, and a singular is found.');
+    $pages['05-keys.md'] = str_replace("## The four parts of a key\n", "## The four parts of a key\n\nA site builder calls buildForm() for each variant.\n", $keys);
+    $this->assertSame(['05-keys.md uses "variants", defined in 11-resources-made-of-structures.md: A site builder calls buildForm() for each variant.'], self::earlyUses($pages, $terms), 'Whole words: neither a site builder nor buildForm() is the build, and a singular is found.');
   }
 
   /**
@@ -353,7 +356,7 @@ final class IntroductionDocsTest extends UnitTestCase {
    */
   public function testEachPageHasItsParts(): void {
     $pages = self::pages();
-    $this->assertCount(17, $pages);
+    $this->assertCount(18, $pages);
     $names = array_keys($pages);
     $pictures = [];
     foreach ($names as $position => $name) {
@@ -386,7 +389,7 @@ final class IntroductionDocsTest extends UnitTestCase {
    */
   public function testEachPictureIsSvgWithTitle(): void {
     $files = glob(self::ROOT . '/' . self::SERIES . '/images/*.svg');
-    $this->assertCount(17, $files);
+    $this->assertCount(18, $files);
     $previous = libxml_use_internal_errors(TRUE);
     foreach ($files as $file) {
       $document = new \DOMDocument();
@@ -411,7 +414,7 @@ final class IntroductionDocsTest extends UnitTestCase {
     $index = (string) file_get_contents(self::ROOT . '/' . self::SERIES . '/index.md');
     preg_match_all('/^(\d+)\. \[[^\]]+\]\(([\w-]+\.md)\)/m', $index, $listed);
     $this->assertSame(array_keys(self::pages()), $listed[2]);
-    $this->assertSame(array_map('strval', range(1, 17)), $listed[1]);
+    $this->assertSame(array_map('strval', range(1, 18)), $listed[1]);
   }
 
   /**

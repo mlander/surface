@@ -1,6 +1,6 @@
 name: 'My module'
 type: module
-description: 'The settings resource the introduction pages show as your own module''s, so the code and the output they quote are real.'
+description: 'The settings resources and the shape the introduction pages show as your own module''s, so the code and the output they quote are real.'
 package: Testing
 hidden: true
 version: VERSION

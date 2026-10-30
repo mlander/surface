@@ -78,16 +78,16 @@ description. The module makes the rest from this class:
 | A React page | a form drawn in the browser from that JSON Schema |
 
 The form is served on a route: a routing entry that names the class and
-the way of asking for it ([Operations](07-operations.md) shows one).
+the way of asking for it ([Operations](09-operations.md) shows one).
 
 The tool, the HTTP API and the React page each come from a submodule
 you install when you want it. A later page lists them
-([Doors](11-doors.md)).
+([Doors](12-doors.md)).
 
 A value the description does not allow is refused at every one of them,
 with the same message, because each one checks against the same
 description. The module calls that description, once it is complete, a
-data surface; [Sealed](15-sealed.md) shows how it is made.
+data surface; [Sealed](16-sealed.md) shows how it is made.
 
 ## Three words to come
 
@@ -96,9 +96,9 @@ The next pages give each part of this a name:
 - The thing described, here your module's settings, is a
   **resource** ([Resources](02-resources.md)).
 - Each value it holds, such as `items_per_page`, is a **key**
-  ([Keys](03-keys.md)).
+  ([Keys](05-keys.md)).
 - Each place that asks for the values, such as the form or the tool, is
-  a **door** ([Doors](11-doors.md)).
+  a **door** ([Doors](12-doors.md)).
 
 Next: [Resources](02-resources.md)
 
