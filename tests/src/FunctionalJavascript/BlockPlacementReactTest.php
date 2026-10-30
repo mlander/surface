@@ -28,7 +28,7 @@ class BlockPlacementReactTest extends WebDriverTestBase {
   protected static $modules = [
     'block',
     'surface_examples_block',
-    'surface_react',
+    'surface_examples_react',
   ];
 
   /**

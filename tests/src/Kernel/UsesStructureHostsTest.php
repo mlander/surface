@@ -14,7 +14,7 @@ use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
 use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
-use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
 use Drupal\surface_resource_test\PlainThresholdPlugin;
 use Drupal\surface_resource_test\Plugin\Action\ThresholdAction;
 use Drupal\surface_resource_test\Plugin\Block\StickyNoteBlock;
@@ -77,7 +77,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
    */
   public function testEveryHostRecordsTheAttribute(): void {
     $named = [
-      ['plugin.manager.block', 'surface_examples_plugins', DemoBlockStructure::class],
+      ['plugin.manager.block', 'surface_examples_plugins', ExampleBlockStructure::class],
       ['plugin.manager.block', 'surface_resource_test_pinned_note', PinnedNoteResource::class],
       // A plugin that is its own structure records its own class.
       ['plugin.manager.field.formatter', 'surface_examples_plugins_string', ExampleFormatter::class],
@@ -205,7 +205,7 @@ class UsesStructureHostsTest extends SurfaceKernelTestBase {
    */
   public function testTheFormatterHost(): void {
     $formatter = $this->container->get('plugin.manager.field.formatter')->createInstance('surface_examples_plugins_string', [
-      'field_definition' => BaseFieldDefinition::create('string')->setName('field_demo'),
+      'field_definition' => BaseFieldDefinition::create('string')->setName('field_example'),
       'settings' => ['casing' => 'lowercase'],
       'label' => 'above',
       'view_mode' => 'default',

@@ -16,6 +16,7 @@ use Drupal\surface_examples\ConceptPanel;
 use Drupal\surface_examples\ConfigSchemaPanel;
 use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\ExampleCalls;
+use Drupal\surface_examples\ExampleModules;
 use Drupal\surface_examples\FilesPanel;
 use Drupal\surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\surface_examples\Form\RegistrationStep2ClassicForm;
@@ -94,14 +95,9 @@ final class ExamplesController extends ControllerBase {
   public const WORKFLOW_ALTERS = ['src/Alter/ProgramWorkflowAlter.php', 'src/Alter/FeesWorkflowAlter.php'];
 
   /**
-   * The module serving examples 1 to 3 as React forms.
+   * The example module serving examples 1 to 3 as React forms.
    */
-  public const REACT = 'surface_react';
-
-  /**
-   * The module serving the OpenAPI document of every operation's endpoints.
-   */
-  public const OPENAPI = 'surface_openapi';
+  public const REACT = 'surface_examples_react';
 
   /**
    * The module the component block of example 13 lives in.
@@ -255,7 +251,80 @@ final class ExamplesController extends ControllerBase {
         'link' => Link::fromTextAndUrl($this->t('Reset to defaults'), Url::fromRoute('surface_examples.reset'))->toRenderable(),
         'why' => ['#markup' => ' ' . $this->t('puts every example back to the settings the module ships with, for a retake.')],
       ],
-    ] + $steps;
+    ] + $steps + ['modules' => $this->modules()];
+  }
+
+  /**
+   * Lists every example module, enabled or not, in its group.
+   *
+   * Each with its name, description and dependencies read from its info
+   * file, whether it is enabled, and the command that installs it, after
+   * the composer require of a contributed module it needs.
+   *
+   * @return array
+   *   A render array: the two groups, each a heading and a list.
+   */
+  protected function modules(): array {
+    $groups = [
+      'learn' => [
+        'title' => $this->t('Learn the pattern'),
+        'intro' => $this->t('The examples above and the modules that teach one idea each outside this page.'),
+        'modules' => ExampleModules::LEARN,
+      ],
+      'own' => [
+        'title' => $this->t("The pattern on Drupal's own things"),
+        'intro' => $this->t('These examples apply the pattern to things Drupal and a contrib module already have, to test it across scenarios; they are not part of the project and will not ship in this form.'),
+        'modules' => ExampleModules::OWN_THINGS,
+      ],
+    ];
+    $branch = Series::branch();
+    $build = [
+      '#type' => 'container',
+      '#attributes' => ['class' => ['surface-example-modules']],
+      'heading' => [
+        '#markup' => '<h2>' . $this->t('Every example module') . '</h2><p>' . $this->t('The base module, surface, is the project and the only thing meant to ship. Every other module is an example: install it, read it and remove it as you like.') . '</p>',
+      ],
+    ];
+    // Every module the site's code base has, enabled or not.
+    $available = $this->moduleList->getAllAvailableInfo();
+    foreach ($groups as $id => $group) {
+      $items = [];
+      foreach ($group['modules'] as $module) {
+        if (!isset($available[$module])) {
+          continue;
+        }
+        $info = $available[$module];
+        $projects = [];
+        foreach ($info['dependencies'] ?? [] as $dependency) {
+          $project = explode(':', (string) $dependency)[0];
+          if (!in_array($project, ['drupal', 'surface'], TRUE)) {
+            $projects[] = 'drupal/' . $project;
+          }
+        }
+        $arguments = [
+          ':readme' => Series::url('modules/' . $module . '/README.md', $branch),
+          '@name' => $info['name'],
+          '@module' => $module,
+          '@status' => $this->moduleHandler()->moduleExists($module) ? $this->t('enabled') : $this->t('not enabled'),
+          '@description' => $info['description'] ?? '',
+          '@install' => 'drush pm:install ' . $module,
+          '@require' => 'composer require ' . implode(' ', $projects),
+        ];
+        $items[] = [
+          '#markup' => $projects === []
+            ? $this->t('<a href=":readme">@name</a>, @module, @status. @description Install: <code>@install</code>', $arguments)
+            : $this->t('<a href=":readme">@name</a>, @module, @status. @description Install: <code>@require</code>, then <code>@install</code>', $arguments),
+          '#wrapper_attributes' => ['data-module' => $module],
+        ];
+      }
+      $build[$id] = [
+        '#type' => 'container',
+        '#attributes' => ['data-group' => $id],
+        'title' => ['#markup' => '<h3>' . $group['title'] . '</h3><p>' . $group['intro'] . '</p>'],
+        'list' => ['#theme' => 'item_list', '#items' => $items],
+      ];
+    }
+    return $build;
   }
 
   /**
@@ -496,7 +565,10 @@ final class ExamplesController extends ControllerBase {
       ];
       if ($react) {
         $links[] = ['#markup' => ' '];
-        $react_edit = Url::fromRoute('surface_react.page', ['resource' => 'event.venue', 'operation' => 'update'], [
+        $react_edit = Url::fromRoute('surface_examples_react.page', [
+          'resource' => 'event.venue',
+          'operation' => 'update',
+        ], [
           'query' => ['id' => $id],
         ]);
         $links[] = Link::fromTextAndUrl($this->t('Edit in React'), $react_edit)->toRenderable();
@@ -513,7 +585,7 @@ final class ExamplesController extends ControllerBase {
     }
     $add = [$this->route('surface_examples.step15_create')];
     if ($react) {
-      $react_add = Url::fromRoute('surface_react.page', ['resource' => 'event.venue', 'operation' => 'create']);
+      $react_add = Url::fromRoute('surface_examples_react.page', ['resource' => 'event.venue', 'operation' => 'create']);
       $add[] = Link::fromTextAndUrl($this->t('Add in React: @path', ['@path' => $react_add->toString()]), $react_add)->toRenderable();
     }
     else {
@@ -814,9 +886,9 @@ final class ExamplesController extends ControllerBase {
   /**
    * Links an example's form in React, or says where it will be.
    *
-   * The same operation, rendered by surface_react from the contract
-   * it serves; the examples do not depend on that module, so while it is
-   * off the path is named rather than linked.
+   * The same operation, rendered by surface_examples_react from the
+   * contract the HTTP door serves; the examples do not depend on that
+   * module, so while it is off the path is named rather than linked.
    *
    * @param string $resource
    *   The example's resource id.
@@ -834,42 +906,33 @@ final class ExamplesController extends ControllerBase {
         '@module' => self::REACT,
       ]);
     }
-    $url = Url::fromRoute('surface_react.page', ['resource' => $resource, 'operation' => $operation]);
+    $url = Url::fromRoute('surface_examples_react.page', ['resource' => $resource, 'operation' => $operation]);
     return Link::fromTextAndUrl($this->t('In React: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**
-   * Links the OpenAPI document, or says where it will be.
+   * Links the OpenAPI document.
    *
-   * Every example's paths, described for any OpenAPI client; the
-   * examples do not depend on that module, so while it is off the path is
-   * named rather than linked.
+   * Every example's paths, described for any OpenAPI client.
    *
-   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
-   *   A link render array, or the sentence naming the path.
+   * @return array
+   *   A link render array.
    */
-  protected function openApi(): array|TranslatableMarkup {
-    if (!$this->moduleHandler()->moduleExists(self::OPENAPI)) {
-      return $this->t('As OpenAPI at /surface-api/openapi.json, once @module is enabled.', ['@module' => self::OPENAPI]);
-    }
-    $url = Url::fromRoute('surface_openapi.json');
+  protected function openApi(): array {
+    $url = Url::fromRoute('surface.openapi.json');
     return Link::fromTextAndUrl($this->t('As OpenAPI: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**
-   * Links Swagger UI over the OpenAPI document, or says where it will be.
+   * Links Swagger UI over the OpenAPI document.
    *
-   * Each example's calls, to try with the logged-in session; named rather
-   * than linked while the module is off.
+   * Each example's calls, to try with the logged-in session.
    *
-   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
-   *   A link render array, or the sentence naming the path.
+   * @return array
+   *   A link render array.
    */
-  protected function openApiDocs(): array|TranslatableMarkup {
-    if (!$this->moduleHandler()->moduleExists(self::OPENAPI)) {
-      return $this->t('To try out at /surface-api/docs, once @module is enabled.', ['@module' => self::OPENAPI]);
-    }
-    $url = Url::fromRoute('surface_openapi.docs');
+  protected function openApiDocs(): array {
+    $url = Url::fromRoute('surface.openapi.docs');
     return Link::fromTextAndUrl($this->t('To try out: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 

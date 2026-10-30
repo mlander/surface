@@ -407,7 +407,7 @@ class FullSubmitTest extends SurfaceKernelTestBase {
    */
   public function testAjaxRebuildReadsStaleSelectLeftEmptyAsTheStoredValue(): void {
     $this->actAsAnonymousAdministrator();
-    $this->config('surface_examples.registration_step2')->set('venue', 'demolished')->save();
+    $this->config('surface_examples.registration_step2')->set('venue', 'torn_down')->save();
 
     $state = $this->postStepTwo(
       [
@@ -424,11 +424,11 @@ class FullSubmitTest extends SurfaceKernelTestBase {
     $venue = $container['venue'];
     // Still the empty option, standing for the stored venue.
     $this->assertSame('', $venue['#value']);
-    $this->assertSame('demolished', $venue[SurfaceWidgetBase::STALE_KEY]);
-    $this->assertArrayNotHasKey('demolished', $venue['#options']);
+    $this->assertSame('torn_down', $venue[SurfaceWidgetBase::STALE_KEY]);
+    $this->assertArrayNotHasKey('torn_down', $venue['#options']);
     $this->assertSame('venue', $container[SurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
     // A rebuild writes nothing.
-    $this->assertSame('demolished', $this->storedStepTwo()['venue']);
+    $this->assertSame('torn_down', $this->storedStepTwo()['venue']);
   }
 
   /**

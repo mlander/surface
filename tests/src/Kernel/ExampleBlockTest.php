@@ -1,0 +1,636 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\surface\Kernel;
+
+use Drupal\Core\Form\EnforcedResponseException;
+use Drupal\Core\Form\FormState;
+use Drupal\block\Entity\Block;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
+use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
+use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
+use Drupal\node\Entity\NodeType;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PHPUnit\Framework\Attributes\Group;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Session\Session;
+use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
+
+/**
+ * Tests the example block: one declaration, live options, one pipeline.
+ *
+ * The block authors no form elements and no storage code. What is proven
+ * here is that the declaration alone is enough: a constraint naming a
+ * plugin manager becomes a select of the plugins it manages, the
+ * refinement chain narrows bundle and field from live site state, and
+ * the same values reach storage through the pipeline whether a form or a
+ * caller hands them over.
+ */
+#[Group('surface')]
+#[RunTestsInSeparateProcesses]
+class ExampleBlockTest extends SurfaceKernelTestBase {
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = [
+    'system',
+    'user',
+    'block',
+    'node',
+    'field',
+    'text',
+    'surface',
+    'surface_examples_plugins',
+  ];
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+    $this->installEntitySchema('user');
+    $this->installEntitySchema('node');
+    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
+    NodeType::create(['type' => 'page', 'name' => 'Page'])->save();
+  }
+
+  /**
+   * Creates the example block through the block manager.
+   *
+   * A plugin-hosted structure is read the way any consumer would read it:
+   * through the manager that owns the plugin, not by constructing the
+   * class.
+   *
+   * @param array $configuration
+   *   The block configuration.
+   *
+   * @return \Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock
+   *   The block instance.
+   */
+  protected function createBlock(array $configuration = []): ExampleBlock {
+    $block = $this->container->get('plugin.manager.block')
+      ->createInstance('surface_examples_plugins', $configuration);
+    $this->assertInstanceOf(ExampleBlock::class, $block);
+    return $block;
+  }
+
+  /**
+   * Tests that the structure, and nothing else, declares the defaults.
+   */
+  public function testDefaultsComeFromTheStructure(): void {
+    $this->assertSame([
+      'headline' => 'Featured content',
+      // The declared default is a content entity type every site has,
+      // because the base class applies these defaults through the
+      // pipeline while the plugin is being constructed: a default the
+      // key's own constraint refuses would make the block impossible to
+      // instantiate at all.
+      'entity_type' => 'user',
+      'bundle' => NULL,
+      'field' => NULL,
+      'limit' => 10,
+      'presentation' => 'list',
+      // The variants start as the one their deciding key starts on.
+      'presentation_settings' => ['show_summary' => TRUE],
+    ], $this->createBlock()->defaultConfiguration());
+  }
+
+  /**
+   * Tests that PluginExists resolves the entity type select.
+   *
+   * The constraint names the manager and the interface, and that is the
+   * whole declaration: the options resolver reads it as the list of
+   * content entity types, so the values a person may pick are by
+   * construction the values the validator accepts.
+   */
+  public function testPluginExistsResolvesEntityTypeOptions(): void {
+    $form = $this->createBlock()->buildConfigurationForm([], new FormState());
+
+    $this->assertSame('select', $form['entity_type']['#type']);
+    $options = $form['entity_type']['#options'];
+    $this->assertArrayHasKey('node', $options);
+    $this->assertArrayHasKey('user', $options);
+    // The interface option is doing work: node_type is an entity type,
+    // but a config one, so it is neither offered nor accepted.
+    $this->assertArrayNotHasKey('node_type', $options);
+    $this->assertSame(
+      array_keys($options),
+      array_keys($this->container->get('surface.options')->resolve(
+        $this->createBlock()->getSurface()->getDefinition('entity_type'),
+      )->options),
+    );
+    // Every offered value carries the label the definition gives it,
+    // read from the manager rather than from a second list declared
+    // beside the constraint.
+    $this->assertSame('Content', (string) $options['node']);
+    $this->assertSame('User', (string) $options['user']);
+    // Others refine against it, so it carries the AJAX rebuild.
+    $this->assertArrayHasKey('#ajax', $form['entity_type']);
+
+    // A config entity type is refused by the same one declaration.
+    $violations = $this->pipeline()->validate(
+      $this->createBlock()->getSurface(),
+      ['entity_type' => 'node_type'] + $this->createBlock()->defaultConfiguration(),
+    );
+    $this->assertContains('entity_type', $violations->keys());
+  }
+
+  /**
+   * Tests that choosing an entity type refines the bundle to its bundles.
+   */
+  public function testEntityTypeRefinesBundle(): void {
+    $form = $this->createBlock(['entity_type' => 'node'])
+      ->buildConfigurationForm([], new FormState());
+
+    $this->assertSame('select', $form['bundle']['#type']);
+    $this->assertSame(
+      ['article' => 'Article', 'page' => 'Page'],
+      array_map('strval', $form['bundle']['#options']),
+    );
+    // Optional select: an empty choice must be offered.
+    $this->assertArrayHasKey('#empty_option', $form['bundle']);
+    // The refined description says what the list is a list of.
+    $this->assertSame('A node bundle.', (string) $form['bundle']['#description']);
+
+    // An entity type with no bundles of its own leaves the key open.
+    $form = $this->createBlock(['entity_type' => 'user'])
+      ->buildConfigurationForm([], new FormState());
+    $this->assertSame(['user' => 'User'], array_map('strval', $form['bundle']['#options']));
+  }
+
+  /**
+   * Tests an entity type the structure refuses refines nothing.
+   *
+   * A refiner never sees an invalid sibling: the bundle stays as it is
+   * advertised, with no list and the declared description, rather than
+   * being refined against an entity type that does not exist.
+   */
+  public function testAnInvalidEntityTypeLeavesTheBundleUnrefined(): void {
+    $surface = $this->container->get('surface.resources')->build(ExampleBlockStructure::class, new OperationContext('configure'));
+    $advertised = $surface->getDefinition('bundle');
+    $bundle = $surface->refine(['entity_type' => 'no_such_type'])->getDefinition('bundle');
+    $this->assertArrayNotHasKey('EntityBundleExists', $bundle->getConstraints());
+    $this->assertSame($advertised->getConstraints(), $bundle->getConstraints());
+    $this->assertSame('Choose an entity type to see its bundles.', (string) $bundle->getDescription());
+    // The field watches the entity type too, and is held back with it.
+    $field = $surface->refine(['entity_type' => 'no_such_type', 'bundle' => 'article'])->getDefinition('field');
+    $this->assertArrayNotHasKey('SurfaceExamplesBundleField', $field->getConstraints());
+
+    $bundle = $surface->refine(['entity_type' => 'node'])->getDefinition('bundle');
+    $this->assertSame(['entityTypeId' => 'node'], $bundle->getConstraints()['EntityBundleExists']);
+  }
+
+  /**
+   * Tests that choosing a bundle refines the field to that bundle's fields.
+   */
+  public function testBundleRefinesField(): void {
+    $form = $this->createBlock(['entity_type' => 'node', 'bundle' => 'article'])
+      ->buildConfigurationForm([], new FormState());
+
+    $this->assertSame('select', $form['field']['#type']);
+    $options = array_map('strval', $form['field']['#options']);
+    // The labels come from the field definitions themselves.
+    $this->assertSame('Title', $options['title']);
+    $this->assertArrayHasKey('created', $options);
+    $this->assertSame('A field on node article.', (string) $form['field']['#description']);
+
+    // While the optional dependency is empty the dependent stays open.
+    $form = $this->createBlock(['entity_type' => 'node'])
+      ->buildConfigurationForm([], new FormState());
+    $this->assertSame('textfield', $form['field']['#type']);
+  }
+
+  /**
+   * Tests that an AJAX rebuild refines against what was just chosen.
+   */
+  public function testRebuildRefinesAgainstTheNewChoice(): void {
+    $block = $this->createBlock(['entity_type' => 'user']);
+
+    $form_state = new FormState();
+    $form_state->setTriggeringElement(['#parents' => ['settings', 'entity_type']]);
+    // The raw input, which is what a rebuild reads. See
+    // SurfaceHostTrait::surfaceRefinementInput() for why the
+    // validated values are the wrong half by then.
+    $form_state->setUserInput(['settings' => ['entity_type' => 'node']]);
+
+    $form = $block->buildConfigurationForm([], $form_state);
+
+    // The in-progress choice won over the stored one.
+    $this->assertSame(
+      ['article' => 'Article', 'page' => 'Page'],
+      array_map('strval', $form['bundle']['#options']),
+    );
+  }
+
+  /**
+   * Tests the orphan cascade settles all three links in one rebuild.
+   *
+   * Stored on node's article and its title; the entity type moves to
+   * user with the bundle and field still posted. The bundle falls back to
+   * the stored article, which user does not offer, so it comes up on its
+   * empty option standing for it; and the field below it is refined as
+   * the bundle is seen — unanswered — so it is open again, not a list of
+   * user's fields narrowed by a bundle no longer on the screen.
+   */
+  public function testTheOrphanCascadeReachesTheField(): void {
+    $block = $this->createBlock(['entity_type' => 'node', 'bundle' => 'article', 'field' => 'title']);
+    $form_state = new FormState();
+    $form_state->setTriggeringElement(['#parents' => ['settings', 'entity_type']]);
+    $form_state->setUserInput(['settings' => ['entity_type' => 'user', 'bundle' => 'article', 'field' => 'title']]);
+
+    $form = $block->buildConfigurationForm([], $form_state);
+
+    $this->assertSame(['user' => 'User'], array_map('strval', $form['bundle']['#options']));
+    $this->assertSame('', $form['bundle']['#default_value']);
+    $this->assertSame('article', $form['bundle'][SurfaceWidgetBase::STALE_KEY]);
+    // Refined against no bundle at all: open, with no options and the
+    // description it was declared with.
+    $this->assertSame('textfield', $form['field']['#type']);
+    $this->assertArrayNotHasKey('#options', $form['field']);
+    $this->assertSame('Choose a bundle to pick from its fields.', (string) $form['field']['#description']);
+    // Both inputs withdrawn, in the one pass; nothing stored was touched.
+    $settings = $form_state->getUserInput()['settings'];
+    $this->assertArrayNotHasKey('bundle', $settings);
+    $this->assertArrayNotHasKey('field', $settings);
+    $this->assertSame('article', $block->getConfiguration()['bundle']);
+    // The builder names both, asked directly.
+    $this->assertSame(['bundle', 'field'], $this->formBuilder()->discardedRefinementInput(
+      $block->getSurface(),
+      $block->getConfiguration(),
+      ['entity_type' => 'user', 'bundle' => 'article', 'field' => 'title'],
+    ));
+  }
+
+  /**
+   * Tests that configuration is validated at the boundary, not trusted.
+   *
+   * With one exception, and it is the one item 11 decided: a value the
+   * list no longer offers is kept rather than refused, because this
+   * method is how a host loads what the site saved and cannot tell a
+   * bundle that was deleted from a bundle that never existed. Everything
+   * else the structure refuses still refuses here.
+   */
+  public function testSetConfigurationValidates(): void {
+    $block = $this->createBlock();
+
+    // A bundle the refined structure does not allow is kept and reported
+    // as stale rather than thrown: the refinement chain still ran (it is
+    // what says the bundle is not on the list), and what changed is what
+    // happens next.
+    $block->setConfiguration(['entity_type' => 'node', 'bundle' => 'not-a-bundle']);
+    $this->assertSame('not-a-bundle', $block->getConfiguration()['bundle']);
+    $stale = $this->pipeline()
+      ->validate($block->getSurface(), $block->getConfiguration(), $block->getConfiguration())
+      ->stale();
+    $this->assertCount(1, $stale);
+    $this->assertSame('bundle', $stale[0]->key);
+
+    // The declared range holds just as well, and has nothing to do with
+    // a list, so it throws as it always did.
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessageMatches('/limit/');
+    $block->setConfiguration(['limit' => 999]);
+  }
+
+  /**
+   * Tests a full pipeline submit into the block's configuration array.
+   *
+   * The same call a form's submit handler makes, made directly: accept
+   * casts the submitted strings, validate runs the refined structure, and
+   * the storage puts the block host's own keys back around the accepted
+   * values.
+   */
+  public function testPipelineSubmitStoresValuesAndKeepsHostKeys(): void {
+    $block = $this->createBlock(['label' => 'A title']);
+    $surface = $block->getSurface();
+
+    $result = $this->pipeline()->submit($surface, [
+      'headline' => 'Latest articles',
+      'entity_type' => 'node',
+      'bundle' => 'article',
+      'field' => 'title',
+      'limit' => '5',
+      'presentation' => 'list',
+      'presentation_settings' => ['show_summary' => 0],
+    ], new PluginConfigurationStorage($block));
+
+    $this->assertTrue($result->isValid());
+    $this->assertTrue($result->committed);
+
+    $configuration = $block->getConfiguration();
+    // Submitted strings arrived as the definitions' native types.
+    $this->assertSame('Latest articles', $configuration['headline']);
+    $this->assertSame(5, $configuration['limit']);
+    // At every depth: the list's checkbox, inside the variant, too.
+    $this->assertSame(['show_summary' => FALSE], $configuration['presentation_settings']);
+    $this->assertSame('article', $configuration['bundle']);
+    $this->assertSame('title', $configuration['field']);
+    // Host-owned keys came through the same write untouched.
+    $this->assertSame('A title', $configuration['label']);
+    $this->assertSame('surface_examples_plugins', $configuration['id']);
+    $this->assertSame('surface_examples_plugins', $configuration['provider']);
+  }
+
+  /**
+   * Tests the presentation's variants: the form rebuilds as the chosen one.
+   *
+   * The presentation is a refinement dependency of its variants, so it
+   * carries the AJAX rebuild. Moved from list to grid, the settings the
+   * person left in the list's checkbox answer a question no longer on
+   * the form: the discard cascade drops that input, and the key comes
+   * back as the grid, from the grid's own defaults.
+   */
+  public function testPresentationVariantsRebuildAsTheChosenVariant(): void {
+    $stored = ['presentation' => 'list', 'presentation_settings' => ['show_summary' => FALSE]];
+    $form = $this->createBlock($stored)->buildConfigurationForm([], new FormState());
+    $this->assertArrayHasKey('#ajax', $form['presentation']);
+    $this->assertSame('details', $form['presentation_settings']['#type']);
+    $this->assertSame('Presentation settings', (string) $form['presentation_settings']['#title']);
+    $this->assertSame('checkbox', $form['presentation_settings']['show_summary']['#type']);
+    $this->assertFalse($form['presentation_settings']['show_summary']['#default_value']);
+    $this->assertArrayNotHasKey('columns', $form['presentation_settings']);
+
+    $form_state = new FormState();
+    $form_state->setTriggeringElement(['#parents' => ['settings', 'presentation']]);
+    $form_state->setUserInput([
+      'settings' => [
+        'presentation' => 'grid',
+      // Left behind by the list's checkbox, which was on the page.
+        'presentation_settings' => ['show_summary' => '1'],
+      ],
+    ]);
+    $form = $this->createBlock($stored)->buildConfigurationForm([], $form_state);
+    $this->assertSame('number', $form['presentation_settings']['columns']['#type']);
+    $this->assertEquals(3, $form['presentation_settings']['columns']['#default_value']);
+    $this->assertArrayNotHasKey('show_summary', $form['presentation_settings']);
+    // The orphaned input is gone from the raw input too, and only it.
+    $this->assertArrayNotHasKey('presentation_settings', $form_state->getUserInput()['settings']);
+    $this->assertSame('grid', $form_state->getUserInput()['settings']['presentation']);
+
+    // Input shaped for the variant chosen stands.
+    $form_state = new FormState();
+    $form_state->setTriggeringElement(['#parents' => ['settings', 'presentation']]);
+    $form_state->setUserInput([
+      'settings' => [
+        'presentation' => 'list',
+        'presentation_settings' => ['show_summary' => '1'],
+      ],
+    ]);
+    $this->createBlock($stored)->buildConfigurationForm([], $form_state);
+    $this->assertSame(['show_summary' => '1'], $form_state->getUserInput()['settings']['presentation_settings']);
+  }
+
+  /**
+   * Tests that the presentation settings have to fit the presentation.
+   */
+  public function testPresentationSettingsFitThePresentation(): void {
+    $block = $this->createBlock();
+    $storage = new PluginConfigurationStorage($block);
+
+    // The list's key under a grid is refused by name, on its own path.
+    $result = $this->pipeline()->submit($block->getSurface(), [
+      'presentation' => 'grid',
+      'presentation_settings' => ['show_summary' => TRUE],
+    ], $storage);
+    $this->assertFalse($result->isValid());
+    $violation = iterator_to_array($result->violations, FALSE)[0];
+    $this->assertSame('presentation_settings.show_summary', $violation->fullPath());
+    $this->assertSame('presentation_settings.show_summary belongs to the list variant, but presentation chose grid.', (string) $violation->message);
+
+    // The grid's own rules judge its own keys.
+    $result = $this->pipeline()->submit($block->getSurface(), [
+      'presentation' => 'grid',
+      'presentation_settings' => ['columns' => '9'],
+    ], $storage);
+    $this->assertSame(['presentation_settings.columns'], array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($result->violations, FALSE)));
+
+    // Moving to a grid and saying nothing else: the list's stored
+    // settings do not fit, so the grid starts from its own defaults.
+    $result = $this->pipeline()->submit($block->getSurface(), ['presentation' => 'grid'], $storage);
+    $this->assertTrue($result->committed);
+    $this->assertSame(['columns' => 3], $block->getConfiguration()['presentation_settings']);
+  }
+
+  /**
+   * Tests that an invalid submit stops before the write.
+   */
+  public function testPipelineSubmitRefusesInvalidValues(): void {
+    $block = $this->createBlock();
+    $surface = $block->getSurface();
+
+    $result = $this->pipeline()->submit($surface, [
+      'headline' => 'Latest articles',
+      'entity_type' => 'node',
+      'bundle' => 'not-a-bundle',
+    ], new PluginConfigurationStorage($block));
+
+    $this->assertFalse($result->isValid());
+    $this->assertFalse($result->committed);
+    $this->assertContains('bundle', $result->violations->keys());
+    // Nothing was stored: the block still holds its defaults.
+    $this->assertSame('Featured content', $block->getConfiguration()['headline']);
+  }
+
+  /**
+   * Tests that build() renders what the structure and configuration hold.
+   */
+  public function testBuildRendersTheConfiguredValues(): void {
+    $build = $this->createBlock(['headline' => 'Latest articles'])->build();
+
+    $this->assertSame('item_list', $build['#theme']);
+    $this->assertSame('Latest articles', $build['#title']);
+    // One translatable sentence per key, label and value both in
+    // placeholders, so neither is glued into the other and neither
+    // reaches the page unescaped.
+    $items = array_map('strval', $build['#items']);
+    $this->assertContains('Number of items: 10', $items);
+    $this->assertContains('Presentation: list', $items);
+    $this->assertContains('Presentation settings: 1 value', $items);
+    // A key with no stored value says so in words rather than printing a
+    // PHP literal.
+    $this->assertContains('Bundle: not configured', $items);
+  }
+
+  /**
+   * Tests a block whose stored bundle was deleted under it.
+   *
+   * The bug item 11 was decided from, on the real host it was hit on.
+   * The block is configured for a node bundle, the bundle is deleted,
+   * and the block is constructed again from what the site saved. Before
+   * the stale rule this threw InvalidArgumentException out of the plugin
+   * manager — "Invalid configuration: bundle: The value you selected is
+   * not a valid choice." — from setConfiguration(), which every host
+   * calls inside its own constructor. So the block's configuration form
+   * died, the block listing died, and every page the block rendered on
+   * died: the one page that could have fixed the value was the one page
+   * that could not be opened.
+   *
+   * Now the value is kept, the select comes up on its empty option with
+   * the value stashed behind it, and nothing errors until somebody
+   * chooses again.
+   */
+  public function testDeletedBundleIsKeptRatherThanFatal(): void {
+    $stored = [
+      'headline' => 'Featured',
+      'entity_type' => 'node',
+      'bundle' => 'article',
+      'limit' => 5,
+    ];
+    $this->assertSame('article', $this->createBlock($stored)->getConfiguration()['bundle']);
+
+    NodeType::load('article')->delete();
+    $this->container->get('entity_type.bundle.info')->clearCachedBundles();
+
+    // Constructing does not throw, and the value is still there.
+    $block = $this->createBlock($stored);
+    $this->assertSame('article', $block->getConfiguration()['bundle']);
+
+    // The form opens, and the bundle select comes up on its empty option
+    // rather than quietly on some other bundle, with the stored bundle
+    // stashed for an untouched save to keep.
+    $surface = $block->getSurface();
+    $element = $this->formBuilder()
+      ->buildSurfaceForm($surface, $block->getConfiguration(), new FormState())['bundle'];
+    $this->assertSame('', $element['#default_value']);
+    $this->assertArrayNotHasKey('article', $element['#options']);
+    $this->assertArrayHasKey('page', $element['#options']);
+    $this->assertSame('article', $element[SurfaceWidgetBase::STALE_KEY]);
+
+    // And the values validate, so an unrelated save goes through.
+    $violations = $this->pipeline()->validate($surface, $block->getConfiguration(), $block->getConfiguration());
+    $this->assertTrue($violations->isEmpty());
+    $this->assertCount(1, $violations->stale());
+  }
+
+  /**
+   * Tests a stored bundle is refused once the same save moves the type.
+   *
+   * The bundle-shaped dependency: the article bundle is stored under
+   * node, and a save that moves the entity type to user while sending
+   * article back has orphaned it itself. Stale is for what the site
+   * did; this is what the caller did, so it blocks, through the block's
+   * own form validation as through the pipeline.
+   */
+  public function testTheBundleOrphanedByTheSameSaveIsRefused(): void {
+    $stored = ['headline' => 'Featured', 'entity_type' => 'node', 'bundle' => 'article', 'limit' => 5];
+    $block = $this->createBlock($stored);
+
+    $result = $this->pipeline()->submit($block->getSurface(), ['entity_type' => 'user', 'bundle' => 'article'], new PluginConfigurationStorage($block));
+    $this->assertFalse($result->committed);
+    $this->assertSame(['bundle'], $result->violations->keys());
+    $this->assertFalse($result->violations->hasStale());
+    $this->assertSame('node', $block->getConfiguration()['entity_type']);
+
+    // The block form, submitted in one statement: the bundle element is
+    // flagged rather than the save going through with a warning.
+    $form_state = new FormState();
+    $form = $block->buildConfigurationForm([], $form_state);
+    $form_state->setValues([
+      'entity_type' => 'user',
+      'bundle' => 'article',
+      'field' => '',
+      'limit' => '5',
+      'headline' => 'Featured',
+      'presentation' => 'list',
+    ]);
+    foreach (['entity_type', 'bundle', 'field', 'limit', 'headline', 'presentation'] as $key) {
+      $form[$key]['#parents'] = [$key];
+    }
+    $block->validateConfigurationForm($form, $form_state);
+    $this->assertArrayHasKey('bundle', $form_state->getErrors());
+  }
+
+  /**
+   * Pins a known limitation: a non-JS save moving type and bundle at once.
+   *
+   * Through core's own block form, posted as a browser without
+   * JavaScript posts it: the entity type moves from user to node and the
+   * bundle to article in the same request. The combination is valid, and
+   * it is refused today: not by the structure, by Form API's own check
+   * that a select's value was among the options it was built with. A
+   * plugin host answers NULL from surfaceSubmissionPath(), because a
+   * subform cannot know where it sits in the input before Form API
+   * assigns its #parents, so the build the submission is processed
+   * against is built from what is stored, and its bundle select offers
+   * user's bundles. With JavaScript the entity type's AJAX rebuild
+   * offers node's bundles first, and none of this arises.
+   *
+   * When a host can supply its subform's parents to
+   * surfaceSubmissionPath(), this test fails: turn it round to assert
+   * the save goes through, and drop the entry.
+   *
+   * @see docs/decisions.md#a-plugin-host-cannot-overlay-a-full-submission
+   */
+  public function testNonJavaScriptSaveMovingTypeAndBundleTogetherIsRefusedToday(): void {
+    // What core's block form needs beside the block: the request path
+    // condition's alias manager, and a theme to place the block in.
+    $this->enableModules(['path_alias']);
+    $this->installConfig(['system']);
+    $this->container->get('theme_installer')->install(['stark']);
+    $this->config('system.theme')->set('default', 'stark')->save();
+    $stored = ['headline' => 'Featured', 'entity_type' => 'user', 'bundle' => 'user', 'limit' => 5];
+    $entity = Block::create([
+      'id' => 'example',
+      'theme' => 'stark',
+      'region' => 'content',
+      'plugin' => 'surface_examples_plugins',
+      'settings' => ['label' => 'Example', 'label_display' => '0'] + $stored,
+    ]);
+    $entity->save();
+
+    $request = Request::create('/admin/structure/block/manage/example', 'POST');
+    $request->setSession(new Session(new MockArraySessionStorage()));
+    $this->container->get('request_stack')->push($request);
+    $form_object = $this->container->get('entity_type.manager')->getFormObject('block', 'default')->setEntity($entity);
+    $form_state = new FormState();
+    $form_state->setUserInput([
+      'form_id' => $form_object->getFormId(),
+      'settings' => [
+        'label' => 'Example',
+        'label_display' => '0',
+        'headline' => 'Featured',
+        // Both moved, together, and the pair is valid.
+        'entity_type' => 'node',
+        'bundle' => 'article',
+        'field' => '',
+        'limit' => '5',
+        'presentation' => 'list',
+      ],
+      'id' => 'example',
+      'region' => 'content',
+      'op' => 'Save block',
+    ]);
+    try {
+      $this->container->get('form_builder')->buildForm($form_object, $form_state);
+    }
+    catch (EnforcedResponseException) {
+      // The redirect a successful save answers with, which is what this
+      // test is waiting for once the limitation is gone.
+    }
+
+    // Refused on the bundle, by Form API's choice check, before the
+    // structure is asked: the select was built offering user's bundles.
+    $errors = array_map('strval', $form_state->getErrors());
+    $this->assertArrayHasKey('settings][bundle', $errors);
+    $this->assertStringContainsString('element is not allowed', $errors['settings][bundle']);
+    $this->assertSame(['user' => 'User'], array_map('strval', array_diff_key(
+      $form_state->getCompleteForm()['settings']['bundle']['#options'],
+      ['' => TRUE],
+    )));
+    // Nothing was written.
+    $settings = Block::load('example')->get('settings');
+    $this->assertSame('user', $settings['entity_type']);
+    $this->assertSame('user', $settings['bundle']);
+    // The structure itself accepts the pair: the refusal is the host's.
+    $block = $this->createBlock($stored);
+    $surface = $block->getSurface();
+    $current = $block->getConfiguration();
+    $values = $this->pipeline()->accept($surface, ['entity_type' => 'node', 'bundle' => 'article'], $current);
+    $this->assertTrue($this->pipeline()->validate($surface, $values, $current)->isEmpty());
+  }
+
+}

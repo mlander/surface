@@ -15,7 +15,7 @@ use Drupal\Core\Form\FormStateInterface;
  * buildConfigurationForm / validateConfigurationForm /
  * submitConfigurationForm over a configuration array. An existing plugin
  * keeps its class, declares its structure, uses this trait, and its form
- * is generated. Alter hooks keep working but are demoted to cosmetics:
+ * is generated. Alter hooks keep working but are reduced to cosmetics:
  * the data the form collects is declared on the structure, not buried in
  * a build method.
  *

@@ -1,0 +1,8 @@
+services:
+  # The React pages an operation reaches, its own and those modules serve
+  # it at, for the site catalog.
+  surface_examples_react.react_doors:
+    class: Drupal\surface_examples_react\ReactDoors
+    arguments: ['@surface.http_doors', '@surface.form_route_doors']
+    tags:
+      - { name: surface.catalog_doors, priority: 25 }

@@ -3,8 +3,9 @@
 You describe once what a thing on your site accepts: each value, its
 type, and what it allows. From that one description the module makes
 the settings form, a Tool API tool, the command line (`drush tool:run`),
-an HTTP API with its OpenAPI document, and a React page. All of them
-accept the same values, because they all read the same description.
+and an HTTP API with its OpenAPI document; an example module adds a
+React page. All of them accept the same values, because they all read
+the same description.
 Everything that runs Tool API tools can run that one tool: the command
 line, ECA, FlowDrop, Maestro, MCP servers and AI agents.
 
@@ -43,20 +44,45 @@ are in [Installation](docs/installation.md).
   command generates the config schema and the install file.
 - [Look it up](docs/index.md): every page of the documentation, by
   section.
-- [Examples](docs/examples/index.md): the example and demo modules, what
-  each shows, and how to try it on a site.
+- [Examples](docs/examples/index.md): every example module, what each
+  shows, and how to try it on a site.
 
 ## Glossary
 
 Every term the module uses has one sense, defined in
 [the glossary](docs/glossary.md).
 
-## Experimental submodules
+## The examples
+
+The base module, `surface`, is the project and the only thing meant to
+ship. Every submodule under `modules/` is an example: read it, install
+it and remove it as you like. The base module depends on none of them.
+They come in two groups:
+
+- **Learn the pattern.** The numbered examples in `surface_examples` and
+  their submodules, the code of the build pages
+  (`surface_examples_first`), a plugin's settings written from a
+  structure and by hand (`surface_examples_plugins`,
+  `surface_examples_classic`), a module extending another module's
+  resources (`surface_examples_extras`), and a React client of the HTTP
+  door (`surface_examples_react`).
+- **The pattern on Drupal's own things.** Placed blocks, a component
+  block, content entities, content types and a comparison of their
+  tools, the performance settings, field settings, and the Address
+  module's field type. These examples apply the pattern to things Drupal
+  and a contrib module already have, to test it across scenarios; they
+  are not part of the project and will not ship in this form. Read them
+  as a proof of concept.
 
 Every submodule is `lifecycle: experimental`: supported, but its API and
-its configuration may change without a deprecation path. The list, what
-each one opens and its install command are in
-[Installation](docs/installation.md#experimental-submodules).
+its configuration may change without a deprecation path. Each one's
+install command and what it opens are in
+[Installation](docs/installation.md#experimental-submodules); what each
+shows and its page on a site are in [Examples](docs/examples/index.md).
+
+## Experimental submodules
+
+Every submodule is an example: see [The examples](#the-examples).
 
 ## Development
 

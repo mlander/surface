@@ -3,8 +3,8 @@
 A door is a place that asks for an operation's values and hands them to
 the module. The module makes every door of an operation from its
 resource, so you write no form, tool or endpoint by hand. Each door is
-a Drupal mechanism you may already know, and this module or a
-submodule turns operations into it.
+a Drupal mechanism you may already know, and this module or an
+example module turns operations into it.
 
 ![One resource, block.placement, with its create operation, and arrows to four doors: the form, a Tool API tool that the command line, ECA, MCP and AI agents run, HTTP with an OpenAPI document, and a React page](images/12-doors.svg)
 
@@ -15,23 +15,25 @@ submodule turns operations into it.
 | The command line | `drush tool:run <tool id>`, the Tool module's Drush command, runs a tool from a shell with its input as JSON. | this module, with the Tool module and its Drush command |
 | MCP | The Model Context Protocol, which an AI agent outside the site uses to list and call tools. An MCP server module such as MCP Server Tool Bridge (`mcp_server_tool_bridge`) offers the Tool API tools over it. | this module, with the Tool module and an MCP server module |
 | ECA | Events, Conditions, Actions: automation a site builder configures. The ECA Tool module (`eca_tool`) makes one ECA action per tool, so an ECA model can run an operation. | this module, with the Tool module and `eca_tool` |
-| HTTP with an OpenAPI document | A JSON endpoint per resource at `/surface-api/{resource}`, where the HTTP method picks the operation: `GET` reads, `PATCH` updates, `POST` creates, `DELETE` removes. The OpenAPI 3.1 document lists every operation's paths for any OpenAPI client or code generator. | `surface_react`; the document, `surface_openapi` |
-| A React page | A React app that draws the form from the JSON Schema the HTTP door serves. | `surface_react` |
+| HTTP with an OpenAPI document | A JSON endpoint per resource at `/surface-api/{resource}`, where the HTTP method picks the operation: `GET` reads, `PATCH` updates, `POST` creates, `DELETE` removes. The OpenAPI 3.1 document lists every operation's paths for any OpenAPI client or code generator. | this module |
+| A React page | A React app that draws the form from the JSON Schema the HTTP door serves: an example client of that door. | the `surface_examples_react` example |
 
 The command line, MCP and ECA run the tool, so they ask for the same
-values the tool does. The React page reads and writes through the HTTP door, so one
-submodule, `surface_react`, serves both. None of these submodules is needed to read this series. To open
-the tool, HTTP and React doors on a site:
+values the tool does. The React page reads and writes through the HTTP
+door, which this module opens with its OpenAPI document; the page is an
+example of a JavaScript client of it. None of these modules is needed
+to read this series. To open the tool door and the React page on a
+site:
 
 ```bash
 composer require drupal/tool
-drush pm:install tool surface_react surface_openapi
+drush pm:install tool surface_examples_react
 ```
 
 ## One operation, every door
 
 The placed block, `block.placement` in the `surface_examples_block`
-submodule, has a `create` operation. With no code added for any door,
+example module, has a `create` operation. With no code added for any door,
 it is served at each of these:
 
 | Door | Where |

@@ -1,9 +1,9 @@
-name: Surface API Examples - Compliance
+name: 'Surface API examples: compliance'
 type: module
 description: 'Example 4 of the examples: another module has a say in example 3''s resource, with one structure, one alter that attaches it, and no form alter.'
-package: Surface API
+package: 'Surface API examples'
 lifecycle: experimental
-lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#the-examples'
 core_version_requirement: ^11.3 || ^12
 dependencies:
   - surface:surface_examples

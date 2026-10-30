@@ -1,4 +1,4 @@
-# Surface API - Your first resource
+# Surface API examples: your first resource
 
 The code of two documentation pages, shipped as a module so the pages
 cannot drift from code that works:

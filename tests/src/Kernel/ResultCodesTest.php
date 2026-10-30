@@ -50,7 +50,6 @@ class ResultCodesTest extends SurfaceKernelTestBase {
     'surface_examples_node_type',
     'surface_examples',
     'surface_examples_workflow',
-    'surface_react',
     'surface_tool_test',
   ];
 

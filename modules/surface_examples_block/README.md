@@ -1,4 +1,9 @@
-# Surface API block placement
+# Surface API examples: block placement
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 A placed block as a resource: `block.placement`, the block config entity
 `block.block.<id>` by its machine name, whose plugin chooses its
@@ -11,7 +16,7 @@ drush pm:install surface_examples_block
 ```
 
 It needs `block` and nothing contributed. The tools need
-the `tool` module, the HTTP door `surface_react`.
+the `tool` module; the HTTP door is the base module's.
 
 ## What it shows
 
@@ -32,7 +37,7 @@ $inputs->attachList('visibility', VisibilityConditionStructure::class)
 - **The plugin chooses the settings.** `Variants\BlockPluginStructures`
   lists the plugins the block layout offers, less any plugin that reads
   a context, which is not offered yet. A plugin whose class names its
-  settings with `#[UsesStructure]` (the component block, the demo block)
+  settings with `#[UsesStructure]` (the component block, the example block)
   is that structure, built as declared. Any other is read from its
   config schema, `block.settings.<plugin id>`, less the keys every block
   has, written as JSON Schema by `Contract\ConfigSchemaDocument` and
@@ -75,7 +80,7 @@ plugin is chosen
 | Door | Where |
 | --- | --- |
 | Tools | `surface:block.placement:create` (`values`, `dry_run`), `:update` (`id`, `values`, `dry_run`), `:update:read` (`id`), `:delete` (`id`, `dry_run`), with the `tool` module; and `:create:schema` and `:update:schema`, since a plugin's settings are variants the site lists, which a tool's listing never spells out ([the narrowing tool](../../docs/tools.md#the-narrowing-tool)) |
-| HTTP | `POST /surface-api/block.placement` (201, `Location`), `GET` and `PATCH /surface-api/block.placement/{id}`, `DELETE /surface-api/block.placement/{id}`, with `surface_react` |
+| HTTP | `POST /surface-api/block.placement` (201, `Location`), `GET` and `PATCH /surface-api/block.placement/{id}`, `DELETE /surface-api/block.placement/{id}` |
 | Forms | `/admin/structure/block/surface/add`, `/admin/structure/block/surface/{id}`, and `/admin/structure/block/surface/{id}/delete`, a confirmation |
 | React | `/surface-react/block.placement/create`, `/surface-react/block.placement/update?id={id}` |
 
@@ -97,7 +102,7 @@ region named header_nope."), props of another component by their path
 | --- | --- |
 | `/admin/structure/block/surface/add` | Choose a plugin and its settings are drawn; choose a theme and its regions are offered. |
 | `/surface-examples/13`, with `surface_examples` and `surface_examples_component_block` | The Spotlight block, placed through `create`, and the calls that place, change and remove it. |
-| `/surface-api/docs`, with `surface_openapi` | The placement's paths, `DELETE` among them. |
+| `/surface-api/docs` | The placement's paths, `DELETE` among them. |
 
 ## Tests
 

@@ -40,7 +40,7 @@ class DefinitionMetadataFieldDefinitionTest extends SurfaceKernelTestBase {
    * rather than on the write that caused it.
    */
   public function testFieldDefinitionIsNotMistakenForNativeSupport(): void {
-    $definition = BaseFieldDefinition::create('string')->setName('field_demo');
+    $definition = BaseFieldDefinition::create('string')->setName('field_example');
 
     // Nothing declared yet, and reading raises no error.
     $this->assertFalse(DefinitionMetadata::hasDefaultValue($definition));

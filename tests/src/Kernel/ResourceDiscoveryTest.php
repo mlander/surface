@@ -9,8 +9,8 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourceCollectorPass;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
-use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
-use Drupal\surface_examples_extras\Alter\DemoBlockAlter;
+use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
+use Drupal\surface_examples_extras\Alter\ExampleBlockAlter;
 use Drupal\surface_resource_test\Access\RecipeAccess;
 use Drupal\surface_resource_test\OutsideDiscovery\BothKindsClass;
 use Drupal\surface_resource_test\Shape\Sku;
@@ -36,7 +36,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests discovery of resources, structures and alters, and the demo alter.
+ * Tests discovery of resources, structures and alters, and the example alter.
  *
  * Nothing in the modules below registers a resource, a structure, an
  * alter or an operation by hand: the compiler pass finds them all, the
@@ -83,25 +83,25 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the demo structure and its alter are found.
+   * Tests that the example structure and its alter are found.
    */
-  public function testDemoStructureIsDiscovered(): void {
-    $definition = $this->registry()->getDefinition(DemoBlockStructure::class);
+  public function testExampleStructureIsDiscovered(): void {
+    $definition = $this->registry()->getDefinition(ExampleBlockStructure::class);
     $this->assertSame('block.surface_examples_plugins', $definition->id);
     $this->assertSame('surface_examples_plugins', $definition->module);
     $this->assertSame($definition, $this->registry()->getDefinition('block.surface_examples_plugins'));
-    $this->assertSame([], $this->registry()->getOperations(DemoBlockStructure::class));
+    $this->assertSame([], $this->registry()->getOperations(ExampleBlockStructure::class));
     $this->assertSame([], $definition->identity);
     $this->assertNull($definition->storage);
 
-    $alters = $this->registry()->getAlters(DemoBlockStructure::class);
+    $alters = $this->registry()->getAlters(ExampleBlockStructure::class);
     $this->assertCount(1, $alters);
-    $this->assertSame(DemoBlockAlter::class, $alters[0]->class);
+    $this->assertSame(ExampleBlockAlter::class, $alters[0]->class);
     $this->assertSame('surface_examples_extras', $alters[0]->module);
     $this->assertSame(['limit'], array_map(static fn ($refiner) => $refiner->key, $alters[0]->refiners));
 
     // An alter is an autowired service, the way a hook class is.
-    $this->assertInstanceOf(DemoBlockAlter::class, $this->container->get(DemoBlockAlter::class));
+    $this->assertInstanceOf(ExampleBlockAlter::class, $this->container->get(ExampleBlockAlter::class));
   }
 
   /**
@@ -151,12 +151,12 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
     $this->assertNotFalse($index);
     // The index names every resource and structure, and holds the shapes
     // by class; each definition is an entry of its own.
-    $this->assertArrayHasKey(DemoBlockStructure::class, $index->data['names']);
+    $this->assertArrayHasKey(ExampleBlockStructure::class, $index->data['names']);
     $this->assertArrayHasKey(StickyNoteBlock::class, $index->data['names']);
     $this->assertSame('resource_test.sku', $index->data['shapes'][Sku::class]->id);
-    $entry = $bin->get('surface:resources:entry:' . $hash . ':' . DemoBlockStructure::class);
+    $entry = $bin->get('surface:resources:entry:' . $hash . ':' . ExampleBlockStructure::class);
     $this->assertNotFalse($entry);
-    $this->assertSame(DemoBlockStructure::class, $entry->data->class);
+    $this->assertSame(ExampleBlockStructure::class, $entry->data->class);
     // A class read from code alone carries no tag: a cache rebuild is what
     // reads it again.
     $this->assertSame([], $entry->tags);
@@ -323,10 +323,10 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests that the extras alter applies to the demo block.
+   * Tests that the extras alter applies to the example block.
    */
   public function testExtrasAlterApplies(): void {
-    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $surface = $this->container->get('surface.resources')->build(ExampleBlockStructure::class, new OperationContext('configure'));
 
     // The badge is mounted under the alter's module, with its default.
     $this->assertSame(
@@ -337,7 +337,7 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
     // The limit is refined against the presentation, after the owner.
     $this->assertSame(['limit' => ['presentation']], array_intersect_key($surface->getDefinitions()->refinements(), ['limit' => TRUE]));
     $range = static fn (array $values): array => $surface->refine($values)->getDefinition('limit')->getConstraints()['Range'];
-    $this->assertSame(['min' => 1, 'max' => DemoBlockAlter::GRID_LIMIT], $range(['presentation' => 'grid']));
+    $this->assertSame(['min' => 1, 'max' => ExampleBlockAlter::GRID_LIMIT], $range(['presentation' => 'grid']));
     $this->assertSame(['min' => 1, 'max' => 50], $range(['presentation' => 'list']));
 
     // And it rewords the headline, the one change to an owner's key an
@@ -360,10 +360,10 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
     // The schema the extras module ships describes the mount, which the
     // strict schema check on save holds it to.
     $placed = Block::create([
-      'id' => 'demo',
+      'id' => 'example',
       'theme' => 'stark',
       'plugin' => 'surface_examples_plugins',
-      'settings' => ['label' => 'Demo'] + $block->getConfiguration(),
+      'settings' => ['label' => 'Example'] + $block->getConfiguration(),
     ]);
     $placed->save();
     $this->assertSame('star', $placed->getPlugin()->getConfiguration()['third_party_settings']['surface_examples_extras']['badge']);

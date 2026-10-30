@@ -49,7 +49,6 @@ class DefaultsUnderStoredMapTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_react',
     'surface_schema_test',
   ];
 
@@ -200,7 +199,7 @@ class DefaultsUnderStoredMapTest extends SurfaceKernelTestBase {
     // values sent.
     $this->assertSame(self::READ, array_intersect_key($this->servedJson('GET', '/surface-api/' . self::RESOURCE)['values'], self::READ));
     $this->assertSame(self::READ, array_intersect_key($this->servedJson('POST', '/surface-api/' . self::RESOURCE . '/schema', [])['values'], self::READ));
-    $served = $this->container->get('surface_react.served_operations');
+    $served = $this->container->get('surface.served_operations');
     $this->assertSame(self::READ, array_intersect_key($served->current($served->resolve(self::RESOURCE, 'configure', [])), self::READ));
 
     // The pipeline accepts the defaults under what is stored.

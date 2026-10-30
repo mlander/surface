@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * On a fresh site with only the examples enabled: every route answers an
  * administrator and refuses anonymous, the landing page lists each, and
- * each page shows what it demonstrates above its contract and saves
+ * each page says what it shows above its contract and saves
  * through its form.
  */
 #[Group('surface')]
@@ -88,7 +88,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     foreach ([...array_keys(self::PAGES), 'surface-examples/15'] as $path) {
       $assert->linkByHrefExists('/' . $path);
     }
-    $assert->pageTextContains('In React at /surface-react/event.doors/configure, once surface_react is enabled.');
+    $assert->pageTextContains('In React at /surface-react/event.doors/configure, once surface_examples_react is enabled.');
 
     foreach (self::PAGES as $path => $paragraph) {
       $this->drupalGet($path);

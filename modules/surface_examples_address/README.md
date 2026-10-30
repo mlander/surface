@@ -1,4 +1,9 @@
-# Surface API - Address field settings
+# Surface API examples: address field settings
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 Adopting a resource on a contrib field type without forking it, and the
 A/B for what a typed contract adds over a config schema.

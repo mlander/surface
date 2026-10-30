@@ -1,4 +1,9 @@
-# Surface API - Content entities
+# Surface API examples: content entities
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 A content entity's create and update form, said as a resource, derived
 from the bundle's fields: the example that pokes holes in the pattern.
@@ -37,7 +42,7 @@ drush pm:install surface_examples_entity
 | `/surface-entity` | Every content entity resource on the site, what it carries and what it leaves out |
 | `/surface-entity/node/page/add` | Add a basic page through `entity.content:node.page` |
 | `/surface-entity/node/{id}/edit` | Edit one |
-| `/surface-react/entity.content:node.page/create` | The same, as the React app, with `surface_react` |
+| `/surface-react/entity.content:node.page/create` | The same, as the React app, with `surface_examples_react` |
 
 With the `tool` module installed, every bundle's resource is three tools:
 

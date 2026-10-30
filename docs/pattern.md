@@ -79,7 +79,7 @@ modules/surface_examples_field/src/
 
 modules/surface_examples_plugins/src/
   Plugin/Block/ExampleBlock.php    a plugin: #[UsesStructure], and build()
-  Structure/DemoBlockStructure.php         its configuration, as a structure
+  Structure/ExampleBlockStructure.php         its configuration, as a structure
   Structure/ListPresentationStructure.php  the block's presentation variants
   Structure/GridPresentationStructure.php
   Plugin/Field/FieldFormatter/ExampleFormatter.php
@@ -93,8 +93,8 @@ modules/surface_examples_node_type/src/
   Resource/NodeTypeResource.php       a content type, with create and update
 
 modules/surface_examples_extras/src/
-  Alter/DemoBlockAlter.php            adds a key, rewords one, narrows one
-  Alter/DemoFormatterAlter.php        offers one more value on a fixed list
+  Alter/ExampleBlockAlter.php            adds a key, rewords one, narrows one
+  Alter/ExampleFormatterAlter.php        offers one more value on a fixed list
   Alter/NodeTypeAlter.php             adds keys stored in another layout
 ```
 
@@ -129,7 +129,7 @@ method.
   first, then one parameter per sibling it watches**, matched by name
   to that sibling's key: one that names no declared key fails at build,
   so a renamed parameter never silently stops watching. Its signature is its dependency declaration, the way an
-  operation method's is. `DemoBlockStructure::fieldOfBundle()` watches
+  operation method's is. `ExampleBlockStructure::fieldOfBundle()` watches
   the entity type and the bundle. It runs once every watched sibling has
   a value (a key its alter mounted is never waited for), and again when
   any of them changes. It returns the definition tightened with plain
@@ -368,8 +368,8 @@ blueprint has no verb for options.
 
 | The list is | Constraint | Example |
 | --- | --- | --- |
-| Fixed | core `Choice`, or `LabeledChoice` for labels | `DemoBlockStructure`'s `presentation` |
-| Live, from site state | a constraint whose options resolver fetches the list | `SurfaceExamplesBundleField` on the demo block's `field` |
+| Fixed | core `Choice`, or `LabeledChoice` for labels | `ExampleBlockStructure`'s `presentation` |
+| Live, from site state | a constraint whose options resolver fetches the list | `SurfaceExamplesBundleField` on the example block's `field` |
 | Already modelled by core | the core constraint | `EntityBundleExists` on `bundle`, attached by a refiner because it needs the entity type |
 
 **A refiner never calls a service.** A list that depends on a value is
@@ -396,8 +396,8 @@ in. Static, like the variant and operation attributes, so a catalog
 can say who alters a class without running anything.
 
 ```php
-#[Alters(DemoBlockStructure::class)]
-final class DemoBlockAlter implements AltersInputsInterface {
+#[Alters(ExampleBlockStructure::class)]
+final class ExampleBlockAlter implements AltersInputsInterface {
 
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
@@ -429,7 +429,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - `extendChoices()` offers more values on a key whose owner declared a
   fixed list. The alter's `#[RefinesInput]` method on that key says what
   its own values mean and is handed only them, so it can never take the
-  owner's away (`DemoFormatterAlter`).
+  owner's away (`ExampleFormatterAlter`).
 - An alter that only tightens implements no interface: the attribute is
   what makes it an alter.
 - An alter may answer access, implementing `OperationAccessInterface`,
@@ -491,21 +491,21 @@ A resource or structure that answers with something implements
 so `defineInputs()` reads as "what this asks for" and most classes never
 mention outputs. Outputs are never refined: a refinement narrows what
 may be sent, and nobody sends an output. A resource's output values are
-what its storage loads back after the write. The demo formatter answers
+what its storage loads back after the write. The example formatter answers
 with its rendered `text` and `classes`. [Outputs](outputs.md) has the
 rest.
 
 ## Plugins
 
 A plugin keeps rendering, and names the structure its configuration is
-with `#[UsesStructure]`. Two spellings, side by side in the demo module.
+with `#[UsesStructure]`. Two spellings, side by side in the example module.
 
 **Naming a structure class.** The configuration moves to a structure in
 `src/Structure/`, and the plugin names it:
 
 ```php
-#[Block(id: 'surface_examples_plugins', admin_label: new TranslatableMarkup('Data surface demo'))]
-#[UsesStructure(DemoBlockStructure::class)]
+#[Block(id: 'surface_examples_plugins', admin_label: new TranslatableMarkup('Surface API example'))]
+#[UsesStructure(ExampleBlockStructure::class)]
 final class ExampleBlock extends TypedBlockBase {
 
   public function build(): array { /* ... */ }
@@ -522,7 +522,7 @@ host builds the data surface from the plugin class without constructing
 it.
 
 ```php
-#[FieldFormatter(id: 'surface_examples_plugins_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
+#[FieldFormatter(id: 'surface_examples_plugins_string', label: new TranslatableMarkup('Surface API example formatter'), field_types: ['string'])]
 #[UsesStructure]
 final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
 

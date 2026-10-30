@@ -1,9 +1,9 @@
-name: Surface API Examples
+name: 'Surface API examples'
 type: module
 description: 'One resource that grows, one idea per example: event registration settings at /surface-examples, each example a form beside the contract it emits; then a small resource per later concept.'
-package: Surface API
+package: 'Surface API examples'
 lifecycle: experimental
-lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#the-examples'
 core_version_requirement: ^11.3 || ^12
 dependencies:
   - surface:surface

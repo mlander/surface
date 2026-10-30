@@ -45,7 +45,6 @@ class UniqueIdentityTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_examples',
-    'surface_react',
   ];
 
   /**

@@ -63,7 +63,7 @@ final class NodeTypeResource implements ResourceInterface {
    * Granted in addition to, never instead of, "administer content types":
    * the access class asks the entity for that half.
    */
-  public const PERMISSION = 'administer data surface node type demo';
+  public const PERMISSION = 'administer surface examples content types';
 
   /**
    * Edits a content type. Its machine name is known, so it is locked.

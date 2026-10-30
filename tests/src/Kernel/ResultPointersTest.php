@@ -46,7 +46,6 @@ class ResultPointersTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_examples',
-    'surface_react',
   ];
 
   /**

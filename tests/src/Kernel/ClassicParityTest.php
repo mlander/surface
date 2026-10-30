@@ -10,8 +10,8 @@ use Drupal\Core\Field\FormatterInterface;
 use Drupal\Core\Form\FormState;
 use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
 use Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter;
-use Drupal\surface_examples_classic\Plugin\Block\ClassicDemoBlock;
-use Drupal\surface_examples_classic\Plugin\Field\FieldFormatter\ClassicDemoFormatter;
+use Drupal\surface_examples_classic\Plugin\Block\ClassicExampleBlock;
+use Drupal\surface_examples_classic\Plugin\Field\FieldFormatter\ClassicExampleFormatter;
 use Drupal\entity_test\Entity\EntityTest;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
 /**
- * Holds the classic demo and the Surface API demo to the same behavior.
+ * Holds the classic example and the Surface API example to the same behavior.
  *
  * The comparison in modules/surface_examples_classic/README.md counts
  * lines and concepts, and a count proves nothing unless the two versions
@@ -83,7 +83,7 @@ class ClassicParityTest extends SurfaceKernelTestBase {
     $classic = $this->createBlock('surface_examples_classic')->defaultConfiguration();
 
     $this->assertSame($this->settingsOf($classic), $this->settingsOf($surface));
-    // And they are the defaults the demo documents, so a parity that
+    // And they are the defaults the example documents, so a parity that
     // held because both sides were empty would not pass here.
     $this->assertSame([
       'bundle' => NULL,
@@ -246,7 +246,7 @@ class ClassicParityTest extends SurfaceKernelTestBase {
    */
   public function testFormatterDefaultsMatch(): void {
     $surface = ExampleFormatter::defaultSettings();
-    $classic = ClassicDemoFormatter::defaultSettings();
+    $classic = ClassicExampleFormatter::defaultSettings();
 
     $this->assertSame([], $surface['third_party_settings']);
     $this->assertSame($classic, array_diff_key($surface, ['third_party_settings' => NULL]));
@@ -262,12 +262,12 @@ class ClassicParityTest extends SurfaceKernelTestBase {
    */
   #[DataProvider('formatterCases')]
   public function testFormattersRenderTheSame(array $settings, array $values): void {
-    $this->installDemoField(count($values));
-    $entity = EntityTest::create(['field_demo' => $values]);
-    $items = $entity->get('field_demo');
+    $this->installExampleField(count($values));
+    $entity = EntityTest::create(['field_example' => $values]);
+    $items = $entity->get('field_example');
 
     $surface = $this->createFormatter(ExampleFormatter::class, 'surface_examples_plugins_string', $settings);
-    $classic = $this->createFormatter(ClassicDemoFormatter::class, 'surface_examples_classic_string', $settings);
+    $classic = $this->createFormatter(ClassicExampleFormatter::class, 'surface_examples_classic_string', $settings);
 
     $surface_elements = $surface->viewElements($items, 'en');
     $classic_elements = $classic->viewElements($items, 'en');
@@ -315,17 +315,17 @@ class ClassicParityTest extends SurfaceKernelTestBase {
   /**
    * Tests that both formatter settings forms offer the same choices.
    *
-   * Not part of the storage claim, but the narrowing is the demo, and a
+   * Not part of the storage claim, but the narrowing is the example, and a
    * classic version that offered a different variant list would be
    * showing something else.
    */
   public function testFormatterFormsOfferTheSameChoices(): void {
-    $this->installDemoField();
+    $this->installExampleField();
     foreach (['none', 'uppercase', 'lowercase'] as $casing) {
       $settings = ['casing' => $casing];
       $surface = $this->createFormatter(ExampleFormatter::class, 'surface_examples_plugins_string', $settings)
         ->settingsForm([], new FormState());
-      $classic = $this->createFormatter(ClassicDemoFormatter::class, 'surface_examples_classic_string', $settings)
+      $classic = $this->createFormatter(ClassicExampleFormatter::class, 'surface_examples_classic_string', $settings)
         ->settingsForm([], new FormState());
 
       foreach (['casing', 'variant'] as $key) {
@@ -339,7 +339,7 @@ class ClassicParityTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Creates one of the two demo blocks through the block manager.
+   * Creates one of the two example blocks through the block manager.
    *
    * @param string $plugin_id
    *   The block plugin id.
@@ -352,7 +352,7 @@ class ClassicParityTest extends SurfaceKernelTestBase {
   protected function createBlock(string $plugin_id, array $configuration = []): BlockPluginInterface {
     $block = $this->container->get('plugin.manager.block')->createInstance($plugin_id, $configuration);
     $this->assertInstanceOf(
-      $plugin_id === 'surface_examples_plugins' ? ExampleBlock::class : ClassicDemoBlock::class,
+      $plugin_id === 'surface_examples_plugins' ? ExampleBlock::class : ClassicExampleBlock::class,
       $block,
     );
     return $block;
@@ -399,7 +399,7 @@ class ClassicParityTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Creates one of the two demo formatters for the demo field.
+   * Creates one of the two example formatters for the example field.
    *
    * @param class-string $class
    *   The formatter class the instance must be.
@@ -414,8 +414,8 @@ class ClassicParityTest extends SurfaceKernelTestBase {
   protected function createFormatter(string $class, string $plugin_id, array $settings): FormatterInterface {
     $formatter = $this->container->get('plugin.manager.field.formatter')->createInstance($plugin_id, [
       'field_definition' => BaseFieldDefinition::create('string')
-        ->setName('field_demo')
-        ->setLabel('Demo'),
+        ->setName('field_example')
+        ->setLabel('Example'),
       'settings' => $settings,
       'label' => 'above',
       'view_mode' => 'default',
@@ -431,16 +431,16 @@ class ClassicParityTest extends SurfaceKernelTestBase {
    * @param int $cardinality
    *   How many values the field holds.
    */
-  protected function installDemoField(int $cardinality = 1): void {
+  protected function installExampleField(int $cardinality = 1): void {
     $entity_type_manager = $this->container->get('entity_type.manager');
     $entity_type_manager->getStorage('field_storage_config')->create([
-      'field_name' => 'field_demo',
+      'field_name' => 'field_example',
       'entity_type' => 'entity_test',
       'type' => 'string',
       'cardinality' => $cardinality,
     ])->save();
     $entity_type_manager->getStorage('field_config')->create([
-      'field_name' => 'field_demo',
+      'field_name' => 'field_example',
       'entity_type' => 'entity_test',
       'bundle' => 'entity_test',
     ])->save();

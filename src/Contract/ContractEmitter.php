@@ -101,7 +101,7 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
  * The contract carries no widget vocabulary unless a renderer asks for
  * it (emit()'s $widgets). Then `x-surface.widget` mirrors
  * SurfaceWidgetManager's selection in its weight order, so a
- * renderer such as surface_react's app draws what the operation
+ * renderer such as surface_examples_react's app draws what the operation
  * form would: a non-empty option list is a select (a list of them, a
  * multiple select, said by `multiple`); a map with properties is a
  * fieldset; a string is a textarea when its definition says multiline,
@@ -290,7 +290,8 @@ final class ContractEmitter {
    *   Whether to add the renderer's widget hints, `x-surface.widget` and,
    *   on a list of allowed values, `x-surface.multiple`. Off by default:
    *   the contract itself names no widget, and a renderer that draws
-   *   from it, as surface_react does, asks for them.
+   *   from it, as the HTTP door does for the React example, asks for
+   *   them.
    * @param array $operation
    *   How the operation behaves (OperationDefinition::facts()), stated at
    *   the top of the schema as `x-surface.operation`; empty for a data

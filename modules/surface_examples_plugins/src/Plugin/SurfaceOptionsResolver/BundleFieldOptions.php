@@ -20,7 +20,7 @@ use Symfony\Component\Validator\Constraint;
  * Reads a SurfaceExamplesBundleField constraint as that bundle's fields.
  *
  * Every field the bundle has, base fields included, each labeled the way
- * its definition labels it: the list the demo block offered when its own
+ * its definition labels it: the list the example block offered when its own
  * refiner fetched it.
  */
 #[SurfaceOptionsResolver(

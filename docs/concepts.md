@@ -22,7 +22,7 @@ coercion, layouts, the commit, ECA, outputs and `prepare()` side by
 side. The Example column is the example that shows the concept, in
 the order the examples index, `/surface-examples`, reads them, and the
 last column a page that shows it on a site, of the examples module
-(`surface_examples`, drawn in React by `surface_react`) or the
+(`surface_examples`, drawn in React by `surface_examples_react`) or the
 first resource's (`surface_examples_first`); a dash where none does.
 
 | Concept | Introduced in | You need it when you ask | Skip it when | Example | Page |
@@ -56,7 +56,7 @@ first resource's (`surface_examples_first`); a dash where none does.
 | Examples, `DefinitionMetadata::setExamples()` | - | Should a caller see what a valid value looks like? Both documents state it; a form shows it only as a placeholder the key's arrangement declares. | The label says enough. | 4, 8 | `/surface-examples/8/desk` |
 | Arrangement, `$inputs->describe($key, group: ...)` | - | Should keys sit in a group (a fieldset or a details), in another order, or show a placeholder, a prefix, a suffix or a help text, on every form that draws them and in React? ([Generated forms](forms.md#arranging-the-keys)) | Declaration order and the labels are the form you want. | - | `/admin/structure/types/surface-add` (with `surface_examples_node_type`) |
 | Layout, `StorageLayoutInterface` | - | Is a value stored differently from how a person is asked for it? | It is stored as asked. | - | - |
-| Outputs, `defineOutputs()` | - | Does running the host emit values a caller relies on, such as a listing's page? ([Outputs](outputs.md)) | Nothing is emitted: settings pages emit nothing. | 15 | `/surface-api/event.venue?limit=2` (with `surface_react`) |
+| Outputs, `defineOutputs()` | - | Does running the host emit values a caller relies on, such as a listing's page? ([Outputs](outputs.md)) | Nothing is emitted: settings pages emit nothing. | 15 | `/surface-api/event.venue?limit=2` |
 | Plugin host, `#[UsesStructure]` | [Structures](introduction/03-structures.md) | Is it a block's, formatter's, condition's, action's or field type's settings? | No plugin holds it. | 13 | - |
 | Cosmetic layer, `_surface_cosmetics` | - | Does one operation form need a borrowed element (vertical tabs), markup, a message or a redirect, with nothing meaning something else? Grouping and order are the arrangement's. | The generated form, arranged, is the form you want. | - | - |
 | Panel, `_surface_panel` | - | Should the contract be shown beside the form? | Nobody needs to see it there. | 1 | `/surface-examples/1` |
@@ -66,7 +66,7 @@ first resource's (`surface_examples_first`); a dash where none does.
 | Stale values | - | What happens to a stored value a refiner no longer allows? ([Value semantics](semantics.md#stale-values-the-third-state)) | No refiner narrows a key that has a stored value. | 2 | `/surface-examples/2` |
 | Tool and read tool | [Doors](introduction/12-doors.md) | Should the command line (`drush tool:run`), ECA, FlowDrop, Maestro, an MCP server or an AI agent run it? One tool made from an operation can be run by everything that runs Tool API tools. | You do not install the `tool` module; there is nothing to write either way. | 5 | `/surface-examples/5` |
 | Served contract and React | [Doors](introduction/12-doors.md) | Will a client with no PHP read, render or write it over HTTP, the path its resource and the method its operation? ([The served contract](served-contract.md#the-api)) | The form and the tool are enough. | 6 | `/surface-api/registration.step2`; in React, `/surface-react/registration.step2/configure` |
-| OpenAPI document | [Doors](introduction/12-doors.md) | Will an OpenAPI client, generator or UI call its paths? ([An OpenAPI document](served-contract.md#an-openapi-document)) | Nobody reads OpenAPI: leave `surface_openapi` off. | 6 | `/surface-api/openapi.json`; try it in `/surface-api/docs` |
+| OpenAPI document | [Doors](introduction/12-doors.md) | Will an OpenAPI client, generator or UI call its paths? ([An OpenAPI document](served-contract.md#an-openapi-document)) | Nobody reads OpenAPI: nothing to do; the document is served all the same. | 6 | `/surface-api/openapi.json`; try it in `/surface-api/docs` |
 | Pipeline, dry run | [A value sent in](introduction/17-a-value-sent-in.md) | Do I submit values from my own code? ([The pipeline](pipeline.md)) | The form and the tool submit for you. | 5 | `/surface-examples/5` |
 | Data surface | [Sealed](introduction/16-sealed.md) | Do I call the build or the pipeline myself? | You write resources: the build is the module's. | - | - |
 | Keys and variants from the site, `addEach()`, `attachEach()`, `attachVariants(..., from:)` | [Resources made of structures](introduction/11-resources-made-of-structures.md) | Is there one key per thing the site has, such as a checkbox per form or a select per character another module may add? Or does each thing choose a group of keys of its own, which a JSON Schema or a structure class already describes, such as a component's props or a field type's settings? One provider lists them, a `SiteListInterface` whose `list()` answers a `SiteList`, each variant read from its schema ([Reading a schema](reading-a-schema.md)) ([Keys](resources.md#keys-that-come-from-the-site), [variants](resources.md#variants-from-the-site)). | Your class can list every key, and each variant can be a class: `#[Variant]`; or each thing is a resource of its own, with operations or storage, which a deriver makes. When each variant the site may offer is a structure your code names, the provider is closed, `ClosedSiteListInterface`, and storage describes them all. | 9, 12, 14 | `/surface-examples/9`, `/surface-examples/12`; closed, `/surface-examples/14` |
@@ -90,7 +90,7 @@ Every class of the module a snippet in these pages names, beside the
 `use` line that imports it. A snippet that quotes a whole file carries
 its own `use` lines; the others leave them out and link here, from the
 section they sit in. A class a snippet borrows from a submodule or an
-example (`NewsletterStorage`, `DemoBlockStructure`) is in that module's
+example (`NewsletterStorage`, `ExampleBlockStructure`) is in that module's
 `src/`, by the same rule: the namespace is the module's, then the
 directory. `NamespacesDocsTest` fails when a snippet names a class of
 the module that it does not import and this table does not list.

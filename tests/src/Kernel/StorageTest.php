@@ -137,7 +137,7 @@ class StorageTest extends SurfaceKernelTestBase {
    * Tests that a key a child names and the data surface does not is allowed.
    *
    * A destination may legitimately be told where a key would go before
-   * any data surface mounts one there, which is how the node type demo names
+   * any data surface mounts one there, which is how the node type example names
    * the third party settings mount nothing has used yet.
    */
   public function testCompositeAllowsUndeclaredKeys(): void {

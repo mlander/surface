@@ -1,6 +1,6 @@
-# Surface API Demo - Classic
+# Surface API examples: plugin settings, classic
 
-The demo block and the demo formatter, written the way they would have
+The example block and the example formatter, written the way they would have
 been written before Surface API, so the two can be read side by side.
 
 This module depends on `block` and `field` and on nothing from Surface
@@ -11,8 +11,8 @@ each plugin, behaving the same way, written two ways.
 
 | The classic way | The Surface API way |
 | --- | --- |
-| [`ClassicDemoBlock`](src/Plugin/Block/ClassicDemoBlock.php) | [`ExampleBlock`](../surface_examples_plugins/src/Plugin/Block/ExampleBlock.php) and its [`DemoBlockStructure`](../surface_examples_plugins/src/Structure/DemoBlockStructure.php) |
-| [`ClassicDemoFormatter`](src/Plugin/Field/FieldFormatter/ClassicDemoFormatter.php) | [`ExampleFormatter`](../surface_examples_plugins/src/Plugin/Field/FieldFormatter/ExampleFormatter.php), which is its own structure |
+| [`ClassicExampleBlock`](src/Plugin/Block/ClassicExampleBlock.php) | [`ExampleBlock`](../surface_examples_plugins/src/Plugin/Block/ExampleBlock.php) and its [`ExampleBlockStructure`](../surface_examples_plugins/src/Structure/ExampleBlockStructure.php) |
+| [`ClassicExampleFormatter`](src/Plugin/Field/FieldFormatter/ClassicExampleFormatter.php) | [`ExampleFormatter`](../surface_examples_plugins/src/Plugin/Field/FieldFormatter/ExampleFormatter.php), which is its own structure |
 
 The classic side is written to be good code, not to lose. It uses the
 element-level validation core already provides (`#required`, `#min` and
@@ -51,7 +51,7 @@ prose.
 
 Five of those rows are worth a sentence.
 
-- The **variant vocabulary** is `DemoVariant`, an enum the Surface API
+- The **variant vocabulary** is `ExampleVariant`, an enum the Surface API
   formatter shares between its declaration and its refiner. It is counted
   on the Surface API side in full, even though most of it is documentation,
   because the classic formatter has no equivalent file: it writes the
@@ -72,7 +72,7 @@ Five of those rows are worth a sentence.
   declares the `third_party_settings` namespace other modules mount into,
   which the classic version has no way to offer.
 - The **block plugin** is four files on the Surface API side: the plugin,
-  which only renders; `DemoBlockStructure`, which its `#[UsesStructure]`
+  which only renders; `ExampleBlockStructure`, which its `#[UsesStructure]`
   names; and the two presentation structures that are its variants,
   `ListPresentationStructure` and `GridPresentationStructure`. None holds a
   service. The variants are where the classic block grew most: a third
@@ -82,7 +82,7 @@ Five of those rows are worth a sentence.
   a few lines each.
 - The **field list** is where the services went. A refiner points at a
   list rather than fetching it, and no core constraint names a bundle's
-  fields, so the demo brings one, its validator, and the options
+  fields, so the example brings one, its validator, and the options
   resolver that reads it: more lines than the classic block
   spends fetching the same list inline. The bundle list needs nothing of
   the kind, because core's `EntityBundleExists` already says it.
@@ -167,12 +167,12 @@ drush pm:install surface_examples_plugins surface_examples_classic
 
 | Where | What to look at |
 | --- | --- |
-| `/admin/structure/block` | Place **Data surface demo** and **Data surface demo (classic)** side by side and configure both. The forms should be indistinguishable. |
-| Manage display, on any bundle with a string field | Switch between the two demo formatters and compare their settings forms and their output. |
+| `/admin/structure/block` | Place **Surface API example** and **Surface API example (classic)** side by side and configure both. The forms should be indistinguishable. |
+| Manage display, on any bundle with a string field | Switch between the two example formatters and compare their settings forms and their output. |
 
 ## What gates it
 
 | Test | Covers |
 | --- | --- |
 | `Kernel\ClassicParityTest` | That the two versions of each plugin really do the same thing. |
-| `Kernel\DemoBlockTest`, `Kernel\DemoFormatterTest` | The Surface API side of each pair, in its own right. |
+| `Kernel\ExampleBlockTest`, `Kernel\ExampleFormatterTest` | The Surface API side of each pair, in its own right. |

@@ -15,7 +15,7 @@ use Drupal\surface\Pipeline\UnknownKeysException;
 use Drupal\surface\Pipeline\VariantMismatchException;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Attachment;
-use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
 use Drupal\surface_examples\Venues;
 use Drupal\surface_resource_test\Structure\Crate\CrateStructure;
 use Drupal\surface_resource_test\Structure\Cupboard\CupboardStructure;
@@ -32,7 +32,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests the served contract the main module emits, over five builds.
  *
  * Examples 1 to 3, the content type resource in both its operations, and
- * the demo block's structure built the way its host builds it. What is
+ * the example block's structure built the way its host builds it. What is
  * asserted is what a client reads: titles from labels, allowed values as
  * `oneOf` with their labels, bounds, the dependency edges, the variants as a
  * conditional on the deciding key, the locked machine name, and the
@@ -73,7 +73,6 @@ class ServedContractTest extends SurfaceKernelTestBase {
     'surface_examples',
     'surface_examples_plugins',
     'surface_examples_node_type',
-    'surface_react',
   ];
 
   /**
@@ -105,7 +104,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The contract, through JSON and back.
    */
   protected function contract(string $resource, string $operation, array $parameters = [], array $values = [], bool $widgets = TRUE): array {
-    $served = $this->container->get('surface_react.served_operations');
+    $served = $this->container->get('surface.served_operations');
     $operation = $served->resolve($resource, $operation, $parameters);
     $contract = $this->container->get('surface.contract_emitter')->emit(
       $operation->surface,
@@ -313,7 +312,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    * widget, and the value itself never handed over.
    */
   public function testRefinementOverlay(): void {
-    $served = $this->container->get('surface_react.served_operations');
+    $served = $this->container->get('surface.served_operations');
     $operation = $served->resolve('registration.step2', 'configure', []);
     $overlay = $this->container->get('surface.form_builder')->refinementOverlay(
       $operation->surface,
@@ -438,7 +437,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    * submodule's endpoint asks the same service for the hints.
    */
   public function testWidgetHintsAreTheRenderersAlone(): void {
-    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $surface = $this->container->get('surface.resources')->build(ExampleBlockStructure::class, new OperationContext('configure'));
     $default = $this->container->get('surface.contract_emitter')
       ->emit($surface, $surface->getDefaultValues(), 'block.surface_examples_plugins')
       ->document;
@@ -587,7 +586,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The built resource, in its configure operation.
    */
   protected function operationSurface(string $resource): SurfaceInterface {
-    return $this->container->get('surface_react.served_operations')->resolve($resource, 'configure', [])->surface;
+    return $this->container->get('surface.served_operations')->resolve($resource, 'configure', [])->surface;
   }
 
   /**
@@ -729,7 +728,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    * Tests every enumerated conditional is what refinement answers.
    *
    * Example 2's against /refine itself, sent the conditional's values;
-   * the demo block's, which no route serves, against the contract emitted
+   * the example block's, which no route serves, against the contract emitted
    * for them. Each conditional applied to the unrefined key is the key
    * the refined contract describes, keyword for keyword.
    */
@@ -751,7 +750,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame(9, $compared, 'Three venues and six rooms.');
 
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
-    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $surface = $this->container->get('surface.resources')->build(ExampleBlockStructure::class, new OperationContext('configure'));
     [$contract, $tags] = $this->staticContract($surface, 'block.surface_examples_plugins');
     $static = $contract['schema'];
     $this->assertWellFormed($static);
@@ -880,7 +879,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The document, through JSON and back.
    */
   protected function full(string $resource): array {
-    $operation = $this->container->get('surface_react.served_operations')->resolve($resource, 'configure', []);
+    $operation = $this->container->get('surface.served_operations')->resolve($resource, 'configure', []);
     $served = $this->container->get('surface.contract_emitter')->emitFull(
       $operation->surface,
       $operation->definition->id,
@@ -1420,10 +1419,10 @@ class ServedContractTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the demo block's structure, built as its host builds it.
+   * Tests the example block's structure, built as its host builds it.
    */
-  public function testDemoBlock(): void {
-    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+  public function testExampleBlock(): void {
+    $surface = $this->container->get('surface.resources')->build(ExampleBlockStructure::class, new OperationContext('configure'));
     $document = $this->container->get('surface.contract_emitter')
       ->emit($surface, $surface->getDefaultValues(), 'block.surface_examples_plugins', widgets: TRUE)
       ->document;
@@ -1578,7 +1577,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertFalse($this->validates($edit['schema'], ['name' => str_repeat('a', 256)] + $edit['values']));
     $this->assertWellFormed($this->contract('node.type', 'create')['schema']);
 
-    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $surface = $this->container->get('surface.resources')->build(ExampleBlockStructure::class, new OperationContext('configure'));
     $document = $this->container->get('surface.contract_emitter')
       ->emit($surface, $surface->getDefaultValues(), 'block.surface_examples_plugins', widgets: TRUE)
       ->document;

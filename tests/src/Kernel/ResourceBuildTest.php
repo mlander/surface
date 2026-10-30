@@ -16,7 +16,7 @@ use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
-use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples_plugins\Structure\ExampleBlockStructure;
 use Drupal\surface_examples_plugins\Structure\GridPresentationStructure;
 use Drupal\surface_examples_plugins\Structure\ListPresentationStructure;
 use Drupal\surface_resource_test\Structure\Broken\AttachingStructure;
@@ -50,7 +50,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests the build step: a class and a context in, a data surface out.
  *
- * The demo block's structure is the plugin host case. The recipe fixture
+ * The example block's structure is the plugin host case. The recipe fixture
  * covers the rest: identity, operations, constraints from a context,
  * refiner dispatch, alters, access and the storage. The broken fixtures
  * each fail one seal-time check, by name.
@@ -96,24 +96,24 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Builds the demo block's structure.
+   * Builds the example block's structure.
    *
    * @return \Drupal\surface\SurfaceInterface
-   *   The built structure DemoBlockStructure produces.
+   *   The built structure ExampleBlockStructure produces.
    */
-  protected function demoStructure(): SurfaceInterface {
-    return $this->resources()->build(DemoBlockStructure::class, new OperationContext('configure'));
+  protected function exampleStructure(): SurfaceInterface {
+    return $this->resources()->build(ExampleBlockStructure::class, new OperationContext('configure'));
   }
 
   /**
-   * Tests the demo structure's refinement edges, read off its signatures.
+   * Tests the example structure's refinement edges, read off its signatures.
    */
-  public function testDemoStructureRefinementEdges(): void {
+  public function testExampleStructureRefinementEdges(): void {
     $this->assertSame([
       'bundle' => ['entity_type'],
       'field' => ['entity_type', 'bundle'],
       'presentation_settings' => ['presentation'],
-    ], $this->demoStructure()->getDefinitions()->refinements());
+    ], $this->exampleStructure()->getDefinitions()->refinements());
   }
 
   /**
@@ -145,13 +145,13 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     $counting = new CountingResources($this->resources());
     $this->container->set('surface.resources', $counting);
     $definition = $this->container->get('plugin.manager.block')->getDefinition('surface_examples_plugins');
-    $this->assertSame(DemoBlockStructure::class, $definition[UsesStructure::DEFINITION_KEY]);
+    $this->assertSame(ExampleBlockStructure::class, $definition[UsesStructure::DEFINITION_KEY]);
 
     $block = $this->container->get('plugin.manager.block')->createInstance('surface_examples_plugins');
     $this->assertInstanceOf(ExampleBlock::class, $block);
-    $this->assertSame([DemoBlockStructure::class], $counting->builds);
+    $this->assertSame([ExampleBlockStructure::class], $counting->builds);
     $this->assertSame(
-      array_keys($this->demoStructure()->getDefinitions()->toArray()),
+      array_keys($this->exampleStructure()->getDefinitions()->toArray()),
       array_keys($block->getSurface()->getDefinitions()->toArray()),
     );
     $variants = $block->getSurface()->getDefinitions()->entry('presentation_settings')?->variants;
@@ -457,7 +457,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
     $this->assertTrue($resources->access(RecipeResource::class, new OperationContext('create'), $cook)->isForbidden());
     // A context that is no operation has no permission tier.
     $this->assertTrue($resources->access(RecipeResource::class, new OperationContext('configure'), $stranger)->isAllowed());
-    $this->assertTrue($resources->access(DemoBlockStructure::class, new OperationContext('configure'), $stranger)->isNeutral());
+    $this->assertTrue($resources->access(ExampleBlockStructure::class, new OperationContext('configure'), $stranger)->isNeutral());
   }
 
   /**
@@ -486,7 +486,7 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
 
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('block.surface_examples_plugins is a structure, which has no storage of its own');
-    $this->resources()->storage(DemoBlockStructure::class, new OperationContext('configure'));
+    $this->resources()->storage(ExampleBlockStructure::class, new OperationContext('configure'));
   }
 
   /**

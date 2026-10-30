@@ -87,7 +87,7 @@ These keep the word, as product names or on-the-wire identifiers:
   `_surface_operation`, `_surface_operation_access`,
   `_surface_panel`, `_surface_cosmetics`,
   `_surface_fixed`, `_surface_defaults`,
-  `_surface_query`, `_surface_react_access`) and URL paths
+  `_surface_query`, `_surface_served_access`) and URL paths
   (`/surface-api/...`, `/surface-react/...`, `/surface-examples/...`);
 - config names and State keys;
 - the served contract's `x-surface` keyword, because clients already
@@ -770,7 +770,7 @@ top ([Which constraint to write](options.md#which-constraint-to-write)):
   reads it back, nothing narrows on it in the browser, and a caller
   learns it when a call is refused. One that is written extends the
   closest stock constraint, so its validator, refusal and result code
-  come with it. *Amended 2026-10-26:* the demo's
+  come with it. *Amended 2026-10-26:* the example's
   `SurfaceExamplesExtrasUniqueItems` was a step three constraint for a
   rule JSON Schema has a keyword for, so it moved to step one as the
   stock `UniqueItems`, written as `uniqueItems: true` and read back.
@@ -1456,7 +1456,7 @@ assemble.
   it under (`field.field.node.page.body` holds `entity_type`, `bundle`,
   `field_name` and `field_type`, the field instance's four identity
   keys), the name the content entity resources, the reference key's two
-  parts, a gate's `entity_type` and `id` pair and the demo block already
+  parts, a gate's `entity_type` and `id` pair and the example block already
   used, and the words a person says; `entity_type_id` is core's name
   for a PHP variable holding it. So the field resources moved and
   nothing else did: no stored value changed, and the content entity
@@ -3214,7 +3214,7 @@ other service to every class as before
 
 ### A machine name is a computed identity
 
-Decided 2026-10-26, with example 15's venue and the content type demo.
+Decided 2026-10-26, with example 15's venue and the content type example.
 Drupal pairs a title with a machine name: the machine name is suggested
 from the title, a person may type over it, it is unique, and it does not
 change once the thing exists. It is one spelling with no verb of its
@@ -3307,7 +3307,7 @@ Five parts, each an existing mechanism:
   narrowing's suggestion, and sends it once the person typed it.
 
 Moved onto it: example 15's venue `id`, whose slug stays `ON_CREATE`,
-the contrast the page shows, and the content type demo's `type`, whose
+the contrast the page shows, and the content type example's `type`, whose
 `SurfaceUniqueNodeType` constraint and whose cosmetic machine name
 element are deleted. A placed block and the storage test's config entity
 get `SurfaceUnique` too: their storages are config entity storages.
@@ -3315,7 +3315,7 @@ get `SurfaceUnique` too: their storages are config entity storages.
 Rejected: a blueprint verb of its own, `machineName()`, since it would
 repeat `compute()`'s sources, class and mode under another name, where
 every door reads a computed key already; and a uniqueness constraint per
-resource, as the content type demo had, since each repeats one storage
+resource, as the content type example had, since each repeats one storage
 question in its own words, and a resource without one lets every door
 offer a taken id.
 
@@ -4325,7 +4325,7 @@ that is their job ([No door-specific context](resources.md#no-door-specific-cont
 
 *Open:* the listing form draws a boolean filter that holds nothing as a
 checkbox left clear, so it cannot say "any" (the venues' `status`); the
-plugin hosts' forms (`SurfaceHostFormTrait`, the demo form) still
+plugin hosts' forms (`SurfaceHostFormTrait`, the example form) still
 say a refusal from their submit handler; core's selection handler reads
 the current user itself for a reference's options, which every door
 sets alike. (`PipelineGuard`, `RefinesInputRefiner::invoke()`,
@@ -5319,7 +5319,7 @@ free strings and a time picker):
   item's own widget, "Remove" beside each and "Add another" under them,
   rebuilt over AJAX (or a plain submit) replacing the list alone, within
   the list's Count. Not a text area of one item per line, which the
-  demos' widgets drew: an item's own rules (a Length, a Regex, an
+  examples' widgets drew: an item's own rules (a Length, a Regex, an
   example) reach its element, a refusal of one item is shown on its row
   (`keywords.2`), an item may hold a comma or a line break, and the form
   draws what both schemas and the React app say, a list. An agent's
@@ -5470,7 +5470,7 @@ in a `Resource\Arrangement` that an owner sets in `defineInputs()` with
 `DefinitionMetadata::setArrangement()`. Why: one place to describe a
 form, read by the operation form, every plugin host (a block, a
 formatter, a condition, a field type, which had no seam short of
-`hook_form_alter()`), the demo's standalone form and the React app. The
+`hook_form_alter()`), the example's standalone form and the React app. The
 cosmetic layer was a second place, and only one door read it: the React
 page never saw the content type's groups, and a block had none to give.
 
@@ -5521,7 +5521,7 @@ page never saw the content type's groups, and a block had none to give.
   has, so the alter's rule above is unchanged, and what the contract
   states (`Arrangement::toArray()`) did not move.
 - **The cosmetic layer keeps what is truly one form's**: a borrowed
-  element (the content type demo's vertical tabs, which gather the
+  element (the content type example's vertical tabs, which gather the
   groups its resource declares, by their `@group.<id>` keys), markup,
   the message and the redirect. `NodeTypeResourceFormCosmetics` lost
   its groups and its hand-tuned weights.
@@ -5705,7 +5705,7 @@ pass's, so a plugin more or less is a different entry. The compiler
 pass never sees such a class, so an access class it names is
 not registered as an autowired service; the class resolver builds it,
 which means no constructor arguments or `ContainerInjectionInterface`.
-The demo formatter is written this way and the demo block is not, so
+The example formatter is written this way and the example block is not, so
 the two spellings sit side by side.
 (`ResourceRegistry::discover()`, `ResourcePluginHooks::usedStructureOf()`)
 
@@ -5963,8 +5963,9 @@ why:
   opens a door implements `CatalogDoorsInterface`, a service tagged
   `surface.catalog_doors`: the main module names the form routes
   (any route naming the operation in `_surface_resource`), the
-  tool bridge the tool and the read tool it derived, the React module
-  the HTTP path and the page, the OpenAPI module its operation. The
+  tool bridge the tool and the read tool it derived, the HTTP door
+  its path, the OpenAPI document its operation, the React example
+  (`surface_examples_react`) the page. The
   main module cannot know a submodule's paths, and a door listed where
   its module is off would be a promise nothing keeps. The tool door is
   read off the Tool API's definitions, so it lists the tools that
@@ -6304,13 +6305,13 @@ so the build a full submission is processed against is built from what
 is stored, not from what was submitted. A nested subform cannot know its
 position in the input at build time: Form API assigns its `#parents`
 only later. So a save without JavaScript that moves a parent and its
-dependent together (the demo block's entity type and bundle) is refused
+dependent together (the example block's entity type and bundle) is refused
 by Form API's "is not allowed" select check even when the pair is valid,
 because the dependent's select still offers the stored parent's choices.
 With JavaScript the parent's AJAX rebuild offers the new choices first
 and the case does not arise, and an invalid pair is refused either way.
 The fix is a host supplying its subform's parents to
-`surfaceSubmissionPath()`. `DemoBlockTest` pins today's refusal. The
+`surfaceSubmissionPath()`. `ExampleBlockTest` pins today's refusal. The
 component block's create form is the same case with variants: without
 JavaScript the props are drawn for the component stored, none, so a
 component chosen and saved at once is refused for the props it requires
@@ -6325,13 +6326,13 @@ alone, sealed on the spot: no alter, no context. There is no instance
 and no context to build with, and alters' keys are mounted where those
 protocols do not look. (`ResourcesInterface::defaults()`)
 
-### The demo's bundle-field constraint
+### The example's bundle-field constraint
 
-`DemoBlockStructure` points at a bundle's fields with a constraint of the
-demo's own, `SurfaceExamplesBundleField`, and its options resolver.
+`ExampleBlockStructure` points at a bundle's fields with a constraint of the
+example's own, `SurfaceExamplesBundleField`, and its options resolver.
 The pattern fetches such a list through an options source, which is
 not built yet, and no core constraint names a bundle's fields.
-(`DemoBlockStructure::fieldOfBundle()`)
+(`ExampleBlockStructure::fieldOfBundle()`)
 
 ### A block embeds a component through its structure
 
@@ -6924,7 +6925,8 @@ canonical contract the operation form's contract panel shows and
 `/surface-api` serves. The roadmap rejects widget vocabulary in the
 contract, so `x-surface.widget`, the Form API mapping said for a
 renderer, and `multiple`, its qualifier, are written only when a caller
-passes `widgets: TRUE`; `surface_react` does, for its app. The rest
+passes `widgets: TRUE`; the HTTP door does, for a client such as the
+React example's app. The rest
 of `x-surface` (locked, dependsOn, refined, stale, emptyOption, fixed, by,
 variants and chosen, rules, within, checkedOnServer, enumerated,
 refine, live) is the
@@ -7055,7 +7057,7 @@ a person reads in the contract panel and a client downloads on every
 GET, and the emission, which refines the whole data surface once per
 combination. 64 holds every finite domain the shipped resources and
 structures have
-(the largest is the demo block's field, entity types times bundles) with
+(the largest is the example block's field, entity types times bundles) with
 room for a real site's bundles, and is small enough that a
 country-sized list (some 250) is refused outright rather than written.
 Above it the key is `refine`. A key watching free text, a number, a
@@ -7835,7 +7837,7 @@ Decided 2026-10-20, from the DX reviews (group E of
 of the wire format, the contract's own, distinct from a resource's
 version: `x-surface.contract`, at the top of both, first under
 `x-surface`, and the `Contract-Version` header every route of
-`surface_react` answers with, but for an error. Contract 1 is what `main` serves and
+the HTTP door answers with, but for an error. Contract 1 is what `main` serves and
 what every document said before it had a number; `next` serves 2. Every
 wire change the reviews asked for moved together, once, so a client
 moves once. The changes, each with why ([the table](served-contract.md#contract-2)):
@@ -8299,8 +8301,8 @@ the contract baselines did not move. (`ContractEmitter`,
 
 ### An OpenAPI document is one more door
 
-`surface_openapi` serves `GET /surface-api/openapi.json` (and
-`.yaml`): an OpenAPI 3.1 document of the API of `surface_react`
+The base module serves `GET /surface-api/openapi.json` (and
+`.yaml`): an OpenAPI 3.1 document of its HTTP door's API
 for every operation that can be asked on its own, so any OpenAPI
 client, generator or UI drives a resource without reading these pages.
 Decided 2026-10-21; its paths are contract 3's since 2026-10-22

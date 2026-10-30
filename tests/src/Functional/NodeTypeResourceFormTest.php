@@ -13,7 +13,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests the resource-driven content type add and edit forms in a browser.
  *
- * The demo's largest claim is that one resource serves two operations
+ * The example's largest claim is that one resource serves two operations
  * and that the operation is build-time context: uniqueness is added on
  * add, the machine name is locked on edit, and one storage class writes a
  * config entity and a set of base field overrides in one commit. Each
@@ -67,7 +67,7 @@ class NodeTypeResourceFormTest extends BrowserTestBase {
     // the other is the case the routing file exists to describe.
     $this->drupalLogin($this->drupalCreateUser([
       'administer content types',
-      'administer data surface node type demo',
+      'administer surface examples content types',
     ]));
   }
 
@@ -231,7 +231,7 @@ class NodeTypeResourceFormTest extends BrowserTestBase {
     $this->drupalGet('admin/structure/types/manage/recipe/surface-edit');
     $this->assertSession()->statusCodeEquals(403);
 
-    $this->drupalLogin($this->drupalCreateUser(['administer data surface node type demo']));
+    $this->drupalLogin($this->drupalCreateUser(['administer surface examples content types']));
     $this->drupalGet(self::ADD_ROUTE);
     $this->assertSession()->statusCodeEquals(403);
     $this->drupalGet('admin/structure/types/manage/recipe/surface-edit');

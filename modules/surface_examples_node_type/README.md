@@ -1,4 +1,9 @@
-# Surface API Demo - Node type
+# Surface API examples: content types
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 A resource-driven alternative to core's content type add and edit form.
 
@@ -49,7 +54,7 @@ operations are tools, `surface:node.type:create` and
 
 ```bash
 drush pm:install surface_examples_node_type
-drush role:perm:add content_editor 'administer data surface node type demo'
+drush role:perm:add content_editor 'administer surface examples content types'
 ```
 
 | Path | Operation |
@@ -69,9 +74,9 @@ reviewer of core's own content type form has not already reviewed.
 
 | Route, link or tool | Entity access (the access class) | Module permission (the operation's) |
 | --- | --- | --- |
-| `surface_examples_node_type.create`, `surface:node.type:create` | node type create access | `administer data surface node type demo` |
-| `surface_examples_node_type.update`, `surface:node.type:update` | `$node_type->access('update')` | `administer data surface node type demo` |
-| The "Edit (resource)" operation link | `$node_type->access('update')` | `administer data surface node type demo` |
+| `surface_examples_node_type.create`, `surface:node.type:create` | node type create access | `administer surface examples content types` |
+| `surface_examples_node_type.update`, `surface:node.type:update` | `$node_type->access('update')` | `administer surface examples content types` |
+| The "Edit (resource)" operation link | `$node_type->access('update')` | `administer surface examples content types` |
 
 All of them ask one question, the content type resource's access for
 the operation, so none can drift from the others: the routes through
@@ -86,11 +91,11 @@ core's `administer content types` permission plus whatever any module
 says through the entity access hooks. This module can therefore never
 grant more than core's form grants.
 
-**`administer data surface node type demo`** decides whether this second
+**`administer surface examples content types`** decides whether this second
 way in is open on this site at all. It is marked `restrict access: true`
 and it is granted *in addition to*, never instead of, the content type
 permission: holding it alone opens nothing, because entity access still
-refuses. That is the point of it: installing a demo module should not
+refuses. That is the point of it: installing an example module should not
 silently hand everyone who already administers content types a second,
 separately written form to do it through.
 
@@ -106,7 +111,7 @@ drives the generic operation form, message and redirect included, and
 `Functional\NodeTypeResourceFormTest` drives both routes in a browser,
 with the routes' 403s.
 
-## Why it is a demo and not a replacement
+## Why it is an example and not a replacement
 
 It exists to show the two claims above in practice. The module is marked
 `lifecycle: experimental` and is not meant to replace `node`'s own form

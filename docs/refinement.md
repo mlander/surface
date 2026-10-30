@@ -54,7 +54,7 @@ An alter contributes in `alterInputs()`:
 
 ```php
 #[Alters(ExampleFormatter::class)]
-final class DemoFormatterAlter implements AltersInputsInterface {
+final class ExampleFormatterAlter implements AltersInputsInterface {
 
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->add('badge', 'string', $this->t('Badge'), default: 'star');
@@ -239,7 +239,7 @@ the owner's, because the owner is the one who answers for the key.
 
 A refiner is a method, so a class that refines several keys has several
 methods, each named for its rule and each attributed with the one key it
-refines: `DemoBlockStructure::bundleOfEntityType()` and
+refines: `ExampleBlockStructure::bundleOfEntityType()` and
 `::fieldOfBundle()`. Nothing dispatches on a key's name. The method
 takes the key's definition first and one parameter per sibling it
 watches, and runs once every watched sibling has a value. A watched
@@ -616,7 +616,7 @@ it varies by those contexts. A data surface with no contexts, a
 `PERMANENT` max-age and no tags is static, and may be reused freely.
 Anything else is only as reusable as its shortest-lived half.
 
-## Worked example: the extras demo
+## Worked example: the extras module
 
 `surface_examples_plugins` ships a field formatter whose `variant` key
 advertises four values (`bold`, `strong`, `quiet`, `muted`) and one
@@ -629,7 +629,7 @@ a fifth value, and a refiner of its own for it:
 
 ```php
 #[Alters(ExampleFormatter::class)]
-final class DemoFormatterAlter implements AltersInputsInterface {
+final class ExampleFormatterAlter implements AltersInputsInterface {
 
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
     $inputs->extendChoices('variant', [self::RIBBON => $this->t('Ribbon')]);

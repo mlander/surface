@@ -132,7 +132,7 @@ cases, a `label()` method, and `asOptions()` projecting the two into the
 value-to-label map a form takes.
 
 ```php
-enum DemoVariant: string {
+enum ExampleVariant: string {
 
   case Bold = 'bold';
   case Strong = 'strong';
@@ -165,16 +165,16 @@ twice anywhere:
 
 ```php
 $inputs->add('variant', 'string', t('Variant'))
-  ->addConstraint('LabeledChoice', ['choices' => DemoVariant::choices()]);
+  ->addConstraint('LabeledChoice', ['choices' => ExampleVariant::choices()]);
 ```
 
 **An enum is not a fence around the key.** What the key allows is the
 constraint, and an alter widens it at build time with
 `extendChoices()`: `surface_examples_extras` contributes `ribbon`, which
-is deliberately not a case in the demo's enum. A contributor answers for
+is deliberately not a case in the example's enum. A contributor answers for
 its own value, and the owner's enum is not where that value lives: that
 is what a contribution *is*. So code acting on a stored value takes the
-string it was handed rather than `DemoVariant::from()`-ing it, and only
+string it was handed rather than `ExampleVariant::from()`-ing it, and only
 the owner's own half of the vocabulary is enumerated. An enum used as a
 gate turns every contribution into a fatal.
 

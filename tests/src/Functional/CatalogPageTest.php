@@ -31,8 +31,7 @@ class CatalogPageTest extends BrowserTestBase {
   protected static $modules = [
     'surface_examples_first',
     'tool',
-    'surface_react',
-    'surface_openapi',
+    'surface_examples_react',
   ];
 
   /**

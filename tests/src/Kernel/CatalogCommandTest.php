@@ -35,7 +35,7 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_react',
+    'surface_examples_react',
     'surface_examples_first',
     'surface_resource_test',
   ];
@@ -71,7 +71,7 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     [$status, $display] = $this->catalog();
     $this->assertSame(0, $status, $display);
     $line = static fn (string $resource): string => (string) preg_replace('/\s+/', ' ', implode("\n", preg_grep('/^\s*' . preg_quote($resource, '/') . '\s/', explode("\n", $display)) ?: []));
-    $this->assertSame(' first.newsletter resource configure (update) administer surface_examples_first nothing form, http, tool, read tool, react ', $line('first.newsletter'));
+    $this->assertSame(' first.newsletter resource configure (update) administer surface_examples_first nothing form, http, tool, read tool, openapi, react ', $line('first.newsletter'));
     // A structure no operation asks for on its own.
     $this->assertStringContainsString(' resource_test.digest.daily structure none ', $line('resource_test.digest.daily'));
     $this->assertMatchesRegularExpression('/\d+ resources and \d+ structures, \d+ operations, \d+ structures read from a schema; [1-9]\d* refused \(drush surface:catalog --refused lists them\)\./', (string) preg_replace('/\s+/', ' ', $display));
@@ -94,6 +94,7 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
       SiteCatalog::HTTP => 'PATCH /surface-api/first.store',
       SiteCatalog::TOOL => 'surface:first.store:configure',
       SiteCatalog::READ_TOOL => 'surface:first.store:configure:read',
+      SiteCatalog::OPENAPI => 'first.store:configure:write',
       SiteCatalog::REACT => '/surface-react/first.store/configure',
     ], $configure['doors']);
     $this->assertNotSame([], $decoded['refused']);

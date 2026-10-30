@@ -1,4 +1,4 @@
-# Surface API Examples - Compliance
+# Surface API examples: compliance
 
 Example 4 of [the examples](../surface_examples/README.md): another
 module has a say in a resource it does not own.
@@ -92,7 +92,7 @@ drush state:set surface_examples_compliance.closed_rooms '["riverside_east"]' --
 ```
 
 Reload `/surface-examples/3` (or `/surface-react/registration.step3/configure`
-with `surface_react` on) and choose Riverside Hall: the room offers
+with `surface_examples_react` on) and choose Riverside Hall: the room offers
 the main hall alone, its help says "The East room is closed.", and a
 submit choosing the East room is refused at the room. In the contract
 panel the room reads "narrowed, and checked at runtime", and both schemas mark it

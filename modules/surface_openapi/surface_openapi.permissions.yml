@@ -1,3 +1,0 @@
-access surface api docs:
-  title: 'View the API documentation pages'
-  description: 'Swagger UI and Redoc over the OpenAPI document. Each page runs a script from a CDN on the site. The document itself is open to everyone.'

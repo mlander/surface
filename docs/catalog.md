@@ -18,10 +18,9 @@ An operation that can be asked "on its own" belongs to a resource that
 names storage and is no plugin's configuration, and every `%key`
 placeholder in its permission can be supplied by one of its parameters.
 Such an operation reaches the doors the installed modules open: a form
-route a module declares, the HTTP path and the React page
-(`surface_react`), the tool `surface:<id>:<operation>` (the base
-module, with `tool` installed) and the OpenAPI operation
-(`surface_openapi`).
+route a module declares, the HTTP path and the OpenAPI operation (the
+base module), the tool `surface:<id>:<operation>` (the base module,
+with `tool` installed) and the React page (`surface_examples_react`).
 One that changes a thing that exists, neither creating nor read only, is
 "read on its own" too, a read tool, `surface:<id>:<operation>:read`.
 A structure a plugin uses is configured through the plugin's host. Every
@@ -34,7 +33,7 @@ Refused. `docs/resources.md` says how each part works.
 | [`block.placement`](#blockplacement) | `BlockPlacementResource` | `id` | `create`, `update`, `delete` |
 | [`block.placement.condition`](#blockplacementcondition) | `VisibilityConditionStructure` | none | none |
 | [`block.surface_component`](#blocksurface_component) | `ComponentBlockStructure` | none | none |
-| [`block.surface_examples_plugins`](#blocksurface_examples_plugins) | `DemoBlockStructure` | none | none |
+| [`block.surface_examples_plugins`](#blocksurface_examples_plugins) | `ExampleBlockStructure` | none | none |
 | [`block.surface_examples_plugins.presentation.grid`](#blocksurface_examples_pluginspresentationgrid) | `GridPresentationStructure` | none | none |
 | [`block.surface_examples_plugins.presentation.list`](#blocksurface_examples_pluginspresentationlist) | `ListPresentationStructure` | none | none |
 | [`event.bulletin`](#eventbulletin) | `BulletinResource` | none | `configure` |
@@ -113,7 +112,7 @@ Refused. `docs/resources.md` says how each part works.
 
 ## block.surface_examples_plugins
 
-`Drupal\surface_examples_plugins\Structure\DemoBlockStructure`, in `surface_examples_plugins`.
+`Drupal\surface_examples_plugins\Structure\ExampleBlockStructure`, in `surface_examples_plugins`.
 
 - Kind: structure
 - Identity: none
@@ -121,7 +120,7 @@ Refused. `docs/resources.md` says how each part works.
 - Access: the operation's permission alone
 - Used by: `block:surface_examples_plugins`; configured through the plugin's host, never on its own.
 
-- Altered by `Drupal\surface_examples_extras\Alter\DemoBlockAlter` (`surface_examples_extras`), in every operation; it refines `limit` (watching `presentation`).
+- Altered by `Drupal\surface_examples_extras\Alter\ExampleBlockAlter` (`surface_examples_extras`), in every operation; it refines `limit` (watching `presentation`).
 
 - Variants at `presentation_settings`: `grid` → `Drupal\surface_examples_plugins\Structure\GridPresentationStructure`, `list` → `Drupal\surface_examples_plugins\Structure\ListPresentationStructure`.
 
@@ -454,7 +453,7 @@ Refused. `docs/resources.md` says how each part works.
 - Access: the operation's permission alone
 - Used by: `field_formatter:surface_examples_plugins_string`; configured through the plugin's host, never on its own.
 
-- Altered by `Drupal\surface_examples_extras\Alter\DemoFormatterAlter` (`surface_examples_extras`), in every operation; it refines `variant` (watching `casing`).
+- Altered by `Drupal\surface_examples_extras\Alter\ExampleFormatterAlter` (`surface_examples_extras`), in every operation; it refines `variant` (watching `casing`).
 
 ## first.newsletter
 
@@ -497,8 +496,8 @@ Refused. `docs/resources.md` says how each part works.
 
 | Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a content type | nothing | yes | `administer data surface node type demo` | yes | no: it creates | `#[Operation] on NodeTypeResource` (`surface_examples_node_type`) |
-| `update` | Edit a content type | `NodeTypeInterface $type` | no | `administer data surface node type demo` | yes | yes | `NodeTypeResource::update()` (`surface_examples_node_type`) |
+| `create` | Add a content type | nothing | yes | `administer surface examples content types` | yes | no: it creates | `#[Operation] on NodeTypeResource` (`surface_examples_node_type`) |
+| `update` | Edit a content type | `NodeTypeInterface $type` | no | `administer surface examples content types` | yes | yes | `NodeTypeResource::update()` (`surface_examples_node_type`) |
 
 - `create` reaches form `/admin/structure/types/surface-add (surface_examples_node_type.create)`, http `POST /surface-api/node.type`, tool `surface:node.type:create`, openapi `node.type:create:write`, react `/surface-react/node.type/create`.
 - `update` reaches form `/admin/structure/types/manage/{type}/surface-edit (surface_examples_node_type.update)`, http `PATCH /surface-api/node.type/{type}`, tool `surface:node.type:update`, read tool `surface:node.type:update:read`, openapi `node.type:update:write`, react `/surface-react/node.type/update`.

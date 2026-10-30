@@ -28,7 +28,6 @@ class NestedCollectionFormTest extends BrowserTestBase {
    */
   protected static $modules = [
     'surface',
-    'surface_react',
     'surface_resource_test',
   ];
 

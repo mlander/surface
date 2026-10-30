@@ -13,7 +13,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * Checks that a value names a field on one bundle of one entity type.
  *
  * Core says a bundle exists (EntityBundleExists) and nothing says a field
- * does, so the demo block's field list could only be built by a refiner
+ * does, so the example block's field list could only be built by a refiner
  * that fetched it. Said as a constraint, the refiner points at the list
  * and hands it the entity type and the bundle, and the options resolver
  * beside it fetches: the rule the pattern states as "a refiner never
@@ -21,7 +21,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * for the pattern's options lists until those are built.
  *
  * @see \Drupal\surface_examples_plugins\Plugin\SurfaceOptionsResolver\BundleFieldOptions
- * @see \Drupal\surface_examples_plugins\Structure\DemoBlockStructure::fieldOfBundle()
+ * @see \Drupal\surface_examples_plugins\Structure\ExampleBlockStructure::fieldOfBundle()
  */
 #[Constraint(
   id: 'SurfaceExamplesBundleField',

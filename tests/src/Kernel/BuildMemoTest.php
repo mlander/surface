@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\surface\ResourceBuild\Resources;
-use Drupal\surface_react\Access\ServedOperationAccessCheck;
+use Drupal\surface\Http\ServedOperationAccessCheck;
 use Drupal\node\Entity\Node;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -34,7 +34,7 @@ class BuildMemoTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_react'];
+  protected static $modules = [...self::ENTITY_MODULES];
 
   /**
    * {@inheritdoc}
@@ -161,7 +161,7 @@ class BuildMemoTest extends SurfaceKernelTestBase {
   public function testTheRouteAccessCheckBuildsNothing(): void {
     $node = Node::create(['type' => 'page', 'title' => 'One', 'field_description' => 'First']);
     $node->save();
-    $check = $this->container->get('surface_react.access');
+    $check = $this->container->get('surface.served_access');
     assert($check instanceof ServedOperationAccessCheck);
     // The API's route, the page's id the path's one identity segment.
     $ids = [
@@ -172,7 +172,7 @@ class BuildMemoTest extends SurfaceKernelTestBase {
       's4' => '',
       's5' => '',
     ];
-    $route_match = new RouteMatch('surface_react.api', new Route('/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'), $ids, $ids);
+    $route_match = new RouteMatch('surface.api', new Route('/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'), $ids, $ids);
     $this->resources()->forgetBuilds();
     $this->assertSame([0, 0], $this->counted(function () use ($check, $route_match, $node): void {
       $request = Request::create('/surface-api/entity.content:node.page/' . $node->id());

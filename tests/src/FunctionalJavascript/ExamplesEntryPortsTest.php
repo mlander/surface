@@ -26,7 +26,7 @@ class ExamplesEntryPortsTest extends ExamplesWebDriverTestBase {
    */
   protected static $modules = [
     'surface_examples',
-    'surface_react',
+    'surface_examples_react',
   ];
 
   /**

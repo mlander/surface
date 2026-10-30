@@ -80,8 +80,9 @@ description. The module makes the rest from this class:
 The form is served on a route: a routing entry that names the class and
 the way of asking for it ([Operations](09-operations.md) shows one).
 
-The tool, the command line, the HTTP API and the React page each come
-from a submodule you install when you want it. A later page lists them
+The HTTP API comes with the module. The tool and the command line come
+once you install the Tool module, and the React page is an example
+module you install when you want it. A later page lists them
 ([Doors](12-doors.md)).
 
 A value the description does not allow is refused at every one of them,

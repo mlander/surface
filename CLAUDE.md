@@ -217,7 +217,7 @@ the record of the rework that brought the module to the pattern.
   config schema type for the pattern and length, `SurfaceUnique` added
   to the identity key of every `creates` operation (the storage answers
   `exists()`), and core's machine name element as the widget (example 15's
-  id, the content type demo,
+  id, the content type example,
   `docs/decisions.md#a-machine-name-is-a-computed-identity`).
   A key **resolved** at use is asked and stored as declared, and read
   otherwise by the code that uses the resource: `$inputs->resolve('api_key',
@@ -299,7 +299,7 @@ or, with no argument, is its own structure: the plugin class implements
 `StructureInterface`, is found through its plugin definition
 (`ResourcePlugins::ownStructures()`), gets the id
 `<host type>:<plugin id>` unless it carries `#[Structure]`, and alters
-name it by the plugin class (the demo formatter). Everything else is
+name it by the plugin class (the example formatter). Everything else is
 discovered by `ResourceBuild\ResourceCollectorPass` and built by the
 `surface.resources` service (`ResourcesInterface::build($resource,
 $context)`), which writes the blueprint, the alters, the context and the
@@ -538,7 +538,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1798, Assertions: 41037, Errors: 0, Failures: 0, Skipped: 3. Classes: 250 of 250, 8 at a time, browser classes 4.
+phpunit: Tests: 1805, Assertions: 41159, Errors: 0, Failures: 0, Skipped: 3. Classes: 252 of 252, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -558,8 +558,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1690, Assertions: 37019, Skipped: 3, Deprecations: 130. Classes:
-201, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1697, Assertions: 37139, Skipped: 3, Deprecations: 130. Classes:
+203, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -621,7 +621,7 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 
 `scripts/check.sh` bakes all four in; read it rather than retyping them.
 
-## The React submodule and its app
+## The HTTP door, OpenAPI, and the React example's app
 
 The served contract's emitter is the main module's:
 `Contract\ContractEmitter` (`surface.contract_emitter`) turns a
@@ -640,8 +640,8 @@ It names no widget unless asked
 (`emit(..., widgets: TRUE)`); the contract panel (`Form\ContractPanel`)
 shows it without, beside what the Tool API can advertise where the tool
 module is installed (which flattens
-variants, and is what `tool:info` prints). `modules/surface_react`
-serves it with the widget hints, through the main module's service, on
+variants, and is what `tool:info` prints). The base module's HTTP door
+(`src/Http/`, route `surface.api`) serves it with the widget hints on
 an API where the path is the resource and the method the operation
 (contract 3's paths, `ServedPaths`, both documents in contract 4's
 keywords): `GET /surface-api/{resource}[/{id}]` the
@@ -653,23 +653,26 @@ listed `stale`); `PATCH` the default update, `POST` on the collection
 the default create (201 with `Location`), `:{operation}` any other,
 `?dryRun=true` a run that writes nothing, `If-Match` a 412 when storage
 changed since, a refusal 422 problem details, every path a JSON Pointer
-and every contract 2 path a 410.
+and every contract 2 path a 410. `src/OpenApi/` describes that API as
+an OpenAPI 3.1 document at `/surface-api/openapi.json`, with Swagger UI
+and Redoc over it (`docs/served-contract.md#an-openapi-document`).
+The example `surface_examples_react` is a JavaScript client of the door:
 `/surface-react/{resource}/{operation}` renders it with a React app,
 which answers a URL that names nothing as the form's route does; a
 module's own route serves the same page with `ResourceReactPage::served()`
 and `servedTitle()`, handing the app `seeds.defaults` and `prefill`, the
 values the app starts from over the stored ones, and fixing nothing
-(`modules/surface_react/README.md`).
+(`modules/surface_examples_react/README.md`).
 `docs/served-contract.md` has the format, with children and variants
 as `$defs` that the properties reference; `docs/decisions.md` (Served
 contract) has the points it settled.
 
-The app is `modules/surface_react/app/`: Vite, React 18 and
+The app is `modules/surface_examples_react/app/`: Vite, React 18 and
 TypeScript, every version pinned exactly. Run npm on the host, never
 inside ddev:
 
 ```
-cd modules/surface_react/app
+cd modules/surface_examples_react/app
 npm ci          # node_modules/ is ignored
 npm test        # Vitest + React Testing Library
 npm run build   # tsc --noEmit, then dist/app.js and dist/app.css
@@ -820,6 +823,11 @@ src/Form/                Form builder, host traits, the operation form
                          The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
                          Drawing.php, Extracting.php and Refreshing.php.
+src/Http/                The HTTP door: the /surface-api routes' controller,
+                         ServedPaths and ServedOperations, the access check,
+                         problem details, and its catalog door.
+src/OpenApi/             The HTTP door's OpenAPI document, its controller
+                         and its catalog door.
 src/Tool/                The Tool API door: what a tool takes and answers
                          (OperationInputs, InputDefinitions), its catalog
                          doors and the invalidator, registered by
@@ -831,10 +839,35 @@ src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constrain
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Twenty experimental submodules; each has its own README.
+modules/                 Nineteen example submodules, each with its own README,
+                         in two groups (below).
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```
+
+The base module is the project and the only thing meant to ship: the
+framework and its doors, the form, the Tool API tool and with it the
+command line (where the tool module is installed), and HTTP with its
+OpenAPI document. Every submodule is an example, in the package
+`Surface API examples` and `lifecycle: experimental`, in one of two
+groups, which
+`surface_examples`' `ExampleModules` (the landing page's list),
+`docs/examples/index.md`, `docs/installation.md` and README.md's "The
+examples" give alike:
+
+- **Learn the pattern:** `surface_examples` and the numbered series'
+  submodules (`surface_examples_compliance`, `_workflow`, `_keys`,
+  `_references`, `_retitle`), `surface_examples_first`, `_plugins`,
+  `_classic`, `_extras` and `_react`.
+- **The pattern on Drupal's own things:** `surface_examples_block`,
+  `_component_block`, `_entity`, `_node_type`, `_node_type_tool`,
+  `_performance`, `_field` and `_address`. They try the pattern on
+  what Drupal and a contrib module already have; they are not part of
+  the project and will not ship in this form, and each one's
+  description and README say so.
+
+A new example goes into one group in all four places;
+`ExamplesRoutesTest` fails when `ExampleModules` misses a directory.
 
 A module that declares its own puts resources in `src/Resource/`,
 structures in `src/Structure/`, shapes in `src/Shape/`, alters in

@@ -3,7 +3,7 @@
 # words, and nothing checks that the two agree.
 block.settings.surface_examples_classic:
   type: block_settings
-  label: 'Data surface demo (classic) block settings'
+  label: 'Surface API example (classic) block settings'
   constraints:
     FullyValidatable: ~
   mapping:
@@ -49,7 +49,7 @@ block.settings.surface_examples_classic.presentation.grid:
 
 field.formatter.settings.surface_examples_classic_string:
   type: mapping
-  label: 'Data surface demo formatter (classic) settings'
+  label: 'Surface API example formatter (classic) settings'
   mapping:
     prefix:
       type: string

@@ -34,7 +34,7 @@ yet.
     a structure held under one key, or one of several chosen by another
     key.
 12. [Doors](12-doors.md): the form, the tool, the command line, MCP,
-    ECA, HTTP and the React page, and the submodule that opens each.
+    ECA, HTTP and the React page, and the module that opens each.
 13. [Other modules](13-other-modules.md): a module adds keys to a
     resource it does not own, or tightens its rules.
 14. [The site and the page](14-site-and-page.md): a site's own defaults,

@@ -31,7 +31,6 @@ class ServedPathsTest extends BrowserTestBase {
   protected static $modules = [
     'node',
     'surface_examples',
-    'surface_react',
     'surface_examples_node_type',
   ];
 
@@ -49,7 +48,7 @@ class ServedPathsTest extends BrowserTestBase {
     $this->drupalLogin($this->drupalCreateUser([
       'administer site configuration',
       'administer content types',
-      'administer data surface node type demo',
+      'administer surface examples content types',
     ]));
   }
 

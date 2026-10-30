@@ -26,7 +26,7 @@ and field storage settings as resources
   and `Plugin\tool\Tool\ResourceOperationTool`, with `Tool\OperationInputs`
   describing them. The field example adds `surface:field.instance:create`,
   `:reuse` and `:update` and `surface:field.storage:update`; the node
-  type demo adds `surface:node.type:create` and `:update`, and
+  type example adds `surface:node.type:create` and `:update`, and
   `surface_examples_entity` one `create` and one `update` per content entity
   bundle with a form display, `surface:entity.content:node.page:create`. The inputs
   are the operation's parameters (an entity parameter as its id; a
@@ -170,8 +170,7 @@ with none required (example 3's ticket). Variants the site lists state
 the keys of the variant the stored values choose and no other
 ([the narrowing tool](#the-narrowing-tool)). The full contract, with an `if`/`then` per variant on the key
 that chooses it, is the module's `surface.contract_emitter`:
-see it in the contract panel below, or, with `surface_react`
-enabled, at `/surface-api/{resource}`
+see it in the contract panel below, or at `/surface-api/{resource}`
 ([`docs/served-contract.md`](served-contract.md)). Since
 contract 3 the tool and HTTP agree: one call per operation, with a dry
 run as a flag (`dry_run` here, `?dryRun=true` there), and every path
@@ -257,8 +256,8 @@ of the variant the stored values choose, where the listing reads what
 is stored (an operation that needs nothing to start from, or the refined
 `values` once the parameters arrive), and none otherwise, and its
 description names two ways to learn the keys of any other: the full
-schema fetched with the choice stated, once per value, where the site
-serves its API (surface_react on), and a third tool beside the
+schema fetched with the choice stated, once per value, on the HTTP
+door, and a third tool beside the
 write and read tools, asked with the values:
 
 > Its keys depend on component: listed here are those of
@@ -392,7 +391,7 @@ entity type.`
 The operation's permission is also the tool's declared permission
 (`ToolDefinition::getPermission()`), so `tool:info` prints it and the
 Tool API checks it before reading any input, when it is one permission
-as written: `surface:node.type:create` declares the node type demo's
+as written: `surface:node.type:create` declares the node type example's
 permission. A permission with a `%key` placeholder, as the field tools'
 `administer %entity_type fields`, names a different permission for
 each call, and the Tool API has no place for one that depends on the

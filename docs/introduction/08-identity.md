@@ -44,11 +44,11 @@ types apart. It sits on the attribute, not among the keys, because it is
 part of the resource's address: anything that asks for one content type
 must name it first.
 
-A resource may have more than one identity key. The
-`surface_examples_entity` submodule makes one resource per bundle of a
-content entity type, such as `entity.content:node.page` for the Basic
-page content type, and each names three: `entity_type`, `bundle` and
-`id`.
+A resource may have more than one identity key. A node is a resource
+only with the `surface_examples_entity` example module, which makes one
+resource per bundle of a content entity type, such as
+`entity.content:node.page` for the Basic page content type, and each
+names three: `entity_type`, `bundle` and `id`.
 
 ## What it changes
 

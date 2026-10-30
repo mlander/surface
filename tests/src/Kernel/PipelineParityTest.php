@@ -304,8 +304,8 @@ class PipelineParityTest extends SurfaceKernelTestBase {
       'mode' => 2,
       'extras' => ['badge' => 'star', 'weight' => 3],
       'flavor' => 'vanilla',
-      'id' => 'demo_block',
-      'label' => 'Demo',
+      'id' => 'example_block',
+      'label' => 'Example',
       'provider' => 'surface',
     ], $plugin->getConfiguration());
   }

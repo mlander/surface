@@ -45,7 +45,7 @@ class ContentEntityStorageTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_entity_test', 'surface_react'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_entity_test'];
 
   /**
    * {@inheritdoc}
@@ -314,7 +314,7 @@ class ContentEntityStorageTest extends SurfaceKernelTestBase {
    * Tests the React door: a page added there lives at edit, by its new id.
    */
   public function testTheServedAddSaysWhereThePageNowLives(): void {
-    $served = $this->container->get('surface_react.served_operations');
+    $served = $this->container->get('surface.served_operations');
     $operation = $served->resolve(self::RESOURCE, 'create', []);
     $this->assertNotNull($operation->storage);
     $values = ['title' => ['value' => 'Served'], 'field_description' => ['value' => 'x']];

@@ -19,9 +19,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
- * Tests the generic form against the node type demo's routes.
+ * Tests the generic form against the node type example's routes.
  *
- * The demo has no form class. Its two routes name the content type
+ * The example has no form class. Its two routes name the content type
  * resource, an operation and a cosmetic layer; the update route's {type}
  * parameter is the update operation's $type. Everything else (the
  * context, the access answer, the built resource, the storage, the three
@@ -32,7 +32,7 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
  * bespoke one did: the same values reach the same two destinations, the
  * lock still refuses a tampered machine name, a violation is still
  * flagged on the element that carries it, and the message and the
- * redirect are still the demo's own. The routes are read from the route
+ * redirect are still the example's own. The routes are read from the route
  * provider rather than written out here, so what is asserted is what the
  * module ships.
  */
@@ -64,13 +64,13 @@ class SurfaceOperationFormTest extends SurfaceKernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
     $this->installConfig(['field', 'node']);
-    // User 1 bypasses every access check, which is what the demo's two
+    // User 1 bypasses every access check, which is what the example's two
     // routes and the form's own floor are both answering for here.
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
-   * Puts one of the demo's own routes on the request stack.
+   * Puts one of the example's own routes on the request stack.
    *
    * The form reads where it is from the route it is served at, so a test
    * of the form is a test of the routing file: the route object comes
@@ -203,7 +203,7 @@ class SurfaceOperationFormTest extends SurfaceKernelTestBase {
     $this->assertSame('Recipe name', (string) $fields['title']->getLabel());
     $this->assertTrue((bool) $fields['promote']->getDefaultValueLiteral()[0]['value']);
 
-    // The demo's own message and the demo's own redirect, both from the
+    // The example's own message and the example's own redirect, both from the
     // cosmetic layer rather than from the form.
     $this->assertContains('The content type Recipe has been added.', $this->statusMessages());
     // A programmed submission is not redirected, and form state says so
@@ -280,7 +280,7 @@ class SurfaceOperationFormTest extends SurfaceKernelTestBase {
    * Tests that a forbidden answer refuses the form outright.
    *
    * The floor the generic form puts under every route: the operation's
-   * answer, asked before anything is built. The demo's routes ask the
+   * answer, asked before anything is built. The example's routes ask the
    * same thing as their requirement and core answers it first, so this
    * is about the caller that arrived some other way.
    */

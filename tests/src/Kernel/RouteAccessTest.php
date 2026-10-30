@@ -18,8 +18,8 @@ use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
-use Drupal\surface_react\Access\ServedOperationAccessCheck;
-use Drupal\surface_react\Controller\ResourceReactPage;
+use Drupal\surface\Http\ServedOperationAccessCheck;
+use Drupal\surface_examples_react\Controller\ResourceReactPage;
 use Drupal\surface_resource_test\Resource\RecipeResource;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
@@ -78,7 +78,7 @@ class RouteAccessTest extends SurfaceKernelTestBase {
     'surface',
     'surface_examples_entity',
     'surface_examples_node_type',
-    'surface_react',
+    'surface_examples_react',
     'surface_resource_test',
     'surface_route_test',
   ];
@@ -195,7 +195,7 @@ class RouteAccessTest extends SurfaceKernelTestBase {
     $foreign = $controlled('\Drupal\system\Controller\SystemController::systemAdminMenuBlockPage');
     foreach ([
       'the operation form' => [$form, 'allowed'],
-      'a React page' => [$controlled('\Drupal\surface_react\Controller\ResourceReactPage::served'), 'allowed'],
+      'a React page' => [$controlled('\Drupal\surface_examples_react\Controller\ResourceReactPage::served'), 'allowed'],
       'another controller' => [$foreign, 'forbidden'],
     ] as $door => [$route, $state]) {
       $this->serveBuilt('surface_route_test.edit_type', $route, ['type' => 'ghost']);
@@ -251,7 +251,7 @@ class RouteAccessTest extends SurfaceKernelTestBase {
     $holder = $this->createUser([NodeTypeResource::PERMISSION]);
     foreach (['article', 'ghost'] as $type) {
       $this->serveBuilt('surface_route_test.edit_type', static::editTypeRoute(), ['type' => $type]);
-      $this->assertSame(['forbidden', "The 'administer data surface node type demo' permission is required.", -1], static::answer($this->formAccess($stranger)), $type);
+      $this->assertSame(['forbidden', "The 'administer surface examples content types' permission is required.", -1], static::answer($this->formAccess($stranger)), $type);
     }
     // The account the permission lets in hears that the id names nothing.
     $this->assertSame(['allowed', '', 0], static::answer($this->formAccess($holder)));
@@ -286,10 +286,10 @@ class RouteAccessTest extends SurfaceKernelTestBase {
       'anonymous' => new AnonymousUserSession(),
       'editor' => $this->createUser(['access content', 'edit any page content', 'edit any kitchen content']),
     ];
-    $react = $this->container->get('surface_react.access');
+    $react = $this->container->get('surface.served_access');
     $routes = $this->container->get('router.route_provider');
     $ids = ['resource' => 'entity.content:node.page', 'operation' => 'update'];
-    $page = new RouteMatch('surface_react.page', $routes->getRouteByName('surface_react.page'), $ids, $ids);
+    $page = new RouteMatch('surface_examples_react.page', $routes->getRouteByName('surface_examples_react.page'), $ids, $ids);
     foreach (['another bundle' => (string) $kitchen->id(), 'none' => '999'] as $case => $id) {
       if ($case === 'none') {
         // A converter answers 404 for it before access is asked; a route
@@ -461,10 +461,10 @@ class RouteAccessTest extends SurfaceKernelTestBase {
   public function testBothPageDoorsAnswerAlike(): void {
     $holder = $this->createUser([NodeTypeResource::PERMISSION]);
     $stranger = $this->createUser([]);
-    $react = $this->container->get('surface_react.access');
-    $page = $this->container->get('router.route_provider')->getRouteByName('surface_react.page');
+    $react = $this->container->get('surface.served_access');
+    $page = $this->container->get('router.route_provider')->getRouteByName('surface_examples_react.page');
     $ids = ['resource' => 'node.type', 'operation' => 'update'];
-    $match = new RouteMatch('surface_react.page', $page, $ids, $ids);
+    $match = new RouteMatch('surface_examples_react.page', $page, $ids, $ids);
     $request = Request::create('/surface-react/node.type/update', 'GET', ['type' => 'ghost']);
     $request->setSession($this->container->get('request_stack')->getSession());
     $this->serveBuilt('surface_route_test.edit_type', static::editTypeRoute(), ['type' => 'ghost']);
@@ -503,7 +503,7 @@ class RouteAccessTest extends SurfaceKernelTestBase {
     ] as $why => [$resource, $operation]) {
       $ids = ['resource' => $resource, 'operation' => $operation];
       $there = Request::create('/surface-react/' . $resource . '/' . $operation);
-      $this->assertSame(['allowed', '', 0], static::answer($react->access(new RouteMatch('surface_react.page', $page, $ids, $ids), $stranger, $there)));
+      $this->assertSame(['allowed', '', 0], static::answer($react->access(new RouteMatch('surface_examples_react.page', $page, $ids, $ids), $stranger, $there)));
       try {
         $controller->page($there, $resource, $operation);
         $this->fail('The React page was built.');

@@ -131,7 +131,7 @@ final class CompositeStorage implements SurfaceStorageInterface {
    *
    * A key a child lists but the data surface does not declare is not an
    * error: a destination may legitimately be told where a key would go
-   * before anything mounts one there, which is how the node type demo
+   * before anything mounts one there, which is how the node type example
    * names the third party settings mount nothing has used yet. Only the
    * data surface's own keys have to be accounted for.
    *

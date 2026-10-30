@@ -13,7 +13,7 @@ parameters:
   reportUnmatchedIgnoredErrors: false
   paths:
     - .
-  # surface_react's app installs its Node dependencies beside it.
+  # surface_examples_react's app installs its Node dependencies beside it.
   excludePaths:
     analyseAndScan:
       - */node_modules/*

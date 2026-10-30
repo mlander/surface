@@ -72,7 +72,7 @@ An output whose shape depends on an input value would be a variant,
 declared with `attachVariants()` on that input key, exactly as for an
 input's variants. Outputs hold no attached structure yet: `attach()` and
 `attachVariants()` on an output are refused by name, so until they can, an
-output that would vary is advertised at its widest: the demo formatter's
+output that would vary is advertised at its widest: the example formatter's
 `classes` is an open list of class names, whatever variant is chosen.
 
 ## Absent, NULL, and the NotEmitted sentinel
@@ -172,7 +172,7 @@ because the data step stays separately callable (by a test, by a JSON
 representation, by an agent asking what this formatter would show) and
 separately checkable against the contract.
 
-The demo formatter is the worked example: it is its own structure, and
+The example formatter is the worked example: it is its own structure, and
 declares two outputs in its static `defineOutputs()`; it implements
 `formatValue()`, writes no render array, and emits
 `NotEmitted::value()` for its classes when no variant is chosen. Its

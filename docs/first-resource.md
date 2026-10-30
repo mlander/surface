@@ -49,9 +49,8 @@ Any module. It needs Surface API and nothing else:
 <!-- lines: modules/surface_examples_first/surface_examples_first.info.yml -->
 
 ```yaml
-name: Surface API - Your first resource
+name: 'Surface API examples: your first resource'
 type: module
-package: Surface API
 core_version_requirement: ^11.3 || ^12
 dependencies:
   - surface:surface

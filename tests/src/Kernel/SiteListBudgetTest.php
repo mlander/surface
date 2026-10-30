@@ -8,9 +8,9 @@ use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheableResponseInterface;
 use Drupal\surface\Contract\SiteListBudget;
-use Drupal\surface_react\Controller\ResourceApiController;
-use Drupal\surface_react\EventSubscriber\SchemaTagSubscriber;
-use Drupal\surface_react\ServedPaths;
+use Drupal\surface\Http\ResourceApiController;
+use Drupal\surface\Http\SchemaTagSubscriber;
+use Drupal\surface\Http\ServedPaths;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface_resource_test\Keys\WorkshopBenches;
 use Drupal\surface_resource_test\Resource\Poster\PosterResource;
@@ -73,7 +73,6 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_react',
     'surface_resource_test',
   ];
 

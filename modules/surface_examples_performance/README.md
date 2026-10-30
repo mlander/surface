@@ -1,4 +1,9 @@
-# Surface API - Performance settings
+# Surface API examples: performance settings
+
+One of the examples of [the pattern on Drupal's own things](../../README.md#the-examples).
+These examples apply the pattern to things Drupal and a contrib module
+already have, to test it across scenarios; they are not part of the
+project and will not ship in this form.
 
 Three settings of core's performance form, declared once in one
 resource, `system.performance`: how long browsers and proxies may cache
@@ -22,7 +27,7 @@ With the `tool` module installed, the resource is also the tool
 drush tool:run surface:system.performance:configure --uid=1 --input='{"values":{"max_age":300,"css_preprocess":true,"js_preprocess":true},"dry_run":true}'
 ```
 
-With `surface_openapi` enabled, the OpenAPI document at
+The OpenAPI document at
 `/surface-api/openapi.json` describes `PATCH /surface-api/system.performance`.
 
 A write keeps every key of `system.performance` the resource does not

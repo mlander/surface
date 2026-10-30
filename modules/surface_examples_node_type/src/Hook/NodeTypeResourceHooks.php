@@ -15,7 +15,7 @@ use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
 use Drupal\node\NodeTypeInterface;
 
 /**
- * Hook implementations for the node type resource demo.
+ * Hook implementations for the node type resource example.
  *
  * A class rather than a .module file: core 11.3 discovers hooks from
  * #[Hook] attributes and registers the class as an autowired service, so

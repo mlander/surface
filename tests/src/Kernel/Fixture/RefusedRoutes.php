@@ -113,7 +113,7 @@ final class RefusedRoutes {
       // Keys fixed on a React page served at a module's route.
       'surface_route_test.react_fixed' => [
         new Route('/surface-test/card/react', [
-          '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
+          '_controller' => '\Drupal\surface_examples_react\Controller\ResourceReactPage::served',
           OperationRoute::FIXED => ['title' => 'Welcome'],
         ] + array_diff_key($card, ['_form' => TRUE])),
         [],

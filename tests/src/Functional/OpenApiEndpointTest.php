@@ -35,7 +35,6 @@ class OpenApiEndpointTest extends BrowserTestBase {
    */
   protected static $modules = [
     'surface_examples_first',
-    'surface_openapi',
   ];
 
   /**

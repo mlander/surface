@@ -59,8 +59,7 @@ class ResourceCatalogTest extends SurfaceKernelTestBase {
     'surface_examples_first',
     'surface_examples_component_block',
     'surface_examples_block',
-    'surface_react',
-    'surface_openapi',
+    'surface_examples_react',
     'surface_examples_performance',
   ];
 

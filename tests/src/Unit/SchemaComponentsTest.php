@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Unit;
 
-use Drupal\surface_openapi\SchemaComponents;
+use Drupal\surface\OpenApi\SchemaComponents;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 

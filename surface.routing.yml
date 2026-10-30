@@ -18,3 +18,89 @@ surface.catalog.resource:
     _title_callback: '\Drupal\surface\Controller\CatalogController::title'
   requirements:
     _permission: 'access surface catalog'
+
+# The HTTP door: the API an operation is served at. It addresses the
+# resource, not the operation, and the method is the operation (contract
+# 3): /surface-api/{resource} for a singleton or a collection,
+# /surface-api/{resource}/{id} for one thing, up to four identity segments
+# (an operation's parameters named for identity keys, in identity order; a
+# create's name its parent), then `schema`; `:{operation}` after the last
+# segment names an operation the method does not imply; DELETE on a
+# thing's path is its default delete. ServedPaths reads the path;
+# ResourceApiController answers it.
+#
+# Its requirement is the operation's: its permission, then the resource's
+# access class, and no opinion is a refusal. A POST, a PATCH or a DELETE
+# also wants the X-CSRF-Token header a session token from /session/token
+# is, when it carries the session cookie.
+#
+# Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
+
+surface.api:
+  path: '/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'
+  defaults:
+    _controller: '\Drupal\surface\Http\ResourceApiController::handle'
+    s1: ''
+    s2: ''
+    s3: ''
+    s4: ''
+    s5: ''
+  methods: [GET, POST, PATCH, DELETE]
+  requirements:
+    # One segment each; a colon in the last one names an operation.
+    resource: '[^/]+'
+    s1: '[^/]+'
+    s2: '[^/]+'
+    s3: '[^/]+'
+    s4: '[^/]+'
+    s5: '[^/]+'
+    _surface_served_access: 'TRUE'
+    _csrf_request_header_token: 'TRUE'
+
+# The OpenAPI document of the API, as JSON and as YAML, and Swagger UI and
+# Redoc over it. The document is open to every account: it is built for no
+# account, from what the code and the site's structure declare, and is the
+# same for everyone; what an account may do is the per-request contract's
+# and schema's to say.
+# Decision: see docs/decisions.md#an-openapi-document-is-one-more-door.
+
+surface.openapi.json:
+  path: '/surface-api/openapi.json'
+  defaults:
+    _controller: '\Drupal\surface\OpenApi\OpenApiController::json'
+  methods: [GET]
+  requirements:
+    # Open: built for no account, the same for everyone; the operations'
+    # own endpoints still answer by their permissions.
+    _access: 'TRUE'
+
+surface.openapi.yaml:
+  path: '/surface-api/openapi.yaml'
+  defaults:
+    _controller: '\Drupal\surface\OpenApi\OpenApiController::yaml'
+  methods: [GET]
+  requirements:
+    # Open: built for no account, the same for everyone; the operations'
+    # own endpoints still answer by their permissions.
+    _access: 'TRUE'
+
+# Swagger UI and Redoc over the document. Under a permission of their own,
+# not open: each page runs a CDN's script on the site's origin, so a site
+# grants them to the roles it chooses. The document itself stays open.
+surface.openapi.docs:
+  path: '/surface-api/docs'
+  defaults:
+    _controller: '\Drupal\surface\OpenApi\OpenApiController::docs'
+    _title: 'API: try it out'
+  methods: [GET]
+  requirements:
+    _permission: 'access surface api docs'
+
+surface.openapi.reference:
+  path: '/surface-api/redoc'
+  defaults:
+    _controller: '\Drupal\surface\OpenApi\OpenApiController::reference'
+    _title: 'API reference'
+  methods: [GET]
+  requirements:
+    _permission: 'access surface api docs'

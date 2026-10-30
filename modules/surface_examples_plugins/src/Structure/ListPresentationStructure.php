@@ -11,16 +11,16 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 
 /**
- * What the demo block needs to know when it renders a list.
+ * What the example block needs to know when it renders a list.
  *
  * One of the two variants of the block's presentation settings, the one
  * for `list`, declared with #[Variant]; the grid is the other. Nothing here
  * depends on anything, and nothing here can see the block's own keys.
  *
- * @see \Drupal\surface_examples_plugins\Structure\DemoBlockStructure
+ * @see \Drupal\surface_examples_plugins\Structure\ExampleBlockStructure
  */
 #[Structure('block.surface_examples_plugins.presentation.list')]
-#[Variant(of: DemoBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
+#[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
 final class ListPresentationStructure implements StructureInterface {
 
   /**

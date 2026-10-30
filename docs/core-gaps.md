@@ -628,7 +628,7 @@ each example's accepted and refused documents through the pipeline and
 both schemas with a standard validator
 (`tests/src/Kernel/Matrix/AdvertisedSchemaAcceptanceTest.php`,
 `tests/src/Kernel/Matrix/InputCoercionMatrixTest.php`). A React app
-renders a form from these documents alone (`modules/surface_react`),
+renders a form from these documents alone (`modules/surface_examples_react`),
 and committed baselines catch a breaking change to them ([Evolving a resource](evolution.md)).
 
 **The core change.** For an operation from step 2, compose a schema of

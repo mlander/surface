@@ -29,7 +29,7 @@ from them.
 
 ```php
 #[Structure('block.surface_examples_plugins')]
-final class DemoBlockStructure implements StructureInterface {
+final class ExampleBlockStructure implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $headline = $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
@@ -62,7 +62,7 @@ final class DemoBlockStructure implements StructureInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-That is `DemoBlockStructure` in `surface_examples_plugins`, shortened: a
+That is `ExampleBlockStructure` in `surface_examples_plugins`, shortened: a
 structure, since the block that names it holds it and stores it. Each
 part of a resource or structure has one home:
 
@@ -79,7 +79,7 @@ part of a resource or structure has one home:
 | Which version of its stored values it describes | `version:` on either attribute, 1 until a breaking change is made after values are stored ([Evolving a resource](evolution.md#the-version)) |
 
 `FieldInstanceResource` in `surface_examples_field` uses every row but the
-version, which nothing raises yet, and outputs, which the demo formatter
+version, which nothing raises yet, and outputs, which the example formatter
 declares; the test module's `TestBlockStructure`, a structure, uses two.
 
 - **Everything on the class is static.** `defineInputs()` and
@@ -217,7 +217,7 @@ as a literal constraint, and so is `EntityBundleExists`, handed the
 entity type by a refiner. A refiner points; the resolver fetches. Look
 for a stock constraint or a reference type string (`entity:<type>`)
 first; only when none names the list does a module add one with its
-resolver, as the demo does with `SurfaceExamplesBundleField`; see
+resolver, as the example does with `SurfaceExamplesBundleField`; see
 [Which constraint to write](options.md#which-constraint-to-write).
 
 A blueprint whose keys do depend on site state (a key offered only while a
@@ -266,9 +266,9 @@ a class of its own:
 ```php
 #[Block(
   id: 'surface_examples_plugins',
-  admin_label: new TranslatableMarkup('Data surface demo'),
+  admin_label: new TranslatableMarkup('Surface API example'),
 )]
-#[UsesStructure(DemoBlockStructure::class)]
+#[UsesStructure(ExampleBlockStructure::class)]
 final class ExampleBlock extends TypedBlockBase {
 
   public function build(): array {
@@ -299,7 +299,7 @@ static methods a structure class has, beside the plugin's own code:
 ```php
 #[FieldFormatter(
   id: 'surface_examples_plugins_string',
-  label: new TranslatableMarkup('Data surface demo formatter'),
+  label: new TranslatableMarkup('Surface API example formatter'),
   field_types: ['string'],
 )]
 #[UsesStructure]
@@ -325,8 +325,8 @@ Discovery finds it through the plugin definition, not a directory. Its
 id is `<host type>:<plugin id>`, `field_formatter:surface_examples_plugins_string`,
 unless the class also carries `#[Structure]`; the catalog lists it as
 used by that same plugin; an alter names it by the plugin class. The
-demo module keeps both spellings side by side: its block names
-`DemoBlockStructure`, its formatter is its own. A separate class reads
+example module keeps both spellings side by side: its block names
+`ExampleBlockStructure`, its formatter is its own. A separate class reads
 better for a large structure, one with children or operations, or one
 more than one plugin shares; the plugin's own reads better for a small
 plugin whose settings are only ever its own, because the settings sit
@@ -420,7 +420,7 @@ of the story.
 
 **A resource class ends in `Resource`, a structure class in
 `Structure`, and the id is dotted.** `NodeTypeResource` is `node.type`,
-`FieldInstanceResource` is `field.instance`, `DemoBlockStructure` is
+`FieldInstanceResource` is `field.instance`, `ExampleBlockStructure` is
 `block.surface_examples_plugins`. A plugin that is its own structure keeps its
 plugin's class name, and its id is its plugin's,
 `<host type>:<plugin id>`, unless it carries `#[Structure]`. An alter
@@ -511,9 +511,9 @@ An alter's static refiner is a static method, so it calls `t()`, or
 constructs `PluralTranslatableMarkup` for a plural, as a resource's
 does.
 
-So the split is by context, and can fall inside one file: the demo
+So the split is by context, and can fall inside one file: the example
 formatter's static `defineInputs()` calls `t()`, its plugin attribute
-constructs `new TranslatableMarkup`, and `DemoFormatterAlter`, an alter
+constructs `new TranslatableMarkup`, and `ExampleFormatterAlter`, an alter
 of it, calls `$this->t()` in `alterInputs()`; the compliance alter of
 example 3 calls `$this->t()` there and `t()` in its static refiners. `SurfaceBuilder`, the engine under the
 build step, is a value object made with `new`, so its one labeling
@@ -822,7 +822,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   the name as the title is typed and a person may edit it. On an update
   the identity is known, locked, and drawn disabled with its value.
 
-Example 15's venue and the content type demo declare it
+Example 15's venue and the content type example declare it
 (why: [decision](decisions.md#a-machine-name-is-a-computed-identity)).
 
 ## Required
