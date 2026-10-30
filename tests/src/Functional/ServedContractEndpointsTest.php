@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\Pipeline\ResultDocument;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Drupal\Tests\data_surface\Traits\ServedApiTrait;
+use Drupal\Tests\surface\Traits\ServedApiTrait;
 
 /**
  * Tests the React page and the API's reads over HTTP: contract 3.
@@ -26,7 +26,7 @@ use Drupal\Tests\data_surface\Traits\ServedApiTrait;
  * with example 4's module on, the narrowing follows the license the
  * module's alter mounted.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ServedContractEndpointsTest extends BrowserTestBase {
 
@@ -36,9 +36,9 @@ class ServedContractEndpointsTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_react',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_react',
   ];
 
   /**
@@ -49,7 +49,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
   /**
    * The config object example 2 keeps its settings in.
    */
-  protected const CONFIG = 'data_surface_examples.registration_step2';
+  protected const CONFIG = 'surface_examples.registration_step2';
 
   /**
    * Example 2's path.
@@ -150,8 +150,8 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->drupalGet('surface-react/registration.step2/configure');
     $this->assertSession()->statusCodeEquals(200);
     $this->assertSession()->titleEquals('React: Configure registration (step 2) | Drupal');
-    $this->assertSession()->elementExists('css', '#data-surface-react');
-    $settings = $this->getDrupalSettings()['dataSurfaceReact'];
+    $this->assertSession()->elementExists('css', '#surface-react');
+    $settings = $this->getDrupalSettings()['surfaceReact'];
     $this->assertSame('registration.step2', $settings['resource']);
     $this->assertSame('configure', $settings['operation']);
     $this->assertStringEndsWith('/surface-api', $settings['apiBase']);
@@ -280,7 +280,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
    */
   public function testNarrowingFollowsTheMountedLicense(): void {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
-    $license = 'third_party_settings.data_surface_examples_compliance.license';
+    $license = 'third_party_settings.surface_examples_compliance.license';
     $path = 'surface-api/registration.step3';
     $values = ['venue' => 'riverside', 'room' => 'riverside_main', 'capacity' => 150];
     $refined = $this->narrowed($path, $values);
@@ -288,21 +288,21 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame(['room', $license], $capacity['x-surface']['dependsOn']);
     $this->assertSame(100, $capacity['maximum']);
 
-    $values['third_party_settings'] = ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]];
+    $values['third_party_settings'] = ['surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]];
     $refined = $this->narrowed($path, $values);
     $this->assertSame(400, $refined['schema']['properties']['capacity']['maximum']);
-    $this->assertSame('2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['license']);
+    $this->assertSame('2048', $refined['values']['third_party_settings']['surface_examples_compliance']['license']);
 
     // A license in the wrong format is no license to the refiner: the
     // ceiling of 100 again, the typed value handed back as it was, and
     // the pattern explained by its message.
-    $values['third_party_settings']['data_surface_examples_compliance']['license'] = 'EV-2048';
+    $values['third_party_settings']['surface_examples_compliance']['license'] = 'EV-2048';
     $refined = $this->narrowed($path, $values);
     $this->assertSame(100, $refined['schema']['properties']['capacity']['maximum']);
     $this->assertSame('Up to 100 without an event license.', $refined['schema']['properties']['capacity']['description']);
-    $this->assertSame('EV-2048', $refined['values']['third_party_settings']['data_surface_examples_compliance']['license']);
+    $this->assertSame('EV-2048', $refined['values']['third_party_settings']['surface_examples_compliance']['license']);
     // The license is the compliance structure's, defined once.
-    $site = $refined['schema']['properties']['third_party_settings']['properties']['data_surface_examples_compliance'];
+    $site = $refined['schema']['properties']['third_party_settings']['properties']['surface_examples_compliance'];
     $schema = SchemaResolver::inline($site, $refined['schema'])['properties']['license'];
     $this->assertSame('^\\d{4}$', $schema['pattern']);
     $this->assertSame('A license number is four digits, such as 2048.', $schema['x-surface']['patternMessage']);

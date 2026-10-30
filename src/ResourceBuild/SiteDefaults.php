@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
+use Drupal\surface\SurfaceBuilderInterface;
 
 /**
  * The defaults a site sets on a resource's keys, over the declared ones.
  *
- * Read from the `data_surface.defaults` config object: a list of entries,
+ * Read from the `surface.defaults` config object: a list of entries,
  * each naming a resource (or a plugin's structure, by the id its host
  * builds it under), a key path from it, and a value written as text, as a
  * form posts it: `monthly`, `250`, `true`, a JSON list `["a","b"]` or a
@@ -34,7 +34,7 @@ final class SiteDefaults {
   /**
    * The config object the site's defaults are stored in.
    */
-  public const CONFIG = 'data_surface.defaults';
+  public const CONFIG = 'surface.defaults';
 
   /**
    * Constructs the site's defaults.
@@ -53,7 +53,7 @@ final class SiteDefaults {
    * Gets what every build depends on: the config object.
    *
    * @return \Drupal\Core\Cache\CacheableDependencyInterface
-   *   The config object, whose tag is `config:data_surface.defaults`.
+   *   The config object, whose tag is `config:surface.defaults`.
    */
   public function cacheability(): CacheableDependencyInterface {
     return $this->configFactory->get(self::CONFIG);
@@ -88,7 +88,7 @@ final class SiteDefaults {
    * of a structure attached at a fixed key, which is handed back for that
    * child's build to write in its own frame (KeyPaths).
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The frame's builder, its keys and its alters' declared.
    * @param array{resource: string, at: string, values: array<string, mixed>} $defaults
    *   What of() answered, or what a parent's write() handed this frame.
@@ -102,7 +102,7 @@ final class SiteDefaults {
    *   When a path names no key a site default reaches, or a value does
    *   not fit its key.
    */
-  public function write(DataSurfaceBuilderInterface $builder, array $defaults, array $kinds): array {
+  public function write(SurfaceBuilderInterface $builder, array $defaults, array $kinds): array {
     $where = [
       'resource' => $defaults['resource'],
       'at' => $defaults['at'],

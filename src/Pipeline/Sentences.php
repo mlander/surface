@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Component\Render\MarkupInterface;
 use Drupal\Component\Utility\Html;
@@ -28,8 +28,8 @@ use Drupal\Component\Utility\Html;
  *
  * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
  *
- * @see \Drupal\data_surface\Pipeline\Validating::sayingWhatIsAllowed()
- * @see \Drupal\data_surface\Pipeline\Named
+ * @see \Drupal\surface\Pipeline\Validating::sayingWhatIsAllowed()
+ * @see \Drupal\surface\Pipeline\Named
  */
 final class Sentences implements MarkupInterface {
 

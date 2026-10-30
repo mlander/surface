@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigEntityStorage;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
  * of another name, and `['method' => 'setX']` a setter the entity offers;
  * anything else is refused by name, before any entity is touched.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class ConfigEntityStorageTest extends UnitTestCase {
 
   /**

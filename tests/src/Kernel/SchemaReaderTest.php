@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface\Contract\SchemaReader;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -30,9 +30,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/reading-a-schema.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class SchemaReaderTest extends DataSurfaceKernelTestBase {
+class SchemaReaderTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use UserCreationTrait;
@@ -43,7 +43,7 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
+    'surface',
   ];
 
   /**
@@ -58,11 +58,11 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the reader.
    *
-   * @return \Drupal\data_surface\Contract\SchemaReader
+   * @return \Drupal\surface\Contract\SchemaReader
    *   The service.
    */
   protected function reader(): SchemaReader {
-    return $this->container->get('data_surface.schema_reader');
+    return $this->container->get('surface.schema_reader');
   }
 
   /**
@@ -73,11 +73,11 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
    * @param string $id
    *   The structure's id.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The structure, built.
    */
-  protected function read(array $document, string $id = 'test.read'): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->build($this->reader()->structure($document, $id), new OperationContext('configure'));
+  protected function read(array $document, string $id = 'test.read'): SurfaceInterface {
+    return $this->container->get('surface.resources')->build($this->reader()->structure($document, $id), new OperationContext('configure'));
   }
 
   /**
@@ -96,7 +96,7 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
   /**
    * Lists what the pipeline refuses of values, each by path and code.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $read
+   * @param \Drupal\surface\SurfaceInterface $read
    *   The structure.
    * @param array $values
    *   The values.
@@ -104,7 +104,7 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
    * @return string[]
    *   Each refusal, `<path> <code>`.
    */
-  protected function refused(DataSurfaceInterface $read, array $values): array {
+  protected function refused(SurfaceInterface $read, array $values): array {
     return array_map(static fn (Violation $violation): string => $violation->fullPath() . ' ' . $violation->code, iterator_to_array($this->pipeline()->validate($read, $values)));
   }
 
@@ -300,7 +300,7 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['stamps'], array_map(static fn ($mixin): string => (string) $mixin->structure->id, $map->mixins()));
     $this->assertSame(['id', 'key', 'address', 'home', 'work', 'people', 'stamped'], $map->names());
 
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
+    $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
     $this->assertSame(['person', 'stamps'], array_keys($full['$defs']));
     $this->assertSame(['$ref' => '#/$defs/stamps'], $full['allOf'][0]);
     // An inline object holding a reference is a child of its own.
@@ -382,7 +382,7 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
     $this->assertSame([' not_valid'], $this->refused($read, ['frequency' => 'weekly', 'items' => 3, 'send_day' => 'tue']), 'The leftover, checked on the frame.');
 
     // Written back, each rule is the conditional it was read from.
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
+    $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
     $this->assertSame($document['allOf'][0], $full['allOf'][0]);
     $this->assertSame([0, 1, 2], $full[ContractEmitter::EXTENSION]['rules']);
   }
@@ -417,7 +417,7 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
     ], $read->getDefinitions()->frameConstraints());
 
     // Both documents name them, with the keywords and the schema itself.
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
+    $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
     $this->assertSame([
       [
         'constraint' => 'JsonSchema',
@@ -523,7 +523,7 @@ class SchemaReaderTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('JsonSchema', $read->getDefinition('any')->getConstraints());
     $this->assertSame([], $this->reader()->notes(static::json('{"type": "object", "additionalProperties": false, "properties": {"tags": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}}}')), 'Nothing is kept or dropped.');
 
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
+    $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
     foreach (['tags', 'rows'] as $key) {
       $this->assertTrue($full['properties'][$key]['uniqueItems'], $key);
       $this->assertArrayNotHasKey('checkedOnServer', (array) ($full['properties'][$key][ContractEmitter::EXTENSION] ?? []), $key . ': stated, so not named as checked on the server.');

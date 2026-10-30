@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
-use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\surface\SurfaceInterface;
 
 /**
  * Writes what sits above a document's properties.
@@ -25,7 +25,7 @@ use Drupal\data_surface\DataSurfaceInterface;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Contract\ContractEmitter
+ * @see \Drupal\surface\Contract\ContractEmitter
  */
 final class DocumentHead {
 
@@ -76,7 +76,7 @@ final class DocumentHead {
   /**
    * Constructs a DocumentHead.
    *
-   * @param \Drupal\data_surface\Contract\PropertySchema $propertySchema
+   * @param \Drupal\surface\Contract\PropertySchema $propertySchema
    *   What describes each output.
    */
   public function __construct(
@@ -91,7 +91,7 @@ final class DocumentHead {
    * behaves and the resource's version, and the frame; laid out by the
    * placement rules of the contract's version (settled()).
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param array $schema
    *   The top frame, its `$defs` written.
@@ -105,7 +105,7 @@ final class DocumentHead {
    * @return array
    *   The schema.
    */
-  public function top(DataSurfaceInterface $surface, array $schema, string|\Stringable|null $label, array $operation, ?string $id): array {
+  public function top(SurfaceInterface $surface, array $schema, string|\Stringable|null $label, array $operation, ?string $id): array {
     $top = ['$schema' => ContractEmitter::DIALECT];
     if ($id !== NULL) {
       $top['$id'] = $id;
@@ -467,7 +467,7 @@ final class DocumentHead {
    *
    * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the frame was described from.
    * @param array $schema
    *   The frame.
@@ -477,7 +477,7 @@ final class DocumentHead {
    * @return array
    *   The frame, stamped.
    */
-  public function versioned(DataSurfaceInterface $surface, array $schema, bool $top = TRUE): array {
+  public function versioned(SurfaceInterface $surface, array $schema, bool $top = TRUE): array {
     if (!$top && $surface->version() === 1) {
       return $schema;
     }
@@ -498,7 +498,7 @@ final class DocumentHead {
    *
    * Decision: see docs/decisions.md#locked-at-the-top.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param array $schema
    *   The top frame.
@@ -506,7 +506,7 @@ final class DocumentHead {
    * @return array
    *   The top frame, `readOnly` when locked whole.
    */
-  protected function lockedWhole(DataSurfaceInterface $surface, array $schema): array {
+  protected function lockedWhole(SurfaceInterface $surface, array $schema): array {
     if ($surface->lockedWhole() === NULL) {
       return $schema;
     }
@@ -519,15 +519,15 @@ final class DocumentHead {
    * Outputs are never refined, never rendered and never locked, so they
    * carry no `x-surface`.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk: its cacheability collects what the description depends on.
    *
    * @return array|null
    *   The output schema, or NULL for a data surface with no outputs.
    */
-  public function outputs(DataSurfaceInterface $surface, Emission $emission): ?array {
+  public function outputs(SurfaceInterface $surface, Emission $emission): ?array {
     $properties = [];
     $required = [];
     $emission = $emission->withoutStale();

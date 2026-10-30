@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Behat\Mink\Driver\BrowserKitDriver;
 use Drupal\Tests\BrowserTestBase;
@@ -22,7 +22,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * example 4's module on, a large event is refused without its license
  * and written with one.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesFullSubmitTest extends BrowserTestBase {
 
@@ -30,8 +30,8 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
-    'data_surface_examples_compliance',
+    'surface_examples',
+    'surface_examples_compliance',
   ];
 
   /**
@@ -83,14 +83,14 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
    */
   protected function stored(string $step): array {
     $this->container->get('config.factory')->reset();
-    return array_diff_key($this->config('data_surface_examples.registration_' . $step)->getRawData(), ['_core' => TRUE]);
+    return array_diff_key($this->config('surface_examples.registration_' . $step)->getRawData(), ['_core' => TRUE]);
   }
 
   /**
    * Tests step 2 refuses a room the submitted venue does not offer.
    */
   public function testStepTwoRefusesTheOldVenuesRoom(): void {
-    $this->config('data_surface_examples.registration_step2')
+    $this->config('surface_examples.registration_step2')
       ->set('venue', 'harbour')
       ->set('room', 'harbour_deck')
       ->save();
@@ -139,8 +139,8 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
       'surface[pricing]' => 'paid',
       'surface[contact][email]' => 'gala@example.com',
       'surface[contact][phone]' => '',
-      'surface[third_party_settings][data_surface_examples_compliance][license]' => '',
-      'surface[third_party_settings][data_surface_examples_compliance][stewards]' => '1',
+      'surface[third_party_settings][surface_examples_compliance][license]' => '',
+      'surface[third_party_settings][surface_examples_compliance][stewards]' => '1',
     ];
 
     // The free ticket's key under paid is refused, and nothing written:
@@ -185,9 +185,9 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
       'surface[ticket][note]' => '',
       'surface[contact][email]' => 'festival@example.com',
       'surface[contact][phone]' => '',
-      'surface[third_party_settings][data_surface_examples_compliance][stewards]' => '3',
+      'surface[third_party_settings][surface_examples_compliance][stewards]' => '3',
     ];
-    $license = 'surface[third_party_settings][data_surface_examples_compliance][license]';
+    $license = 'surface[third_party_settings][surface_examples_compliance][license]';
 
     $before = $this->stored('step3');
     $this->rawPost('surface-examples/3', $fields + [$license => '']);
@@ -203,7 +203,7 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
     $assert->pageTextContains('The changes have been saved.');
     $stored = $this->stored('step3');
     $this->assertSame(150, $stored['capacity']);
-    $this->assertSame(['license' => '2048', 'stewards' => 3], $stored['third_party_settings']['data_surface_examples_compliance']);
+    $this->assertSame(['license' => '2048', 'stewards' => 3], $stored['third_party_settings']['surface_examples_compliance']);
   }
 
   /**
@@ -217,7 +217,7 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
    */
   protected function storedAs(string $name): array {
     $this->container->get('config.factory')->reset();
-    return array_diff_key($this->config('data_surface_examples.' . $name)->getRawData(), ['_core' => TRUE]);
+    return array_diff_key($this->config('surface_examples.' . $name)->getRawData(), ['_core' => TRUE]);
   }
 
   /**
@@ -241,7 +241,7 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
    * one post, they apply, were never sent, and keep what is stored.
    */
   public function testExampleNineKeepsTheLimitsWhenBackOnSale(): void {
-    $this->config('data_surface_examples.sales')->set('on_sale.student', FALSE)->save();
+    $this->config('surface_examples.sales')->set('on_sale.student', FALSE)->save();
     $this->drupalGet('surface-examples/9');
     $this->assertSession()->fieldNotExists('surface[limits][student][per_order]');
     $this->assertSame('limits.student.per_order limits.student.waiting_list limits.speaker.per_order limits.speaker.waiting_list', $this->assertSession()->hiddenFieldExists('surface[@absent]')->getValue());
@@ -265,7 +265,7 @@ class ExamplesFullSubmitTest extends BrowserTestBase {
    * to weekly and saved in one post, it was never sent, and keeps Friday.
    */
   public function testExampleSevenKeepsTheSendDayWhenWeeklyAgain(): void {
-    $this->config('data_surface_examples.bulletin')->set('frequency', 'monthly')->save();
+    $this->config('surface_examples.bulletin')->set('frequency', 'monthly')->save();
     $this->drupalGet('surface-examples/7');
     $this->assertSession()->fieldNotExists('surface[send_day]');
 

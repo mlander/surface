@@ -54,8 +54,6 @@ final class NodeTypeAccess implements OperationAccessInterface {
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 `$context->creates` is `TRUE` when the operation creates the thing, so
 there is no content type to load yet. Otherwise `$context->known['type']`
 is the machine name the operation knows; a content type that does not

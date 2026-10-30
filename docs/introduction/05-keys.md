@@ -36,8 +36,6 @@ public static function defineInputs(BlueprintInterface $inputs): void {
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 `defineInputs()` receives `$inputs`, a `BlueprintInterface`: the object
 the class adds its keys to. The method and the object are named for
 inputs, the values a caller sends; each input is a key. The calls

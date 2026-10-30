@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Behat\Mink\Element\NodeElement;
-use Drupal\data_surface\Drush\Commands\CatalogCommand;
+use Drupal\surface\Drush\Commands\CatalogCommand;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -21,7 +21,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * command's, row for row, read off the page as text: the drift check
  * holds for whatever the site has, not for a list written here.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class CatalogPageTest extends BrowserTestBase {
 
@@ -29,10 +29,10 @@ class CatalogPageTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_first',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_openapi',
+    'surface_examples_first',
+    'tool',
+    'surface_react',
+    'surface_openapi',
   ];
 
   /**
@@ -59,14 +59,20 @@ class CatalogPageTest extends BrowserTestBase {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
     $this->drupalGet(self::PAGE);
     $assert->statusCodeEquals(403);
-    $this->drupalLogin($this->drupalCreateUser(['access data surface catalog']));
+    $this->drupalLogin($this->drupalCreateUser(['access surface catalog']));
     $this->drupalGet(self::PAGE);
     $assert->statusCodeEquals(200);
     $assert->pageTextContains('This listing is built for no account');
 
     // The newsletter, with its doors: linked where a door has a URL.
     $newsletter = $this->row('first.newsletter');
-    $this->assertSame(['first.newsletter', 'resource', 'configure (update)', 'administer data_surface_first', 'nothing'], array_slice($this->cells($newsletter), 0, 5));
+    $this->assertSame([
+      'first.newsletter',
+      'resource',
+      'configure (update)',
+      'administer surface_examples_first',
+      'nothing',
+    ], array_slice($this->cells($newsletter), 0, 5));
     $doors = [];
     foreach ($newsletter->findAll('css', 'li[data-door]') as $door) {
       $link = $door->find('css', 'a');
@@ -76,8 +82,8 @@ class CatalogPageTest extends BrowserTestBase {
     $this->assertSame([
       'form' => $base . 'admin/config/services/surface-newsletter',
       'http' => $this->getAbsoluteUrl('/surface-api/first.newsletter'),
-      'tool' => 'text: data_surface:first.newsletter:configure',
-      'read tool' => 'text: data_surface:first.newsletter:configure:read',
+      'tool' => 'text: surface:first.newsletter:configure',
+      'read tool' => 'text: surface:first.newsletter:configure:read',
       'openapi' => $base . 'surface-api/redoc#operation/first.newsletter:configure:write',
       'react' => $base . 'surface-react/first.newsletter/configure',
     ], $doors);
@@ -87,24 +93,24 @@ class CatalogPageTest extends BrowserTestBase {
     $assert->addressEquals(self::PAGE . '/first.newsletter');
     $this->drupalGet(self::PAGE . '/first.store');
     $assert->statusCodeEquals(200);
-    $keys = array_map(fn (NodeElement $row): string => $this->cells($row)[0], $this->getSession()->getPage()->findAll('css', '#data-surface-catalog-keys tbody tr'));
+    $keys = array_map(fn (NodeElement $row): string => $this->cells($row)[0], $this->getSession()->getPage()->findAll('css', '#surface-catalog-keys tbody tr'));
     $this->assertSame(['country', 'region'], $keys);
-    $assert->elementTextContains('css', '#data-surface-catalog-keys', 'regionOfCountry');
+    $assert->elementTextContains('css', '#surface-catalog-keys', 'regionOfCountry');
     $this->drupalGet(self::PAGE . '/no.such.thing');
     $assert->statusCodeEquals(404);
 
     // Nothing refused here.
     $this->drupalGet(self::PAGE);
-    $assert->elementTextContains('css', '#data-surface-catalog-refused', 'Nothing discovery found was refused');
+    $assert->elementTextContains('css', '#surface-catalog-refused', 'Nothing discovery found was refused');
     $this->assertSame($this->commandRows(), $this->pageRows());
 
     // The resource test module's broken fixtures are refused, each with
     // its message and its file.
-    $this->container->get('module_installer')->install(['data_surface_resource_test']);
+    $this->container->get('module_installer')->install(['surface_resource_test']);
     $this->rebuildContainer();
     $this->drupalGet(self::PAGE);
     $refused = [];
-    foreach ($this->getSession()->getPage()->findAll('css', '#data-surface-catalog-refused tbody tr') as $row) {
+    foreach ($this->getSession()->getPage()->findAll('css', '#surface-catalog-refused tbody tr') as $row) {
       $refused[$this->cells($row)[0]] = $this->cells($row)[3];
     }
     $this->assertArrayHasKey('resource_test.broken.identity', $refused);
@@ -122,7 +128,7 @@ class CatalogPageTest extends BrowserTestBase {
    *   The row.
    */
   protected function row(string $resource): NodeElement {
-    foreach ($this->getSession()->getPage()->findAll('css', '#data-surface-catalog tbody tr') as $row) {
+    foreach ($this->getSession()->getPage()->findAll('css', '#surface-catalog tbody tr') as $row) {
       if ($this->cells($row)[0] === $resource) {
         return $row;
       }
@@ -151,7 +157,7 @@ class CatalogPageTest extends BrowserTestBase {
    */
   protected function pageRows(): array {
     $rows = [];
-    foreach ($this->getSession()->getPage()->findAll('css', '#data-surface-catalog tbody tr') as $row) {
+    foreach ($this->getSession()->getPage()->findAll('css', '#surface-catalog tbody tr') as $row) {
       $cells = $this->cells($row);
       $doors = array_map(static fn (NodeElement $door): string => (string) $door->getAttribute('data-door'), $row->findAll('css', 'li[data-door]'));
       if ($doors !== []) {
@@ -169,7 +175,7 @@ class CatalogPageTest extends BrowserTestBase {
    *   The rows.
    */
   protected function commandRows(): array {
-    return CatalogCommand::rows($this->container->get('data_surface.site_catalog')->describe());
+    return CatalogCommand::rows($this->container->get('surface.site_catalog')->describe());
   }
 
 }

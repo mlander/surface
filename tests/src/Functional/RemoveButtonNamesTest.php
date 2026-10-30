@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
-use Drupal\data_surface_examples\Storage\InfoDeskStorage;
+use Drupal\surface_examples\Storage\InfoDeskStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * are never the same button to a screen reader. Pressing one still
  * removes its own item.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class RemoveButtonNamesTest extends BrowserTestBase {
 
@@ -25,7 +25,7 @@ class RemoveButtonNamesTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
+    'surface_examples',
   ];
 
   /**
@@ -81,7 +81,7 @@ class RemoveButtonNamesTest extends BrowserTestBase {
    */
   protected function removeNames(string $key): array {
     $names = [];
-    foreach ($this->getSession()->getPage()->findAll('css', sprintf('input[type="submit"][name^="data_surface_%s_"]', $key)) as $button) {
+    foreach ($this->getSession()->getPage()->findAll('css', sprintf('input[type="submit"][name^="surface_%s_"]', $key)) as $button) {
       if ($button->getValue() === 'Remove') {
         $names[] = (string) $button->getAttribute('aria-label');
       }

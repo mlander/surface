@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * A storage that says which keys it may hold nothing for.
@@ -13,7 +13,7 @@ namespace Drupal\data_surface\Resource;
  * nullable, and would refuse null there. A storage implementing this is
  * asked once per key when a resource is built, and a key it answers FALSE
  * for is marked as always held
- * (\Drupal\data_surface\DefinitionMetadata::setAlwaysHeld()), which the
+ * (\Drupal\surface\DefinitionMetadata::setAlwaysHeld()), which the
  * pipeline, both schemas and the widgets read. A storage that does not
  * implement it, or answers NULL, says nothing, and the key may be
  * cleared as before.
@@ -25,7 +25,7 @@ interface KnowsClearableKeysInterface {
   /**
    * Answers whether a key may be stored as nothing.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where the resource is being asked for.
    * @param string $path
    *   The key's dotted path from the top of what this storage stores: a

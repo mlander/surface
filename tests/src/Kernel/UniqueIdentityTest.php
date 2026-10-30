@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Pipeline\StorageViolationsException;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_examples\Entity\EventVenue;
-use Drupal\data_surface_examples\Resource\VenueResource;
-use Drupal\data_surface_examples\Storage\VenueStorage;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples\Entity\EventVenue;
+use Drupal\surface_examples\Resource\VenueResource;
+use Drupal\surface_examples\Storage\VenueStorage;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -20,16 +20,16 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Example 15's venue: its `id` is a `machine_name` computed from its name
  * when a call leaves it out, kept as sent when one is given, and the stock
- * DataSurfaceUnique the build adds to a create's identity refuses one a
+ * SurfaceUnique the build adds to a create's identity refuses one a
  * venue holds, in one sentence, at the tool door and over HTTP. On an
  * update the identity is the venue the call names: a value sent for it is
  * not taken.
  *
  * @see docs/decisions.md#a-machine-name-is-a-computed-identity
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class UniqueIdentityTest extends DataSurfaceKernelTestBase {
+class UniqueIdentityTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
   use UserCreationTrait;
@@ -43,16 +43,15 @@ class UniqueIdentityTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_react',
+    'surface',
+    'surface_examples',
+    'surface_react',
   ];
 
   /**
    * The tools' prefix.
    */
-  protected const TOOL = 'data_surface:event.venue:';
+  protected const TOOL = 'surface:event.venue:';
 
   /**
    * The refusal of a machine name Riverside Hall holds.
@@ -65,7 +64,7 @@ class UniqueIdentityTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -163,7 +162,7 @@ class UniqueIdentityTest extends DataSurfaceKernelTestBase {
     $update = $this->container->get('plugin.manager.tool')->createInstance(self::TOOL . 'update');
     $listed = $this->container->get('tool.definition_serializer')->normalizeInputSchema($update);
     $this->assertArrayNotHasKey('id', $listed['properties']['values']['properties'], 'The update tool knows it, so it is no value.');
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(VenueResource::class, 'update', ['id' => 'concert_hall']);
     $built = $resources->build(VenueResource::class, $context);
     $storage = $resources->storage(VenueResource::class, $context, $built);
@@ -196,12 +195,12 @@ class UniqueIdentityTest extends DataSurfaceKernelTestBase {
    * Tests the full schema names the constraint with its reason.
    */
   public function testTheSchemaNamesItCheckedOnTheServer(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $built = $resources->build(VenueResource::class, $resources->operation(VenueResource::class, 'create'));
-    $id = $this->container->get('data_surface.contract_emitter')->emitFull($built, 'event.venue', 'create')->document['schema']['properties']['id'];
+    $id = $this->container->get('surface.contract_emitter')->emitFull($built, 'event.venue', 'create')->document['schema']['properties']['id'];
     $this->assertSame([
       [
-        'constraint' => 'DataSurfaceUnique',
+        'constraint' => 'SurfaceUnique',
         'message' => 'Refused when a venue named this already exists.',
       ],
     ], $id['x-surface']['checkedOnServer']);

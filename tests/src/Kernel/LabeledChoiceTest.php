@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfacePipeline;
-use Drupal\data_surface\Pipeline\Sentences;
-use Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
+use Drupal\surface\Surface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfacePipeline;
+use Drupal\surface\Pipeline\Sentences;
+use Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Validator\Constraints\Choice;
 use Symfony\Component\Validator\Constraints\ChoiceValidator;
@@ -28,14 +28,14 @@ use PHPUnit\Framework\Attributes\Group;
  * payload give the same value are made to agree by the pipeline's
  * casting, before anything validates, rather than by a looser constraint.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class LabeledChoiceTest extends DataSurfaceKernelTestBase {
+class LabeledChoiceTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'data_surface'];
+  protected static $modules = ['system', 'surface'];
 
   /**
    * The message the constraint reports, which is core's Choice message.
@@ -50,11 +50,11 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
    * written this way, because an integer-keyed label map cannot be told
    * from a list of values.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function surface(): DataSurfaceInterface {
-    return new DataSurface(
+  protected function surface(): SurfaceInterface {
+    return new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'mode' => DataDefinition::create('integer')
@@ -78,7 +78,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
    * @param array $options
    *   The constraint options.
    *
-   * @return \Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint
+   * @return \Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint
    *   The constraint.
    */
   protected function constraint(array $options): LabeledChoiceConstraint {
@@ -173,7 +173,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
     $this->assertSame([0, 1, 2], $labels->choices);
     $this->assertSame([0 => 'Disabled', 1 => 'Optional', 2 => 'Required'], $labels->labels);
 
-    $surface = new DataSurface(
+    $surface = new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'mode' => DataDefinition::create('integer')
@@ -216,7 +216,7 @@ class LabeledChoiceTest extends DataSurfaceKernelTestBase {
     $this->assertSame('7', $own->getArguments()['%value']);
     $this->assertSame(self::MESSAGE, (string) $own);
     $this->assertInstanceOf(TranslatableMarkup::class, $choose);
-    $this->assertSame(DataSurfacePipeline::REFUSAL_CONTEXT, $choose->getOption('context'));
+    $this->assertSame(SurfacePipeline::REFUSAL_CONTEXT, $choose->getOption('context'));
     $this->assertSame('The value you selected is not a valid choice. Choose Disabled, Optional or Required.', (string) $message);
   }
 

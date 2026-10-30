@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\data_surface\Attachment;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Refinement\DoesNotApply;
+use Drupal\surface\Attachment;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entry;
+use Drupal\surface\Refinement\DoesNotApply;
 
 /**
  * What any door may hand a caller of a set of values: the read's answer.
@@ -26,7 +26,7 @@ use Drupal\data_surface\Refinement\DoesNotApply;
  * each item of a list; a key that does not apply to the values is not
  * there. A locked key is there as stored, which is what the accepted
  * values already hold for it. Nothing storage-shaped crosses: storage's
- * prepared artifact stays on DataSurfaceResult for PHP callers.
+ * prepared artifact stays on SurfaceResult for PHP callers.
  *
  * Decision: see
  * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
@@ -43,7 +43,7 @@ final class Outbound {
   /**
    * Projects values as any door returns them.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the values are for, built for the caller.
    * @param array $values
    *   The values, keyed like it: accepted, or what storage loads.
@@ -52,7 +52,7 @@ final class Outbound {
    *   The values, less every key the build left out, every secret and
    *   every key that does not apply to them.
    */
-  public static function project(DataSurfaceInterface $surface, array $values): array {
+  public static function project(SurfaceInterface $surface, array $values): array {
     // Decision: see docs/decisions.md#a-key-that-does-not-apply.
     $values = static::declared($surface, DoesNotApply::leftOut($surface, $values));
     // Decision: see docs/decisions.md#a-read-leaves-a-secret-out.
@@ -68,7 +68,7 @@ final class Outbound {
    * caller's to see. A child is read in its own frame: an attached one,
    * the variant the values choose at a key, each item of a collection.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param array $values
    *   The values.
@@ -76,7 +76,7 @@ final class Outbound {
    * @return array
    *   The declared keys of the values, in the order they were in.
    */
-  public static function declared(DataSurfaceInterface $surface, array $values): array {
+  public static function declared(SurfaceInterface $surface, array $values): array {
     $definitions = $surface->getDefinitions();
     $declared = [];
     foreach ($values as $name => $value) {
@@ -118,16 +118,16 @@ final class Outbound {
    * read from a document stating no secret (SchemaReader::holdsNoSecret()),
    * which holds none and stays unsettled.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
-   * @param \Closure(\Drupal\data_surface\Entry): bool|null $walks
+   * @param \Closure(\Drupal\surface\Entry): bool|null $walks
    *   Whether to ask the variants at a key; NULL asks every one.
    *
    * @return array<string, true|array>
    *   A tree keyed like the values: TRUE where a key is secret, an array
    *   where one below it is. Empty when nothing is.
    */
-  public static function secrets(DataSurfaceInterface $surface, ?\Closure $walks = NULL): array {
+  public static function secrets(SurfaceInterface $surface, ?\Closure $walks = NULL): array {
     // A sealed data surface never changes, and one child may be held at
     // many keys (a read structure, built once): each is asked once.
     static $asked = NULL;
@@ -151,9 +151,9 @@ final class Outbound {
   /**
    * Finds the secrets at one key: its own, its child's, its items'.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
-   * @param \Closure(\Drupal\data_surface\Entry): bool|null $walks
+   * @param \Closure(\Drupal\surface\Entry): bool|null $walks
    *   Whether to ask the variants at a key, as secrets() takes it.
    *
    * @return true|array
@@ -165,7 +165,7 @@ final class Outbound {
     // A variant not built yet whose document states no secret holds none:
     // it is left unsettled.
     $variants = $entry->variants === NULL || ($walks !== NULL && !$walks($entry)) ? [] : array_filter($entry->variants->variants, static fn (Attachment $variant): bool => !$variant->holdsNoSecretUnsettled());
-    $children = array_values(array_map(static fn (Attachment $variant): DataSurfaceInterface => $variant->child, $variants));
+    $children = array_values(array_map(static fn (Attachment $variant): SurfaceInterface => $variant->child, $variants));
     if ($entry->attachment !== NULL) {
       $children[] = $entry->attachment->child;
     }

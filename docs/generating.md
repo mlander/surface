@@ -9,7 +9,7 @@ the keys, their rules, the operation and the storage, which
 [Operations](introduction/09-operations.md) and
 [Storage](introduction/10-storage.md) introduce.
 
-`drush generate surface:resource` (also `data_surface:resource`) writes
+`drush generate surface:resource` writes
 the files [Your first resource](first-resource.md) shows: the
 permission, the route, the resource class, its storage, and the config
 object's schema entry and install file. It is listed by `drush generate
@@ -67,7 +67,7 @@ asked for a config schema: the object is the one named.
 | `<module>.permissions.yml` | The permission is added at its end after a blank line; every other entry is kept byte for byte. A permission of that name is kept and the generated one left out. |
 | `<module>.routing.yml` | The same, for the route `<module>.<class name>`. |
 | `src/Resource/<Name>Resource.php`, `src/Storage/<Name>Storage.php` | Asked before it is replaced. |
-| `config/schema/<module>.schema.yml` | The entry is laid in as `drush data_surface:config-schema` lays it: one of its name replaced, the others kept. |
+| `config/schema/<module>.schema.yml` | The entry is laid in as `drush surface:config-schema` lays it: one of its name replaced, the others kept. |
 | `config/install/<object>.yml` | Written again; a value it gives a key the resource declares is kept. |
 
 Each kept or added entry is named in a note as the files are written.
@@ -100,7 +100,7 @@ parameter is the one place the name is spelled out, and it has to match
 the constant's value ([Your second resource](second-resource.md)).
 
 The schema entry and the install file are written by the same mapping
-`drush data_surface:config-schema` uses. The generator builds the
+`drush surface:config-schema` uses. The generator builds the
 resource before any class of it exists (the answers declared as the
 class declares them, or the document read), and writes both from that
 build. Once the files are in the module's own directory, installed or

@@ -1,0 +1,20 @@
+<?php
+
+/**
+ * @file
+ * Install and uninstall functions for the retitle example.
+ */
+
+declare(strict_types=1);
+
+use Drupal\surface_examples_retitle\Retitle;
+
+/**
+ * Implements hook_uninstall().
+ *
+ * Deletes the nodes the module wrote when it was installed, and what it
+ * kept in State.
+ */
+function surface_examples_retitle_uninstall(bool $is_syncing): void {
+  \Drupal::classResolver(Retitle::class)->deleteNodes();
+}

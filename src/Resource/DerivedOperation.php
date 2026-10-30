@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * One operation of a derived resource, declared by its deriver.
@@ -21,7 +21,7 @@ namespace Drupal\data_surface\Resource;
  * `edit(array $arguments, string $entity_type, string $bundle)`. Every
  * parameter is required.
  *
- * @see \Drupal\data_surface\Resource\Attribute\Operation
+ * @see \Drupal\surface\Resource\Attribute\Operation
  */
 final class DerivedOperation {
 
@@ -32,7 +32,7 @@ final class DerivedOperation {
    *   Machine name, unique within the resource; the context's id.
    * @param string|\Stringable $label
    *   For people and for tool descriptions.
-   * @param \Drupal\data_surface\Resource\ResourceCallable $context
+   * @param \Drupal\surface\Resource\ResourceCallable $context
    *   What builds the OperationContext, handed the arguments by name.
    * @param array<string, string> $parameters
    *   The parameters, by name, each typed with a builtin ('string',

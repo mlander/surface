@@ -1,0 +1,9 @@
+surface_examples_performance.configure:
+  path: '/admin/config/development/surface-performance'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Performance settings'
+    _surface_resource: 'Drupal\surface_examples_performance\Resource\PerformanceResource'
+    _surface_operation: 'configure'
+  requirements:
+    _permission: 'administer site configuration'

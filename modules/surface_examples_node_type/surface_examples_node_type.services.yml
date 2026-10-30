@@ -1,0 +1,7 @@
+services:
+  # The cosmetic layer the two routes name beside the operation: the
+  # vertical tabs, the machine name mirror, the message and the redirect,
+  # which is all a form class is still for here.
+  surface_examples_node_type.form_cosmetics:
+    class: Drupal\surface_examples_node_type\Form\NodeTypeResourceFormCosmetics
+    arguments: ['@string_translation']

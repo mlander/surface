@@ -1,0 +1,16 @@
+langcode: en
+status: true
+dependencies:
+  config:
+    - node.type.page
+  module:
+    - surface_examples_retitle
+    - node
+id: node_retitler
+label: 'Node retitler'
+weight: 11
+is_admin: false
+permissions:
+  - 'access content'
+  - 'edit any page content'
+  - 'retitle nodes'

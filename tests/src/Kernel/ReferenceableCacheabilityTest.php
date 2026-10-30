@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
-use Drupal\data_surface_entity\Plugin\DataSurfaceOptionsResolver\ReferenceableOptions;
+use Drupal\surface_examples_entity\Plugin\SurfaceOptionsResolver\ReferenceableOptions;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\node\Entity\Node;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -23,11 +23,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * be served the first's labels. They now carry what core's selection and
  * its query access read: node grants for a node, permissions for a term.
  *
- * @see \Drupal\data_surface_entity\Plugin\DataSurfaceOptionsResolver\ReferenceableOptions
+ * @see \Drupal\surface_examples_entity\Plugin\SurfaceOptionsResolver\ReferenceableOptions
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ReferenceableCacheabilityTest extends DataSurfaceKernelTestBase {
+class ReferenceableCacheabilityTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
 
@@ -37,7 +37,7 @@ class ReferenceableCacheabilityTest extends DataSurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'data_surface_react'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_react'];
 
   /**
    * {@inheritdoc}

@@ -189,7 +189,7 @@ already known (and locked). A structure may declare operations too, for
 what holds it to choose between. Operations are what routes and tools
 are generated from: a route naming a resource class and an operation is
 a working form with no form class behind it, through
-`Form\DataSurfaceOperationForm`, and `data_surface_tool` derives one tool
+`Form\SurfaceOperationForm`, and the tool door derives one tool
 per operation that can be asked on its own. Who may submit is the
 operation's permission and then the resource's access class, and the
 pipeline consults that answer before it reads or writes anything, so a
@@ -248,14 +248,17 @@ Reference: [Variants](resources.md#variants).
 ### Door
 
 A door is a place that asks for an operation's values: the form, a Tool
-API tool, MCP for AI agents, ECA for automation, HTTP with an OpenAPI
-document, a React page.
+API tool, the command line (`drush tool:run`), MCP for AI agents, ECA
+for automation, HTTP with an OpenAPI document, a React page. One tool
+made from an operation can be run by everything that runs Tool API
+tools: the command line, ECA, FlowDrop, Maestro, MCP servers and AI
+agents.
 
 Precisely: every door reads the one sealed data surface and nothing
-else: the generated form, the tool, MCP, ECA, HTTP with its OpenAPI
-document, and the React page. That is why they agree on what is
-accepted, and why one module can change all of them at once without
-touching any.
+else: the generated form, the tool, the command line, MCP, ECA, HTTP
+with its OpenAPI document, and the React page. That is why they agree
+on what is accepted, and why one module can change all of them at once
+without touching any.
 
 Introduced in [Doors](introduction/12-doors.md). Reference:
 [The doors](catalog-command.md#the-doors),
@@ -304,7 +307,7 @@ the class declares.
 
 Precisely: a declared default is the module's. A site that wants a key
 to start from another value sets it in configuration,
-`data_surface.defaults`, not in an alter: an alter may not change an
+`surface.defaults`, not in an alter: an alter may not change an
 owner's default. Each entry names the resource (or a plugin's
 structure, by the id the catalog lists), a key path from it, and the
 value as a form posts it.
@@ -364,7 +367,7 @@ vocabulary (see [Outputs](outputs.md)). It is what the pipeline, the
 form, the widgets and the emitter read, so the same data surface answers
 a form submit, a Drush command, a config action, an agent call and a
 test, without any of them owning a second copy of the rules. In the
-code, `DataSurfaceInterface`.
+code, `SurfaceInterface`.
 
 Introduced in [Sealed](introduction/16-sealed.md). Reference:
 [The build step](how-it-fits.md#the-build-step).
@@ -391,9 +394,9 @@ Introduced in [Sealed](introduction/16-sealed.md). Reference:
 The build is the step that makes the data surface from the class, the
 alters, the site's defaults and the operation, and seals it.
 
-Precisely: the build step, `data_surface.resources`
+Precisely: the build step, `surface.resources`
 (`ResourceBuild\ResourcesInterface`), turns a resource or structure
-class and a context into a sealed `DataSurfaceInterface`. The blueprint
+class and a context into a sealed `SurfaceInterface`. The blueprint
 is filled once at build, then sealed; the context is applied once by
 the build step.
 
@@ -471,12 +474,12 @@ Not in the introduction. Reference:
 A resolver turns a rule that lists allowed values into the list a form
 offers, with labels.
 
-Precisely: a `DataSurfaceOptionsResolver` plugin that turns a
+Precisely: a `SurfaceOptionsResolver` plugin that turns a
 constraint into a value/label list with its cacheability, so the list
 that validates a value and the list that is offered as form options are
 the same list, derived rather than repeated. The plugin type is
-`Options\DataSurfaceOptionsResolverInterface`, its plugins in
-`Plugin/DataSurfaceOptionsResolver/`.
+`Options\SurfaceOptionsResolverInterface`, its plugins in
+`Plugin/SurfaceOptionsResolver/`.
 
 Not in the introduction. Reference:
 [The resolver plugin type](options.md#the-resolver-plugin-type).
@@ -595,7 +598,7 @@ Precisely: the other half of the contract: what a host's execution
 emits, in the same vocabulary and the same collection type as the
 inputs, with an absent-rather-than-NULL rule. Never refined. Declared
 with `defineOutputs()`, read with
-`DataSurfaceInterface::getOutputDefinitions()`; a value not emitted is
+`SurfaceInterface::getOutputDefinitions()`; a value not emitted is
 `Pipeline\NotEmitted`.
 
 Not in the introduction. Reference: [Outputs](outputs.md).
@@ -605,7 +608,7 @@ Not in the introduction. Reference: [Outputs](outputs.md).
 The pipeline is the one path every value takes from a door to storage.
 
 Precisely: access, accept, validate, prepare, commit: the one road from
-raw input to storage, `Pipeline\DataSurfacePipelineInterface`. The
+raw input to storage, `Pipeline\SurfacePipelineInterface`. The
 architecture is three layers that never reach into each other. A data
 surface is pure data: it holds definitions and refiners, reaches no
 service, and can therefore ride along in a cached form or be read by a
@@ -654,8 +657,8 @@ Not in the introduction. Reference: [Outputs](outputs.md),
 The operation form is the one generic form that serves any resource's
 operation from a route, with no form class of its own.
 
-Precisely: `Form\DataSurfaceOperationForm`, with
-`Form\DataSurfaceFormCosmeticsInterface` for a form that needs a
+Precisely: `Form\SurfaceOperationForm`, with
+`Form\SurfaceFormCosmeticsInterface` for a form that needs a
 borrowed element.
 
 Not in the introduction. Reference:
@@ -666,8 +669,8 @@ Not in the introduction. Reference:
 A widget draws one key as a form element and reads the value back.
 
 Precisely: maps one definition to a form element and back. A plugin
-type, `Widget\DataSurfaceWidgetInterface`, its plugins in
-`Plugin/DataSurfaceWidget/`.
+type, `Widget\SurfaceWidgetInterface`, its plugins in
+`Plugin/SurfaceWidget/`.
 
 Not in the introduction. Reference: [Widgets](widgets.md).
 
@@ -679,7 +682,7 @@ with each operation's doors and what failed to build.
 Precisely: every discovered resource and structure, with its kind, read
 from the static layer without building anything; on a site, with each
 operation's doors and every build refusal. The services are
-`data_surface.resource_catalog` and `data_surface.site_catalog`; the
+`surface.resource_catalog` and `surface.site_catalog`; the
 command is `drush surface:catalog`.
 
 Not in the introduction. Reference:

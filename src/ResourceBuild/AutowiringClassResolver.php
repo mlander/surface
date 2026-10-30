@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
@@ -28,7 +28,7 @@ use Symfony\Component\DependencyInjection\Reference;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator::including()
+ * @see \Drupal\surface\Storage\ConfigSchemaGenerator::including()
  */
 final class AutowiringClassResolver implements ClassResolverInterface {
 

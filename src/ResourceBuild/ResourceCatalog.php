@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 /**
  * Every resource and structure, as the static layer describes it.
@@ -17,16 +17,16 @@ namespace Drupal\data_surface\ResourceBuild;
  * is the point of the attributes being static, whether an operation
  * creates among it.
  *
- * @see \Drupal\data_surface\ResourceBuild\ResourceRegistry
+ * @see \Drupal\surface\ResourceBuild\ResourceRegistry
  */
 final class ResourceCatalog {
 
   /**
    * Constructs a ResourceCatalog.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins $plugins
+   * @param \Drupal\surface\ResourceBuild\ResourcePlugins $plugins
    *   Which plugins name which structure with #[UsesStructure].
    */
   public function __construct(
@@ -134,9 +134,9 @@ final class ResourceCatalog {
    * operation whose permission could never be named could never be
    * allowed.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param list<string> $plugins
    *   The plugins whose configuration it is.
@@ -158,9 +158,9 @@ final class ResourceCatalog {
    *
    * Decision: see docs/decisions.md#which-operations-read.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param list<string> $plugins
    *   The plugins whose configuration it is.

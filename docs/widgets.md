@@ -8,8 +8,8 @@ widget reads.
 
 A widget maps one data definition to a form element, and reads the
 submitted value back. It is a plugin type: classes live in
-`Plugin/DataSurfaceWidget` and are declared with the
-`#[DataSurfaceWidget]` attribute.
+`Plugin/SurfaceWidget` and are declared with the
+`#[SurfaceWidget]` attribute.
 
 A widget reads the definition and **nothing else**. It never sees the
 data surface, the host or the storage: everything it needs (type, label,
@@ -63,7 +63,7 @@ To put a widget in front of or behind another module's, alter its
 weight rather than its class:
 
 ```php
-function my_module_data_surface_widget_info_alter(array &$definitions): void {
+function my_module_surface_widget_info_alter(array &$definitions): void {
   $definitions['select']['weight'] = 10;
 }
 ```
@@ -75,7 +75,7 @@ function my_module_data_surface_widget_info_alter(array &$definitions): void {
 | `checkboxes` | -15 | A list whose item resolves to a list of allowed values, while it offers at most twelve (`CheckboxesWidget::MAXIMUM_OPTIONS`), or that asks for checkboxes. | `checkboxes`, never `#required` |
 | `radios` | -15 | One value that resolves to a list of allowed values and asks for radios. | `radios`; `- None -` a radio only where the key may be cleared |
 | `select` | -10 | Any definition whose constraints resolve to a list of allowed values, an empty one included: one value, and a list the checkboxes leave (more than twelve, or asking for a select). See [Options and resolvers](options.md). | `select`; a list's `#multiple`, never `#required`; an `item` showing the one value a deciding key's variants offer |
-| `autocomplete` | -5 | A key that refers to one entity type, `entity:<type>[:<bundle>]` or a bare `entity` key's id once its entity type is chosen, whose candidates are not listed: more than `data_surface.settings:reference_list_limit` ([Options](options.md#a-key-that-refers-to-an-entity)). | core's `entity_autocomplete`, its selection settings the key's; read back as the id in brackets, `Riverside Hall (riverside)` as `riverside`; core's own check of what was typed taken off |
+| `autocomplete` | -5 | A key that refers to one entity type, `entity:<type>[:<bundle>]` or a bare `entity` key's id once its entity type is chosen, whose candidates are not listed: more than `surface.settings:reference_list_limit` ([Options](options.md#a-key-that-refers-to-an-entity)). | core's `entity_autocomplete`, its selection settings the key's; read back as the id in brackets, `Riverside Hall (riverside)` as `riverside`; core's own check of what was typed taken off |
 | `fieldset` | 5 | A `ComplexDataDefinitionInterface`. One that declares no property, such as a variant for a choice with nothing more to say, renders as an empty container and answers an empty map. A list of maps inside it is the form builder's, drawn as a collection in its place ([below](#a-list-of-maps-is-a-collection)). | `details` |
 | `list` | 8 | A list of single values with no list of allowed values, whose item a widget draws: keywords, a list of free strings or numbers. | a `fieldset` of rows, "Remove" beside each, "Add another" under them |
 | `time` | 9 | A `string` that asks for a time. | a time input |
@@ -169,11 +169,11 @@ $inputs->add('reviewed_on', 'string', t('Reviewed on'))
 ```
 
 `checkboxes`, `radios`, `select`, `time` and `date` are the words the stock
-widgets answer to (`DataSurfaceWidgetBase::answersTo()`): each is the
+widgets answer to (`SurfaceWidgetBase::answersTo()`): each is the
 widget's plugin ID, as `fieldset` and `checkbox` are, and the word
 `x-surface.widget` says. *Renamed 2026-10-24:* the select, fieldset and
 checkbox widgets were the plugins `options`, `map` and `boolean`; a
-`hook_data_surface_widget_info_alter()` keyed by an old ID finds
+`hook_surface_widget_info_alter()` keyed by an old ID finds
 nothing. A word the
 widget that claims the definition does not answer to is refused when the
 element is built ("... asks for the radios widget, which does not draw a
@@ -220,7 +220,7 @@ empty field showing a value reads as filled. A placeholder, a prefix, a
 suffix, a help text, a weight and a group are the key's
 [arrangement](forms.md#arranging-the-keys), which the form builder draws
 on whatever element the widget built
-(`DataSurfaceWidgetBase::arranged()`), a module's own widget's
+(`SurfaceWidgetBase::arranged()`), a module's own widget's
 included.
 
 A definition marked secret is the one case where the string widget
@@ -267,7 +267,7 @@ come back `NULL`, which the data surface reports as "not configured": a
 spurious violation for a required key, and a stored value silently
 replaced by nothing for an optional one.
 
-`DataSurfaceWidgetBase::rawValue()` handles it ([the SubformState lesson](forms.md#the-subformstate-lesson) is the whole story), and a
+`SurfaceWidgetBase::rawValue()` handles it ([the SubformState lesson](forms.md#the-subformstate-lesson) is the whole story), and a
 widget that overrides `extractValue()` should go through it rather than
 reading `$form_state` directly. An absolute path is read against the complete
 form state it is absolute in; an element with no `#parents` has not been
@@ -277,12 +277,12 @@ processed at all (programmatic use, kernel tests) and is read at
 ## Writing a widget
 
 ```php
-#[DataSurfaceWidget(
+#[SurfaceWidget(
   id: 'my_module_color',
   label: new TranslatableMarkup('Color'),
   weight: 5,
 )]
-final class ColorWidget extends DataSurfaceWidgetBase {
+final class ColorWidget extends SurfaceWidgetBase {
 
   public function isApplicable(DataDefinitionInterface $definition): bool {
     return $definition->getDataType() === 'string'
@@ -329,13 +329,13 @@ did not write, and their owners cannot each ask. The widget claims them
 instead:
 
 ```php
-#[DataSurfaceWidget(
+#[SurfaceWidget(
   id: 'my_module_color',
   label: new TranslatableMarkup('Color'),
   claims: [['type' => 'string', 'format' => 'color']],
   priority: 10,
 )]
-final class ColorWidget extends DataSurfaceWidgetBase {
+final class ColorWidget extends SurfaceWidgetBase {
 
   public function isApplicable(DataDefinitionInterface $definition): bool {
     return !DefinitionMetadata::isSecret($definition);
@@ -361,7 +361,7 @@ A claim of a list or a map is refused when the plugins are discovered:
 a list is drawn item by item, each item by the widget that serves it,
 and a map is a fieldset of its keys.
 
-How the manager chooses (`DataSurfaceWidgetManager::claimed()`):
+How the manager chooses (`SurfaceWidgetManager::claimed()`):
 
 1. **A key whose owner asks for a widget**, `setSetting('widget', ...)`,
    is drawn by that widget, and no claim is asked. The owner wins.

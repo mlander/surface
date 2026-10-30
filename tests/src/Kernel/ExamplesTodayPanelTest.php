@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface_examples\CodeLines;
-use Drupal\data_surface_examples\Controller\ExamplesController;
-use Drupal\data_surface_examples\ExamplePanels;
-use Drupal\data_surface_examples\Form\RegistrationStep2ClassicForm;
-use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
-use Drupal\data_surface_examples\Storage\RegistrationStep2Storage;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface_examples\CodeLines;
+use Drupal\surface_examples\Controller\ExamplesController;
+use Drupal\surface_examples\ExamplePanels;
+use Drupal\surface_examples\Form\RegistrationStep2ClassicForm;
+use Drupal\surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\surface_examples\Storage\RegistrationStep2Storage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -27,9 +27,9 @@ use Symfony\Component\HttpFoundation\Request;
  * value, so the panel is replaced with the contract panel on every
  * rebuild and says what it said.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
+class ExamplesTodayPanelTest extends SurfaceKernelTestBase {
 
   use ExamplesFormPostTrait;
   use UserCreationTrait;
@@ -43,9 +43,8 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_examples',
   ];
 
   /**
@@ -68,7 +67,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -82,7 +81,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
    *   The two panels under it.
    */
   protected function panelsOf(int $example): array {
-    $route_name = 'data_surface_examples.step' . $example;
+    $route_name = 'surface_examples.step' . $example;
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -90,8 +89,8 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_NAME, $route_name);
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
-    return $form[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY];
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    return $form[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY];
   }
 
   /**
@@ -139,19 +138,19 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($today['#open']);
     $this->assertSame('Without a resource: what config schema can say', (string) $today['#title']);
     $this->assertSame(['intro', 'core', 'derived', 'comparison_note', 'comparison'], Element::children($today));
-    $this->assertStringContainsString('from the config schema of <code>data_surface_examples.registration_step3</code> alone', (string) $today['intro']['#markup']);
+    $this->assertStringContainsString('from the config schema of <code>surface_examples.registration_step3</code> alone', (string) $today['intro']['#markup']);
     $this->assertStringContainsString('Nothing here changes as the values change.', (string) $today['intro']['#markup']);
 
-    $contract = $this->container->get('data_surface_examples.config_schema_contract');
+    $contract = $this->container->get('surface_examples.config_schema_contract');
     $this->assertSame('What core answers when asked for a JSON Schema', (string) $today['core']['#title']);
     // Said above the block, so the reader does not take the comment for an
     // error.
     $this->assertSame(['note', 'json'], Element::children($today['core']));
     $this->assertSame('<p>This is core\'s whole answer, not an error: core has no JSON Schema for a config mapping, and the page its comment links says how code implements a schema.</p>', (string) $today['core']['note']['#markup']);
-    $this->assertSame($contract->core('data_surface_examples.registration_step3'), $this->document($today['core']));
+    $this->assertSame($contract->core('surface_examples.registration_step3'), $this->document($today['core']));
     $this->assertSame(['$comment'], array_keys($this->document($today['core'])));
     $this->assertSame('The most a plain mapping of config schema could say', (string) $today['derived']['#title']);
-    $this->assertSame($contract->derived('data_surface_examples.registration_step3'), $this->document($today['derived']));
+    $this->assertSame($contract->derived('surface_examples.registration_step3'), $this->document($today['derived']));
 
     $this->assertSame(['Key', 'From config schema', 'From the resource'], array_map('strval', $today['comparison']['#header']));
     $this->assertSame([
@@ -175,7 +174,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
       'required' => ['title, open, venue, room, capacity, pricing, ticket, contact', 'title, venue, room, pricing'],
     ], $this->comparison($today));
     // The examples' README quotes the rows, as the table prints them.
-    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/data_surface_examples/README.md');
+    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/surface_examples/README.md');
     foreach (['venue', 'room', 'ticket', 'contact'] as $key) {
       foreach ($this->comparison($today)[$key] as $cell) {
         $this->assertStringContainsString('`' . $cell . '`', $readme, $key);
@@ -221,12 +220,12 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
 
     $state = $this->postStep(3, ['pricing' => 'paid'] + self::SHIPPED, ['_triggering_element_name' => 'surface[pricing]']);
     $this->assertSame([], array_map('strval', $state->getErrors()));
-    $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $response = $this->ajaxResponse($state);
     // One wrapper for both panels, replaced as the contract panel was.
-    $panels = $this->wrapperSelector($container[DataSurfaceOperationForm::PANEL_KEY]);
+    $panels = $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]);
     $this->assertSame([$this->wrapperSelector($container['ticket']), $panels], $this->ajaxSelectors($response, 'replaceWith'));
-    $after = $container[DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::TODAY];
+    $after = $container[SurfaceOperationForm::PANEL_KEY][ExamplePanels::TODAY];
     $this->assertSame([
       'title, $comment',
       'title, anyOf, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
@@ -242,7 +241,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('No schema is defined for property of type', $markup);
 
     $state = $this->postStep(3, ['venue' => 'harbour'] + self::SHIPPED, ['_triggering_element_name' => 'surface[venue]']);
-    $panels = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY];
+    $panels = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY];
     $after = $panels[ExamplePanels::TODAY];
     $this->assertSame($this->comparison($before), $this->comparison($after));
     $this->assertSame($before['derived']['json']['#code'], $after['derived']['json']['#code']);
@@ -253,7 +252,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
     $this->assertCount(6, $this->document($contract['full'])['properties']['room']['oneOf']);
 
     // Stored somewhere else, the same rows.
-    $this->config('data_surface_examples.registration_step3')->set('venue', 'harbour')->set('room', 'harbour_deck')->save();
+    $this->config('surface_examples.registration_step3')->set('venue', 'harbour')->set('room', 'harbour_deck')->save();
     $this->assertSame($this->comparison($before), $this->comparison($this->panelsOf(3)[ExamplePanels::TODAY]));
   }
 
@@ -266,7 +265,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
    */
   public function testAnotherModulesKeysAreOnTheResourceSideOnly(): void {
     $before = $this->panelsOf(3)[ExamplePanels::TODAY];
-    $this->enableModules(['data_surface_examples_compliance']);
+    $this->enableModules(['surface_examples_compliance']);
     $today = $this->panelsOf(3)[ExamplePanels::TODAY];
     $this->assertSame($before['core']['json']['#code'], $today['core']['json']['#code']);
     $this->assertSame($before['derived']['json']['#code'], $today['derived']['json']['#code']);
@@ -281,7 +280,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
   public function testTheClassicTwinShowsTheTwoDocuments(): void {
     $page = $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->step1Classic();
     $this->assertSame(['form', 'files', 'today'], Element::children($page));
-    $this->assertSame('data_surface_examples_registration_step1_classic', $page['form']['#form_id']);
+    $this->assertSame('surface_examples_registration_step1_classic', $page['form']['#form_id']);
     $today = $page['today'];
     $this->assertSame('Without a resource: what config schema can say', (string) $today['#title']);
     // No resource on this page, so nothing to compare with.
@@ -302,7 +301,7 @@ class ExamplesTodayPanelTest extends DataSurfaceKernelTestBase {
   public function testTheSecondClassicTwinCountsItselfAndShowsTheTwoDocuments(): void {
     $page = $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->step2Classic();
     $this->assertSame(['about', 'form', 'files', 'today'], Element::children($page));
-    $this->assertSame('data_surface_examples_registration_step2_classic', $page['form']['#form_id']);
+    $this->assertSame('surface_examples_registration_step2_classic', $page['form']['#form_id']);
     // The counts, made from the files as the page is.
     $file = static fn (string $class): string => (string) (new \ReflectionClass($class))->getFileName();
     $classic = CodeLines::count($file(RegistrationStep2ClassicForm::class));

@@ -1,0 +1,190 @@
+services:
+  surface.pipeline:
+    class: Drupal\surface\Pipeline\SurfacePipeline
+    arguments: ['@typed_data_manager', '@surface.options', '@string_translation']
+  Drupal\surface\Pipeline\SurfacePipelineInterface: '@surface.pipeline'
+  plugin.manager.surface_widget:
+    class: Drupal\surface\Widget\SurfaceWidgetManager
+    parent: default_plugin_manager
+  plugin.manager.surface_options_resolver:
+    class: Drupal\surface\Options\SurfaceOptionsResolverManager
+    parent: default_plugin_manager
+  surface.options:
+    class: Drupal\surface\Options\SurfaceOptions
+    arguments: ['@plugin.manager.surface_options_resolver', '@validation.constraint', '@logger.channel.surface']
+  # What a key that refers to an entity is (`entity:<type>[:<bundle>]` and
+  # the bare `entity`), its candidates through core's selection handler,
+  # the limit up to which it lists them, and the lookup past it.
+  surface.references:
+    class: Drupal\surface\Reference\References
+    arguments: ['@entity_type.manager', '@entity_field.manager', '@plugin.manager.entity_reference_selection', '@config.factory', '@typed_data_manager', '@entity.repository']
+  Drupal\surface\Reference\References: '@surface.references'
+  surface.secret_codec:
+    class: Drupal\surface\Storage\SodiumSecretCodec
+  Drupal\surface\Storage\SecretCodecInterface: '@surface.secret_codec'
+  surface.form_builder:
+    class: Drupal\surface\Form\SurfaceFormBuilder
+    arguments: ['@plugin.manager.surface_widget', '@surface.pipeline', '@element_info', '@messenger', '@surface.options', '@module_handler', '@string_translation']
+  Drupal\surface\Form\SurfaceFormBuilderInterface: '@surface.form_builder'
+  # A read-only panel an operation route can name in _surface_panel:
+  # the contract the form's data surface emits, rebuilt with the form, and
+  # what the derived tool can advertise of it where the tool module is
+  # installed (the two optional arguments).
+  surface.contract_panel:
+    class: Drupal\surface\Form\ContractPanel
+    arguments: ['@surface.resource_registry', '@surface.options', '@surface.contract_emitter', '@?plugin.manager.tool', '@?tool.definition_serializer', '@string_translation', '@surface.resources']
+  logger.channel.surface:
+    parent: logger.channel_base
+    arguments: ['surface']
+  # Resources and structures discovered in src/Resource, src/Structure and
+  # src/Alter by ResourceCollectorPass, and plugins that are their own
+  # structure, read from their definitions; and the build step that builds
+  # and seals them.
+  surface.resource_registry:
+    class: Drupal\surface\ResourceBuild\ResourceRegistry
+    arguments: ['%surface.resource_classes%', '@cache.discovery', '@surface.resource_plugins', '@class_resolver', '@entity_type.manager']
+  # A derived resource is read from site state; when its cache tags are
+  # invalidated, the registry this request already read forgets it.
+  surface.resource_registry_invalidator:
+    class: Drupal\surface\ResourceBuild\ResourceRegistryInvalidator
+    arguments: ['@service_container']
+    tags:
+      - { name: cache_tags_invalidator }
+  surface.resources:
+    class: Drupal\surface\ResourceBuild\Resources
+    arguments: ['@surface.resource_registry', '@typed_data_manager', '@class_resolver', '@current_user', '@surface.operation_arguments', '@surface.watched_value_check', '@user_permissions_hash_generator', '@surface.site_defaults', '@cache.surface_build', '@language_manager', '@config.typed']
+  # Each build for no account (buildDeclared()) and the OpenAPI document,
+  # kept across requests under the tags of what they were read from.
+  cache.surface_build:
+    class: Drupal\Core\Cache\CacheBackendInterface
+    tags:
+      - { name: cache.bin }
+    factory: ['@cache_factory', 'get']
+    arguments: [surface_build]
+  Drupal\surface\ResourceBuild\ResourcesInterface: '@surface.resources'
+  # Reads one entry of a provider's variants when a door builds it, named
+  # by class in the read definitions the build registers.
+  Drupal\surface\ResourceBuild\SiteEntries:
+    arguments: ['@class_resolver', '@language_manager']
+  # The defaults a site sets over the declared ones, surface.defaults,
+  # which every build reads and carries the cache tag of.
+  surface.site_defaults:
+    class: Drupal\surface\ResourceBuild\SiteDefaults
+    arguments: ['@config.factory', '@typed_data_manager']
+  # Sealed into every data surface the build step makes: a watched value its
+  # own definition refuses is handed to no refiner.
+  surface.watched_value_check:
+    class: Drupal\surface\Refinement\WatchedValueCheck
+    arguments: ['@typed_data_manager']
+  # An operation's arguments from a route's parameters or a tool's inputs,
+  # by name; an entity's id becomes the entity a parameter is typed with.
+  surface.operation_arguments:
+    class: Drupal\surface\ResourceBuild\OperationArguments
+    arguments: ['@entity_type.manager']
+  # The two answers every door serving an operation gives alike: the
+  # operation's permission from the two ids, and a URL that names nothing.
+  surface.operation_gate:
+    class: Drupal\surface\Access\OperationGate
+    arguments: ['@surface.resources']
+  # Finds the key a dotted path names and holds a value to it: on a built
+  # resource, what a door starts keys from that no build was handed.
+  surface.key_paths:
+    class: Drupal\surface\ResourceBuild\KeyPaths
+    arguments: ['@typed_data_manager']
+  # The route access check for a route served by an operation: the
+  # operation's permission, then the resource's access class.
+  surface.operation_access:
+    class: Drupal\surface\Access\OperationAccessCheck
+    arguments: ['@surface.resources', '@surface.resource_registry', '@surface.operation_arguments', '@surface.operation_gate']
+    tags:
+      - { name: access_check, applies_to: _surface_operation_access }
+  # Adds that access check to every route naming a resource and an
+  # operation, so a routing file need not, and refuses one written wrong
+  # in a way the route alone shows, which stops the router's rebuild.
+  surface.operation_route_subscriber:
+    class: Drupal\surface\Access\OperationRouteSubscriber
+    tags:
+      - { name: event_subscriber }
+  # Turns a sealed data surface and its values into the served contract: JSON
+  # Schema 2020-12 with the x-surface extension, values and stale paths;
+  # widget hints only when a renderer asks for them.
+  surface.contract_emitter:
+    class: Drupal\surface\Contract\ContractEmitter
+    arguments: ['@surface.options', '@string_translation', '@validation.constraint', '@surface.site_list_budget', '@plugin.manager.surface_widget']
+  # How many entries of a list the site decides (variants from the site,
+  # keys from the site) the documents and the tool listing spell out.
+  surface.site_list_budget:
+    class: Drupal\surface\Contract\SiteListBudget
+    arguments: ['@config.factory']
+  Drupal\surface\Contract\SiteListBudget: '@surface.site_list_budget'
+  # The emitter run backwards: a JSON Schema document read into the keys,
+  # children and rules of a structure, what it cannot say kept as a
+  # JsonSchema constraint. A variant from the site is read with it; a
+  # caller with a document of its own registers it here to build it.
+  surface.schema_reader:
+    class: Drupal\surface\Contract\SchemaReader
+    arguments: ['@surface.resource_registry', '@typed_data_manager']
+  Drupal\surface\Contract\SchemaReader: '@surface.schema_reader'
+  # Writes a config schema type as JSON Schema, for the schema reader: a
+  # plugin's settings (surface_examples_block), a config object a resource is
+  # first written from (drush generate surface:resource).
+  surface.config_schema_document:
+    class: Drupal\surface\Contract\ConfigSchemaDocument
+    arguments: ['@config.typed']
+  Drupal\surface\Contract\ConfigSchemaDocument: '@surface.config_schema_document'
+  # The additive-diff lint: each module's committed contract baselines,
+  # and today's full schemas judged against them.
+  surface.contract_baselines:
+    class: Drupal\surface\Contract\ContractBaselines
+    arguments: ['@surface.resource_registry', '@surface.resources', '@surface.contract_emitter', '@extension.list.module']
+  # The config schema and install file of every resource stored in a simple
+  # config object, written from the resource (drush surface:config-schema).
+  surface.config_schema:
+    class: Drupal\surface\Storage\ConfigSchemaGenerator
+    arguments: ['@surface.resource_registry', '@surface.resources', '@extension.list.module', '%app.root%', '%container.modules%', '@service_container', '@class_resolver', '@surface.resource_plugins', '@entity_type.manager']
+  # Creates the config objects a module's config/install ships that the
+  # site does not have, for a post-update hook (surface_install_missing_config()).
+  surface.missing_config_installer:
+    class: Drupal\surface\Storage\MissingConfigInstaller
+    arguments: ['@config.storage', '@config.factory', '@config.typed', '@config.manager', '@config.installer', '@extension.list.module']
+  # Every discovered resource and structure, its operations, alters and
+  # variants, as one array: what docs/catalog.md is generated from.
+  surface.resource_catalog:
+    class: Drupal\surface\ResourceBuild\ResourceCatalog
+    arguments: ['@surface.resource_registry', '@surface.resource_plugins']
+  # The live map of the site (drush surface:catalog): the static layer,
+  # the doors each operation reaches as the modules tagged
+  # surface.catalog_doors name them, every build refusal, and every
+  # route written wrong for the operation it serves.
+  surface.site_catalog:
+    class: Drupal\surface\ResourceBuild\SiteCatalog
+    arguments:
+      - '@surface.resource_catalog'
+      - '@surface.resource_registry'
+      - '@surface.resources'
+      - '@surface.resource_plugins'
+      - '@account_switcher'
+      - !tagged_iterator surface.catalog_doors
+      - '%app.root%'
+      - '@surface.site_list_budget'
+      - '@plugin.manager.surface_widget'
+      - '@surface.form_route_doors'
+      - '@surface.operation_arguments'
+      - '@surface.key_paths'
+  # The form routes a module declares for an operation.
+  surface.form_route_doors:
+    class: Drupal\surface\ResourceBuild\FormRouteDoors
+    arguments: ['@router.route_provider']
+    tags:
+      - { name: surface.catalog_doors, priority: 40 }
+  # Which plugins name which structure with #[UsesStructure], read from the
+  # definitions of every host that reads the attribute (the keys of
+  # ResourcePluginHooks::HOSTS).
+  surface.resource_plugins:
+    class: Drupal\surface\ResourceBuild\ResourcePlugins
+    arguments:
+      - block: '@plugin.manager.block'
+        field_formatter: '@plugin.manager.field.formatter'
+        condition: '@plugin.manager.condition'
+        action: '@plugin.manager.action'
+        field_type: '@plugin.manager.field.field_type'

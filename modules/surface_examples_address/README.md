@@ -1,0 +1,84 @@
+# Surface API - Address field settings
+
+Adopting a resource on a contrib field type without forking it, and the
+A/B for what a typed contract adds over a config schema.
+
+## What it shows
+
+The `address` field type's instance settings (`available_countries`,
+`langcode_override`, `field_overrides`) are described by a resource
+instead of by the form that collects them. Field UI renders the
+generated form; the address module is not modified.
+
+Four pieces:
+
+- `Resource\AddressFieldSettingsResource`: the definitions, a class
+  with a static `defineInputs()` and no services. The country
+  list and the language list are not in it: the items carry the address
+  module's `Country` constraint and the `LanguageExists` constraint, and
+  `CountryOptions` and `LanguageExistsOptions` resolve them live. It is
+  also the field instance resource's `settings` variant for the address
+  field type, by
+  `#[Variant(of: FieldInstanceResource::class, at: 'settings', for: 'address')]`,
+  so `surface_examples_field`'s field resource never names it.
+- `SurfaceAddressItem`: the Field UI host. It names that resource with
+  `#[UsesStructure]`, which the field type trait reads from the field
+  type's definition to build it, and supplies the storage bound to the
+  field config entity Field UI is editing. It declares no keys of its
+  own.
+- `Storage\AddressFieldSettingsStorage`: the resource's own storage, for a
+  caller that addresses the field by its identity rather than holding
+  it: the field instance resource routes its settings here, after the
+  field itself is stored. Its prepare holds the settings, in the layout
+  the field stores, to the address field type's settings schema, so a
+  dry run previews them.
+- `AddressStorageLayout::toStorage()` / `fromStorage()`: the layout transform between the input
+  layout and the stored layout. It is not new logic: it is the settings
+  form's validate handler (strip the rows with an empty override) plus
+  the item class's accessors (unwrap each override, drop the falsy
+  countries, let the deprecated `fields` key win when it is set), given
+  one visible home.
+- `hook_field_info_alter()`: the class swap, which is a fifth piece
+  only in name.
+
+The resource deliberately describes the input layout, not the storage
+layout: a list of country codes rather than a map of each code to itself,
+one optional override per field rather than a single-key array around
+each one, and no deprecated `fields` key at all. Every write through the
+resource stores `fields` empty, so it can never shadow `field_overrides`.
+
+### Why this field type
+
+Its settings form has no dependent settings and no AJAX, so nothing about
+the comparison is about form mechanics. What is left is meaning and
+shape, which is the whole of what the config schema for
+`field.field_settings.address` cannot say: it gives three types, a nested
+`override` key with no vocabulary, no labels, no defaults, and no hint
+that one of the four keys is deprecated and overrules another.
+
+## How to try it
+
+```bash
+composer require drupal/address
+drush pm:install surface_examples_address
+```
+
+Add an address field to any bundle and open its field settings. The swap
+is a single assignment in `AddressResourceHooks::fieldInfoAlter()`, so the
+before and after are one uninstall apart:
+
+1. Configure an address field with the module uninstalled.
+2. Install it and reload
+   `admin/structure/types/manage/<bundle>/fields/<field>`.
+3. Compare. The storage contract does not change, so a field configured
+   through either form is read identically by
+   `AddressItem::getAvailableCountries()` and
+   `AddressItem::getFieldOverrides()`.
+
+## What gates it
+
+`Kernel\AddressFieldResourceTest` covers the resource, the layout transform
+in both directions, and the settings round trip. The same resource is what
+`surface_examples_field`'s tools describe, so
+`Kernel\FieldToolsTest` and `Kernel\FieldToolsComparisonTest` exercise it
+from a non-form caller.

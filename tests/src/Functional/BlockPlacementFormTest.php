@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\block\Entity\Block;
 use Drupal\Tests\BrowserTestBase;
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * changes its title; the remove form asks before
  * it removes, and the block is gone from the page.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class BlockPlacementFormTest extends BrowserTestBase {
 
@@ -28,7 +28,7 @@ class BlockPlacementFormTest extends BrowserTestBase {
    */
   protected static $modules = [
     'block',
-    'data_surface_block',
+    'surface_examples_block',
   ];
 
   /**

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\Group;
  * The two pages are the module's concept budget: the first builds a
  * working settings page from a resource, an operation, a storage and
  * add(), and nothing else, and every later feature has to leave it
- * unchanged. So the code on them is data_surface_first's, and this fails
+ * unchanged. So the code on them is surface_examples_first's, and this fails
  * when either drifts:
  *
  * - `<!-- code: <path> -->` before a block: the block is that file, whole.
@@ -31,7 +31,7 @@ use PHPUnit\Framework\Attributes\Group;
  * the ideas it is the budget against. FirstResourceTest runs the Drush
  * calls the pages quote.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class FirstResourceDocsTest extends UnitTestCase {
 
   /**
@@ -198,23 +198,23 @@ class FirstResourceDocsTest extends UnitTestCase {
    * Tests every file and entry of the module is on one of the pages.
    */
   public function testEveryFileOfTheModuleIsShown(): void {
-    $module = self::ROOT . '/modules/data_surface_first';
+    $module = self::ROOT . '/modules/surface_examples_first';
     $shown = [];
     foreach (self::blocks() as [, , $target]) {
       $shown[] = explode('#', $target, 2)[0];
     }
     $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($module, \FilesystemIterator::SKIP_DOTS));
     foreach ($iterator as $file) {
-      $path = 'modules/data_surface_first/' . substr($file->getPathname(), strlen($module) + 1);
-      if ($path === 'modules/data_surface_first/README.md') {
+      $path = 'modules/surface_examples_first/' . substr($file->getPathname(), strlen($module) + 1);
+      if ($path === 'modules/surface_examples_first/README.md') {
         continue;
       }
       $this->assertContains($path, $shown, sprintf('%s is not on either page.', $path));
     }
-    foreach (['data_surface_first.routing.yml', 'config/schema/data_surface_first.schema.yml'] as $yaml) {
+    foreach (['surface_examples_first.routing.yml', 'config/schema/surface_examples_first.schema.yml'] as $yaml) {
       preg_match_all('/^([a-z][\w.]*):$/m', (string) file_get_contents($module . '/' . $yaml), $keys);
       foreach ($keys[1] as $key) {
-        $this->assertContains('modules/data_surface_first/' . $yaml . '#' . $key, array_column(self::blocks(), 2), sprintf('The %s entry of %s is not on either page.', $key, $yaml));
+        $this->assertContains('modules/surface_examples_first/' . $yaml . '#' . $key, array_column(self::blocks(), 2), sprintf('The %s entry of %s is not on either page.', $key, $yaml));
       }
     }
   }

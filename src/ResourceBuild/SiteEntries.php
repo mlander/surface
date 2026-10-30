@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
-use Drupal\data_surface\Contract\SchemaReader;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Resource\BlueprintInterface;
+use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Resource\BlueprintInterface;
 
 /**
  * Reads one entry of a provider's variants when a door reads it.
@@ -53,9 +53,9 @@ final class SiteEntries {
   /**
    * Reads one entry's variant into a blueprint.
    *
-   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The variant's blueprint.
-   * @param class-string<\Drupal\data_surface\Resource\EntrySchemasInterface> $from
+   * @param class-string<\Drupal\surface\Resource\EntrySchemasInterface> $from
    *   The provider.
    * @param string $value
    *   The entry's id.
@@ -72,7 +72,7 @@ final class SiteEntries {
    * itself when the schema is a reference alone to one of the defs, else
    * the schema with the defs beside it.
    *
-   * @param class-string<\Drupal\data_surface\Resource\EntrySchemasInterface> $from
+   * @param class-string<\Drupal\surface\Resource\EntrySchemasInterface> $from
    *   The provider.
    * @param string $value
    *   The entry's id.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Behat\Mink\Driver\BrowserKitDriver;
 use Drupal\Tests\BrowserTestBase;
@@ -32,9 +32,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * bootstrap fixed that, and the first run this checkout managed found
  * two things a kernel test cannot see.
  *
- * @group data_surface
+ * @group surface
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class NodeTypeResourceFormTest extends BrowserTestBase {
 
@@ -43,8 +43,8 @@ class NodeTypeResourceFormTest extends BrowserTestBase {
    */
   protected static $modules = [
     'node',
-    'data_surface',
-    'data_surface_demo_node_type',
+    'surface',
+    'surface_examples_node_type',
   ];
 
   /**
@@ -164,7 +164,7 @@ class NodeTypeResourceFormTest extends BrowserTestBase {
       'surface[title_label]' => 'Title',
     ], 'Save');
 
-    // The stock DataSurfaceUnique consults storage, which no config
+    // The stock SurfaceUnique consults storage, which no config
     // schema can do, and its message names the value that was refused.
     $assert_session->pageTextContains('A content type named recipe already exists.');
     $assert_session->pageTextNotContains('has been added.');

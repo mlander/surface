@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface_examples\ExamplePanels;
-use Drupal\data_surface_examples\Resource\ProgramResource;
-use Drupal\data_surface_examples_workflow\Alter\ProgramWorkflowAlter;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\StaticAccessAgreementTrait;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface_examples\ExamplePanels;
+use Drupal\surface_examples\Resource\ProgramResource;
+use Drupal\surface_examples_workflow\Alter\ProgramWorkflowAlter;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\Traits\StaticAccessAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -27,9 +27,9 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * @see docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
+class ExamplesWorkflowTest extends SurfaceKernelTestBase {
 
   use StaticAccessAgreementTrait;
   use UserCreationTrait;
@@ -43,10 +43,9 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_workflow',
+    'surface',
+    'surface_examples',
+    'surface_examples_workflow',
   ];
 
   /**
@@ -55,7 +54,7 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -66,9 +65,9 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
    *   The schema.
    */
   protected function full(): array {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(ProgramResource::class, 'configure');
-    return $this->container->get('data_surface.contract_emitter')
+    return $this->container->get('surface.contract_emitter')
       ->emitFull($resources->buildStatic(ProgramResource::class, $context), 'event.program', 'configure')
       ->document['schema'];
   }
@@ -90,7 +89,7 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
    *   The keys.
    */
   protected function listed(): array {
-    $values = $this->container->get('plugin.manager.tool')->createInstance('data_surface:event.program:configure')->getInputDefinition(OperationInputs::VALUES);
+    $values = $this->container->get('plugin.manager.tool')->createInstance('surface:event.program:configure')->getInputDefinition(OperationInputs::VALUES);
     return array_keys($values->getPropertyDefinitions());
   }
 
@@ -110,7 +109,7 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
     $this->setUpCurrentUser(permissions: ['administer site configuration']);
     $this->assertSame(['headline', 'sessions', 'published'], array_keys($this->full()['properties']));
     $this->assertSame(['headline', 'sessions', 'published'], $this->listed());
-    $read = $this->container->get('plugin.manager.tool')->createInstance('data_surface:event.program:configure:read');
+    $read = $this->container->get('plugin.manager.tool')->createInstance('surface:event.program:configure:read');
     $read->execute();
     $this->assertSame(['headline', 'sessions', 'published'], array_keys($read->getOutputValue(OperationInputs::VALUES)));
 
@@ -126,7 +125,7 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
    * Tests the program is locked whole once published in its workflow.
    */
   public function testPublishedInTheWorkflowLocksTheProgramWhole(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(ProgramResource::class, 'configure');
     $this->assertNull($resources->build(ProgramResource::class, $context)->lockedWhole());
 
@@ -141,19 +140,19 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
     foreach (['headline', 'sessions', 'published', 'fees'] as $key) {
       $this->assertTrue($full['properties'][$key][ContractEmitter::EXTENSION]['live'], $key . ': marked, since the whole program may be found locked.');
     }
-    $these = $this->container->get('data_surface.contract_emitter')->emit($built, $built->getDefaultValues(), 'event.program', 'configure')->document['schema'];
+    $these = $this->container->get('surface.contract_emitter')->emit($built, $built->getDefaultValues(), 'event.program', 'configure')->document['schema'];
     $this->assertTrue($these['readOnly'], 'The schema for these answers settles it.');
 
     // A call is refused by name, and checking, which changes nothing, is
     // left alone.
     $tools = $this->container->get('plugin.manager.tool');
-    $tool = $tools->createInstance('data_surface:event.program:configure');
+    $tool = $tools->createInstance('surface:event.program:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['headline' => 'Four days of talks']);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('The program is published in its workflow, so it is fixed.', (string) $tool->getResult()->getMessage());
-    $check = $tools->createInstance('data_surface:event.program:check');
+    $check = $tools->createInstance('surface:event.program:check');
     $check->setInputValue(OperationInputs::VALUES, ['headline' => 'Four days of talks', 'sessions' => 12]);
     $check->execute();
     $this->assertTrue($check->getResult()->isSuccess());
@@ -174,7 +173,7 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
       'published in the workflow' => fn () => $this->publish(),
       'published as stored' => function (): void {
         $this->publish(FALSE);
-        $this->config('data_surface_examples.program')->set('published', TRUE)->save();
+        $this->config('surface_examples.program')->set('published', TRUE)->save();
       },
     ];
     $this->assertGreaterThan(10, $this->assertStaticAccessAgrees(ProgramResource::class, 'configure', $accounts, $situations));
@@ -184,16 +183,16 @@ class ExamplesWorkflowTest extends DataSurfaceKernelTestBase {
    * Tests the panel says what the module answers, and makes its call.
    */
   public function testThePanelSaysWhatTheModuleAnswers(): void {
-    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_examples.step10');
+    $route = $this->container->get('router.route_provider')->getRouteByName('surface_examples.step10');
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
     $request->setSession($stack->getSession());
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_examples.step10');
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_examples.step10');
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class);
-    $panel = $form[DataSurfaceOperationForm::SURFACE_KEY][DataSurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
-    $this->assertStringContainsString('data_surface_examples_workflow', (string) $panel['workflow']['#markup']);
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $panel = $form[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $this->assertStringContainsString('surface_examples_workflow', (string) $panel['workflow']['#markup']);
     $this->assertStringContainsString('see event fees', (string) $panel['workflow']['#markup']);
     $accounts = json_decode((string) $panel['accounts']['content']['#code'], TRUE);
     $this->assertNull($accounts['without the permission']['property'], 'Left out for the account without either permission.');

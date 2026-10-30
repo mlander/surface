@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface_resource_test\Resource\Digest\DigestResource;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface_resource_test\Resource\Digest\DigestResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -22,9 +22,9 @@ use Symfony\Component\HttpFoundation\Request;
  * no properties. It now renders as nothing, its value is an empty map,
  * and the contracts, the tool and the pipeline take it as such.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class EmptyVariantTest extends DataSurfaceKernelTestBase {
+class EmptyVariantTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -36,15 +36,14 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
    * The digest's config object.
    */
-  protected const CONFIG = 'data_surface_resource_test.digest';
+  protected const CONFIG = 'surface_resource_test.digest';
 
   /**
    * {@inheritdoc}
@@ -52,18 +51,18 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Builds the digest as its operation asks for it.
    *
-   * @return array{0: \Drupal\data_surface\DataSurfaceInterface, 1: \Drupal\data_surface\Resource\OperationContext}
+   * @return array{0: \Drupal\surface\SurfaceInterface, 1: \Drupal\surface\Resource\OperationContext}
    *   The built resource and its context.
    */
   protected function digest(): array {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(DigestResource::class, 'configure');
     return [$resources->build(DigestResource::class, $context), $context];
   }
@@ -78,7 +77,7 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
    *   The form and its state.
    */
   protected function form(?array $values = NULL): array {
-    $route_name = 'data_surface_resource_test.digest';
+    $route_name = 'surface_resource_test.digest';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
@@ -88,11 +87,11 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
     $stack->push($request);
     $form_state = new FormState();
     if ($values === NULL) {
-      $form = $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state);
+      $form = $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $form_state);
       return [$form, $form_state];
     }
-    $form_state->setValues([DataSurfaceOperationForm::SURFACE_KEY => $values]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $form_state->setValues([SurfaceOperationForm::SURFACE_KEY => $values]);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     return [$form_state->getCompleteForm(), $form_state];
   }
 
@@ -101,11 +100,11 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
    */
   public function testTheFormDrawsNothingForAnEmptyVariant(): void {
     [$form] = $this->form();
-    $this->assertArrayHasKey('send_day', $form[DataSurfaceOperationForm::SURFACE_KEY]['schedule'], 'Weekly, as stored.');
+    $this->assertArrayHasKey('send_day', $form[SurfaceOperationForm::SURFACE_KEY]['schedule'], 'Weekly, as stored.');
 
     $this->config(self::CONFIG)->setData(['frequency' => 'daily', 'schedule' => []])->save();
     [$form] = $this->form();
-    $schedule = $form[DataSurfaceOperationForm::SURFACE_KEY]['schedule'];
+    $schedule = $form[SurfaceOperationForm::SURFACE_KEY]['schedule'];
     $this->assertSame('container', $schedule['#type']);
     $this->assertSame([], array_filter(array_keys($schedule), static fn ($key): bool => !str_starts_with((string) $key, '#')), 'Nothing to fill in.');
 
@@ -121,7 +120,7 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
   public function testTheContractsStateAnEmptyObject(): void {
     $this->config(self::CONFIG)->setData(['frequency' => 'daily', 'schedule' => []])->save();
     [$built] = $this->digest();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
 
     $answers = $emitter->emit($built, ['frequency' => 'daily', 'schedule' => []], 'resource_test.digest', 'configure')->document['schema'];
     // A union of its variants' defs, each an object: the union says the
@@ -141,7 +140,7 @@ class EmptyVariantTest extends DataSurfaceKernelTestBase {
    * Tests the tool and the pipeline accept an empty variant.
    */
   public function testTheToolAcceptsAnEmptyVariant(): void {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:resource_test.digest:configure');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.digest:configure');
     $tool->setInputValue('values', ['frequency' => 'daily', 'schedule' => []]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());

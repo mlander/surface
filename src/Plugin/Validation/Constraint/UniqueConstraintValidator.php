@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Resource\DeletableStorageInterface;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Resource\DeletableStorageInterface;
+use Drupal\surface\Resource\OperationContext;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
 
 /**
- * Validates the DataSurfaceUnique constraint, and answers the form's question.
+ * Validates the SurfaceUnique constraint, and answers the form's question.
  *
  * Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
  */

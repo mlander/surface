@@ -10,7 +10,7 @@ becomes.
 
 The emitter writes a resource or structure as JSON Schema 2020-12
 ([The served contract](served-contract.md)). The reader,
-`Contract\SchemaReader` (`data_surface.schema_reader`), runs that the
+`Contract\SchemaReader` (`surface.schema_reader`), runs that the
 other way: it reads a JSON Schema document into the keys, children and
 rules a blueprint declares, so what it describes is built, validated,
 drawn, served and called as a structure written in code is. The
@@ -29,7 +29,7 @@ attaches the structure.)
   carries ([Variants from the site](resources.md#variants-from-the-site)).
   Example 12 reads every single-directory component's props this way
   (`/surface-examples/12`).
-- **On its own.** `data_surface.schema_reader`'s `structure($document,
+- **On its own.** `surface.schema_reader`'s `structure($document,
   $id)` registers the document as a structure and answers the name
   `ResourcesInterface::build()` takes; `notes($document)` lists what
   reading it would note, and `SchemaReader::upconvert()` converts an

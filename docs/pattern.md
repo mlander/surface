@@ -35,7 +35,7 @@ surface, and [Decisions](decisions.md) lists the points the pattern left
 open and how the module settled them.
 
 The worked example throughout is the field: `FieldInstanceResource` in
-`data_surface_tool`, with its storage, `FieldStorageResource`, and the
+`surface_examples_field`, with its storage, `FieldStorageResource`, and the
 address module's `AddressFieldSettingsResource` filling its settings.
 
 ## Where things live
@@ -69,7 +69,7 @@ src/Resource/Attribute/               #[Resource], #[Structure], #[Operation],
                                       #[RefinesInput], #[Alters], #[Variant],
                                       #[UsesStructure], #[DerivesResources]
 
-modules/data_surface_tool/src/
+modules/surface_examples_field/src/
   Resource/FieldInstanceResource.php  the generic field resource
   Resource/FieldStorageResource.php   its storage, attached at `storage`
   Storage/FieldInstanceStorage.php    where its values go
@@ -77,22 +77,22 @@ modules/data_surface_tool/src/
   Access/FieldInstanceAccess.php      the part of access that needs the subject
   FieldSettingsSchemaVariants.php     settings for field types with no class
 
-modules/data_surface_demo/src/
-  Plugin/Block/DataSurfaceDemoBlock.php    a plugin: #[UsesStructure], and build()
+modules/surface_examples_plugins/src/
+  Plugin/Block/ExampleBlock.php    a plugin: #[UsesStructure], and build()
   Structure/DemoBlockStructure.php         its configuration, as a structure
   Structure/ListPresentationStructure.php  the block's presentation variants
   Structure/GridPresentationStructure.php
-  Plugin/Field/FieldFormatter/DataSurfaceDemoFormatter.php
+  Plugin/Field/FieldFormatter/ExampleFormatter.php
                                            a plugin that is its own structure
 
-modules/data_surface_address/src/
+modules/surface_examples_address/src/
   Resource/AddressFieldSettingsResource.php  a variant at the field's settings
   Storage/AddressFieldSettingsStorage.php    and stores them itself
 
-modules/data_surface_demo_node_type/src/
+modules/surface_examples_node_type/src/
   Resource/NodeTypeResource.php       a content type, with create and update
 
-modules/data_surface_demo_extras/src/
+modules/surface_examples_extras/src/
   Alter/DemoBlockAlter.php            adds a key, rewords one, narrows one
   Alter/DemoFormatterAlter.php        offers one more value on a fixed list
   Alter/NodeTypeAlter.php             adds keys stored in another layout
@@ -369,7 +369,7 @@ blueprint has no verb for options.
 | The list is | Constraint | Example |
 | --- | --- | --- |
 | Fixed | core `Choice`, or `LabeledChoice` for labels | `DemoBlockStructure`'s `presentation` |
-| Live, from site state | a constraint whose options resolver fetches the list | `DataSurfaceDemoBundleField` on the demo block's `field` |
+| Live, from site state | a constraint whose options resolver fetches the list | `SurfaceExamplesBundleField` on the demo block's `field` |
 | Already modelled by core | the core constraint | `EntityBundleExists` on `bundle`, attached by a refiner because it needs the entity type |
 
 **A refiner never calls a service.** A list that depends on a value is
@@ -504,9 +504,9 @@ with `#[UsesStructure]`. Two spellings, side by side in the demo module.
 `src/Structure/`, and the plugin names it:
 
 ```php
-#[Block(id: 'data_surface_demo', admin_label: new TranslatableMarkup('Data surface demo'))]
+#[Block(id: 'surface_examples_plugins', admin_label: new TranslatableMarkup('Data surface demo'))]
 #[UsesStructure(DemoBlockStructure::class)]
-final class DataSurfaceDemoBlock extends DataSurfaceBlockBase {
+final class ExampleBlock extends TypedBlockBase {
 
   public function build(): array { /* ... */ }
 
@@ -522,9 +522,9 @@ host builds the data surface from the plugin class without constructing
 it.
 
 ```php
-#[FieldFormatter(id: 'data_surface_demo_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
+#[FieldFormatter(id: 'surface_examples_plugins_string', label: new TranslatableMarkup('Data surface demo formatter'), field_types: ['string'])]
 #[UsesStructure]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, DefinesOutputsInterface {
+final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void { /* prefix, casing, variant */ }
 
@@ -540,10 +540,10 @@ final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements
 
 Such a structure is found through the plugin definitions, not a
 directory. Its id is `<host type>:<plugin id>`
-(`field_formatter:data_surface_demo_string`) unless the class also
+(`field_formatter:surface_examples_plugins_string`) unless the class also
 carries `#[Structure]`; the catalog lists it as used by that same
 plugin; an alter names it by the plugin class,
-`#[Alters(DataSurfaceDemoFormatter::class)]`. The separate class
+`#[Alters(ExampleFormatter::class)]`. The separate class
 reads better when the structure is large, has children or operations,
 or is shared; the plugin's own reads better when the plugin is small
 and its settings are only ever its own.
@@ -553,7 +553,7 @@ host supplies the context and the storage, since only it holds the
 instance. The attribute is copied into the plugin definition, so tools
 and the catalog can list such plugins without instantiating any.
 Block, formatter, condition, action and field type hosts all read it,
-and `DataSurfacePluginForm` serves any other configurable plugin.
+and `SurfacePluginForm` serves any other configurable plugin.
 
 ## Deferred
 
@@ -617,7 +617,7 @@ concept. The naming of sources and resolvers is undecided.
    name is what makes the parent's key one click away.
 3. **Create-only keys that are not identity.** No new verb.
    `withConstraint()` with a one-value `Choice` that says it fixes the
-   key (`data_surface_fixed`) is a lock in every way that matters: the
+   key (`surface_fixed`) is a lock in every way that matters: the
    key holds the value, the form renders it fixed, the pipeline refuses
    anything else, both documents state it `const`.
 4. **May an options alter remove entries?** Yes, under the stale rule
@@ -631,12 +631,12 @@ concept. The naming of sources and resolvers is undecided.
 
 | The pattern | Before the rework |
 | --- | --- |
-| A class in `src/Resource/` or `src/Structure/` | a static `declareDataSurface()` on the host, or a provider service |
+| A class in `src/Resource/` or `src/Structure/` | a static `declareSurface()` on the host, or a provider service |
 | `#[RefinesInput('key')]` methods, dependencies in the signature | `refineDataDefinition($name, $definition, $values)` with a `match`, dependencies declared separately |
 | `attach()`, `attachVariants()` | `mount()`, `mountVariants()` |
 | `#[Variant]` on the child | a resolver service, or a table the parent holds |
 | `#[Resource(identity:)]` and `#[Operation]` methods | the builder's `lock()`, called by each provider per operation |
 | A class in `src/Alter/` with `#[Alters]` | a build event subscriber holding the full builder |
-| `#[Resource(storage:, access:)]` | the provider triple: `getDataSurface()`, `surfaceAccess()`, `getDataSurfaceStorage()` |
+| `#[Resource(storage:, access:)]` | the provider triple: `getSurface()`, `surfaceAccess()`, `getSurfaceStorage()` |
 | `defineOutputs()`, never refined | `setOutputDefinition()` plus output refiners |
-| `#[UsesStructure]` on the plugin, naming a structure or being one | `declareDataSurface()` on the plugin class itself |
+| `#[UsesStructure]` on the plugin, naming a structure or being one | `declareSurface()` on the plugin class itself |

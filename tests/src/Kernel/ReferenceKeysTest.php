@@ -2,22 +2,22 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\Reference\References;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\Reference\References;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
-use Drupal\data_surface_examples\ConceptPanel;
-use Drupal\data_surface_examples\ExamplePanels;
-use Drupal\data_surface_examples_references\Resource\SponsorshipResource;
-use Drupal\data_surface_examples_references\Sponsorship;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface_examples\ConceptPanel;
+use Drupal\surface_examples\ExamplePanels;
+use Drupal\surface_examples_references\Resource\SponsorshipResource;
+use Drupal\surface_examples_references\Sponsorship;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\node\Entity\NodeType;
 use Drupal\user\Entity\Role;
 use Drupal\user\Entity\User;
@@ -35,16 +35,16 @@ use Symfony\Component\Routing\Route;
  * and the bare `entity`, two parts narrowed by a refiner); both documents
  * of the configure operation are pinned whole under the limit and past it,
  * under tests/fixtures/references/ (written again with
- * DATA_SURFACE_REFERENCES_WRITE=1); the candidates are core's selection
+ * SURFACE_REFERENCES_WRITE=1); the candidates are core's selection
  * handler's for the account, cached by what it read; the refusals; the
  * lookup and what it filters; the marker; the tool listing under the
  * limit and past it.
  *
  * @see docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ReferenceKeysTest extends DataSurfaceKernelTestBase {
+class ReferenceKeysTest extends SurfaceKernelTestBase {
 
   use OperationRouteTrait;
   use UserCreationTrait;
@@ -61,10 +61,9 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
     'node',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_references',
+    'surface',
+    'surface_examples',
+    'surface_examples_references',
   ];
 
   /**
@@ -75,7 +74,7 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
   /**
    * The tool.
    */
-  protected const TOOL = 'data_surface:event.sponsorship:configure';
+  protected const TOOL = 'surface:event.sponsorship:configure';
 
   /**
    * {@inheritdoc}
@@ -89,9 +88,9 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
       'system',
       'node',
       'filter',
-      'data_surface',
-      'data_surface_examples',
-      'data_surface_examples_references',
+      'surface',
+      'surface_examples',
+      'surface_examples_references',
     ]);
     // The article and page bundles are the module's optional config.
     $this->assertNotNull(NodeType::load('article'));
@@ -119,11 +118,11 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the sponsorship for the current account.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   It, built.
    */
   protected function built() {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     return $resources->build(SponsorshipResource::class, $resources->operation(SponsorshipResource::class, 'configure'));
   }
 
@@ -182,7 +181,7 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], $credit->refine(['entity_type' => 'node'], FALSE)->getDefinition('id')->getConstraints()[References::CONSTRAINT], 'A bundle list narrows the id of each entity type it names.');
 
     // The spellings refused.
-    $blueprint = (new ResourceBlueprint(new DataSurfaceBuilder(), $this->container->get('typed_data_manager')))->useReferences($this->container->get('data_surface.references'));
+    $blueprint = (new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager')))->useReferences($this->container->get('surface.references'));
     foreach ([
       'entity:nope' => 'names an entity type this site does not have',
       'entity:' => 'names no entity type',
@@ -214,7 +213,7 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
    * service itself still refusing a type the site does not have.
    */
   public function testAnEntityTypeReadFromCode(): void {
-    $references = $this->container->get('data_surface.references');
+    $references = $this->container->get('surface.references');
     $types = $this->container->get('entity_type.manager')->getDefinitions();
     $content = clone $types['node'];
     $content->set('id', 'zz_content');
@@ -232,10 +231,10 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
    * Tests both documents, whole, under the limit and past it.
    */
   public function testBothDocumentsUnderAndPastTheLimit(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $references = $this->container->get('data_surface.references');
-    $operation = $this->container->get('data_surface.resource_registry')->getOperation(SponsorshipResource::class, 'configure');
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
+    $references = $this->container->get('surface.references');
+    $operation = $this->container->get('surface.resource_registry')->getOperation(SponsorshipResource::class, 'configure');
     $documents = function () use ($resources, $emitter, $operation): array {
       $resources->forgetBuilds();
       $context = $resources->operation(SponsorshipResource::class, 'configure');
@@ -251,16 +250,16 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
       foreach ($pair as $kind => $document) {
         $json = json_encode($document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION) . "\n";
         $file = self::FIXTURES . 'configure.' . $where . '.' . $kind . '.json';
-        if (getenv('DATA_SURFACE_REFERENCES_WRITE')) {
+        if (getenv('SURFACE_REFERENCES_WRITE')) {
           @mkdir(self::FIXTURES);
           file_put_contents($file, $json);
           continue;
         }
         $this->assertFileExists($file);
-        $this->assertSame(file_get_contents($file), $json, sprintf('The %s document %s the limit; written again with DATA_SURFACE_REFERENCES_WRITE=1.', $kind, $where));
+        $this->assertSame(file_get_contents($file), $json, sprintf('The %s document %s the limit; written again with SURFACE_REFERENCES_WRITE=1.', $kind, $where));
       }
     }
-    if (getenv('DATA_SURFACE_REFERENCES_WRITE')) {
+    if (getenv('SURFACE_REFERENCES_WRITE')) {
       $this->markTestSkipped('The reference documents were written.');
     }
 
@@ -283,7 +282,7 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('oneOf', $past['properties']['venue']);
     $this->assertSame('autocomplete', $past['properties']['venue']['x-surface']['widget']);
     $this->assertSame([
-      ['constraint' => 'DataSurfaceValidReference', 'message' => 'Refers to an entity the account may reference'],
+      ['constraint' => 'SurfaceValidReference', 'message' => 'Refers to an entity the account may reference'],
     ], $past['properties']['venue']['x-surface']['checkedOnServer']);
     // The marker, in both documents and either way.
     foreach ([$under, $past, $all['under']['emit']['schema'], $all['past']['emit']['schema']] as $schema) {
@@ -317,7 +316,7 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
     $nodes = $this->nodes();
     $this->assertSame([$nodes['draft'], $nodes['article']], array_keys($set->options));
     $this->assertContains('node_list', $set->getCacheTags());
-    $this->assertContains('config:data_surface.settings', $set->getCacheTags(), 'Whether it is listed at all is the limit\'s.');
+    $this->assertContains('config:surface.settings', $set->getCacheTags(), 'Whether it is listed at all is the limit\'s.');
     $this->assertSame(['user.permissions', 'user.node_grants:view'], $set->getCacheContexts(), 'What core\'s node selection reads.');
     $venue = $options->resolve($this->built()->getDefinition('venue'));
     $this->assertContains('config:event_venue_list', $venue->getCacheTags(), "A config entity type's list tag.");
@@ -325,7 +324,7 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
     // An account that may not see unpublished content is not offered the
     // draft, and is refused it.
     $this->setUpCurrentUser([], ['access content', 'set event sponsorship']);
-    $this->container->get('data_surface.resources')->forgetBuilds();
+    $this->container->get('surface.resources')->forgetBuilds();
     $this->assertSame([$nodes['article']], array_keys($this->options()->resolve($this->built()->getDefinition('page'))->options));
     $this->assertSame([
       'success' => FALSE,
@@ -374,7 +373,7 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
    * Tests the lookup: the key's candidates by label, for the account.
    */
   public function testTheLookup(): void {
-    $references = $this->container->get('data_surface.references');
+    $references = $this->container->get('surface.references');
     $built = $this->built();
     $nodes = $this->nodes();
     $page = $references->definitionAt($built, ['page']);
@@ -407,9 +406,9 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
    */
   public function testTheToolListing(): void {
     $listed = function (): array {
-      $inputs = $this->container->get('data_surface_tool.operation_inputs');
-      $registry = $this->container->get('data_surface.resource_registry');
-      $this->container->get('data_surface.resources')->forgetBuilds();
+      $inputs = $this->container->get('surface.operation_inputs');
+      $registry = $this->container->get('surface.resource_registry');
+      $this->container->get('surface.resources')->forgetBuilds();
       $values = $inputs->inputs($registry->getDefinition(SponsorshipResource::class), $registry->getOperation(SponsorshipResource::class, 'configure'))[OperationInputs::VALUES];
       assert($values instanceof MapInputDefinition);
       $properties = $values->getPropertyDefinitions();
@@ -433,15 +432,15 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
         NULL,
       ],
     ], $listed(), 'Under the limit, the enum; the site serves no API, so no lookup is named.');
-    $past = $this->container->get('data_surface.references')->withLimit(1, $listed);
+    $past = $this->container->get('surface.references')->withLimit(1, $listed);
     $this->assertSame([
       "Where the sponsor's stand is. Too many to list (more than 1): send the id of one. Required; a value already stored stands when left out.",
       NULL,
     ], $past['venue']);
 
     // With the API served, the listing names the lookup.
-    $this->container->get('module_installer')->install(['data_surface_react']);
-    $past = $this->container->get('data_surface.references')->withLimit(1, $listed);
+    $this->container->get('module_installer')->install(['surface_react']);
+    $past = $this->container->get('surface.references')->withLimit(1, $listed);
     $this->assertSame([
       "Where the sponsor's stand is. Too many to list (more than 1): send the id of one; GET /surface-api/event.sponsorship:lookup?key=/venue&q={text} looks one up by its label. Required; a value already stored stands when left out.",
       NULL,
@@ -453,18 +452,18 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
    * Tests the page: each key, both documents, the lookups and the calls.
    */
   public function testThePageShowsEachKey(): void {
-    $this->container->get('module_installer')->install(['data_surface_react']);
+    $this->container->get('module_installer')->install(['surface_react']);
     $this->container->get('router.builder')->rebuild();
-    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_examples.step16');
+    $route = $this->container->get('router.route_provider')->getRouteByName('surface_examples.step16');
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath());
     $request->setSession($stack->getSession());
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_examples.step16');
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_examples.step16');
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
-    $form = $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class)[DataSurfaceOperationForm::SURFACE_KEY];
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('select', $form['venue']['#type']);
-    $panel = $form[DataSurfaceOperationForm::PANEL_KEY];
+    $panel = $form[SurfaceOperationForm::PANEL_KEY];
     $this->assertSame([ExamplePanels::CONCEPT, ExamplePanels::FILES, ExamplePanels::CONTRACT, ExamplePanels::TODAY], array_values(array_intersect(Element::children($panel, TRUE), [
       ExamplePanels::CONCEPT,
       ExamplePanels::FILES,
@@ -497,15 +496,15 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
       'event.sponsorship:not_referenceable',
       'event.sponsorship:not_config',
     ], array_values(array_filter(Element::children($concept['calls']), static fn (string $key): bool => str_starts_with($key, 'event.sponsorship:'))));
-    $this->assertSame(50, $this->container->get('data_surface.references')->limit(), 'The limit held for the page is put back.');
+    $this->assertSame(50, $this->container->get('surface.references')->limit(), 'The limit held for the page is put back.');
   }
 
   /**
    * Tests the OpenAPI document describes the lookup.
    */
   public function testTheOpenApiDocumentDescribesTheLookup(): void {
-    $this->container->get('module_installer')->install(['data_surface_openapi']);
-    $document = $this->container->get('data_surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document;
+    $this->container->get('module_installer')->install(['surface_openapi']);
+    $document = $this->container->get('surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document;
     $lookup = $document['paths']['/surface-api/event.sponsorship:lookup']['get'];
     $this->assertSame('event.sponsorship:lookup', $lookup['operationId']);
     $this->assertSame('read', $lookup['x-surface-kind']);
@@ -531,7 +530,7 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
    * Tests the example's panel: its paragraph, and the account of a call.
    */
   public function testThePanel(): void {
-    $panel = $this->container->get('data_surface_examples.concept_panel');
+    $panel = $this->container->get('surface_examples.concept_panel');
     $this->assertStringContainsString('<code>entity:node:article</code> an article', (string) $panel->paragraph('event.sponsorship'));
     $account = ConceptPanel::accountOf('event_sponsorship_editor');
     $this->assertNotNull($account);
@@ -551,15 +550,15 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
    * the Choice's value and no candidate is read.
    */
   public function testFixedReferenceKeyUnderAndPastTheLimit(): void {
-    $this->serveBuilt('data_surface_examples.sponsorship_fixed', new Route('/surface-test/sponsorship/fixed', [
-      '_form' => DataSurfaceOperationForm::class,
+    $this->serveBuilt('surface_examples.sponsorship_fixed', new Route('/surface-test/sponsorship/fixed', [
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Configure the sponsorship',
       OperationRoute::RESOURCE => SponsorshipResource::class,
       OperationRoute::OPERATION => 'configure',
       OperationRoute::FIXED => ['venue' => 'riverside', 'contact' => 1],
     ]));
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
     $drawn = function () use ($resources, $emitter): array {
       $resources->forgetBuilds();
       $served = $this->served();
@@ -587,7 +586,7 @@ class ReferenceKeysTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'venue' => ['item', 'riverside', 'riverside', 'riverside'],
       'contact' => ['item', '1', 1, '1'],
-    ], $this->container->get('data_surface.references')->withLimit(1, $drawn), 'Past the limit.');
+    ], $this->container->get('surface.references')->withLimit(1, $drawn), 'Past the limit.');
   }
 
 }

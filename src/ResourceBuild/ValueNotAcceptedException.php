@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 /**
  * A value given for a key that the key does not accept.
@@ -17,7 +17,7 @@ namespace Drupal\data_surface\ResourceBuild;
  *
  * @internal
  *
- * @see \Drupal\data_surface\ResourceBuild\OperationRoute
+ * @see \Drupal\surface\ResourceBuild\OperationRoute
  */
 final class ValueNotAcceptedException extends \LogicException {
 

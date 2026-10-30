@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Resource\OperationContext;
 
 /**
  * A key whose value is a list of child structure instances: a collection.
@@ -30,17 +30,17 @@ use Drupal\data_surface\Resource\OperationContext;
  * The child's operation, and its access, were answered once for the
  * list: field access is per field, not per delta.
  *
- * @see \Drupal\data_surface\DataSurfaceBuilderInterface::attachList()
- * @see \Drupal\data_surface\Attachment
+ * @see \Drupal\surface\SurfaceBuilderInterface::attachList()
+ * @see \Drupal\surface\Attachment
  */
 final class Collection {
 
   /**
    * Constructs a Collection.
    *
-   * @param \Drupal\data_surface\Attachment $item
+   * @param \Drupal\surface\Attachment $item
    *   The child every item is, sealed once, as it was advertised.
-   * @param \Drupal\data_surface\Resource\OperationContext|null $context
+   * @param \Drupal\surface\Resource\OperationContext|null $context
    *   The context every item was invoked in, the child's operation
    *   resolved for the list; contextFor() adds an item's delta to what
    *   it knows. NULL for a list handed over already sealed.
@@ -89,7 +89,7 @@ final class Collection {
     if (!$item instanceof ComplexDataDefinitionInterface) {
       return NULL;
     }
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     foreach ($item->getPropertyDefinitions() as $name => $property) {
       $builder->setDefinition((string) $name, $property);
     }
@@ -99,10 +99,10 @@ final class Collection {
   /**
    * Gets the child every item is.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The child, as advertised.
    */
-  public function child(): DataSurfaceInterface {
+  public function child(): SurfaceInterface {
     return $this->item->child;
   }
 
@@ -116,7 +116,7 @@ final class Collection {
    * @param int $delta
    *   The item's position, from zero.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext|null
+   * @return \Drupal\surface\Resource\OperationContext|null
    *   The context, or NULL when the list carries none.
    */
   public function contextFor(int $delta): ?OperationContext {
@@ -132,13 +132,13 @@ final class Collection {
    *
    * @param \Drupal\Core\TypedData\ListDataDefinition $shell
    *   The list describing the key itself. Not changed; a clone is filled.
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child, advertised or refined.
    *
    * @return \Drupal\Core\TypedData\ListDataDefinition
    *   The list.
    */
-  public static function listOf(ListDataDefinition $shell, DataSurfaceInterface $child): ListDataDefinition {
+  public static function listOf(ListDataDefinition $shell, SurfaceInterface $child): ListDataDefinition {
     $list = clone $shell;
     $list->setItemDefinition(Attachment::mapOf(MapDataDefinition::create(), $child));
     return $list;

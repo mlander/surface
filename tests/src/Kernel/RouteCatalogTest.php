@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Routing\RouteProviderInterface;
-use Drupal\data_surface\ResourceBuild\FormRouteDoors;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface\ResourceBuild\SiteCatalog;
+use Drupal\surface\ResourceBuild\FormRouteDoors;
+use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface\ResourceBuild\SiteCatalog;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -24,13 +24,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * operation's build; and a route either refuses is listed under Refused,
  * naming the route and why, as every visitor of it is refused.
  *
- * @see \Drupal\data_surface\ResourceBuild\FormRouteDoors
- * @see \Drupal\data_surface\ResourceBuild\SiteCatalog
+ * @see \Drupal\surface\ResourceBuild\FormRouteDoors
+ * @see \Drupal\surface\ResourceBuild\SiteCatalog
  * @see docs/catalog-command.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RouteCatalogTest extends DataSurfaceKernelTestBase {
+class RouteCatalogTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -40,8 +40,8 @@ class RouteCatalogTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_route_test',
+    'surface',
+    'surface_route_test',
   ];
 
   /**
@@ -50,18 +50,18 @@ class RouteCatalogTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface']);
+    $this->installConfig(['surface']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Gets the catalog.
    *
-   * @return \Drupal\data_surface\ResourceBuild\SiteCatalog
+   * @return \Drupal\surface\ResourceBuild\SiteCatalog
    *   The service.
    */
   protected function catalog(): SiteCatalog {
-    return $this->container->get('data_surface.site_catalog');
+    return $this->container->get('surface.site_catalog');
   }
 
   /**
@@ -85,24 +85,24 @@ class RouteCatalogTest extends DataSurfaceKernelTestBase {
     $doors = $this->formDoors();
     foreach ([
       // A route that says nothing more.
-      '/surface-test/card/add (data_surface_route_test.add), ',
+      '/surface-test/card/add (surface_route_test.add), ',
       // Literal values it fixes and fills, as written.
-      '/surface-test/card/add-welcome (data_surface_route_test.add_welcome) [fixes title: Welcome, greeting.format: html, envelope.color: cream; fills greeting.value: Start here., copies: 3, envelope.stamps: 2]',
+      '/surface-test/card/add-welcome (surface_route_test.add_welcome) [fixes title: Welcome, greeting.format: html, envelope.color: cream; fills greeting.value: Start here., copies: 3, envelope.stamps: 2]',
       // A reference, as written.
-      '/surface-test/card/add/{color} (data_surface_route_test.add_colored) [fixes envelope.color: {color}]',
-      '/surface-test/card/add-copies/{copies} (data_surface_route_test.add_copies) [fills copies: {copies}]',
+      '/surface-test/card/add/{color} (surface_route_test.add_colored) [fixes envelope.color: {color}]',
+      '/surface-test/card/add-copies/{copies} (surface_route_test.add_copies) [fills copies: {copies}]',
       // The keys a link may start, and the query parameter each reads.
-      '/surface-test/card/add-subject (data_surface_route_test.add_subject) [starts title from ?subject, greeting.value from ?greeting]',
+      '/surface-test/card/add-subject (surface_route_test.add_subject) [starts title from ?subject, greeting.value from ?greeting]',
     ] as $route) {
       $this->assertStringContainsString($route, $doors['create']);
     }
     // A React page a module serves is no form: the React door lists it
     // (ReactRoutePageTest).
-    $this->assertStringNotContainsString('data_surface_route_test.react_add', $doors['create']);
+    $this->assertStringNotContainsString('surface_route_test.react_add', $doors['create']);
     // A plain default pinning a parameter of the operation.
-    $this->assertStringContainsString('/surface-test/card/send-friends (data_surface_route_test.send_friends) [pins to: friends; fills title: Dear friends]', $doors['send']);
+    $this->assertStringContainsString('/surface-test/card/send-friends (surface_route_test.send_friends) [pins to: friends; fills title: Dear friends]', $doors['send']);
     // An update's route, whose card the path names.
-    $this->assertStringContainsString('/surface-test/card/{card}/edit-queried (data_surface_route_test.edit_queried) [starts title from ?subject]', $doors['update']);
+    $this->assertStringContainsString('/surface-test/card/{card}/edit-queried (surface_route_test.edit_queried) [starts title from ?subject]', $doors['update']);
   }
 
   /**
@@ -123,20 +123,20 @@ class RouteCatalogTest extends DataSurfaceKernelTestBase {
     $this->assertSame([
       'create' => [
         // Seeds the card refuses: a value, a path that names no key.
-        'The data_surface_route_test.add_too_many_stamps route: The "create" operation sets "envelope.stamps" on route_test.card to 9, which the key does not accept: This value should be between 1 and 5.',
-        'The data_surface_route_test.add_tucked route: The "create" operation: route_test.card has no key "envelope.flap". A fixed value names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).',
+        'The surface_route_test.add_too_many_stamps route: The "create" operation sets "envelope.stamps" on route_test.card to 9, which the key does not accept: This value should be between 1 and 5.',
+        'The surface_route_test.add_tucked route: The "create" operation: route_test.card has no key "envelope.flap". A fixed value names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).',
         // Keys no link may start.
-        'The data_surface_route_test.query_inside route\'s "_data_surface_query": "paper_settings.weight" on route_test.card is inside "paper_settings", a key with variants, each starting from its own defaults, so a prefill does not reach it.',
-        'The data_surface_route_test.query_map route\'s "_data_surface_query": "greeting" on route_test.card holds a map: name each of its keys, as "greeting.<key>".',
-        'The data_surface_route_test.query_secret route\'s "_data_surface_query": "code" on route_test.card is a secret, which no form draws, so no prefill starts it.',
-        'The data_surface_route_test.query_undeclared route\'s "_data_surface_query": route_test.card has no key "greeting.font". A prefill names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).',
+        'The surface_route_test.query_inside route\'s "_surface_query": "paper_settings.weight" on route_test.card is inside "paper_settings", a key with variants, each starting from its own defaults, so a prefill does not reach it.',
+        'The surface_route_test.query_map route\'s "_surface_query": "greeting" on route_test.card holds a map: name each of its keys, as "greeting.<key>".',
+        'The surface_route_test.query_secret route\'s "_surface_query": "code" on route_test.card is a secret, which no form draws, so no prefill starts it.',
+        'The surface_route_test.query_undeclared route\'s "_surface_query": route_test.card has no key "greeting.font". A prefill names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).',
       ],
       'send' => [
         // A key fixed over the operation's own fixed value, a plain
         // default nothing reads, and one the operation refuses.
-        'The data_surface_route_test.send_cream route fixes "envelope.color", which the "send" operation already narrows with a Choice of its own: the route\'s would take its place. A key the operation narrows to a list is the operation\'s to fix.',
-        'The data_surface_route_test.send_misnamed route has the plain default "too", which nothing it serves reads: the "send" operation takes $to, $from. A default with no leading underscore is a route parameter, which the operation reads by its name.',
-        'The data_surface_route_test.send_nobody route: There is no "nobody" list; the lists are family, friends.',
+        'The surface_route_test.send_cream route fixes "envelope.color", which the "send" operation already narrows with a Choice of its own: the route\'s would take its place. A key the operation narrows to a list is the operation\'s to fix.',
+        'The surface_route_test.send_misnamed route has the plain default "too", which nothing it serves reads: the "send" operation takes $to, $from. A default with no leading underscore is a route parameter, which the operation reads by its name.',
+        'The surface_route_test.send_nobody route: There is no "nobody" list; the lists are family, friends.',
       ],
     ], $refused);
     // A route with a variable is the URL's to finish, so it is not held:
@@ -151,16 +151,16 @@ class RouteCatalogTest extends DataSurfaceKernelTestBase {
    * page reads rather than builds.
    */
   public function testEachLiteralRouteIsHeldOnceForTheNextRequest(): void {
-    $this->container->get('cache.data_surface_build')->deleteAll();
+    $this->container->get('cache.surface_build')->deleteAll();
     $this->catalog()->refused();
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     // The next request, which finds nothing in its memo: the page's own
     // hold reads what the catalog held, and builds nothing.
     $resources->forgetBuilds();
     $counts = $resources->buildCounts();
-    $route = $this->container->get('router.route_provider')->getRouteByName('data_surface_route_test.add_welcome');
-    $served = OperationRoute::fromRouteMatch(new RouteMatch('data_surface_route_test.add_welcome', $route), $this->container->get('data_surface.resource_registry'), $this->container->get('data_surface.operation_arguments'), $resources);
+    $route = $this->container->get('router.route_provider')->getRouteByName('surface_route_test.add_welcome');
+    $served = OperationRoute::fromRouteMatch(new RouteMatch('surface_route_test.add_welcome', $route), $this->container->get('surface.resource_registry'), $this->container->get('surface.operation_arguments'), $resources);
     $this->assertSame('Welcome', $served->context->constraints()['title']['Choice']['choices'][0]);
     $after = $resources->buildCounts();
     $this->assertSame([$counts['built'], $counts['cached'] + 1], [$after['built'], $after['cached']]);
@@ -173,7 +173,7 @@ class RouteCatalogTest extends DataSurfaceKernelTestBase {
    * variable nothing fills is listed and not linked.
    */
   public function testFormDoorIsLinkedWhereUrlNeedsNothingMore(): void {
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $card = $registry->getDefinition('route_test.card');
     $create = $registry->getOperation($card->name(), 'create');
     $routes = $this->container->get('router.route_provider');
@@ -185,13 +185,13 @@ class RouteCatalogTest extends DataSurfaceKernelTestBase {
       $link = $doors->links($card, $create, TRUE, FALSE)[SiteCatalog::FORM] ?? NULL;
       return $link === NULL ? [] : [$link->getRouteName(), $link->toString()];
     };
-    $this->assertSame(['data_surface_route_test.add', '/surface-test/card/add'], $linked('data_surface_route_test.add'));
+    $this->assertSame(['surface_route_test.add', '/surface-test/card/add'], $linked('surface_route_test.add'));
     // Its one variable has a default, so the URL leaves it out.
-    $this->assertSame(['data_surface_route_test.add_optional', '/surface-test/card/add-optional'], $linked('data_surface_route_test.add_optional'));
+    $this->assertSame(['surface_route_test.add_optional', '/surface-test/card/add-optional'], $linked('surface_route_test.add_optional'));
     // A variable nothing fills: listed, not linked.
-    $this->assertSame([], $linked('data_surface_route_test.add_colored'));
+    $this->assertSame([], $linked('surface_route_test.add_colored'));
     // Every route of the card's create, the first that can be linked.
-    $this->assertSame('data_surface_route_test.add', $this->catalog()->links('route_test.card', 'create')[SiteCatalog::FORM]->getRouteName());
+    $this->assertSame('surface_route_test.add', $this->catalog()->links('route_test.card', 'create')[SiteCatalog::FORM]->getRouteName());
   }
 
 }

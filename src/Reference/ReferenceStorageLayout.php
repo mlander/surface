@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Reference;
+namespace Drupal\surface\Reference;
 
 use Drupal\Component\Uuid\Uuid;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Storage\StoredSchemaInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entry;
+use Drupal\surface\Storage\StoredSchemaInterface;
 
 /**
  * Stores a reference to a content entity by its uuid, in config.
@@ -58,7 +58,7 @@ use Drupal\data_surface\Storage\StoredSchemaInterface;
  *
  * Decision: see docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
  *
- * @see \Drupal\data_surface\ResourceBuild\StorageAdapter
+ * @see \Drupal\surface\ResourceBuild\StorageAdapter
  */
 final class ReferenceStorageLayout implements StoredSchemaInterface {
 
@@ -80,16 +80,16 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Constructs a ReferenceStorageLayout.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource, whose keys say which are references.
-   * @param \Drupal\data_surface\Reference\References $references
+   * @param \Drupal\surface\Reference\References $references
    *   The references service, which finds an entity by id or uuid.
    * @param string[] $skip
    *   Top-level keys left alone: those a child with storage of its own
    *   holds, which its own storage translates.
    */
   public function __construct(
-    protected readonly DataSurfaceInterface $surface,
+    protected readonly SurfaceInterface $surface,
     protected readonly References $references,
     protected readonly array $skip = [],
   ) {}
@@ -97,9 +97,9 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Gives the layout for a resource, when it has a key to translate.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource.
-   * @param \Drupal\data_surface\Reference\References $references
+   * @param \Drupal\surface\Reference\References $references
    *   The references service.
    * @param string[] $skip
    *   Top-level keys left alone.
@@ -107,7 +107,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * @return self|null
    *   The layout, or NULL when no key may be stored by uuid.
    */
-  public static function forSurface(DataSurfaceInterface $surface, References $references, array $skip = []): ?self {
+  public static function forSurface(SurfaceInterface $surface, References $references, array $skip = []): ?self {
     return static::holds($surface->getDefinitions(), $skip) ? new self($surface, $references, $skip) : NULL;
   }
 
@@ -119,7 +119,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * content entity type. A bare `entity` key is left out: it is stored as
    * two strings, as it is asked for.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource.
    *
    * @return array<string, array>
@@ -128,7 +128,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    *   no variant; an entry of a map of keys from the site as `*`, since
    *   which entries there are is the site's (`pages.*`, `authors.*.author`).
    */
-  public static function storedSchemaOf(DataSurfaceInterface $surface): array {
+  public static function storedSchemaOf(SurfaceInterface $surface): array {
     $schema = [];
     static::listUuidKeys($surface->getDefinitions(), '', $schema);
     return $schema;
@@ -216,7 +216,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Answers whether a map holds a key that may be stored by uuid.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The keys.
    * @param string[] $skip
    *   Keys left alone.
@@ -268,10 +268,10 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Lists every child map a key holds whose keys are stored with it.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    *
-   * @return array<string, \Drupal\data_surface\DefinitionMap>
+   * @return array<string, \Drupal\surface\DefinitionMap>
    *   An attached structure's keys, a collection's item's, a map of keys
    *   from the site's entries, each variant a class declares, and each
    *   structure an alter mounted, by variant id or module; empty for any
@@ -304,7 +304,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Reads a bare `entity` key's id part, when a key is one.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
@@ -324,7 +324,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Lists the keys of a map stored as a uuid, with their schema.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The keys.
    * @param string $prefix
    *   Their path, a dotted path and a dot; empty at the top.
@@ -380,7 +380,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
    * entries there are being the site's: the value of each, or a key of
    * the structure in each, read off the first entry the site lists.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The map.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|string $each
    *   What each entry is, as DefinitionMetadata::eachOf() reads it.
@@ -430,7 +430,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Translates the references of one map's values, either way.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The keys.
    * @param array $values
    *   Their values.
@@ -586,7 +586,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Keeps each unresolved reference of one map that a write holds nothing for.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The keys.
    * @param array $values
    *   What is written, in storage layout.
@@ -645,7 +645,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
   /**
    * Collects the entities one map's references name.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The keys.
    * @param array $values
    *   Their values, ids.

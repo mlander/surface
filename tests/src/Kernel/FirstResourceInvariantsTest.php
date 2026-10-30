@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -18,14 +18,14 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/testing-a-resource.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class FirstResourceInvariantsTest extends ResourceTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['data_surface_first'];
+  protected static $modules = ['surface_examples_first'];
 
   /**
    * {@inheritdoc}

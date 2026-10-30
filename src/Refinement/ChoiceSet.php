@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Refinement;
+namespace Drupal\surface\Refinement;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 
@@ -22,8 +22,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * what a form offers are different questions, and the second one is
  * answered by the options resolvers, which read live site state as well.
  *
- * @see \Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint
- * @see \Drupal\data_surface\Options\DataSurfaceOptions
+ * @see \Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint
+ * @see \Drupal\surface\Options\SurfaceOptions
  *
  * @internal
  *   The shape of a choice constraint is the constraint's business; this
@@ -65,7 +65,7 @@ final class ChoiceSet {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition to read.
    *
-   * @return \Drupal\data_surface\Refinement\ChoiceSet|null
+   * @return \Drupal\surface\Refinement\ChoiceSet|null
    *   The set, or NULL when the definition names no list of values and
    *   so allows anything its type allows.
    */
@@ -92,7 +92,7 @@ final class ChoiceSet {
    * @param string $name
    *   The constraint plugin ID to read.
    *
-   * @return \Drupal\data_surface\Refinement\ChoiceSet|null
+   * @return \Drupal\surface\Refinement\ChoiceSet|null
    *   The set, or NULL when the definition does not carry that
    *   constraint.
    */
@@ -116,7 +116,7 @@ final class ChoiceSet {
    * @param array $options
    *   The constraint's declared options.
    *
-   * @return \Drupal\data_surface\Refinement\ChoiceSet
+   * @return \Drupal\surface\Refinement\ChoiceSet
    *   The set.
    */
   public static function fromOptions(string $name, array $options): ChoiceSet {
@@ -186,7 +186,7 @@ final class ChoiceSet {
    *   Labels to read from, merged under the ones this set holds; only
    *   those belonging to the given values are kept.
    *
-   * @return \Drupal\data_surface\Refinement\ChoiceSet
+   * @return \Drupal\surface\Refinement\ChoiceSet
    *   The new set.
    */
   public function withValues(array $values, array $labels = []): ChoiceSet {

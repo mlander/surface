@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface_resource_test\Resource\Library\OpeningHoursResource;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface_resource_test\Resource\Library\OpeningHoursResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -19,9 +19,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * fixture to the page's words: what each key draws, what the full schema
  * states and what the pipeline refuses.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RecipesTest extends DataSurfaceKernelTestBase {
+class RecipesTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -31,8 +31,8 @@ class RecipesTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -41,18 +41,18 @@ class RecipesTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Builds the opening hours in their operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function hours(): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function hours(): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build(OpeningHoursResource::class, $resources->operation(OpeningHoursResource::class, 'configure'));
   }
 
@@ -66,7 +66,7 @@ class RecipesTest extends DataSurfaceKernelTestBase {
    *   The refusals, by key, as plain text.
    */
   protected function refusals(array $values): array {
-    $stored = $this->config('data_surface_resource_test.opening_hours')->getRawData();
+    $stored = $this->config('surface_resource_test.opening_hours')->getRawData();
     $accepted = $this->pipeline()->accept($this->hours(), $values, $stored);
     $messages = [];
     foreach ($this->pipeline()->validate($this->hours(), $accepted, $stored) as $violation) {
@@ -95,7 +95,7 @@ class RecipesTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($open['door_code']['#required']);
     $this->assertSame('checkboxes', $open['late_days']['#type']);
 
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema'];
+    $full = $this->container->get('surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema'];
     $this->assertSame('^([01]\d|2[0-3]):[0-5]\d$', $full['properties']['opens']['pattern']);
     $this->assertSame([721, 1439], [$full['properties']['closes']['minimum'], $full['properties']['closes']['maximum']]);
     $this->assertSame('textarea', $full['properties']['notes']['x-surface']['widget']);
@@ -142,7 +142,7 @@ class RecipesTest extends DataSurfaceKernelTestBase {
    */
   public function testTheSchemaIsFullyValidatable(): void {
     $typed = $this->container->get('config.typed');
-    $name = 'data_surface_resource_test.opening_hours';
+    $name = 'surface_resource_test.opening_hours';
     // Written from the resource, it holds nothing translatable, so no
     // language code either.
     $stored = $this->config($name)->getRawData();
@@ -168,7 +168,7 @@ class RecipesTest extends DataSurfaceKernelTestBase {
    * nothing is stored for it.
    */
   public function testKeyLeftOutKeepsWhatIsStored(): void {
-    $this->config('data_surface_resource_test.opening_hours')->set('door_code', '7310')->set('late_days', ['sat'])->save();
+    $this->config('surface_resource_test.opening_hours')->set('door_code', '7310')->set('late_days', ['sat'])->save();
     $this->assertSame([], $this->refusals(['after_hours' => TRUE]), 'Both left out: what is stored stands.');
     $refused = ['door_code' => 'Door code is required.'];
     $this->assertSame($refused, $this->refusals(['after_hours' => TRUE, 'door_code' => '']), 'Sent empty, it is refused.');

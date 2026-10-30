@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface_tool_test\Resource\CabinetResource;
-use Drupal\data_surface_tool_test\Resource\VaultResource;
-use Drupal\data_surface_tool_test\Storage\CabinetStorage;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface_tool_test\Resource\CabinetResource;
+use Drupal\surface_tool_test\Resource\VaultResource;
+use Drupal\surface_tool_test\Storage\CabinetStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -21,9 +21,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Decision: see docs/decisions.md#a-chosen-variant-may-refuse.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class VariantsOfThisResourceTest extends DataSurfaceKernelTestBase {
+class VariantsOfThisResourceTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -35,9 +35,8 @@ class VariantsOfThisResourceTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_tool_test',
+    'surface',
+    'surface_tool_test',
   ];
 
   /**
@@ -57,11 +56,11 @@ class VariantsOfThisResourceTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources
+   * @return \Drupal\surface\ResourceBuild\Resources
    *   The service.
    */
   protected function resources(): Resources {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     return $resources;
   }
@@ -89,7 +88,7 @@ class VariantsOfThisResourceTest extends DataSurfaceKernelTestBase {
    * Tests that only the resource holding the refusing variant is built.
    */
   public function testOnlyTheHoldersAccessBuilds(): void {
-    $this->assertSame([CabinetResource::class => TRUE], $this->container->get('data_surface.resource_registry')->getRefusingVariantHolders());
+    $this->assertSame([CabinetResource::class => TRUE], $this->container->get('surface.resource_registry')->getRefusingVariantHolders());
     $this->assertSame(1, $this->buildsForAccess(CabinetResource::class, 'update'));
     $this->assertSame(0, $this->buildsForAccess(VaultResource::class, 'configure'));
   }

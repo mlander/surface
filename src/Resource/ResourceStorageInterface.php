@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 use Drupal\Core\Session\AccountInterface;
 
@@ -29,7 +29,7 @@ use Drupal\Core\Session\AccountInterface;
  * door answers: each write verb is handed the account it writes as, and
  * the current user is never read here.
  * The engine's pipeline reaches it through
- * \Drupal\data_surface\ResourceBuild\StorageAdapter.
+ * \Drupal\surface\ResourceBuild\StorageAdapter.
  *
  * Decision: see
  * docs/decisions.md#nothing-an-operation-runs-reads-the-request.
@@ -39,7 +39,7 @@ interface ResourceStorageInterface {
   /**
    * Current values, for an edit. Empty for an operation that creates.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where the resource is being asked for.
    *
    * @return array
@@ -55,7 +55,7 @@ interface ResourceStorageInterface {
    * constraints). Must have no side effects: nothing saved, nothing
    * cached that a later load would read.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where the resource is being asked for.
    * @param array $values
    *   The accepted, validated, canonical values, keyed by input key.
@@ -67,7 +67,7 @@ interface ResourceStorageInterface {
    *   What commit() would store, in storage's own layout. A dry run
    *   reports it as it is.
    *
-   * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
+   * @throws \Drupal\surface\Pipeline\StorageViolationsException
    *   When storage would refuse the values, its violations filed under
    *   the input keys that own them.
    */
@@ -76,7 +76,7 @@ interface ResourceStorageInterface {
   /**
    * Writes what prepare() returned.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where the resource is being asked for.
    * @param array $prepared
    *   What prepare() returned for this context.

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\SettlesChildInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SettlesChildInterface;
 
 /**
  * A variant the site lists, built by the build step the first time it is read.
@@ -33,16 +33,16 @@ final class VariantToSettle implements SettlesChildInterface {
   /**
    * The variant, once built.
    */
-  private ?DataSurfaceInterface $surface = NULL;
+  private ?SurfaceInterface $surface = NULL;
 
   /**
    * Constructs a VariantToSettle.
    *
-   * @param \Drupal\data_surface\ResourceBuild\VariantsToSettle $at
+   * @param \Drupal\surface\ResourceBuild\VariantsToSettle $at
    *   Where it sits and the build it was held in.
    * @param string $name
    *   The variant, by the name it is built by.
-   * @param \Drupal\data_surface\Resource\OperationContext|null $context
+   * @param \Drupal\surface\Resource\OperationContext|null $context
    *   The context it is invoked in.
    * @param string|null $locked
    *   Why its access locked it whole, or NULL.
@@ -66,7 +66,7 @@ final class VariantToSettle implements SettlesChildInterface {
   /**
    * {@inheritdoc}
    */
-  public function settle(): DataSurfaceInterface {
+  public function settle(): SurfaceInterface {
     if ($this->surface === NULL) {
       assert($this->context !== NULL);
       $this->surface = $this->at->settle($this->name, $this->context, $this->locked, $this->read);
@@ -78,7 +78,7 @@ final class VariantToSettle implements SettlesChildInterface {
   /**
    * {@inheritdoc}
    */
-  public function settled(): ?DataSurfaceInterface {
+  public function settled(): ?SurfaceInterface {
     return $this->surface;
   }
 

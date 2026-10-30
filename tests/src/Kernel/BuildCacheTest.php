@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\Cache;
-use Drupal\data_surface\Contract\ContractBaselines;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\OperationDefinition;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface\Storage\StorageLayoutInterface;
+use Drupal\surface\Contract\ContractBaselines;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\OperationDefinition;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface\Storage\StorageLayoutInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\user\Entity\Role;
 use Drupal\user\Entity\User;
@@ -34,9 +34,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Decision: see
  * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class BuildCacheTest extends DataSurfaceKernelTestBase {
+class BuildCacheTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -49,21 +49,21 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_examples_workflow',
-    'data_surface_first',
+    'surface',
+    'surface_examples_field',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_examples_workflow',
+    'surface_examples_first',
     'block',
     'path_alias',
-    'data_surface_component_block',
-    'data_surface_block',
-    'data_surface_examples_keys',
+    'surface_examples_component_block',
+    'surface_examples_block',
+    'surface_examples_keys',
     'text',
     'filter',
     'node',
-    'data_surface_examples_references',
+    'surface_examples_references',
   ];
 
   /**
@@ -76,11 +76,11 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('path_alias');
     $this->installSchema('node', ['node_access']);
     $this->installConfig([
-      'data_surface_examples',
-      'data_surface_first',
+      'surface_examples',
+      'surface_examples_first',
       'node',
       'filter',
-      'data_surface_examples_references',
+      'surface_examples_references',
     ]);
     $this->container->get('theme_installer')->install(['stark']);
     User::create(['uid' => 0, 'name' => '', 'status' => 0])->save();
@@ -92,11 +92,11 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources
+   * @return \Drupal\surface\ResourceBuild\Resources
    *   The service.
    */
   protected function resources(): Resources {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     return $resources;
   }
@@ -106,7 +106,7 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
    *
    * The sample is what it starts from, so every key's refiners run.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The build.
    * @param string $id
    *   Its resource's id.
@@ -116,8 +116,8 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
    * @return string
    *   Both documents, as JSON.
    */
-  protected function emitted(DataSurfaceInterface $built, string $id, string $operation): string {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+  protected function emitted(SurfaceInterface $built, string $id, string $operation): string {
+    $emitter = $this->container->get('surface.contract_emitter');
     return (string) json_encode([
       $emitter->emitFull($built, $id, $operation, $operation)->document,
       $emitter->emit($built, $built->getDefaultValues(), $id, $operation, $operation)->document,
@@ -128,10 +128,10 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
    * Tests every shipped operation's build reads back equal to the one kept.
    */
   public function testEverySealedBuildReadsBackEqual(): void {
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $resources = $this->resources();
-    $bin = $this->container->get('cache.data_surface_build');
-    $budget = $this->container->get('data_surface.site_list_budget');
+    $bin = $this->container->get('cache.surface_build');
+    $budget = $this->container->get('surface.site_list_budget');
     // What a request registers by building, which a later one has not.
     $read = new \ReflectionProperty(ResourceRegistry::class, 'read');
     $checked = [];
@@ -152,7 +152,7 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
         }
         // With the site's limit, and with every list the site decides
         // stated, which builds every variant.
-        $all = fn (DataSurfaceInterface $built): string => $budget->withLimit(1000, fn (): string => $this->emitted($built, $definition->id, (string) $operation));
+        $all = fn (SurfaceInterface $built): string => $budget->withLimit(1000, fn (): string => $this->emitted($built, $definition->id, (string) $operation));
         $documents = [$this->emitted($fresh, $definition->id, (string) $operation), $all($fresh)];
         // A later request: nothing built, and nothing a build read from a
         // schema registered, so each variant is built from what was stored
@@ -206,10 +206,10 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
     $built = $resources->buildDeclared('event.spotlight', $context);
     $key = (new \ReflectionMethod(Resources::class, 'memoKey'))->invoke($resources, 'event.spotlight', $context, TRUE, TRUE);
     $cid = (new \ReflectionMethod(Resources::class, 'cacheId'))->invoke($resources, 'event.spotlight', $key);
-    $kept = $this->container->get('cache.data_surface_build')->get($cid);
+    $kept = $this->container->get('cache.surface_build')->get($cid);
     $this->assertNotFalse($kept, 'The spotlight is kept.');
     $tags = $kept->tags;
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $expected = [
       // What the build read: the providers of what the site lists, the
       // site's defaults.
@@ -218,16 +218,16 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
       ...$registry->getIndexCacheTags(),
       ...$registry->getDefinition('event.spotlight')->cacheTags,
       'config:core.extension',
-      'config:data_surface.settings',
-      'config:data_surface.defaults',
+      'config:surface.settings',
+      'config:surface.defaults',
     ];
     foreach ($expected as $tag) {
       $this->assertContains($tag, $tags);
     }
     $dropping = [
       'config:core.extension',
-      'config:data_surface.settings',
-      'config:data_surface.defaults',
+      'config:surface.settings',
+      'config:surface.defaults',
       ...$built->getCacheTags(),
     ];
     foreach ($dropping as $tag) {
@@ -263,7 +263,7 @@ class BuildCacheTest extends DataSurfaceKernelTestBase {
       }
 
     };
-    $surface = new DataSurface(new DefinitionMap([]), thirdPartyLayouts: ['data_surface_test' => $layout]);
+    $surface = new Surface(new DefinitionMap([]), thirdPartyLayouts: ['surface_test' => $layout]);
     $keep = new \ReflectionMethod(Resources::class, 'keep');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessageMatches('/^The first\.newsletter resource, built for its "configure" operation, cannot be kept in the build cache: Serialization of \'[^\']+@anonymous\' is not allowed\./');

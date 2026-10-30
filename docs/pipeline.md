@@ -6,7 +6,7 @@ you call the pipeline yourself, or need to know at which step a value
 is refused. [A value sent in](introduction/17-a-value-sent-in.md)
 introduces the steps in plain words.
 
-`data_surface.pipeline` (`Pipeline\DataSurfacePipelineInterface`) is the
+`surface.pipeline` (`Pipeline\SurfacePipelineInterface`) is the
 one entry point from raw values to stored values. Whether values arrive
 through Form API, a service endpoint, a config action, or an agent, they
 pass the same stages.
@@ -82,9 +82,9 @@ writing it by hand is the way to get it wrong:
 every structure that says nothing would silently close its host's door:
 
 ```php
-use Drupal\data_surface\DataSurfaceAccess;
+use Drupal\surface\SurfaceAccess;
 
-$access = DataSurfaceAccess::gate(
+$access = SurfaceAccess::gate(
   $field->access('update', $account, TRUE),   // What the host decided.
   $item->surfaceAccess(account: $account),    // What the structure says.
 );
@@ -103,7 +103,7 @@ account is turned away by the route and let through by the payload:
 
 ```php
 $result = $pipeline->submit($surface, $values, $storage,
-  access: DataSurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
+  access: SurfaceAccess::decisive($access, 'The resource this form configures may not be written by this account.'),
 );
 ```
 
@@ -126,7 +126,7 @@ is `submit()`.
 ### accept
 
 ```php
-public function accept(DataSurfaceInterface $surface, array $input, array $current = []): array;
+public function accept(SurfaceInterface $surface, array $input, array $current = []): array;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -177,7 +177,7 @@ reference for this page.
 ### validate
 
 ```php
-public function validate(DataSurfaceInterface $surface, array $values, array $current = []): ViolationSet;
+public function validate(SurfaceInterface $surface, array $values, array $current = []): ViolationSet;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -250,7 +250,7 @@ the same stored values it extracted against.
 ### conformOutput
 
 ```php
-public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet;
+public function conformOutput(SurfaceInterface $surface, array $output): ViolationSet;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -274,7 +274,7 @@ emitted array to what the data surface advertised.
 ### prepare
 
 ```php
-public function prepare(DataSurfaceInterface $surface, array $values, DataSurfaceStorageInterface $storage): PreparedValues;
+public function prepare(SurfaceInterface $surface, array $values, SurfaceStorageInterface $storage): PreparedValues;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -288,7 +288,7 @@ nothing stored.
 ### commit
 
 ```php
-public function commit(PreparedValues $prepared, DataSurfaceStorageInterface $storage): void;
+public function commit(PreparedValues $prepared, SurfaceStorageInterface $storage): void;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -298,7 +298,7 @@ Writes the artifact. The only stage with side effects.
 ### submit
 
 ```php
-public function submit(DataSurfaceInterface $surface, array $input, DataSurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): DataSurfaceResult;
+public function submit(SurfaceInterface $surface, array $input, SurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): SurfaceResult;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -308,12 +308,12 @@ caller reads one result rather than orchestrating five calls. The
 storage is both where current values are read from and where the result
 is written.
 
-`DataSurfaceResult` carries `values`, `violations`, the `prepared`
+`SurfaceResult` carries `values`, `violations`, the `prepared`
 artifact when the values were valid, `committed`, the `access` answer
 the run was gated by, `notes` and `changes`. `isValid()` is the question
 most callers ask.
 
-Every door answers a run in one shape, `DataSurfaceResult::document()`
+Every door answers a run in one shape, `SurfaceResult::document()`
 (`Pipeline\ResultDocument`): `{ok, committed, changed, changes, values,
 violations, notes, stale}`, each key always present, `values` as the
 door may return them (what `outbound()` projected), each violation and
@@ -349,13 +349,13 @@ caller asks
 for the context it is running and hands the answer over:
 
 ```php
-$resources = \Drupal::service('data_surface.resources');
+$resources = \Drupal::service('surface.resources');
 $context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $result = $pipeline->submit(
   $resources->build(NodeTypeResource::class, $context),
   $values,
   $resources->storage(NodeTypeResource::class, $context),
-  access: DataSurfaceAccess::decisive($resources->access(NodeTypeResource::class, $context)),
+  access: SurfaceAccess::decisive($resources->access(NodeTypeResource::class, $context)),
 );
 ```
 
@@ -394,7 +394,7 @@ real as a refusal's.
 ### outbound
 
 ```php
-public function outbound(DataSurfaceInterface $surface, array $values): array;
+public function outbound(SurfaceInterface $surface, array $values): array;
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
@@ -432,10 +432,10 @@ The resource or structure answers; the caller decides when to ask. The
 rule that keeps the two halves honest is that nothing spells the question
 twice:
 
-- **`data_surface_demo_node_type`** states its gate once: the
+- **`surface_examples_node_type`** states its gate once: the
   operations' permission on `NodeTypeResource`, and the node type
   entity's own create or update answer in `NodeTypeAccess`. The routes'
-  `_data_surface_operation_access` requirement, the operation link in
+  `_surface_operation_access` requirement, the operation link in
   the content type listing, the operation form's own write and the
   generated tools all read `ResourcesInterface::access()` in the same
   operation.
@@ -458,7 +458,7 @@ twice:
 ## Violations are objects
 
 Every message in a violation is a `TranslatableMarkup`, and it stays one
-the whole way out: through `DataSurfaceResult`, through
+the whole way out: through `SurfaceResult`, through
 `FormStateInterface::setError()`, into a caller's own report. Why, how a
 placeholder is filled in, and the three places a message becomes text
 are in [Value semantics](semantics.md#violation-messages-are-objects).
@@ -475,7 +475,7 @@ are in [Value semantics](semantics.md#violation-messages-are-objects).
 `UnknownKeysException` and `StorageViolationsException` render their
 message through `Pipeline\ViolationSummary`, which names the first five
 entries and counts the rest; the full list is still on the exception.
-`DataSurfaceConfigurationTrait::setConfiguration()` throws its refusal
+`SurfaceConfigurationTrait::setConfiguration()` throws its refusal
 the same way.
 
 `submit()` catches all four and turns them into ordinary violations on
@@ -497,8 +497,8 @@ in `commit()`. The storage owns the transform; the host owns the write
 ## Calling it without a form
 
 ```php
-$result = \Drupal::service('data_surface.pipeline')->submit(
-  $block->getDataSurface(),
+$result = \Drupal::service('surface.pipeline')->submit(
+  $block->getSurface(),
   ['headline' => 'Latest', 'limit' => '5'],
   new PluginConfigurationStorage($block),
 );

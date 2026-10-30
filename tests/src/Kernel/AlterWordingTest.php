@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_resource_test\OutsideDiscovery\EastWordingAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\NorthWordingAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\SouthWordingAlter;
-use Drupal\data_surface_resource_test\Resource\Relay\PlainRelayResource;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_resource_test\OutsideDiscovery\EastWordingAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\NorthWordingAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\SouthWordingAlter;
+use Drupal\surface_resource_test\Resource\Relay\PlainRelayResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -26,9 +26,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-key-may-stand-for-another-at-use
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class AlterWordingTest extends DataSurfaceKernelTestBase {
+class AlterWordingTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -38,8 +38,8 @@ class AlterWordingTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -62,11 +62,11 @@ class AlterWordingTest extends DataSurfaceKernelTestBase {
    */
   protected function token(array $alters): ?DataDefinitionInterface {
     $registry = new ResourceRegistry([
-      'resources' => [PlainRelayResource::class => 'data_surface_resource_test'],
-      'operations' => [PlainRelayResource::class => 'data_surface_resource_test'],
+      'resources' => [PlainRelayResource::class => 'surface_resource_test'],
+      'operations' => [PlainRelayResource::class => 'surface_resource_test'],
       'alters' => $alters,
     ], $this->container->get('cache.discovery'));
-    $resources = $this->container->get('data_surface.resources')->withRegistry($registry, $this->container->get('class_resolver'));
+    $resources = $this->container->get('surface.resources')->withRegistry($registry, $this->container->get('class_resolver'));
     return $resources->buildOperation(PlainRelayResource::class, 'configure')->getDefinition('token');
   }
 

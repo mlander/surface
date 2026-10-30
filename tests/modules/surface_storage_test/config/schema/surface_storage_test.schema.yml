@@ -1,0 +1,80 @@
+# Core expects every third party to describe its own settings, under the
+# config name it stores them in. The config entity storage test mounts one
+# setting onto the test configuration entity, so this is what makes that
+# mount legal as far as the config schema is concerned.
+config_test.dynamic.*.third_party.surface_storage_test:
+  type: mapping
+  label: 'Data surface target test settings'
+  mapping:
+    note:
+      type: string
+      label: 'Note'
+
+# Two simple config objects for ConfigObjectStorage: one holding a
+# translatable value, so core asks for a language code, and one holding
+# none. The first mounts other modules' settings the way a settings
+# resource does: a sequence whose type is named by the module key, each
+# module declaring its own part.
+surface_storage_test.translatable:
+  type: config_object
+  label: 'Translatable settings'
+  mapping:
+    greeting:
+      type: label
+      label: 'Greeting'
+    limit:
+      type: integer
+      label: 'Limit'
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: surface_storage_test.translatable.third_party.[%key]
+
+surface_storage_test.translatable.third_party.surface_storage_test:
+  type: mapping
+  label: 'Data surface target test settings'
+  mapping:
+    note:
+      type: string
+      label: 'Note'
+
+surface_storage_test.plain:
+  type: config_object
+  label: 'Plain settings'
+  mapping:
+    limit:
+      type: integer
+      label: 'Limit'
+
+# A fully validatable object keeping the limit under a path, beside a
+# note no resource declares, for ConfigObjectStorage's STORED_AT.
+surface_storage_test.nested:
+  type: config_object
+  label: 'Nested settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    outer:
+      type: mapping
+      label: 'Outer'
+      mapping:
+        inner:
+          type: mapping
+          label: 'Inner'
+          mapping:
+            limit:
+              type: integer
+              label: 'Limit'
+              constraints:
+                Range:
+                  min: 0
+                  max: 10
+            note:
+              type: string
+              label: 'Note'
+    title:
+      type: string
+      label: 'Title'
+      nullable: true

@@ -36,8 +36,6 @@ final class TeaserBadgeAlter implements AltersInputsInterface {
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 The teaser block and its structure do not change. Every door now offers
 the badge, and refuses a `limit` above 20 while a badge is set. The
 module saves a key an alter adds under `third_party_settings` and the

@@ -1,8 +1,0 @@
-name: Data Surface Test
-type: module
-description: 'Test support for data_surface: engine refiners and plugin hosts with their structures.'
-package: Testing
-version: VERSION
-core_version_requirement: ^11.3 || ^12
-dependencies:
-  - data_surface:data_surface

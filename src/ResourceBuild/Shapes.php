@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
@@ -10,12 +10,12 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\ConstraintMessages;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface\Resource\Attribute\Shape;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\surface\ConstraintMessages;
+use Drupal\surface\Surface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\AltersInputsInterface;
+use Drupal\surface\Resource\Attribute\Shape;
+use Drupal\surface\Resource\ShapeInterface;
 
 /**
  * Turns a shape into the definition a key declared with it starts from.
@@ -36,7 +36,7 @@ final class Shapes {
   /**
    * Constructs the shape resolver.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found: each shape's id and alters.
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
    *   What returns each alter as the autowired service discovery
@@ -165,7 +165,7 @@ final class Shapes {
       }
       $definition->addConstraint((string) $name, $options);
     }
-    $declared = DataSurface::deepClone($definition);
+    $declared = Surface::deepClone($definition);
     DefinitionMetadata::setConfigType($definition, $type, $declared);
     return $definition;
   }
@@ -236,9 +236,9 @@ final class Shapes {
     // Both copies carry a message written with t() as its source, the
     // string core's validator translates.
     ConstraintMessages::sources($shape);
-    $key = DataSurface::deepClone($shape);
+    $key = Surface::deepClone($shape);
     assert($key instanceof DataDefinition);
-    DefinitionMetadata::setShape($key, $id, DataSurface::deepClone($shape));
+    DefinitionMetadata::setShape($key, $id, Surface::deepClone($shape));
     return $key;
   }
 

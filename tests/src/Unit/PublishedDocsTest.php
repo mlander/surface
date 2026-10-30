@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
  * relative link to a file outside it is not found there; such a link names
  * the file on GitHub instead.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 final class PublishedDocsTest extends UnitTestCase {
 
   /**
@@ -76,7 +76,7 @@ final class PublishedDocsTest extends UnitTestCase {
         }
       }
     }
-    $this->assertSame([], $outside, 'Link a file outside docs/ by its GitHub URL, https://github.com/mlander/data_surface/blob/main/<path>.');
+    $this->assertSame([], $outside, 'Link a file outside docs/ by its GitHub URL, https://github.com/mlander/surface/blob/main/<path>.');
   }
 
   /**

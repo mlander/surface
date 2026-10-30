@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -20,7 +20,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#an-element-hints-and-the-rule-speaks
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ErrorsNameTheirFieldTest extends BrowserTestBase {
 
@@ -28,7 +28,7 @@ class ErrorsNameTheirFieldTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
+    'surface_examples',
   ];
 
   /**
@@ -54,14 +54,14 @@ class ErrorsNameTheirFieldTest extends BrowserTestBase {
    */
   public function testErrorSummaryNamesTheField(): void {
     $assert = $this->assertSession();
-    $before = $this->config('data_surface_examples.registration_step1')->getRawData();
+    $before = $this->config('surface_examples.registration_step1')->getRawData();
     $this->drupalGet('surface-examples/1');
     $this->submitForm(['surface[capacity]' => '5000', 'surface[title]' => ''], 'Save');
     $assert->statusMessageContains('Capacity: ' . self::MESSAGE, 'error');
     // A message that already begins with the title is not named twice.
     $assert->pageTextNotContains('Event title: Event title');
     $assert->elementAttributeContains('css', 'input[name="surface[capacity]"]', 'aria-invalid', 'true');
-    $this->assertSame($before, $this->config('data_surface_examples.registration_step1')->getRawData());
+    $this->assertSame($before, $this->config('surface_examples.registration_step1')->getRawData());
   }
 
   /**

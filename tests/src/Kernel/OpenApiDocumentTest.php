@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\Cache;
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface\ResourceBuild\ResourceCatalog;
-use Drupal\data_surface_openapi\OpenApiDescription;
-use Drupal\data_surface_openapi\OpenApiDocument;
-use Drupal\data_surface_openapi\SchemaComponents;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\ResourceBuild\ResourceCatalog;
+use Drupal\surface_openapi\OpenApiDescription;
+use Drupal\surface_openapi\OpenApiDocument;
+use Drupal\surface_openapi\SchemaComponents;
 use Drupal\user\Entity\Role;
 use Opis\JsonSchema\Errors\ErrorFormatter;
 use Opis\JsonSchema\CompliantValidator;
@@ -41,9 +41,9 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * @see docs/decisions.md#an-openapi-document-is-one-more-door
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
+class OpenApiDocumentTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
 
@@ -53,13 +53,13 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_react',
-    'data_surface_openapi',
-    'data_surface_first',
-    'data_surface_tool_test',
+    'surface',
+    'surface_react',
+    'surface_openapi',
+    'surface_examples_first',
+    'surface_tool_test',
     'block',
-    'data_surface_block',
+    'surface_examples_block',
   ];
 
   /**
@@ -94,7 +94,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['system', 'data_surface_first']);
+    $this->installConfig(['system', 'surface_examples_first']);
     $this->config('system.site')->set('name', 'Test site')->save();
     $this->container->get('router.builder')->rebuild();
   }
@@ -102,17 +102,17 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the document for a request to example.com.
    *
-   * @return \Drupal\data_surface_openapi\OpenApiDescription
+   * @return \Drupal\surface_openapi\OpenApiDescription
    *   The document.
    */
   protected function description(): OpenApiDescription {
-    return $this->container->get('data_surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'));
+    return $this->container->get('surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'));
   }
 
   /**
    * Gets the document as a client decodes it.
    *
-   * @param \Drupal\data_surface_openapi\OpenApiDescription|null $description
+   * @param \Drupal\surface_openapi\OpenApiDescription|null $description
    *   The document, or NULL to build it.
    *
    * @return array
@@ -198,15 +198,15 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $description = $this->description();
     $document = $this->decoded($description);
     $schemas = $document['components']['schemas'];
-    $registry = $this->container->get('data_surface.resource_registry');
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $registry = $this->container->get('surface.resource_registry');
+    $emitter = $this->container->get('surface.contract_emitter');
     $this->assertArrayHasKey('first.newsletter:configure', $description->operations);
     $this->assertArrayHasKey('tool_test.logbook:inspect', $description->operations);
     foreach ($description->operations as $id => $entry) {
       $name = $registry->getDefinition($entry['resource'])->name();
       $operation = $registry->getOperation($name, $entry['operation']);
       // Built for no account, and knowing nothing of a subject.
-      $built = $this->container->get('data_surface_openapi.document')->neutral($registry->getDefinition($name), $operation);
+      $built = $this->container->get('surface_openapi.document')->neutral($registry->getDefinition($name), $operation);
       $full = json_decode((string) json_encode($emitter->emitFull($built, $entry['resource'], $operation->id, $operation->label, operation: $operation->facts())->document, JSON_THROW_ON_ERROR), TRUE);
       $emitted = $full['schema'];
       $this->assertSame(isset($full['outputs']), $entry['outputs'] !== NULL, $id . ': an outputs component where outputs are declared.');
@@ -448,7 +448,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined
    */
   public function testListPastTheLimitIsFetchedOrAskedAtTheSchemaPath(): void {
-    $this->config('data_surface.settings')->set('site_list_limit', 2)->save();
+    $this->config('surface.settings')->set('site_list_limit', 2)->save();
     $document = $this->decoded();
     $settings = $document['components']['schemas']['block.placement.create']['properties']['settings'];
     $this->assertSame(['fetch' => '?choose=/settings={value}'], $settings['x-surface']['deferred']);
@@ -466,14 +466,14 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
       $choose[0]['explode'],
       $choose[0]['schema']['type'],
     ]);
-    $this->assertStringContainsString('choose=/settings=data_surface_component&choose=/settings/props=card', $choose[0]['description']);
+    $this->assertStringContainsString('choose=/settings=surface_component&choose=/settings/props=card', $choose[0]['description']);
     $this->assertArrayHasKey('304', $schema['get']['responses']);
     $this->assertArrayHasKey('400', $schema['get']['responses']);
     $this->assertArrayHasKey('ETag', $schema['get']['responses']['200']['headers']);
     // Every schema path describes it, an item's too.
     $this->assertContains('choose', array_column($document['paths']['/surface-api/block.placement/{id}/schema']['get']['parameters'], 'name'));
     $this->assertSame([], array_filter(array_keys($document['paths']), static fn (string $path): bool => str_contains($path, ':schema')));
-    $this->assertContains('config:data_surface.settings', $this->description()->cacheability->getCacheTags());
+    $this->assertContains('config:surface.settings', $this->description()->cacheability->getCacheTags());
   }
 
   /**
@@ -488,8 +488,8 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection
    */
   public function testTheListingIsGetOnTheCollectionAndTheReorderIsPatch(): void {
-    $this->enableModules(['field', 'serialization', 'tool', 'data_surface_tool', 'data_surface_examples']);
-    $this->installConfig(['data_surface_examples']);
+    $this->enableModules(['field', 'serialization', 'tool', 'surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->container->get('router.builder')->rebuild();
     $paths = $this->decoded()['paths'];
     $collection = '/surface-api/event.venue';
@@ -538,8 +538,8 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
    * @see docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources
    */
   public function testComputedKeyIsReadOnlyAndSentByNoExample(): void {
-    $this->enableModules(['field', 'serialization', 'tool', 'data_surface_tool', 'data_surface_examples']);
-    $this->installConfig(['data_surface_examples']);
+    $this->enableModules(['field', 'serialization', 'tool', 'surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->container->get('router.builder')->rebuild();
     $document = $this->decoded();
     foreach (['event.venue.create', 'event.venue.update', 'event.venue.update' . SchemaComponents::PATCH] as $component) {
@@ -656,8 +656,8 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
    * requiring nothing.
    */
   public function testPatchOnlyWhereNeeded(): void {
-    $this->enableModules(['field', 'serialization', 'tool', 'data_surface_tool', 'data_surface_examples']);
-    $this->installConfig(['data_surface_examples']);
+    $this->enableModules(['field', 'serialization', 'tool', 'surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->container->get('router.builder')->rebuild();
     $description = $this->description();
     $schemas = $this->decoded($description)['components']['schemas'];
@@ -712,12 +712,12 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $outputs = $document['components']['schemas'][$page['outputs']];
     $this->assertSame(['id'], array_keys($outputs['properties']));
 
-    $registry = $this->container->get('data_surface.resource_registry');
-    $resources = $this->container->get('data_surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
     $name = $registry->getDefinition('entity.content:node.page')->name();
     $operation = $registry->getOperation($name, 'create');
     $built = $resources->buildDeclared($name, $resources->operation($name, 'create'));
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($built, 'entity.content:node.page', 'create', $operation->label, operation: $operation->facts())->document;
+    $full = $this->container->get('surface.contract_emitter')->emitFull($built, 'entity.content:node.page', 'create', $operation->label, operation: $operation->facts())->document;
     $this->assertSame(json_encode($full['outputs']), json_encode($outputs), 'The outputs, byte for byte.');
 
     $paths = $document['paths'];
@@ -771,14 +771,14 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['get', 'post'], array_keys($document['paths']['/surface-api/entity.content:node.page/{id}/schema']));
     $this->assertSame(['get', 'post'], array_keys($document['paths']['/surface-api/entity.content:node.page']), 'The collection: the create\'s envelope and the create.');
     // Every operation that can be asked on its own is described.
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     foreach ($registry->getIndex() as $name => $indexed) {
       if (!$indexed['stored']) {
         continue;
       }
       foreach ($registry->getOperations($name) as $operation) {
         $definition = $registry->getDefinition($name);
-        if (ResourceCatalog::standalone($definition, $operation, []) && $this->container->get('data_surface.resource_plugins')->usedBy($name) === []) {
+        if (ResourceCatalog::standalone($definition, $operation, []) && $this->container->get('surface.resource_plugins')->usedBy($name) === []) {
           $this->assertArrayHasKey($definition->id . ':' . $operation->id, $description->operations);
         }
       }
@@ -792,7 +792,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     $document = $this->decoded();
     $submit = $document['paths']['/surface-api/first.newsletter']['patch'];
     $this->assertSame([[OpenApiDocument::SESSION => []]], $submit['security'], 'The session cookie, and no basic auth while it is off.');
-    $this->assertSame('administer data_surface_first', $submit['x-drupal-permission']);
+    $this->assertSame('administer surface_examples_first', $submit['x-drupal-permission']);
     $scheme = $document['components']['securitySchemes'][OpenApiDocument::SESSION];
     $this->assertSame(['apiKey', 'cookie'], [$scheme['type'], $scheme['in']]);
     $this->assertSame($this->container->get('session_configuration')->getOptions(Request::create('https://example.com/'))['name'], $scheme['name']);
@@ -800,7 +800,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
 
     // The anonymous role holding the permission makes the requirement
     // optional; basic auth on adds its scheme.
-    Role::create(['id' => 'anonymous', 'label' => 'Anonymous'])->grantPermission('administer data_surface_first')->save();
+    Role::create(['id' => 'anonymous', 'label' => 'Anonymous'])->grantPermission('administer surface_examples_first')->save();
     $this->enableModules(['basic_auth']);
     $document = $this->decoded();
     $submit = $document['paths']['/surface-api/first.newsletter']['patch'];
@@ -816,7 +816,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
    */
   public function testCacheabilityCarriesDiscoveryTags(): void {
     $description = $this->description();
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $tags = $description->getCacheTags();
     foreach ($registry->getIndexCacheTags() as $tag) {
       $this->assertContains($tag, $tags, 'What decides which resources there are.');
@@ -836,7 +836,7 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
   /**
    * Tests the request examples: the declared defaults, valid, and pinned.
    *
-   * Run with DATA_SURFACE_OPENAPI_EXAMPLES_WRITE=1 to write the fixture
+   * Run with SURFACE_OPENAPI_EXAMPLES_WRITE=1 to write the fixture
    * after an accepted change.
    */
   public function testTheExamplesAreTheDeclaredDefaults(): void {
@@ -863,12 +863,12 @@ class OpenApiDocumentTest extends DataSurfaceKernelTestBase {
     ksort($examples);
     $written = json_encode($examples, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n";
     $fixture = $this->moduleRoot() . '/' . self::FIXTURES . '/examples.json';
-    if (getenv('DATA_SURFACE_OPENAPI_EXAMPLES_WRITE')) {
+    if (getenv('SURFACE_OPENAPI_EXAMPLES_WRITE')) {
       file_put_contents($fixture, $written);
       $this->markTestSkipped('examples.json written.');
     }
     $this->assertFileExists($fixture);
-    $this->assertSame((string) file_get_contents($fixture), $written, 'The submit examples moved. Run this test with DATA_SURFACE_OPENAPI_EXAMPLES_WRITE=1 after an accepted change, and commit what it writes.');
+    $this->assertSame((string) file_get_contents($fixture), $written, 'The submit examples moved. Run this test with SURFACE_OPENAPI_EXAMPLES_WRITE=1 after an accepted change, and commit what it writes.');
   }
 
 }

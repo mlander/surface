@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * A provider of variants whose every variant is a structure its code names.
@@ -18,7 +18,7 @@ namespace Drupal\data_surface\Resource;
  * structure from structures(). It refuses an entry these do not name, and
  * one that names a schema or a structure of its own.
  *
- * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator
+ * @see \Drupal\surface\Storage\ConfigSchemaGenerator
  * @see docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter
  */
 interface ClosedSiteListInterface extends SiteListInterface {
@@ -26,7 +26,7 @@ interface ClosedSiteListInterface extends SiteListInterface {
   /**
    * Names every structure the provider may list.
    *
-   * @return array<string, class-string<\Drupal\data_surface\Resource\StructureInterface>>
+   * @return array<string, class-string<\Drupal\surface\Resource\StructureInterface>>
    *   Each structure's class, by the value of the deciding key that
    *   chooses it, in the order they are offered.
    */

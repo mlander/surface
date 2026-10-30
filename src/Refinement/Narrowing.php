@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Refinement;
+namespace Drupal\surface\Refinement;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -67,7 +67,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * told about, losing one would refuse a key everybody was — and every
  * property is held to this same table, as is a list's item definition.
  *
- * @see \Drupal\data_surface\DataSurfaceInterface::refine()
+ * @see \Drupal\surface\SurfaceInterface::refine()
  */
 final class Narrowing {
 

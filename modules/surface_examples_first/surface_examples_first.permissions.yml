@@ -1,0 +1,3 @@
+administer surface_examples_first:
+  title: 'Configure the newsletter and the store location'
+  restrict access: true

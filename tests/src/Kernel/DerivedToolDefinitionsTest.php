@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Access\AccessResultReasonInterface;
@@ -11,7 +11,7 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
+use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
 use Drupal\tool\TypedData\InputDefinitionInterface;
@@ -28,13 +28,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Yaml::encode(), which copies every constraint's options and refuses an
  * object: a LabeledChoice's TranslatableMarkup labels on the node type's
  * preview mode and on the extras' deadline unit broke the page for
- * data_surface:node.type:create. And a module installed after the tool
+ * surface:node.type:create. And a module installed after the tool
  * definitions were cached has to have its resources' tools discovered
  * without anyone clearing a plugin cache by hand.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
+class DerivedToolDefinitionsTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -52,13 +52,13 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     'serialization',
     'tool',
     'tool_explorer',
-    'data_surface',
-    'data_surface_address',
-    'data_surface_demo',
-    'data_surface_demo_extras',
-    'data_surface_demo_node_type',
-    'data_surface_resource_test',
-    'data_surface_tool',
+    'surface',
+    'surface_examples_address',
+    'surface_examples_plugins',
+    'surface_examples_extras',
+    'surface_examples_node_type',
+    'surface_resource_test',
+    'surface_examples_field',
   ];
 
   /**
@@ -86,13 +86,13 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
    * Lists the derived tools' ids.
    *
    * @return list<string>
-   *   Every `data_surface:<id>:<operation>` tool and every read tool
-   *   beside one, `data_surface:<id>:<operation>:read`, sorted.
+   *   Every `surface:<id>:<operation>` tool and every read tool
+   *   beside one, `surface:<id>:<operation>:read`, sorted.
    */
   protected function derivedIds(): array {
     $ids = array_values(array_filter(
       array_keys($this->toolManager()->getDefinitions()),
-      static fn (string $id): bool => str_starts_with($id, 'data_surface:') && (substr_count($id, ':') === 2 || str_ends_with($id, ':read')),
+      static fn (string $id): bool => str_starts_with($id, 'surface:') && (substr_count($id, ':') === 2 || str_ends_with($id, ':read')),
     ));
     sort($ids);
     return $ids;
@@ -135,17 +135,17 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
    * and output, at any depth, is a scalar or an array of them.
    */
   public function testExplorerShowsEveryDerivedTool(): void {
-    $this->container->get('module_installer')->install(['data_surface_examples', 'data_surface_examples_compliance']);
+    $this->container->get('module_installer')->install(['surface_examples', 'surface_examples_compliance']);
     $ids = $this->derivedIds();
     // The tools that carry what broke, so this cannot pass by having
     // nothing to look at: the node type's add, built in its real
     // context with the extras' LabeledChoice units, and the examples.
-    $this->assertContains('data_surface:node.type:create', $ids);
-    $this->assertContains('data_surface:node.type:update', $ids);
-    $this->assertContains('data_surface:registration.step3:configure', $ids);
-    $this->assertContains('data_surface:field.instance:update', $ids);
-    $this->assertContains('data_surface:registration.step3:configure:read', $ids);
-    $this->assertContains('data_surface:field.instance:update:read', $ids);
+    $this->assertContains('surface:node.type:create', $ids);
+    $this->assertContains('surface:node.type:update', $ids);
+    $this->assertContains('surface:registration.step3:configure', $ids);
+    $this->assertContains('surface:field.instance:update', $ids);
+    $this->assertContains('surface:registration.step3:configure:read', $ids);
+    $this->assertContains('surface:field.instance:update:read', $ids);
 
     $explorer = $this->explorer();
     foreach ($ids as $id) {
@@ -166,7 +166,7 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
     }
 
     // The labels still say what they said, as strings.
-    $add = $this->toolManager()->getDefinition('data_surface:node.type:create');
+    $add = $this->toolManager()->getDefinition('surface:node.type:create');
     assert($add instanceof ToolDefinition);
     $values = $add->getInputDefinition('values');
     $this->assertInstanceOf(MapInputDefinition::class, $values);
@@ -183,46 +183,46 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
    */
   public function testInstalledModuleResourcesBecomeTools(): void {
     $before = $this->derivedIds();
-    $this->assertContains('data_surface:node.type:create', $before);
-    $this->assertNotContains('data_surface:registration.step3:configure', $before);
+    $this->assertContains('surface:node.type:create', $before);
+    $this->assertNotContains('surface:registration.step3:configure', $before);
     $this->assertNotFalse($this->container->get('cache.discovery')->get('tool_plugins'));
 
-    $this->container->get('module_installer')->install(['data_surface_examples']);
+    $this->container->get('module_installer')->install(['surface_examples']);
 
     $after = $this->derivedIds();
     $this->assertSame([
-      'data_surface:event.bulletin:configure',
-      'data_surface:event.bulletin:configure:read',
-      'data_surface:event.desk:configure',
-      'data_surface:event.desk:configure:read',
-      'data_surface:event.doors:configure',
-      'data_surface:event.doors:configure:read',
-      'data_surface:event.mailer:configure',
-      'data_surface:event.mailer:configure:read',
-      'data_surface:event.press:configure',
-      'data_surface:event.press:configure:read',
-      'data_surface:event.program:check',
-      'data_surface:event.program:configure',
-      'data_surface:event.program:configure:read',
-      'data_surface:event.sales:configure',
-      'data_surface:event.sales:configure:read',
-      'data_surface:event.spotlight:configure',
-      'data_surface:event.spotlight:configure:read',
-      'data_surface:event.venue:create',
-      'data_surface:event.venue:delete',
-      'data_surface:event.venue:list',
-      'data_surface:event.venue:reorder',
-      'data_surface:event.venue:reorder:read',
-      'data_surface:event.venue:update',
-      'data_surface:event.venue:update:read',
-      'data_surface:event.webhook:configure',
-      'data_surface:event.webhook:configure:read',
-      'data_surface:registration.step1:configure',
-      'data_surface:registration.step1:configure:read',
-      'data_surface:registration.step2:configure',
-      'data_surface:registration.step2:configure:read',
-      'data_surface:registration.step3:configure',
-      'data_surface:registration.step3:configure:read',
+      'surface:event.bulletin:configure',
+      'surface:event.bulletin:configure:read',
+      'surface:event.desk:configure',
+      'surface:event.desk:configure:read',
+      'surface:event.doors:configure',
+      'surface:event.doors:configure:read',
+      'surface:event.mailer:configure',
+      'surface:event.mailer:configure:read',
+      'surface:event.press:configure',
+      'surface:event.press:configure:read',
+      'surface:event.program:check',
+      'surface:event.program:configure',
+      'surface:event.program:configure:read',
+      'surface:event.sales:configure',
+      'surface:event.sales:configure:read',
+      'surface:event.spotlight:configure',
+      'surface:event.spotlight:configure:read',
+      'surface:event.venue:create',
+      'surface:event.venue:delete',
+      'surface:event.venue:list',
+      'surface:event.venue:reorder',
+      'surface:event.venue:reorder:read',
+      'surface:event.venue:update',
+      'surface:event.venue:update:read',
+      'surface:event.webhook:configure',
+      'surface:event.webhook:configure:read',
+      'surface:registration.step1:configure',
+      'surface:registration.step1:configure:read',
+      'surface:registration.step2:configure',
+      'surface:registration.step2:configure:read',
+      'surface:registration.step3:configure',
+      'surface:registration.step3:configure:read',
     ], array_values(array_diff($after, $before)));
     $this->assertSame([], array_diff($before, $after));
 
@@ -243,14 +243,14 @@ class DerivedToolDefinitionsTest extends DataSurfaceKernelTestBase {
    */
   public function testDerivedToolsDeclareTheOperationsPermission(): void {
     $definitions = $this->toolManager()->getDefinitions();
-    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:create']->getPermission());
-    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:update']->getPermission());
-    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['data_surface:node.type:update:read']->getPermission());
-    $this->assertNull($definitions['data_surface:field.instance:create']->getPermission());
-    $this->assertNull($definitions['data_surface:field.instance:update:read']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['surface:node.type:create']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['surface:node.type:update']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['surface:node.type:update:read']->getPermission());
+    $this->assertNull($definitions['surface:field.instance:create']->getPermission());
+    $this->assertNull($definitions['surface:field.instance:update:read']->getPermission());
 
     // The declared permission is asked first, before any input is read.
-    $refused = ToolManager::checkPermission($definitions['data_surface:node.type:create'], new AnonymousUserSession());
+    $refused = ToolManager::checkPermission($definitions['surface:node.type:create'], new AnonymousUserSession());
     $this->assertFalse($refused->isAllowed());
     $this->assertInstanceOf(AccessResultReasonInterface::class, $refused);
     $this->assertStringContainsString(NodeTypeResource::PERMISSION, (string) $refused->getReason());

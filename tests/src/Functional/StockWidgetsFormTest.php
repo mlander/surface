@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -18,9 +18,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * JavaScript, so the rows' buttons rebuild by a plain submit; the AJAX
  * path is StockWidgetsAjaxTest's.
  *
- * @see \Drupal\Tests\data_surface\Kernel\StockWidgetsTest
+ * @see \Drupal\Tests\surface\Kernel\StockWidgetsTest
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class StockWidgetsFormTest extends BrowserTestBase {
 
@@ -28,8 +28,8 @@ class StockWidgetsFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -79,7 +79,7 @@ class StockWidgetsFormTest extends BrowserTestBase {
       'surface[opens]' => '08:30',
     ], 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $stored = $this->stored('data_surface_resource_test.opening_hours');
+    $stored = $this->stored('surface_resource_test.opening_hours');
     $this->assertSame(['tue', 'wed', 'thu', 'fri', 'sat'], $stored['days']);
     $this->assertSame('reduced', $stored['holidays']);
     $this->assertSame('08:30', $stored['opens']);
@@ -91,12 +91,12 @@ class StockWidgetsFormTest extends BrowserTestBase {
     }
     $this->submitForm($edit, 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $this->assertSame([], $this->stored('data_surface_resource_test.opening_hours')['days']);
+    $this->assertSame([], $this->stored('surface_resource_test.opening_hours')['days']);
 
     // Left alone, the boxes post what they showed: kept.
     $this->submitForm(['surface[days][sun]' => TRUE], 'Save');
     $this->submitForm([], 'Save');
-    $this->assertSame(['sun'], $this->stored('data_surface_resource_test.opening_hours')['days']);
+    $this->assertSame(['sun'], $this->stored('surface_resource_test.opening_hours')['days']);
   }
 
   /**
@@ -112,11 +112,11 @@ class StockWidgetsFormTest extends BrowserTestBase {
 
     $this->submitForm(['surface[handling]' => 'upright'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $this->assertSame('upright', $this->stored('data_surface_resource_test.parcel')['handling']);
+    $this->assertSame('upright', $this->stored('surface_resource_test.parcel')['handling']);
 
     $this->submitForm(['surface[handling]' => ''], 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $this->assertNull($this->stored('data_surface_resource_test.parcel')['handling'], '"- None -" clears an optional key that may be cleared.');
+    $this->assertNull($this->stored('surface_resource_test.parcel')['handling'], '"- None -" clears an optional key that may be cleared.');
   }
 
   /**
@@ -126,23 +126,23 @@ class StockWidgetsFormTest extends BrowserTestBase {
     $this->drupalGet('surface-test/opening-hours');
     $assert = $this->assertSession();
     $assert->fieldNotExists('surface[keywords][0]');
-    $this->submitForm([], 'data_surface_keywords_add');
+    $this->submitForm([], 'surface_keywords_add');
     $assert->fieldExists('surface[keywords][0]');
-    $this->submitForm(['surface[keywords][0]' => 'maps'], 'data_surface_keywords_add');
+    $this->submitForm(['surface[keywords][0]' => 'maps'], 'surface_keywords_add');
     $assert->fieldValueEquals('surface[keywords][0]', 'maps');
-    $this->submitForm(['surface[keywords][1]' => 'archives'], 'data_surface_keywords_add');
-    $this->submitForm(['surface[keywords][2]' => 'press'], 'data_surface_keywords_remove-0');
+    $this->submitForm(['surface[keywords][1]' => 'archives'], 'surface_keywords_add');
+    $this->submitForm(['surface[keywords][2]' => 'press'], 'surface_keywords_remove-0');
     $assert->fieldValueEquals('surface[keywords][0]', 'archives');
     $assert->fieldValueEquals('surface[keywords][1]', 'press');
     $assert->fieldNotExists('surface[keywords][2]');
     $this->submitForm([], 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $this->assertSame(['archives', 'press'], $this->stored('data_surface_resource_test.opening_hours')['keywords']);
+    $this->assertSame(['archives', 'press'], $this->stored('surface_resource_test.opening_hours')['keywords']);
 
     // A row left empty is dropped.
-    $this->submitForm([], 'data_surface_keywords_add');
+    $this->submitForm([], 'surface_keywords_add');
     $this->submitForm([], 'Save');
-    $this->assertSame(['archives', 'press'], $this->stored('data_surface_resource_test.opening_hours')['keywords']);
+    $this->assertSame(['archives', 'press'], $this->stored('surface_resource_test.opening_hours')['keywords']);
   }
 
 }

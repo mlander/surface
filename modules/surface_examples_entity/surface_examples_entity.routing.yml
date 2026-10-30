@@ -1,0 +1,41 @@
+# A basic page's create and update forms, served by the derived content
+# entity resource entity.content:node.page and the generic operation
+# form, with the contract panel beside each; and a landing page saying
+# what was derived and what was left out, read from the registry.
+#
+# Each route is one operation of the derived resource, named by its id:
+# a derived resource has no class. The update route's {id} is the
+# operation's one parameter, the node, upcast; a node of another bundle
+# is refused by the operation, and so by the route's access.
+
+surface_examples_entity.index:
+  path: '/surface-entity'
+  defaults:
+    _controller: '\Drupal\surface_examples_entity\Controller\EntityResourcesController::index'
+    _title: 'Content entity resources'
+  requirements:
+    _permission: 'access content overview'
+
+surface_examples_entity.node_page_create:
+  path: '/surface-entity/node/page/add'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a basic page (resource)'
+    _surface_resource: 'entity.content:node.page'
+    _surface_operation: 'create'
+    _surface_panel: 'surface.contract_panel'
+
+surface_examples_entity.node_page_update:
+  path: '/surface-entity/node/{id}/edit'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a basic page (resource)'
+    _surface_resource: 'entity.content:node.page'
+    _surface_operation: 'update'
+    _surface_panel: 'surface.contract_panel'
+  requirements:
+    id: '\d+'
+  options:
+    parameters:
+      id:
+        type: 'entity:node'

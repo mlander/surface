@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Refinement\Rule;
+use Drupal\surface\Refinement\Rule;
 
 /**
  * What anyone may do to a blueprint: add to it.
@@ -173,7 +173,7 @@ interface BlueprintAdditionsInterface {
    *   For the calling alter's own input mount only: a top-level key of
    *   the owner's blueprint, a plain key or an attached part, to draw the
    *   mount's fieldset directly after. NULL leaves it where it is.
-   * @param \Drupal\data_surface\Resource\ArrangementGroup|null $group
+   * @param \Drupal\surface\Resource\ArrangementGroup|null $group
    *   The group the key is drawn in, or NULL to leave it.
    * @param int|null $weight
    *   Its weight among its frame's keys (or its group's), lighter first;
@@ -196,7 +196,7 @@ interface BlueprintAdditionsInterface {
    *   when it would empty a text another contributor arranged, or the key
    *   is an output, which is never drawn.
    *
-   * @see \Drupal\data_surface\Resource\Arrangement
+   * @see \Drupal\surface\Resource\Arrangement
    * @see docs/decisions.md#arrangement-is-declared-once
    */
   public function describe(string $key, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL, ?string $after = NULL, ?ArrangementGroup $group = NULL, ?int $weight = NULL, string|\Stringable|null $placeholder = NULL, string|\Stringable|null $prefix = NULL, string|\Stringable|null $suffix = NULL, string|\Stringable|null $help = NULL): static;
@@ -235,7 +235,7 @@ interface BlueprintAdditionsInterface {
    * @param string $key
    *   The key the child sits at; for an alter, its own mount,
    *   `third_party_settings.<module>`.
-   * @param class-string<\Drupal\data_surface\Resource\DefinesInputsInterface> $child
+   * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface> $child
    *   The child's class.
    * @param array<string, string> $reads
    *   The child's ports, each mapped to the container's key it reads: an
@@ -398,7 +398,7 @@ interface BlueprintAdditionsInterface {
    *   The key to narrow: an owner's key by its name, or, for an alter, a
    *   key it added by the name it added it under.
    *
-   * @return \Drupal\data_surface\Refinement\Rule
+   * @return \Drupal\surface\Refinement\Rule
    *   The rule, to say when() and what.
    *
    * @throws \LogicException

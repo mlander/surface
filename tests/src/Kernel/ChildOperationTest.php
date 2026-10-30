@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_resource_test\Structure\Broken\MisnamingLarderStructure;
-use Drupal\data_surface_resource_test\Resource\Larder\LarderResource;
-use Drupal\data_surface_resource_test\Resource\Larder\SpiceRackResource;
-use Drupal\data_surface_resource_test\Resource\Pantry\LabelResource;
-use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
-use Drupal\data_surface_resource_test\Structure\Pantry\ShelfStructure;
-use Drupal\data_surface_resource_test\Storage\LarderStorage;
-use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationTool;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface_resource_test\Structure\Broken\MisnamingLarderStructure;
+use Drupal\surface_resource_test\Resource\Larder\LarderResource;
+use Drupal\surface_resource_test\Resource\Larder\SpiceRackResource;
+use Drupal\surface_resource_test\Resource\Pantry\LabelResource;
+use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
+use Drupal\surface_resource_test\Structure\Pantry\ShelfStructure;
+use Drupal\surface_resource_test\Storage\LarderStorage;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationTool;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolInterface;
@@ -50,24 +50,24 @@ use Symfony\Component\HttpFoundation\Request;
  * contracts, the operation form, the write tool's `values` input, the
  * read tool, the pipeline, and what the larder's storage is left holding.
  *
- * @see \Drupal\data_surface_resource_test\Resource\Larder\LarderResource
- * @see \Drupal\data_surface_resource_test\Access\SpiceRackAccess
+ * @see \Drupal\surface_resource_test\Resource\Larder\LarderResource
+ * @see \Drupal\surface_resource_test\Access\SpiceRackAccess
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ChildOperationTest extends DataSurfaceKernelTestBase {
+class ChildOperationTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
   /**
    * The write tool for the larder's update operation.
    */
-  protected const TOOL = 'data_surface:resource_test.larder:update';
+  protected const TOOL = 'surface:resource_test.larder:update';
 
   /**
    * The read tool beside it.
    */
-  protected const READ_TOOL = 'data_surface:resource_test.larder:update:read';
+  protected const READ_TOOL = 'surface:resource_test.larder:update:read';
 
   /**
    * What the larder holds before each test.
@@ -80,7 +80,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
       'shelf' => 'top',
       'spices' => 2,
       'label' => 'Spare',
-      'third_party_settings' => ['data_surface_resource_test' => ['supplier' => 'Acme']],
+      'third_party_settings' => ['surface_resource_test' => ['supplier' => 'Acme']],
     ],
   ];
 
@@ -93,9 +93,8 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -122,35 +121,35 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
    * Builds the larder being edited, for the current account.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The larder.
    */
-  protected function edit(): DataSurfaceInterface {
+  protected function edit(): SurfaceInterface {
     return $this->resources()->buildOperation(LarderResource::class, 'update', ['larder' => 'main']);
   }
 
   /**
    * Gets the child built at a key.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The parent.
    * @param string $key
    *   The key.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The child.
    */
-  protected static function child(DataSurfaceInterface $surface, string $key): DataSurfaceInterface {
+  protected static function child(SurfaceInterface $surface, string $key): SurfaceInterface {
     $attachment = $surface->getDefinitions()->entry($key)?->attachment;
     assert($attachment !== NULL);
     return $attachment->child;
@@ -159,28 +158,28 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the larder being stocked, both racks handed a context whole.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The larder.
    */
-  protected function stock(): DataSurfaceInterface {
+  protected function stock(): SurfaceInterface {
     return $this->resources()->buildOperation(LarderResource::class, 'stock', ['larder' => 'main']);
   }
 
   /**
    * Emits the larder's contract, as it stands or in full.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The larder, built.
    * @param bool $full
    *   Whether to emit the full schema.
    * @param string $operation
    *   The larder's operation it was built in.
    *
-   * @return \Drupal\data_surface\Contract\ServedContract
+   * @return \Drupal\surface\Contract\ServedContract
    *   The contract.
    */
-  protected function contract(DataSurfaceInterface $surface, bool $full = FALSE, string $operation = 'update'): mixed {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+  protected function contract(SurfaceInterface $surface, bool $full = FALSE, string $operation = 'update'): mixed {
+    $emitter = $this->container->get('surface.contract_emitter');
     if ($full) {
       return $emitter->emitFull($surface, 'resource_test.larder', $operation);
     }
@@ -199,7 +198,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    *   The resource's part of the built form.
    */
   protected function form(string $operation = 'update'): array {
-    $name = 'data_surface_resource_test.larder.' . $operation;
+    $name = 'surface_resource_test.larder.' . $operation;
     $route = $this->container->get('router.route_provider')->getRouteByName($name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($operation === 'update' ? '/surface-test/larder/main' : '/surface-test/larder/main/' . $operation);
@@ -209,7 +208,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $request->attributes->set('larder', 'main');
     $request->attributes->set('_raw_variables', new InputBag(['larder' => 'main']));
     $stack->push($request);
-    return $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class)[DataSurfaceOperationForm::SURFACE_KEY];
+    return $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
   }
 
   /**
@@ -328,7 +327,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
    * build.
    */
   public function testChildWithoutOperationsInherits(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $context = PantryResource::update('cellar');
     $pantry = $this->resources()->build(PantryResource::class, $context);
     foreach (['shelf' => ShelfStructure::class, 'label' => LabelResource::class] as $key => $class) {
@@ -425,7 +424,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
     $this->assertSame(self::STORED['rack'], $read['values']['rack']);
 
     // The pipeline ignores what is posted for it, as for any locked key.
-    $accepted = $this->container->get('data_surface.pipeline')->accept($edit, ['rack' => ['spices' => 30]], self::STORED);
+    $accepted = $this->container->get('surface.pipeline')->accept($edit, ['rack' => ['spices' => 30]], self::STORED);
     $this->assertSame(self::STORED['rack'], $accepted['rack']);
     $write = $this->runTool(self::TOOL, [
       'larder' => 'main',
@@ -471,7 +470,7 @@ class ChildOperationTest extends DataSurfaceKernelTestBase {
 
     // A value posted for it is a key the built resource does not have.
     try {
-      $this->container->get('data_surface.pipeline')->accept($edit, ['rack' => ['spices' => 30]], []);
+      $this->container->get('surface.pipeline')->accept($edit, ['rack' => ['spices' => 30]], []);
       $this->fail('A value for an omitted child was accepted.');
     }
     catch (UnknownKeysException $e) {

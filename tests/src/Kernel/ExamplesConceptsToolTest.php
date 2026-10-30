@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface_examples\ConceptCalls;
-use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
-use Drupal\data_surface_examples_references\Sponsorship;
-use Drupal\data_surface_examples_retitle\Retitle;
+use Drupal\surface_examples\ConceptCalls;
+use Drupal\surface_examples\Hook\SpotlightBlockHooks;
+use Drupal\surface_examples_references\Sponsorship;
+use Drupal\surface_examples_retitle\Retitle;
 use Drupal\node\Entity\Node;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -28,9 +28,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * calls write a fourth venue and remove it again with the last, and
  * example 17's retitle its pages and put each title back with the last.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
+class ExamplesConceptsToolTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -43,20 +43,19 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_workflow',
+    'surface',
+    'surface_examples',
+    'surface_examples_workflow',
     'block',
     'path_alias',
-    'data_surface_component_block',
-    'data_surface_block',
-    'data_surface_examples_keys',
+    'surface_examples_component_block',
+    'surface_examples_block',
+    'surface_examples_keys',
     'text',
     'filter',
     'node',
-    'data_surface_examples_references',
-    'data_surface_examples_retitle',
+    'surface_examples_references',
+    'surface_examples_retitle',
   ];
 
   /**
@@ -73,10 +72,10 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
       'system',
       'node',
       'filter',
-      'data_surface_examples',
-      'data_surface_examples_keys',
-      'data_surface_examples_references',
-      'data_surface_examples_retitle',
+      'surface_examples',
+      'surface_examples_keys',
+      'surface_examples_references',
+      'surface_examples_retitle',
     ]);
     $this->container->get('theme_installer')->install(['stark']);
     $this->config('system.theme')->set('default', 'stark')->save();
@@ -99,7 +98,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $factory->reset();
     $stored = [];
     $blocks = ['block.block.' . SpotlightBlockHooks::BLOCK, 'block.block.' . SpotlightBlockHooks::SECTION];
-    foreach ([...$factory->listAll('data_surface_examples.'), ...$blocks] as $name) {
+    foreach ([...$factory->listAll('surface_examples.'), ...$blocks] as $name) {
       $stored[$name] = $factory->get($name)->getRawData();
     }
     return $stored;
@@ -110,7 +109,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
    */
   public function testTheCallsAnswerAndWriteNothing(): void {
     $before = $this->everything();
-    $panel = $this->container->get('data_surface_examples.concept_panel');
+    $panel = $this->container->get('surface_examples.concept_panel');
     $answers = [];
     foreach (ConceptCalls::CALLS as $resource => $calls) {
       foreach (array_keys($calls) as $name) {
@@ -135,25 +134,25 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Success: Check a program changes nothing: the values were accepted and prepared, and nothing was written.', $first($answers['event.program']['check']));
     $this->assertSame("Failed: The values were refused:\n" . '/sessions: This value should be between 1 and 30.', $first($answers['event.program']['check_too_many']));
     $this->assertSame("Failed: The values were refused:\n" . 'This may be seen and not changed, so nothing was written: The program is published in its workflow, so it is fixed.', $first($answers['event.program']['published_in_workflow']));
-    $this->assertNull($this->container->get('state')->get('data_surface_examples_workflow.state'), 'The State the call was made in is put back.');
+    $this->assertNull($this->container->get('state')->get('surface_examples_workflow.state'), 'The State the call was made in is put back.');
     $this->assertStringContainsString('"notes":"Hand out the maps."', $answers['event.doors']['left_out'], 'Left out: kept.');
     $this->assertStringContainsString('"notes":null', $answers['event.doors']['null'], 'Null: cleared.');
     $this->assertStringContainsString('"notes":"Doors close at ten."', $answers['event.doors']['value'], 'A value: replaced.');
     $this->assertSame("Failed: The values were refused:\n" . '/badges: Badges cannot be cleared: it always holds a value, printed (Printed at the door) by default. Leave it out to keep what it holds.', $first($answers['event.doors']['always_held']));
-    $this->assertStringContainsString('values: {"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false},"slots":{"actions":{"kind":"text","text":null}}}', $answers['event.spotlight']['hero'], 'The hero\'s props, read from its schema, its defaults filled in, and its slot holding text.');
-    $this->assertSame("Failed: The values were refused:\n" . '/props/align: props.align belongs to the data_surface_examples:hero variant, but component chose data_surface_examples:card.', $first($answers['event.spotlight']['wrong_component']), 'Refused, naming the component the props belong to.');
+    $this->assertStringContainsString('values: {"component":"surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false},"slots":{"actions":{"kind":"text","text":null}}}', $answers['event.spotlight']['hero'], 'The hero\'s props, read from its schema, its defaults filled in, and its slot holding text.');
+    $this->assertSame("Failed: The values were refused:\n" . '/props/align: props.align belongs to the surface_examples:hero variant, but component chose surface_examples:card.', $first($answers['event.spotlight']['wrong_component']), 'Refused, naming the component the props belong to.');
     $this->assertSame("Failed: The values were refused:\n" . '/props/overlay: This value should be between 0 and 100.', $first($answers['event.spotlight']['out_of_bounds']));
-    $this->assertSame("Failed: The values were refused:\n" . '/id: A block named data_surface_examples_spotlight already exists.', $first($answers['block.placement']['place']), 'Placed once, the Spotlight block refuses a second add under its name.');
-    $this->assertSame("Failed: The values were refused:\n" . '/id: A block named data_surface_examples_section already exists.', $first($answers['block.placement']['section']), 'Placed once, the Tonight block refuses a second add under its name.');
-    $this->assertStringContainsString('"settings":{"component":"data_surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false},"slots":{"actions":{"kind":"text","text":null}}}', $answers['block.placement']['props'], 'The placed block named by its machine name, the hero read from its schema.');
-    $this->assertSame("Failed: The values were refused:\n" . '/settings/slots/actions/component/component: The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).', $first($answers['block.placement']['wrong_slot']), 'A component the slot does not expect, refused naming the one it does.');
+    $this->assertSame("Failed: The values were refused:\n" . '/id: A block named surface_examples_spotlight already exists.', $first($answers['block.placement']['place']), 'Placed once, the Spotlight block refuses a second add under its name.');
+    $this->assertSame("Failed: The values were refused:\n" . '/id: A block named surface_examples_section already exists.', $first($answers['block.placement']['section']), 'Placed once, the Tonight block refuses a second add under its name.');
+    $this->assertStringContainsString('"settings":{"component":"surface_examples:hero","props":{"title":"Doors open at half past six","subtitle":null,"align":"start","overlay":40,"full_width":false},"slots":{"actions":{"kind":"text","text":null}}}', $answers['block.placement']['props'], 'The placed block named by its machine name, the hero read from its schema.');
+    $this->assertSame("Failed: The values were refused:\n" . '/settings/slots/actions/component/component: The value you selected is not a valid choice. Choose surface_examples:call_to_action (Call to action).', $first($answers['block.placement']['wrong_slot']), 'A component the slot does not expect, refused naming the one it does.');
     $this->assertSame('Success: Dry run of Remove a placed block: the removal was rehearsed, and nothing was removed. The values it holds are answered.', $first($answers['block.placement']['delete']));
     $this->assertStringNotContainsString('mk-example-7f3a91', $answers['event.mailer']['pasted'], 'A pasted key is in no answer.');
     $this->assertStringContainsString('"source":"pasted","credential":[]', $answers['event.mailer']['pasted']);
     $this->assertStringContainsString('"source":"managed","credential":{"key_id":"mail_service"}', $answers['event.mailer']['managed']);
     $this->assertSame("Failed: The values were refused:\n" . '/credential/api_key: credential.api_key belongs to the pasted variant, but source chose managed.', $first($answers['event.mailer']['pasted_while_managed']), 'Refused, naming the source that chose the other variant.');
     $this->assertSame('Success: Configure the mailer: the stored values were read, and nothing was written.', $first($answers['event.mailer']['read']));
-    $this->assertStringContainsString('"credential":{"key_id":"webhook_signing"}', str_replace('"third_party_settings":{"data_surface_examples_keys":', '"credential":', $answers['event.webhook']['managed']));
+    $this->assertStringContainsString('"credential":{"key_id":"webhook_signing"}', str_replace('"third_party_settings":{"surface_examples_keys":', '"credential":', $answers['event.webhook']['managed']));
     $this->assertSame("Failed: The values were refused:\n" . '/api_key: API key does not apply when Managed key: Key is set.', $first($answers['event.webhook']['pasted_beside_managed']), 'Refused, naming the key it depends on.');
     $this->assertStringContainsString("\n  items: [{\"id\":\"riverside\",\"label\":\"Riverside Hall\",\"capacity\":520,\"weight\":0},{\"id\":\"library\",\"label\":\"Old Library\",\"capacity\":90,\"weight\":1}]\n  total: 3", $answers['event.venue']['list'], 'The listing answers its page and its total beside the result.');
     $this->assertSame('Success: Add a venue: the values were accepted and written.', $first($answers['event.venue']['create']), 'Town Hall written, so the next calls find it.');
@@ -185,7 +184,7 @@ class ExamplesConceptsToolTest extends DataSurfaceKernelTestBase {
 
     // The examples' README quotes every command, and every answer under
     // its call's label.
-    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/data_surface_examples/README.md');
+    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/surface_examples/README.md');
     foreach ($answers as $resource => $made) {
       $number = 0;
       foreach ($made as $name => $answer) {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\Cache;
@@ -14,17 +14,17 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Resolve;
-use Drupal\data_surface\SettledCacheability;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Reference\References;
-use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Resource\ResourceStorageInterface;
-use Drupal\data_surface\Storage\ConfigEntityStorage;
-use Drupal\data_surface\Storage\ConfigObjectStorage;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Resolve;
+use Drupal\surface\SettledCacheability;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Refinement\WatchedValueCheckInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\ResourceStorageInterface;
+use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigObjectStorage;
 
 /**
  * The build step, over the engine's builder and factory.
@@ -34,7 +34,7 @@ use Drupal\data_surface\Storage\ConfigObjectStorage;
  *
  * 1. The owner's shape. defineInputs() and, for a class with outputs,
  *    defineOutputs(), called on the class, each over a ResourceBlueprint that
- *    writes straight into a fresh DataSurfaceBuilder. Neither kind is
+ *    writes straight into a fresh SurfaceBuilder. Neither kind is
  *    ever instantiated: its declarations and its refiners are static, so
  *    the class may as well be a plugin's, as it is for a plugin that is its
  *    own structure. A structure mixed in with mixIn() declares its members
@@ -49,7 +49,7 @@ use Drupal\data_surface\Storage\ConfigObjectStorage;
  *    alter's glue reads its keys.
  * 3. The seal-time checks on the shape: every identity key is a declared
  *    input, and no operation id is provided twice.
- * 4. The site's defaults, `data_surface.defaults`, written over the
+ * 4. The site's defaults, `surface.defaults`, written over the
  *    declared ones (SiteDefaults). Then the context: each constraint is
  *    added to its key and held to the narrowing check; each identity key
  *    the context knows becomes that key's default and is locked, which is
@@ -186,7 +186,7 @@ final class Resources implements ResourcesInterface {
   /**
    * The sealed builds asked for lately, by memo key, the latest last.
    *
-   * @var array<string, array{surface: \Drupal\data_surface\DataSurfaceInterface, tags: string[]}>
+   * @var array<string, array{surface: \Drupal\surface\SurfaceInterface, tags: string[]}>
    */
   protected array $builds = [];
 
@@ -205,7 +205,7 @@ final class Resources implements ResourcesInterface {
    * sites (a component's props in every slot that offers it) is built
    * once and held at each.
    *
-   * @var array<string, array{surface: \Drupal\data_surface\DataSurfaceInterface, tags: string[]}>
+   * @var array<string, array{surface: \Drupal\surface\SurfaceInterface, tags: string[]}>
    */
   protected array $readBuilds = [];
 
@@ -236,7 +236,7 @@ final class Resources implements ResourcesInterface {
    * Which modules are installed, the module's settings (the limits) and
    * the site's defaults.
    */
-  protected const KEPT_TAGS = ['config:core.extension', 'config:data_surface.settings', 'config:data_surface.defaults'];
+  protected const KEPT_TAGS = ['config:core.extension', 'config:surface.settings', 'config:surface.defaults'];
 
   /**
    * The containers a kept build must not hold, which a whole service brings.
@@ -250,7 +250,7 @@ final class Resources implements ResourcesInterface {
   /**
    * Constructs the build step.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, for the definitions add() creates.
@@ -259,16 +259,16 @@ final class Resources implements ResourcesInterface {
    *   class as the autowired service discovery registered.
    * @param \Drupal\Core\Session\AccountInterface $currentUser
    *   The account an access question is about when none is named.
-   * @param \Drupal\data_surface\ResourceBuild\OperationArguments $operationArguments
+   * @param \Drupal\surface\ResourceBuild\OperationArguments $operationArguments
    *   What turns a route's or a tool's values into an operation's
    *   arguments, an entity's id into the entity among them.
-   * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
+   * @param \Drupal\surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it, sealed
    *   into every data surface and every child this step builds.
    * @param \Drupal\Core\Session\PermissionsHashGeneratorInterface|null $permissionsHashGenerator
    *   What tells two accounts' permissions apart, which a static access
    *   answer is kept by; NULL keeps none.
-   * @param \Drupal\data_surface\ResourceBuild\SiteDefaults|null $siteDefaults
+   * @param \Drupal\surface\ResourceBuild\SiteDefaults|null $siteDefaults
    *   The defaults the site sets over the declared ones; NULL reads none.
    * @param \Drupal\Core\Cache\CacheBackendInterface|null $buildCache
    *   The bin a build for no account is kept in across requests; NULL
@@ -315,11 +315,11 @@ final class Resources implements ResourcesInterface {
    * not installed: their classes are in a registry of their own, and
    * their alters, storage and access classes are no services yet.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   The registry.
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
    *   What builds the classes discovery names.
-   * @param \Drupal\data_surface\Reference\References|null $references
+   * @param \Drupal\surface\Reference\References|null $references
    *   What builds reference keys, knowing the entity types those modules
    *   declare (References::knowing()); NULL for the service.
    *
@@ -328,7 +328,7 @@ final class Resources implements ResourcesInterface {
    *
    * @internal
    *
-   * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator::including()
+   * @see \Drupal\surface\Storage\ConfigSchemaGenerator::including()
    */
   public function withRegistry(ResourceRegistry $registry, ClassResolverInterface $classResolver, ?References $references = NULL): static {
     $resources = new static($registry, $this->typedDataManager, $classResolver, $this->currentUser, $this->operationArguments, $this->watchedValueCheck, $this->permissionsHashGenerator, $this->siteDefaults, typedConfig: $this->typedConfig);
@@ -340,14 +340,14 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function build(string $resource, OperationContext $context): DataSurfaceInterface {
+  public function build(string $resource, OperationContext $context): SurfaceInterface {
     return $this->buildAs($resource, $context, FALSE, FALSE);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function buildStatic(string $resource, OperationContext $context): DataSurfaceInterface {
+  public function buildStatic(string $resource, OperationContext $context): SurfaceInterface {
     // Decision: see
     // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
     return $this->buildAs($resource, $context, TRUE, FALSE);
@@ -356,7 +356,7 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function buildDeclared(string $resource, OperationContext $context): DataSurfaceInterface {
+  public function buildDeclared(string $resource, OperationContext $context): SurfaceInterface {
     // Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
     return $this->buildAs($resource, $context, TRUE, TRUE);
   }
@@ -364,7 +364,7 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function holdDeclared(string $resource, OperationContext $context): DataSurfaceInterface {
+  public function holdDeclared(string $resource, OperationContext $context): SurfaceInterface {
     // Decision: see
     // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
     return $this->buildAs($resource, $context, TRUE, TRUE, keep: FALSE);
@@ -380,17 +380,17 @@ final class Resources implements ResourcesInterface {
    *
    * @param string $resource
    *   The class, or its #[Resource] id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface.
    *
    * @internal
    *
-   * @see \Drupal\data_surface\Storage\ConfigSchemaGenerator
+   * @see \Drupal\surface\Storage\ConfigSchemaGenerator
    */
-  public function declaration(string $resource, OperationContext $context): DataSurfaceInterface {
+  public function declaration(string $resource, OperationContext $context): SurfaceInterface {
     $was = $this->declaring->holdsToSchema;
     $this->declaring->holdsToSchema = FALSE;
     try {
@@ -406,7 +406,7 @@ final class Resources implements ResourcesInterface {
    *
    * @param string $resource
    *   The class, or its id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    * @param bool $alone
    *   TRUE to set a runtime answer aside (buildStatic()).
@@ -416,10 +416,10 @@ final class Resources implements ResourcesInterface {
    *   FALSE to keep a build for no account within this request alone, the
    *   build cache neither read nor written (holdDeclared()).
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface.
    */
-  protected function buildAs(string $resource, OperationContext $context, bool $alone, bool $declaring, bool $keep = TRUE): DataSurfaceInterface {
+  protected function buildAs(string $resource, OperationContext $context, bool $alone, bool $declaring, bool $keep = TRUE): SurfaceInterface {
     if ($context->id === '') {
       throw new \LogicException(sprintf(
         'A context with no id was handed to build %s. An #[Operation] method may leave its id out for the attribute\'s to be stamped on it, so ask for the operation through operation() rather than calling its method.',
@@ -489,7 +489,7 @@ final class Resources implements ResourcesInterface {
    *
    * @param string $resource
    *   The class, or its id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    * @param bool $alone
    *   Whether runtime answers are set aside.
@@ -539,13 +539,13 @@ final class Resources implements ResourcesInterface {
    * by: a build that expires, or varies by the route or the time, is built
    * every time.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The build.
    *
    * @return bool
    *   TRUE when it may be kept.
    */
-  protected static function keepable(DataSurfaceInterface $built): bool {
+  protected static function keepable(SurfaceInterface $built): bool {
     if ($built->getCacheMaxAge() !== Cache::PERMANENT) {
       return FALSE;
     }
@@ -601,10 +601,10 @@ final class Resources implements ResourcesInterface {
    * @param string $cid
    *   Its cache id.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   * @return \Drupal\surface\SurfaceInterface|null
    *   The sealed build, or NULL when none is kept.
    */
-  protected function cached(string $cid): ?DataSurfaceInterface {
+  protected function cached(string $cid): ?SurfaceInterface {
     $hit = $this->buildCache?->get($cid);
     if ($hit === FALSE || $hit === NULL || !is_string($hit->data)) {
       return NULL;
@@ -612,7 +612,7 @@ final class Resources implements ResourcesInterface {
     // The module's own bin, written by keep() alone.
     // phpcs:ignore DrupalPractice.FunctionCalls.InsecureUnserialize.InsecureUnserialize
     $kept = unserialize($hit->data);
-    if (!is_array($kept) || !($kept['surface'] ?? NULL) instanceof DataSurfaceInterface) {
+    if (!is_array($kept) || !($kept['surface'] ?? NULL) instanceof SurfaceInterface) {
       return NULL;
     }
     // What it names that only building it registers.
@@ -631,14 +631,14 @@ final class Resources implements ResourcesInterface {
    * (a theme's components, every one a def of it) is not stored with
    * every build that holds them.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The build.
-   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $read
+   * @param array<string, \Drupal\surface\ResourceBuild\ResourceDefinition> $read
    *   Filled with those definitions, by name.
    * @param array<int, true> $seen
    *   The frames walked, by object id.
    */
-  protected function readNamed(DataSurfaceInterface $surface, array &$read, array &$seen = []): void {
+  protected function readNamed(SurfaceInterface $surface, array &$read, array &$seen = []): void {
     if (isset($seen[spl_object_id($surface)])) {
       return;
     }
@@ -691,9 +691,9 @@ final class Resources implements ResourcesInterface {
    *   Its cache id.
    * @param string $resource
    *   The class, or its id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Its context.
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The build.
    * @param array<string, true> $visited
    *   What it built, by name.
@@ -702,7 +702,7 @@ final class Resources implements ResourcesInterface {
    *   When it holds what cannot be stored: a closure, or a service held as
    *   an object rather than by its id.
    */
-  protected function keep(string $cid, string $resource, OperationContext $context, DataSurfaceInterface $built, array $visited): void {
+  protected function keep(string $cid, string $resource, OperationContext $context, SurfaceInterface $built, array $visited): void {
     if ($built->getCacheMaxAge() !== Cache::PERMANENT || array_diff($built->getCacheContexts(), [self::LANGUAGE_CONTEXT]) !== []) {
       return;
     }
@@ -823,12 +823,12 @@ final class Resources implements ResourcesInterface {
    * Decision: see
    * docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The operation it is asked for in.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceDefinition
+   * @return \Drupal\surface\ResourceBuild\ResourceDefinition
    *   The structure the operation names, or the resource itself.
    *
    * @throws \LogicException
@@ -857,7 +857,7 @@ final class Resources implements ResourcesInterface {
    *
    * @param string $resource
    *   The class, or its id; a derived resource has only its id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    * @param array<int, array{class: string, id: string, key: string, inputs: string[], held?: array|null}> $ancestry
    *   The parents this one is being built inside, outermost first, each
@@ -875,10 +875,10 @@ final class Resources implements ResourcesInterface {
    *   its keys, from its parent's (SiteDefaults::write()); NULL reads the
    *   site's for one built at the top, and none for any other.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface.
    */
-  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE, ?array $siteDefaults = NULL): DataSurfaceInterface {
+  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE, ?array $siteDefaults = NULL): SurfaceInterface {
     $definition = $this->registry->getDefinition($resource);
     if ($this->visited !== NULL) {
       $this->visited[$definition->name()] = TRUE;
@@ -1018,11 +1018,11 @@ final class Resources implements ResourcesInterface {
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
    *
-   * @param \Drupal\data_surface\ResourceBuild\VariantsToSettle $at
+   * @param \Drupal\surface\ResourceBuild\VariantsToSettle $at
    *   Where the variant sits and the build it was held in.
    * @param string $name
    *   The variant, by name.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is invoked in.
    * @param string|null $locked
    *   Why its access locked it whole, or NULL.
@@ -1030,12 +1030,12 @@ final class Resources implements ResourcesInterface {
    *   Whether it is a structure read from a schema, built through
    *   buildRead().
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed variant.
    *
    * @internal
    */
-  public function settleVariant(VariantsToSettle $at, string $name, OperationContext $context, ?string $locked, bool $read): DataSurfaceInterface {
+  public function settleVariant(VariantsToSettle $at, string $name, OperationContext $context, ?string $locked, bool $read): SurfaceInterface {
     $ancestry = $at->ancestry;
     // A storage a frame names is a service, kept by its class when the
     // variants were stored.
@@ -1062,7 +1062,7 @@ final class Resources implements ResourcesInterface {
     $this->gating->settlingAs = $at->account;
     try {
       // Nothing wires a variant's ports yet.
-      $this->attaching->assertWiring(new Build(new DataSurfaceBuilder(), $this->registry->getDefinition($parent['class']), $context), NULL, $at->key, $name, [], 'variant');
+      $this->attaching->assertWiring(new Build(new SurfaceBuilder(), $this->registry->getDefinition($parent['class']), $context), NULL, $at->key, $name, [], 'variant');
       $built = $read
         ? $this->buildRead($name, $context, $ancestry)
         : $this->buildResource($name, $context, $ancestry, $locked);
@@ -1090,7 +1090,7 @@ final class Resources implements ResourcesInterface {
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
    *
-   * @param \Drupal\data_surface\ResourceBuild\VariantsToSettle $at
+   * @param \Drupal\surface\ResourceBuild\VariantsToSettle $at
    *   Where the variant sits.
    * @param string $name
    *   The variant, by name.
@@ -1116,15 +1116,15 @@ final class Resources implements ResourcesInterface {
    *
    * @param string $name
    *   The read structure's name.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is invoked in.
    * @param array $ancestry
    *   Where it is first attached, for messages and the cycle check.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed structure.
    */
-  protected function buildRead(string $name, OperationContext $context, array $ancestry): DataSurfaceInterface {
+  protected function buildRead(string $name, OperationContext $context, array $ancestry): SurfaceInterface {
     $key = hash('xxh3', serialize([
       $name,
       $context,
@@ -1158,12 +1158,12 @@ final class Resources implements ResourcesInterface {
    * its parent's does. A child with operations of its own is resolved by
    * invokeChild() first, which falls back to this.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The parent's context.
    * @param string $key
    *   The key the child sits at.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The child's context.
    */
   public static function childContext(OperationContext $context, string $key): OperationContext {
@@ -1207,7 +1207,7 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function buildOperation(string $resource, string $operation, array $arguments = []): DataSurfaceInterface {
+  public function buildOperation(string $resource, string $operation, array $arguments = []): SurfaceInterface {
     return $this->build($resource, $this->operation($resource, $operation, $arguments));
   }
 
@@ -1236,7 +1236,7 @@ final class Resources implements ResourcesInterface {
    * {@inheritdoc}
    */
   public function defaults(string $resource): array {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $definition = $this->registry->getDefinition($resource);
     $this->declaring->fillBlueprints($definition, $this->declaring->blueprint($builder, $definition));
     return $builder->seal()->getDefaultValues();
@@ -1245,7 +1245,7 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL, ?AccountInterface $account = NULL): DataSurfaceStorageInterface {
+  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL): SurfaceStorageInterface {
     $definition = $this->registry->getDefinition($resource);
     if ($definition->storage === NULL) {
       throw new \LogicException(sprintf(
@@ -1278,21 +1278,21 @@ final class Resources implements ResourcesInterface {
    * values, stored by the parent under its key. A key with variants
    * routes per variant, by what its deciding key holds.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource, which has storage.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Its context.
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The resource as built, whose entries carry the children.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account each level writes as.
-   * @param \Drupal\data_surface\ResourceBuild\ItemGates|null $gates
+   * @param \Drupal\surface\ResourceBuild\ItemGates|null $gates
    *   The gates the operation asks per item, for the top level alone.
    *
-   * @return \Drupal\data_surface\ResourceBuild\StorageAdapter
+   * @return \Drupal\surface\ResourceBuild\StorageAdapter
    *   The storage.
    */
-  protected function storageFor(ResourceDefinition $definition, OperationContext $context, DataSurfaceInterface $built, AccountInterface $account, ?ItemGates $gates = NULL): StorageAdapter {
+  protected function storageFor(ResourceDefinition $definition, OperationContext $context, SurfaceInterface $built, AccountInterface $account, ?ItemGates $gates = NULL): StorageAdapter {
     $routes = [];
     foreach ($built->getDefinitions()->entries() as $key => $entry) {
       $children = $entry->attachment !== NULL
@@ -1331,7 +1331,7 @@ final class Resources implements ResourcesInterface {
    * @param string $resource
    *   The resource, by name.
    *
-   * @return \Drupal\data_surface\Resource\ResourceStorageInterface
+   * @return \Drupal\surface\Resource\ResourceStorageInterface
    *   Its storage.
    *
    * @throws \LogicException

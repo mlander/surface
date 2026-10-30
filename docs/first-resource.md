@@ -26,35 +26,35 @@ This page uses four things and nothing else:
 | a storage | the config object it lives in |
 | `defineInputs()` with `add()` | its keys: name, type, label, what each allows |
 
-Every file below is the shipped module `data_surface_first`, word for
+Every file below is the shipped module `surface_examples_first`, word for
 word; a test fails if the page and the module differ, so what you copy
 works. The module also holds [Your second resource](second-resource.md),
 which this page does not need.
 
 ```
-data_surface_first/
-  data_surface_first.info.yml
-  data_surface_first.permissions.yml
-  data_surface_first.routing.yml
-  config/install/data_surface_first.newsletter.yml
-  config/schema/data_surface_first.schema.yml
+surface_examples_first/
+  surface_examples_first.info.yml
+  surface_examples_first.permissions.yml
+  surface_examples_first.routing.yml
+  config/install/surface_examples_first.newsletter.yml
+  config/schema/surface_examples_first.schema.yml
   src/Resource/NewsletterResource.php
   src/Storage/NewsletterStorage.php
 ```
 
 ## 1. The module
 
-Any module. It needs Data Surface and nothing else:
+Any module. It needs Surface API and nothing else:
 
-<!-- lines: modules/data_surface_first/data_surface_first.info.yml -->
+<!-- lines: modules/surface_examples_first/surface_examples_first.info.yml -->
 
 ```yaml
-name: Data Surface - Your first resource
+name: Surface API - Your first resource
 type: module
-package: Data Surface
+package: Surface API
 core_version_requirement: ^11.3 || ^12
 dependencies:
-  - data_surface:data_surface
+  - surface:surface
 ```
 
 ## 2. Where the settings live
@@ -62,13 +62,13 @@ dependencies:
 The settings are a simple config object, so they are described the way
 any Drupal config is: a config schema, and the values the module ships
 with. You write neither by hand: once the resource in step 4 exists,
-`drush data_surface:config-schema --module=data_surface_first --write`
+`drush surface:config-schema --module=surface_examples_first --write`
 writes both from it, before the module is installed (step 7).
 
-<!-- yaml: modules/data_surface_first/config/schema/data_surface_first.schema.yml#data_surface_first.newsletter -->
+<!-- yaml: modules/surface_examples_first/config/schema/surface_examples_first.schema.yml#surface_examples_first.newsletter -->
 
 ```yaml
-data_surface_first.newsletter:
+surface_examples_first.newsletter:
   type: config_object
   label: 'Newsletter settings'
   constraints:
@@ -96,7 +96,7 @@ data_surface_first.newsletter:
           max: 10000
 ```
 
-<!-- code: modules/data_surface_first/config/install/data_surface_first.newsletter.yml -->
+<!-- code: modules/surface_examples_first/config/install/surface_examples_first.newsletter.yml -->
 
 ```yaml
 sender_name: 'The newsletter'
@@ -110,16 +110,16 @@ written, and a key it does not describe is refused.
 
 ## 3. The storage
 
-<!-- code: modules/data_surface_first/src/Storage/NewsletterStorage.php -->
+<!-- code: modules/surface_examples_first/src/Storage/NewsletterStorage.php -->
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface_first\Storage;
+namespace Drupal\surface_examples_first\Storage;
 
-use Drupal\data_surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectStorage;
 
 /**
  * Keeps the newsletter settings in their config object.
@@ -129,7 +129,7 @@ final class NewsletterStorage extends ConfigObjectStorage {
   /**
    * {@inheritdoc}
    */
-  public const CONFIG = 'data_surface_first.newsletter';
+  public const CONFIG = 'surface_examples_first.newsletter';
 
 }
 ```
@@ -141,21 +141,21 @@ resource names it, and that is how it is found.
 
 ## 4. The resource
 
-<!-- code: modules/data_surface_first/src/Resource/NewsletterResource.php -->
+<!-- code: modules/surface_examples_first/src/Resource/NewsletterResource.php -->
 
 ```php
 <?php
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface_first\Resource;
+namespace Drupal\surface_examples_first\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Resource\Attribute\Operation;
-use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\ResourceInterface;
-use Drupal\data_surface_first\Storage\NewsletterStorage;
+use Drupal\surface\Resource\Attribute\Operation;
+use Drupal\surface\Resource\Attribute\Resource;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\ResourceInterface;
+use Drupal\surface_examples_first\Storage\NewsletterStorage;
 
 /**
  * The newsletter settings: a form, a tool and a schema, from this class.
@@ -164,7 +164,7 @@ use Drupal\data_surface_first\Storage\NewsletterStorage;
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the newsletter'),
   description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),
-  permission: 'administer data_surface_first',
+  permission: 'administer surface_examples_first',
 )]
 final class NewsletterResource implements ResourceInterface {
 
@@ -205,7 +205,7 @@ Read it top to bottom:
 
 - **`#[Resource('first.newsletter', storage: ...)]`** names the resource
   and its storage. The id is the resource's own machine name and needs
-  no module prefix; the config object is `data_surface_first.newsletter`
+  no module prefix; the config object is `surface_examples_first.newsletter`
   because Drupal requires a module's config object names to start with
   the module's name. The class goes in `src/Resource/`, where it is
   found; nothing is registered by hand.
@@ -244,10 +244,10 @@ Read it top to bottom:
 The operation names a permission; the module declares it, as any module
 declares a permission:
 
-<!-- code: modules/data_surface_first/data_surface_first.permissions.yml -->
+<!-- code: modules/surface_examples_first/surface_examples_first.permissions.yml -->
 
 ```yaml
-administer data_surface_first:
+administer surface_examples_first:
   title: 'Configure the newsletter and the store location'
   restrict access: true
 ```
@@ -257,16 +257,16 @@ administer data_surface_first:
 A route names the resource class and the operation, and the generic
 operation form serves it. There is no form class:
 
-<!-- yaml: modules/data_surface_first/data_surface_first.routing.yml#data_surface_first.newsletter -->
+<!-- yaml: modules/surface_examples_first/surface_examples_first.routing.yml#surface_examples_first.newsletter -->
 
 ```yaml
-data_surface_first.newsletter:
+surface_examples_first.newsletter:
   path: '/admin/config/services/surface-newsletter'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Newsletter settings'
-    _data_surface_resource: 'Drupal\data_surface_first\Resource\NewsletterResource'
-    _data_surface_operation: 'configure'
+    _surface_resource: 'Drupal\surface_examples_first\Resource\NewsletterResource'
+    _surface_operation: 'configure'
 ```
 
 A route that names a resource and an operation asks the operation who
@@ -277,8 +277,8 @@ tool:info` prints it.
 ## 7. Try it
 
 ```bash
-drush data_surface:config-schema --module=data_surface_first --write
-drush pm:install data_surface_first
+drush surface:config-schema --module=surface_examples_first --write
+drush pm:install surface_examples_first
 ```
 
 The command reads the module's classes whether it is installed or not,
@@ -297,13 +297,13 @@ recipients, and Save marks the field, says what is wrong in the rule's
 own words ("This value should be between 1 and 10000."), and writes
 nothing.
 
-With the Tool API bridge enabled, the same resource is a tool:
+With the `tool` module installed, the same resource is a tool:
 
 ```bash
-drush pm:install data_surface_tool
-drush tool:info data_surface:first.newsletter:configure
-drush tool:run data_surface:first.newsletter:configure --uid=1 --input='{"values":{"sender_name":"Weekly news","sender_email":"news@example.com","frequency":"monthly"}}'
-drush tool:run data_surface:first.newsletter:configure:read --uid=1
+drush pm:install tool
+drush tool:info surface:first.newsletter:configure
+drush tool:run surface:first.newsletter:configure --uid=1 --input='{"values":{"sender_name":"Weekly news","sender_email":"news@example.com","frequency":"monthly"}}'
+drush tool:run surface:first.newsletter:configure:read --uid=1
 ```
 
 `tool:info` lists the same four keys, bounded as the class says. The
@@ -359,7 +359,7 @@ resource's id and label, the operation, the config object, the
 permission and the route path, then each key in turn, with its type,
 label, whether it is required, its default and what it allows. An answer
 can be given ahead, in the order asked, with `--answer`: `drush generate
-surface:resource --answer=data_surface_first --answer=first.newsletter
+surface:resource --answer=surface_examples_first --answer=first.newsletter
 --answer='Newsletter settings'` asks only from the class name on, and
 `--dry-run` prints the files without writing them. A routing or
 permissions file the module has gains the new entry and keeps every

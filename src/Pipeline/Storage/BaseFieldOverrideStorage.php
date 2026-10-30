@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline\Storage;
+namespace Drupal\surface\Pipeline\Storage;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
 use Drupal\Core\Field\Entity\BaseFieldOverride;
 use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Pipeline\PreparedValues;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Pipeline\PreparedValues;
 
 /**
  * Stores a data surface's values as per bundle overrides of base fields.
@@ -64,10 +64,10 @@ use Drupal\data_surface\Pipeline\PreparedValues;
  * pipeline's wrapping: NodeTypeStorage writes a content type's title
  * label and workflow defaults this way.
  *
- * @see \Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage
+ * @see \Drupal\surface_examples_node_type\Storage\NodeTypeStorage
  * @see docs/storage.md
  */
-final class BaseFieldOverrideStorage implements DataSurfaceStorageInterface {
+final class BaseFieldOverrideStorage implements SurfaceStorageInterface {
 
   use DependencySerializationTrait;
 
@@ -131,14 +131,14 @@ final class BaseFieldOverrideStorage implements DataSurfaceStorageInterface {
   /**
    * {@inheritdoc}
    */
-  public function load(DataSurfaceInterface $surface): array {
+  public function load(SurfaceInterface $surface): array {
     return $this->values();
   }
 
   /**
    * {@inheritdoc}
    */
-  public function prepare(DataSurfaceInterface $surface, array $values): PreparedValues {
+  public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
     return new PreparedValues($values, $this->plan($values));
   }
 

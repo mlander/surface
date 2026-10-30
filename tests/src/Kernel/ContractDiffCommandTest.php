@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Drush\Commands\ContractDiffCommand;
+use Drupal\surface\Drush\Commands\ContractDiffCommand;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -22,9 +22,9 @@ use Symfony\Component\Console\Tester\CommandTester;
  *
  * @see docs/evolution.md#the-contract-diff
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
+class ContractDiffCommandTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -37,19 +37,18 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_examples_workflow',
-    'data_surface_examples_keys',
-    'data_surface_first',
+    'surface',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_examples_workflow',
+    'surface_examples_keys',
+    'surface_examples_first',
   ];
 
   /**
    * The modules the main module pins.
    */
-  protected const PINNED = 'data_surface_examples,data_surface_examples_compliance,data_surface_first';
+  protected const PINNED = 'surface_examples,surface_examples_compliance,surface_examples_first';
 
   /**
    * A directory of this test's own, removed afterwards.
@@ -62,12 +61,12 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_first']);
+    $this->installConfig(['surface_examples', 'surface_examples_first']);
     // The site's first account, which the command emits for by default.
     $this->setUpCurrentUser(admin: TRUE);
     // A real directory: the baselines are listed with glob(), which reads
     // no stream wrapper.
-    $this->directory = sys_get_temp_dir() . '/data_surface_contracts_' . $this->randomMachineName();
+    $this->directory = sys_get_temp_dir() . '/surface_contracts_' . $this->randomMachineName();
     mkdir($this->directory, 0775, TRUE);
   }
 
@@ -90,7 +89,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
    */
   protected function diff(array $options): array {
     $command = new ContractDiffCommand(
-      $this->container->get('data_surface.contract_baselines'),
+      $this->container->get('surface.contract_baselines'),
       $this->container->get('account_switcher'),
       $this->container->get('entity_type.manager'),
     );
@@ -105,7 +104,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
    * Copies the committed baselines into this test's directory.
    */
   protected function copyCommitted(): void {
-    $committed = $this->container->get('data_surface.contract_baselines')->directory('data_surface');
+    $committed = $this->container->get('surface.contract_baselines')->directory('surface');
     foreach (glob($committed . '/*.json') ?: [] as $file) {
       copy($file, $this->directory . '/' . basename($file));
     }
@@ -138,7 +137,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
    */
   public function testMissingBaselineFailsUntilWritten(): void {
     [$status, $display] = $this->diff([
-      '--module' => 'data_surface_first',
+      '--module' => 'surface_examples_first',
       '--baselines' => $this->directory,
       '--format' => 'json',
     ]);
@@ -148,12 +147,16 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $this->assertSame(2, $report['failing']);
     $this->assertSame(['no baseline yet: unpinned', 'no baseline yet: unpinned'], array_map(static fn (array $change): string => $change['change'] . ': ' . $change['status'], $report['changes']));
 
-    [$status] = $this->diff(['--module' => 'data_surface_first', '--baselines' => $this->directory, '--write' => TRUE]);
+    [$status] = $this->diff([
+      '--module' => 'surface_examples_first',
+      '--baselines' => $this->directory,
+      '--write' => TRUE,
+    ]);
     $this->assertSame(0, $status, 'Pinning a declaration asks no reason.');
     $written = json_decode((string) file_get_contents($this->directory . '/first.store.json'), TRUE);
     $this->assertSame(['resource', 'module', 'contract', 'documents'], array_keys($written));
-    $this->assertSame('data_surface_first', $written['module']);
-    [$status] = $this->diff(['--module' => 'data_surface_first', '--baselines' => $this->directory]);
+    $this->assertSame('surface_examples_first', $written['module']);
+    [$status] = $this->diff(['--module' => 'surface_examples_first', '--baselines' => $this->directory]);
     $this->assertSame(0, $status);
   }
 
@@ -208,11 +211,11 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     unset($legacy['module']);
     file_put_contents($this->directory . '/registration.step1.json', json_encode($legacy));
     // One of the named module's, no longer declared.
-    $gone = ['surface' => 'first.gone', 'module' => 'data_surface_first', 'documents' => []];
+    $gone = ['surface' => 'first.gone', 'module' => 'surface_examples_first', 'documents' => []];
     file_put_contents($this->directory . '/first.gone.json', json_encode($gone));
 
     [$status, $display] = $this->diff([
-      '--module' => 'data_surface_first',
+      '--module' => 'surface_examples_first',
       '--baselines' => $this->directory,
       '--format' => 'json',
     ]);
@@ -222,7 +225,7 @@ class ContractDiffCommandTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['first.gone: no longer declared'], $said);
 
     [$status, $display] = $this->diff([
-      '--module' => 'data_surface_first',
+      '--module' => 'surface_examples_first',
       '--baselines' => $this->directory,
       '--write' => TRUE,
       '--allow' => 'The gone resource was never released.',

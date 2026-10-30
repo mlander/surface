@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Drupal\my_module\Shape;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\Attribute\Shape;
-use Drupal\data_surface\Resource\ShapeInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\Attribute\Shape;
+use Drupal\surface\Resource\ShapeInterface;
 
 /**
  * A color as # and six hexadecimal digits, declared once.

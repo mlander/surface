@@ -15,11 +15,11 @@
  *
  * Run it from anywhere inside the site:
  * @code
- *   ddev exec php web/modules/custom/data_surface/scripts/generate-catalog.php
+ *   ddev exec php web/modules/custom/surface/scripts/generate-catalog.php
  * @endcode
  *
- * @see \Drupal\data_surface\ResourceBuild\SiteCatalog::markdown()
- * @see \Drupal\Tests\data_surface\Kernel\ResourceCatalogTest
+ * @see \Drupal\surface\ResourceBuild\SiteCatalog::markdown()
+ * @see \Drupal\Tests\surface\Kernel\ResourceCatalogTest
  */
 
 declare(strict_types=1);
@@ -40,7 +40,7 @@ if (!is_file($phpunit)) {
 $command = sprintf(
   'cd %s && %s=1 SIMPLETEST_DB=%s SIMPLETEST_BASE_URL=%s %s -c core --filter %s %s',
   escapeshellarg($web_root),
-  'DATA_SURFACE_WRITE_CATALOGUE',
+  'SURFACE_WRITE_CATALOGUE',
   escapeshellarg(getenv('SIMPLETEST_DB') ?: 'mysql://db:db@db/db'),
   escapeshellarg(getenv('SIMPLETEST_BASE_URL') ?: 'http://localhost'),
   escapeshellarg($phpunit),

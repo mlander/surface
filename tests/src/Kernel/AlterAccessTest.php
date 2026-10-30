@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_resource_test\Access\WallAccess;
-use Drupal\data_surface_resource_test\Alter\GalleryAlter;
-use Drupal\data_surface_resource_test\Alter\OilFinishAlter;
-use Drupal\data_surface_resource_test\Alter\PlaqueAlter;
-use Drupal\data_surface_resource_test\Alter\RoomAlter;
-use Drupal\data_surface_resource_test\Alter\WallAlter;
-use Drupal\data_surface_resource_test\Alter\WallOpeningAlter;
-use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
-use Drupal\data_surface_resource_test\Structure\Gallery\AnnexStructure;
-use Drupal\data_surface_resource_test\Structure\Gallery\WallStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\StaticAccessAgreementTrait;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Resource\AccessAnswer;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_resource_test\Access\WallAccess;
+use Drupal\surface_resource_test\Alter\GalleryAlter;
+use Drupal\surface_resource_test\Alter\OilFinishAlter;
+use Drupal\surface_resource_test\Alter\PlaqueAlter;
+use Drupal\surface_resource_test\Alter\RoomAlter;
+use Drupal\surface_resource_test\Alter\WallAlter;
+use Drupal\surface_resource_test\Alter\WallOpeningAlter;
+use Drupal\surface_resource_test\Resource\Gallery\GalleryResource;
+use Drupal\surface_resource_test\Structure\Gallery\AnnexStructure;
+use Drupal\surface_resource_test\Structure\Gallery\WallStructure;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\Traits\StaticAccessAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
@@ -39,10 +39,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class AlterAccessTest extends DataSurfaceKernelTestBase {
+class AlterAccessTest extends SurfaceKernelTestBase {
 
   use StaticAccessAgreementTrait;
   use UserCreationTrait;
@@ -55,9 +55,8 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -92,7 +91,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     // User 1 first, so none of the accounts below is the super user.
     $this->setUpCurrentUser();
     $this->accounts = [
@@ -142,11 +141,11 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
    *   The operation: configure, or curate, where the gallery's own alter
    *   answers too.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built gallery.
    */
-  protected function gallery(bool $alone = FALSE, string $operation = 'configure'): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function gallery(bool $alone = FALSE, string $operation = 'configure'): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(GalleryResource::class, $operation);
     return $alone ? $resources->buildStatic(GalleryResource::class, $context) : $resources->build(GalleryResource::class, $context);
   }
@@ -161,7 +160,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
    *   The schema.
    */
   protected function full(string $operation = 'configure'): array {
-    $served = $this->container->get('data_surface.contract_emitter')->emitFull($this->gallery(TRUE, $operation), 'resource_test.gallery', $operation);
+    $served = $this->container->get('surface.contract_emitter')->emitFull($this->gallery(TRUE, $operation), 'resource_test.gallery', $operation);
     return SchemaResolver::inline(json_decode((string) json_encode($served->document['schema']), TRUE));
   }
 
@@ -173,7 +172,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
    * since it would answer twice, once in each role.
    */
   public function testAnAlterAnswersThroughTheOneInterface(): void {
-    $gallery = $this->container->get('data_surface.resource_registry')->getDefinition(GalleryResource::class);
+    $gallery = $this->container->get('surface.resource_registry')->getDefinition(GalleryResource::class);
     $this->assertSame([GalleryAlter::class], array_values(array_map(static fn ($alter): string => $alter->class, array_filter($gallery->alters, static fn ($alter): bool => $alter->answersAccess))));
     $refuse = new \ReflectionMethod(ResourceRegistry::class, 'assertAccessClass');
     $refuse->invoke(NULL, GalleryResource::class, WallAccess::class);
@@ -186,9 +185,9 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
    * Tests the owner's answer is asked first, then each alter in order.
    */
   public function testTheOwnerFirstThenEachAlterInOrder(): void {
-    $alters = array_map(static fn ($alter): string => $alter->class, $this->container->get('data_surface.resource_registry')->getAlters(WallStructure::class));
+    $alters = array_map(static fn ($alter): string => $alter->class, $this->container->get('surface.resource_registry')->getAlters(WallStructure::class));
     $this->assertSame([WallAlter::class, WallOpeningAlter::class], $alters, 'Discovery order.');
-    $this->assertTrue($this->container->get('data_surface.resource_registry')->getDefinition(GalleryResource::class)->answersAccess(), 'An alter answering is an answer, with no access class.');
+    $this->assertTrue($this->container->get('surface.resource_registry')->getDefinition(GalleryResource::class)->answersAccess(), 'An alter answering is an answer, with no access class.');
     $this->gallery();
     $this->assertSame(['WallAccess', 'WallAlter', 'WallOpeningAlter'], array_values(array_unique(WallAccess::$asked)));
 
@@ -298,8 +297,8 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
    * Tests the alters' answers in every frame the altered thing is built.
    */
   public function testEveryFrame(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $annex = fn (bool $alone = FALSE): DataSurfaceInterface => $alone ? $resources->buildStatic(AnnexStructure::class, new OperationContext('configure')) : $resources->build(AnnexStructure::class, new OperationContext('configure'));
+    $resources = $this->container->get('surface.resources');
+    $annex = fn (bool $alone = FALSE): SurfaceInterface => $alone ? $resources->buildStatic(AnnexStructure::class, new OperationContext('configure')) : $resources->build(AnnexStructure::class, new OperationContext('configure'));
 
     // A structure attached twice, and by a second container: the alter
     // answers at every site.
@@ -349,7 +348,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $this->flag(RoomAlter::DARK, FALSE);
 
     // At the top: locked whole, or refused.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(GalleryResource::class, 'curate');
     $this->assertTrue($resources->access(GalleryResource::class, $context)->isAllowed());
     $this->flag(GalleryAlter::CLOSED);
@@ -409,10 +408,10 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
 
     // What the full schema depends on: the account's permissions, and
     // nothing a runtime answer read.
-    $served = $this->container->get('data_surface.contract_emitter')->emitFull($this->gallery(TRUE), 'resource_test.gallery', 'configure');
+    $served = $this->container->get('surface.contract_emitter')->emitFull($this->gallery(TRUE), 'resource_test.gallery', 'configure');
     $this->assertContains('user.permissions', $served->getCacheContexts());
     $this->assertSame(-1, $served->getCacheMaxAge());
-    $these = $this->container->get('data_surface.contract_emitter')->emit($this->gallery(), self::GALLERY, 'resource_test.gallery', 'configure');
+    $these = $this->container->get('surface.contract_emitter')->emit($this->gallery(), self::GALLERY, 'resource_test.gallery', 'configure');
     $this->assertSame(0, $these->getCacheMaxAge(), 'The schema for these answers depends on what the runtime answers read.');
   }
 
@@ -421,7 +420,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testTheToolsAreTheAccounts(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    $id = 'data_surface:resource_test.gallery:configure';
+    $id = 'surface:resource_test.gallery:configure';
     $this->assertSame('keep a gallery', $tools->getDefinition($id)->getPermission(), 'The operation\'s permission stays the owner\'s.');
 
     $this->actAs('freezer');
@@ -439,7 +438,7 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('Whether this may be changed is decided once the thing it belongs to is known', (string) $values->getPropertyDefinition('north')->getDescription());
 
     $read = function (): array {
-      $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:resource_test.gallery:configure:read');
+      $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.gallery:configure:read');
       $this->assertTrue($tool->access());
       $tool->execute();
       return $tool->getOutputValue(OperationInputs::VALUES);
@@ -451,8 +450,8 @@ class AlterAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['name', 'caption', 'credit', 'medium', 'finish', 'rooms'], array_keys($read()), 'Left out once the walls are known.');
     $this->flag(WallAlter::DOWN, FALSE);
     $this->flag(GalleryAlter::CLOSED);
-    $this->assertFalse($this->container->get('plugin.manager.tool')->createInstance('data_surface:resource_test.gallery:curate:read')->access(), 'Left out at the top: refused.');
-    $this->assertTrue($this->container->get('plugin.manager.tool')->createInstance('data_surface:resource_test.gallery:configure:read')->access());
+    $this->assertFalse($this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.gallery:curate:read')->access(), 'Left out at the top: refused.');
+    $this->assertTrue($this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.gallery:configure:read')->access());
   }
 
   /**

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\MemoryBackend;
 use Drupal\Component\Datetime\Time;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_discovery_test\Plugin\Derivative\RegistryAskingActions;
-use Drupal\data_surface_resource_test\Plugin\Block\StickyNoteBlock;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_discovery_test\Plugin\Derivative\RegistryAskingActions;
+use Drupal\surface_resource_test\Plugin\Block\StickyNoteBlock;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -24,9 +24,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * formatter missing. The fixture's deriver asks the same way, and the
  * sticky note block is the plugin that is its own structure.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DiscoveryOrderTest extends DataSurfaceKernelTestBase {
+class DiscoveryOrderTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -34,9 +34,9 @@ class DiscoveryOrderTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_resource_test',
-    'data_surface_discovery_test',
+    'surface',
+    'surface_resource_test',
+    'surface_discovery_test',
   ];
 
   /**
@@ -54,7 +54,7 @@ class DiscoveryOrderTest extends DataSurfaceKernelTestBase {
    * Tests the plugin hosts read first, the order that lost a definition.
    */
   public function testPluginHostsFirst(): void {
-    $plugins = $this->container->get('data_surface.resource_plugins');
+    $plugins = $this->container->get('surface.resource_plugins');
     $this->assertArrayHasKey(StickyNoteBlock::class, $plugins->ownStructures());
     $this->assertTrue($plugins->isComplete());
     $this->assertNotSame([], RegistryAskingActions::$seen, 'The deriver asked the registry while the hosts were being read.');
@@ -73,12 +73,12 @@ class DiscoveryOrderTest extends DataSurfaceKernelTestBase {
    * Tests that the plugin hosts asked again, cached, change nothing.
    */
   public function testBothOrdersAgree(): void {
-    $first = array_keys($this->container->get('data_surface.resource_registry')->getDefinitions());
+    $first = array_keys($this->container->get('surface.resource_registry')->getDefinitions());
     // The rebuilt container is this test's again: register() keeps it.
     $this->container->get('kernel')->rebuildContainer();
     $this->container->get('cache.discovery')->deleteAll();
-    $this->container->get('data_surface.resource_plugins')->ownStructures();
-    $this->assertSame($first, array_keys($this->container->get('data_surface.resource_registry')->getDefinitions()));
+    $this->container->get('surface.resource_plugins')->ownStructures();
+    $this->assertSame($first, array_keys($this->container->get('surface.resource_registry')->getDefinitions()));
   }
 
   /**
@@ -90,13 +90,13 @@ class DiscoveryOrderTest extends DataSurfaceKernelTestBase {
    * and the call made inside the cycle was answered with it too.
    */
   protected function assertComplete(): void {
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $names = array_keys($registry->getDefinitions());
-    $classes = $this->container->getParameter('data_surface.resource_classes');
+    $classes = $this->container->getParameter('surface.resource_classes');
     $fresh = new ResourceRegistry(
       $classes,
       new MemoryBackend(new Time()),
-      $this->container->get('data_surface.resource_plugins'),
+      $this->container->get('surface.resource_plugins'),
       $this->container->get('class_resolver'),
     );
     $whole = array_keys($fresh->getDefinitions());

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\my_module\Storage;
 
-use Drupal\data_surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Storage\ConfigObjectStorage;
 
 /**
  * Keeps my module's settings in its config object, my_module.settings.

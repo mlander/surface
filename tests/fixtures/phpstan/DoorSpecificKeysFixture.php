@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Fixtures;
+namespace Drupal\Tests\surface\Fixtures;
 
-use Drupal\data_surface\Resource\SiteList;
-use Drupal\data_surface\Resource\SiteListInterface;
+use Drupal\surface\Resource\SiteList;
+use Drupal\surface\Resource\SiteListInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource\Attribute;
+namespace Drupal\surface\Resource\Attribute;
 
 /**
  * Names one operation: one way a resource or structure is asked for.
@@ -98,7 +98,7 @@ final class Operation {
    *   an operation says destructive: TRUE too, and neither creates nor is
    *   read only; the facts are refused at discovery otherwise. Its tool
    *   takes the parameters and a dry run, and HTTP serves it as DELETE.
-   * @param class-string<\Drupal\data_surface\Resource\StructureInterface>|null $structure
+   * @param class-string<\Drupal\surface\Resource\StructureInterface>|null $structure
    *   The structure whose keys a call takes, when they are not the
    *   resource's own: a listing's paging and filter, a reorder's list of
    *   ids and weights. Its inputs are what the operation takes and its

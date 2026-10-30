@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 use Drupal\Core\Cache\CacheableMetadata;
-use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\surface\SurfaceInterface;
 
 /**
  * What one walk of one document carries, in one place.
@@ -41,14 +41,14 @@ use Drupal\data_surface\DataSurfaceInterface;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Contract\ContractEmitter
+ * @see \Drupal\surface\Contract\ContractEmitter
  */
 final readonly class Emission {
 
   /**
    * Constructs an Emission.
    *
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   * @param \Drupal\surface\Contract\Subschemas $subschemas
    *   The document's defs, which every child is written to, and whether it
    *   is the full schema (emitFull()): its frames are then described from
    *   their locked keys alone, and a key that watches anything a value
@@ -137,12 +137,12 @@ final readonly class Emission {
    * Gets the kinds of refiner a combination of the frame is answered by.
    *
    * @return int
-   *   DataSurfaceInterface::STATIC for one set of values, whose declared
+   *   SurfaceInterface::STATIC for one set of values, whose declared
    *   rules are evaluated, and CODED for the full schema and a def, which
    *   state a declared rule as written.
    */
   public function kinds(): int {
-    return $this->runtime() ? DataSurfaceInterface::STATIC : DataSurfaceInterface::CODED;
+    return $this->runtime() ? SurfaceInterface::STATIC : SurfaceInterface::CODED;
   }
 
   /**

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * A provider of variants that answers an entry's schema when it is read.
@@ -22,8 +22,8 @@ namespace Drupal\data_surface\Resource;
  * Decision: see
  * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
  *
- * @see \Drupal\data_surface\Variants\ComponentProps
- * @see \Drupal\data_surface\Variants\ComponentSlots
+ * @see \Drupal\surface\Variants\ComponentProps
+ * @see \Drupal\surface\Variants\ComponentSlots
  */
 interface EntrySchemasInterface extends SiteListInterface {
 

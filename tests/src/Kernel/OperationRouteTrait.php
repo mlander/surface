@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\ResourceBuild\NamesNothingException;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\NamesNothingException;
+use Drupal\surface\ResourceBuild\OperationRoute;
 use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
@@ -75,15 +75,15 @@ trait OperationRouteTrait {
   /**
    * Reads the operation the route on the stack serves.
    *
-   * @return \Drupal\data_surface\ResourceBuild\OperationRoute
+   * @return \Drupal\surface\ResourceBuild\OperationRoute
    *   The operation and its context.
    */
   protected function served(): OperationRoute {
     return OperationRoute::fromRouteMatch(
       $this->container->get('current_route_match'),
-      $this->container->get('data_surface.resource_registry'),
-      $this->container->get('data_surface.operation_arguments'),
-      $this->container->get('data_surface.resources'),
+      $this->container->get('surface.resource_registry'),
+      $this->container->get('surface.operation_arguments'),
+      $this->container->get('surface.resources'),
     );
   }
 
@@ -94,7 +94,7 @@ trait OperationRouteTrait {
    *   The built form's data surface container.
    */
   protected function surfaceForm(): array {
-    return $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class)[DataSurfaceOperationForm::SURFACE_KEY];
+    return $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
   }
 
   /**
@@ -115,7 +115,7 @@ trait OperationRouteTrait {
     }
     // The access check answers it as it answers a parameter that names
     // nothing: a refusal saying why, never an error.
-    $access = $this->container->get('data_surface.operation_access')->access($this->container->get('current_route_match'), $this->container->get('current_user'));
+    $access = $this->container->get('surface.operation_access')->access($this->container->get('current_route_match'), $this->container->get('current_user'));
     $this->assertTrue($access->isForbidden());
     $this->assertSame($message, $access->getReason());
   }

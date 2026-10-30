@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel\Fixture;
+namespace Drupal\Tests\surface\Kernel\Fixture;
 
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\OperationRoute;
 use Symfony\Component\Routing\Route;
 
 /**
@@ -14,7 +14,7 @@ use Symfony\Component\Routing\Route;
  * The router's rebuild refuses each of them (OperationRouteSubscriber),
  * which would leave a test site with no router at all, so no routing file
  * can carry one. Each is built here instead, under the name it would have
- * in data_surface_route_test's routing file, with the raw values of a URL
+ * in surface_route_test's routing file, with the raw values of a URL
  * that matches it: for a test to hand the subscriber, or to match as a
  * route no rebuild saw is matched.
  */
@@ -29,7 +29,7 @@ final class RefusedRoutes {
    */
   public static function all(): array {
     $card = [
-      '_form' => DataSurfaceOperationForm::class,
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Add a card',
       OperationRoute::RESOURCE => 'route_test.card',
       OperationRoute::OPERATION => 'create',
@@ -37,27 +37,27 @@ final class RefusedRoutes {
     $color = ['color' => '[a-z]+'];
     return [
       // A reference naming no variable of the path.
-      'data_surface_route_test.add_misspelled' => [
+      'surface_route_test.add_misspelled' => [
         new Route('/surface-test/card/add-misspelled/{color}', [OperationRoute::FIXED => ['envelope.color' => '{hue}']] + $card, $color),
         ['color' => 'cream'],
       ],
       // A reference to a variable nothing bounds.
-      'data_surface_route_test.add_unbounded' => [
+      'surface_route_test.add_unbounded' => [
         new Route('/surface-test/card/add-unbounded/{color}', [OperationRoute::FIXED => ['envelope.color' => '{color}']] + $card),
         ['color' => 'cream'],
       ],
-      'data_surface_route_test.add_copies_unbounded' => [
+      'surface_route_test.add_copies_unbounded' => [
         new Route('/surface-test/card/add-copies-unbounded/{copies}', [OperationRoute::DEFAULTS => ['copies' => '{copies}']] + $card),
         ['copies' => '4'],
       ],
       // A resource's id naming no variable of the path, and one naming a
       // variable nothing bounds: its type has no converter on a route the
       // router's rebuild did not convert.
-      'data_surface_route_test.add_node_misnamed' => [
+      'surface_route_test.add_node_misnamed' => [
         new Route('/surface-test/node/{node_type}/add-misnamed', [OperationRoute::RESOURCE => 'entity.content:node.{bundle}'] + $card, ['node_type' => '[a-z_]+']),
         ['node_type' => 'page'],
       ],
-      'data_surface_route_test.add_node_unbounded' => [
+      'surface_route_test.add_node_unbounded' => [
         new Route(
           '/surface-test/node/{node_type}/add-unbounded',
           [OperationRoute::RESOURCE => 'entity.content:node.{node_type}'] + $card,
@@ -67,7 +67,7 @@ final class RefusedRoutes {
         ['node_type' => 'page'],
       ],
       // One path both fixed and filled.
-      'data_surface_route_test.add_twice' => [
+      'surface_route_test.add_twice' => [
         new Route('/surface-test/card/add-twice', [
           OperationRoute::FIXED => ['title' => 'Welcome'],
           OperationRoute::DEFAULTS => ['title' => 'Hello'],
@@ -78,30 +78,30 @@ final class RefusedRoutes {
       // empty one, one PHP renames before the form reads it, one the form
       // reads for itself, a variable of the path, and a default of the
       // route.
-      'data_surface_route_test.query_braced' => [
+      'surface_route_test.query_braced' => [
         new Route('/surface-test/card/query-braced', [OperationRoute::QUERY => ['title' => '{subject}']] + $card),
         [],
       ],
-      'data_surface_route_test.query_empty' => [
+      'surface_route_test.query_empty' => [
         new Route('/surface-test/card/query-empty', [OperationRoute::QUERY => ['title' => '']] + $card),
         [],
       ],
-      'data_surface_route_test.query_dotted' => [
+      'surface_route_test.query_dotted' => [
         new Route('/surface-test/card/query-dotted', [OperationRoute::QUERY => ['greeting.value' => 'greeting.value']] + $card),
         [],
       ],
-      'data_surface_route_test.query_reserved' => [
+      'surface_route_test.query_reserved' => [
         new Route('/surface-test/card/query-reserved', [OperationRoute::QUERY => ['title' => 'destination']] + $card),
         [],
       ],
-      'data_surface_route_test.query_variable' => [
+      'surface_route_test.query_variable' => [
         new Route('/surface-test/card/query-variable/{color}', [
           OperationRoute::FIXED => ['envelope.color' => '{color}'],
           OperationRoute::QUERY => ['title' => 'color'],
         ] + $card, $color),
         ['color' => 'cream'],
       ],
-      'data_surface_route_test.query_default' => [
+      'surface_route_test.query_default' => [
         new Route('/surface-test/card/query-default', [
           '_title' => 'Send a card',
           OperationRoute::OPERATION => 'send',
@@ -111,9 +111,9 @@ final class RefusedRoutes {
         [],
       ],
       // Keys fixed on a React page served at a module's route.
-      'data_surface_route_test.react_fixed' => [
+      'surface_route_test.react_fixed' => [
         new Route('/surface-test/card/react', [
-          '_controller' => '\Drupal\data_surface_react\Controller\ResourceReactPage::served',
+          '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
           OperationRoute::FIXED => ['title' => 'Welcome'],
         ] + array_diff_key($card, ['_form' => TRUE])),
         [],

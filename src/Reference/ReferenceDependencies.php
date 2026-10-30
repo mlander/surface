@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Reference;
+namespace Drupal\surface\Reference;
 
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 

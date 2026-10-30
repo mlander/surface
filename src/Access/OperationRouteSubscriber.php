@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Access;
+namespace Drupal\surface\Access;
 
 use Drupal\Core\Routing\RouteSubscriberBase;
 use Drupal\Core\Routing\RoutingEvents;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
+use Drupal\surface\ResourceBuild\OperationRoute;
 use Symfony\Component\Routing\RouteCollection;
 
 /**
  * Gates every route served by an operation with the operation's access.
  *
- * A route whose defaults name a resource (`_data_surface_resource`) and an
- * operation (`_data_surface_operation`) is served by that operation, so
+ * A route whose defaults name a resource (`_surface_resource`) and an
+ * operation (`_surface_operation`) is served by that operation, so
  * it asks what the operation asks: the requirement
- * `_data_surface_operation_access: 'TRUE'` is added to it here, and a
+ * `_surface_operation_access: 'TRUE'` is added to it here, and a
  * routing file need not say it. One that says it already is left as it
  * is.
  *
@@ -34,7 +34,7 @@ use Symfony\Component\Routing\RouteCollection;
  * Decision: see
  * docs/decisions.md#the-surface-was-counted-and-cut.
  *
- * @see \Drupal\data_surface\Access\OperationAccessCheck
+ * @see \Drupal\surface\Access\OperationAccessCheck
  */
 final class OperationRouteSubscriber extends RouteSubscriberBase {
 

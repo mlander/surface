@@ -1,0 +1,442 @@
+# The card's create, served by the generic form with nothing more.
+surface_route_test.add:
+  path: '/surface-test/card/add'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+
+# The same create, on a page that fixes three keys (one of the card's
+# own, one inside the map it declares, one inside the structure it
+# attaches) and fills three more, one written as text, with the contract
+# panel beside the form.
+surface_route_test.add_welcome:
+  path: '/surface-test/card/add-welcome'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a welcome card'
+    _surface_panel: 'surface.contract_panel'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_fixed: { title: 'Welcome', 'greeting.format': 'html', 'envelope.color': 'cream' }
+    _surface_defaults: { 'greeting.value': 'Start here.', copies: '3', 'envelope.stamps': 2 }
+
+# Defaults on an update, which keeps what is stored: refused.
+surface_route_test.edit_refilled:
+  path: '/surface-test/card/{card}/refill'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'update'
+    _surface_defaults: { copies: 2 }
+
+# A value the key refuses: refused, naming the key.
+surface_route_test.add_too_many_stamps:
+  path: '/surface-test/card/add-stamped'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a stamped card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_defaults: { 'envelope.stamps': 9 }
+
+# A path that names no key: refused, naming it.
+surface_route_test.add_tucked:
+  path: '/surface-test/card/add-tucked'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a tucked card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_fixed: { 'envelope.flap': 'tucked' }
+
+# A basic page (surface_examples_entity, which a test enables) whose title is
+# fixed and whose body starts filled: each a key of a field's structure,
+# attached at the field's name. The contract panel beside the form states
+# both.
+surface_route_test.add_welcome_page:
+  path: '/surface-test/node/page/add-welcome'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a welcome page'
+    _surface_panel: 'surface.contract_panel'
+    _surface_resource: 'entity.content:node.page'
+    _surface_operation: 'create'
+    _surface_fixed: { 'title.value': 'Welcome' }
+    _surface_defaults: { 'body.value': 'Start here.' }
+
+# The envelope's color fixed from the path, by a reference: the raw value,
+# held to the key, so a color the envelope does not come in names nothing.
+surface_route_test.add_colored:
+  path: '/surface-test/card/add/{color}'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_fixed: { 'envelope.color': '{color}' }
+  requirements:
+    color: '[a-z]+'
+
+# The number of copies starting from the path.
+surface_route_test.add_copies:
+  path: '/surface-test/card/add-copies/{copies}'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add copies of a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_defaults: { copies: '{copies}' }
+  requirements:
+    copies: '\d+'
+
+# One route for both URLs: the color fixed when the path names one,
+# nothing when it does not.
+surface_route_test.add_optional:
+  path: '/surface-test/card/add-optional/{color}'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    color: ~
+    _surface_fixed: { 'envelope.color': '{color}' }
+  requirements:
+    color: '[a-z]+'
+
+# A reference at a path that names no key: the route written wrong, for
+# every value of the path.
+surface_route_test.add_misplaced:
+  path: '/surface-test/card/add-misplaced/{color}'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_fixed: { 'envelope.hue': '{color}' }
+  requirements:
+    color: '[a-z]+'
+
+# The keys a link may start, each from a query parameter.
+surface_route_test.add_subject:
+  path: '/surface-test/card/add-subject'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_query: { title: subject, 'greeting.value': greeting }
+
+# A link may start the card's own keys (its machine name among them, on a
+# create), a key of the structure it attaches, and a key the route fixes,
+# whose fixed value stands.
+surface_route_test.add_prefilled:
+  path: '/surface-test/card/add-prefilled'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_fixed: { 'greeting.format': 'html' }
+    _surface_query: { card: name, title: subject, copies: copies, occasion: occasion, 'envelope.stamps': stamps, 'greeting.format': format }
+
+# Keys no link may start: a secret, a key the card does not declare, one
+# inside its variants, and the map it declares, named whole. The router's
+# rebuild takes each, and the form refuses each when it is first drawn,
+# as the route written wrong.
+surface_route_test.query_secret:
+  path: '/surface-test/card/query-secret'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_query: { code: code }
+
+surface_route_test.query_undeclared:
+  path: '/surface-test/card/query-undeclared'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_query: { 'greeting.font': font }
+
+surface_route_test.query_inside:
+  path: '/surface-test/card/query-inside'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_query: { 'paper_settings.weight': weight }
+
+surface_route_test.query_map:
+  path: '/surface-test/card/query-map'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_query: { greeting: greeting }
+
+# A link may start a key of an update too, though no route default may.
+surface_route_test.edit_queried:
+  path: '/surface-test/card/{card}/edit-queried'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'update'
+    _surface_query: { title: subject }
+
+# Never the card's machine name on its update, which the path names:
+# identity is the operation's.
+surface_route_test.edit_renamed_by_link:
+  path: '/surface-test/card/{card}/rename-by-link'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'update'
+    _surface_query: { card: name }
+
+# What the router's rebuild refuses (a reference naming no variable of
+# the path, one key both fixed and filled, a query parameter no link can
+# start a key from) no routing file can carry: those routes are built by
+# hand, in the tests' RefusedRoutes.
+
+# An update, the card named by the path, fixing the envelope's color.
+surface_route_test.edit_cream:
+  path: '/surface-test/card/{card}/in-cream'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'update'
+    _surface_fixed: { 'envelope.color': 'cream' }
+
+# The card's machine name fixed on its update, where the path names the
+# card: identity is the operation's, refused.
+surface_route_test.edit_renamed:
+  path: '/surface-test/card/{card}/rename'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'update'
+    _surface_fixed: { card: 'other' }
+
+# Values on a delete, which takes none: refused.
+surface_route_test.delete_titled:
+  path: '/surface-test/card/{card}/delete'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Remove a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'delete'
+    _surface_fixed: { title: 'Gone' }
+
+# A send to friends: the list pinned by a plain default, which core counts
+# as a route parameter, and the title starting filled.
+surface_route_test.send_friends:
+  path: '/surface-test/card/send-friends'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Send a card to friends'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'send'
+    to: 'friends'
+    _surface_defaults: { title: 'Dear friends' }
+
+# A send to friends from the sender the path names: the path's value is
+# what the page is about, never the plain default.
+surface_route_test.send_from:
+  path: '/surface-test/card/send-from/{from}'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Send a card to friends'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'send'
+    to: 'friends'
+  requirements:
+    from: '[a-z]+'
+
+# A plain default that names no parameter of the send: refused, naming it.
+surface_route_test.send_misnamed:
+  path: '/surface-test/card/send-misnamed'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Send a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'send'
+    too: 'friends'
+
+# A plain default the send refuses, there being no such list: the route
+# written wrong, refused with the operation's reason.
+surface_route_test.send_nobody:
+  path: '/surface-test/card/send-nobody'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Send a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'send'
+    to: 'nobody'
+
+# The envelope's color fixed over the send's own fixed color: refused.
+surface_route_test.send_cream:
+  path: '/surface-test/card/send-cream'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Send a card'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'send'
+    _surface_fixed: { 'envelope.color': 'cream' }
+
+# One add page for every node bundle (surface_examples_entity, which a test
+# enables), the bundle in the path, titled by core's node callback. The
+# requirement bounds the bundle where node is not installed and no
+# converter loads its type; the router's rebuild refuses a resource id
+# whose variable nothing bounds.
+surface_route_test.add_node:
+  path: '/surface-test/node/{node_type}/add'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title_callback: '\Drupal\node\Controller\NodeController::addPageTitle'
+    _surface_resource: 'entity.content:node.{node_type}'
+    _surface_operation: 'create'
+  requirements:
+    node_type: '[a-z0-9_]+'
+  options:
+    parameters:
+      node_type:
+        type: 'entity:node_type'
+
+# The same, titled by core's entity callback, which reads two plain
+# defaults: neither is the operation's, and neither is refused.
+surface_route_test.add_node_titled:
+  path: '/surface-test/node/{node_type}/add-titled'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title_callback: '\Drupal\Core\Entity\Controller\EntityController::addBundleTitle'
+    _surface_resource: 'entity.content:node.{node_type}'
+    _surface_operation: 'create'
+    entity_type_id: 'node'
+    bundle_parameter: 'node_type'
+  requirements:
+    node_type: '[a-z0-9_]+'
+  options:
+    parameters:
+      node_type:
+        type: 'entity:node_type'
+
+# Every bundle's add page with its title fixed: nothing read from the
+# request is in the context, so each bundle's build is kept.
+surface_route_test.add_node_welcome:
+  path: '/surface-test/node/{node_type}/welcome'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title_callback: '\Drupal\node\Controller\NodeController::addPageTitle'
+    _surface_resource: 'entity.content:node.{node_type}'
+    _surface_operation: 'create'
+    _surface_fixed: { 'title.value': 'Welcome' }
+  requirements:
+    node_type: '[a-z0-9_]+'
+  options:
+    parameters:
+      node_type:
+        type: 'entity:node_type'
+
+# The edit page of a node of the bundle the path names: a node of another
+# bundle names nothing here.
+surface_route_test.edit_node:
+  path: '/surface-test/node/{node_type}/{id}/edit'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit content'
+    _surface_resource: 'entity.content:node.{node_type}'
+    _surface_operation: 'update'
+  requirements:
+    node_type: '[a-z0-9_]+'
+  options:
+    parameters:
+      node_type:
+        type: 'entity:node_type'
+      id:
+        type: 'entity:node'
+
+# Every bundle's add page titled by the operation's label, the derived
+# create's "Add <bundle>".
+surface_route_test.add_node_labeled:
+  path: '/surface-test/node/{node_type}/add-labeled'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title_callback: '\Drupal\surface\Form\SurfaceOperationForm::title'
+    _surface_resource: 'entity.content:node.{node_type}'
+    _surface_operation: 'create'
+  requirements:
+    node_type: '[a-z0-9_]+'
+  options:
+    parameters:
+      node_type:
+        type: 'entity:node_type'
+
+# A node's edit page titled by the operation's label, where `_title`
+# would print the raw id of the node its upcast placeholder loads.
+surface_route_test.edit_node_labeled:
+  path: '/surface-test/node/{node_type}/{id}/edit-labeled'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title_callback: '\Drupal\surface\Form\SurfaceOperationForm::title'
+    _surface_resource: 'entity.content:node.{node_type}'
+    _surface_operation: 'update'
+  requirements:
+    node_type: '[a-z0-9_]+'
+  options:
+    parameters:
+      node_type:
+        type: 'entity:node_type'
+      id:
+        type: 'entity:node'
+
+# A basic page's edit page pinning, by a plain default, a node that does
+# not exist: the route written wrong.
+surface_route_test.edit_missing_page:
+  path: '/surface-test/node/page/edit-missing'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit content'
+    _surface_resource: 'entity.content:node.page'
+    _surface_operation: 'update'
+    id: 999
+
+# The card's occasion, which a card may leave out, fixed: a fixed key
+# holds its value, so it is drawn as it, stated `const` and required, and
+# a card added here cannot leave it out or hold another.
+surface_route_test.add_thanks:
+  path: '/surface-test/card/add-thanks'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Add a thank-you card'
+    _surface_panel: 'surface.contract_panel'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_fixed: { occasion: 'thanks' }
+
+# The card's create as a React page (surface_react, which a test
+# enables) served at the module's own route: the title starting filled,
+# the copies from the path, and the keys a link may start. A React page
+# fixes nothing; the router's rebuild refuses `_surface_fixed` here.
+surface_route_test.react_add:
+  path: '/surface-test/card/react/{copies}'
+  defaults:
+    _controller: '\Drupal\surface_react\Controller\ResourceReactPage::served'
+    _title_callback: '\Drupal\surface_react\Controller\ResourceReactPage::servedTitle'
+    _surface_resource: 'route_test.card'
+    _surface_operation: 'create'
+    _surface_defaults: { title: 'Dear you', copies: '{copies}' }
+    _surface_query: { occasion: occasion, 'envelope.stamps': stamps, 'greeting.value': greeting }
+  requirements:
+    copies: '\d+'

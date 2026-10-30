@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 /**
  * A layout that says the config schema of each key it translates.
@@ -25,7 +25,7 @@ namespace Drupal\data_surface\Storage;
  * Decision: see
  * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
  *
- * @see \Drupal\data_surface\Storage\ConfigObjectStorage::layout()
+ * @see \Drupal\surface\Storage\ConfigObjectStorage::layout()
  */
 interface StoredSchemaInterface extends StorageLayoutInterface {
 

@@ -1,0 +1,42 @@
+services:
+  # What a client could be told about an example's settings with no
+  # resource: core's own JSON Schema answer for the config object, and a
+  # plain mapping of its config schema.
+  surface_examples.config_schema_contract:
+    class: Drupal\surface_examples\ConfigSchemaContract
+    arguments: ['@config.typed', '@serializer']
+  # Shows both, collapsed, and compares the second with a resource's
+  # contract when it is handed one.
+  surface_examples.config_schema_panel:
+    class: Drupal\surface_examples\ConfigSchemaPanel
+    arguments: ['@surface_examples.config_schema_contract', '@string_translation']
+  # The panel the examples' routes name in _surface_panel: the
+  # contract panel, and below it what config schema says today.
+  surface_examples.panels:
+    class: Drupal\surface_examples\ExamplePanels
+    arguments: ['@surface.contract_panel', '@surface_examples.config_schema_panel', '@surface.contract_emitter', '@surface.resource_registry', '@surface.resources', '@surface_examples.concept_panel', '@surface_examples.files_panel']
+  # The files each example is made of, from Series, on each of its pages.
+  surface_examples.files_panel:
+    class: Drupal\surface_examples\FilesPanel
+    arguments: ['@string_translation']
+  # What examples 7 to 12 and 14 each show, the part of their documents it is
+  # about, and their tool calls, each a dry run; a call another module's
+  # part needs only where that module is on, in the State it needs.
+  surface_examples.concept_panel:
+    class: Drupal\surface_examples\ConceptPanel
+    arguments: ['@surface.contract_emitter', '@surface.resource_registry', '@surface.resources', '@plugin.manager.tool', '@account_switcher', '@class_resolver', '@string_translation', '@module_handler', '@state', '@plugin.manager.sdc', '@surface.schema_reader', '@surface.references', '@surface.operation_inputs', '@surface.site_list_budget', '@entity_type.manager']
+  # Example 14: the code that uses the webhook, which signs each post with
+  # the key the webhook's values hold where it is used.
+  surface_examples.webhook_signer:
+    class: Drupal\surface_examples\WebhookSigner
+    arguments: ['@surface.resources']
+  # Example 15: what its three forms say once they wrote, and where they
+  # go back to.
+  surface_examples.venue_form_cosmetics:
+    class: Drupal\surface_examples\Form\VenueFormCosmetics
+    arguments: ['@string_translation']
+  # The rooms an event may be held in, those of example 15's venues,
+  # which example 2's room is chosen from.
+  surface_examples.venue_choices:
+    class: Drupal\surface_examples\VenueChoices
+    arguments: ['@entity_type.manager']

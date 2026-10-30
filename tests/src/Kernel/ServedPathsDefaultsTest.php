@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\ResourceBuild\OperationDefinition;
-use Drupal\data_surface_paths_test\Resource\BoardResource;
-use Drupal\data_surface_paths_test\Resource\CrateResource;
-use Drupal\data_surface_paths_test\Resource\DeskResource;
-use Drupal\data_surface_paths_test\Resource\PanelResource;
-use Drupal\data_surface_paths_test\Resource\ShelfResource;
+use Drupal\surface\ResourceBuild\OperationDefinition;
+use Drupal\surface_paths_test\Resource\BoardResource;
+use Drupal\surface_paths_test\Resource\CrateResource;
+use Drupal\surface_paths_test\Resource\DeskResource;
+use Drupal\surface_paths_test\Resource\PanelResource;
+use Drupal\surface_paths_test\Resource\ShelfResource;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -23,9 +23,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ServedPathsDefaultsTest extends DataSurfaceKernelTestBase {
+class ServedPathsDefaultsTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -33,9 +33,9 @@ class ServedPathsDefaultsTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_react',
-    'data_surface_paths_test',
+    'surface',
+    'surface_react',
+    'surface_paths_test',
   ];
 
   /**
@@ -81,8 +81,8 @@ class ServedPathsDefaultsTest extends DataSurfaceKernelTestBase {
    *   ServedPaths::defaults().
    */
   protected function defaults(string $class): array {
-    $definition = $this->container->get('data_surface.resource_registry')->getDefinition($class);
-    return $this->container->get('data_surface_react.served_paths')->defaults($definition);
+    $definition = $this->container->get('surface.resource_registry')->getDefinition($class);
+    return $this->container->get('surface_react.served_paths')->defaults($definition);
   }
 
 }

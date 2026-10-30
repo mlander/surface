@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\ResourceBuild\OperationDefinition;
-use Drupal\data_surface\ResourceBuild\ResourceDefinition;
-use Drupal\data_surface_examples\ConceptCalls;
-use Drupal\data_surface_examples\ExampleCalls;
-use Drupal\data_surface_examples\Hook\SpotlightBlockHooks;
-use Drupal\data_surface_examples_references\Sponsorship;
-use Drupal\data_surface_examples_retitle\Retitle;
+use Drupal\surface\ResourceBuild\OperationDefinition;
+use Drupal\surface\ResourceBuild\ResourceDefinition;
+use Drupal\surface_examples\ConceptCalls;
+use Drupal\surface_examples\ExampleCalls;
+use Drupal\surface_examples\Hook\SpotlightBlockHooks;
+use Drupal\surface_examples_references\Sponsorship;
+use Drupal\surface_examples_retitle\Retitle;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
-use Drupal\Tests\data_surface\Traits\DoorAgreementTrait;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\Tests\surface\Traits\DoorAgreementTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\AssertionFailedError;
 use PHPUnit\Framework\ExpectationFailedException;
@@ -48,9 +48,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/decisions.md#nothing-an-operation-runs-reads-the-request
  * @see docs/decisions.md#one-result-at-every-door
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
+class EveryDoorAgreesTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
   use DoorAgreementTrait;
@@ -71,9 +71,9 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
     'path_alias',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
+    'surface',
+    'surface_examples_field',
+    'surface_react',
   ];
 
   /**
@@ -82,15 +82,15 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
   protected const SITES = [
     'the examples' => [
       'modules' => [
-        'data_surface_examples',
-        'data_surface_examples_compliance',
-        'data_surface_examples_workflow',
-        'data_surface_examples_keys',
-        'data_surface_examples_references',
-        'data_surface_examples_retitle',
-        'data_surface_component_block',
-        'data_surface_block',
-        'data_surface_first',
+        'surface_examples',
+        'surface_examples_compliance',
+        'surface_examples_workflow',
+        'surface_examples_keys',
+        'surface_examples_references',
+        'surface_examples_retitle',
+        'surface_examples_component_block',
+        'surface_examples_block',
+        'surface_examples_first',
       ],
     ],
     'content entities and fields' => [
@@ -101,24 +101,24 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
         'telephone',
         'taxonomy',
         'address',
-        'data_surface_address',
-        'data_surface_demo',
-        'data_surface_demo_extras',
-        'data_surface_demo_node_type',
-        'data_surface_entity',
+        'surface_examples_address',
+        'surface_examples_plugins',
+        'surface_examples_extras',
+        'surface_examples_node_type',
+        'surface_examples_entity',
       ],
-      'holds' => ['data_surface_tool'],
+      'holds' => ['surface_examples_field'],
     ],
     'the fixtures' => [
       'modules' => [
         'config_test',
-        'data_surface_test',
-        'data_surface_resource_test',
-        'data_surface_tool_test',
-        'data_surface_storage_test',
-        'data_surface_schema_test',
-        'data_surface_paths_test',
-        'data_surface_gate_test',
+        'surface_test',
+        'surface_resource_test',
+        'surface_tool_test',
+        'surface_storage_test',
+        'surface_schema_test',
+        'surface_paths_test',
+        'surface_gate_test',
       ],
     ],
   ];
@@ -129,8 +129,8 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
   protected const SUBJECTS = [
     'event.venue:update' => ['id' => 'riverside'],
     'event.venue:delete' => ['id' => 'riverside'],
-    'block.placement:update' => ['id' => 'data_surface_examples_spotlight'],
-    'block.placement:delete' => ['id' => 'data_surface_examples_spotlight'],
+    'block.placement:update' => ['id' => 'surface_examples_spotlight'],
+    'block.placement:delete' => ['id' => 'surface_examples_spotlight'],
     'node.type:update' => ['type' => 'page'],
     'field.instance:create' => ['entity_type' => 'node', 'bundle' => 'article'],
     'field.instance:reuse' => ['entity_type' => 'node', 'bundle' => 'article', 'field_name' => 'body'],
@@ -249,8 +249,8 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
   #[DataProvider('siteProvider')]
   public function testEveryDoorAgrees(string $site): void {
     $this->site($site);
-    $registry = $this->container->get('data_surface.resource_registry');
-    $resources = $this->container->get('data_surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
     $holds = [...self::SITES[$site]['modules'], ...(self::SITES[$site]['holds'] ?? [])];
     $compared = 0;
     $skipped = [];
@@ -328,9 +328,9 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
   /**
    * Lists the README's calls of one operation, as rows of the door check.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param array<string, int> $skipped
    *   The skipped kinds, counted, a call the doors cannot make among them.
@@ -353,7 +353,7 @@ class EveryDoorAgreesTest extends DataSurfaceKernelTestBase {
       $parameters = $call['parameters'] ?? [];
       if ($parameters !== []) {
         try {
-          $this->container->get('data_surface.resources')->operation($definition->name(), $operation->id, $parameters);
+          $this->container->get('surface.resources')->operation($definition->name(), $operation->id, $parameters);
         }
         catch (\InvalidArgumentException) {
           $skipped[self::SKIPPED_SUBJECT] = ($skipped[self::SKIPPED_SUBJECT] ?? 0) + 1;

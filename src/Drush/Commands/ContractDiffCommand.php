@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Commands;
+namespace Drupal\surface\Drush\Commands;
 
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
-use Drupal\data_surface\Contract\ContractBaselines;
-use Drupal\data_surface\Contract\ContractChange;
-use Drupal\data_surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\ContractBaselines;
+use Drupal\surface\Contract\ContractChange;
+use Drupal\surface\Contract\ContractEmitter;
 use Drush\Commands\AutowireTrait;
 use Drush\Style\DrushStyle;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -44,9 +44,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
  */
 #[AsCommand(
-  name: 'data_surface:contract-diff',
+  name: 'surface:contract-diff',
   description: 'Compares the full schemas of the named modules\' resources and structures with their committed contract baselines.',
-  aliases: ['ds-contract-diff'],
 )]
 final class ContractDiffCommand extends Command {
 
@@ -60,7 +59,7 @@ final class ContractDiffCommand extends Command {
   /**
    * Constructs a ContractDiffCommand.
    *
-   * @param \Drupal\data_surface\Contract\ContractBaselines $baselines
+   * @param \Drupal\surface\Contract\ContractBaselines $baselines
    *   The baselines.
    * @param \Drupal\Core\Session\AccountSwitcherInterface $switcher
    *   The account switcher, for the fixed account.
@@ -68,7 +67,7 @@ final class ContractDiffCommand extends Command {
    *   The entity type manager, which loads it.
    */
   public function __construct(
-    #[Autowire(service: 'data_surface.contract_baselines')]
+    #[Autowire(service: 'surface.contract_baselines')]
     private readonly ContractBaselines $baselines,
     #[Autowire(service: 'account_switcher')]
     private readonly AccountSwitcherInterface $switcher,
@@ -226,7 +225,7 @@ final class ContractDiffCommand extends Command {
    *
    * @param \Drush\Style\DrushStyle $io
    *   The output.
-   * @param \Drupal\data_surface\Contract\ContractChange[] $changes
+   * @param \Drupal\surface\Contract\ContractChange[] $changes
    *   The differences.
    */
   protected function table(DrushStyle $io, array $changes): void {

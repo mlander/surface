@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * A resource or structure that answers with something too.
@@ -28,7 +28,7 @@ interface DefinesOutputsInterface {
    * Static, like DefinesInputsInterface::defineInputs(), and for the same
    * reason: it takes nothing but the blueprint to fill.
    *
-   * @param \Drupal\data_surface\Resource\BlueprintInterface $outputs
+   * @param \Drupal\surface\Resource\BlueprintInterface $outputs
    *   The output blueprint to fill.
    */
   public static function defineOutputs(BlueprintInterface $outputs): void;

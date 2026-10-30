@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 use Drupal\Component\Serialization\Yaml as DrupalYaml;
 use Composer\Autoload\ClassLoader;
@@ -23,21 +23,21 @@ use Drupal\Core\TypedData\Type\BooleanInterface;
 use Drupal\Core\TypedData\Type\FloatInterface;
 use Drupal\Core\TypedData\Type\IntegerInterface;
 use Drupal\Core\TypedData\Type\StringInterface;
-use Drupal\data_surface\Contract\ContractBaselines;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Reference\ReferenceStorageLayout;
-use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Resource\ClosedSiteListInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\AutowiringClassResolver;
-use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
-use Drupal\data_surface\ResourceBuild\ResourceDefinition;
-use Drupal\data_surface\ResourceBuild\ResourcePlugins;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface\ResourceBuild\Resources;
+use Drupal\surface\Contract\ContractBaselines;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entry;
+use Drupal\surface\Reference\ReferenceStorageLayout;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Resource\ClosedSiteListInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\AutowiringClassResolver;
+use Drupal\surface\ResourceBuild\ResourceCollectorPass;
+use Drupal\surface\ResourceBuild\ResourceDefinition;
+use Drupal\surface\ResourceBuild\ResourcePlugins;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\Resources;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Yaml\Yaml;
 
@@ -104,7 +104,7 @@ use Symfony\Component\Yaml\Yaml;
  * the file too. Writing nothing itself: files() answers what each file
  * would hold, and the Drush command and the drift test compare or write.
  *
- * @see \Drupal\data_surface\Drush\Commands\ConfigSchemaCommand
+ * @see \Drupal\surface\Drush\Commands\ConfigSchemaCommand
  * @see docs/storage.md#a-schema-generated-from-the-resource
  */
 final class ConfigSchemaGenerator {
@@ -112,7 +112,7 @@ final class ConfigSchemaGenerator {
   /**
    * The line above each entry this writes, with the resource's id.
    */
-  public const GENERATED = '# Generated from the %s resource by drush data_surface:config-schema.';
+  public const GENERATED = '# Generated from the %s resource by drush surface:config-schema.';
 
   /**
    * The constraints a schema carries, and the options of each it keeps.
@@ -147,9 +147,9 @@ final class ConfigSchemaGenerator {
   /**
    * Constructs a ConfigSchemaGenerator.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   The registry.
-   * @param \Drupal\data_surface\ResourceBuild\Resources $resources
+   * @param \Drupal\surface\ResourceBuild\Resources $resources
    *   The build step, which seals each resource as declared.
    * @param \Drupal\Core\Extension\ModuleExtensionList $moduleList
    *   The module list, for where each module's files are.
@@ -163,7 +163,7 @@ final class ConfigSchemaGenerator {
    *   arguments from; NULL reads installed modules alone.
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface|null $classResolver
    *   The class resolver.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins|null $plugins
+   * @param \Drupal\surface\ResourceBuild\ResourcePlugins|null $plugins
    *   The plugins that are their own structure.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface|null $entityTypeManager
    *   The entity type manager, for the config entity types an installed
@@ -238,11 +238,11 @@ final class ConfigSchemaGenerator {
     // their own, since the main one may have cached a miss for a class.
     $loader->register();
     $resolver = new AutowiringClassResolver($this->classResolver, $this->container);
-    $registry = new ResourceRegistry(ResourceCollectorPass::discover($scanned, $this->root . '/'), new NullBackend('data_surface_config_schema'), $this->plugins, $resolver);
+    $registry = new ResourceRegistry(ResourceCollectorPass::discover($scanned, $this->root . '/'), new NullBackend('surface_config_schema'), $this->plugins, $resolver);
     // A key may refer to an entity type a module not installed declares,
     // which the site does not have until it is.
     $declared = $this->entityTypesOf(array_diff_key($scanned, $this->installed));
-    $references = $this->container->get('data_surface.references');
+    $references = $this->container->get('surface.references');
     $known = $declared === [] ? NULL : $references->knowing($declared);
     return new static($registry, $this->resources->withRegistry($registry, $resolver, $known), $this->moduleList, $this->root, $scanned, entityTypeManager: $this->entityTypeManager);
   }
@@ -274,7 +274,7 @@ final class ConfigSchemaGenerator {
   /**
    * Lists the resources whose config schema this writes.
    *
-   * @return array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   * @return array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>
    *   Each resource stored in a simple config object, or in a config
    *   entity whose type its own module declares, by name.
    */
@@ -301,7 +301,7 @@ final class ConfigSchemaGenerator {
   /**
    * Gives the config entity type a resource is stored in, if its module's.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    *
    * @return \Drupal\Core\Config\Entity\ConfigEntityTypeInterface|null
@@ -373,7 +373,7 @@ final class ConfigSchemaGenerator {
   /**
    * Describes one resource's config object.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    *
    * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: array|null}
@@ -408,15 +408,15 @@ final class ConfigSchemaGenerator {
    * Decision: see
    * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The resource, sealed as declared.
    *
    * @return array<string, array>
    *   Each such key's config schema as stored, by its dotted path.
    */
-  protected function translatedBy(ResourceDefinition $definition, DataSurfaceInterface $built): array {
+  protected function translatedBy(ResourceDefinition $definition, SurfaceInterface $built): array {
     $storage = $this->resources->storageInstance($definition->name());
     return $storage instanceof ConfigObjectStorage || $storage instanceof ConfigEntityStorage ? $storage->translatedKeys($built) : [];
   }
@@ -432,9 +432,9 @@ final class ConfigSchemaGenerator {
    * Decision: see
    * docs/decisions.md#the-generator-writes-what-the-first-page-shows.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The resource, sealed as declared.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
    *   What it was built from: its id names the entry, its module the file.
    * @param string $config
    *   The config object.
@@ -455,7 +455,7 @@ final class ConfigSchemaGenerator {
    *   The object's name, each schema entry with the module it is written
    *   in, and the values it is installed with.
    */
-  public function describeBuilt(DataSurfaceInterface $built, ResourceDefinition $owner, string $config, array $always_held, array $schema, array $install, ?array $translated = NULL): array {
+  public function describeBuilt(SurfaceInterface $built, ResourceDefinition $owner, string $config, array $always_held, array $schema, array $install, ?array $translated = NULL): array {
     $this->alwaysHeld = $always_held;
     $this->translated = $translated ?? ReferenceStorageLayout::storedSchemaOf($built);
     $entries = [];
@@ -500,7 +500,7 @@ final class ConfigSchemaGenerator {
    * Decision: see
    * docs/decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    * @param \Drupal\Core\Config\Entity\ConfigEntityTypeInterface $type
    *   The entity type its storage names, which its module declares.
@@ -549,10 +549,10 @@ final class ConfigSchemaGenerator {
   /**
    * Gives the context a resource is described in.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   Its first operation that needs nothing and takes the resource's own
    *   keys, or the plugin host's verb.
    */
@@ -568,11 +568,11 @@ final class ConfigSchemaGenerator {
   /**
    * Writes the mapping of a map of keys.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The keys.
    * @param string $prefix
    *   The schema type every named type below starts with.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
    *   The resource.
    * @param array $entries
    *   The named types written for other parts, added to.
@@ -622,11 +622,11 @@ final class ConfigSchemaGenerator {
   /**
    * Writes one key.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param string $path
    *   The schema type a named part of it is called.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
    *   The resource.
    * @param array $entries
    *   The named types written for other parts, added to.
@@ -760,7 +760,7 @@ final class ConfigSchemaGenerator {
    *
    * @param string $value
    *   The variant whose mapping is written.
-   * @param array<string, array{0: \Drupal\data_surface\DefinitionMap, 1: mixed}> $variants
+   * @param array<string, array{0: \Drupal\surface\DefinitionMap, 1: mixed}> $variants
    *   Every variant's keys, by value.
    *
    * @return array
@@ -786,11 +786,11 @@ final class ConfigSchemaGenerator {
   /**
    * Writes the owner's map of mounted keys, and each module's entry.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The third_party_settings key.
    * @param string $config
    *   The config object.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
    *   The resource.
    * @param array $entries
    *   The named types written for other parts, added to.
@@ -1045,7 +1045,7 @@ final class ConfigSchemaGenerator {
   /**
    * Writes the values a config object is installed with.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The resource.
    * @param array $existing
    *   What the install file holds now.
@@ -1053,16 +1053,16 @@ final class ConfigSchemaGenerator {
    * @return array
    *   The values.
    */
-  protected function install(DataSurfaceInterface $built, array $existing): array {
+  protected function install(SurfaceInterface $built, array $existing): array {
     return $this->installMap($built->getDefinitions(), $built, $existing);
   }
 
   /**
    * Writes the values a map of keys starts from.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The keys.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   What holds them, for its defaults.
    * @param array $existing
    *   What the file holds for them now.
@@ -1073,7 +1073,7 @@ final class ConfigSchemaGenerator {
    * @return array
    *   The values.
    */
-  protected function installMap(DefinitionMap $map, DataSurfaceInterface $surface, array $existing, string $at = ''): array {
+  protected function installMap(DefinitionMap $map, SurfaceInterface $surface, array $existing, string $at = ''): array {
     // In declaration order, the order core keeps a config object in once
     // its schema lists the keys so.
     $values = [];
@@ -1236,7 +1236,7 @@ final class ConfigSchemaGenerator {
       $comments = [];
     }
     foreach ($entries as $name => $entry) {
-      $kept = array_values(array_filter($blocks[$name]['comments'] ?? [], static fn (string $line): bool => !preg_match('/^# Generated from the \S+ resource by drush data_surface:config-schema\.$/', $line)));
+      $kept = array_values(array_filter($blocks[$name]['comments'] ?? [], static fn (string $line): bool => !preg_match('/^# Generated from the \S+ resource by drush surface:config-schema\.$/', $line)));
       $blocks[$name] = [
         'comments' => [...$kept, sprintf(self::GENERATED, $entry['resource'])],
         'lines' => explode("\n", rtrim(static::dumpEntry($name, $entry['schema']), "\n")),

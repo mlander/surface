@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\Violation;
 
 /**
  * The gates an operation asks once per item of a collection.
@@ -29,11 +29,11 @@ final class ItemGates {
   /**
    * Constructs ItemGates.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Gates $gates
+   * @param \Drupal\surface\ResourceBuild\Gates $gates
    *   What answers each gate.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which answers an operation gate.
-   * @param array<string, array{item: string, type: string, gates: \Drupal\data_surface\ResourceBuild\Gate[]}> $lists
+   * @param array<string, array{item: string, type: string, gates: \Drupal\surface\ResourceBuild\Gate[]}> $lists
    *   By the collection's key: the key in each item that names its thing,
    *   the entity type it names, and the gates asked about it.
    */
@@ -51,7 +51,7 @@ final class ItemGates {
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account the call is made as.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   One per gate that refused an item, at the path of the item's key
    *   that names its thing; none when every gate allowed every item.
    */

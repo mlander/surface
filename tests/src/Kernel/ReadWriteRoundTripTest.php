@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Config\ConfigEvents;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -23,9 +23,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#absent-keeps-null-clears
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ReadWriteRoundTripTest extends DataSurfaceKernelTestBase {
+class ReadWriteRoundTripTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -38,21 +38,20 @@ class ReadWriteRoundTripTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
+    'surface',
+    'surface_examples',
+    'surface_examples_compliance',
   ];
 
   /**
    * The config object step 3 stores in.
    */
-  protected const CONFIG = 'data_surface_examples.registration_step3';
+  protected const CONFIG = 'surface_examples.registration_step3';
 
   /**
    * The write tool, and its read tool with the suffix.
    */
-  protected const TOOL = 'data_surface:registration.step3:configure';
+  protected const TOOL = 'surface:registration.step3:configure';
 
   /**
    * {@inheritdoc}
@@ -60,7 +59,7 @@ class ReadWriteRoundTripTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -160,14 +159,14 @@ class ReadWriteRoundTripTest extends DataSurfaceKernelTestBase {
     // A key storage never held reads as its default: sent as that
     // default, as a form posts every element it drew, it changes nothing;
     // sent another value, it is written.
-    $compliance = ['data_surface_examples_compliance' => ['license' => '', 'stewards' => 1]];
+    $compliance = ['surface_examples_compliance' => ['license' => '', 'stewards' => 1]];
     [, $outputs] = $this->write(['capacity' => 50, 'third_party_settings' => $compliance]);
     $this->assertSame(['/capacity'], $outputs[OperationInputs::CHANGES]);
     $this->assertNull($this->config(self::CONFIG)->get('third_party_settings'));
-    $compliance = ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 1]];
+    $compliance = ['surface_examples_compliance' => ['license' => '2048', 'stewards' => 1]];
     [, $outputs] = $this->write(['third_party_settings' => $compliance]);
     $this->assertSame(['/third_party_settings'], $outputs[OperationInputs::CHANGES]);
-    $this->assertSame('2048', $this->config(self::CONFIG)->get('third_party_settings.data_surface_examples_compliance.license'));
+    $this->assertSame('2048', $this->config(self::CONFIG)->get('third_party_settings.surface_examples_compliance.license'));
   }
 
 }

@@ -1,6 +1,6 @@
 {
     "resource": "ai.retitle",
-    "module": "data_surface_examples_retitle",
+    "module": "surface_examples_retitle",
     "contract": 4,
     "documents": [
         {
@@ -91,7 +91,7 @@
                                     },
                                     "checkedOnServer": [
                                         {
-                                            "constraint": "DataSurfaceValidReference",
+                                            "constraint": "SurfaceValidReference",
                                             "message": "Refers to an entity the account may reference"
                                         }
                                     ]

@@ -1,0 +1,4 @@
+# The defaults this site sets over the ones a resource declares, one entry
+# each: the resource id, the key path from it, and the value, as a form
+# posts it. drush config:set surface.defaults writes them.
+defaults: []

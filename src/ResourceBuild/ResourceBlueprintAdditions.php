@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\ArrangementGroup;
+use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\ArrangementGroup;
 
 /**
  * An alter's blueprint: keys are mounted under the alter's module.
@@ -27,7 +27,7 @@ use Drupal\data_surface\Resource\ArrangementGroup;
  *
  * An alter may attach a structure, and only at its own mount: the
  * mount's keys are then the structure's, which the build step builds in
- * its own frame and fixes there (DataSurfaceBuilderInterface::
+ * its own frame and fixes there (SurfaceBuilderInterface::
  * mountStructure()). The alter is then an adapter: it wires the
  * structure's ports to the owner's keys, and adds no key of its own.
  *
@@ -38,7 +38,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   /**
    * Constructs an alter's blueprint.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The engine's builder the blueprint fills.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typed_data_manager
    *   The typed data manager.
@@ -55,7 +55,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *   fact one set already is refused (describe()). NULL checks nothing.
    */
   public function __construct(
-    DataSurfaceBuilderInterface $builder,
+    SurfaceBuilderInterface $builder,
     TypedDataManagerInterface $typed_data_manager,
     protected readonly string $provider,
     protected readonly ?array $mixedIn = NULL,

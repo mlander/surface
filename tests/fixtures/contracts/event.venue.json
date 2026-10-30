@@ -1,6 +1,6 @@
 {
     "resource": "event.venue",
-    "module": "data_surface_examples",
+    "module": "surface_examples",
     "contract": 4,
     "documents": [
         {
@@ -46,7 +46,7 @@
                             },
                             "checkedOnServer": [
                                 {
-                                    "constraint": "DataSurfaceUnique",
+                                    "constraint": "SurfaceUnique",
                                     "message": "Refused when a venue named this already exists."
                                 }
                             ]

@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Generators\Resource;
+namespace Drupal\surface\Drush\Generators\Resource;
 
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\ResourceBuild\ResourceDefinition;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\ResourceBuild\ResourceDefinition;
 
 /**
  * A source of the resource generator, built.
  *
- * @see \Drupal\data_surface\Drush\Generators\Resource\ResourceSources
+ * @see \Drupal\surface\Drush\Generators\Resource\ResourceSources
  */
 final class BuiltSource {
 
   /**
    * Constructs a BuiltSource.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The keys, sealed as declared.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $owner
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
    *   The structure it was registered as: the resource's id and module.
    * @param string $source
    *   What it was read from, in words.
@@ -30,7 +30,7 @@ final class BuiltSource {
    *   key path.
    */
   public function __construct(
-    public readonly DataSurfaceInterface $built,
+    public readonly SurfaceInterface $built,
     public readonly ResourceDefinition $owner,
     public readonly string $source,
     public readonly array $notes = [],

@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceResult;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface_resource_test\Compute\BadgeCode;
-use Drupal\data_surface_resource_test\Compute\Broken\ClockStamp;
-use Drupal\data_surface_resource_test\Resource\Badge\BadgeResource;
-use Drupal\data_surface_resource_test\Storage\BadgeStorage;
-use Drupal\data_surface_resource_test\Structure\ThresholdStructure;
+use Drupal\surface\Computed;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceResult;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface_resource_test\Compute\BadgeCode;
+use Drupal\surface_resource_test\Compute\Broken\ClockStamp;
+use Drupal\surface_resource_test\Resource\Badge\BadgeResource;
+use Drupal\surface_resource_test\Storage\BadgeStorage;
+use Drupal\surface_resource_test\Structure\ThresholdStructure;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -30,9 +30,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ComputedKeysTest extends DataSurfaceKernelTestBase {
+class ComputedKeysTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -43,8 +43,8 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
     'system',
     'user',
     'serialization',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -59,11 +59,11 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the badge for its one operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built badge.
    */
-  protected function badge(): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function badge(): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build(BadgeResource::class, $resources->operation(BadgeResource::class, 'configure'));
   }
 
@@ -75,11 +75,11 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
    * @param bool $dry_run
    *   TRUE to write nothing.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   * @return \Drupal\surface\Pipeline\SurfaceResult
    *   The result.
    */
-  protected function submit(array $input, bool $dry_run = FALSE): DataSurfaceResult {
-    $resources = $this->container->get('data_surface.resources');
+  protected function submit(array $input, bool $dry_run = FALSE): SurfaceResult {
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(BadgeResource::class, 'configure');
     $built = $resources->build(BadgeResource::class, $context);
     return $this->pipeline()->submit($built, $input, $resources->storage(BadgeResource::class, $context, $built), $dry_run);
@@ -98,7 +98,7 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
   /**
    * Lists a result's violations, or notes, by path, code and message.
    *
-   * @param iterable<\Drupal\data_surface\Pipeline\Violation> $violations
+   * @param iterable<\Drupal\surface\Pipeline\Violation> $violations
    *   The violations.
    *
    * @return list<array{0: string, 1: string, 2: string}>
@@ -119,7 +119,7 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
   public function testBothDocumentsStateItReadOnlyAndComputed(): void {
     $built = $this->badge();
     $this->assertSame(['first', 'last', 'code', 'handle', 'tag', 'color'], $built->getDefinitions()->names());
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $documents = [
       'full' => $emitter->emitFull($built, 'resource_test.badge', 'configure')->document['schema'],
       'these' => $emitter->emit($built, ['first' => 'Ada'] + $built->getDefaultValues(), 'resource_test.badge', 'configure')->document['schema'],
@@ -231,7 +231,7 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
    */
   public function testTheNarrowingAnswersTheComputedValue(): void {
     $built = $this->badge();
-    $forms = $this->container->get('data_surface.form_builder');
+    $forms = $this->container->get('surface.form_builder');
     $overlay = $forms->refinementOverlay($built, [], ['first' => 'Grace', 'last' => 'Hop']);
     $this->assertSame(['GRA', 'grace.hop'], [$overlay['code'], $overlay['handle']]);
     $stored = [
@@ -244,7 +244,7 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
     ];
     $overlay = $forms->refinementOverlay($built, $stored, ['first' => 'Grace']);
     $this->assertSame(['ADA', 'grace.byron'], [$overlay['code'], $overlay['handle']], 'As a write would: the code kept, the handle computed again.');
-    $document = $this->container->get('data_surface.contract_emitter')->emit($built, $overlay, 'resource_test.badge', 'configure')->document;
+    $document = $this->container->get('surface.contract_emitter')->emit($built, $overlay, 'resource_test.badge', 'configure')->document;
     $this->assertSame('grace.byron', $document['values']['handle']);
   }
 
@@ -287,7 +287,7 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
    */
   public function testTheNarrowingKeepsWhatIsTypedOverTheSuggestion(): void {
     $built = $this->badge();
-    $forms = $this->container->get('data_surface.form_builder');
+    $forms = $this->container->get('surface.form_builder');
     $suggested = $forms->refinementOverlay($built, [], ['first' => 'Grace', 'last' => 'Hopper']);
     $this->assertSame('hopper', $suggested['tag']);
     $typed = $forms->refinementOverlay($built, [], [
@@ -313,8 +313,8 @@ class ComputedKeysTest extends DataSurfaceKernelTestBase {
    */
   public function testTheBlueprintRefusesWhatIsNoComputedKey(): void {
     $typed = $this->container->get('typed_data_manager');
-    $registry = $this->container->get('data_surface.resource_registry');
-    $blueprint = static fn (bool $outputs = FALSE, ?string $owner = NULL): ResourceBlueprint => new ResourceBlueprint(new DataSurfaceBuilder(), $typed, $outputs, $registry, $owner);
+    $registry = $this->container->get('surface.resource_registry');
+    $blueprint = static fn (bool $outputs = FALSE, ?string $owner = NULL): ResourceBlueprint => new ResourceBlueprint(new SurfaceBuilder(), $typed, $outputs, $registry, $owner);
     $refused = function (callable $declare, string $message): void {
       try {
         $declare();

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Traits;
+namespace Drupal\Tests\surface\Traits;
 
-use Drupal\data_surface_examples\Series;
+use Drupal\surface_examples\Series;
 
 /**
  * Asserts an example's page lists the files Series lists for it.
@@ -23,9 +23,9 @@ trait ExampleFilesPanelTrait {
    */
   protected function assertFilesPanel(int $number): void {
     $assert = $this->assertSession();
-    $panel = $assert->elementExists('css', 'details.data-surface-files-panel');
+    $panel = $assert->elementExists('css', 'details.surface-files-panel');
     $this->assertSame('open', $panel->getAttribute('open'), sprintf('Example %d lists its files open.', $number));
-    $assert->elementTextContains('css', 'details.data-surface-files-panel > summary', sprintf('The files of example %d', $number));
+    $assert->elementTextContains('css', 'details.surface-files-panel > summary', sprintf('The files of example %d', $number));
     $files = Series::examples()[$number]['files'];
     $items = $panel->findAll('css', 'li[data-file]');
     $this->assertSame(array_keys($files), array_map(static fn ($item): string => (string) $item->getAttribute('data-file'), $items), sprintf('Example %d lists its files in the order Series does.', $number));

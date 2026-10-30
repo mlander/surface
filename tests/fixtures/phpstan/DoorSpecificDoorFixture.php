@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Fixtures;
+namespace Drupal\Tests\surface\Fixtures;
 
 /**
  * Nothing the pipeline runs: not flagged.

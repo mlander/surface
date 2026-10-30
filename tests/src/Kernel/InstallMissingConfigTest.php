@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -15,9 +15,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * its file, as core's installer would have created it, and every object
  * the site has is left as the site has it.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class InstallMissingConfigTest extends DataSurfaceKernelTestBase {
+class InstallMissingConfigTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -28,9 +28,8 @@ class InstallMissingConfigTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_examples',
     'config_test',
   ];
 
@@ -39,7 +38,7 @@ class InstallMissingConfigTest extends DataSurfaceKernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->installConfig(['data_surface_examples', 'config_test']);
+    $this->installConfig(['surface_examples', 'config_test']);
   }
 
   /**
@@ -60,9 +59,9 @@ class InstallMissingConfigTest extends DataSurfaceKernelTestBase {
    * Tests the examples' post-update creates what is missing and only that.
    */
   public function testThePostUpdateCreatesTheMissingExamples(): void {
-    $doors = 'data_surface_examples.doors';
-    $sales = 'data_surface_examples.sales';
-    $step1 = 'data_surface_examples.registration_step1';
+    $doors = 'surface_examples.doors';
+    $sales = 'surface_examples.sales';
+    $step1 = 'surface_examples.registration_step1';
     $installed = [$doors => $this->stored($doors), $sales => $this->stored($sales)];
     $this->assertArrayHasKey('_core', $installed[$doors]);
     $this->config($doors)->delete();
@@ -70,15 +69,15 @@ class InstallMissingConfigTest extends DataSurfaceKernelTestBase {
     $this->config($step1)->set('title', 'Changed by the site')->save();
     $this->assertSame([], $this->stored($doors));
 
-    $path = $this->container->get('extension.list.module')->getPath('data_surface_examples');
-    require_once $this->root . '/' . $path . '/data_surface_examples.post_update.php';
-    data_surface_examples_post_update_install_missing_examples();
+    $path = $this->container->get('extension.list.module')->getPath('surface_examples');
+    require_once $this->root . '/' . $path . '/surface_examples.post_update.php';
+    surface_examples_post_update_install_missing_examples();
 
     // As core's installer wrote them: the file's values and its hash.
     $this->assertSame($installed[$doors], $this->stored($doors));
     $this->assertSame($installed[$sales], $this->stored($sales));
     $this->assertSame('Changed by the site', $this->stored($step1)['title'], 'An existing object is not overwritten.');
-    $this->assertSame([], data_surface_install_missing_config('data_surface_examples'), 'Nothing is missing the second time.');
+    $this->assertSame([], surface_install_missing_config('surface_examples'), 'Nothing is missing the second time.');
   }
 
   /**
@@ -89,7 +88,7 @@ class InstallMissingConfigTest extends DataSurfaceKernelTestBase {
     $entities->load('dotted.default')->delete();
     $this->config('config_test.system')->delete();
 
-    $created = data_surface_install_missing_config('config_test');
+    $created = surface_install_missing_config('config_test');
     $this->assertSame(['config_test.system', 'config_test.dynamic.dotted.default'], $created);
     $entities->resetCache();
     $this->assertSame('Default', $entities->load('dotted.default')->label());

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 /**
  * The marker a producer returns for an output it is not emitting.
@@ -41,7 +41,7 @@ namespace Drupal\data_surface\Pipeline;
  * nothing, it returns the marker, and is() answers by instance rather
  * than by a magic string a real value could collide with.
  *
- * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::conformOutput()
+ * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::conformOutput()
  * @see docs/outputs.md
  */
 final class NotEmitted {
@@ -49,7 +49,7 @@ final class NotEmitted {
   /**
    * The one instance.
    *
-   * @var \Drupal\data_surface\Pipeline\NotEmitted|null
+   * @var \Drupal\surface\Pipeline\NotEmitted|null
    */
   private static ?self $instance = NULL;
 

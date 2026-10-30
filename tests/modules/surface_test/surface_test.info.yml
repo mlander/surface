@@ -1,0 +1,8 @@
+name: Surface API Test
+type: module
+description: 'Test support for surface: engine refiners and plugin hosts with their structures.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

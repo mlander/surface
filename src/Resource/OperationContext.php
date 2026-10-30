@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * Which operation is being asked, and what it knows. Never the values.
@@ -20,8 +20,8 @@ namespace Drupal\data_surface\Resource;
  *   - each identity key it knows is locked to that value, and a context
  *     that also fixes or fills one is refused;
  *   - each constraint it carries narrows that key; a Choice of one value
- *     that says it fixes the key (`data_surface_fixed`, as a route's
- *     `_data_surface_fixed` does) makes the key hold that value, a key
+ *     that says it fixes the key (`surface_fixed`, as a route's
+ *     `_surface_fixed` does) makes the key hold that value, a key
  *     that may otherwise hold nothing included: drawn as the value, stated
  *     `const`;
  *   - each default it carries is the value that key starts from in this
@@ -76,7 +76,7 @@ final class OperationContext {
   /**
    * A context for the child at a key, when it differs; withChild().
    *
-   * @var array<string, \Drupal\data_surface\Resource\OperationContext>
+   * @var array<string, \Drupal\surface\Resource\OperationContext>
    */
   private array $children = [];
 
@@ -137,7 +137,7 @@ final class OperationContext {
    *   The constraints.
    * @param array<string, mixed> $defaults
    *   The defaults.
-   * @param array<string, \Drupal\data_surface\Resource\OperationContext> $children
+   * @param array<string, \Drupal\surface\Resource\OperationContext> $children
    *   The child contexts.
    * @param array<string, array{operation: string, known: array<string, mixed>}> $childOperations
    *   The child operations.
@@ -269,7 +269,7 @@ final class OperationContext {
    * Returns a copy in which some keys start from other values.
    *
    * Each value is what its key starts from in this build, written over
-   * the declared default and the site's (`data_surface.defaults`), read
+   * the declared default and the site's (`surface.defaults`), read
    * through the coercion table and held to the key: a value the key does
    * not accept, or a path that names no key, refuses the build, naming
    * the key. Only a context that creates may carry defaults; one that
@@ -327,7 +327,7 @@ final class OperationContext {
    *
    * @param string $key
    *   The key the child sits at.
-   * @param \Drupal\data_surface\Resource\OperationContext|null $context
+   * @param \Drupal\surface\Resource\OperationContext|null $context
    *   The child's context, or NULL when naming an operation.
    * @param string|null $operation
    *   The id of the child's operation to invoke, or NULL when handing a

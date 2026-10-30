@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
-use Drupal\data_surface_tool\Resource\FieldInstanceResource;
-use Drupal\data_surface_tool\Resource\FieldStorageResource;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
+use Drupal\surface_examples_field\Resource\FieldInstanceResource;
+use Drupal\surface_examples_field\Resource\FieldStorageResource;
 use Drupal\entity_test\EntityTestHelper;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
@@ -23,6 +23,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests the field instance resource, its storage child and settings.
  *
+ * The resource is surface_examples_field's, an example that describes
+ * core's field instance and field storage settings to test the pattern.
  * The field resource lists no children: the address module's settings
  * resource is the settings variant for the address field type, by
  * #[Variant]. Editing knows the field type, so the settings are the
@@ -32,9 +34,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * their own, by theirs, after the field, in a context that knows which
  * field.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
+class FieldInstanceResourceTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -50,9 +52,9 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
     'address',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_address',
-    'data_surface_tool',
+    'surface',
+    'surface_examples_address',
+    'surface_examples_field',
   ];
 
   /**
@@ -72,17 +74,17 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
    * Gets the context a new address field on the test bundle is added in.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The reuse operation: the storage exists, so it knows the field's
    *   name and type, and edits the storage.
    */
@@ -237,7 +239,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    * which the field's own permission keeps out at the top.
    */
   public function testTheStorageChildIsOpenOnEveryPath(): void {
-    $this->assertNull($this->container->get('data_surface.resource_registry')->getDefinition(FieldStorageResource::class)->access);
+    $this->assertNull($this->container->get('surface.resource_registry')->getDefinition(FieldStorageResource::class)->access);
     $this->createField();
     $contexts = [
       'create' => FieldInstanceResource::create('entity_test', 'entity_test'),
@@ -376,7 +378,7 @@ class FieldInstanceResourceTest extends DataSurfaceKernelTestBase {
    */
   public function testOperationsTakeTheFieldByItsParts(): void {
     $this->createField();
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $names = static fn (string $resource, string $operation): array => array_map(
       static fn ($parameter): string => $parameter->name,
       $registry->getOperation($resource, $operation)->parameters,

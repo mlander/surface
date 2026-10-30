@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\OptionsProviderInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface_examples\Resource\RegistrationStep2Resource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -19,9 +19,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * to that venue's rooms. Possible is the declared list, settable the
  * refined one.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class OptionsProviderTest extends DataSurfaceKernelTestBase {
+class OptionsProviderTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -34,9 +34,8 @@ class OptionsProviderTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_examples',
   ];
 
   /**
@@ -45,18 +44,18 @@ class OptionsProviderTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Builds example 2 in its configure operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function surface(): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function surface(): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build(RegistrationStep2Resource::class, $resources->operation(RegistrationStep2Resource::class, 'configure'));
   }
 
@@ -71,7 +70,7 @@ class OptionsProviderTest extends DataSurfaceKernelTestBase {
     $this->assertInstanceOf(OptionsProviderInterface::class, $provider);
 
     // Every room of every venue, with its label.
-    $all = $this->container->get('data_surface_examples.venue_choices')->rooms();
+    $all = $this->container->get('surface_examples.venue_choices')->rooms();
     $this->assertSame('Garden room', $all['library_garden']);
     $this->assertArrayHasKey('riverside_main', $all);
     $this->assertSame($all, $provider->getPossibleOptions());

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -26,7 +26,7 @@ use PHPUnit\Framework\Attributes\Group;
  *   door's entity parameter, the commit and the computed values it
  *   puts in their places.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class QuotedCodeDocsTest extends UnitTestCase {
 
   /**
@@ -69,9 +69,9 @@ class QuotedCodeDocsTest extends UnitTestCase {
    */
   public function testTheWholeAlterIsQuoted(): void {
     $quoted = array_column(FirstResourceDocsTest::blocks(['docs/resources.md']), 2);
-    $this->assertContains('modules/data_surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php', $quoted);
-    $this->assertContains('modules/data_surface_examples/config/schema/data_surface_examples.schema.yml', $quoted);
-    $this->assertContains('modules/data_surface_examples_compliance/config/schema/data_surface_examples_compliance.schema.yml', $quoted);
+    $this->assertContains('modules/surface_examples_compliance/src/Alter/RegistrationComplianceAlter.php', $quoted);
+    $this->assertContains('modules/surface_examples/config/schema/surface_examples.schema.yml', $quoted);
+    $this->assertContains('modules/surface_examples_compliance/config/schema/surface_examples_compliance.schema.yml', $quoted);
   }
 
   /**

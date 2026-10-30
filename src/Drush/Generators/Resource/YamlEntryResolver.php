@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Generators\Resource;
+namespace Drupal\surface\Drush\Generators\Resource;
 
 use Drupal\Component\Serialization\Yaml;
 use DrupalCodeGenerator\Asset\Asset;

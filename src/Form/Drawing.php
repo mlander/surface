@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Form;
+namespace Drupal\surface\Form;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
@@ -13,23 +13,23 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\SettledCacheability;
-use Drupal\data_surface\Resource\ArrangementGroup;
-use Drupal\data_surface\Resource\Compute;
-use Drupal\data_surface\Plugin\DataSurfaceWidget\OptionsWidget;
-use Drupal\data_surface\Pipeline\Sentences;
-use Drupal\data_surface\Collection;
-use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
-use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
+use Drupal\surface\Computed;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\SettledCacheability;
+use Drupal\surface\Resource\ArrangementGroup;
+use Drupal\surface\Resource\Compute;
+use Drupal\surface\Plugin\SurfaceWidget\OptionsWidget;
+use Drupal\surface\Pipeline\Sentences;
+use Drupal\surface\Collection;
+use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\SurfaceWidgetManager;
 
 /**
  * Draws a data surface as Form API elements.
  *
- * DataSurfaceFormBuilder::buildSurfaceForm() hands this class the data
+ * SurfaceFormBuilder::buildSurfaceForm() hands this class the data
  * surface and the values to draw it with. Each key is drawn by its widget
  * as its arrangement says; a collection as one details per item, with its
  * "Add another" and "Remove" buttons; a computed key as an item; a key
@@ -44,19 +44,19 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Form\DataSurfaceFormBuilder
+ * @see \Drupal\surface\Form\SurfaceFormBuilder
  */
 final class Drawing {
 
   /**
    * Render key marking a collection's element: its dotted path.
    */
-  public const LIST_KEY = '#data_surface_list';
+  public const LIST_KEY = '#surface_list';
 
   /**
    * Marks the item a computed key is drawn as.
    */
-  protected const COMPUTED_KEY = '#data_surface_computed';
+  protected const COMPUTED_KEY = '#surface_computed';
 
   /**
    * The key of a collection's "Add another" button inside its element.
@@ -73,13 +73,13 @@ final class Drawing {
   /**
    * Constructs the drawing of a data surface.
    *
-   * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager $widgetManager
+   * @param \Drupal\surface\Widget\SurfaceWidgetManager $widgetManager
    *   The widget manager, which maps definitions to elements.
-   * @param \Drupal\data_surface\Form\Refreshing $refreshing
+   * @param \Drupal\surface\Form\Refreshing $refreshing
    *   What wires the drawn container to the rebuild.
    */
   public function __construct(
-    protected readonly DataSurfaceWidgetManager $widgetManager,
+    protected readonly SurfaceWidgetManager $widgetManager,
     protected readonly Refreshing $refreshing,
   ) {
   }
@@ -87,20 +87,20 @@ final class Drawing {
   /**
    * Builds a container of form elements for a data surface.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::buildSurfaceForm()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::buildSurfaceForm()
    */
-  public function buildSurfaceForm(DataSurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'data-surface'): array {
+  public function buildSurfaceForm(SurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'surface'): array {
     // Two views of one overlay. The data surface is refined against the keys
     // as they stand, an orphan held unanswered; each element is rendered
     // with what it holds, an orphan standing for its stored value, so its
     // select comes up on the empty option with that value behind it.
     $shown = $values;
     $orphans = [];
-    foreach ($values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [] as $dotted => $standing) {
+    foreach ($values[SurfaceFormBuilderInterface::STANDING_KEY] ?? [] as $dotted => $standing) {
       NestedArray::setValue($shown, explode('.', (string) $dotted), $standing, TRUE);
       $orphans[] = explode('.', (string) $dotted);
     }
-    unset($values[DataSurfaceFormBuilderInterface::STANDING_KEY], $shown[DataSurfaceFormBuilderInterface::STANDING_KEY]);
+    unset($values[SurfaceFormBuilderInterface::STANDING_KEY], $shown[SurfaceFormBuilderInterface::STANDING_KEY]);
     $surface = $surface->refine($values);
     // One id per built container, not one per plugin. Two placements of
     // the same block on one page, or one block rendered twice by Layout
@@ -137,10 +137,10 @@ final class Drawing {
         // Decision: see docs/decisions.md#a-key-that-does-not-apply.
         $ruled_out = [
           '#markup' => '',
-          DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE,
-          DataSurfaceFormBuilderInterface::RULED_OUT_KEY => TRUE,
+          SurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE,
+          SurfaceFormBuilderInterface::RULED_OUT_KEY => TRUE,
         ];
-        $container[$name] = DataSurfaceWidgetBase::arranged($ruled_out, $declared);
+        $container[$name] = SurfaceWidgetBase::arranged($ruled_out, $declared);
         continue;
       }
       $computed = Computed::of($definition);
@@ -149,14 +149,14 @@ final class Drawing {
         // One computed unless sent is drawn by its widget, below.
         // Decision: see
         // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
-        $container[$name] = DataSurfaceWidgetBase::arranged(static::computedItem($definition, $computed, $surface, $shown[$name] ?? NULL), $declared);
+        $container[$name] = SurfaceWidgetBase::arranged(static::computedItem($definition, $computed, $surface, $shown[$name] ?? NULL), $declared);
         continue;
       }
       // A list of maps no collection was attached for is drawn as one.
       $list = $definitions->entry($name)->list ?? Collection::forList($definition);
       if ($list !== NULL && $definition instanceof ListDataDefinitionInterface) {
         // Decision: see docs/decisions.md#a-list-of-child-invocations.
-        $container[$name] = DataSurfaceWidgetBase::arranged($this->buildCollection(
+        $container[$name] = SurfaceWidgetBase::arranged($this->buildCollection(
           $list,
           $definition,
           $values[$name] ?? $surface->getDefault($name),
@@ -184,9 +184,9 @@ final class Drawing {
           // appears the moment its deciding key is answered, through the
           // rebuild the deciding key is wired to. Nothing but its
           // wrapper is rendered, so that rebuild has a place to put it.
-          $container[$name] = DataSurfaceWidgetBase::arranged([
+          $container[$name] = SurfaceWidgetBase::arranged([
             '#markup' => '',
-            DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE,
+            SurfaceFormBuilderInterface::PLACEHOLDER_KEY => TRUE,
           ], $declared);
           continue;
         }
@@ -230,7 +230,7 @@ final class Drawing {
         $locked = $locked || $variant !== NULL;
         $reason ??= $variant;
       }
-      $element = DataSurfaceWidgetBase::arranged($this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value), $declared);
+      $element = SurfaceWidgetBase::arranged($this->widgetManager->getWidgetFor($definition)->buildElement($definition, $value), $declared);
       if ($definition instanceof ComplexDataDefinitionInterface) {
         // A list of maps inside the map, at any depth, is a collection in
         // its place: a variant's, an attached child's, or a plain map's.
@@ -287,7 +287,7 @@ final class Drawing {
     $absent = Refreshing::ruledOutPaths($container);
     if ($absent !== []) {
       // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-      $container[DataSurfaceFormBuilderInterface::ABSENT_MARKER_KEY] = [
+      $container[SurfaceFormBuilderInterface::ABSENT_MARKER_KEY] = [
         '#type' => 'hidden',
         '#value' => implode(' ', $absent),
       ];
@@ -297,7 +297,7 @@ final class Drawing {
     if ($stale !== []) {
       // Fixed to this build: what the person is looking at now, not what
       // the previous build posted.
-      $container[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY] = [
+      $container[SurfaceFormBuilderInterface::STALE_MARKER_KEY] = [
         '#type' => 'hidden',
         '#value' => implode(' ', $stale),
       ];
@@ -318,9 +318,9 @@ final class Drawing {
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key.
-   * @param \Drupal\data_surface\Computed $computed
+   * @param \Drupal\surface\Computed $computed
    *   What it is computed from.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface it belongs to, which labels its sources.
    * @param mixed $value
    *   What it holds for the values shown.
@@ -328,7 +328,7 @@ final class Drawing {
    * @return array
    *   An item, which posts nothing.
    */
-  protected static function computedItem(DataDefinitionInterface $definition, Computed $computed, DataSurfaceInterface $surface, mixed $value): array {
+  protected static function computedItem(DataDefinitionInterface $definition, Computed $computed, SurfaceInterface $surface, mixed $value): array {
     $sources = implode(', ', array_map(static fn (string $source): string => (string) ($surface->getDefinition($source)?->getLabel() ?? $source), $computed->from));
     $note = $computed->when === Compute::ON_CHANGE
       ? t('Computed from @sources, again whenever they change.', ['@sources' => $sources])
@@ -358,7 +358,7 @@ final class Drawing {
    * one. A locked list is drawn disabled, every item and both controls
    * with it.
    *
-   * @param \Drupal\data_surface\Collection $list
+   * @param \Drupal\surface\Collection $list
    *   The child every item is.
    * @param \Drupal\Core\TypedData\ListDataDefinitionInterface $definition
    *   The list, as the parent's refiners left it.
@@ -412,18 +412,18 @@ final class Drawing {
     $control = fn (string $name, array $at, bool $disabled): array => [
       '#type' => 'submit',
       '#value' => static::controlLabel($name),
-      '#name' => 'data_surface_' . implode('_', array_map([Html::class, 'getId'], [...$path, ...$at])),
-      '#submit' => [[DataSurfaceFormBuilder::class, $name === self::ADD_KEY ? 'addListItem' : 'removeListItem']],
+      '#name' => 'surface_' . implode('_', array_map([Html::class, 'getId'], [...$path, ...$at])),
+      '#submit' => [[SurfaceFormBuilder::class, $name === self::ADD_KEY ? 'addListItem' : 'removeListItem']],
       // Nothing is judged: the person said only "one more", or "not this
       // one", and every value is still mid-edit.
       '#limit_validation_errors' => [],
       '#disabled' => $disabled || $locked,
       '#ajax' => [
-        'callback' => [DataSurfaceFormBuilder::class, 'refreshSurface'],
+        'callback' => [SurfaceFormBuilder::class, 'refreshSurface'],
         'wrapper' => $wrapper_id,
-        'submit' => [DataSurfaceFormBuilderInterface::WRAPPER_INPUT => $wrapper_id],
+        'submit' => [SurfaceFormBuilderInterface::WRAPPER_INPUT => $wrapper_id],
       ],
-      DataSurfaceFormBuilderInterface::TRIGGER_KEY => ['path' => [...$path, ...$at], 'replaces' => [$dotted]],
+      SurfaceFormBuilderInterface::TRIGGER_KEY => ['path' => [...$path, ...$at], 'replaces' => [$dotted]],
     ];
     foreach ($items as $delta => $item) {
       $held = array_replace($child->getDefaultValues(), is_array($item) ? $item : []);
@@ -498,7 +498,7 @@ final class Drawing {
    *   The map's element, as its widget drew it.
    * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $definition
    *   The map, as drawn.
-   * @param \Drupal\data_surface\DataSurfaceInterface|null $frame
+   * @param \Drupal\surface\SurfaceInterface|null $frame
    *   The child the map is drawn from, or NULL for a plain map.
    * @param mixed $value
    *   What the map holds, as drawn.
@@ -512,7 +512,7 @@ final class Drawing {
    * @return array
    *   The element, each list of maps in it a collection.
    */
-  protected function collectionsInside(array $element, ComplexDataDefinitionInterface $definition, ?DataSurfaceInterface $frame, mixed $value, array $path, string $wrapper_id, bool $whole): array {
+  protected function collectionsInside(array $element, ComplexDataDefinitionInterface $definition, ?SurfaceInterface $frame, mixed $value, array $path, string $wrapper_id, bool $whole): array {
     foreach ($definition->getPropertyDefinitions() as $name => $property) {
       $name = (string) $name;
       if (!is_array($element[$name] ?? NULL) || DoesNotApply::marks($property)) {
@@ -525,10 +525,10 @@ final class Drawing {
         $locked = $frame !== NULL && $frame->getDefinitions()->isLocked($name);
         $at = [...$path, $name];
         $collection = $this->buildCollection($list, $property, $held, $held, $locked, $at, $wrapper_id, $entry?->lockedBecause, $whole);
-        $element[$name] = DataSurfaceWidgetBase::arranged($collection, $property);
+        $element[$name] = SurfaceWidgetBase::arranged($collection, $property);
         continue;
       }
-      if (!$property instanceof ComplexDataDefinitionInterface || !empty($element[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+      if (!$property instanceof ComplexDataDefinitionInterface || !empty($element[$name][SurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
         continue;
       }
       $inner = $entry?->attachment?->child;
@@ -627,8 +627,8 @@ final class Drawing {
     $marked = in_array('form-required', (array) ($element['#label_attributes']['class'] ?? []), TRUE);
     return [
       'label' => $element['#title'] ?? NULL,
-      'applies' => empty($element[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY]),
-      'required' => !empty($element['#required']) || !empty($element[DataSurfaceFormBuilderInterface::REQUIRED_KEY]) || $marked,
+      'applies' => empty($element[SurfaceFormBuilderInterface::PLACEHOLDER_KEY]),
+      'required' => !empty($element['#required']) || !empty($element[SurfaceFormBuilderInterface::REQUIRED_KEY]) || $marked,
       'min' => isset($element['#min']) ? (string) $element['#min'] : NULL,
       'max' => isset($element['#max']) ? (string) $element['#max'] : NULL,
       'options' => Refreshing::optionsSignature($element),
@@ -668,7 +668,7 @@ final class Drawing {
     $members = [];
     foreach (static::elementChildren($element) as $key) {
       $element[$key] = static::withGroups($element[$key]);
-      $group = $element[$key][DataSurfaceFormBuilderInterface::GROUP_KEY] ?? NULL;
+      $group = $element[$key][SurfaceFormBuilderInterface::GROUP_KEY] ?? NULL;
       if (!is_array($group) || !is_string($group['id'] ?? NULL)) {
         continue;
       }
@@ -698,7 +698,7 @@ final class Drawing {
           $own = ['#type', '#title', '#open', '#description', '#required'];
           $value = ['#type' => 'container'] + array_diff_key($value, array_flip($own));
         }
-        $framed[DataSurfaceFormBuilderInterface::GROUP_PREFIX . $group['id']] = $drawn;
+        $framed[SurfaceFormBuilderInterface::GROUP_PREFIX . $group['id']] = $drawn;
       }
       $framed[$key] = $value;
     }
@@ -723,8 +723,8 @@ final class Drawing {
    */
   public static function gatherGroups(array $element): array {
     foreach (static::elementChildren($element) as $key) {
-      $group = $element[$key][DataSurfaceFormBuilderInterface::GROUP_KEY] ?? NULL;
-      $into = is_array($group) && is_string($group['id'] ?? NULL) ? DataSurfaceFormBuilderInterface::GROUP_PREFIX . $group['id'] : NULL;
+      $group = $element[$key][SurfaceFormBuilderInterface::GROUP_KEY] ?? NULL;
+      $into = is_array($group) && is_string($group['id'] ?? NULL) ? SurfaceFormBuilderInterface::GROUP_PREFIX . $group['id'] : NULL;
       if ($into !== NULL && $into !== (string) $key && isset($element[$into]) && is_array($element[$into])) {
         $element[$into][$key] = $element[$key];
         $element[$into]['#sorted'] = FALSE;
@@ -763,7 +763,7 @@ final class Drawing {
   public static function placeMounts(array $element): array {
     foreach (static::elementChildren($element) as $group) {
       foreach (static::elementChildren($element[$group]) as $mount) {
-        $after = $element[$group][$mount][DataSurfaceFormBuilderInterface::PLACED_AFTER_KEY] ?? NULL;
+        $after = $element[$group][$mount][SurfaceFormBuilderInterface::PLACED_AFTER_KEY] ?? NULL;
         $holder = is_string($after) && $after !== (string) $group ? static::holding($element, $after) : NULL;
         if ($holder === NULL) {
           continue;
@@ -787,7 +787,7 @@ final class Drawing {
         else {
           $element[$holder] = $reordered;
         }
-        if (static::elementChildren($element[$group]) === [] && !isset($element[$group][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
+        if (static::elementChildren($element[$group]) === [] && !isset($element[$group][SurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
           // Every fieldset it grouped is drawn elsewhere: a container
           // with nothing in it is drawn as nothing.
           $element[$group]['#access'] = FALSE;
@@ -818,7 +818,7 @@ final class Drawing {
       return '';
     }
     foreach (static::elementChildren($element) as $child) {
-      if (str_starts_with((string) $child, DataSurfaceFormBuilderInterface::GROUP_PREFIX) && isset($element[$child][$key]) && is_array($element[$child][$key])) {
+      if (str_starts_with((string) $child, SurfaceFormBuilderInterface::GROUP_PREFIX) && isset($element[$child][$key]) && is_array($element[$child][$key])) {
         return (string) $child;
       }
     }
@@ -844,24 +844,24 @@ final class Drawing {
   public static function wireRows(array &$element, array $path, string $wrapper_id): void {
     foreach (static::elementChildren($element) as $key) {
       $at = [...$path, (string) $key];
-      if (empty($element[$key][DataSurfaceFormBuilderInterface::ROWS_KEY])) {
+      if (empty($element[$key][SurfaceFormBuilderInterface::ROWS_KEY])) {
         static::wireRows($element[$key], $at, $wrapper_id);
         continue;
       }
       $dotted = implode('.', $at);
       $element[$key][Refreshing::REFRESH_KEY] = $dotted;
       foreach (static::elementChildren($element[$key]) as $control) {
-        if (!isset($element[$key][$control][DataSurfaceFormBuilderInterface::ROW_CONTROL_KEY])) {
+        if (!isset($element[$key][$control][SurfaceFormBuilderInterface::ROW_CONTROL_KEY])) {
           continue;
         }
         $named = array_map([Html::class, 'getId'], [...$at, (string) $control]);
-        $element[$key][$control]['#name'] = 'data_surface_' . implode('_', $named);
+        $element[$key][$control]['#name'] = 'surface_' . implode('_', $named);
         $element[$key][$control]['#ajax'] = [
-          'callback' => [DataSurfaceFormBuilder::class, 'refreshSurface'],
+          'callback' => [SurfaceFormBuilder::class, 'refreshSurface'],
           'wrapper' => $wrapper_id,
-          'submit' => [DataSurfaceFormBuilderInterface::WRAPPER_INPUT => $wrapper_id],
+          'submit' => [SurfaceFormBuilderInterface::WRAPPER_INPUT => $wrapper_id],
         ];
-        $element[$key][$control][DataSurfaceFormBuilderInterface::TRIGGER_KEY] = [
+        $element[$key][$control][SurfaceFormBuilderInterface::TRIGGER_KEY] = [
           'path' => [...$at, (string) $control],
           'replaces' => [$dotted],
         ];
@@ -886,7 +886,7 @@ final class Drawing {
    */
   protected static function postedWrapperId(FormStateInterface $form_state, string $wrapper_key): ?string {
     $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
-    $posted = $state->getUserInput()[DataSurfaceFormBuilderInterface::WRAPPER_INPUT] ?? NULL;
+    $posted = $state->getUserInput()[SurfaceFormBuilderInterface::WRAPPER_INPUT] ?? NULL;
     $generated = Html::getId($wrapper_key . '-wrapper');
     return is_string($posted)
       && preg_match('/^[A-Za-z0-9_-]+$/', $posted)
@@ -898,14 +898,14 @@ final class Drawing {
   /**
    * Answers whether a child holds variants below a key of its own.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child.
    *
    * @return bool
    *   TRUE when a key of it, or of a child attached inside it, holds
    *   variants.
    */
-  public static function nestsVariants(DataSurfaceInterface $child): bool {
+  public static function nestsVariants(SurfaceInterface $child): bool {
     foreach ($child->getDefinitions()->entries() as $entry) {
       if ($entry->variants !== NULL || ($entry->attachment !== NULL && static::nestsVariants($entry->attachment->child))) {
         return TRUE;
@@ -921,7 +921,7 @@ final class Drawing {
    * chose, and that variant's defaults when it does not (chosen afresh, or
    * written for another), at every depth, as the top of a form does.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The child.
    * @param mixed $value
    *   What it holds.
@@ -929,7 +929,7 @@ final class Drawing {
    * @return mixed
    *   The same, each variant inside it drawn from what fits it.
    */
-  protected static function nestedHeld(DataSurfaceInterface $surface, mixed $value): mixed {
+  protected static function nestedHeld(SurfaceInterface $surface, mixed $value): mixed {
     if (!is_array($value)) {
       return $value;
     }
@@ -963,7 +963,7 @@ final class Drawing {
    *   Its deciding key.
    * @param string $chosen
    *   The variant drawn.
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   That variant.
    * @param mixed $value
    *   What it was drawn from.
@@ -971,8 +971,8 @@ final class Drawing {
    * @return array
    *   The element, marked.
    */
-  protected static function drawnFor(array $element, string $by, string $chosen, DataSurfaceInterface $child, mixed $value): array {
-    $element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY] = ['by' => $by, 'for' => $chosen];
+  protected static function drawnFor(array $element, string $by, string $chosen, SurfaceInterface $child, mixed $value): array {
+    $element[SurfaceFormBuilderInterface::DRAWN_FOR_KEY] = ['by' => $by, 'for' => $chosen];
     return static::drawnForInside($element, $child, $value);
   }
 
@@ -981,7 +981,7 @@ final class Drawing {
    *
    * @param array $element
    *   The frame's element.
-   * @param \Drupal\data_surface\DataSurfaceInterface $frame
+   * @param \Drupal\surface\SurfaceInterface $frame
    *   The frame: a variant, or a child attached in one.
    * @param mixed $value
    *   What it was drawn from.
@@ -989,10 +989,10 @@ final class Drawing {
    * @return array
    *   The element, each variant key inside it marked.
    */
-  protected static function drawnForInside(array $element, DataSurfaceInterface $frame, mixed $value): array {
+  protected static function drawnForInside(array $element, SurfaceInterface $frame, mixed $value): array {
     foreach ($frame->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
-      if (!is_array($element[$name] ?? NULL) || !empty($element[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+      if (!is_array($element[$name] ?? NULL) || !empty($element[$name][SurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
         continue;
       }
       $held = is_array($value) ? ($value[$name] ?? NULL) : NULL;
@@ -1057,13 +1057,13 @@ final class Drawing {
    *
    * @param array $element
    *   The child's element.
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child.
    *
    * @return array
    *   The element.
    */
-  protected static function lockedInside(array $element, DataSurfaceInterface $child): array {
+  protected static function lockedInside(array $element, SurfaceInterface $child): array {
     $definitions = $child->getDefinitions();
     foreach ($definitions->entries() as $name => $entry) {
       $name = (string) $name;

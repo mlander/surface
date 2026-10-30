@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -25,10 +25,10 @@ use PHPUnit\Framework\Attributes\Group;
  * message is never rendered here: it stays the object its constraint
  * built, so whatever prints it escapes it exactly once.
  *
- * @see \Drupal\data_surface\Pipeline\ViolationSet
- * @see \Drupal\data_surface\Pipeline\Violation
+ * @see \Drupal\surface\Pipeline\ViolationSet
+ * @see \Drupal\surface\Pipeline\Violation
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class ViolationSetTest extends UnitTestCase {
 
   /**

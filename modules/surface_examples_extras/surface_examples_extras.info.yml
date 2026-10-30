@@ -1,0 +1,10 @@
+name: Surface API Demo Extras
+type: module
+description: 'A third-party module extending another module''s resources and structures: a namespaced setting and a chained refiner, no form alters.'
+package: Surface API
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface
+  - surface:surface_examples_plugins

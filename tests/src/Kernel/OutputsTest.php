@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\NotEmitted;
-use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\NotEmitted;
+use Drupal\surface\Pipeline\ViolationSet;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -26,13 +26,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * **absent**, which is what a producer says with the NotEmitted sentinel
  * and what conformance judges against the required flag.
  *
- * @see \Drupal\data_surface\DataSurfaceInterface::getOutputDefinitions()
- * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::conformOutput()
+ * @see \Drupal\surface\SurfaceInterface::getOutputDefinitions()
+ * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::conformOutput()
  * @see docs/outputs.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class OutputsTest extends DataSurfaceKernelTestBase {
+class OutputsTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -40,18 +40,18 @@ class OutputsTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_test',
+    'surface',
+    'surface_test',
   ];
 
   /**
    * Builds the fixture: one input, four outputs.
    *
-   * @return \Drupal\data_surface\DataSurfaceBuilderInterface
+   * @return \Drupal\surface\SurfaceBuilderInterface
    *   The unsealed builder, so a test can add to it before it seals.
    */
-  protected function outputBuilder(): DataSurfaceBuilderInterface {
-    $builder = new DataSurfaceBuilder([
+  protected function outputBuilder(): SurfaceBuilderInterface {
+    $builder = new SurfaceBuilder([
       'mode' => DataDefinition::create('string')
         ->setLabel('Mode')
         ->setRequired(TRUE)
@@ -79,17 +79,17 @@ class OutputsTest extends DataSurfaceKernelTestBase {
   /**
    * Seals the fixture.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function outputSurface(): DataSurfaceInterface {
+  protected function outputSurface(): SurfaceInterface {
     return $this->outputBuilder()->seal();
   }
 
   /**
    * Reads the values an output's choice constraint allows.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface to read.
    * @param string $name
    *   The output key.
@@ -97,7 +97,7 @@ class OutputsTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The allowed values.
    */
-  protected function choices(DataSurfaceInterface $surface, string $name): array {
+  protected function choices(SurfaceInterface $surface, string $name): array {
     return $surface->getOutputDefinitions()->get($name)->getConstraints()['Choice']['choices'] ?? [];
   }
 
@@ -145,7 +145,7 @@ class OutputsTest extends DataSurfaceKernelTestBase {
    * Tests that an output declaring a default value is refused.
    */
   public function testOutputsCannotDeclareDefaults(): void {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
 
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('The "text" output declares a default value.');
@@ -167,7 +167,7 @@ class OutputsTest extends DataSurfaceKernelTestBase {
 
     $this->expectException(\InvalidArgumentException::class);
     $this->expectExceptionMessage('The "meta.tag" output declares a default value.');
-    (new DataSurfaceBuilder())->setOutputDefinition('meta', $meta);
+    (new SurfaceBuilder())->setOutputDefinition('meta', $meta);
   }
 
   /**
@@ -178,7 +178,7 @@ class OutputsTest extends DataSurfaceKernelTestBase {
    * where the data surface is assembled.
    */
   public function testConstructorDeclaredDefaultIsRefusedAtSeal(): void {
-    $builder = new DataSurfaceBuilder(
+    $builder = new SurfaceBuilder(
       definitions: ['mode' => DataDefinition::create('string')],
       outputs: ['text' => new DataDefinition(['type' => 'string', 'default_value' => 'x'])],
     );
@@ -192,7 +192,7 @@ class OutputsTest extends DataSurfaceKernelTestBase {
    * Tests that an output cannot be locked.
    */
   public function testOutputsCannotBeLocked(): void {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $builder->setOutputDefinition('text', DataDefinition::create('string'));
 
     $this->expectException(\LogicException::class);
@@ -276,7 +276,7 @@ class OutputsTest extends DataSurfaceKernelTestBase {
   /**
    * Reads a violation set as the paths it refused.
    *
-   * @param \Drupal\data_surface\Pipeline\ViolationSet $violations
+   * @param \Drupal\surface\Pipeline\ViolationSet $violations
    *   The violations.
    *
    * @return string[]

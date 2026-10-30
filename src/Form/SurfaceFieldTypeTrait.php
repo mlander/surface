@@ -1,0 +1,351 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\surface\Form;
+
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Entity\EntityFormInterface;
+use Drupal\Core\Field\FieldConfigInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\SurfaceHostTrait;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\Storage\FieldSettingsStorage;
+
+/**
+ * Implements the field settings protocol of a field type from a structure.
+ *
+ * The group C counterpart of the formatter trait: a field item class
+ * whose per instance settings are described by a structure instead of by
+ * the form that collects them. The method it replaces,
+ * fieldSettingsForm(), is the one ADOPTION.md calls out as "described by
+ * nothing more than the form" — a field type may hand back any elements
+ * it likes and Field UI copies whatever those elements produced onto the
+ * field config entity, so nothing outside the form knows what the
+ * settings mean, what they may be, or what shape they take.
+ *
+ * A class using this trait declares that it implements
+ * FieldSurfaceProviderInterface, names its structure with
+ * #[UsesStructure], and writes nothing else: the trait builds that
+ * structure, answers access through the field config entity and the
+ * structure's access class, and hands over the field settings storage
+ * the host supplies.
+ *
+ * Two host realities it absorbs, both inherited from group B and one of
+ * them sharper here:
+ * - There is no validate or submit hook, so an #element_validate on the
+ *   data surface container is the whole pipeline: it extracts, validates,
+ *   flags violations on their own elements, and writes the result into
+ *   form state.
+ * - What it writes is the STORAGE layout, not the input layout. Field UI
+ *   builds $form['settings'] with #tree and merges the field type's
+ *   elements into it flat, then copyFormValuesToEntity() copies the
+ *   'settings' value onto the field config entity and saves it. So the
+ *   values have to have been through the storage's prepare() by the time
+ *   validation ends. The storage's commit() is deliberately NOT called on
+ *   the form path: the entity is the host's to save, and calling both
+ *   would save the field twice.
+ *
+ * That split is the honest shape of the pipeline under a host that owns
+ * the write. Prepare is where the transform lives, so a caller that does
+ * own the write (a config action, a test, an agent) reaches the same
+ * transform through submit() and gets the same stored settings.
+ *
+ * The other half of the field type protocol, storage settings, is a
+ * separate structure with a different signature and a $has_data lock;
+ * it is not in this trait. One plugin, two structures.
+ *
+ * Nothing but identifiers rides on the element. The form cache
+ * serializes the whole form array, and a data surface holds its refiners
+ * while a storage holds services and a config entity, so putting either
+ * on an element made the cache responsible for objects nobody designed
+ * to be stored. What the element carries instead is the field config's
+ * identifier, and the static callback rebuilds both from it: the field
+ * being edited comes from the form object when the host is Field UI,
+ * which is also the only way an unsaved field can be found, and
+ * otherwise it is loaded by id. See docs/storage.md.
+ */
+trait SurfaceFieldTypeTrait {
+
+  use SurfaceHostTrait;
+
+  /**
+   * The element key carrying the field config the settings belong to.
+   */
+  protected const FIELD_ELEMENT_KEY = '#surface';
+
+  /**
+   * The element key carrying the values the form started from.
+   */
+  protected const CURRENT_ELEMENT_KEY = '#surface_current';
+
+  /**
+   * Builds the data surface for this field type's instance settings.
+   *
+   * Named for the settings it describes, because a field type has two
+   * sets of settings and only the instance half is a structure here. The
+   * structure the field type's #[UsesStructure] names, read from its
+   * definition, built in the host's `field_settings` context.
+   *
+   * @return \Drupal\surface\SurfaceInterface
+   *   The built structure.
+   */
+  public function getFieldSurface(): SurfaceInterface {
+    return $this->hostedStructure(FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS);
+  }
+
+  /**
+   * Gets the storage the field settings are read from and written to.
+   *
+   * The default is the plain settings storage: the input layout is the
+   * storage layout. A field type whose storage layout differs overrides
+   * this and hands the storage a StorageLayoutInterface, which is where
+   * the transform becomes visible.
+   *
+   * @return \Drupal\surface\Pipeline\SurfaceStorageInterface
+   *   The storage.
+   *
+   * @throws \LogicException
+   *   When the item's field definition is not a field config entity,
+   *   which is the only kind of definition whose settings are editable.
+   */
+  public function getSurfaceStorage(): SurfaceStorageInterface {
+    return new FieldSettingsStorage($this->settingsFieldConfig());
+  }
+
+  /**
+   * Answers whether an account may configure these field settings.
+   *
+   * The field config entity answers, which is core's own spelling of who
+   * may administer a field: its access handler delegates to the field
+   * storage, where the "administer <entity type> fields" permission
+   * lives, and any module refining that through the entity access hooks
+   * is heard. So a tool, a settings form and an agent all reach the same
+   * answer as Field UI, and the answer carries its own cacheability.
+   *
+   * A field item whose definition is not a field config entity — a base
+   * field, a definition built in code — has no per instance settings to
+   * write and nothing to ask, so it expresses no opinion rather than
+   * refusing: the host that reached it has its own gate.
+   *
+   * The structure the field type names is then asked through its access
+   * class, which may refuse.
+   *
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account to answer for, or NULL for the current user.
+   * @param string $operation
+   *   The operation the answer is wanted for.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The access answer.
+   */
+  public function surfaceAccess(?AccountInterface $account = NULL, string $operation = FieldSurfaceProviderInterface::OPERATION_FIELD_SETTINGS): AccessResultInterface {
+    $definition = $this->getFieldDefinition();
+    $answer = $definition instanceof FieldConfigInterface
+      ? $definition->access('update', $account, TRUE)
+      : AccessResult::neutral();
+    $surface = $this->usedStructure();
+    if ($surface === NULL) {
+      return $answer;
+    }
+    // The structure's own access class may refuse what the entity
+    // allowed; it never allows on the entity's behalf, because the entity
+    // is the host's gate and the structure only knows its settings.
+    $own = $this->resources()->access($surface, $this->operationContext($operation), $this->surfaceAccount($account));
+    return $own->isForbidden() ? $answer->andIf($own) : $answer;
+  }
+
+  /**
+   * Gets the field config entity whose settings this item describes.
+   *
+   * @return \Drupal\Core\Field\FieldConfigInterface
+   *   The field config entity.
+   *
+   * @throws \LogicException
+   *   When the item's field definition is not a field config entity.
+   */
+  protected function settingsFieldConfig(): FieldConfigInterface {
+    $definition = $this->getFieldDefinition();
+    if (!$definition instanceof FieldConfigInterface) {
+      throw new \LogicException(sprintf(
+        'The settings of %s are not stored on a field config entity, so there is nothing for the field settings storage to write to.',
+        $definition->getName(),
+      ));
+    }
+    return $definition;
+  }
+
+  /**
+   * Reads the static default field settings from a class's structure.
+   *
+   * The same static-protocol problem the formatter trait has:
+   * defaultFieldSettings() cannot consult an instance. A field type
+   * answers with the shape of the structure its #[UsesStructure] names,
+   * which is static; a field type that wants its parent's static defaults
+   * (SurfaceAddressItem, whose parent still stores a key the structure
+   * does not describe) keeps them.
+   *
+   * @param class-string $class
+   *   The fully qualified field item class name.
+   *
+   * @return array
+   *   The declared defaults keyed by setting name.
+   *
+   * @throws \LogicException
+   *   When the class names no structure.
+   */
+  protected static function surfaceDefaultFieldSettings(string $class): array {
+    return static::surfaceDeclaredDefaults($class);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function fieldSettingsForm(array $form, FormStateInterface $form_state): array {
+    $field = $this->settingsFieldConfig();
+    $surface = $this->getFieldSurface();
+    $storage = $this->getSurfaceStorage();
+    // Current values come through the storage, so the form shows the
+    // input layout of what is stored rather than the storage layout, and
+    // an in-progress refinement rebuild overlays what was just chosen.
+    $stored = array_intersect_key($storage->load($surface), $surface->getDefinitions()->toArray());
+    $values = $this->surfaceFormValues($surface, $stored, $form_state);
+    $element = $this->surfaceFormBuilder()->buildSurfaceForm(
+      $surface,
+      $values,
+      $form_state,
+      'surface-field-settings-' . $field->getName(),
+    );
+    // Identifiers, not objects: the static callback rebuilds the item,
+    // the data surface and the storage from the field this settings form is
+    // for, and the form cache only ever holds strings and arrays.
+    $element[static::FIELD_ELEMENT_KEY] = $field->id();
+    // The stored settings ride along for the validate callback, which is
+    // static and has no field item to ask. A key with no rendered
+    // element must keep what is stored rather than fall back to its
+    // default.
+    $element[static::CURRENT_ELEMENT_KEY] = $stored;
+    $element['#element_validate'] = [[static::class, 'validateSurfaceFieldSettings']];
+    return $element;
+  }
+
+  /**
+   * Element validate: the pipeline stage this host protocol has no hook for.
+   *
+   * Runs accept, validate and prepare, and leaves commit to Field UI,
+   * which saves the field config entity the prepared settings are
+   * copied onto.
+   *
+   * @param array $element
+   *   The data surface container element.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   */
+  public static function validateSurfaceFieldSettings(array $element, FormStateInterface $form_state): void {
+    $item = static::surfaceFieldItem($element[static::FIELD_ELEMENT_KEY] ?? NULL, $form_state);
+    $surface = $item->getFieldSurface();
+    $storage = $item->getSurfaceStorage();
+    // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+    $builder = \Drupal::service('surface.form_builder');
+    $current = $element[static::CURRENT_ELEMENT_KEY] ?? [];
+    $values = $builder->extractSurfaceValues($surface, $element, $form_state, $current);
+    if (!$builder->validateSurfaceForm($surface, $values, $element, $form_state, $current)) {
+      // The values are already flagged on their own elements, and there
+      // is nothing safe to hand the host, so what it finds in form state
+      // stays whatever the elements produced.
+      return;
+    }
+    try {
+      // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+      $prepared = \Drupal::service('surface.pipeline')->prepare($surface, $values, $storage);
+    }
+    catch (StorageViolationsException $e) {
+      $builder->flagSurfaceErrors($e->getViolations(), $element, $form_state);
+      return;
+    }
+    // The host copies what it finds here straight onto the field config
+    // entity, so this is the storage layout, not the input layout.
+    $form_state->setValueForElement($element, $prepared->artifact);
+  }
+
+  /**
+   * Rebuilds the field item the element was built from.
+   *
+   * The field being edited is found on the form object first. Field UI's
+   * field settings form is an entity form over the field config, so the
+   * object it is editing is the field itself — including the unsaved one
+   * a create operation is holding, which no id can load. Only when there
+   * is no such form object, which is a programmatic caller rather than
+   * Field UI, is the stored id loaded.
+   *
+   * The item is then built straight from the field's own item
+   * definition rather than from a field item list. A list goes through
+   * the typed data manager's prototype cache, which is keyed by root
+   * data type and property path and not by the field config object, so
+   * two field configs with the same name hand back clones of the first
+   * one's item, and a storage built from that writes to the wrong entity.
+   *
+   * @param mixed $field_id
+   *   The field config identifier the element carries.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return \Drupal\surface\Form\FieldSurfaceProviderInterface
+   *   The field item.
+   *
+   * @throws \LogicException
+   *   When the field cannot be found, or when its item class does not
+   *   describe its settings with a structure after all.
+   */
+  protected static function surfaceFieldItem(mixed $field_id, FormStateInterface $form_state): FieldSurfaceProviderInterface {
+    $field = static::surfaceFormField($form_state);
+    if ($field === NULL && is_string($field_id) && $field_id !== '') {
+      // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+      $loaded = \Drupal::entityTypeManager()->getStorage('field_config')->load($field_id);
+      $field = $loaded instanceof FieldConfigInterface ? $loaded : NULL;
+    }
+    if ($field === NULL) {
+      throw new \LogicException(sprintf(
+        'The %s settings element names no field this request can find, so its data surface and its storage cannot be rebuilt to validate it.',
+        static::class,
+      ));
+    }
+    // @phpstan-ignore globalDrupalDependencyInjection.useDependencyInjection
+    $item = \Drupal::service('typed_data_manager')->create($field->getItemDefinition());
+    if (!$item instanceof FieldSurfaceProviderInterface) {
+      throw new \LogicException(sprintf(
+        'The %s field type does not describe its settings with a structure, so %s has nothing to validate.',
+        $field->getType(),
+        static::class,
+      ));
+    }
+    return $item;
+  }
+
+  /**
+   * Reads the field config the host's form is editing, if it is one.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   *
+   * @return \Drupal\Core\Field\FieldConfigInterface|null
+   *   The field, or NULL when the host is not a field config form.
+   */
+  protected static function surfaceFormField(FormStateInterface $form_state): ?FieldConfigInterface {
+    // Read through the build info rather than through getFormObject(),
+    // which assumes the key is there and warns when it is not: a caller
+    // replaying a submission builds its own form state and has no form
+    // object at all.
+    $form_object = $form_state->getBuildInfo()['callback_object'] ?? NULL;
+    if (!$form_object instanceof EntityFormInterface) {
+      return NULL;
+    }
+    $entity = $form_object->getEntity();
+    return $entity instanceof FieldConfigInterface ? $entity : NULL;
+  }
+
+}

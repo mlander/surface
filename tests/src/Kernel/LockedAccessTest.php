@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\ResourceBuild\Gating;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_resource_test\Resource\Gallery\GalleryResource;
-use Drupal\data_surface_resource_test\Structure\Gallery\OilFinishStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool_test\Resource\CabinetResource;
-use Drupal\data_surface_tool_test\Storage\CabinetStorage;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\ResourceBuild\Gating;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface_resource_test\Resource\Gallery\GalleryResource;
+use Drupal\surface_resource_test\Structure\Gallery\OilFinishStructure;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface_tool_test\Resource\CabinetResource;
+use Drupal\surface_tool_test\Storage\CabinetStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolInterface;
 use PHPUnit\Framework\Attributes\Group;
@@ -31,9 +31,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/decisions.md#a-variant-is-open-locked-or-not-offered
  * @see docs/decisions.md#an-operation-states-how-it-behaves
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class LockedAccessTest extends DataSurfaceKernelTestBase {
+class LockedAccessTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -55,9 +55,8 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_tool_test',
+    'surface',
+    'surface_tool_test',
   ];
 
   /**
@@ -84,11 +83,11 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
@@ -99,7 +98,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
    * @param string $operation
    *   The operation.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   * @return \Drupal\surface\Pipeline\SurfaceResult
    *   The result.
    */
   protected function submit(array $input, string $operation = 'update') {
@@ -160,15 +159,15 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame('This may be seen and not changed, so nothing was written: The cabinet may be audited, not changed.', (string) $violation->message);
     $this->assertSame(self::STORED, $this->container->get('state')->get(CabinetStorage::KEY));
 
-    $write = $this->runTool('data_surface:tool_test.cabinet:update', [OperationInputs::VALUES => ['drawers' => 9]]);
+    $write = $this->runTool('surface:tool_test.cabinet:update', [OperationInputs::VALUES => ['drawers' => 9]]);
     $this->assertFalse($write['success']);
     $this->assertStringContainsString('The cabinet may be audited, not changed.', $write['message']);
-    $read = $this->runTool('data_surface:tool_test.cabinet:update:read');
+    $read = $this->runTool('surface:tool_test.cabinet:update:read');
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame(self::STORED, $read['values']);
 
     // Both documents say it at the top and on every key.
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $documents = [
       'the schema for these answers' => $emitter->emit($built, self::STORED, 'tool_test.cabinet', 'update')->document['schema'],
       'the full schema' => $emitter->emitFull($this->resources()->buildStatic(CabinetResource::class, $context), 'tool_test.cabinet', 'update')->document['schema'],
@@ -226,7 +225,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame('lock_settings.digits', $result->notes[0]->fullPath());
     $this->assertSame('Digits is locked and kept as stored; the value sent was not taken.', (string) $result->notes[0]->message);
     $this->assertSame([], $this->submit(['lock_settings' => ['digits' => 5]])->notes, 'What it holds, sent back, was taken.');
-    $write = $this->runTool('data_surface:tool_test.cabinet:update', [OperationInputs::VALUES => ['lock_settings' => ['digits' => 7]]]);
+    $write = $this->runTool('surface:tool_test.cabinet:update', [OperationInputs::VALUES => ['lock_settings' => ['digits' => 7]]]);
     $this->assertTrue($write['success'], $write['message']);
     $this->assertSame("Edit the cabinet: the values were accepted, and they are what is stored, so nothing was written.\n/lock_settings/digits: Digits is locked and kept as stored; the value sent was not taken.", $write['message']);
 
@@ -238,7 +237,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['lock_settings.digits'], array_map(static fn ($note): string => $note->fullPath(), $result->notes));
 
     // Both documents mark the variant's keys locked.
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = $emitter->emitFull($this->resources()->buildStatic(CabinetResource::class, $this->resources()->operation(CabinetResource::class, 'update')), 'tool_test.cabinet', 'update')->document['schema'];
     // The code lock's site says its key is fixed; the key lock's says
     // nothing of the kind.
@@ -287,7 +286,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame(self::STORED, $this->container->get('state')->get(CabinetStorage::KEY));
 
     // The tool says so, and writes nothing.
-    $tool = $this->runTool('data_surface:tool_test.cabinet:count', [OperationInputs::VALUES => ['drawers' => 9]]);
+    $tool = $this->runTool('surface:tool_test.cabinet:count', [OperationInputs::VALUES => ['drawers' => 9]]);
     $this->assertTrue($tool['success'], $tool['message']);
     $this->assertSame('Count the drawers changes nothing: the values were accepted and prepared, and nothing was written.', $tool['message']);
     $this->assertSame(self::STORED, $this->container->get('state')->get(CabinetStorage::KEY));
@@ -306,7 +305,7 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     // What may answer is the access phase's to say.
     $gating = new \ReflectionProperty(Resources::class, 'gating');
     $may = new \ReflectionMethod(Gating::class, 'childrenMayAnswer');
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     // The code lock is a variant with an access class.
     $this->assertTrue($may->invoke($gating->getValue($resources), $registry->getDefinition(CabinetResource::class)));
 
@@ -314,10 +313,10 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
     // and the one variant answered for is the gallery's oil finish, by an
     // alter: it alone could refuse, so nothing else is built for it.
     $this->installSchema('user', ['users_data']);
-    $this->container->get('module_installer')->uninstall(['data_surface_tool_test']);
-    $this->container->get('module_installer')->install(['data_surface_resource_test']);
-    $resources = $this->container->get('data_surface.resources');
-    $registry = $this->container->get('data_surface.resource_registry');
+    $this->container->get('module_installer')->uninstall(['surface_tool_test']);
+    $this->container->get('module_installer')->install(['surface_resource_test']);
+    $resources = $this->container->get('surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
     $access = array_filter($registry->getDefinitions(), static fn ($definition): bool => $definition->access !== NULL);
     $this->assertNotEmpty($access, 'Some resource or structure names an access class.');
     $answered = [];
@@ -339,15 +338,15 @@ class LockedAccessTest extends DataSurfaceKernelTestBase {
   /**
    * Gets a built resource's chosen variant at a key, for a value.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The built resource.
    * @param string $value
    *   The deciding value.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The variant.
    */
-  protected static function variant(DataSurfaceInterface $built, string $value): DataSurfaceInterface {
+  protected static function variant(SurfaceInterface $built, string $value): SurfaceInterface {
     $variants = $built->getDefinitions()->entry('lock_settings')?->variants;
     assert($variants !== NULL);
     return $variants->variant($value)->child;

@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\ResultDocument;
-use Drupal\data_surface\Refinement\Rule;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_resource_test\Structure\Kiosk\KioskStructure;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\ResultDocument;
+use Drupal\surface\Refinement\Rule;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_resource_test\Structure\Kiosk\KioskStructure;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -25,9 +25,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-rule-declared-as-data
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RuleMessageTest extends DataSurfaceKernelTestBase {
+class RuleMessageTest extends SurfaceKernelTestBase {
 
   use StringTranslationTrait;
 
@@ -38,18 +38,18 @@ class RuleMessageTest extends DataSurfaceKernelTestBase {
     'system',
     'user',
     'serialization',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
    * Builds the kiosk.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The kiosk.
    */
-  protected function kiosk(): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->build(KioskStructure::class, new OperationContext('configure'));
+  protected function kiosk(): SurfaceInterface {
+    return $this->container->get('surface.resources')->build(KioskStructure::class, new OperationContext('configure'));
   }
 
   /**
@@ -136,7 +136,7 @@ class RuleMessageTest extends DataSurfaceKernelTestBase {
    */
   public function testTheDocumentsStateTheBound(): void {
     $kiosk = $this->kiosk();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = json_decode((string) json_encode($emitter->emitFull($kiosk, 'resource_test.kiosk')->document['schema']), TRUE);
     $thens = array_column($full['allOf'], 'then');
     $capacity = ['type' => $full['properties']['capacity']['type'], 'maximum' => 100];

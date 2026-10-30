@@ -8,7 +8,7 @@ found and which doors it reaches. [Resources](introduction/02-resources.md),
 [Operations](introduction/09-operations.md) and
 [Doors](introduction/12-doors.md) introduce the words it prints.
 
-`drush surface:catalog` (alias `data_surface:catalog`) prints the live
+`drush surface:catalog` prints the live
 map of a site: every resource and structure discovery finds, from any
 module, derived and read-back ones included; per operation its id, kind,
 label, permission, parameters and the doors it reaches; and every
@@ -33,13 +33,13 @@ where the module that opens it is installed:
 
 | Door | What it is | Module |
 | --- | --- | --- |
-| `form` | The path of each form route a module declares for the operation and the route's name, then in brackets what the route says of the operation's keys beside its two naming defaults: `/contact/support (example.support) [pins to: support; fixes department: 3; fills subject: Support request; starts message from ?message]`, each parameter a plain default pins, each key it fixes or fills with the value as written (a reference as `{name}`), and each key a link may start with the query parameter it reads. A route whose resource id holds a variable of its path is listed under every resource whose id it fills, its path filled for each. | any (`_data_surface_resource` on the route) |
-| `http` | The method and path that run it under contract 3: `PATCH /surface-api/first.store`, a listing's `GET` on the collection. | `data_surface_react` |
-| `tool` | The derived tool, `data_surface:<id>:<operation>`. | `data_surface_tool` |
-| `read tool` | The read tool beside it, for an operation that changes a thing that exists. | `data_surface_tool` |
-| `schema tool` | The narrowing tool beside it, `data_surface:<id>:<operation>:schema`, where its listing leaves a key's entries out: variants the site lists, or a map of keys from the site past the budget (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). | `data_surface_tool` |
-| `openapi` | The OpenAPI operation that runs it: `<id>:<operation>:write`, a listing's `:list`. | `data_surface_openapi` |
-| `react` | The React page its form mounts on, `/surface-react/<id>/<operation>`, then each page a module serves it at, a route whose controller is `ResourceReactPage::served()`, named as the `form` door names a route. | `data_surface_react` |
+| `form` | The path of each form route a module declares for the operation and the route's name, then in brackets what the route says of the operation's keys beside its two naming defaults: `/contact/support (example.support) [pins to: support; fixes department: 3; fills subject: Support request; starts message from ?message]`, each parameter a plain default pins, each key it fixes or fills with the value as written (a reference as `{name}`), and each key a link may start with the query parameter it reads. A route whose resource id holds a variable of its path is listed under every resource whose id it fills, its path filled for each. | any (`_surface_resource` on the route) |
+| `http` | The method and path that run it under contract 3: `PATCH /surface-api/first.store`, a listing's `GET` on the collection. | `surface_react` |
+| `tool` | The derived tool, `surface:<id>:<operation>`. | `surface`, with `tool` |
+| `read tool` | The read tool beside it, for an operation that changes a thing that exists. | `surface`, with `tool` |
+| `schema tool` | The narrowing tool beside it, `surface:<id>:<operation>:schema`, where its listing leaves a key's entries out: variants the site lists, or a map of keys from the site past the budget (why: [decision](decisions.md#a-budget-for-what-the-site-decides)). | `surface`, with `tool` |
+| `openapi` | The OpenAPI operation that runs it: `<id>:<operation>:write`, a listing's `:list`. | `surface_openapi` |
+| `react` | The React page its form mounts on, `/surface-react/<id>/<operation>`, then each page a module serves it at, a route whose controller is `ResourceReactPage::served()`, named as the `form` door names a route. | `surface_react` |
 
 Only an operation that can be asked on its own reaches the HTTP, tool
 and OpenAPI doors and a React page of its own: its resource names
@@ -49,14 +49,14 @@ none; its plugin's host configures it. A route a module declares is
 listed for any operation it serves, under `form`, or under `react` for
 a React page. A module that opens a door of its own
 implements `ResourceBuild\CatalogDoorsInterface` as a service tagged
-`data_surface.catalog_doors`, and `ResourceBuild\CatalogDoorLinksInterface`
+`surface.catalog_doors`, and `ResourceBuild\CatalogDoorLinksInterface`
 beside it to link the door on the catalog page.
 
 ## The catalog page
 
 `/admin/config/development/surfaces` (Configuration, Development, "Data
 surface catalog"), for a role with the restricted permission "View the
-data surface catalog" (`access data surface catalog`), shows what the
+data surface catalog" (`access surface catalog`), shows what the
 table lists, from the same `SiteCatalog` data: one row per operation
 with its kind, permission and parameters, and its doors, each linked
 where it has a URL: the form route (the first whose every path variable
@@ -81,7 +81,7 @@ is registered when a build reads it, so the command builds every
 operation first and then lists them. A site with a theme of components
 reads thousands (3,133 on this module's development site), so the table
 and the markdown give one row where they are read
-(`block.data_surface_component.props.*`) with how many; `--format=json`
+(`block.surface_component.props.*`) with how many; `--format=json`
 lists every one, and `--resource=<name>` shows one in full.
 
 ## One in full
@@ -103,7 +103,7 @@ the operations with every door, and who answers access: the operation's
 permission alone, or the access class and the alters that answer, and
 whether the answer at the top is static or runtime.
 
-Variants the site lists past `data_surface.settings:site_list_limit`
+Variants the site lists past `surface.settings:site_list_limit`
 are listed by value, `listed: false` in the JSON and a note in the
 table, and their keys are not walked: a structure walked once per place
 it is used grows with the product of the lists, which exhausted 3 GB

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -12,21 +12,21 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\Refinement\DeclaredRefiner;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Attachment;
-use Drupal\data_surface\Port;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Collection;
-use Drupal\data_surface\Pipeline\ResultDocument;
-use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Refinement\DeclaredRefiner;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Attachment;
+use Drupal\surface\Port;
+use Drupal\surface\Entry;
+use Drupal\surface\Collection;
+use Drupal\surface\Pipeline\ResultDocument;
+use Drupal\surface\Widget\SurfaceWidgetManager;
 
 /**
  * Turns a sealed data surface and its values into the served contract.
@@ -100,8 +100,8 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
  *
  * The contract carries no widget vocabulary unless a renderer asks for
  * it (emit()'s $widgets). Then `x-surface.widget` mirrors
- * DataSurfaceWidgetManager's selection in its weight order, so a
- * renderer such as data_surface_react's app draws what the operation
+ * SurfaceWidgetManager's selection in its weight order, so a
+ * renderer such as surface_react's app draws what the operation
  * form would: a non-empty option list is a select (a list of them, a
  * multiple select, said by `multiple`); a map with properties is a
  * fieldset; a string is a textarea when its definition says multiline,
@@ -111,7 +111,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
  * value radios when it asks for them, by the widgets' own rule
  * (CheckboxesWidget::drawsList(), RadiosWidget::drawsOne()); a list with
  * no option list is `list`, rows to add and remove. A key a module's
- * widget claims (DataSurfaceWidgetManager::claimed()) is that widget's
+ * widget claims (SurfaceWidgetManager::claimed()) is that widget's
  * word, ahead of the stock rule, unless its owner asked for one with the
  * `widget` setting. One hint has no
  * Form API counterpart here: `variants`, for a key with variants, whose
@@ -237,26 +237,26 @@ final class ContractEmitter {
   /**
    * Constructs a ContractEmitter.
    *
-   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
+   * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, the one place a constraint is read as a list.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service, for the empty option's labels.
    * @param \Drupal\Core\Validation\ConstraintManager|null $constraints
    *   The constraint plugin manager, for what a constraint only the server
    *   checks says it checks (its label); without it, its id.
-   * @param \Drupal\data_surface\Contract\SiteListBudget|null $budget
+   * @param \Drupal\surface\Contract\SiteListBudget|null $budget
    *   How many entries of a list the site decides are spelled out; without
    *   it, every one.
-   * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager|null $widgets
+   * @param \Drupal\surface\Widget\SurfaceWidgetManager|null $widgets
    *   The widget manager, which says what a module's widget claims;
    *   without it, the stock rule alone names the widget.
    */
   public function __construct(
-    DataSurfaceOptions $options,
+    SurfaceOptions $options,
     TranslationInterface $string_translation,
     ?ConstraintManager $constraints = NULL,
     protected readonly ?SiteListBudget $budget = NULL,
-    ?DataSurfaceWidgetManager $widgets = NULL,
+    ?SurfaceWidgetManager $widgets = NULL,
   ) {
     $this->stringTranslation = $string_translation;
     $this->propertySchema = new PropertySchema($options, $string_translation, $constraints, $widgets);
@@ -267,14 +267,14 @@ final class ContractEmitter {
   /**
    * Emits the contract a data surface serves for a set of values.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface as built in its context, not refined: what it
    *   advertises.
    * @param array $values
    *   The values to describe it for, keyed by key: what the storage holds
    *   over the defaults, with any in-progress answers over that. A key
    *   not given shows its default. A refinement overlay
-   *   (DataSurfaceFormBuilderInterface::refinementOverlay()) is read the
+   *   (SurfaceFormBuilderInterface::refinementOverlay()) is read the
    *   way buildSurfaceForm() reads it: the data surface is refined against
    *   the keys as they stand, each orphan held unanswered, and each orphan
    *   named under STANDING_KEY is shown stale, standing for its stored
@@ -290,7 +290,7 @@ final class ContractEmitter {
    *   Whether to add the renderer's widget hints, `x-surface.widget` and,
    *   on a list of allowed values, `x-surface.multiple`. Off by default:
    *   the contract itself names no widget, and a renderer that draws
-   *   from it, as data_surface_react does, asks for them.
+   *   from it, as surface_react does, asks for them.
    * @param array $operation
    *   How the operation behaves (OperationDefinition::facts()), stated at
    *   the top of the schema as `x-surface.operation`; empty for a data
@@ -306,10 +306,10 @@ final class ContractEmitter {
    *   key's `fetch` template is written against; NULL writes the template
    *   as its query alone.
    *
-   * @return \Drupal\data_surface\Contract\ServedContract
+   * @return \Drupal\surface\Contract\ServedContract
    *   The contract, and what it depends on.
    */
-  public function emit(DataSurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?string $schema_url = NULL): ServedContract {
+  public function emit(SurfaceInterface $surface, array $values, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?string $schema_url = NULL): ServedContract {
     // Refined surfaces are remembered for this one document.
     // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
     $was = [$this->conditionals->remember(new \WeakMap()), $this->choices, $this->fetchBase, $this->site];
@@ -318,8 +318,8 @@ final class ContractEmitter {
     $this->site = ['pointer' => '', 'steps' => []];
     try {
       $cacheability = new CacheableMetadata();
-      $standing = $values[DataSurfaceFormBuilderInterface::STANDING_KEY] ?? [];
-      unset($values[DataSurfaceFormBuilderInterface::STANDING_KEY]);
+      $standing = $values[SurfaceFormBuilderInterface::STANDING_KEY] ?? [];
+      unset($values[SurfaceFormBuilderInterface::STANDING_KEY]);
       $subschemas = new Subschemas(FALSE, $widgets ? [] : self::WIDGET_HINTS, $this->mixedIn($surface));
       $emission = new Emission($subschemas, $cacheability, new \ArrayObject(), $resource_id, standing: is_array($standing) ? $standing : []);
       [$schema, $shown] = $this->frame($surface, $values, $emission);
@@ -393,7 +393,7 @@ final class ContractEmitter {
    * Decision: see
    * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface as built in its context, not refined: for the
    *   account alone (buildStatic()), so access says what the account
    *   decides and marks the rest.
@@ -410,20 +410,20 @@ final class ContractEmitter {
    *   How the operation behaves, as for emit().
    * @param string|null $id
    *   The URI the document is served at, as for emit().
-   * @param \Drupal\data_surface\Contract\Choices|null $choices
+   * @param \Drupal\surface\Contract\Choices|null $choices
    *   The choices to state in full (`?choose=`), resolved against the same
    *   data surface; NULL or none for the plain full schema.
    * @param string|null $schema_url
    *   The URL of the plain full schema, which a deferred key's `fetch`
    *   template is written against; NULL for `$id`.
    *
-   * @return \Drupal\data_surface\Contract\ServedContract
+   * @return \Drupal\surface\Contract\ServedContract
    *   The document (`resource`, `operation`, `label`, `schema` and, when
    *   the data surface declares outputs, `outputs`), and what it depends
    *   on: the data surface and every option list read, never a stored
    *   value.
    */
-  public function emitFull(DataSurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?Choices $choices = NULL, ?string $schema_url = NULL): ServedContract {
+  public function emitFull(SurfaceInterface $surface, string $resource_id, ?string $operation_id = NULL, string|\Stringable|null $label = NULL, bool $widgets = FALSE, array $operation = [], ?string $id = NULL, ?Choices $choices = NULL, ?string $schema_url = NULL): ServedContract {
     // Refined surfaces are remembered for this one document.
     // Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
     $was = [$this->conditionals->remember(new \WeakMap()), $this->choices, $this->fetchBase, $this->site];
@@ -466,13 +466,13 @@ final class ContractEmitter {
    * its identity whatever is stored or typed, so a key that watches only
    * locked siblings has one answer.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   A data surface frame, as advertised.
    *
    * @return array
    *   The value of each locked key, by key.
    */
-  protected function known(DataSurfaceInterface $surface): array {
+  protected function known(SurfaceInterface $surface): array {
     $known = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       // A key its access locked holds what is stored, which is no value
@@ -487,11 +487,11 @@ final class ContractEmitter {
   /**
    * Describes one frame: the top level, or one child.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   * @param \Drupal\surface\SurfaceInterface $declared
    *   The data surface of this frame, as advertised.
    * @param array $values
    *   The values of this frame.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   What the walk carries: where this frame is (its path and the id it
    *   was built from), the orphans of a refinement, whether it is a def,
    *   locked whole or stands for every item of a collection, and the
@@ -505,7 +505,7 @@ final class ContractEmitter {
    * @return array{0: array, 1: array|\stdClass}
    *   The object schema of the frame, and its values as shown.
    */
-  protected function frame(DataSurfaceInterface $declared, array $values, Emission $emission): array {
+  protected function frame(SurfaceInterface $declared, array $values, Emission $emission): array {
     $full = $emission->full();
     $prefix = $emission->prefix;
     $owner = $emission->owner;
@@ -528,7 +528,7 @@ final class ContractEmitter {
     // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
     $ports = $declared->getDefinitions()->ports();
     $values = $declared->getPortValues() + $values;
-    $refined = $declared->refine($values, $runtime ? DataSurfaceInterface::EVERY : $kinds);
+    $refined = $declared->refine($values, $runtime ? SurfaceInterface::EVERY : $kinds);
     $cacheability->addCacheableDependency($refined);
     $advertised = $declared->getDefinitions();
     $now = $refined->getDefinitions();
@@ -537,7 +537,7 @@ final class ContractEmitter {
     $static = $runtime && $this->conditionals->refinedAtRuntime($advertised) ? $declared->refine($values, $kinds) : $refined;
     $ahead = $static->getDefinitions();
     // What the coded ones alone answer: whether their gate is open yet.
-    $coded = $runtime && $this->conditionals->hasRules($advertised) ? $declared->refine($values, DataSurfaceInterface::CODED)->getDefinitions() : $ahead;
+    $coded = $runtime && $this->conditionals->hasRules($advertised) ? $declared->refine($values, SurfaceInterface::CODED)->getDefinitions() : $ahead;
     $properties = [];
     $required = [];
     $conditions = [];
@@ -763,7 +763,7 @@ final class ContractEmitter {
       if ($at_site) {
         // Not stated here, so wherever its coded refiners may rule it
         // out, it is not required here either.
-        [$properties[$name], $requires] = $this->conditionals->mayNotApply($entry, DataSurfaceInterface::CODED, $properties[$name], $requires);
+        [$properties[$name], $requires] = $this->conditionals->mayNotApply($entry, SurfaceInterface::CODED, $properties[$name], $requires);
       }
       if ($ahead_of_time) {
         if ($enumerated === NULL) {
@@ -771,7 +771,7 @@ final class ContractEmitter {
           // Not stated, so wherever its coded refiners may rule it out,
           // it is not required. Decision: see
           // docs/decisions.md#a-key-that-does-not-apply.
-          [$properties[$name], $requires] = $this->conditionals->mayNotApply($entry, DataSurfaceInterface::CODED, $properties[$name], $requires);
+          [$properties[$name], $requires] = $this->conditionals->mayNotApply($entry, SurfaceInterface::CODED, $properties[$name], $requires);
         }
         else {
           $properties[$name][self::EXTENSION]['enumerated'] = TRUE;
@@ -803,7 +803,7 @@ final class ContractEmitter {
         if (!$runtime) {
           // Never run here, so wherever it may rule the key out, the key
           // is not required.
-          [$properties[$name], $requires] = $this->conditionals->mayNotApply($entry, DataSurfaceInterface::RUNTIME, $properties[$name], $requires);
+          [$properties[$name], $requires] = $this->conditionals->mayNotApply($entry, SurfaceInterface::RUNTIME, $properties[$name], $requires);
         }
       }
       if ($requires) {
@@ -866,11 +866,11 @@ final class ContractEmitter {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\data_surface\DefinitionMap $advertised
+   * @param \Drupal\surface\DefinitionMap $advertised
    *   The frame's definitions, which say which structures are mixed in.
    * @param array $schema
    *   The frame, described flat.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the frame: its owner is the id the frame was built from.
    *
    * @return array
@@ -930,7 +930,7 @@ final class ContractEmitter {
   /**
    * Lists the structures a data surface mixes in, at any depth.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param array<int, true> $seen
    *   The frames walked, by object id.
@@ -938,7 +938,7 @@ final class ContractEmitter {
    * @return string[]
    *   Their ids: each one's def is written open in this document.
    */
-  protected function mixedIn(DataSurfaceInterface $surface, array &$seen = []): array {
+  protected function mixedIn(SurfaceInterface $surface, array &$seen = []): array {
     // A sealed child may be held at many keys: each is walked once.
     if (isset($seen[spl_object_id($surface)])) {
       return [];
@@ -972,9 +972,9 @@ final class ContractEmitter {
   /**
    * Answers whether a key's coded refiners read a port that holds nothing.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
-   * @param array<string, \Drupal\data_surface\Port> $ports
+   * @param array<string, \Drupal\surface\Port> $ports
    *   The frame's ports.
    * @param array $values
    *   The frame's values, its ports' among them.
@@ -1006,20 +1006,20 @@ final class ContractEmitter {
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   * @param \Drupal\surface\SurfaceInterface $declared
    *   The container's frame, as advertised.
-   * @param \Drupal\data_surface\DataSurfaceInterface $static
+   * @param \Drupal\surface\SurfaceInterface $static
    *   The same, refined for its values by its static refiners alone.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key holding the child, or the mounts.
-   * @param \Drupal\data_surface\Attachment $attachment
+   * @param \Drupal\surface\Attachment $attachment
    *   The child, wired.
    * @param string $below
    *   Where the child sits below the key: '' for an attached child, the
    *   module for a structure at a mount.
    * @param array $values
    *   The container's values.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the container's frame. Whether it is for one set of
    *   values decides whether a rule is evaluated, not stated.
    * @param array|null $inline
@@ -1030,7 +1030,7 @@ final class ContractEmitter {
    *   The conditionals, and the markers the site carries: `enumerated`
    *   or `refine`.
    */
-  protected function site(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, string $below, array $values, Emission $emission, ?array $inline = NULL): array {
+  protected function site(SurfaceInterface $declared, SurfaceInterface $static, Entry $entry, Attachment $attachment, string $below, array $values, Emission $emission, ?array $inline = NULL): array {
     $map = $attachment->child->getDefinitions();
     $ports = $map->ports();
     $held = $attachment->ports ?? $attachment->readFrom($values)->ports ?? [];
@@ -1054,7 +1054,7 @@ final class ContractEmitter {
         }
         $reading = TRUE;
         $mixed = $mixed || array_diff($watched, array_keys($ports)) !== [];
-        foreach ($child->mayNotApply(DataSurfaceInterface::CODED) as $inside) {
+        foreach ($child->mayNotApply(SurfaceInterface::CODED) as $inside) {
           $ruled[] = $inside === '' ? (string) $name : $name . '.' . $inside;
         }
       }
@@ -1105,7 +1105,7 @@ final class ContractEmitter {
       }
     }
     if ($links !== []) {
-      $pseudo = new Entry($entry->name, $definition, refiners: [DataSurfaceInterface::OWNER => $links]);
+      $pseudo = new Entry($entry->name, $definition, refiners: [SurfaceInterface::OWNER => $links]);
       [, $stated] = $this->conditionals->rules($pseudo, $definition, $base, [], FALSE, $emission);
       array_push($branches, ...$stated);
     }
@@ -1115,13 +1115,13 @@ final class ContractEmitter {
   /**
    * Lists the ports of a data surface that a map reads for its entries.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    *
-   * @return array<string, \Drupal\data_surface\Port>
+   * @return array<string, \Drupal\surface\Port>
    *   Its through ports, by name.
    */
-  protected static function throughPorts(DataSurfaceInterface $surface): array {
+  protected static function throughPorts(SurfaceInterface $surface): array {
     return array_filter($surface->getDefinitions()->ports(), static fn (Port $port): bool => $port->through);
   }
 
@@ -1132,9 +1132,9 @@ final class ContractEmitter {
    * through the map's own port: what depends on it is stated where the
    * map's port is wired, in the owner's frame, never in the map's.
    *
-   * @param \Drupal\data_surface\Attachment $attachment
+   * @param \Drupal\surface\Attachment $attachment
    *   The child, wired.
-   * @param array<string, \Drupal\data_surface\Port> $ports
+   * @param array<string, \Drupal\surface\Port> $ports
    *   The frame's ports.
    *
    * @return bool
@@ -1155,7 +1155,7 @@ final class ContractEmitter {
    * As attachEach() was told: each port of the structure, by the sibling
    * map whose entry of the same id it reads.
    *
-   * @param \Drupal\data_surface\Attachment $attachment
+   * @param \Drupal\surface\Attachment $attachment
    *   The map, wired to its siblings.
    *
    * @return array<string, string>
@@ -1183,23 +1183,23 @@ final class ContractEmitter {
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   * @param \Drupal\surface\SurfaceInterface $declared
    *   This frame, as advertised.
-   * @param \Drupal\data_surface\DataSurfaceInterface $static
+   * @param \Drupal\surface\SurfaceInterface $static
    *   The same, refined for its values by its static refiners alone.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key holding the map.
-   * @param \Drupal\data_surface\Attachment $attachment
+   * @param \Drupal\surface\Attachment $attachment
    *   The map, wired to its siblings.
    * @param array $values
    *   This frame's values.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at this frame.
    *
    * @return array{0: array, 1: array<string, true>}
    *   The conditionals, and the markers the key carries.
    */
-  protected function entrySites(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Attachment $attachment, array $values, Emission $emission): array {
+  protected function entrySites(SurfaceInterface $declared, SurfaceInterface $static, Entry $entry, Attachment $attachment, array $values, Emission $emission): array {
     $branches = [];
     $markers = [];
     foreach ($attachment->child->getDefinitions()->entries() as $id => $inner) {
@@ -1239,13 +1239,13 @@ final class ContractEmitter {
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   * @param \Drupal\surface\SurfaceInterface $declared
    *   The frame, as advertised.
-   * @param \Drupal\data_surface\DataSurfaceInterface $static
+   * @param \Drupal\surface\SurfaceInterface $static
    *   The same, refined for its values by its static refiners alone.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key holding the mounts.
-   * @param \Drupal\data_surface\Entry $current
+   * @param \Drupal\surface\Entry $current
    *   The same key, as it stands.
    * @param array $property
    *   Its property, stated inline.
@@ -1253,14 +1253,14 @@ final class ContractEmitter {
    *   The frame's values.
    * @param bool $locked
    *   Whether the key is described locked.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the frame.
    *
    * @return array{0: array, 1: array}
    *   The property, each mount a site, and the conditionals for the
    *   frame's `allOf`.
    */
-  protected function mounts(DataSurfaceInterface $declared, DataSurfaceInterface $static, Entry $entry, Entry $current, array $property, array $values, bool $locked, Emission $emission): array {
+  protected function mounts(SurfaceInterface $declared, SurfaceInterface $static, Entry $entry, Entry $current, array $property, array $values, bool $locked, Emission $emission): array {
     $subschemas = $emission->subschemas;
     $branches = [];
     foreach ($entry->mounted as $module => $attachment) {
@@ -1302,7 +1302,7 @@ final class ContractEmitter {
   /**
    * Answers whether every key a key's static refiners watch holds a value.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param array $values
    *   The values of its frame.
@@ -1339,13 +1339,13 @@ final class ContractEmitter {
    *
    * Decision: see docs/decisions.md#a-list-of-child-invocations.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   * @param \Drupal\surface\SurfaceInterface $declared
    *   The data surface the collection belongs to.
-   * @param \Drupal\data_surface\Collection $list
+   * @param \Drupal\surface\Collection $list
    *   The child every item is.
-   * @param \Drupal\data_surface\Entry $current
+   * @param \Drupal\surface\Entry $current
    *   The key as it stands, refined by the parent.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key as advertised.
    * @param array $values
    *   The values of the collection's frame.
@@ -1353,7 +1353,7 @@ final class ContractEmitter {
    *   Whether the list is locked: its items are then described locked.
    * @param string[] $depends
    *   The siblings the parent's refiners of the list watch.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the collection's frame: its owner is the id of the
    *   resource or structure it belongs to, a stale value inside an item
    *   is listed under its delta, and a def (declaring) has its items as a
@@ -1363,7 +1363,7 @@ final class ContractEmitter {
    *   The collection's property schema, and its value as shown: one map
    *   per item, or NULL for a list that holds nothing.
    */
-  protected function collection(DataSurfaceInterface $declared, Collection $list, Entry $current, Entry $entry, array $values, bool $locked, array $depends, Emission $emission): array {
+  protected function collection(SurfaceInterface $declared, Collection $list, Entry $current, Entry $entry, array $values, bool $locked, array $depends, Emission $emission): array {
     $path = $emission->at($entry->name);
     $owner = $emission->owner;
     $declaring = $emission->declaring;
@@ -1424,12 +1424,12 @@ final class ContractEmitter {
    * attached inside itself, and a sealed data surface cannot hold itself,
    * so that is a guard, not a case.)
    *
-   * @param \Drupal\data_surface\Attachment $attachment
+   * @param \Drupal\surface\Attachment $attachment
    *   The child at its key.
    * @param string $fallback
    *   The id to define it under when it has no `#[Resource]` or
    *   `#[Structure]` id of its own.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk: the document's defs the def is written to, and the
    *   cacheability it collects into.
    *
@@ -1466,13 +1466,13 @@ final class ContractEmitter {
    * In the full schema a child with nothing locked anywhere inside it is
    * its own def, so its def is read back rather than described twice.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child.
    * @param string $key
    *   The key its def is filed under.
    * @param array $values
    *   Its values.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the child: its path from the top, its id, the orphans
    *   standing in it, whether it is locked whole (by its access or its
    *   parent's) and whether it stands for every item of a collection. Not
@@ -1481,7 +1481,7 @@ final class ContractEmitter {
    * @return array{0: array, 1: array|\stdClass}
    *   The child's object schema here, and its values as shown.
    */
-  protected function instance(DataSurfaceInterface $child, string $key, array $values, Emission $emission): array {
+  protected function instance(SurfaceInterface $child, string $key, array $values, Emission $emission): array {
     $def = $emission->subschemas->get($key);
     $bound = array_filter($child->getPortValues(), ValueState::isConfigured(...)) !== [];
     if ($emission->full() && $def !== NULL && !$emission->frozen && !$bound && !$this->locks($child)) {
@@ -1496,13 +1496,13 @@ final class ContractEmitter {
    * Or whether access marked anything in it as decided at runtime: either
    * makes a child differ from its def, so it is described where it sits.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    *
    * @return bool
    *   TRUE when a key of it, or of a child inside it, is locked or marked.
    */
-  protected function locks(DataSurfaceInterface $surface): bool {
+  protected function locks(SurfaceInterface $surface): bool {
     static $asked = NULL;
     $asked ??= new \WeakMap();
     return $asked[$surface] ??= $this->locksBelow($surface);
@@ -1511,13 +1511,13 @@ final class ContractEmitter {
   /**
    * Answers locks() for a data surface not asked about before.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    *
    * @return bool
    *   TRUE when a key of it, or of a child inside it, is locked or marked.
    */
-  protected function locksBelow(DataSurfaceInterface $surface): bool {
+  protected function locksBelow(SurfaceInterface $surface): bool {
     foreach ($surface->getDefinitions()->entries() as $entry) {
       $children = match (TRUE) {
         $entry->variants !== NULL => $entry->variants->variants,
@@ -1612,13 +1612,13 @@ final class ContractEmitter {
    *
    * @param string $name
    *   The map's key.
-   * @param \Drupal\data_surface\Attachment $attachment
+   * @param \Drupal\surface\Attachment $attachment
    *   The map, attached at its key.
    * @param string $fallback
    *   The id to describe it under when it has none of its own.
    * @param list<string> $picked
    *   The ids chosen.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk: the document's defs, which an entry's structure is filed
    *   in, and the cacheability it collects into.
    *
@@ -1642,7 +1642,7 @@ final class ContractEmitter {
   /**
    * Gives the document its `$defs`, when it has any.
    *
-   * @param \Drupal\data_surface\Contract\Subschemas $subschemas
+   * @param \Drupal\surface\Contract\Subschemas $subschemas
    *   The defs written.
    *
    * @return array
@@ -1672,16 +1672,16 @@ final class ContractEmitter {
    * the others as they are advertised.
    * Decision: see docs/decisions.md#contract-2.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   * @param \Drupal\surface\SurfaceInterface $declared
    *   The data surface the variants belong to.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The entry of the key the variants are attached at.
    * @param array $values
    *   The values of the variants' frame.
    * @param bool $locked
    *   Whether the key is locked, or inside a child locked whole: every
    *   variant is then described locked.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the variants' frame. Its owner is the id of the
    *   resource or structure the variants belong to; only the chosen
    *   variant's orphans of its standing are its own; in the full schema
@@ -1695,7 +1695,7 @@ final class ContractEmitter {
    *   The key's property schema, its value as shown, and the
    *   conditionals for the parent's `allOf`.
    */
-  protected function variants(DataSurfaceInterface $declared, Entry $entry, array $values, bool $locked, Emission $emission): array {
+  protected function variants(SurfaceInterface $declared, Entry $entry, array $values, bool $locked, Emission $emission): array {
     $full = $emission->full();
     $path = $emission->at($entry->name);
     $owner = $emission->owner;
@@ -1834,7 +1834,7 @@ final class ContractEmitter {
    * conditional's `then` laid over it, against the key refined afresh
    * for the conditional's values, each described by this.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key, from the data surface's definition map.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
    *   The definition to describe; NULL for the entry's own.

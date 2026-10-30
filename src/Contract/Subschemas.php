@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
-use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\surface\SurfaceInterface;
 
 /**
  * The subschemas one emission writes under `$defs`, as it writes them.
@@ -21,7 +21,7 @@ use Drupal\data_surface\DataSurfaceInterface;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Contract\ContractEmitter
+ * @see \Drupal\surface\Contract\ContractEmitter
  */
 final class Subschemas {
 
@@ -35,14 +35,14 @@ final class Subschemas {
   /**
    * The children whose def is being written now.
    *
-   * @var \SplObjectStorage<\Drupal\data_surface\DataSurfaceInterface, string>
+   * @var \SplObjectStorage<\Drupal\surface\SurfaceInterface, string>
    */
   protected \SplObjectStorage $writing;
 
   /**
    * The key each child's def was filed under.
    *
-   * @var \SplObjectStorage<\Drupal\data_surface\DataSurfaceInterface, string>
+   * @var \SplObjectStorage<\Drupal\surface\SurfaceInterface, string>
    */
   protected \SplObjectStorage $keys;
 
@@ -73,26 +73,26 @@ final class Subschemas {
   /**
    * Gets the key a child's def was filed under, if it was.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The built child.
    *
    * @return string|null
    *   The key, or NULL when its def is not written yet.
    */
-  public function keyOf(DataSurfaceInterface $child): ?string {
+  public function keyOf(SurfaceInterface $child): ?string {
     return $this->keys->contains($child) ? $this->keys[$child] : NULL;
   }
 
   /**
    * Gets the id a child's def is being written under, if it is.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The built child.
    *
    * @return string|null
    *   The id, inside that def's own declaration; NULL elsewhere.
    */
-  public function writing(DataSurfaceInterface $child): ?string {
+  public function writing(SurfaceInterface $child): ?string {
     return $this->writing->contains($child) ? $this->writing[$child] : NULL;
   }
 
@@ -101,10 +101,10 @@ final class Subschemas {
    *
    * @param string $id
    *   The id it is written under.
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child.
    */
-  public function begin(string $id, DataSurfaceInterface $child): void {
+  public function begin(string $id, SurfaceInterface $child): void {
     $this->writing[$child] = $id;
   }
 
@@ -115,14 +115,14 @@ final class Subschemas {
    *   The child's id.
    * @param array $def
    *   Its declaration, as its own frame describes it for no values.
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child it was written from.
    *
    * @return string
    *   The key it is filed under: the id, unless the id holds a different
    *   declaration already.
    */
-  public function add(string $id, array $def, DataSurfaceInterface $child): string {
+  public function add(string $id, array $def, SurfaceInterface $child): string {
     $this->writing->detach($child);
     $key = $id;
     for ($n = 2; isset($this->defs[$key]) && !self::same($this->defs[$key], $def); $n++) {

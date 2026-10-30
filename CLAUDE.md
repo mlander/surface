@@ -1,4 +1,4 @@
-# Data Surface — working notes
+# Surface API — working notes
 
 A data surface is an immutable, sealed group of core data definitions,
 built once from a resource or structure and read by every caller: a
@@ -53,13 +53,13 @@ the record of the rework that brought the module to the pattern.
   `creates` stamped on it and a context saying otherwise refused
   (`docs/decisions.md#an-operation-on-the-class`); only ever on its
   resource's or structure's own class. Its context adds `known`
-  identity, `withConstraint()` (a Choice of one value with `data_surface_fixed`
+  identity, `withConstraint()` (a Choice of one value with `surface_fixed`
   fixes the key),
   `withDefaults()` (what keys start from, only on a context that
   creates) and `withChild()`, the first two by key path, a path into a
   fixed child handed to its context, never an identity key it knows; a
   route fixes or fills keys of the operation it serves with them,
-  `_data_surface_fixed` and `_data_surface_defaults`, and a fixed key
+  `_surface_fixed` and `_surface_defaults`, and a fixed key
   holds its value (required, drawn fixed, `const`)
   (`docs/forms.md#a-route-that-fixes-or-fills-keys`); a child with operations
   is invoked through the one its parent names, else the one with its
@@ -134,7 +134,7 @@ the record of the rework that brought the module to the pattern.
   unless the provider is closed (`ClosedSiteListInterface`, a static
   `structures()` naming every structure it may list, its list naming
   values and labels alone), whose variants are written as a class's. A
-  field type's settings are one (`data_surface_tool`'s
+  field type's settings are one (`surface_examples_field`'s
   `FieldSettingsSchemaVariants`, each read from its config schema), and
   count against the site list limit as any list the site decides. A deciding key whose variants offer one value is
   drawn as that value and stated `const`, its label under
@@ -153,7 +153,7 @@ the record of the rework that brought the module to the pattern.
   (`docs/resources.md#variants-from-the-site`,
   `docs/decisions.md#a-slot-holds-text-a-component-or-components`).
 - **Reading a schema**: `Contract\SchemaReader`
-  (`data_surface.schema_reader`), the emitter's mapping run backwards: a
+  (`surface.schema_reader`), the emitter's mapping run backwards: a
   JSON Schema document (2020-12; draft-04 to -07 converted first,
   `upconvert()`) read into a blueprint, for a variant from the site, or
   registered as a structure, `structure($document, $id)`. A def is one
@@ -183,14 +183,14 @@ the record of the rework that brought the module to the pattern.
 - **Reference key**: a key that refers to an entity, declared by the
   data type string of what it refers to, `add('page', 'entity:node:article',
   ...)`, `'entity:user'`, or the bare `'entity'` (two parts attached at
-  the key, `entity_type` and `id`, filtered by `DataSurfaceReferenceableType`
+  the key, `entity_type` and `id`, filtered by `SurfaceReferenceableType`
   written on the key); every door sends and answers the id, and a config
   storage stores a content entity's uuid (`ReferenceStorageLayout`, which
   the engine applies; `References::STORED_AS` keeps the id) and a config
   entity's id, a config entity depending on what its keys refer to
   (`docs/decisions.md#a-config-object-stores-a-reference-by-uuid`). Its candidates are core's
   selection handler's for the account (`Reference\References`), listed
-  up to `data_surface.settings:reference_list_limit` and looked up past
+  up to `surface.settings:reference_list_limit` and looked up past
   it, with core's entity autocomplete on the form and `GET
   .../{x}:lookup` over HTTP; `x-surface.reference` marks it in both
   documents (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
@@ -214,7 +214,7 @@ the record of the rework that brought the module to the pattern.
   machine name is that pair: `compute('id', 'machine_name', t('Machine
   name'), from: ['label'], using: MachineName::class, when:
   Compute::UNLESS_SENT)` on the identity key, with core's `machine_name`
-  config schema type for the pattern and length, `DataSurfaceUnique` added
+  config schema type for the pattern and length, `SurfaceUnique` added
   to the identity key of every `creates` operation (the storage answers
   `exists()`), and core's machine name element as the widget (example 15's
   id, the content type demo,
@@ -252,7 +252,7 @@ the record of the rework that brought the module to the pattern.
 - **Contract baseline** and **contract diff**: a module's committed full
   schemas, `tests/fixtures/contracts/<id>.json`, and the lint that
   judges today's against them (`Contract\ContractDiff`,
-  `ContractBaselineTest`, `drush data_surface:contract-diff`): a
+  `ContractBaselineTest`, `drush surface:contract-diff`): a
   breaking change passes only versioned or allowed with a reason.
   Regenerate with `--write` after an accepted change; never by hand.
 - **Access answer**: what the operation's permission, then the access
@@ -273,14 +273,14 @@ the record of the rework that brought the module to the pattern.
   (`docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability`).
 
 "Data surface" names the project, and the sealed object the build step
-makes (`DataSurfaceInterface`); it is not a third kind. "Shape" is the
+makes (`SurfaceInterface`); it is not a third kind. "Shape" is the
 named type, of which resources, structures and named scalar shapes are
 the three kinds; in code `#[Shape]` names the third, and the word never
 names the blueprint or the layout. A value that arrives of the wrong
 type is a `TypeMismatchException`. Product names
 and on-the-wire identifiers keep the word surface (module, namespaces,
 services, routes and paths, `x-surface`, the `surface[...]` form key,
-React, the `DataSurface*` engine, tool ids; the contract's `surface` and
+React, the `Surface*` engine, tool ids; the contract's `surface` and
 `situation` keys became `resource` and `operation` with contract 2); every concept name uses the new word
 (`docs/decisions.md#the-product-keeps-its-name`).
 
@@ -301,18 +301,18 @@ or, with no argument, is its own structure: the plugin class implements
 `<host type>:<plugin id>` unless it carries `#[Structure]`, and alters
 name it by the plugin class (the demo formatter). Everything else is
 discovered by `ResourceBuild\ResourceCollectorPass` and built by the
-`data_surface.resources` service (`ResourcesInterface::build($resource,
+`surface.resources` service (`ResourcesInterface::build($resource,
 $context)`), which writes the blueprint, the alters, the context and the
-bound refiners into the engine's `DataSurfaceBuilder` and seals it into a
-`DataSurfaceInterface` (`docs/resources.md`). The builder, the definition
-map and `DataSurfaceRefinerInterface` are internal: nothing an author
+bound refiners into the engine's `SurfaceBuilder` and seals it into a
+`SurfaceInterface` (`docs/resources.md`). The builder, the definition
+map and `SurfaceRefinerInterface` are internal: nothing an author
 writes touches them. There is no build event, no declaration method, no
 provider service, no policy filter and no output refiner; step 5 of
 `REWORK.md` deleted them.
 
 Every plugin host reads `#[UsesStructure]` from the plugin definition:
 block, formatter, condition, action and field type base classes, and
-`DataSurfacePluginForm` for any configurable plugin. A host builds the
+`SurfacePluginForm` for any configurable plugin. A host builds the
 named class in a context of its own verb (`configure`, `field_settings`),
 supplies the storage (the plugin's configuration array; the field config
 for a field type) and answers static defaults from the class's own
@@ -328,13 +328,13 @@ marked open, not left as a code comment; code points at an entry with
 that spot needs it.
 
 Operations are what routes and tools are generated from. A route names
-`_data_surface_resource` and `_data_surface_operation` and maps its
+`_surface_resource` and `_surface_operation` and maps its
 parameters onto the operation's by name (`OperationRoute`), gated by
-`_data_surface_operation_access`, which `OperationRouteSubscriber` adds
+`_surface_operation_access`, which `OperationRouteSubscriber` adds
 to every such route (a routing file may still say it);
-`DataSurfaceOperationForm` serves it.
+`SurfaceOperationForm` serves it.
 
-A route's seeds, `_data_surface_fixed` and `_data_surface_defaults`, are
+A route's seeds, `_surface_fixed` and `_surface_defaults`, are
 literals or references: `'{name}'` whole (`OperationRoute::REFERENCE`),
 the raw value of a variable of the route's path that a requirement or a
 converter bounds, left out when an optional placeholder is absent, and
@@ -343,13 +343,13 @@ resource's id may hold such a variable, `entity.content:node.{node_type}`,
 filled at match (`OperationRoute::named()`), so one route serves every
 bundle (`docs/forms.md#a-value-from-the-routes-path`).
 
-`_data_surface_query: { '<key path>': '<query name>' }` lists the keys a
+`_surface_query: { '<key path>': '<query name>' }` lists the keys a
 link may start, each name plain (`[A-Za-z0-9_-]`, since PHP renames a
 `.` and splits a `[`): prefills, laid on the form's first draw only,
 held to the key and dropped without a word when it refuses them
 (`KeyPaths::heldOn()`), never in the context, a build or a document; the
 page varies by `url.query_args:<name>`. Code hands the form the same,
-`getForm(DataSurfaceOperationForm::class, $values)`. A React page a
+`getForm(SurfaceOperationForm::class, $values)`. A React page a
 module serves at its own route (`ResourceReactPage::served()`, told
 apart by `OperationRoute::reactPage()`) starts keys from both and fixes
 none (`docs/forms.md#keys-a-link-or-the-code-starts`).
@@ -364,7 +364,7 @@ that is a path variable with a value
 
 What the route alone shows to be wrong (a `{name}` naming no bounded
 variable, one path both fixed and filled, a query map no link can use,
-`_data_surface_fixed` on a React page) fails the router rebuild for the
+`_surface_fixed` on a React page) fails the router rebuild for the
 whole site (`OperationRoute::assertWritten()`, from
 `OperationRouteSubscriber` at ALTER -230, after core's converters at
 -220) and is refused again at match, and by the access check before the
@@ -380,20 +380,21 @@ only when nothing in its context came from the request, else held for
 the request alone (`ResourcesInterface::holdDeclared()`)
 (`docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for`).
 
-`data_surface_tool` derives one tool per operation that can be asked
-on its own, `data_surface:<id>:<operation>`: its resource names storage,
-no plugin uses it, and every `%key` in its permission can be supplied by
+With the `tool` module installed, the module derives one tool per
+operation that can be asked on its own, `surface:<id>:<operation>`
+(the Tool API door, `docs/tools.md`): its resource names storage, no
+plugin uses it, and every `%key` in its permission can be supplied by
 a parameter (`ResourceCatalog::standalone()`). Beside each such
 operation that changes a thing that exists it derives a read tool,
-`data_surface:<id>:<operation>:read`, taking the parameters and
+`surface:<id>:<operation>:read`, taking the parameters and
 answering with the stored values less secrets
 (`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Where an
 operation's listing leaves a key's entries out, it derives a narrowing
-tool too, `data_surface:<id>:<operation>:schema`, answering what
+tool too, `surface:<id>:<operation>:schema`, answering what
 `POST .../schema` answers for the values sent, and the key's description
 names the fetch beside it, `GET .../schema?choose=<pointer>=<value>`. The
 listing leaves out variants the site lists whatever
-`data_surface.settings:site_list_limit` says, stating the keys of the
+`surface.settings:site_list_limit` says, stating the keys of the
 variant the stored values choose and no other (the listing of an
 operation that needs nothing reads what is stored, for an account it is
 open to), and a map of keys from the site past the limit; the limit
@@ -407,12 +408,12 @@ is the operation's label (with its resource added where labels are
 shared; the read tool's is "Current values:" and that), and its
 description the operation's description and one line of call rules
 for its kind (`OperationInputs::description()`). The field
-tools are `data_surface:field.instance:create` / `:reuse` / `:update`; the
+tools are `surface:field.instance:create` / `:reuse` / `:update`; the
 hand-written `field_add` / `field_update` are gone.
-`data_surface.resource_catalog` lists the static layer;
-`data_surface.site_catalog` adds each operation's doors (each module
+`surface.resource_catalog` lists the static layer;
+`surface.site_catalog` adds each operation's doors (each module
 that opens one names it, a `CatalogDoorsInterface` service tagged
-`data_surface.catalog_doors`; a route's `form` or `react` line says
+`surface.catalog_doors`; a route's `form` or `react` line says
 what it pins, fixes, fills and starts) and every build refusal and
 route written wrong (stage `route`), which `drush
 surface:catalog` prints and the page `/admin/config/development/surfaces`
@@ -437,7 +438,7 @@ setting a fact another alter set on the key is refused at build.
 A child may be a resource with storage of its own, an attached resource
 (the field's storage, `FieldStorageResource`). A provider named by
 `attachVariants(from:)` lists variants for the values no variant class
-declares (`data_surface_tool` lists a field type's settings, and its
+declares (`surface_examples_field` lists a field type's settings, and its
 storage settings, from its config schema). A child
 whose keys cannot be listed at all is a `#[RefinesInput]` method on an
 `any` key returning a map. A structure reads a value of its container
@@ -455,7 +456,7 @@ Keys one resource asks per thing the site has (a checkbox per form) are
 `addEach()` or `attachEach()` with a provider, not a deriver
 (`docs/decisions.md#keys-that-come-from-the-site`); the derived tools are
 cleared when a tag any of them was built with is invalidated
-(`data_surface_tool`'s `ToolDefinitionsInvalidator`).
+(`Tool\ToolDefinitionsInvalidator`).
 
 A resource or structure whose keys are the site's rather than the
 code's (one per bundle, one per field) is derived: a class in `src/Resource/` or `src/Structure/`
@@ -466,7 +467,7 @@ discovery, each `<base>:<derivative>` with no class
 inputs and operations `ResourceCallable`s, cached under the tags of what
 it was read from. Its kind follows from what it names: one that names
 storage or identity keys is a resource, any other a structure.
-`data_surface_entity` derives a resource per content entity bundle
+`surface_examples_entity` derives a resource per content entity bundle
 (`entity.content:*`) and a structure per field (`field.item:*`), with
 field access as each field child's access (`docs/entities.md`). A
 child is built by the same build step in its own frame and sealed into
@@ -483,11 +484,11 @@ print the wall time of each gate and end with a PASS line only when no
 test errored or failed and every gate passed.
 
 - **The fast lane**, `scripts/check.sh --fast` (or
-  `DATA_SURFACE_CHECK_FAST=1`): unit and kernel tests through phpunit,
-  one process per class, `DATA_SURFACE_CHECK_CONCURRENCY` at once (one
+  `SURFACE_CHECK_FAST=1`): unit and kernel tests through phpunit,
+  one process per class, `SURFACE_CHECK_CONCURRENCY` at once (one
   process for all of them takes 15 minutes, since every kernel test
   installs its modules). Each class has its own result cache in the
-  container's `/tmp/data_surface-phpunit-cache` and runs with
+  container's `/tmp/surface-phpunit-cache` and runs with
   `--order-by=defects`, so what failed last runs first; classes with a
   defect last time start first, then the slowest. A class's output is
   printed only when it has a problem. Then phpcs, phpstan and cspell on
@@ -498,8 +499,8 @@ test errored or failed and every gate passed.
 - **The full lane**, `scripts/check.sh`: every class through core's
   `run-tests.sh`, each in its own phpunit process with its own database
   prefix and site directory. Unit, kernel and functional classes run
-  `DATA_SURFACE_CHECK_CONCURRENCY` at a time (default 8), then the
-  browser classes `DATA_SURFACE_CHECK_BROWSER_CONCURRENCY` at a time
+  `SURFACE_CHECK_CONCURRENCY` at a time (default 8), then the
+  browser classes `SURFACE_CHECK_BROWSER_CONCURRENCY` at a time
   (default 4); then phpcs, phpstan and cspell over the whole module.
   **Run the full lane once before handing work back**; its PASS line is
   the one that counts. `run-tests.sh` builds each class's phpunit command
@@ -531,13 +532,13 @@ class, or the plain phpunit run, from the site root:
 
 ```
 ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
-  ../vendor/bin/phpunit -c core modules/custom/data_surface/tests/src/Kernel/SomeTest.php'
+  ../vendor/bin/phpunit -c core modules/custom/surface/tests/src/Kernel/SomeTest.php'
 ```
 
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1798, Assertions: 41035, Errors: 0, Failures: 0, Skipped: 3. Classes: 250 of 250, 8 at a time, browser classes 4.
+phpunit: Tests: 1798, Assertions: 41037, Errors: 0, Failures: 0, Skipped: 3. Classes: 250 of 250, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -557,8 +558,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1450, Assertions: 28535, Deprecations: 102, Skipped: 3. Classes:
-161, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1690, Assertions: 37019, Skipped: 3, Deprecations: 130. Classes:
+201, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -604,13 +605,13 @@ Run from the site root (`ROOT` below), which is the parent of `web/`:
 
 ```
 # phpcs — the stored installed_paths point inside the container.
-cd web/modules/custom/data_surface && $ROOT/vendor/bin/phpcs -d memory_limit=1G \
+cd web/modules/custom/surface && $ROOT/vendor/bin/phpcs -d memory_limit=1G \
   --runtime-set installed_paths \
   "$ROOT/vendor/drupal/coder/coder_sniffer,$ROOT/vendor/slevomat/coding-standard"
 
 # phpstan — the module's own config; needs the raised memory limit.
 cd $ROOT && vendor/bin/phpstan analyse \
-  -c web/modules/custom/data_surface/phpstan.neon --no-progress --memory-limit=1G
+  -c web/modules/custom/surface/phpstan.neon --no-progress --memory-limit=1G
 
 # cspell — core's .cspell.json with globRoot set to the module, its
 # dictionaryDefinitions paths made absolute, and .cspell-project-words.txt
@@ -623,7 +624,7 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 ## The React submodule and its app
 
 The served contract's emitter is the main module's:
-`Contract\ContractEmitter` (`data_surface.contract_emitter`) turns a
+`Contract\ContractEmitter` (`surface.contract_emitter`) turns a
 sealed data surface and its values into JSON Schema 2020-12 with an
 `x-surface` keyword per property, variants as an `allOf` of `if`/`then`
 on their deciding sibling. That is the schema as it stands, for one set
@@ -636,9 +637,10 @@ The emitter is the walk both documents share; `Contract\PropertySchema`,
 `Contract\Conditionals` and `Contract\DocumentHead` write what it asks
 for (`docs/decisions.md#the-emitter-is-one-walk-and-three-writers`).
 It names no widget unless asked
-(`emit(..., widgets: TRUE)`); `data_surface_tool`'s contract panel shows
-it without, beside what the Tool API can advertise (which flattens
-variants, and is what `tool:info` prints). `modules/data_surface_react`
+(`emit(..., widgets: TRUE)`); the contract panel (`Form\ContractPanel`)
+shows it without, beside what the Tool API can advertise where the tool
+module is installed (which flattens
+variants, and is what `tool:info` prints). `modules/surface_react`
 serves it with the widget hints, through the main module's service, on
 an API where the path is the resource and the method the operation
 (contract 3's paths, `ServedPaths`, both documents in contract 4's
@@ -657,17 +659,17 @@ which answers a URL that names nothing as the form's route does; a
 module's own route serves the same page with `ResourceReactPage::served()`
 and `servedTitle()`, handing the app `seeds.defaults` and `prefill`, the
 values the app starts from over the stored ones, and fixing nothing
-(`modules/data_surface_react/README.md`).
+(`modules/surface_react/README.md`).
 `docs/served-contract.md` has the format, with children and variants
 as `$defs` that the properties reference; `docs/decisions.md` (Served
 contract) has the points it settled.
 
-The app is `modules/data_surface_react/app/`: Vite, React 18 and
+The app is `modules/surface_react/app/`: Vite, React 18 and
 TypeScript, every version pinned exactly. Run npm on the host, never
 inside ddev:
 
 ```
-cd modules/data_surface_react/app
+cd modules/surface_react/app
 npm ci          # node_modules/ is ignored
 npm test        # Vitest + React Testing Library
 npm run build   # tsc --noEmit, then dist/app.js and dist/app.css
@@ -746,23 +748,23 @@ so the rule is this sentence. `npm test` is not part of
   (`docs/declaring-a-resource.md#the-class`); the generator writes it.
 - Iteration order is load-bearing: the definition map is in declaration
   order, and `FieldToolsComparisonTest`'s drift assertion is the tripwire.
-- `modules/data_surface_tool/COMPARISON.md` and
-  `modules/data_surface_demo_node_type_tool/COMPARISON.md` are generated
+- `modules/surface_examples_field/COMPARISON.md` and
+  `modules/surface_examples_node_type_tool/COMPARISON.md` are generated
   by `scripts/generate-comparison.php`, `docs/catalog.md` by
   `scripts/generate-catalog.php` (the markdown of `drush surface:catalog`
   for this repository's modules), and the contract baselines under
-  `tests/fixtures/contracts/` by `drush data_surface:contract-diff
+  `tests/fixtures/contracts/` by `drush surface:contract-diff
   --write`, and the config schema and install files of every resource
   stored in a `ConfigObjectStorage`, and the schema of a config entity
   type a module declares and stores a resource in, by `drush
-  data_surface:config-schema --write` (the test modules' through
-  `ConfigSchemaDriftTest` with `DATA_SURFACE_CONFIG_SCHEMA_WRITE=1`), and
+  surface:config-schema --write` (the test modules' through
+  `ConfigSchemaDriftTest` with `SURFACE_CONFIG_SCHEMA_WRITE=1`), and
   example 15's documents under `tests/fixtures/venues/` by
-  `VenueResourceTest` with `DATA_SURFACE_VENUE_WRITE=1`, and example
+  `VenueResourceTest` with `SURFACE_VENUE_WRITE=1`, and example
   16's under `tests/fixtures/references/` by `ReferenceKeysTest` with
-  `DATA_SURFACE_REFERENCES_WRITE=1`, and example 17's under
+  `SURFACE_REFERENCES_WRITE=1`, and example 17's under
   `tests/fixtures/retitle/` by `RetitleExampleTest` with
-  `DATA_SURFACE_RETITLE_WRITE=1`. Never edit any of them by hand.
+  `SURFACE_RETITLE_WRITE=1`. Never edit any of them by hand.
 - Commit messages are one line.
 
 ## Naming
@@ -802,7 +804,7 @@ src/ResourceBuild/       Discovery pass, registry, build step, adapters,
 src/Access/              The operation route's access check.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
-                         DataSurfacePipeline.php keeps the write path and
+                         SurfacePipeline.php keeps the write path and
                          the document, over its three verbs: Accepting.php,
                          Validating.php, Conforming.php.
 src/Storage/             Where accepted values are written; settings layouts.
@@ -813,10 +815,18 @@ src/Contract/            The served contract's emitter (JSON Schema): ContractEm
 src/Drush/               Drush commands (the site's catalog, the contract diff, the
                          config schema) and the resource generator, drush
                          generate surface:resource.
-src/Form/                Form builder, host traits, the operation form.
-                         The form builder is DataSurfaceFormBuilder.php,
+src/Form/                Form builder, host traits, the operation form
+                         and its contract panel (ContractPanel.php).
+                         The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
                          Drawing.php, Extracting.php and Refreshing.php.
+src/Tool/                The Tool API door: what a tool takes and answers
+                         (OperationInputs, InputDefinitions), its catalog
+                         doors and the invalidator, registered by
+                         SurfaceServiceProvider only with the tool module.
+src/Plugin/tool/ src/Plugin/Derivative/
+                         The tool plugins and their deriver, found only by
+                         the tool module's plugin manager.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.

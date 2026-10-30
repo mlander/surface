@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceResult;
-use Drupal\data_surface\Reference\ReferenceStorageLayout;
-use Drupal\data_surface\Storage\StoredSchemaInterface;
-use Drupal\data_surface_reference_test\Resource\ReferenceSettingsResource;
-use Drupal\data_surface_reference_test\Resource\ReferencingEntityResource;
-use Drupal\data_surface_reference_test\Storage\ReferenceSettingsStorage;
-use Drupal\data_surface_reference_test\Storage\ReferencingEntityStorage;
-use Drupal\data_surface_schema_test\Storage\AliasSettingsStorage;
-use Drupal\data_surface_schema_test\Storage\CheckedListLayout;
+use Drupal\surface\Pipeline\SurfaceResult;
+use Drupal\surface\Reference\ReferenceStorageLayout;
+use Drupal\surface\Storage\StoredSchemaInterface;
+use Drupal\surface_reference_test\Resource\ReferenceSettingsResource;
+use Drupal\surface_reference_test\Resource\ReferencingEntityResource;
+use Drupal\surface_reference_test\Storage\ReferenceSettingsStorage;
+use Drupal\surface_reference_test\Storage\ReferencingEntityStorage;
+use Drupal\surface_schema_test\Storage\AliasSettingsStorage;
+use Drupal\surface_schema_test\Storage\CheckedListLayout;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\user\Entity\Role;
@@ -38,9 +38,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/decisions.md#a-config-object-stores-a-reference-by-uuid
  * @see docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ReferenceStorageTest extends DataSurfaceKernelTestBase {
+class ReferenceStorageTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -55,9 +55,9 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
     'filter',
     'node',
     'config_test',
-    'data_surface',
-    'data_surface_reference_test',
-    'data_surface_schema_test',
+    'surface',
+    'surface_reference_test',
+    'surface_schema_test',
   ];
 
   /**
@@ -75,7 +75,7 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
     $this->installSchema('node', ['node_access']);
-    $this->installConfig(['system', 'node', 'filter', 'data_surface_reference_test', 'data_surface_schema_test']);
+    $this->installConfig(['system', 'node', 'filter', 'surface_reference_test', 'surface_schema_test']);
     NodeType::create(['type' => 'page', 'name' => 'Page'])->save();
     User::create(['uid' => 0, 'name' => '', 'status' => 0])->save();
     $this->setUpCurrentUser(admin: TRUE);
@@ -101,11 +101,11 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
    * @param bool $dry_run
    *   Whether to stop after prepare.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   * @return \Drupal\surface\Pipeline\SurfaceResult
    *   The result, asserted valid.
    */
-  protected function submit(string $resource, string $operation, array $values, array $parameters = [], bool $dry_run = FALSE): DataSurfaceResult {
-    $resources = $this->container->get('data_surface.resources');
+  protected function submit(string $resource, string $operation, array $values, array $parameters = [], bool $dry_run = FALSE): SurfaceResult {
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation($resource, $operation, $parameters);
     $built = $resources->build($resource, $context);
     $result = $this->pipeline()->submit($built, $values, $resources->storage($resource, $context, $built), $dry_run);
@@ -131,7 +131,7 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
    *   The values.
    */
   protected function loaded(string $resource, string $operation, array $parameters = []): array {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation($resource, $operation, $parameters);
     $built = $resources->build($resource, $context);
     return $resources->storage($resource, $context, $built)->load($built);
@@ -153,7 +153,7 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
       'nested' => ['author' => (int) $admin->id()],
       'items' => [['node' => (int) $first->id()], ['node' => (int) $second->id()]],
     ]);
-    $raw = $this->config('data_surface_reference_test.settings')->getRawData();
+    $raw = $this->config('surface_reference_test.settings')->getRawData();
     $this->assertSame($first->uuid(), $raw['page'], 'A content entity: its uuid.');
     $this->assertSame((int) $second->id(), $raw['kept'], 'Its author kept the id.');
     $this->assertSame('editor', $raw['role'], 'A config entity: its id.');
@@ -161,7 +161,7 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['entity_type' => 'node', 'id' => (string) $first->id()], $raw['kept_thing'], 'A bare key whose author kept the id.');
     $this->assertSame(User::load($admin->id())->uuid(), $raw['nested']['author'], 'Inside an attached structure.');
     $this->assertSame([['node' => $first->uuid()], ['node' => $second->uuid()]], $raw['items'], 'In each item of a collection.');
-    $this->assertSame([], $this->violations('data_surface_reference_test.settings'), 'The stored object holds to its generated schema.');
+    $this->assertSame([], $this->violations('surface_reference_test.settings'), 'The stored object holds to its generated schema.');
 
     $loaded = $this->loaded(ReferenceSettingsResource::class, 'configure');
     $this->assertSame((int) $first->id(), $loaded['page'], 'Read back: the id, typed as the key holds it.');
@@ -175,7 +175,7 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
     $this->submit(ReferenceSettingsResource::class, 'configure', [
       'thing' => ['entity_type' => 'user', 'id' => (string) $admin->id()],
     ]);
-    $this->assertSame(User::load($admin->id())->uuid(), $this->config('data_surface_reference_test.settings')->get('thing.id'));
+    $this->assertSame(User::load($admin->id())->uuid(), $this->config('surface_reference_test.settings')->get('thing.id'));
   }
 
   /**
@@ -196,14 +196,14 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
     // A write that holds nothing for it keeps the uuid, for an entity that
     // may yet arrive on this site.
     $this->submit(ReferenceSettingsResource::class, 'configure', ['role' => 'editor']);
-    $raw = $this->config('data_surface_reference_test.settings')->getRawData();
+    $raw = $this->config('surface_reference_test.settings')->getRawData();
     $this->assertSame($uuid, $raw['page']);
     $this->assertSame(['entity_type' => 'node', 'id' => $uuid], $raw['thing']);
 
     // A new choice replaces it.
     $second = $this->nodes['Second'];
     $this->submit(ReferenceSettingsResource::class, 'configure', ['page' => (int) $second->id()]);
-    $this->assertSame($second->uuid(), $this->config('data_surface_reference_test.settings')->get('page'));
+    $this->assertSame($second->uuid(), $this->config('surface_reference_test.settings')->get('page'));
   }
 
   /**
@@ -211,24 +211,24 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
    */
   public function testAnIdStoredBeforeIsReadAsAnId(): void {
     $first = $this->nodes['First'];
-    $this->config('data_surface_reference_test.settings')
+    $this->config('surface_reference_test.settings')
       ->set('page', (int) $first->id())
       ->set('thing', ['entity_type' => 'node', 'id' => (string) $first->id()])
       ->set('nested', ['author' => 999])
       ->save();
-    $this->assertNotSame([], $this->violations('data_surface_reference_test.settings'), 'Config validation names the id where a uuid belongs.');
+    $this->assertNotSame([], $this->violations('surface_reference_test.settings'), 'Config validation names the id where a uuid belongs.');
     $loaded = $this->loaded(ReferenceSettingsResource::class, 'configure');
     $this->assertSame((int) $first->id(), $loaded['page']);
     $this->assertSame((string) $first->id(), $loaded['thing']['id']);
     $this->assertNull($loaded['nested']['author'], 'An id that names nothing reads as nothing.');
 
-    $this->assertTrue(data_surface_store_references_by_uuid(ReferenceSettingsResource::class, 'configure'));
-    $raw = $this->config('data_surface_reference_test.settings')->getRawData();
+    $this->assertTrue(surface_store_references_by_uuid(ReferenceSettingsResource::class, 'configure'));
+    $raw = $this->config('surface_reference_test.settings')->getRawData();
     $this->assertSame($first->uuid(), $raw['page']);
     $this->assertSame($first->uuid(), $raw['thing']['id']);
     $this->assertNull($raw['nested']['author'], 'An id that names nothing is not kept: it names nothing on any site.');
-    $this->assertSame([], $this->violations('data_surface_reference_test.settings'));
-    $this->assertFalse(data_surface_store_references_by_uuid(ReferenceSettingsResource::class, 'configure'), 'Run again, nothing changes.');
+    $this->assertSame([], $this->violations('surface_reference_test.settings'));
+    $this->assertFalse(surface_store_references_by_uuid(ReferenceSettingsResource::class, 'configure'), 'Run again, nothing changes.');
   }
 
   /**
@@ -247,12 +247,12 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
       'pages' => ['lead' => (int) $first->id(), 'aside' => (int) $second->id()],
       'authors' => ['lead' => ['author' => (int) $admin->id()]],
     ]);
-    $raw = $this->config('data_surface_reference_test.settings')->getRawData();
+    $raw = $this->config('surface_reference_test.settings')->getRawData();
     $this->assertSame(['lead' => $first->uuid(), 'aside' => $second->uuid()], $raw['pages']);
     $this->assertSame($admin->uuid(), $raw['authors']['lead']['author']);
-    $this->assertSame([], $this->violations('data_surface_reference_test.settings'), 'Held to the generated schema.');
-    $path = $this->container->get('extension.list.module')->getPath('data_surface_reference_test');
-    $schema = $this->container->get('data_surface.config_schema')->files(['data_surface_reference_test'])[$path . '/config/schema/data_surface_reference_test.schema.yml'];
+    $this->assertSame([], $this->violations('surface_reference_test.settings'), 'Held to the generated schema.');
+    $path = $this->container->get('extension.list.module')->getPath('surface_reference_test');
+    $schema = $this->container->get('surface.config_schema')->files(['surface_reference_test'])[$path . '/config/schema/surface_reference_test.schema.yml'];
     $this->assertStringContainsString("    pages:\n      type: sequence\n      label: 'Pages'\n      sequence:\n        type: uuid\n", $schema, 'Generated: each entry a uuid.');
     $this->assertStringContainsString("        mapping:\n          author:\n            type: uuid\n", substr($schema, (int) strpos($schema, '    authors:')), 'Generated: the reference inside each entry\'s structure a uuid.');
 
@@ -266,7 +266,7 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
     $second->delete();
     $this->assertNull($this->loaded(ReferenceSettingsResource::class, 'configure')['pages']['aside']);
     $this->submit(ReferenceSettingsResource::class, 'configure', ['role' => 'editor']);
-    $this->assertSame($uuid, $this->config('data_surface_reference_test.settings')->get('pages.aside'));
+    $this->assertSame($uuid, $this->config('surface_reference_test.settings')->get('pages.aside'));
   }
 
   /**
@@ -279,22 +279,22 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
    */
   public function testAnIdTheInstallFileHoldsIsReadAsTheId(): void {
     $first = $this->nodes['First'];
-    $installed = $this->config('data_surface_reference_test.settings')->getRawData();
+    $installed = $this->config('surface_reference_test.settings')->getRawData();
     $installed['page'] = (int) $first->id();
     // Written as the config installer writes a module's file, unchecked.
-    $this->container->get('config.storage')->write('data_surface_reference_test.settings', $installed);
-    $this->container->get('config.factory')->reset('data_surface_reference_test.settings');
+    $this->container->get('config.storage')->write('surface_reference_test.settings', $installed);
+    $this->container->get('config.factory')->reset('surface_reference_test.settings');
     $this->assertSame((int) $first->id(), $this->loaded(ReferenceSettingsResource::class, 'configure')['page']);
 
     $this->submit(ReferenceSettingsResource::class, 'configure', ['role' => 'editor']);
-    $this->assertSame($first->uuid(), $this->config('data_surface_reference_test.settings')->get('page'), 'The next write stores the uuid.');
+    $this->assertSame($first->uuid(), $this->config('surface_reference_test.settings')->get('page'), 'The next write stores the uuid.');
   }
 
   /**
    * Tests the check and the generator learn the uuid keys from the storage.
    */
   public function testTheCheckAndTheGeneratorReadTheStoredShape(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $built = $resources->build(ReferenceSettingsResource::class, $resources->operation(ReferenceSettingsResource::class, 'configure'));
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(ReferenceSettingsStorage::class);
     $this->assertSame([
@@ -320,13 +320,13 @@ class ReferenceStorageTest extends DataSurfaceKernelTestBase {
    * schema of the key, which the check skips and the generator writes.
    */
   public function testLayoutIsTheStoragesWordOnItsShape(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation('schema_test.aliases', 'configure');
     $built = $resources->build('schema_test.aliases', $context);
     // Content is locked and kept as stored: out of the list.
     $result = $this->pipeline()->submit($built, ['types' => ['term' => TRUE, 'user' => FALSE]], $resources->storage('schema_test.aliases', $context, $built));
     $this->assertTrue($result->isValid());
-    $this->assertSame(['term'], $this->config('data_surface_schema_test.aliases')->get('types'), 'Stored through the layout: the list of the types checked.');
+    $this->assertSame(['term'], $this->config('surface_schema_test.aliases')->get('types'), 'Stored through the layout: the list of the types checked.');
     $this->assertSame(['term' => TRUE], $resources->storage('schema_test.aliases', $context, $built)->load($built)['types'], 'Read through it: a map.');
 
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(AliasSettingsStorage::class);

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 /**
  * A storage that knows whether the call it serves deletes what it holds.
@@ -15,7 +15,7 @@ namespace Drupal\data_surface\Pipeline;
  *
  * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
  */
-interface DeletingStorageInterface extends DataSurfaceStorageInterface {
+interface DeletingStorageInterface extends SurfaceStorageInterface {
 
   /**
    * Answers whether the operation it serves deletes what it holds.

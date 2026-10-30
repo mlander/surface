@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Validation\Attribute\Constraint;
@@ -28,7 +28,7 @@ use Symfony\Component\Validator\Constraints\Unique;
  * and `errorPath` compare part of an item, or an item changed, which
  * `uniqueItems` cannot say, so a list that needs them writes its own.
  *
- * @see \Drupal\data_surface\Plugin\Validation\Constraint\UniqueItemsConstraintValidator
+ * @see \Drupal\surface\Plugin\Validation\Constraint\UniqueItemsConstraintValidator
  */
 #[Constraint(
   id: 'UniqueItems',

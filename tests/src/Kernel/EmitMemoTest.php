@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_resource_test\Structure\Booth\BoothStructure;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_resource_test\Structure\Booth\BoothStructure;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -19,9 +19,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class EmitMemoTest extends DataSurfaceKernelTestBase {
+class EmitMemoTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -29,16 +29,16 @@ class EmitMemoTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
    * Tests that the full schema refines each size once for both keys.
    */
   public function testEachCombinationIsRefinedOnce(): void {
-    $surface = $this->container->get('data_surface.resources')->buildStatic(BoothStructure::class, new OperationContext('configure'));
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $surface = $this->container->get('surface.resources')->buildStatic(BoothStructure::class, new OperationContext('configure'));
+    $emitter = $this->container->get('surface.contract_emitter');
     assert($emitter instanceof ContractEmitter);
     $before = $emitter->refineCounts();
     $document = $emitter->emitFull($surface, 'resource_test.booth', 'configure')->document;

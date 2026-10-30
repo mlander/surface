@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -16,17 +16,17 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * not changed, and a bench added to the configuration is drawn at the
  * next request, the form being cached by the list's tag.
  *
- * @see \Drupal\Tests\data_surface\Kernel\KeysFromSiteTest
+ * @see \Drupal\Tests\surface\Kernel\KeysFromSiteTest
  * @see docs/resources.md#keys-that-come-from-the-site
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class KeysFromSiteFormTest extends BrowserTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['data_surface_resource_test'];
+  protected static $modules = ['surface_resource_test'];
 
   /**
    * {@inheritdoc}
@@ -49,7 +49,7 @@ class KeysFromSiteFormTest extends BrowserTestBase {
    */
   protected function stored(): array {
     $this->container->get('config.factory')->reset();
-    return array_diff_key($this->config('data_surface_resource_test.workshop')->getRawData(), ['_core' => TRUE]);
+    return array_diff_key($this->config('surface_resource_test.workshop')->getRawData(), ['_core' => TRUE]);
   }
 
   /**
@@ -83,7 +83,7 @@ class KeysFromSiteFormTest extends BrowserTestBase {
     $this->assertSame('BS3', $stored['codes']['saw']);
     $this->assertSame($before['benches'], $stored['benches']);
 
-    $this->config('data_surface_resource_test.benches')->set('benches.bench', ['label' => 'Workbench'])->save();
+    $this->config('surface_resource_test.benches')->set('benches.bench', ['label' => 'Workbench'])->save();
     $this->drupalGet('surface-test/workshop');
     $assert->fieldExists('surface[lights][bench]');
     $assert->fieldExists('surface[benches][bench][enabled]');

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\ResourceBuild\RefinesInputRefiner;
 
 /**
  * What a key's value is resolved from at use, and by what.
@@ -34,7 +34,7 @@ final class Resolve {
    *   under (as resolve() was given it), mapped to its dotted path in the
    *   stored values: `third_party_settings.<module>.<key>` for an alter's
    *   own key.
-   * @param class-string<\Drupal\data_surface\Resource\ComputesValueInterface> $using
+   * @param class-string<\Drupal\surface\Resource\ComputesValueInterface> $using
    *   The class that resolves it.
    * @param string $by
    *   What declared it, the owner or an alter, as a refusal names it.
@@ -96,7 +96,7 @@ final class Resolve {
    * runs on the operation's behalf: with assertions on, its own code may
    * not ask for a door-specific service.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource as built.
    * @param array $stored
    *   What its storage loaded for it.
@@ -105,14 +105,14 @@ final class Resolve {
    *   The stored values, each resolved key holding what its class answered
    *   while every key it is resolved from holds a value.
    */
-  public static function apply(DataSurfaceInterface $surface, array $stored): array {
+  public static function apply(SurfaceInterface $surface, array $stored): array {
     return static::applyIn($surface->getDefinitions(), $stored);
   }
 
   /**
    * Puts the resolved values of one frame, and of its children, over it.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The frame's keys.
    * @param array $stored
    *   What is stored for them.
@@ -165,7 +165,7 @@ final class Resolve {
   /**
    * Lists the keys of a built resource that are resolved at use.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource as built.
    *
    * @return array<string, array{0: static, 1: \Drupal\Core\TypedData\DataDefinitionInterface}>
@@ -174,14 +174,14 @@ final class Resolve {
    *   entry's from the site under `*`, a variant's under its key, whichever
    *   variant it is.
    */
-  public static function declared(DataSurfaceInterface $surface): array {
+  public static function declared(SurfaceInterface $surface): array {
     return static::declaredIn($surface->getDefinitions(), '');
   }
 
   /**
    * Lists the resolved keys of one frame and of its children.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The frame's keys.
    * @param string $prefix
    *   Their path, a dotted path and a dot; empty at the top.
@@ -223,15 +223,15 @@ final class Resolve {
   /**
    * Gets the child an attached key holds: its structure, or an entry's.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key, which holds an attachment.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   * @return \Drupal\surface\SurfaceInterface|null
    *   The attached structure; for a map of keys from the site, the
    *   structure at its first entry, every entry being the same; NULL for
    *   a map whose entries are values.
    */
-  protected static function entryChild(Entry $entry): ?DataSurfaceInterface {
+  protected static function entryChild(Entry $entry): ?SurfaceInterface {
     $child = $entry->attachment?->child;
     if ($child === NULL || DefinitionMetadata::eachOf($entry->definition) === NULL) {
       return $child;
@@ -244,7 +244,7 @@ final class Resolve {
   /**
    * Lists the resolved keys of one frame: its own and its alters' mounts.
    *
-   * @param \Drupal\data_surface\DefinitionMap $map
+   * @param \Drupal\surface\DefinitionMap $map
    *   The frame's keys.
    *
    * @return array<string, array{0: static, 1: \Drupal\Core\TypedData\DataDefinitionInterface}>

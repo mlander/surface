@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Pipeline\ResultDocument;
+use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -12,11 +12,11 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -36,9 +36,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * pin that they stay right. Each order runs in a process of its own,
  * since what the first call of a process leaves behind is the point.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RefinementIsolationTest extends DataSurfaceKernelTestBase {
+class RefinementIsolationTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -51,16 +51,15 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
+    'surface',
+    'surface_examples',
+    'surface_examples_compliance',
   ];
 
   /**
    * The module the alter lives in, which its keys are mounted under.
    */
-  protected const MODULE = 'data_surface_examples_compliance';
+  protected const MODULE = 'surface_examples_compliance';
 
   /**
    * The path the stewards count is mounted at.
@@ -113,7 +112,7 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -194,7 +193,7 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
    * earlier in the process.
    */
   public function testTwoBuildsWithOneKeyNameKeepTheirOwnRules(): void {
-    $build = static fn (int $max, string $tag): DataSurfaceInterface => (new DataSurfaceBuilder([
+    $build = static fn (int $max, string $tag): SurfaceInterface => (new SurfaceBuilder([
       'settings' => MapDataDefinition::create()
         ->setPropertyDefinition('size', DataDefinition::create('integer')->addConstraint('Range', ['max' => $max])),
       'tags' => ListDataDefinition::create('string')->setItemDefinition(
@@ -211,18 +210,18 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
   /**
    * Builds step 3 in its configure operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed resource.
    */
-  protected function surface(): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function surface(): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
   }
 
   /**
    * Validates values against a resource and lists where it refused them.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The sealed resource.
    * @param array $values
    *   The values.
@@ -230,7 +229,7 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
    * @return string[]
    *   The full paths of the violations.
    */
-  protected function refusals(DataSurfaceInterface $surface, array $values): array {
+  protected function refusals(SurfaceInterface $surface, array $values): array {
     return array_map(
       static fn (Violation $violation): string => $violation->fullPath(),
       iterator_to_array($this->pipeline()->validate($surface, $values)),
@@ -247,7 +246,7 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
    *   The refusal as plain text, or NULL when the values were accepted.
    */
   protected function toolRefusal(array $values): ?string {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:registration.step3:configure');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:registration.step3:configure');
     $tool->setInputValue(OperationInputs::VALUES, $values);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
@@ -258,13 +257,13 @@ class RefinementIsolationTest extends DataSurfaceKernelTestBase {
   /**
    * Describes every definition of a resource, at every depth.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The sealed resource.
    *
    * @return array
    *   What each key says, by key.
    */
-  protected static function described(DataSurfaceInterface $surface): array {
+  protected static function described(SurfaceInterface $surface): array {
     return array_map(static::describe(...), $surface->getDefinitions()->toArray());
   }
 

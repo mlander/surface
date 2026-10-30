@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 use Drupal\Core\Session\AccountInterface;
 
@@ -18,7 +18,7 @@ use Drupal\Core\Session\AccountInterface;
  * A storage that removes a thing by its identity can say whether one is
  * stored under an identity, exists(), and what one thing is called,
  * singularLabel(). The build reads both: every operation that creates
- * holds its identity key to the stock DataSurfaceUnique constraint, which
+ * holds its identity key to the stock SurfaceUnique constraint, which
  * asks exists() and refuses an identity taken, "A venue named riverside
  * already exists."
  *
@@ -33,7 +33,7 @@ interface DeletableStorageInterface extends ResourceStorageInterface {
   /**
    * Rehearses removing the thing the context names, without removing it.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The delete's context, which knows the thing's identity.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account the removal is made as.
@@ -41,7 +41,7 @@ interface DeletableStorageInterface extends ResourceStorageInterface {
    * @return array
    *   What delete() is handed: enough to name what it removes.
    *
-   * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
+   * @throws \Drupal\surface\Pipeline\StorageViolationsException
    *   When the store would refuse the removal, filed under the identity
    *   key or the whole call.
    */
@@ -50,7 +50,7 @@ interface DeletableStorageInterface extends ResourceStorageInterface {
   /**
    * Removes what prepareDelete() rehearsed.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The delete's context.
    * @param array $prepared
    *   What prepareDelete() returned for this context.
@@ -63,11 +63,11 @@ interface DeletableStorageInterface extends ResourceStorageInterface {
    * Answers whether a thing is stored under the identity the context knows.
    *
    * Asked of a context that knows every identity key, by the stock
-   * DataSurfaceUnique constraint and by the form's machine name element,
+   * SurfaceUnique constraint and by the form's machine name element,
    * so every door refuses a taken identity in one sentence. Reads what is
    * stored, as load() does, and nothing bound to a request.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   A context whose known identity names the thing.
    *
    * @return bool

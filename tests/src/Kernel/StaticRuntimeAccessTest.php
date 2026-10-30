@@ -2,27 +2,27 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_resource_test\Access\Broken\FickleAccess;
-use Drupal\data_surface_resource_test\Access\ExhibitAccess;
-use Drupal\data_surface_resource_test\Access\InsuranceAccess;
-use Drupal\data_surface_resource_test\Resource\Exhibit\ExhibitResource;
-use Drupal\data_surface_resource_test\Resource\Journal\JournalResource;
-use Drupal\data_surface_resource_test\Structure\Broken\FickleAccessParentStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\StateReadingParentStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
-use Drupal\Tests\data_surface\Traits\StaticAccessAgreementTrait;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Resource\AccessAnswer;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_resource_test\Access\Broken\FickleAccess;
+use Drupal\surface_resource_test\Access\ExhibitAccess;
+use Drupal\surface_resource_test\Access\InsuranceAccess;
+use Drupal\surface_resource_test\Resource\Exhibit\ExhibitResource;
+use Drupal\surface_resource_test\Resource\Journal\JournalResource;
+use Drupal\surface_resource_test\Structure\Broken\FickleAccessParentStructure;
+use Drupal\surface_resource_test\Structure\Broken\StateReadingParentStructure;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\StaticAccessAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
@@ -41,10 +41,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
+class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use StaticAccessAgreementTrait;
@@ -58,9 +58,9 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_examples_field',
+    'surface_resource_test',
   ];
 
   /**
@@ -92,7 +92,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     // User 1 first, so none of the accounts below is the super user.
     $this->setUpCurrentUser();
     $this->createRole(['keep an exhibit'], ExhibitAccess::ARCHIVIST);
@@ -127,11 +127,11 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
    * @param bool $alone
    *   TRUE to build it for the account alone, as the full schema is.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built exhibit.
    */
-  protected function exhibit(bool $alone = FALSE): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function exhibit(bool $alone = FALSE): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(ExhibitResource::class, 'configure');
     return $alone ? $resources->buildStatic(ExhibitResource::class, $context) : $resources->build(ExhibitResource::class, $context);
   }
@@ -143,7 +143,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
    *   The schema, its mixed-in members read flat.
    */
   protected function full(): array {
-    $served = $this->container->get('data_surface.contract_emitter')->emitFull($this->exhibit(TRUE), 'resource_test.exhibit', 'configure');
+    $served = $this->container->get('surface.contract_emitter')->emitFull($this->exhibit(TRUE), 'resource_test.exhibit', 'configure');
     return SchemaResolver::inline(json_decode((string) json_encode($served->document['schema']), TRUE));
   }
 
@@ -157,7 +157,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
    *   The schema, its mixed-in members read flat.
    */
   protected function these(array $values = self::EXHIBIT): array {
-    $served = $this->container->get('data_surface.contract_emitter')->emit($this->exhibit(), $values, 'resource_test.exhibit', 'configure');
+    $served = $this->container->get('surface.contract_emitter')->emit($this->exhibit(), $values, 'resource_test.exhibit', 'configure');
     return SchemaResolver::inline(json_decode((string) json_encode($served->document['schema']), TRUE));
   }
 
@@ -168,7 +168,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
    *   The status.
    */
   protected function seal(string $status = 'sealed'): void {
-    $this->config('data_surface_resource_test.exhibit')->set('status', $status)->save();
+    $this->config('surface_resource_test.exhibit')->set('status', $status)->save();
   }
 
   /**
@@ -186,7 +186,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
       $this->assertSame(AccessAnswer::STATIC, $answer->kind(), $what);
     }
     $runtime = [
-      'a cache tag' => AccessAnswer::locked()->addCacheContexts(['user.permissions'])->addCacheTags(['config:data_surface_resource_test.exhibit']),
+      'a cache tag' => AccessAnswer::locked()->addCacheContexts(['user.permissions'])->addCacheTags(['config:surface_resource_test.exhibit']),
       'the user' => AccessAnswer::locked()->addCacheContexts(['user']),
       'a route' => AccessAnswer::open()->addCacheContexts(['route']),
       'max-age 0' => AccessAnswer::omitted()->mergeCacheMaxAge(0),
@@ -319,17 +319,17 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
     // roles, and nothing a runtime answer read.
     foreach (['inspector', 'keeper', 'archivist'] as $who) {
       $this->actAs($who);
-      $served = $this->container->get('data_surface.contract_emitter')->emitFull($this->exhibit(TRUE), 'resource_test.exhibit', 'configure');
+      $served = $this->container->get('surface.contract_emitter')->emitFull($this->exhibit(TRUE), 'resource_test.exhibit', 'configure');
       $this->assertContains('user.permissions', $served->getCacheContexts(), $who);
-      $this->assertNotContains('config:data_surface_resource_test.exhibit', $served->getCacheTags(), $who);
+      $this->assertNotContains('config:surface_resource_test.exhibit', $served->getCacheTags(), $who);
       $this->assertSame(Cache::PERMANENT, $served->getCacheMaxAge(), $who);
     }
     $this->assertContains('user.roles:archivist', $served->getCacheContexts());
     // The schema for these answers depends on what the runtime answers
     // read as well.
     $this->actAs('keeper');
-    $these = $this->container->get('data_surface.contract_emitter')->emit($this->exhibit(), self::EXHIBIT, 'resource_test.exhibit', 'configure');
-    $this->assertContains('config:data_surface_resource_test.exhibit', $these->getCacheTags());
+    $these = $this->container->get('surface.contract_emitter')->emit($this->exhibit(), self::EXHIBIT, 'resource_test.exhibit', 'configure');
+    $this->assertContains('config:surface_resource_test.exhibit', $these->getCacheTags());
     $this->assertSame(0, $these->getCacheMaxAge());
   }
 
@@ -439,7 +439,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
     if (!$this->assertionsOn()) {
       $this->markTestSkipped('The guard runs under assert().');
     }
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     try {
       $resources->build(StateReadingParentStructure::class, new OperationContext('configure'));
       $this->fail('A static answer that reads State is refused.');
@@ -461,8 +461,8 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
    * Tests the operation's permission is the first static answer.
    */
   public function testTheOperationsPermissionIsTheFirstStaticAnswer(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $operation = $this->container->get('data_surface.resource_registry')->getOperation(ExhibitResource::class, 'configure');
+    $resources = $this->container->get('surface.resources');
+    $operation = $this->container->get('surface.resource_registry')->getOperation(ExhibitResource::class, 'configure');
     $this->assertSame('keep an exhibit', $operation->staticPermission());
     $this->assertSame('keep an exhibit', ResourceOperationToolDeriver::declaredPermission($operation));
     $context = $resources->operation(ExhibitResource::class, 'configure');
@@ -471,11 +471,11 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
     $this->assertSame(AccessAnswer::STATIC, AccessAnswer::kindOf($refused), 'Refused by the account alone.');
     $this->assertTrue($resources->access(ExhibitResource::class, $context, $this->accounts['keeper'])->isAllowed());
     $tools = $this->container->get('plugin.manager.tool');
-    foreach (['data_surface:resource_test.exhibit:configure', 'data_surface:resource_test.exhibit:configure:read'] as $id) {
+    foreach (['surface:resource_test.exhibit:configure', 'surface:resource_test.exhibit:configure:read'] as $id) {
       $this->assertSame('keep an exhibit', $tools->getDefinition($id)->getPermission(), $id);
     }
     // A placeholder names the subject's permission: never declared.
-    $field = $this->container->get('data_surface.resource_registry')->getOperation('field.instance', 'create');
+    $field = $this->container->get('surface.resource_registry')->getOperation('field.instance', 'create');
     $this->assertNull($field->staticPermission());
   }
 
@@ -484,7 +484,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testTheToolListingIsTheAccounts(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    $id = 'data_surface:resource_test.exhibit:configure';
+    $id = 'surface:resource_test.exhibit:configure';
 
     $this->actAs('inspector');
     $values = $tools->createInstance($id)->getInputDefinition(OperationInputs::VALUES);
@@ -513,7 +513,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
   public function testTheReadToolLeavesOutWhatIsLeftOut(): void {
     $tools = $this->container->get('plugin.manager.tool');
     $read = function (): array {
-      $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:resource_test.exhibit:configure:read');
+      $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.exhibit:configure:read');
       $this->assertTrue($tool->access());
       $tool->execute();
       return $tool->getOutputValue(OperationInputs::VALUES);
@@ -526,7 +526,7 @@ class StaticRuntimeAccessTest extends DataSurfaceKernelTestBase {
     $this->container->get('state')->set(ExhibitAccess::WITHDRAWN, TRUE);
     $this->assertSame(['title', 'status', 'room'], array_keys($read()), 'Left out once the thing is known.');
     $this->actAs('stranger');
-    $this->assertFalse($tools->createInstance('data_surface:resource_test.exhibit:configure:read')->access(), 'Reading asks what writing asks: the static permission.');
+    $this->assertFalse($tools->createInstance('surface:resource_test.exhibit:configure:read')->access(), 'Reading asks what writing asks: the static permission.');
   }
 
   /**

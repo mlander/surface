@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Config\Entity\ConfigEntityTypeInterface;
@@ -12,16 +12,16 @@ use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\StorageViolationsException;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\Pipeline\ViolationSet;
-use Drupal\data_surface\Reference\ReferenceDependencies;
-use Drupal\data_surface\Reference\ReferenceStorageLayout;
-use Drupal\data_surface\Resource\DeletableStorageInterface;
-use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
-use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\ViolationSet;
+use Drupal\surface\Reference\ReferenceDependencies;
+use Drupal\surface\Reference\ReferenceStorageLayout;
+use Drupal\surface\Resource\DeletableStorageInterface;
+use Drupal\surface\Resource\HeldToConfigSchemaInterface;
+use Drupal\surface\Resource\KnowsClearableKeysInterface;
+use Drupal\surface\Resource\OperationContext;
 use Drupal\Core\Session\AccountInterface;
 
 /**
@@ -50,7 +50,7 @@ use Drupal\Core\Session\AccountInterface;
  *   creates, so a new thing starts from what the resource declares.
  * - prepare() builds the entity it would save, unsaved: a copy of the
  *   one the context names, or a new one under the id the values carry,
- *   refused when that id is taken (which DataSurfaceUnique, asking
+ *   refused when that id is taken (which SurfaceUnique, asking
  *   exists(), refuses first at every door). It calculates the dependencies the
  *   entity would save with and holds the whole entity to its config
  *   schema, which for a config entity is its validation, filing each
@@ -100,7 +100,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
    * The optional keys the entity always holds a value for.
    *
    * For an entity type whose config schema is written from the resource
-   * (drush data_surface:config-schema --write): its generated schema
+   * (drush surface:config-schema --write): its generated schema
    * leaves `nullable: true` off these, and mayClear() then answers that
    * they may not be cleared. Every other optional key may. An entity type
    * whose schema is written by hand says it there.
@@ -217,7 +217,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
    * What each alter's layout says of the keys at its mount, and each
    * reference to a content entity, stored by uuid.
    */
-  public function translatedKeys(DataSurfaceInterface $built): array {
+  public function translatedKeys(SurfaceInterface $built): array {
     return static::mountedLayouts($built) + ReferenceStorageLayout::storedSchemaOf($built);
   }
 
@@ -259,7 +259,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
    *
    * @throws \LogicException
    *   When the context edits an entity that does not exist.
-   * @throws \Drupal\data_surface\Pipeline\StorageViolationsException
+   * @throws \Drupal\surface\Pipeline\StorageViolationsException
    *   When the entity's config schema refuses it, or its id is taken.
    */
   public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
@@ -272,7 +272,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
       $key = $this->idKey();
       $id = $values[$key] ?? NULL;
       if (is_string($id) && $id !== '' && $this->storage()->load($id) !== NULL) {
-        // What DataSurfaceUnique refuses before this runs, in its words,
+        // What SurfaceUnique refuses before this runs, in its words,
         // for a caller of prepare() that skipped validation.
         $violations[] = new Violation($key, '', $this->t('A @thing named @id already exists.', [
           '@thing' => $this->singularLabel(),
@@ -442,7 +442,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
    * @param array $record
    *   Its exported array.
    *
-   * @return \Drupal\data_surface\Pipeline\ViolationSet
+   * @return \Drupal\surface\Pipeline\ViolationSet
    *   The violations, filed under the keys that own them.
    */
   protected function validate(ConfigEntityInterface $entity, array $record): ViolationSet {
@@ -524,7 +524,7 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
   /**
    * Loads the entity the context's identity names.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    *
    * @return \Drupal\Core\Config\Entity\ConfigEntityInterface|null

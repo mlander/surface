@@ -1,0 +1,153 @@
+# The larder's update operation as a route, served by the generic form, so
+# a test reads what the form draws for a child its access locked or left
+# out. It says the access requirement itself, which every route naming a
+# resource and an operation has without saying it: still accepted.
+surface_resource_test.larder.update:
+  path: '/surface-test/larder/{larder}'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a larder'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Larder\LarderResource'
+    _surface_operation: 'update'
+  requirements:
+    _surface_operation_access: 'TRUE'
+
+# The larder's stock operation, which hands both racks a context whole.
+surface_resource_test.larder.stock:
+  path: '/surface-test/larder/{larder}/stock'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Stock a larder'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Larder\LarderResource'
+    _surface_operation: 'stock'
+
+# The cellar's update operation, served by the generic form: two
+# collections, each with Add another and Remove, over AJAX.
+surface_resource_test.cellar.update:
+  path: '/surface-test/cellar/{larder}'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a cellar'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Cellar\CellarResource'
+    _surface_operation: 'update'
+
+# The digest's one operation, served by the generic form: variants, two
+# of which declare no keys.
+surface_resource_test.digest:
+  path: '/surface-test/digest'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the digest'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Digest\DigestResource'
+    _surface_operation: 'configure'
+
+# The bulletin's one operation, served by the generic form: a send day
+# that is drawn only while the bulletin goes out weekly.
+surface_resource_test.bulletin:
+  path: '/surface-test/bulletin'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the bulletin'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Bulletin\BulletinResource'
+    _surface_operation: 'configure'
+
+# The parcel's one operation, served by the generic form: every rule
+# between its keys declared as data, rebuilt over AJAX.
+surface_resource_test.parcel:
+  path: '/surface-test/parcel'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the parcel'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Parcel\ParcelResource'
+    _surface_operation: 'configure'
+
+# The venue's one operation, served by the generic form: a structure whose
+# ports read the venue's layout and capacity.
+surface_resource_test.venue:
+  path: '/surface-test/venue'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the venue'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Venue\VenueResource'
+    _surface_operation: 'configure'
+
+# The journal's one operation, served by the generic form: two structures
+# mixed in, their members drawn as the journal's own keys.
+surface_resource_test.journal:
+  path: '/surface-test/journal'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the journal'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Journal\JournalResource'
+    _surface_operation: 'configure'
+
+# The depot's one operation, served by the generic form: one shape at two
+# keys, each narrowing it its own way.
+surface_resource_test.depot:
+  path: '/surface-test/depot'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the depot'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Depot\DepotResource'
+    _surface_operation: 'configure'
+
+# The exhibit's one operation, served by the generic form: access of both
+# kinds on a mixed-in structure's members and on an attached child.
+surface_resource_test.exhibit:
+  path: '/surface-test/exhibit'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the exhibit'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Exhibit\ExhibitResource'
+    _surface_operation: 'configure'
+
+# The gallery's one operation, served by the generic form: access answered
+# by alters, after the owner's.
+surface_resource_test.gallery:
+  path: '/surface-test/gallery'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the gallery'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Gallery\GalleryResource'
+    _surface_operation: 'configure'
+
+# The opening hours' one operation, served by the generic form: the
+# common settings recipes, drawn by the stock widgets (docs/recipes.md).
+surface_resource_test.opening_hours:
+  path: '/surface-test/opening-hours'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the opening hours'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Library\OpeningHoursResource'
+    _surface_operation: 'configure'
+
+# The storeroom's update operation, served by the generic form: a list of
+# aisles, each with a list of shelves of its own.
+surface_resource_test.storeroom.update:
+  path: '/surface-test/storeroom'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit the storeroom'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Storeroom\StoreroomResource'
+    _surface_operation: 'update'
+
+# The workshop's one operation, served by the generic form: one bench, one
+# light and one stock code per bench the site lists.
+surface_resource_test.workshop:
+  path: '/surface-test/workshop'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the workshop'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Workshop\WorkshopResource'
+    _surface_operation: 'configure'
+
+# The studio's one operation, served by the generic form: its keys
+# arranged in two groups, with weights, a placeholder, a prefix, a suffix
+# and a help text, one of them reworded by an alter.
+surface_resource_test.studio:
+  path: '/surface-test/studio'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Configure the studio'
+    _surface_resource: 'Drupal\surface_resource_test\Resource\Studio\StudioResource'
+    _surface_operation: 'configure'

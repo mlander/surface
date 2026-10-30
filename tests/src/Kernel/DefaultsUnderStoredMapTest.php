@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
-use Drupal\data_surface_schema_test\Shape\MarkAction;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface_schema_test\Shape\MarkAction;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -33,9 +33,9 @@ use Symfony\Component\Routing\Route;
  *
  * @see docs/decisions.md#defaults-follow-the-definitions-under-a-stored-value
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
+class DefaultsUnderStoredMapTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
   use UserCreationTrait;
@@ -48,10 +48,9 @@ class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_schema_test',
+    'surface',
+    'surface_react',
+    'surface_schema_test',
   ];
 
   /**
@@ -81,18 +80,18 @@ class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_schema_test']);
+    $this->installConfig(['surface_schema_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Builds the resource in its operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function aliases(): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function aliases(): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build(self::RESOURCE, $resources->operation(self::RESOURCE, 'configure'));
   }
 
@@ -101,14 +100,14 @@ class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
    */
   protected function route(): void {
     $route = new Route('/schema-test/aliases', [
-      '_form' => DataSurfaceOperationForm::class,
+      '_form' => SurfaceOperationForm::class,
       OperationRoute::RESOURCE => self::RESOURCE,
       OperationRoute::OPERATION => 'configure',
     ]);
     $stack = $this->container->get('request_stack');
     $request = Request::create('/schema-test/aliases', 'POST');
     $request->setSession($stack->getSession());
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface_schema_test.aliases');
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_schema_test.aliases');
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
   }
@@ -117,7 +116,7 @@ class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
    * Tests the stored maps leave the two entries out, and the merge fills them.
    */
   public function testTheMergeFollowsTheDefinitions(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(self::RESOURCE, 'configure');
     $built = $resources->build(self::RESOURCE, $context);
     $stored = array_intersect_key($resources->storage(self::RESOURCE, $context, $built)->load($built), $built->getDefinitions()->toArray());
@@ -139,7 +138,7 @@ class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
   public function testTheFormDrawsAndSavesEachEntry(): void {
     $this->route();
     $state = new FormState();
-    $container = $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $state)[DataSurfaceOperationForm::SURFACE_KEY];
+    $container = $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $state)[SurfaceOperationForm::SURFACE_KEY];
     $drawn = [];
     foreach (self::READ as $map => $entries) {
       foreach (array_keys($entries) as $id) {
@@ -154,16 +153,16 @@ class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
     // browser leaves out a disabled checkbox.
     $state = new FormState();
     $state->setValues([
-      DataSurfaceOperationForm::SURFACE_KEY => [
+      SurfaceOperationForm::SURFACE_KEY => [
         // A programmed submission says unchecked with NULL.
         'types' => ['term' => $drawn['types']['term'] ? 1 : NULL, 'user' => $drawn['types']['user'] ? 1 : NULL],
         'marks' => array_map('strval', $drawn['marks']),
       ],
       'op' => 'Save',
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $state);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $state);
     $this->assertSame([], $state->getErrors());
-    $saved = $this->config('data_surface_schema_test.aliases')->getRawData();
+    $saved = $this->config('surface_schema_test.aliases')->getRawData();
     $this->assertSame(['user'], $saved['types']);
     $this->assertNotContains(NULL, $saved['marks'], 'No entry is saved as null.');
     // A default storage never held is not written: the hyphen stays
@@ -179,9 +178,9 @@ class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
   public function testTheMapAloneInItsGroupIsOneDetails(): void {
     $this->route();
     $state = new FormState();
-    $form = $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $state);
-    $container = $form[DataSurfaceOperationForm::SURFACE_KEY];
-    $group = $container[DataSurfaceFormBuilderInterface::GROUP_PREFIX . 'punctuation'];
+    $form = $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $state);
+    $container = $form[SurfaceOperationForm::SURFACE_KEY];
+    $group = $container[SurfaceFormBuilderInterface::GROUP_PREFIX . 'punctuation'];
     $this->assertSame('details', $group['#type']);
     $this->assertSame('Punctuation', (string) $group['#title']);
     $this->assertFalse($group['#open']);
@@ -201,7 +200,7 @@ class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
     // values sent.
     $this->assertSame(self::READ, array_intersect_key($this->servedJson('GET', '/surface-api/' . self::RESOURCE)['values'], self::READ));
     $this->assertSame(self::READ, array_intersect_key($this->servedJson('POST', '/surface-api/' . self::RESOURCE . '/schema', [])['values'], self::READ));
-    $served = $this->container->get('data_surface_react.served_operations');
+    $served = $this->container->get('surface_react.served_operations');
     $this->assertSame(self::READ, array_intersect_key($served->current($served->resolve(self::RESOURCE, 'configure', [])), self::READ));
 
     // The pipeline accepts the defaults under what is stored.
@@ -212,13 +211,13 @@ class DefaultsUnderStoredMapTest extends DataSurfaceKernelTestBase {
     // every door that draws. A default storage never held is not written.
     // Decision: see docs/decisions.md#absent-keeps-null-clears.
     $tools = $this->container->get('plugin.manager.tool');
-    $tool = $tools->createInstance('data_surface:' . self::RESOURCE . ':configure');
+    $tool = $tools->createInstance('surface:' . self::RESOURCE . ':configure');
     $tool->setInputValue(OperationInputs::VALUES, ['marks' => ['hyphen' => MarkAction::REPLACE]]);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
     $this->assertSame(self::HELD, array_intersect_key($tool->getResult()->getContextValues()[OperationInputs::VALUES], self::HELD));
-    $read = $tools->createInstance('data_surface:' . self::RESOURCE . ':configure:read');
+    $read = $tools->createInstance('surface:' . self::RESOURCE . ':configure:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::HELD, $read->getResult()->getContextValues()[OperationInputs::VALUES]);

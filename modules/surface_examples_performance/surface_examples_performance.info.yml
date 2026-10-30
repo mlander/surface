@@ -1,0 +1,9 @@
+name: Surface API - Performance settings
+type: module
+description: 'The page cache maximum age and asset aggregation, from one resource stored in system.performance and held to its config schema as core wrote it.'
+package: Surface API
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

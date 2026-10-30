@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -15,9 +15,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * it and they come back holding what is stored, on the form over #ajax
  * and on the React page with no request.
  *
- * @see \Drupal\Tests\data_surface\Kernel\EntryPortsTest
+ * @see \Drupal\Tests\surface\Kernel\EntryPortsTest
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesEntryPortsTest extends ExamplesWebDriverTestBase {
 
@@ -25,8 +25,8 @@ class ExamplesEntryPortsTest extends ExamplesWebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
-    'data_surface_react',
+    'surface_examples',
+    'surface_react',
   ];
 
   /**
@@ -64,7 +64,7 @@ class ExamplesEntryPortsTest extends ExamplesWebDriverTestBase {
     // The press returns before the saved page has loaded: wait for it.
     $this->assertNotNull($assert->waitForText('The changes have been saved.'));
     $assert->elementNotExists('css', '.error');
-    $stored = $this->config('data_surface_examples.sales')->get();
+    $stored = $this->config('surface_examples.sales')->get();
     $this->assertFalse($stored['on_sale']['student']);
     $this->assertSame(['per_order' => 1, 'waiting_list' => TRUE], $stored['limits']['student']);
     $assert->fieldNotExists('surface[limits][student][per_order]');

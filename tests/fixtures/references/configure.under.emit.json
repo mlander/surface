@@ -51,7 +51,7 @@
                     },
                     "checkedOnServer": [
                         {
-                            "constraint": "DataSurfaceValidReference",
+                            "constraint": "SurfaceValidReference",
                             "message": "Refers to an entity the account may reference"
                         }
                     ]
@@ -92,7 +92,7 @@
                     },
                     "checkedOnServer": [
                         {
-                            "constraint": "DataSurfaceValidReference",
+                            "constraint": "SurfaceValidReference",
                             "message": "Refers to an entity the account may reference"
                         }
                     ]
@@ -132,7 +132,7 @@
                     },
                     "checkedOnServer": [
                         {
-                            "constraint": "DataSurfaceValidReference",
+                            "constraint": "SurfaceValidReference",
                             "message": "Refers to an entity the account may reference"
                         }
                     ]

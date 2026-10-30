@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface_examples\Resource\TicketSalesResource;
-use Drupal\data_surface_resource_test\Structure\Broken\EntryPortOtherListStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\EntryPortPlainKeyStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\EntryPortStructuresStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\EntryPortTypeStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\EntryPortUnmatchedStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\EntryPortUnreadStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
-use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface_examples\Resource\TicketSalesResource;
+use Drupal\surface_resource_test\Structure\Broken\EntryPortOtherListStructure;
+use Drupal\surface_resource_test\Structure\Broken\EntryPortPlainKeyStructure;
+use Drupal\surface_resource_test\Structure\Broken\EntryPortStructuresStructure;
+use Drupal\surface_resource_test\Structure\Broken\EntryPortTypeStructure;
+use Drupal\surface_resource_test\Structure\Broken\EntryPortUnmatchedStructure;
+use Drupal\surface_resource_test\Structure\Broken\EntryPortUnreadStructure;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
@@ -33,10 +33,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/resources.md#ports-on-an-entry
  * @see docs/decisions.md#keys-that-come-from-the-site
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class EntryPortsTest extends DataSurfaceKernelTestBase {
+class EntryPortsTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use StaticRefinerAgreementTrait;
@@ -51,10 +51,9 @@ class EntryPortsTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_resource_test',
+    'surface',
+    'surface_examples',
+    'surface_resource_test',
   ];
 
   /**
@@ -75,24 +74,24 @@ class EntryPortsTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_resource_test']);
+    $this->installConfig(['surface_examples', 'surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Builds example 9 in its one operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function sales(): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->buildOperation(TicketSalesResource::class, 'configure');
+  protected function sales(): SurfaceInterface {
+    return $this->container->get('surface.resources')->buildOperation(TicketSalesResource::class, 'configure');
   }
 
   /**
    * Answers whether a key of one type's limits applies to some values.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $sales
+   * @param \Drupal\surface\SurfaceInterface $sales
    *   The built resource.
    * @param array $values
    *   Its values.
@@ -104,7 +103,7 @@ class EntryPortsTest extends DataSurfaceKernelTestBase {
    * @return bool
    *   TRUE when it applies.
    */
-  protected function applies(DataSurfaceInterface $sales, array $values, string $type, string $key): bool {
+  protected function applies(SurfaceInterface $sales, array $values, string $type, string $key): bool {
     $limits = $sales->refine($values)->getDefinitions()->entry('limits');
     $entry = $limits->attachment->bound($values)->getDefinitions()->entry($type);
     $child = $entry->attachment->bound([]);
@@ -137,7 +136,7 @@ class EntryPortsTest extends DataSurfaceKernelTestBase {
    * Tests the full schema states each entry's rules at the site.
    */
   public function testTheFullSchemaStatesEachEntry(): void {
-    $full = self::decoded($this->container->get('data_surface.contract_emitter')->emitFull($this->sales(), 'event.sales', 'configure')->document['schema']);
+    $full = self::decoded($this->container->get('surface.contract_emitter')->emitFull($this->sales(), 'event.sales', 'configure')->document['schema']);
     $object = static fn (array $properties, array $required = []): array => array_filter([
       'type' => 'object',
       'properties' => $properties,
@@ -188,7 +187,7 @@ class EntryPortsTest extends DataSurfaceKernelTestBase {
   public function testTheSchemaForTheseAnswers(): void {
     $values = self::SHIPPED;
     $values['on_sale']['student'] = FALSE;
-    $served = $this->container->get('data_surface.contract_emitter')->emit($this->sales(), $values, 'event.sales', 'configure')->document;
+    $served = $this->container->get('surface.contract_emitter')->emit($this->sales(), $values, 'event.sales', 'configure')->document;
     $document = self::decoded($served);
     $limits = $document['schema']['properties']['limits'];
     $this->assertSame(['per_order' => FALSE, 'waiting_list' => FALSE], $limits['allOf'][1]['properties']['student']['allOf'][1]['properties']);
@@ -216,11 +215,11 @@ class EntryPortsTest extends DataSurfaceKernelTestBase {
    */
   public function testTheTool(): void {
     $manager = $this->container->get('plugin.manager.tool');
-    $listed = $manager->getDefinition('data_surface:event.sales:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
+    $listed = $manager->getDefinition('surface:event.sales:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
     $this->assertStringContainsString('Depends on on_sale.student.', (string) $listed['limits']->getPropertyDefinitions()['student']->getPropertyDefinitions()['per_order']->getDescription());
 
     $call = function (array $values, bool $dry = TRUE) use ($manager) {
-      $tool = $manager->createInstance('data_surface:event.sales:configure');
+      $tool = $manager->createInstance('surface:event.sales:configure');
       $tool->setInputValue(OperationInputs::VALUES, $values);
       $tool->setInputValue('dry_run', $dry);
       $tool->execute();
@@ -243,14 +242,14 @@ class EntryPortsTest extends DataSurfaceKernelTestBase {
     // Off sale and saved: the limits are kept for the day it is on sale
     // again, and the read tool leaves them out until then.
     $this->assertTrue($call(['on_sale' => ['student' => FALSE]], FALSE)->isSuccess());
-    $stored = $this->config('data_surface_examples.sales');
+    $stored = $this->config('surface_examples.sales');
     $this->assertFalse($stored->get('on_sale.student'));
     $this->assertSame(['per_order' => 1, 'waiting_list' => TRUE], $stored->get('limits.student'));
-    $read = $manager->createInstance('data_surface:event.sales:configure:read');
+    $read = $manager->createInstance('surface:event.sales:configure:read');
     $read->execute();
     $this->assertSame([], $read->getResult()->getContextValues()[OperationInputs::VALUES]['limits']['student']);
     $this->assertTrue($call(['on_sale' => ['student' => TRUE]], FALSE)->isSuccess());
-    $read = $manager->createInstance('data_surface:event.sales:configure:read');
+    $read = $manager->createInstance('surface:event.sales:configure:read');
     $read->execute();
     $this->assertSame(['per_order' => 1, 'waiting_list' => TRUE], $read->getResult()->getContextValues()[OperationInputs::VALUES]['limits']['student']);
   }
@@ -261,15 +260,15 @@ class EntryPortsTest extends DataSurfaceKernelTestBase {
   public function testEachWiringRefusal(): void {
     $refusals = [
       EntryPortUnreadStructure::class => 'resource_test.broken.entry_port_unread wires the "lit" port of resource_test.workshop.bench at every entry of "benches", which resource_test.workshop.bench does not read; it reads no port.',
-      EntryPortPlainKeyStructure::class => 'resource_test.broken.entry_port_plain_key wires the "layout" port of resource_test.seating at every entry of "seats" to "layout", which is no map of keys from the site: an entry\'s port reads the entry of the same id in a sibling map, addEach(\'layout\', ..., from: Drupal\data_surface_resource_test\Keys\WorkshopBenches::class).',
+      EntryPortPlainKeyStructure::class => 'resource_test.broken.entry_port_plain_key wires the "layout" port of resource_test.seating at every entry of "seats" to "layout", which is no map of keys from the site: an entry\'s port reads the entry of the same id in a sibling map, addEach(\'layout\', ..., from: Drupal\surface_resource_test\Keys\WorkshopBenches::class).',
       EntryPortStructuresStructure::class => 'resource_test.broken.entry_port_structures wires the "layout" port of resource_test.seating at every entry of "seats" to "benches", which holds a structure at every entry: a port reads one value.',
-      EntryPortOtherListStructure::class => 'resource_test.broken.entry_port_other_list wires the "layout" port of resource_test.seating at every entry of "seats" to "layouts", which lists its keys from Drupal\data_surface_resource_test\Keys\GalleryRooms: an entry\'s port reads the entry of the same id, so both maps list their keys from Drupal\data_surface_resource_test\Keys\WorkshopBenches.',
+      EntryPortOtherListStructure::class => 'resource_test.broken.entry_port_other_list wires the "layout" port of resource_test.seating at every entry of "seats" to "layouts", which lists its keys from Drupal\surface_resource_test\Keys\GalleryRooms: an entry\'s port reads the entry of the same id, so both maps list their keys from Drupal\surface_resource_test\Keys\WorkshopBenches.',
       EntryPortTypeStructure::class => 'resource_test.broken.entry_port_type wires the "layout" port of resource_test.seating at every entry of "seats", which reads a string, to "layouts", whose "lathe" entry holds a boolean.',
-      EntryPortUnmatchedStructure::class => 'resource_test.broken.entry_port_unmatched wires the "layout" port of resource_test.seating at every entry of "seats" to "layouts", which has no "press" entry: Drupal\data_surface_resource_test\Keys\ShiftingBenches listed it for one map and not the other.',
+      EntryPortUnmatchedStructure::class => 'resource_test.broken.entry_port_unmatched wires the "layout" port of resource_test.seating at every entry of "seats" to "layouts", which has no "press" entry: Drupal\surface_resource_test\Keys\ShiftingBenches listed it for one map and not the other.',
     ];
     foreach ($refusals as $class => $message) {
       try {
-        $this->container->get('data_surface.resources')->build($class, new OperationContext('configure'));
+        $this->container->get('surface.resources')->build($class, new OperationContext('configure'));
         $this->fail(sprintf('%s was built.', $class));
       }
       catch (\LogicException $e) {

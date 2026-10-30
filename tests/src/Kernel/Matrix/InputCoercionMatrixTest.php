@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel\Matrix;
+namespace Drupal\Tests\surface\Kernel\Matrix;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\TypeMismatchException;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Pipeline\VariantMismatchException;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool_test\Storage\SpecimenStorage;
-use Drupal\Tests\data_surface\Kernel\DataSurfaceKernelTestBase;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\TypeMismatchException;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Pipeline\VariantMismatchException;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface_tool_test\Storage\SpecimenStorage;
+use Drupal\Tests\surface\Kernel\SurfaceKernelTestBase;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -36,16 +36,16 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Where the doors do not agree, a named test says so.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class InputCoercionMatrixTest extends DataSurfaceKernelTestBase {
+class InputCoercionMatrixTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
   /**
    * The specimen's derived tool.
    */
-  protected const TOOL = 'data_surface:tool_test.specimen:configure';
+  protected const TOOL = 'surface:tool_test.specimen:configure';
 
   /**
    * {@inheritdoc}
@@ -56,9 +56,8 @@ class InputCoercionMatrixTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_tool_test',
+    'surface',
+    'surface_tool_test',
   ];
 
   /**
@@ -73,11 +72,11 @@ class InputCoercionMatrixTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the specimen in its operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The specimen.
    */
-  protected function specimen(): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->buildOperation('tool_test.specimen', 'configure', []);
+  protected function specimen(): SurfaceInterface {
+    return $this->container->get('surface.resources')->buildOperation('tool_test.specimen', 'configure', []);
   }
 
   /**
@@ -305,7 +304,7 @@ class InputCoercionMatrixTest extends DataSurfaceKernelTestBase {
    * the Tool API's answer.
    */
   public function testDatetimeAndTimestampRows(): void {
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $builder->setDefinition('when', DataDefinition::create('datetime_iso8601')->setLabel('When'));
     $builder->setDefinition('day', DataDefinition::create('datetime_iso8601')->setLabel('Day')->addConstraint('DateOnly', []));
     $builder->setDefinition('moment', DataDefinition::create('datetime_iso8601')->setLabel('Moment')->addConstraint('DateTime', []));

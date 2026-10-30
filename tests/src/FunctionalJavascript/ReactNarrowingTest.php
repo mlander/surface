@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
-use Drupal\data_surface_examples\Resource\VenueResource;
+use Drupal\surface_examples\Resource\VenueResource;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -20,7 +20,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * document the page reads is in contract 4, which it refuses any other
  * than.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ReactNarrowingTest extends ExamplesWebDriverTestBase {
 
@@ -28,9 +28,9 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_react',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_react',
   ];
 
   /**
@@ -149,7 +149,7 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
    * @see docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined
    */
   public function testTwelveFetchesPastTheSiteListLimit(): void {
-    $this->config('data_surface.settings')->set('site_list_limit', 2)->save();
+    $this->config('surface.settings')->set('site_list_limit', 2)->save();
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
     $this->drupalGet('surface-react/event.spotlight/configure');
@@ -211,7 +211,7 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
     $page->fillField('dsr-ticket-price', '12.5');
     $page->pressButton('Submit');
     $this->assertNotNull($assert->waitForText('Saved: the values were written.'));
-    $stored = $this->config('data_surface_examples.registration_step3')->get();
+    $stored = $this->config('surface_examples.registration_step3')->get();
     $this->assertSame('paid', $stored['pricing']);
     $this->assertEquals(12.5, $stored['ticket']['price']);
     $this->assertSame(0, $this->askedTheServer(), 'Nothing here needed the server before the write.');

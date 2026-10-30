@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Symfony\Component\Validator\ConstraintViolationInterface;
-use Drupal\data_surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
-use Drupal\data_surface\Plugin\Validation\Constraint\UniqueConstraint;
-use Drupal\data_surface\Plugin\Validation\Constraint\UniqueItemsConstraint;
+use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
+use Drupal\surface\Plugin\Validation\Constraint\UniqueConstraint;
+use Drupal\surface\Plugin\Validation\Constraint\UniqueItemsConstraint;
 use Symfony\Component\Validator\Constraints\Choice;
 use Symfony\Component\Validator\Constraints\Count;
 use Symfony\Component\Validator\Constraints\Email;
@@ -48,7 +48,7 @@ use Symfony\Component\Validator\Constraints\Type;
  *
  * Decision: see docs/decisions.md#one-result-at-every-door.
  *
- * @see \Drupal\data_surface\Pipeline\ViolationSet
+ * @see \Drupal\surface\Pipeline\ViolationSet
  * @see docs/pipeline.md
  */
 final class Violation {
@@ -132,7 +132,7 @@ final class Violation {
   /**
    * A create names a thing that exists already: its machine name is taken.
    *
-   * Also the code of the stock DataSurfaceUnique constraint's refusal.
+   * Also the code of the stock SurfaceUnique constraint's refusal.
    */
   public const TAKEN = 'taken';
 

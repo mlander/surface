@@ -1,6 +1,6 @@
 {
     "resource": "first.newsletter",
-    "module": "data_surface_first",
+    "module": "surface_examples_first",
     "contract": 4,
     "documents": [
         {

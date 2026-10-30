@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Drush\Generators\Resource;
+namespace Drupal\surface\Drush\Generators\Resource;
 
-use Drupal\data_surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\BlueprintInterface;
 
 /**
  * Declares the keys an interview answered, as the generated class will.
@@ -38,7 +38,7 @@ final class KeyAnswers {
    * A ResourceCallable's method: what the build step hands over first,
    * the keys after, as plain values the registry can hold.
    *
-   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The blueprint.
    * @param array<int, array<string, mixed>> $keys
    *   The keys, as answered.

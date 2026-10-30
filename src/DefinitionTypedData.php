@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -47,7 +47,7 @@ final class DefinitionTypedData {
   /**
    * The setting holding the digest of the definition the root was made from.
    */
-  public const DIGEST_SETTING = 'data_surface_definition_digest';
+  public const DIGEST_SETTING = 'surface_definition_digest';
 
   /**
    * Creates typed data whose every property is the definition's own.

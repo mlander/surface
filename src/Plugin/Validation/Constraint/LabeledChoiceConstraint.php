@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Plugin\Validation\Constraint;
+namespace Drupal\surface\Plugin\Validation\Constraint;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Validation\Attribute\Constraint;
@@ -65,7 +65,7 @@ use Symfony\Component\Validator\Constraints\ChoiceValidator;
  * A bare list of values with no meaning attached is core's Choice, not
  * this constraint, so `choices` alone is never read as one.
  *
- * @see \Drupal\data_surface\Plugin\DataSurfaceOptionsResolver\LabeledChoiceOptions
+ * @see \Drupal\surface\Plugin\SurfaceOptionsResolver\LabeledChoiceOptions
  */
 #[Constraint(
   id: 'LabeledChoice',

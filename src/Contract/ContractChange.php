@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 /**
  * One difference between a contract baseline and today's full schema.
@@ -12,7 +12,7 @@ namespace Drupal\data_surface\Contract;
  *
  * Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
  *
- * @see \Drupal\data_surface\Contract\ContractDiff
+ * @see \Drupal\surface\Contract\ContractDiff
  */
 final class ContractChange {
 

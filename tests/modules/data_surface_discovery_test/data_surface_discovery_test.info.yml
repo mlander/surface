@@ -1,8 +1,0 @@
-name: Data Surface Discovery Test
-type: module
-description: 'Test support for discovery order: an action deriver that asks the resource registry while the plugin hosts are being read, as eca_tool''s does.'
-package: Testing
-version: VERSION
-core_version_requirement: ^11.3 || ^12
-dependencies:
-  - data_surface:data_surface

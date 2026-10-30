@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\OperationDefinition;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool\Plugin\Derivative\ResourceOperationToolDeriver;
-use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationReadTool;
-use Drupal\data_surface_tool\Plugin\tool\Tool\ResourceOperationSchemaTool;
-use Drupal\data_surface_tool_test\Resource\VaultResource;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\OperationDefinition;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationReadTool;
+use Drupal\surface\Plugin\tool\Tool\ResourceOperationSchemaTool;
+use Drupal\surface_tool_test\Resource\VaultResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
@@ -35,9 +35,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door
  * @see docs/decisions.md#an-operation-states-how-it-behaves
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class OperationKindsTest extends DataSurfaceKernelTestBase {
+class OperationKindsTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -65,12 +65,12 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_first',
-    'data_surface_tool_test',
+    'surface',
+    'surface_examples_field',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_examples_first',
+    'surface_tool_test',
   ];
 
   /**
@@ -79,7 +79,7 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_first']);
+    $this->installConfig(['surface_examples', 'surface_examples_first']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -88,9 +88,9 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
    */
   public function testEachToolAsksWhatItsKindSays(): void {
     $manager = $this->container->get('plugin.manager.tool');
-    $registry = $this->container->get('data_surface.resource_registry');
-    $resources = $this->container->get('data_surface.resources');
-    $operation_inputs = $this->container->get('data_surface_tool.operation_inputs');
+    $registry = $this->container->get('surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
+    $operation_inputs = $this->container->get('surface.operation_inputs');
     $prefix = OperationInputs::TOOL . ':';
     $kinds = [];
     foreach ($manager->getDefinitions() as $id => $definition) {
@@ -106,7 +106,7 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       $this->assertSame($kind, $operation->facts()['kind'], $id . ': the tool and the documents name one kind.');
       $description = (string) $definition->getDescription();
       // The vault says none, and is described by its label.
-      $this->assertSame($operation->description === NULL, $id === 'data_surface:tool_test.vault:configure', $id . ': every shipped operation says what it does.');
+      $this->assertSame($operation->description === NULL, $id === 'surface:tool_test.vault:configure', $id . ': every shipped operation says what it does.');
       $this->assertSame((string) ($operation->description ?? $operation->label . '.') . ' ' . self::RULES[$kind], $description, $id . ': its own description, then its kind\'s call rules.');
       $this->assertStringNotContainsString('"', $description, $id . ': no literal quotes, which a bridge escapes.');
 
@@ -159,39 +159,39 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
 
     ksort($kinds);
     $this->assertSame([
-      'data_surface:event.bulletin:configure' => 'update',
-      'data_surface:event.desk:configure' => 'update',
-      'data_surface:event.doors:configure' => 'update',
-      'data_surface:event.mailer:configure' => 'update',
-      'data_surface:event.press:configure' => 'update',
-      'data_surface:event.program:check' => 'read',
-      'data_surface:event.program:configure' => 'update',
-      'data_surface:event.sales:configure' => 'update',
-      'data_surface:event.spotlight:configure' => 'update',
-      'data_surface:event.venue:create' => 'create',
-      'data_surface:event.venue:delete' => 'delete',
-      'data_surface:event.venue:list' => 'read',
-      'data_surface:event.venue:reorder' => 'update',
-      'data_surface:event.venue:update' => 'update',
-      'data_surface:event.webhook:configure' => 'update',
-      'data_surface:field.instance:create' => 'create',
-      'data_surface:field.instance:reuse' => 'create',
-      'data_surface:field.instance:update' => 'update',
-      'data_surface:field.storage:update' => 'update',
-      'data_surface:first.newsletter:configure' => 'update',
-      'data_surface:first.store:configure' => 'update',
-      'data_surface:registration.step1:configure' => 'update',
-      'data_surface:registration.step2:configure' => 'update',
-      'data_surface:registration.step3:configure' => 'update',
-      'data_surface:tool_test.cabinet:count' => 'read',
-      'data_surface:tool_test.cabinet:update' => 'update',
-      'data_surface:tool_test.logbook:append' => 'update',
-      'data_surface:tool_test.logbook:clear' => 'update',
-      'data_surface:tool_test.logbook:configure' => 'update',
-      'data_surface:tool_test.logbook:inspect' => 'read',
-      'data_surface:tool_test.logbook:start' => 'create',
-      'data_surface:tool_test.specimen:configure' => 'update',
-      'data_surface:tool_test.vault:configure' => 'update',
+      'surface:event.bulletin:configure' => 'update',
+      'surface:event.desk:configure' => 'update',
+      'surface:event.doors:configure' => 'update',
+      'surface:event.mailer:configure' => 'update',
+      'surface:event.press:configure' => 'update',
+      'surface:event.program:check' => 'read',
+      'surface:event.program:configure' => 'update',
+      'surface:event.sales:configure' => 'update',
+      'surface:event.spotlight:configure' => 'update',
+      'surface:event.venue:create' => 'create',
+      'surface:event.venue:delete' => 'delete',
+      'surface:event.venue:list' => 'read',
+      'surface:event.venue:reorder' => 'update',
+      'surface:event.venue:update' => 'update',
+      'surface:event.webhook:configure' => 'update',
+      'surface:field.instance:create' => 'create',
+      'surface:field.instance:reuse' => 'create',
+      'surface:field.instance:update' => 'update',
+      'surface:field.storage:update' => 'update',
+      'surface:first.newsletter:configure' => 'update',
+      'surface:first.store:configure' => 'update',
+      'surface:registration.step1:configure' => 'update',
+      'surface:registration.step2:configure' => 'update',
+      'surface:registration.step3:configure' => 'update',
+      'surface:tool_test.cabinet:count' => 'read',
+      'surface:tool_test.cabinet:update' => 'update',
+      'surface:tool_test.logbook:append' => 'update',
+      'surface:tool_test.logbook:clear' => 'update',
+      'surface:tool_test.logbook:configure' => 'update',
+      'surface:tool_test.logbook:inspect' => 'read',
+      'surface:tool_test.logbook:start' => 'create',
+      'surface:tool_test.specimen:configure' => 'update',
+      'surface:tool_test.vault:configure' => 'update',
     ], $kinds);
   }
 
@@ -211,12 +211,12 @@ class OperationKindsTest extends DataSurfaceKernelTestBase {
       }
     }
     $this->assertSame(array_unique($titles), $titles);
-    $this->assertSame('Configure registration (step 3)', $titles['data_surface:registration.step3:configure']);
-    $this->assertSame('Current values: Configure registration (step 3)', $titles['data_surface:registration.step3:configure:read']);
+    $this->assertSame('Configure registration (step 3)', $titles['surface:registration.step3:configure']);
+    $this->assertSame('Current values: Configure registration (step 3)', $titles['surface:registration.step3:configure:read']);
 
     $deriver = ResourceOperationToolDeriver::create($this->container, OperationInputs::TOOL);
     $shared = new \ReflectionMethod($deriver, 'sharedLabels');
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $this->assertSame([], $shared->invoke($deriver, $registry->getDefinitions()), 'No shipped label is shared.');
     $title = new \ReflectionMethod($deriver, 'title');
     $vault = $registry->getDefinition(VaultResource::class);

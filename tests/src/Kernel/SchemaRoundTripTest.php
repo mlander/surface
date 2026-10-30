@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Contract\ContractBaselines;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\Tests\data_surface\Traits\SchemaRoundTripTrait;
+use Drupal\surface\Contract\ContractBaselines;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\Tests\surface\Traits\SchemaRoundTripTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -30,9 +30,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/reading-a-schema.md#the-round-trip
  * @see docs/decisions.md#a-schema-can-be-read-back-into-a-structure
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
+class SchemaRoundTripTest extends SurfaceKernelTestBase {
 
   use SchemaRoundTripTrait;
   use UserCreationTrait;
@@ -46,17 +46,16 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_first',
-    'data_surface_resource_test',
+    'surface',
+    'surface_examples',
+    'surface_examples_first',
+    'surface_resource_test',
   ];
 
   /**
    * The modules whose declarations are read back.
    */
-  protected const MODULES = ['data_surface_examples', 'data_surface_first', 'data_surface_resource_test'];
+  protected const MODULES = ['surface_examples', 'surface_examples_first', 'surface_resource_test'];
 
   /**
    * What does not round-trip, by document, each by the kind of its reason.
@@ -130,20 +129,20 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples', 'data_surface_first', 'data_surface_resource_test']);
+    $this->installConfig(['surface_examples', 'surface_examples_first', 'surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Emits the full schema of every declaration of the modules read back.
    *
-   * @return array<string, array{document: array, declared: \Drupal\data_surface\DataSurfaceInterface, id: string, module: string, context: string, operation: string|null, label: \Stringable|string|null, facts: array}>
+   * @return array<string, array{document: array, declared: \Drupal\surface\SurfaceInterface, id: string, module: string, context: string, operation: string|null, label: \Stringable|string|null, facts: array}>
    *   Each document, by `<id>:<context>`, with what it was emitted for.
    */
   protected function documents(): array {
-    $registry = $this->container->get('data_surface.resource_registry');
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $registry = $this->container->get('surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
     $documents = [];
     foreach ($registry->getDefinitions() as $definition) {
       if ($definition->isDerived() || !in_array($definition->module, self::MODULES, TRUE) || str_contains((string) $definition->class, '\\Broken\\')) {
@@ -182,7 +181,7 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
    * Reads every document back, and emits what it built.
    */
   public function testEveryFullSchemaReadsBackToItself(): void {
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $same = [];
     $differ = [];
     $runtime = [];
@@ -208,10 +207,10 @@ class SchemaRoundTripTest extends DataSurfaceKernelTestBase {
       $report[$label] = ['original' => $original, 'read back' => $read['again']];
       $kinds[$label] = static::kindOf($original, $read['again'], $registry->getDefinition($emitted['id']));
     }
-    if (getenv('DATA_SURFACE_ROUND_TRIP_REPORT')) {
+    if (getenv('SURFACE_ROUND_TRIP_REPORT')) {
       // Every document read back, for a reader looking at what differs.
       $written = ['same' => $same, 'runtime' => $runtime, 'differ' => $differ, 'kinds' => $kinds, 'report' => $report];
-      file_put_contents((string) getenv('DATA_SURFACE_ROUND_TRIP_REPORT'), json_encode($written, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+      file_put_contents((string) getenv('SURFACE_ROUND_TRIP_REPORT'), json_encode($written, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     }
     $this->assertSame(self::RUNTIME, $runtime, 'The documents a runtime refiner narrows are the ones left out.');
     $this->assertSame([], array_filter($differ, static fn (string $what): bool => $what === 'error'), 'Every document is read back, and what it reads builds.');

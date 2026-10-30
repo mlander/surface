@@ -16,7 +16,7 @@ from the typed data first and layered on top of it (labels, defaults,
 what narrows, access, operations), with a class written by hand where
 the derivation is not enough.
 
-`data_surface_entity` does it, through two derivers
+`surface_examples_entity` does it, through two derivers
 ([Derived resources](resources.md#derived-resources)):
 
 | Deriver | Derives | One per |
@@ -163,7 +163,7 @@ the resource never lets anyone write what core's form would not.
 
 ## The storage
 
-`ContentEntityStorage`, in `data_surface_entity` rather than beside the
+`ContentEntityStorage`, in `surface_examples_entity` rather than beside the
 engine's storage classes, because what it reads and writes is the field
 item derivation's keys, which the engine does not own
 (why: [decision](decisions.md#the-content-entity-storage)).
@@ -226,14 +226,14 @@ would, a field whose view access is denied left out
   [open](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)).
 - **One route for every bundle**: a module may serve every bundle's add
   page at one route, the bundle in its path filling the resource's id,
-  `_data_surface_resource: 'entity.content:node.{node_type}'`, gated by
+  `_surface_resource: 'entity.content:node.{node_type}'`, gated by
   create access for that bundle
   ([One route for every bundle](forms.md#one-route-for-every-bundle));
   this module ships the basic page's two routes alone. An edit route for
   every bundle puts the bundle in its path too,
   `/{node_type}/{id}/edit`, since a node's bundle is known only once the
   node is loaded, and refuses a node of another bundle as above.
-- **The tools**: `data_surface:entity.content:node.page:create`, `:update`
+- **The tools**: `surface:entity.content:node.page:create`, `:update`
   and `:update:read`, derived like every other operation's. The field item
   structures have no storage, so they are no tools. Every bundle with a form
   display has its three.
@@ -307,9 +307,9 @@ done about it.
    entity's precision check sees it.
 10. **Which targets a reference may hold depends on the account.** The
     selection handler checks access, so the list is live: a constraint,
-    `DataSurfaceReferenceable`, points at it, and its options resolver
+    `SurfaceReferenceable`, points at it, and its options resolver
     lists the targets for the account asking while there are at most
-    `data_surface.settings:reference_list_limit` (50 as shipped, the
+    `surface.settings:reference_list_limit` (50 as shipped, the
     limit a reference key a resource declares lists up to,
     [Options](options.md#a-key-that-refers-to-an-entity)), carrying what
     the selection read:
@@ -334,7 +334,7 @@ done about it.
     when a field or a display changes, and the tool plugin manager's
     cache did not, so a new field reached the `create` tool's static
     definition only at the next cache rebuild. Settled 2026-10-19:
-    `data_surface_tool` clears the tool definitions when a tag they were
+    the tool door clears the tool definitions when a tag they were
     derived from is invalidated
     (why: [decision](decisions.md#tool-definitions-after-a-field-changes)).
 14. **The entity's id is storage's.** The create operation knows `id` as

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Cache\CacheableMetadata;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface\SettledCacheability;
-use Drupal\data_surface_examples\Resource\SpotlightResource;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface\SettledCacheability;
+use Drupal\surface_examples\Resource\SpotlightResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -27,9 +27,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Decision: see
  * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class LazyVariantsTest extends DataSurfaceKernelTestBase {
+class LazyVariantsTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -42,9 +42,8 @@ class LazyVariantsTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_examples',
   ];
 
   /**
@@ -58,18 +57,18 @@ class LazyVariantsTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources
+   * @return \Drupal\surface\ResourceBuild\Resources
    *   The service.
    */
   protected function resources(): Resources {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     return $resources;
   }
@@ -77,11 +76,11 @@ class LazyVariantsTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the spotlight for no account, nothing built before it.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The build.
    */
-  protected function spotlight(): DataSurfaceInterface {
-    $this->container->get('cache.data_surface_build')->deleteAll();
+  protected function spotlight(): SurfaceInterface {
+    $this->container->get('cache.surface_build')->deleteAll();
     $this->resources()->forgetBuilds();
     return $this->resources()->buildDeclared(SpotlightResource::class, $this->resources()->operation(SpotlightResource::class, 'configure'));
   }
@@ -89,13 +88,13 @@ class LazyVariantsTest extends DataSurfaceKernelTestBase {
   /**
    * Lists which variants at the listed keys are built, by key and value.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The build.
    *
    * @return array<string, array<string, bool>>
    *   Whether each is built.
    */
-  protected function settled(DataSurfaceInterface $built): array {
+  protected function settled(SurfaceInterface $built): array {
     $settled = [];
     foreach (self::LISTED as $key) {
       foreach ($built->getDefinitions()->entry($key)->variants->variants as $value => $variant) {
@@ -123,8 +122,8 @@ class LazyVariantsTest extends DataSurfaceKernelTestBase {
    * Tests the full schema builds what it states, and only that.
    */
   public function testTheFullSchemaBuildsWhatItStates(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $budget = $this->container->get('data_surface.site_list_budget');
+    $emitter = $this->container->get('surface.contract_emitter');
+    $budget = $this->container->get('surface.site_list_budget');
     $built = $this->spotlight();
     // Past the limit: each listed key is open, deferred, its values named.
     $budget->withLimit(1, fn () => $emitter->emitFull($built, 'event.spotlight', 'configure', 'Configure'));
@@ -141,13 +140,13 @@ class LazyVariantsTest extends DataSurfaceKernelTestBase {
    * Tests the schema for a chosen component builds that one, past the limit.
    */
   public function testChosenComponentBuildsItAlone(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $budget = $this->container->get('data_surface.site_list_budget');
+    $emitter = $this->container->get('surface.contract_emitter');
+    $budget = $this->container->get('surface.site_list_budget');
     $built = $this->spotlight();
-    $values = ['component' => 'data_surface_examples:card'] + $built->getDefaultValues();
+    $values = ['component' => 'surface_examples:card'] + $built->getDefaultValues();
     $budget->withLimit(1, fn () => $emitter->emit($built, $values, 'event.spotlight', 'configure', 'Configure'));
     foreach ($this->settled($built) as $key => $variants) {
-      $this->assertSame(['data_surface_examples:card'], array_keys(array_filter($variants)), $key);
+      $this->assertSame(['surface_examples:card'], array_keys(array_filter($variants)), $key);
     }
   }
 
@@ -158,13 +157,13 @@ class LazyVariantsTest extends DataSurfaceKernelTestBase {
     $built = $this->spotlight();
     $before = $built->getCacheTags();
     $this->assertEquals(CacheableMetadata::createFromObject($built), SettledCacheability::of($built), 'Nothing read, nothing added.');
-    $card = $built->getDefinitions()->entry('props')->variants->variant('data_surface_examples:card')->child;
+    $card = $built->getDefinitions()->entry('props')->variants->variant('surface_examples:card')->child;
     $read = SettledCacheability::of($built)->getCacheTags();
     foreach ([...$before, ...$card->getCacheTags()] as $tag) {
       $this->assertContains($tag, $read);
     }
     $this->assertSame($before, $built->getCacheTags(), 'What the build itself read stays what it was sealed with.');
-    $this->assertSame($card, $built->getDefinitions()->entry('props')->variants->variant('data_surface_examples:card')->child, 'Built once, then kept.');
+    $this->assertSame($card, $built->getDefinitions()->entry('props')->variants->variant('surface_examples:card')->child, 'Built once, then kept.');
   }
 
 }

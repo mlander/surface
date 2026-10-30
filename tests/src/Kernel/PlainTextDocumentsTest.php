@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface_test\ModeSubsetRefiner;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface_test\ModeSubsetRefiner;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -25,9 +25,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-machine-document-carries-plain-text
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class PlainTextDocumentsTest extends DataSurfaceKernelTestBase {
+class PlainTextDocumentsTest extends SurfaceKernelTestBase {
 
   use StringTranslationTrait;
 
@@ -39,19 +39,18 @@ class PlainTextDocumentsTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_test',
+    'surface',
+    'surface_test',
   ];
 
   /**
    * Builds a data surface whose words hold markup.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function surface(): DataSurfaceInterface {
-    return new DataSurface(DefinitionMap::fromArrays(
+  protected function surface(): SurfaceInterface {
+    return new Surface(DefinitionMap::fromArrays(
       definitions: [
         'scope' => DataDefinition::create('string')
           ->setLabel($this->t('Double quotation marks (@value)', ['@value' => '"'])),
@@ -70,7 +69,7 @@ class PlainTextDocumentsTest extends DataSurfaceKernelTestBase {
             ],
           ]),
       ],
-      refiners: ['mode' => [DataSurfaceInterface::OWNER => [new ModeSubsetRefiner()]]],
+      refiners: ['mode' => [SurfaceInterface::OWNER => [new ModeSubsetRefiner()]]],
       refinements: ['mode' => ['scope']],
     ));
   }
@@ -79,7 +78,7 @@ class PlainTextDocumentsTest extends DataSurfaceKernelTestBase {
    * Tests both schemas carry the text, and the form the markup.
    */
   public function testBothSchemasCarryPlainText(): void {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $surface = $this->surface();
     $documents = [
       'the schema for these answers' => $emitter->emit($surface, $surface->getDefaultValues(), 'audit')->document['schema'],
@@ -101,7 +100,7 @@ class PlainTextDocumentsTest extends DataSurfaceKernelTestBase {
    * Tests the tool listing carries the text, the appended sentence too.
    */
   public function testTheToolListingCarriesPlainText(): void {
-    $inputs = $this->container->get('data_surface_tool.input_definitions');
+    $inputs = $this->container->get('surface.input_definitions');
     $map = $inputs->withDependencies($inputs->fromSurface($this->surface(), 'Audit', ''), $this->surface());
     $this->assertSame('Double quotation marks (")', (string) $map->getPropertyDefinition('scope')->getLabel());
     $this->assertSame("Enable it for every form.\nPage caching is disabled.", (string) $map->getPropertyDefinition('protect')->getDescription());

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DefinitionMetadata;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -21,9 +21,9 @@ use PHPUnit\Framework\Attributes\Group;
  * to it: ArrayAccess creates the key it is asked for, so a single read
  * of a definition that declares nothing would make it declare NULL.
  *
- * @see \Drupal\data_surface\DefinitionMetadata
+ * @see \Drupal\surface\DefinitionMetadata
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class DefinitionMetadataTest extends UnitTestCase {
 
   /**

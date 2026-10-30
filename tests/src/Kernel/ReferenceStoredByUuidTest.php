@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Reference\ReferenceStorageLayout;
-use Drupal\data_surface_examples_references\Resource\SponsorshipResource;
-use Drupal\data_surface_examples_references\Sponsorship;
-use Drupal\data_surface_examples_references\Storage\SponsorshipStorage;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Reference\ReferenceStorageLayout;
+use Drupal\surface_examples_references\Resource\SponsorshipResource;
+use Drupal\surface_examples_references\Sponsorship;
+use Drupal\surface_examples_references\Storage\SponsorshipStorage;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\user\Entity\Role;
 use Drupal\user\Entity\User;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -31,9 +31,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-config-object-stores-a-reference-by-uuid
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ReferenceStoredByUuidTest extends DataSurfaceKernelTestBase {
+class ReferenceStoredByUuidTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
   use UserCreationTrait;
@@ -50,17 +50,16 @@ class ReferenceStoredByUuidTest extends DataSurfaceKernelTestBase {
     'node',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_examples',
-    'data_surface_examples_references',
+    'surface',
+    'surface_react',
+    'surface_examples',
+    'surface_examples_references',
   ];
 
   /**
    * The config object.
    */
-  protected const CONFIG = 'data_surface_examples_references.sponsorship';
+  protected const CONFIG = 'surface_examples_references.sponsorship';
 
   /**
    * The account writing.
@@ -79,9 +78,9 @@ class ReferenceStoredByUuidTest extends DataSurfaceKernelTestBase {
       'system',
       'node',
       'filter',
-      'data_surface',
-      'data_surface_examples',
-      'data_surface_examples_references',
+      'surface',
+      'surface_examples',
+      'surface_examples_references',
     ]);
     $this->assertNotNull(NodeType::load('article'));
     User::create(['uid' => 0, 'name' => '', 'status' => 0])->save();
@@ -111,7 +110,7 @@ class ReferenceStoredByUuidTest extends DataSurfaceKernelTestBase {
    *   The values.
    */
   protected function write(array $values): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(SponsorshipResource::class, 'configure');
     $built = $resources->build(SponsorshipResource::class, $context);
     $result = $this->pipeline()->submit($built, $values, $resources->storage(SponsorshipResource::class, $context, $built));
@@ -125,10 +124,10 @@ class ReferenceStoredByUuidTest extends DataSurfaceKernelTestBase {
    *   What each answered as the values, by door.
    */
   protected function doors(): array {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation(SponsorshipResource::class, 'configure');
     $built = $resources->build(SponsorshipResource::class, $context);
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:event.sponsorship:configure:read');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:event.sponsorship:configure:read');
     $tool->execute();
     return [
       'storage' => $resources->storage(SponsorshipResource::class, $context, $built)->load($built),
@@ -203,8 +202,8 @@ class ReferenceStoredByUuidTest extends DataSurfaceKernelTestBase {
       $this->assertSame((int) $article->id(), $values['page'], $door . ': an id stored before reads as the id.');
       $this->assertSame((int) $this->sponsor->id(), $values['contact'], $door);
     }
-    require_once $this->container->get('extension.list.module')->getPath('data_surface_examples_references') . '/data_surface_examples_references.post_update.php';
-    data_surface_examples_references_post_update_references_by_uuid();
+    require_once $this->container->get('extension.list.module')->getPath('surface_examples_references') . '/surface_examples_references.post_update.php';
+    surface_examples_references_post_update_references_by_uuid();
     $raw = $this->config(self::CONFIG)->getRawData();
     $this->assertSame($article->uuid(), $raw['page']);
     $this->assertSame($this->sponsor->uuid(), $raw['contact']);
@@ -216,18 +215,18 @@ class ReferenceStoredByUuidTest extends DataSurfaceKernelTestBase {
    * Tests the generated schema types the two keys `uuid`, and the check.
    */
   public function testTheSchemaTypesThemUuid(): void {
-    $generator = $this->container->get('data_surface.config_schema');
-    $path = $this->container->get('extension.list.module')->getPath('data_surface_examples_references');
-    $files = $generator->files(['data_surface_examples_references']);
+    $generator = $this->container->get('surface.config_schema');
+    $path = $this->container->get('extension.list.module')->getPath('surface_examples_references');
+    $files = $generator->files(['surface_examples_references']);
     foreach ($files as $file => $contents) {
       $this->assertSame($contents, file_get_contents($this->root . '/' . $file), $file . ' is what the resource writes.');
     }
-    $schema = $files[$path . '/config/schema/data_surface_examples_references.schema.yml'];
+    $schema = $files[$path . '/config/schema/surface_examples_references.schema.yml'];
     $this->assertStringContainsString("    contact:\n      type: uuid\n      label: 'Contact'\n      nullable: true\n", $schema);
     $this->assertStringContainsString("    page:\n      type: uuid\n      label: 'Announcement'\n      nullable: true\n", $schema);
     $this->assertStringContainsString("    venue:\n      type: string\n", $schema, 'A config entity: its id.');
 
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $built = $resources->build(SponsorshipResource::class, $resources->operation(SponsorshipResource::class, 'configure'));
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(SponsorshipStorage::class);
     $this->assertSame(['contact' => ReferenceStorageLayout::UUID_SCHEMA, 'page' => ReferenceStorageLayout::UUID_SCHEMA], $storage->translatedKeys($built));

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Refinement;
+namespace Drupal\surface\Refinement;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\DataSurfaceRefinerInterface;
+use Drupal\surface\SurfaceRefinerInterface;
 
 /**
  * A link in a refiner chain whose answer only the runtime may give.
@@ -17,7 +17,7 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  * is behind a link. Refined for values, which is what the pipeline, a
  * form and the served contract's schema for those values do, it runs in
  * its chain like any other link, held to the same narrowing check.
- * Asked what the static refiners alone answer (DataSurfaceInterface::
+ * Asked what the static refiners alone answer (SurfaceInterface::
  * refine() with $runtime FALSE), which is all the served contract may
  * state ahead of time, the engine leaves it out.
  *
@@ -36,12 +36,12 @@ use Drupal\data_surface\DataSurfaceRefinerInterface;
  *
  * @internal
  */
-final class RuntimeRefiner implements DataSurfaceRefinerInterface, CacheableDependencyInterface, ApplicabilityInterface {
+final class RuntimeRefiner implements SurfaceRefinerInterface, CacheableDependencyInterface, ApplicabilityInterface {
 
   /**
    * Constructs a RuntimeRefiner.
    *
-   * @param \Drupal\data_surface\DataSurfaceRefinerInterface $link
+   * @param \Drupal\surface\SurfaceRefinerInterface $link
    *   The link that refines: the runtime methods of one class.
    * @param bool $gated
    *   FALSE for a link whose methods watch nothing, which runs on every
@@ -49,7 +49,7 @@ final class RuntimeRefiner implements DataSurfaceRefinerInterface, CacheableDepe
    *   other link does.
    */
   public function __construct(
-    public readonly DataSurfaceRefinerInterface $link,
+    public readonly SurfaceRefinerInterface $link,
     public readonly bool $gated = TRUE,
   ) {
   }

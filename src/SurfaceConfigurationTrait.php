@@ -1,0 +1,177 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\surface;
+
+use Drupal\surface\Pipeline\ViolationSummary;
+
+/**
+ * Implements ConfigurableInterface from a structure.
+ *
+ * Drop-in for plugins that own their state as a configuration array:
+ * the configuration is a structure, its defaults come from it, and
+ * setConfiguration() runs the values through the pipeline rather than
+ * trusting its caller, so a plugin
+ * configured by a test, a config action or an agent is held to the same
+ * contract a form holds it to.
+ *
+ * Two rules the hosts depend on. Keys the structure does not declare pass
+ * through untouched, so host-owned keys (a block's id, label, provider;
+ * a variant's weight; a context mapping) survive progressive adoption.
+ * And the merge is the pipeline's, not the host's: accept() fills every
+ * declared key from the structure's defaults before the input lands on
+ * top, which is why adopters set the configuration property from the
+ * accepted values instead of calling a host's own deep or shallow merge.
+ *
+ * The structure is built once per instance. The host calls these three
+ * methods freely and each of them needs the built structure;
+ * memoizedSurface() says why nothing invalidates it.
+ *
+ * The configuration property is declared here without a type or an
+ * initial value on purpose: core's PluginBase already declares it
+ * untyped, and PHP refuses to compose a trait property that differs from
+ * an inherited one in either respect.
+ *
+ * @see \Drupal\surface\SurfaceHostTrait
+ *   For why the pipeline is fetched from the container rather than
+ *   injected: the host constructor trap, documented there once.
+ */
+trait SurfaceConfigurationTrait {
+
+  use SurfaceHostTrait;
+
+  /**
+   * The stored values: the structure's keys plus whatever the host owns.
+   *
+   * @var array
+   */
+  protected $configuration;
+
+  /**
+   * The structure this instance has already built, once it has.
+   */
+  protected ?SurfaceInterface $memoizedSurface = NULL;
+
+  /**
+   * Builds the structure describing this object's values.
+   *
+   * @return \Drupal\surface\SurfaceInterface
+   *   The built structure.
+   */
+  abstract public function getSurface(): SurfaceInterface;
+
+  /**
+   * Gets this instance's built structure, built at most once.
+   *
+   * Every method in this trait needs the built structure, and the host calls
+   * them freely: one block submit asks for the configuration three
+   * times. Building once per instance makes the advertisement stable for
+   * the life of the object, which is what "the built structure is the
+   * single authority" has to mean in practice.
+   *
+   * Nothing invalidates this. A data surface is a per-request description: it
+   * is built from live site state at the moment it is asked for, and the
+   * request that would need a different one is the next request, with a
+   * new instance. A host whose state changes underneath it mid-request
+   * (a test installing a module between two calls, say) asks the build
+   * step itself rather than going through this trait.
+   *
+   * @return \Drupal\surface\SurfaceInterface
+   *   The built structure.
+   */
+  protected function memoizedSurface(): SurfaceInterface {
+    return $this->memoizedSurface ??= $this->getSurface();
+  }
+
+  /**
+   * Gets the default configuration the structure declares.
+   *
+   * @return array
+   *   The default values, keyed by definition key.
+   */
+  public function defaultConfiguration(): array {
+    return $this->memoizedSurface()->getDefaultValues();
+  }
+
+  /**
+   * Gets the configuration, with the structure's defaults filled in.
+   *
+   * @return array
+   *   The configuration values.
+   */
+  public function getConfiguration(): array {
+    return $this->configuration + $this->defaultConfiguration();
+  }
+
+  /**
+   * Sets the configuration after running it through the pipeline.
+   *
+   * Replace semantics, as every host expects: the declared keys are
+   * accepted against the structure's defaults rather than against what is
+   * already stored, so setting one key resets its siblings to their
+   * defaults instead of quietly keeping older values. Undeclared keys
+   * are taken from the incoming array as they are.
+   *
+   * Access is deliberately not consulted here, and it is worth saying
+   * why, because this looks like a write and is not one. A host
+   * constructs its plugins with whatever it has already stored: core's
+   * block, condition and action bases all call setConfiguration() from
+   * inside their own constructors, so every instantiation of an already
+   * placed block would be asking whether the current account may
+   * configure it — during a cache warm, during a cron run, for an
+   * anonymous visitor merely viewing the page. The gate belongs where
+   * something is actually written, which is the pipeline's submit(), and
+   * a host that means "write this" calls that rather than this.
+   *
+   * One refusal is not a refusal here, and the trade is worth saying
+   * out loud. A value outside the list its key offers is read as stale
+   * and kept, because this method cannot tell a stored value that went
+   * stale from a bad value a caller just made up: it has one array and
+   * no separate notion of what is stored. Reading it the other way is
+   * what made a deleted node type fatal, and the value is kept where a
+   * form can show it and ask for a new choice rather than thrown where
+   * nothing can. A caller that wants the strict answer asks the pipeline
+   * with the stored values it actually has.
+   *
+   * @param array $configuration
+   *   The configuration values.
+   *
+   * @return $this
+   *
+   * @throws \InvalidArgumentException
+   *   When a declared key's value violates the refined structure, stale
+   *   references excepted.
+   */
+  public function setConfiguration(array $configuration): static {
+    $surface = $this->memoizedSurface();
+    $definitions = $surface->getDefinitions()->toArray();
+    $pipeline = $this->surfacePipeline();
+    $values = $pipeline->accept($surface, array_intersect_key($configuration, $definitions));
+    // The values are their own stored values here, and that is not a
+    // trick: this method is how a host loads what storage holds, called
+    // from inside a plugin constructor with the configuration the site
+    // saved. So a key whose stored value has fallen outside the list it
+    // now offers is stale by definition, and stale never blocks — which
+    // is the whole of the bug this closes. A block configured for a node
+    // bundle that was later deleted threw out of the plugin manager, so
+    // the block's own configuration form, the block listing, and every
+    // page the block rendered on died with it: the one page that could
+    // have fixed the value was the one page that could not be opened.
+    // What still throws is everything else a structure refuses, because
+    // nothing else is something the site did underneath a value nobody
+    // touched.
+    $violations = $pipeline->validate($surface, $values, $values);
+    if (!$violations->isEmpty()) {
+      // The one place these message objects become text: an exception
+      // message is a string and has nowhere to put an object.
+      throw new \InvalidArgumentException('Invalid configuration: ' . ViolationSummary::fromViolations($violations));
+    }
+    // A key that does not apply is left out of what accept() made of the
+    // configuration, and kept as it was saved.
+    // Decision: see docs/decisions.md#a-key-that-does-not-apply.
+    $this->configuration = $pipeline->kept($surface, $values, $configuration) + array_diff_key($configuration, $definitions);
+    return $this;
+  }
+
+}

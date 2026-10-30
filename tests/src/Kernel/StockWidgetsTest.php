@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Form\FormState;
@@ -10,18 +10,18 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Form\Drawing;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
-use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
-use Drupal\data_surface_resource_test\Resource\Library\OpeningHoursResource;
-use Drupal\data_surface_resource_test\Resource\Parcel\ParcelResource;
-use Drupal\data_surface_resource_test\Storage\OpeningHoursStorage;
-use Drupal\data_surface_resource_test\Storage\ParcelStorage;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Form\Drawing;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface\Widget\SurfaceWidgetManager;
+use Drupal\surface_resource_test\Resource\Library\OpeningHoursResource;
+use Drupal\surface_resource_test\Resource\Parcel\ParcelResource;
+use Drupal\surface_resource_test\Storage\OpeningHoursStorage;
+use Drupal\surface_resource_test\Storage\ParcelStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -41,9 +41,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/decisions.md#a-key-its-storage-always-holds
  * @see docs/decisions.md#the-form-never-refuses-to-draw-a-declared-key
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class StockWidgetsTest extends DataSurfaceKernelTestBase {
+class StockWidgetsTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -53,8 +53,8 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -63,7 +63,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -73,18 +73,18 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
    * @param class-string $class
    *   The resource.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function built(string $class): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function built(string $class): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build($class, $resources->operation($class, 'configure'));
   }
 
   /**
    * Builds the form elements for a data surface and values.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param array $values
    *   The values.
@@ -92,7 +92,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
    * @return array
    *   The container.
    */
-  protected function form(DataSurfaceInterface $surface, array $values = []): array {
+  protected function form(SurfaceInterface $surface, array $values = []): array {
     return $this->formBuilder()->buildSurfaceForm($surface, $values + $surface->getDefaultValues(), new FormState());
   }
 
@@ -102,11 +102,11 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function one(DataDefinitionInterface $definition): DataSurfaceInterface {
-    return (new DataSurfaceBuilder())->setDefinition('key', $definition)->seal();
+  protected function one(DataDefinitionInterface $definition): SurfaceInterface {
+    return (new SurfaceBuilder())->setDefinition('key', $definition)->seal();
   }
 
   /**
@@ -124,7 +124,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
    */
   protected function extracted(DataDefinitionInterface $definition, array $element, mixed $posted): mixed {
     $state = (new FormState())->setValues(['key' => $posted]);
-    return $this->container->get('plugin.manager.data_surface_widget')->getWidgetFor($definition)->extractValue($definition, $element, $state, ['key']);
+    return $this->container->get('plugin.manager.surface_widget')->getWidgetFor($definition)->extractValue($definition, $element, $state, ['key']);
   }
 
   /**
@@ -161,7 +161,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
 
     // The three-way rule, through accept(): left out keeps, the empty
     // list clears, the boxes left as drawn keep what they showed.
-    $stored = $this->config('data_surface_resource_test.opening_hours')->getRawData();
+    $stored = $this->config('surface_resource_test.opening_hours')->getRawData();
     $this->assertSame($stored['days'], $this->pipeline()->accept($hours, [], $stored)['days']);
     $this->assertSame([], $this->pipeline()->accept($hours, ['days' => $this->extracted($definition, $days, $none)], $stored)['days']);
     $untouched = array_combine(array_keys($days['#options']), array_map(static fn (string $day): string|int => in_array($day, $stored['days'], TRUE) ? $day : 0, array_keys($days['#options'])));
@@ -183,8 +183,8 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $select = $this->form($this->one(static::choices(3)->setSetting('widget', 'select')))['key'];
     $this->assertSame(['select', TRUE], [$select['#type'], $select['#multiple']]);
 
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $hint = static fn (DataSurfaceInterface $surface): array => $emitter->emitFull($surface, 'test', widgets: TRUE)->document['schema']['properties']['key']['x-surface'];
+    $emitter = $this->container->get('surface.contract_emitter');
+    $hint = static fn (SurfaceInterface $surface): array => $emitter->emitFull($surface, 'test', widgets: TRUE)->document['schema']['properties']['key']['x-surface'];
     $this->assertSame('checkboxes', $hint($this->one(static::choices(12)))['widget']);
     $this->assertArrayNotHasKey('multiple', $hint($this->one(static::choices(12))));
     $long = $hint($this->one(static::choices(13)));
@@ -196,7 +196,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
    * A setting naming a widget that does not draw the key is refused.
    */
   public function testAskingForMisfitWidgetIsRefused(): void {
-    $manager = $this->container->get('plugin.manager.data_surface_widget');
+    $manager = $this->container->get('plugin.manager.surface_widget');
     $refusals = [];
     foreach ([
       'radios for a list' => static::choices(3)->setSetting('widget', 'radios'),
@@ -250,11 +250,11 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
 
     $stale = $this->form($this->one($choice()->setRequired(TRUE)), ['key' => 'xl'])['key'];
     $this->assertNull($stale['#default_value'], 'A stored value no longer offered: nothing checked.');
-    $this->assertSame('xl', $stale[DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame('xl', $stale[SurfaceWidgetBase::STALE_KEY]);
     $this->assertFalse($stale['#required'], 'Left alone it keeps, so nothing is required of it.');
     $this->assertSame('xl', $this->extracted($choice()->setRequired(TRUE), $stale, NULL), 'Radios left alone keep the stored value.');
 
-    $schema = $this->container->get('data_surface.contract_emitter')->emit($parcel, ['handling' => 'fragile'] + $parcel->getDefaultValues(), 'resource_test.parcel', widgets: TRUE)->document['schema'];
+    $schema = $this->container->get('surface.contract_emitter')->emit($parcel, ['handling' => 'fragile'] + $parcel->getDefaultValues(), 'resource_test.parcel', widgets: TRUE)->document['schema'];
     $this->assertSame('radios', $schema['properties']['handling']['x-surface']['widget']);
     $this->assertSame(['show' => TRUE, 'label' => '- None -'], $schema['properties']['handling']['x-surface']['emptyOption']);
     $this->assertSame('select', $schema['properties']['service']['x-surface']['widget'], 'A choice that asks for nothing stays a select.');
@@ -297,7 +297,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $optional = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['a', 'b']]);
     $this->assertSame('- None -', (string) $this->form($this->one($optional), ['key' => 'a'])['key']['#empty_option'], 'Optional and clearable: "- None -" always.');
 
-    $stored = $this->config('data_surface_resource_test.opening_hours')->getRawData();
+    $stored = $this->config('surface_resource_test.opening_hours')->getRawData();
     $refusals = function (array $values) use ($hours, $stored): array {
       $messages = [];
       foreach ($this->pipeline()->validate($hours, $this->pipeline()->accept($hours, $values, $stored), $stored) as $violation) {
@@ -311,7 +311,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $refusals(['notes' => NULL]), 'Nullable in the schema: null clears it.');
     $this->assertSame([], $refusals(['holidays' => 'open']));
 
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     foreach ([
       'the schema for these answers' => $emitter->emit($hours, $stored, 'resource_test.opening_hours', widgets: TRUE)->document['schema'],
       'the full schema' => $emitter->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema'],
@@ -334,11 +334,11 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $hours = $this->built(OpeningHoursResource::class);
     $keywords = $this->form($hours, ['keywords' => ['maps', 'archives']])['keywords'];
     $this->assertSame('fieldset', $keywords['#type']);
-    $this->assertTrue($keywords[DataSurfaceFormBuilderInterface::ROWS_KEY]);
+    $this->assertTrue($keywords[SurfaceFormBuilderInterface::ROWS_KEY]);
     $this->assertSame(['textfield', 'maps'], [$keywords[0]['#type'], $keywords[0]['#default_value']]);
     $this->assertSame('Keywords 2', (string) $keywords[1]['#title']);
-    $this->assertSame(['remove', 1], $keywords['remove_1'][DataSurfaceFormBuilderInterface::ROW_CONTROL_KEY]);
-    $this->assertSame(['add', NULL], $keywords['add'][DataSurfaceFormBuilderInterface::ROW_CONTROL_KEY]);
+    $this->assertSame(['remove', 1], $keywords['remove_1'][SurfaceFormBuilderInterface::ROW_CONTROL_KEY]);
+    $this->assertSame(['add', NULL], $keywords['add'][SurfaceFormBuilderInterface::ROW_CONTROL_KEY]);
     $this->assertFalse($keywords['add']['#disabled']);
 
     $definition = $hours->getDefinition('keywords');
@@ -354,7 +354,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($element['remove_0']['#disabled'], 'At the minimum: nothing to remove.');
     $this->assertTrue($element['add']['#disabled'], 'At the maximum: nothing to add.');
 
-    $hint = $this->container->get('data_surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema']['properties']['keywords']['x-surface']['widget'];
+    $hint = $this->container->get('surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema']['properties']['keywords']['x-surface']['widget'];
     $this->assertSame('list', $hint);
   }
 
@@ -367,7 +367,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('date', $opens['#type']);
     $this->assertSame(['time', '09:00'], [$opens['#attributes']['type'], $opens['#default_value']]);
     $this->assertSame('17:30', $this->extracted($hours->getDefinition('opens'), $opens, '17:30'));
-    $schema = $this->container->get('data_surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema'];
+    $schema = $this->container->get('surface.contract_emitter')->emitFull($hours, 'resource_test.opening_hours', widgets: TRUE)->document['schema'];
     $this->assertSame('time', $schema['properties']['opens']['x-surface']['widget']);
     $this->assertSame('^([01]\d|2[0-3]):[0-5]\d$', $schema['properties']['opens']['pattern']);
     $this->assertArrayNotHasKey('format', $schema['properties']['opens'], 'A time input posts HH:MM, which RFC 3339 time refuses.');
@@ -387,7 +387,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('#attributes', $element, "Core's date element is a date input as it stands.");
     $this->assertSame('date', $this->container->get('element_info')->getInfo('date')['#attributes']['type']);
     $this->assertSame('2026-10-20', $this->extracted($day, $element, '2026-10-20'));
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $property = $emitter->emitFull($surface, 'test', widgets: TRUE)->document['schema']['properties']['key'];
     $this->assertSame(['date', 'date'], [$property['x-surface']['widget'], $property['format']]);
     $this->assertSame('date', $emitter->emitFull($surface, 'test')->document['schema']['properties']['key']['format'], 'The format is stated without the widget hints.');
@@ -402,7 +402,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
    * (`filter_format`, say) is not walked here: no widget names it.
    */
   public function testEveryDataTypeOfCoreIsDrawn(): void {
-    $manager = $this->container->get('plugin.manager.data_surface_widget');
+    $manager = $this->container->get('plugin.manager.surface_widget');
     $typed = $this->container->get('typed_data_manager');
     $drawn = [];
     $lists = [];
@@ -411,8 +411,8 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
         continue;
       }
       $definition = $typed->createDataDefinition($type);
-      $drawn[$type] = DataSurfaceWidgetManager::wordOf($manager->getWidgetFor($definition));
-      $lists[$type] = DataSurfaceWidgetManager::wordOf($manager->getWidgetFor(new ListDataDefinition(['type' => 'list'], $definition)));
+      $drawn[$type] = SurfaceWidgetManager::wordOf($manager->getWidgetFor($definition));
+      $lists[$type] = SurfaceWidgetManager::wordOf($manager->getWidgetFor(new ListDataDefinition(['type' => 'list'], $definition)));
     }
     $primitives = [
       'any' => 'json',
@@ -482,7 +482,7 @@ class StockWidgetsTest extends DataSurfaceKernelTestBase {
     $surface = $this->one($bytes);
     $element = $this->form($surface, ['key' => 'stored'])['key'];
     $this->assertSame('item', $element['#type']);
-    $this->assertTrue($element[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY]);
+    $this->assertTrue($element[SurfaceFormBuilderInterface::PLACEHOLDER_KEY]);
     $this->assertSame('This is not drawn on this form; what it holds is kept. Set it through the tool, over HTTP or on the React page.', $element['#markup']);
     $container = $this->form($surface, ['key' => 'stored']);
     $this->assertSame(['key' => 'stored'], $this->formBuilder()->extractSurfaceValues($surface, $container, new FormState(), ['key' => 'stored']));

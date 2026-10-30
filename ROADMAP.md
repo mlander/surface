@@ -1,4 +1,4 @@
-# data_surface roadmap: after the hardening pass
+# surface roadmap: after the hardening pass
 
 This consolidates three sources into one ordered plan: the open threads
 HARDENING.md left behind, the clean-room design review (four blind
@@ -43,14 +43,14 @@ serving, and evolution.
    own `access()` with incompatible signatures; the pipeline takes a
    resolved `AccessResultInterface` on `submit()`; refusals land as a
    violation of the whole call, code `access` (under the reserved
-   `@access` key until 2026-10-20); `DataSurfaceAccess::decisive()`
+   `@access` key until 2026-10-20); `SurfaceAccess::decisive()`
    is the idiom for a provider that owns an operation, since core
    permission and entity checks answer neutral on denial. (The headline
    net-new borrow, from Form
-   Request `authorize()` plus policies). `DataSurfaceProviderInterface`
+   Request `authorize()` plus policies). `SurfaceProviderInterface`
    gains an access answer per operation and account, returning core's
    `AccessResult` (which carries reason and cacheability, exceeding the
-   Laravel original). `DataSurfacePipeline::submit()` consults it
+   Laravel original). `SurfacePipeline::submit()` consults it
    before `accept()`; the future endpoint consults the same answer.
    Hosts that spell access today (the action base, the tools) delegate
    to it. Form, Drush, config action, agent: one resolution.
@@ -103,7 +103,7 @@ operation from subject on the provider contract.** `operation` becomes
 a closed verb from the host type's vocabulary and never carries
 identity; `subject` is an optional opaque string id the provider
 resolves itself, NULL when the provider is its own subject. Both
-`getDataSurface()` and `surfaceAccess()` take the pair; typed entry
+`getSurface()` and `surfaceAccess()` take the pair; typed entry
 points such as the node type provider's entity-taking method remain
 the in-process convenience; the edit-prefixed id encoding in the node
 type provider is deleted. This is the wire shape the discovery route
@@ -111,8 +111,8 @@ and the dry-run endpoint address surfaces by: host type, host id,
 operation, subject.
 
 Prerequisite, second half — DONE 2026-09-15. The triple is complete
-(`getDataSurfaceStorage()` on both provider contracts, the field-side
-accessor renamed to match), `DataSurfaceProviderForm` serves provider
+(`getSurfaceStorage()` on both provider contracts, the field-side
+accessor renamed to match), `SurfaceProviderForm` serves provider
 forms from route coordinates with a three-method cosmetics seam, and
 the node type demo's form class is gone, not shrunk: routing plus a
 small cosmetics class. The standalone State demo form deliberately
@@ -131,7 +131,7 @@ hand-writing form classes and the node type form shrinks to routing
 plus its cosmetic layer, which is the part that should stay bespoke.
 
 Prerequisite, third half — DONE 2026-09-15. The attribute is deleted;
-`declareDataSurface(builder)` is the one home, static so the formatter
+`declareSurface(builder)` is the one home, static so the formatter
 defaults protocol reads the same declaration the instance path builds
 from, with no container and no plugin constructed out of season; the
 awareness service slimmed to interface detection for the future
@@ -145,7 +145,7 @@ array-constructor-only spelling, no map property definitions (the
 address before-seal callback exists only for this), no translatable
 constants, the interim metadata keys, and the one-home rule itself.
 `definitions`, `outputs`, `refinements`, and `locked` leave the
-attribute; every surface is declared in `getDataSurface()` through the
+attribute; every surface is declared in `getSurface()` through the
 builder, with a protected builder helper on the host bases keeping
 simple plugins compact; the attribute is deleted (the interface is the
 marker) unless a future index needs it for category-style metadata.
@@ -155,7 +155,7 @@ wanted containerless indexing uses the discovery document instead,
 which serves the real contract.
 
 4. **Emission as a plugin type.** — DELIVERED 2026-10-08 as the main
-   module's emitter, `data_surface.contract_emitter`: JSON Schema
+   module's emitter, `surface.contract_emitter`: JSON Schema
    2020-12, labeled options as `oneOf` const/title, variants as `if`/
    `then` on their deciding sibling, dependency edges and locking under
    `x-surface`, widget hints only when a renderer asks
@@ -174,7 +174,7 @@ which serves the real contract.
    declaration every critique named first among Drupalisms. CLOSED
    2026-10-20 for a simple config object: its schema and install file
    are written from the resource, committed and checked for drift
-   (`drush data_surface:config-schema`, group D of item 14 below); a
+   (`drush surface:config-schema`, group D of item 14 below); a
    plugin's settings and discovery-time emission are not built.
    Backbone, added 2026-09-17 after the owner named the gap: **the
    coordinate space is declared, not free.** A provider declares its
@@ -311,9 +311,9 @@ which serves the real contract.
     nothing calls. To build: the pipeline converting what `load()` hands
     it before `accept()`, step by step from the ledger's version; the
     ledger as the storage's (`ConfigObjectStorage` keeping
-    `_data_surface.versions` beside `_core`, described for every config
+    `_surface.versions` beside `_core`, described for every config
     object by altering core's `config_object` type; a config entity's in
-    its `third_party_settings.data_surface`); a refusal for a version
+    its `third_party_settings.surface`); a refusal for a version
     above 1 on storage that keeps no ledger, and for a stored version
     above the declared; the eager pass (a command and a service a
     post-update calls) for code that reads its storage directly; then
@@ -330,7 +330,7 @@ which serves the real contract.
     version raised or an allowance with a reason in the baseline;
     baselines in `tests/fixtures/contracts/<id>.json` of the module that
     keeps them; `ContractBaselineTest` pins the examples and
-    `data_surface_first`; `drush data_surface:contract-diff` prints the
+    `surface_examples_first`; `drush surface:contract-diff` prints the
     verdicts and pins with `--write`. As planned: emit each resource's
     and structure's schema against a committed snapshot in CI; fail on
     removed keys, tightened constraints, or type changes without a
@@ -341,7 +341,7 @@ which serves the real contract.
     report enumerates stored usages before removal.
 15a. **Doors: an OpenAPI document.** DONE 2026-10-21
     (`docs/decisions.md#an-openapi-document-is-one-more-door`,
-    `docs/served-contract.md#an-openapi-document`): `data_surface_openapi`
+    `docs/served-contract.md#an-openapi-document`): `surface_openapi`
     serves `/surface-api/openapi.json` and `.yaml`, OpenAPI 3.1 for every
     operation that stands alone and needs no subject, its five endpoints,
     its full schema as components (an update's bodies its patch), facts as
@@ -430,7 +430,7 @@ to.
    subform's parents to `surfaceSubmissionPath()`, so a save without
    JavaScript that moves a parent and its dependent together is not
    refused by Form API (`docs/decisions.md`).
-8. **Served contract, first shape** — DONE 2026-10-08: `data_surface_react`
+8. **Served contract, first shape** — DONE 2026-10-08: `surface_react`
    serves one operation as JSON Schema 2020-12 with `x-surface`, refine
    and validate (dry run) endpoints, and a React form rendered from it
    (`docs/served-contract.md`). Writes since: `/submit`, with `created`
@@ -456,7 +456,7 @@ renames sit in A because they are cheapest before new code exists.
 - **A, from the first fresh-eyes run (2026-10-18, `docs/fresh-eyes-2026-10-18.md`),
   before the merge** — DONE 2026-10-18: `ConfigObjectStorage`, the pinned
   pages `docs/first-resource.md` and `docs/second-resource.md` on
-  `data_surface_first`, `docs/concepts.md`, the guesses documented where
+  `surface_examples_first`, `docs/concepts.md`, the guesses documented where
   the log asked, the two contradictions, the three bugs, and defaults
   out of the tool listing (item 9). As planned: ship a storage class for a simple config object
   (the most common case has none; the docs only say it was removed);
@@ -532,9 +532,9 @@ renames sit in A because they are cheapest before new code exists.
    - A reading pass over the docs and decisions after the rename, then
      the leftover old words in one decision, DONE 2026-10-18
      (`docs/decisions.md#the-product-keeps-its-name`): module name and
-     namespaces, the `data_surface.` service prefix, route names and
+     namespaces, the `surface.` service prefix, route names and
      paths, the `x-surface` keyword, the `surface[...]` form key, the
-     React app's internal names, the `DataSurface*` engine prefix keep
+     React app's internal names, the `Surface*` engine prefix keep
      the word; concept names in code took the new one. With it, three
      fresh-eyes entries: a derived tool declares its operation's
      permission (12), a refusal a refiner caused names the keys it
@@ -829,7 +829,7 @@ renames sit in A because they are cheapest before new code exists.
      `docs/decisions.md#an-operation-states-how-it-behaves`); the map
      mounted keys sit in is never null, the parcel's `courier`
      workaround gone, and a map whose every key is ruled out is written
-     `{}` by `DataSurfacePipelineInterface::document()` and the emitter
+     `{}` by `SurfacePipelineInterface::document()` and the emitter
      alike; a ruled-out key inside a collection item is not put back,
      by design (items are sent whole); keys inside a collection's items
      say what they depend on in the tool listing; a required plain map
@@ -863,7 +863,7 @@ renames sit in A because they are cheapest before new code exists.
    first alter with a storage of its own, and a placed block as a
    config entity resource whose settings are variants chosen by plugin
    id, each plugin's structure one of them (DONE 2026-10-23,
-   `docs/decisions.md#a-placed-block-is-a-resource`: `data_surface_block`'s
+   `docs/decisions.md#a-placed-block-is-a-resource`: `surface_examples_block`'s
    `block.placement`, placed, configured, moved within its theme and
    removed through four tools, HTTP with `DELETE` for a delete, and a
    form; `ConfigEntityStorage` a resource's storage, `NodeTypeStorage`
@@ -889,7 +889,7 @@ renames sit in A because they are cheapest before new code exists.
     item is held to, with the evidence each produces.
     - **A concept budget, with a page that enforces it.** (The page and
       the inventory exist: `docs/first-resource.md`, pinned to
-      `data_surface_first` by `FirstResourceDocsTest`, and
+      `surface_examples_first` by `FirstResourceDocsTest`, and
       `docs/concepts.md`.) A doc page,
       "Your first resource", that writes a working resource using only
       resource, operation, storage and `add()`, and nothing else, with a
@@ -1082,7 +1082,7 @@ renames sit in A because they are cheapest before new code exists.
     - **B11, the license refusal names the wrong reason.** DONE
       2026-10-20: a condition says what the refiners were handed, "Event
       license is empty (EV-2048 was refused)"
-      (`DataSurfaceInterface::withheldValues()`,
+      (`SurfaceInterface::withheldValues()`,
       `ExamplesComplianceTest::testTheLicenseRefusalNamesWhatTheRuleWasHanded()`).
     - **B12, a read then a write changes storage.** DONE 2026-10-20: the
       stored representation is kept where the accepted forms are equal, a
@@ -1136,7 +1136,7 @@ renames sit in A because they are cheapest before new code exists.
 
     Group D, say each key once (synthesis 2c and 3.1):
     - **D1, a key declared once, the class the source.** DONE
-      2026-10-20: `drush data_surface:config-schema` writes a simple
+      2026-10-20: `drush surface:config-schema` writes a simple
       config object's schema entry and install file from its resource,
       fully validatable, mounted keys by the existing convention, and
       prints the difference without `--write`; `ConfigSchemaDriftTest`
@@ -1251,7 +1251,7 @@ renames sit in A because they are cheapest before new code exists.
 
 16. **A block embeds a component.** DONE 2026-10-23
     (`docs/decisions.md#a-block-embeds-a-component-through-its-structure`).
-    `data_surface_component_block`: a block, "Component", whose settings
+    `surface_examples_component_block`: a block, "Component", whose settings
     are example 12's two lines named by `#[UsesStructure]`, so its form,
     validation and storage come from the block host, and which renders
     the component with the props it holds. The provider, `ComponentProps`,
@@ -1350,10 +1350,10 @@ renames sit in A because they are cheapest before new code exists.
 20. **A key that refers to an entity.** DONE 2026-10-23
     (`docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
     Example 16 at `/surface-examples/16`, in
-    `data_surface_examples_references`: `add($key, 'entity:<type>')`,
+    `surface_examples_references`: `add($key, 'entity:<type>')`,
     `'entity:<type>:<bundle>'` and the bare `'entity'`, the id stored;
     the candidates core's selection handler's for the account; listed up
-    to `data_surface.settings:reference_enum_limit`, an id past it, with
+    to `surface.settings:reference_enum_limit`, an id past it, with
     core's entity autocomplete on the form, `x-surface.widget:
     autocomplete` in both documents and the resource's lookup, `GET
     .../{x}:lookup`, which the tool listing names, the React app calls
@@ -1388,7 +1388,7 @@ renames sit in A because they are cheapest before new code exists.
     `drush generate surface:resource` writes what the first page lists
     from an interview, `--from-config-schema=<name>` or
     `--from-json-schema=<file>`; the newsletter's answers write
-    `data_surface_first` byte for byte, a foreign constraint is a comment
+    `surface_examples_first` byte for byte, a foreign constraint is a comment
     naming the keyword and the key, and a routing or permissions file is
     added to, never replaced ([Generating a resource](docs/generating.md)).
     Open: a resource with identity in a config entity type, its identity
@@ -1437,7 +1437,7 @@ renames sit in A because they are cheapest before new code exists.
 26. **Performance that every host supports.** DONE 2026-10-24
     (`docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request`,
     `docs/performance.md`). A build for no account is kept across
-    requests in `cache.data_surface_build`, keyed by the memo's key and
+    requests in `cache.surface_build`, keyed by the memo's key and
     the languages and dropped by every tag it was read from; a sealed
     surface stores and wakes equal (`SerializedMaps` keeps what core's
     map definitions drop), or is refused by name. A variant the site
@@ -1463,7 +1463,7 @@ renames sit in A because they are cheapest before new code exists.
     storage never handed the item; a gate naming what the site lacks is
     refused at discovery. A dry run answers the outputs prepare
     rehearsed. Example 17 at `/surface-examples/17`, in
-    `data_surface_examples_retitle`: a bulk retitle of nodes, `ai.retitle`,
+    `surface_examples_retitle`: a bulk retitle of nodes, `ai.retitle`,
     with a deterministic rewriter and no model. Open: a gate on a child's
     operation; a gate per item inside an item; the tool listing's
     sentence on a gated list says "locked or left out" where a gate
@@ -1479,7 +1479,7 @@ renames sit in A because they are cheapest before new code exists.
     path; an alter's layout of its mount tells the check and the
     generator, at `third_party_settings.<module>.<key>`; an id a module's
     install file holds is read as an id stored before is (a test, no
-    code). Still open: a site default in `data_surface.defaults` for a
+    code). Still open: a site default in `surface.defaults` for a
     content reference key holds an id, so it deploys as badly as a
     stored id did, and should be a uuid the build resolves (which makes
     the build depend on the entity being on the site); a config entity
@@ -1526,11 +1526,11 @@ renames sit in A because they are cheapest before new code exists.
     (`docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for`,
     `docs/decisions.md#a-plain-route-default-pins-an-operation-parameter`,
     `docs/forms.md#a-route-that-fixes-or-fills-keys`). Since 2026-10-28 a
-    route fixed and filled keys with literals, `_data_surface_fixed` and
-    `_data_surface_defaults`. A value may now be `'{name}'`, the raw value
+    route fixed and filled keys with literals, `_surface_fixed` and
+    `_surface_defaults`. A value may now be `'{name}'`, the raw value
     of a bounded variable of the route's path; a derived resource's id may
     hold one, so one route serves every bundle; a plain default pins an
-    operation parameter; `_data_surface_query` and the values code hands
+    operation parameter; `_surface_query` and the values code hands
     `getForm()` start keys as prefills, held to the key and dropped when
     refused, never in the context; a fixed key holds its value; and a React
     page at a module's route starts keys and fixes none. The permission is

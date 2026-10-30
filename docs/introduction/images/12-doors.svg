@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 320" role="img" aria-labelledby="t">
-  <title id="t">One resource, block.placement, with its create operation, and arrows to four doors: the form, a Tool API tool that MCP and ECA call, HTTP with an OpenAPI document, and a React page</title>
+  <title id="t">One resource, block.placement, with its create operation, and arrows to four doors: the form, a Tool API tool that the command line, ECA, MCP and AI agents run, HTTP with an OpenAPI document, and a React page</title>
   <style>
     .bg { fill: #F6F8FA; }
     .ink { fill: #1F2328; }
@@ -31,32 +31,32 @@
   <rect class="bg" x="0" y="0" width="720" height="320" rx="12"/>
 
   <!-- The resource and its operation -->
-  <rect class="resource" x="32" y="100" width="240" height="120" rx="10"/>
+  <rect class="resource" x="32" y="100" width="200" height="120" rx="10"/>
   <text class="resource-label bold code" x="48" y="128" font-size="15">block.placement</text>
   <text class="muted small" x="48" y="168">operation</text>
   <text class="ink code" x="48" y="192" font-size="15">create</text>
 
   <!-- Arrows from the resource to each door -->
-  <path class="arrow" d="M272 160 C 340 160, 360 58, 422 58"/>
-  <path class="arrowhead" d="M430 58 L420 53 L420 63 Z"/>
-  <path class="arrow" d="M272 160 C 340 160, 360 126, 422 126"/>
-  <path class="arrowhead" d="M430 126 L420 121 L420 131 Z"/>
-  <path class="arrow" d="M272 160 C 340 160, 360 194, 422 194"/>
-  <path class="arrowhead" d="M430 194 L420 189 L420 199 Z"/>
-  <path class="arrow" d="M272 160 C 340 160, 360 262, 422 262"/>
-  <path class="arrowhead" d="M430 262 L420 257 L420 267 Z"/>
+  <path class="arrow" d="M232 160 C 280 160, 290 58, 326 58"/>
+  <path class="arrowhead" d="M334 58 L324 53 L324 63 Z"/>
+  <path class="arrow" d="M232 160 C 280 160, 290 126, 326 126"/>
+  <path class="arrowhead" d="M334 126 L324 121 L324 131 Z"/>
+  <path class="arrow" d="M232 160 C 280 160, 290 194, 326 194"/>
+  <path class="arrowhead" d="M334 194 L324 189 L324 199 Z"/>
+  <path class="arrow" d="M232 160 C 280 160, 290 262, 326 262"/>
+  <path class="arrowhead" d="M334 262 L324 257 L324 267 Z"/>
 
   <!-- Doors: a rectangle with an arrow notch on the right -->
-  <path class="door" d="M436 38 H668 L688 58 L668 78 H436 Z"/>
-  <text class="door-label bold" x="452" y="63">The form</text>
+  <path class="door" d="M340 38 H668 L688 58 L668 78 H340 Z"/>
+  <text class="door-label bold" x="356" y="63">The form</text>
 
-  <path class="door" d="M436 106 H668 L688 126 L668 146 H436 Z"/>
-  <text class="door-label bold" x="452" y="122">A Tool API tool</text>
-  <text class="muted small" x="452" y="139">called by MCP and ECA</text>
+  <path class="door" d="M340 106 H668 L688 126 L668 146 H340 Z"/>
+  <text class="door-label bold" x="356" y="122">A Tool API tool</text>
+  <text class="muted small" x="356" y="139">run by the command line, ECA, MCP and AI agents</text>
 
-  <path class="door" d="M436 174 H668 L688 194 L668 214 H436 Z"/>
-  <text class="door-label bold" x="452" y="199">HTTP with OpenAPI</text>
+  <path class="door" d="M340 174 H668 L688 194 L668 214 H340 Z"/>
+  <text class="door-label bold" x="356" y="199">HTTP with OpenAPI</text>
 
-  <path class="door" d="M436 242 H668 L688 262 L668 282 H436 Z"/>
-  <text class="door-label bold" x="452" y="267">A React page</text>
+  <path class="door" d="M340 242 H668 L688 262 L668 282 H340 Z"/>
+  <text class="door-label bold" x="356" y="267">A React page</text>
 </svg>

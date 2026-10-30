@@ -37,7 +37,7 @@ Beside the inputs, in the same class, on `DefinesOutputsInterface`:
 
 ```php
 #[UsesStructure]
-final class DataSurfaceDemoFormatter extends DataSurfaceFormatterBase implements StructureInterface, DefinesOutputsInterface {
+final class ExampleFormatter extends TypedFormatterBase implements StructureInterface, DefinesOutputsInterface {
 
   public static function defineOutputs(BlueprintInterface $outputs): void {
     $outputs->add('text', 'string', t('Text'))
@@ -150,7 +150,7 @@ it.
 
 ### The formatter's data step
 
-`DataSurfaceFormatterBase` splits viewing in two:
+`TypedFormatterBase` splits viewing in two:
 
 ```php
 public function formatValue(FieldItemInterface $item, array $settings): array;
@@ -196,7 +196,7 @@ inputs get. What is lost, on top of the two the inputs already lose
 - **The `NotEmitted` marker itself**, which is a PHP marker and not a
   value. The statement it makes survives as `required`.
 
-The tools `data_surface_tool` derives from operations answer with the
+The tools the tool door derives from operations answer with the
 accepted `values`, as the read tool would answer them, `committed`, and
 the resource's own outputs converted here. A resource's outputs are
 what its storage's `load()` hands back once the values are committed; a

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * What a resource and a structure share: what it asks for.
@@ -22,7 +22,7 @@ namespace Drupal\data_surface\Resource;
  * a plugin class be its own structure (#[UsesStructure] with no
  * argument) without anything constructing the plugin to ask.
  *
- * @see \Drupal\data_surface\ResourceBuild\ResourcesInterface::build()
+ * @see \Drupal\surface\ResourceBuild\ResourcesInterface::build()
  */
 interface DefinesInputsInterface {
 
@@ -39,7 +39,7 @@ interface DefinesInputsInterface {
    * translation service to be injected into, and t() returns the same
    * lazy TranslatableMarkup, which string extraction finds.
    *
-   * @param \Drupal\data_surface\Resource\BlueprintInterface $inputs
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The input blueprint to fill.
    */
   public static function defineInputs(BlueprintInterface $inputs): void;

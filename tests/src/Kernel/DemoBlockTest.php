@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\block\Entity\Block;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
-use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
-use Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock;
-use Drupal\data_surface_demo\Structure\DemoBlockStructure;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
+use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock;
+use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -29,9 +29,9 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
  * the same values reach storage through the pipeline whether a form or a
  * caller hands them over.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DemoBlockTest extends DataSurfaceKernelTestBase {
+class DemoBlockTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -43,8 +43,8 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     'node',
     'field',
     'text',
-    'data_surface',
-    'data_surface_demo',
+    'surface',
+    'surface_examples_plugins',
   ];
 
   /**
@@ -68,13 +68,13 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
    * @param array $configuration
    *   The block configuration.
    *
-   * @return \Drupal\data_surface_demo\Plugin\Block\DataSurfaceDemoBlock
+   * @return \Drupal\surface_examples_plugins\Plugin\Block\ExampleBlock
    *   The block instance.
    */
-  protected function createBlock(array $configuration = []): DataSurfaceDemoBlock {
+  protected function createBlock(array $configuration = []): ExampleBlock {
     $block = $this->container->get('plugin.manager.block')
-      ->createInstance('data_surface_demo', $configuration);
-    $this->assertInstanceOf(DataSurfaceDemoBlock::class, $block);
+      ->createInstance('surface_examples_plugins', $configuration);
+    $this->assertInstanceOf(ExampleBlock::class, $block);
     return $block;
   }
 
@@ -119,8 +119,8 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('node_type', $options);
     $this->assertSame(
       array_keys($options),
-      array_keys($this->container->get('data_surface.options')->resolve(
-        $this->createBlock()->getDataSurface()->getDefinition('entity_type'),
+      array_keys($this->container->get('surface.options')->resolve(
+        $this->createBlock()->getSurface()->getDefinition('entity_type'),
       )->options),
     );
     // Every offered value carries the label the definition gives it,
@@ -133,7 +133,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
 
     // A config entity type is refused by the same one declaration.
     $violations = $this->pipeline()->validate(
-      $this->createBlock()->getDataSurface(),
+      $this->createBlock()->getSurface(),
       ['entity_type' => 'node_type'] + $this->createBlock()->defaultConfiguration(),
     );
     $this->assertContains('entity_type', $violations->keys());
@@ -170,7 +170,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
    * being refined against an entity type that does not exist.
    */
   public function testAnInvalidEntityTypeLeavesTheBundleUnrefined(): void {
-    $surface = $this->container->get('data_surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
+    $surface = $this->container->get('surface.resources')->build(DemoBlockStructure::class, new OperationContext('configure'));
     $advertised = $surface->getDefinition('bundle');
     $bundle = $surface->refine(['entity_type' => 'no_such_type'])->getDefinition('bundle');
     $this->assertArrayNotHasKey('EntityBundleExists', $bundle->getConstraints());
@@ -178,7 +178,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $this->assertSame('Choose an entity type to see its bundles.', (string) $bundle->getDescription());
     // The field watches the entity type too, and is held back with it.
     $field = $surface->refine(['entity_type' => 'no_such_type', 'bundle' => 'article'])->getDefinition('field');
-    $this->assertArrayNotHasKey('DataSurfaceDemoBundleField', $field->getConstraints());
+    $this->assertArrayNotHasKey('SurfaceExamplesBundleField', $field->getConstraints());
 
     $bundle = $surface->refine(['entity_type' => 'node'])->getDefinition('bundle');
     $this->assertSame(['entityTypeId' => 'node'], $bundle->getConstraints()['EntityBundleExists']);
@@ -213,7 +213,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $form_state = new FormState();
     $form_state->setTriggeringElement(['#parents' => ['settings', 'entity_type']]);
     // The raw input, which is what a rebuild reads. See
-    // DataSurfaceHostTrait::surfaceRefinementInput() for why the
+    // SurfaceHostTrait::surfaceRefinementInput() for why the
     // validated values are the wrong half by then.
     $form_state->setUserInput(['settings' => ['entity_type' => 'node']]);
 
@@ -246,7 +246,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
 
     $this->assertSame(['user' => 'User'], array_map('strval', $form['bundle']['#options']));
     $this->assertSame('', $form['bundle']['#default_value']);
-    $this->assertSame('article', $form['bundle'][DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame('article', $form['bundle'][SurfaceWidgetBase::STALE_KEY]);
     // Refined against no bundle at all: open, with no options and the
     // description it was declared with.
     $this->assertSame('textfield', $form['field']['#type']);
@@ -259,7 +259,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $this->assertSame('article', $block->getConfiguration()['bundle']);
     // The builder names both, asked directly.
     $this->assertSame(['bundle', 'field'], $this->formBuilder()->discardedRefinementInput(
-      $block->getDataSurface(),
+      $block->getSurface(),
       $block->getConfiguration(),
       ['entity_type' => 'user', 'bundle' => 'article', 'field' => 'title'],
     ));
@@ -284,7 +284,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $block->setConfiguration(['entity_type' => 'node', 'bundle' => 'not-a-bundle']);
     $this->assertSame('not-a-bundle', $block->getConfiguration()['bundle']);
     $stale = $this->pipeline()
-      ->validate($block->getDataSurface(), $block->getConfiguration(), $block->getConfiguration())
+      ->validate($block->getSurface(), $block->getConfiguration(), $block->getConfiguration())
       ->stale();
     $this->assertCount(1, $stale);
     $this->assertSame('bundle', $stale[0]->key);
@@ -306,7 +306,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
    */
   public function testPipelineSubmitStoresValuesAndKeepsHostKeys(): void {
     $block = $this->createBlock(['label' => 'A title']);
-    $surface = $block->getDataSurface();
+    $surface = $block->getSurface();
 
     $result = $this->pipeline()->submit($surface, [
       'headline' => 'Latest articles',
@@ -331,8 +331,8 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $this->assertSame('title', $configuration['field']);
     // Host-owned keys came through the same write untouched.
     $this->assertSame('A title', $configuration['label']);
-    $this->assertSame('data_surface_demo', $configuration['id']);
-    $this->assertSame('data_surface_demo', $configuration['provider']);
+    $this->assertSame('surface_examples_plugins', $configuration['id']);
+    $this->assertSame('surface_examples_plugins', $configuration['provider']);
   }
 
   /**
@@ -392,7 +392,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $storage = new PluginConfigurationStorage($block);
 
     // The list's key under a grid is refused by name, on its own path.
-    $result = $this->pipeline()->submit($block->getDataSurface(), [
+    $result = $this->pipeline()->submit($block->getSurface(), [
       'presentation' => 'grid',
       'presentation_settings' => ['show_summary' => TRUE],
     ], $storage);
@@ -402,7 +402,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $this->assertSame('presentation_settings.show_summary belongs to the list variant, but presentation chose grid.', (string) $violation->message);
 
     // The grid's own rules judge its own keys.
-    $result = $this->pipeline()->submit($block->getDataSurface(), [
+    $result = $this->pipeline()->submit($block->getSurface(), [
       'presentation' => 'grid',
       'presentation_settings' => ['columns' => '9'],
     ], $storage);
@@ -410,7 +410,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
 
     // Moving to a grid and saying nothing else: the list's stored
     // settings do not fit, so the grid starts from its own defaults.
-    $result = $this->pipeline()->submit($block->getDataSurface(), ['presentation' => 'grid'], $storage);
+    $result = $this->pipeline()->submit($block->getSurface(), ['presentation' => 'grid'], $storage);
     $this->assertTrue($result->committed);
     $this->assertSame(['columns' => 3], $block->getConfiguration()['presentation_settings']);
   }
@@ -420,7 +420,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
    */
   public function testPipelineSubmitRefusesInvalidValues(): void {
     $block = $this->createBlock();
-    $surface = $block->getDataSurface();
+    $surface = $block->getSurface();
 
     $result = $this->pipeline()->submit($surface, [
       'headline' => 'Latest articles',
@@ -492,13 +492,13 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     // The form opens, and the bundle select comes up on its empty option
     // rather than quietly on some other bundle, with the stored bundle
     // stashed for an untouched save to keep.
-    $surface = $block->getDataSurface();
+    $surface = $block->getSurface();
     $element = $this->formBuilder()
       ->buildSurfaceForm($surface, $block->getConfiguration(), new FormState())['bundle'];
     $this->assertSame('', $element['#default_value']);
     $this->assertArrayNotHasKey('article', $element['#options']);
     $this->assertArrayHasKey('page', $element['#options']);
-    $this->assertSame('article', $element[DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame('article', $element[SurfaceWidgetBase::STALE_KEY]);
 
     // And the values validate, so an unrelated save goes through.
     $violations = $this->pipeline()->validate($surface, $block->getConfiguration(), $block->getConfiguration());
@@ -519,7 +519,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $stored = ['headline' => 'Featured', 'entity_type' => 'node', 'bundle' => 'article', 'limit' => 5];
     $block = $this->createBlock($stored);
 
-    $result = $this->pipeline()->submit($block->getDataSurface(), ['entity_type' => 'user', 'bundle' => 'article'], new PluginConfigurationStorage($block));
+    $result = $this->pipeline()->submit($block->getSurface(), ['entity_type' => 'user', 'bundle' => 'article'], new PluginConfigurationStorage($block));
     $this->assertFalse($result->committed);
     $this->assertSame(['bundle'], $result->violations->keys());
     $this->assertFalse($result->violations->hasStale());
@@ -577,7 +577,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
       'id' => 'demo',
       'theme' => 'stark',
       'region' => 'content',
-      'plugin' => 'data_surface_demo',
+      'plugin' => 'surface_examples_plugins',
       'settings' => ['label' => 'Demo', 'label_display' => '0'] + $stored,
     ]);
     $entity->save();
@@ -627,7 +627,7 @@ class DemoBlockTest extends DataSurfaceKernelTestBase {
     $this->assertSame('user', $settings['bundle']);
     // The structure itself accepts the pair: the refusal is the host's.
     $block = $this->createBlock($stored);
-    $surface = $block->getDataSurface();
+    $surface = $block->getSurface();
     $current = $block->getConfiguration();
     $values = $this->pipeline()->accept($surface, ['entity_type' => 'node', 'bundle' => 'article'], $current);
     $this->assertTrue($this->pipeline()->validate($surface, $values, $current)->isEmpty());

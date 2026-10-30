@@ -1,12 +1,13 @@
-# What Data Surface does
+# What Surface API does
 
 You describe once what a thing on your site accepts: each value it
 holds, its type, its label, its default and what it allows. From that
 one description the module makes the form, a Tool API tool for AI
-agents, the HTTP API and the React page. They all accept the same
-values, because they all read the same description.
+agents, the command line (`drush tool:run`), the HTTP API and the React
+page. They all accept the same values, because they all read the same
+description.
 
-![A module's settings, my_module.settings, described once with five values on the left; arrows to a form, a Tool API tool, an HTTP API and a React page on the right, each asking for the same five values](images/01-what-it-does.svg)
+![A module's settings, my_module.settings, described once with five values on the left; arrows to a form, a Tool API tool, the command line, an HTTP API and a React page on the right, each asking for the same five values](images/01-what-it-does.svg)
 
 ## The problem it removes
 
@@ -56,8 +57,6 @@ final class MySettingsResource implements ResourceInterface {
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 Each `add()` names one value: its name, its type, its label and its
 default. The calls chained after it say what the value allows. The two
 attributes above the class name the settings, `my_module.settings`, the
@@ -73,15 +72,16 @@ description. The module makes the rest from this class:
 | What you get | From the same five values |
 | --- | --- |
 | A form | a text field, a number field, a checkbox, an email field and a select |
-| A Tool API tool | `data_surface:my_module.settings:configure`, which an AI agent calls |
+| A Tool API tool | `surface:my_module.settings:configure`, which an AI agent calls |
+| The command line | `drush tool:run surface:my_module.settings:configure`, which runs the same tool |
 | An HTTP API | `PATCH /surface-api/my_module.settings`, with a JSON Schema of the values |
 | A React page | a form drawn in the browser from that JSON Schema |
 
 The form is served on a route: a routing entry that names the class and
 the way of asking for it ([Operations](09-operations.md) shows one).
 
-The tool, the HTTP API and the React page each come from a submodule
-you install when you want it. A later page lists them
+The tool, the command line, the HTTP API and the React page each come
+from a submodule you install when you want it. A later page lists them
 ([Doors](12-doors.md)).
 
 A value the description does not allow is refused at every one of them,

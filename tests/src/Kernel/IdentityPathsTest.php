@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -27,9 +27,9 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * @see docs/decisions.md#a-parameter-is-identity-the-caller-knows
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class IdentityPathsTest extends DataSurfaceKernelTestBase {
+class IdentityPathsTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
   use UserCreationTrait;
@@ -45,13 +45,13 @@ class IdentityPathsTest extends DataSurfaceKernelTestBase {
     'address',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_react',
-    'data_surface_openapi',
-    'data_surface_address',
-    'data_surface_tool',
-    'data_surface_resource_test',
-    'data_surface_paths_test',
+    'surface',
+    'surface_react',
+    'surface_openapi',
+    'surface_examples_address',
+    'surface_examples_field',
+    'surface_resource_test',
+    'surface_paths_test',
   ];
 
   /**
@@ -87,8 +87,8 @@ class IdentityPathsTest extends DataSurfaceKernelTestBase {
    *   The path, and the query its other parameters are in.
    */
   protected function template(string $resource, string $operation, bool $schema = FALSE): string {
-    $registry = $this->container->get('data_surface.resource_registry');
-    $paths = $this->container->get('data_surface_react.served_paths');
+    $registry = $this->container->get('surface.resource_registry');
+    $paths = $this->container->get('surface_react.served_paths');
     $definition = $registry->getDefinition($resource);
     $found = $registry->getOperation($definition->name(), $operation);
     [$path] = $paths->template($definition, $found, !$paths->readsPlain($definition, $found), $schema, TRUE);
@@ -117,8 +117,8 @@ class IdentityPathsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('/surface-api/paths_test.shelf/{id}', $this->template('paths_test.shelf', 'read'));
     $this->assertSame('/surface-api/paths_test.shelf:create', $this->template('paths_test.shelf', 'create'));
 
-    $registry = $this->container->get('data_surface.resource_registry');
-    $paths = $this->container->get('data_surface_react.served_paths');
+    $registry = $this->container->get('surface.resource_registry');
+    $paths = $this->container->get('surface_react.served_paths');
     $field = $registry->getDefinition('field.instance');
     $operations = $registry->getOperations($field->name());
     $this->assertSame(['POST', FALSE], $paths->writes($field, $operations['create']), 'A create is POSTed to the parent it names.');
@@ -168,7 +168,7 @@ class IdentityPathsTest extends DataSurfaceKernelTestBase {
    * Tests the OpenAPI document writes the identity as path parameters.
    */
   public function testTheOpenApiDocumentWritesTheRule(): void {
-    $document = $this->container->get('data_surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document;
+    $document = $this->container->get('surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document;
     $document = json_decode((string) json_encode($document, JSON_THROW_ON_ERROR), TRUE);
     $parameters = static function (array $call): array {
       $own = [];
@@ -210,7 +210,7 @@ class IdentityPathsTest extends DataSurfaceKernelTestBase {
    * so the fetch answers once the parameters are filled in.
    */
   public function testToolFetchCarriesTheParameters(): void {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:field.instance:create');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:field.instance:create');
     $tool->setInputValue('entity_type', 'entity_test');
     $tool->setInputValue('bundle', 'entity_test');
     $settings = $tool->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['settings'];

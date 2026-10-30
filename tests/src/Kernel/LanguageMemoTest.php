@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\ResourceBuild\Resources;
-use Drupal\data_surface\SettledCacheability;
-use Drupal\data_surface_examples\Resource\SpotlightResource;
+use Drupal\surface\ResourceBuild\Resources;
+use Drupal\surface\SettledCacheability;
+use Drupal\surface_examples\Resource\SpotlightResource;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -25,9 +25,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Decision: see
  * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class LanguageMemoTest extends DataSurfaceKernelTestBase {
+class LanguageMemoTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -41,9 +41,8 @@ class LanguageMemoTest extends DataSurfaceKernelTestBase {
     'language',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_examples',
   ];
 
   /**
@@ -53,7 +52,7 @@ class LanguageMemoTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('configurable_language');
-    $this->installConfig(['language', 'data_surface_examples']);
+    $this->installConfig(['language', 'surface_examples']);
     ConfigurableLanguage::createFromLangcode('fr')->save();
     $this->setUpCurrentUser(admin: TRUE);
   }
@@ -61,11 +60,11 @@ class LanguageMemoTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources
+   * @return \Drupal\surface\ResourceBuild\Resources
    *   The service.
    */
   protected function resources(): Resources {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     assert($resources instanceof Resources);
     return $resources;
   }
@@ -82,7 +81,7 @@ class LanguageMemoTest extends DataSurfaceKernelTestBase {
     // Within the site's list limit the full schema states every variant,
     // and a def many slots hold is built once.
     $before = $resources->buildCounts()['reused'];
-    $this->container->get('data_surface.contract_emitter')->emitFull($built, 'event.spotlight', 'configure', 'Configure');
+    $this->container->get('surface.contract_emitter')->emitFull($built, 'event.spotlight', 'configure', 'Configure');
     $this->assertContains('languages:language_interface', SettledCacheability::of($built)->getCacheContexts());
     $this->assertGreaterThan($before, $resources->buildCounts()['reused'], 'Read structures are answered from the memo.');
     $this->assertSame($built, $resources->build(SpotlightResource::class, $context), 'The build itself is kept.');

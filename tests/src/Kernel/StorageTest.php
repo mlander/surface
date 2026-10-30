@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\Storage\CompositeStorage;
-use Drupal\data_surface\Pipeline\Storage\StateStorage;
-use Drupal\data_surface_test\RecordingStorage;
+use Drupal\surface\Surface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Pipeline\Storage\CompositeStorage;
+use Drupal\surface\Pipeline\Storage\StateStorage;
+use Drupal\surface_test\RecordingStorage;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -23,27 +23,27 @@ use PHPUnit\Framework\Attributes\Group;
  * without writing, and it writes only when told to. The config entity
  * storage is a resource's storage now (ConfigEntityStorageTest).
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class StorageTest extends DataSurfaceKernelTestBase {
+class StorageTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
   protected static $modules = [
     'system',
-    'data_surface',
+    'surface',
   ];
 
   /**
    * The state key the state storage writes to.
    */
-  protected const STATE_KEY = 'data_surface.storage_test';
+  protected const STATE_KEY = 'surface.storage_test';
 
   /**
    * The state key a second state storage writes to.
    */
-  protected const OTHER_STATE_KEY = 'data_surface.storage_test_other';
+  protected const OTHER_STATE_KEY = 'surface.storage_test_other';
 
   /**
    * {@inheritdoc}
@@ -58,14 +58,14 @@ class StorageTest extends DataSurfaceKernelTestBase {
    *
    * A site name and a slogan: two keys, for two destinations.
    */
-  protected function siteSurface(): DataSurfaceInterface {
+  protected function siteSurface(): SurfaceInterface {
     $definitions = [
       'name' => DataDefinition::create('string')->setLabel('Site name')->setRequired(TRUE),
       'slogan' => DataDefinition::create('string')->setLabel('Slogan'),
     ];
     DefinitionMetadata::setDefaultValue($definitions['name'], 'Drupal');
     DefinitionMetadata::setDefaultValue($definitions['slogan'], '');
-    return new DataSurface(DefinitionMap::fromArrays(definitions: $definitions));
+    return new Surface(DefinitionMap::fromArrays(definitions: $definitions));
   }
 
   /**
@@ -197,7 +197,7 @@ class StorageTest extends DataSurfaceKernelTestBase {
    * @param \ArrayObject<int, string> $log
    *   The shared log every recording storage appends to.
    *
-   * @return \Drupal\data_surface_test\RecordingStorage
+   * @return \Drupal\surface_test\RecordingStorage
    *   The storage.
    */
   protected function recordingStorage(string $name, \ArrayObject $log): RecordingStorage {

@@ -2,26 +2,26 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Pipeline\StorageViolationsException;
-use Drupal\data_surface\Pipeline\ViolationSummary;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface\ResourceBuild\StorageAdapter;
-use Drupal\data_surface_demo_extras\NodeTypeReviewSettings;
-use Drupal\data_surface_demo_extras\Alter\NodeTypeAlter;
-use Drupal\data_surface_demo_node_type\Access\NodeTypeAccess;
-use Drupal\data_surface_demo_node_type\Hook\NodeTypeResourceHooks;
-use Drupal\data_surface_demo_node_type\Resource\NodeTypeResource;
-use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\ViolationSummary;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\ResourceBuild\StorageAdapter;
+use Drupal\surface_examples_extras\NodeTypeReviewSettings;
+use Drupal\surface_examples_extras\Alter\NodeTypeAlter;
+use Drupal\surface_examples_node_type\Access\NodeTypeAccess;
+use Drupal\surface_examples_node_type\Hook\NodeTypeResourceHooks;
+use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
+use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodeTypeInterface;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -39,9 +39,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * The extras module's review settings arrive through NodeTypeAlter, and
  * are stored as seconds through the storage layout it hands the resource.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
+class NodeTypeResourceTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -56,10 +56,10 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
     'text',
     'node',
     'block',
-    'data_surface',
-    'data_surface_demo',
-    'data_surface_demo_extras',
-    'data_surface_demo_node_type',
+    'surface',
+    'surface_examples_plugins',
+    'surface_examples_extras',
+    'surface_examples_node_type',
   ];
 
   /**
@@ -75,20 +75,20 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
    * Builds the resource in a context, and its storage.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    *
-   * @return array{0: \Drupal\data_surface\DataSurfaceInterface, 1: \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface}
+   * @return array{0: \Drupal\surface\SurfaceInterface, 1: \Drupal\surface\Pipeline\SurfaceStorageInterface}
    *   The built resource and its composed storage.
    */
   protected function served(OperationContext $context): array {
@@ -99,19 +99,19 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
   /**
    * Submits values to a built resource and its storage.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The built resource.
-   * @param \Drupal\data_surface\Pipeline\DataSurfaceStorageInterface $storage
+   * @param \Drupal\surface\Pipeline\SurfaceStorageInterface $storage
    *   The storage.
    * @param array $values
    *   The values.
    * @param bool $dry_run
    *   Whether to stop after prepare.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   * @return \Drupal\surface\Pipeline\SurfaceResult
    *   The result.
    */
-  protected function submit(DataSurfaceInterface $surface, DataSurfaceStorageInterface $storage, array $values, bool $dry_run = FALSE) {
+  protected function submit(SurfaceInterface $surface, SurfaceStorageInterface $storage, array $values, bool $dry_run = FALSE) {
     return $this->pipeline()->submit($surface, $values, $storage, $dry_run);
   }
 
@@ -151,12 +151,12 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
    * Tests what discovery reads off the resource: identity, storage, access.
    */
   public function testTheResourceIsDiscovered(): void {
-    $definition = $this->container->get('data_surface.resource_registry')->getDefinition('node.type');
+    $definition = $this->container->get('surface.resource_registry')->getDefinition('node.type');
     $this->assertSame(NodeTypeResource::class, $definition->class);
     $this->assertSame(['type'], $definition->identity);
     $this->assertSame(NodeTypeStorage::class, $definition->storage);
     $this->assertSame(NodeTypeAccess::class, $definition->access);
-    $operations = $this->container->get('data_surface.resource_registry')->getOperations(NodeTypeResource::class);
+    $operations = $this->container->get('surface.resource_registry')->getOperations(NodeTypeResource::class);
     $this->assertSame(['create', 'update'], array_keys($operations));
     $this->assertSame(NodeTypeResource::PERMISSION, $operations['update']->permission);
     $this->assertSame([NodeTypeAlter::class], array_map(static fn ($alter): string => $alter->class, $definition->alters));
@@ -170,7 +170,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($surface->isLocked('type'));
     // The stock uniqueness the build adds to a create's identity, asking
     // the node type storage.
-    $unique = $surface->getDefinition('type')->getConstraints()['DataSurfaceUnique'] ?? NULL;
+    $unique = $surface->getDefinition('type')->getConstraints()['SurfaceUnique'] ?? NULL;
     $this->assertIsArray($unique);
     $this->assertSame(NodeTypeStorage::class, $unique['storage']);
     $this->assertSame('type', $unique['key']);
@@ -230,7 +230,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($surface->isLocked('type'));
     $this->assertSame('article', $surface->getDefault('type'));
     // No uniqueness check against yourself on edit.
-    $this->assertArrayNotHasKey('DataSurfaceUnique', $surface->getDefinition('type')->getConstraints());
+    $this->assertArrayNotHasKey('SurfaceUnique', $surface->getDefinition('type')->getConstraints());
 
     // Current values come from the storage, not from the built resource.
     $stored = $storage->load($surface);
@@ -240,7 +240,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
 
     // The generated form renders the locked value, disabled, and a
     // tampered submit cannot move it.
-    $form_builder = $this->container->get('data_surface.form_builder');
+    $form_builder = $this->container->get('surface.form_builder');
     $form = $form_builder->buildSurfaceForm($surface, array_replace($surface->getDefaultValues(), $stored), new FormState());
     $this->assertTrue($form['type']['#disabled']);
     $this->assertSame('article', $form['type']['#default_value']);
@@ -413,7 +413,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
    * without knowing the extras module exists.
    */
   public function testAlterStoresTheReviewSettingsInTheirOwnLayout(): void {
-    $extras = 'data_surface_demo_extras';
+    $extras = 'surface_examples_extras';
     [$surface, $storage] = $this->served($this->resources()->operation(NodeTypeResource::class, 'create'));
     $mount = $surface->getDefinition('third_party_settings');
     $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $mount);
@@ -437,7 +437,7 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
       }
       return NULL;
     };
-    $tags = $find(json_decode((string) json_encode($this->container->get('data_surface.contract_emitter')->emitFull($surface, 'node.type')->document['schema']), TRUE));
+    $tags = $find(json_decode((string) json_encode($this->container->get('surface.contract_emitter')->emitFull($surface, 'node.type')->document['schema']), TRUE));
     $this->assertTrue($tags['uniqueItems'] ?? NULL);
     $this->assertArrayNotHasKey('checkedOnServer', $tags['x-surface'] ?? []);
 
@@ -498,8 +498,8 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
       $edit_access = $this->resources()->access(NodeTypeResource::class, $edit, $account);
       $this->assertSame($allowed, $add_access->isAllowed(), $who . ' on add.');
       $this->assertSame($allowed, $edit_access->isAllowed(), $who . ' on edit.');
-      $this->assertSame($allowed, $access_manager->checkNamedRoute('data_surface_demo_node_type.create', [], $account), $who . ' on the create route.');
-      $this->assertSame($allowed, $access_manager->checkNamedRoute('data_surface_demo_node_type.update', ['type' => 'article'], $account), $who . ' on the update route.');
+      $this->assertSame($allowed, $access_manager->checkNamedRoute('surface_examples_node_type.create', [], $account), $who . ' on the create route.');
+      $this->assertSame($allowed, $access_manager->checkNamedRoute('surface_examples_node_type.update', ['type' => 'article'], $account), $who . ' on the update route.');
       $this->assertContains('user.permissions', CacheableMetadata::createFromObject($edit_access)->getCacheContexts());
     }
 
@@ -521,11 +521,11 @@ class NodeTypeResourceTest extends DataSurfaceKernelTestBase {
 
     $this->setUpCurrentUser([], ['administer content types']);
     $arguments = [$node_type, new CacheableMetadata()];
-    $this->assertSame([], $module_handler->invoke('data_surface_demo_node_type', 'entity_operation', $arguments));
+    $this->assertSame([], $module_handler->invoke('surface_examples_node_type', 'entity_operation', $arguments));
 
     $this->setUpCurrentUser([], ['administer content types', NodeTypeResourceHooks::PERMISSION]);
     $cacheability = new CacheableMetadata();
-    $operations = $module_handler->invoke('data_surface_demo_node_type', 'entity_operation', [$node_type, $cacheability]);
+    $operations = $module_handler->invoke('surface_examples_node_type', 'entity_operation', [$node_type, $cacheability]);
     $this->assertSame('Edit (resource)', (string) $operations['surface_edit']['title']);
     $this->assertSame('/admin/structure/types/manage/article/surface-edit', $operations['surface_edit']['url']->toString());
     $this->assertContains('user.permissions', $cacheability->getCacheContexts());

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Component\DependencyInjection\ContainerInterface as DrupalContainerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -83,7 +83,7 @@ final class PipelineGuard implements DrupalContainerInterface {
    * Decision: see docs/decisions.md#a-machine-name-is-a-computed-identity.
    */
   public const COMPUTE_ALLOWED = [
-    'Drupal\data_surface\Compute\MachineName' => ['transliteration'],
+    'Drupal\surface\Compute\MachineName' => ['transliteration'],
   ];
 
   /**

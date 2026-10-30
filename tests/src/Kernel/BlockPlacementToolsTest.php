@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\block\Entity\Block;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolOperation;
 use PHPUnit\Framework\Attributes\Group;
@@ -23,9 +23,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * machine name taken by name, and values sent to a removal for what they
  * are.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
+class BlockPlacementToolsTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -40,17 +40,16 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_component_block',
-    'data_surface_block',
+    'surface',
+    'surface_examples',
+    'surface_examples_component_block',
+    'surface_examples_block',
   ];
 
   /**
    * The tools, by operation.
    */
-  protected const TOOL = 'data_surface:block.placement:';
+  protected const TOOL = 'surface:block.placement:';
 
   /**
    * The hero the agent places.
@@ -58,9 +57,9 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
   protected const HERO = [
     'label' => 'Doors',
     'id' => 'doors_hero',
-    'plugin' => 'data_surface_component',
+    'plugin' => 'surface_component',
     'settings' => [
-      'component' => 'data_surface_examples:hero',
+      'component' => 'surface_examples:hero',
       'props' => ['title' => 'Doors open at half past six', 'align' => 'start'],
     ],
     'theme' => 'stark',
@@ -111,8 +110,8 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
    */
   public function testTheToolsAreListed(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    $this->assertFalse($tools->hasDefinition('data_surface:block.data_surface_component:configure'), 'The plugin\'s structure is held by its host: no tool.');
-    $this->assertFalse($tools->hasDefinition('data_surface:block.placed_component:configure'), 'The stop-gap resource is gone.');
+    $this->assertFalse($tools->hasDefinition('surface:block.surface_component:configure'), 'The plugin\'s structure is held by its host: no tool.');
+    $this->assertFalse($tools->hasDefinition('surface:block.placed_component:configure'), 'The stop-gap resource is gone.');
     $this->assertFalse($tools->hasDefinition(self::TOOL . 'delete:read'), 'A delete has nothing to read before.');
     $expected = [
       'create' => ['Place a block', ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
@@ -138,7 +137,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
 
     // The listing: the plugins offered, the variants flattened.
     $listed = $this->container->get('tool.definition_serializer')->normalizeInputSchema($tools->createInstance(self::TOOL . 'create'));
-    $this->assertContains('data_surface_component', $listed['properties']['values']['properties']['plugin']['enum']);
+    $this->assertContains('surface_component', $listed['properties']['values']['properties']['plugin']['enum']);
     $this->assertContains('system_branding_block', $listed['properties']['values']['properties']['plugin']['enum']);
     $this->assertSame(['label', 'id', 'plugin', 'theme', 'region'], $listed['properties']['values']['required']);
   }
@@ -166,16 +165,16 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     $block = $this->container->get('entity_type.manager')->getStorage('block')->loadUnchanged('doors_hero');
     $this->assertSame('stark', $block->getTheme());
     $this->assertSame('sidebar_first', $block->getRegion());
-    $this->assertSame('data_surface_component', $block->getPluginId());
+    $this->assertSame('surface_component', $block->getPluginId());
     $settings = $block->get('settings');
-    $this->assertSame('data_surface_component', $settings['id']);
+    $this->assertSame('surface_component', $settings['id']);
     $this->assertSame('Doors', $settings['label']);
     $this->assertSame('visible', $settings['label_display']);
-    $this->assertSame('data_surface_component_block', $settings['provider']);
-    $this->assertSame('data_surface_examples:hero', $block->get('settings')['component']);
+    $this->assertSame('surface_examples_component_block', $settings['provider']);
+    $this->assertSame('surface_examples:hero', $block->get('settings')['component']);
     $this->assertSame(['request_path' => ['id' => 'request_path', 'negate' => FALSE, 'pages' => '/events']], $block->get('visibility'));
     $dependencies = [
-      'module' => ['data_surface_component_block', 'data_surface_examples', 'system'],
+      'module' => ['surface_examples', 'surface_examples_component_block', 'system'],
       'theme' => ['stark'],
     ];
     $this->assertSame($dependencies, $block->getDependencies(), 'Its theme, its plugin\'s, its component\'s and its condition\'s.');
@@ -198,15 +197,15 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     $section = [
       'label' => 'Tonight',
       'id' => 'tonight',
-      'plugin' => 'data_surface_component',
+      'plugin' => 'surface_component',
       'settings' => [
-        'component' => 'data_surface_examples:section',
+        'component' => 'surface_examples:section',
         'props' => ['heading' => 'Tonight'],
         'slots' => [
           'content' => [
             'kind' => 'component',
             'component' => [
-              'component' => 'data_surface_examples:card',
+              'component' => 'surface_examples:card',
               'props' => ['heading' => 'Talks start at seven'],
               'slots' => ['body' => ['kind' => 'text', 'text' => 'In the main hall.']],
             ],
@@ -219,7 +218,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     $placed = $this->call('create', ['values' => $section]);
     $this->assertTrue($placed['committed'], $placed['message'] . json_encode($placed['violations'] ?? []));
     $card = [
-      'component' => 'data_surface_examples:card',
+      'component' => 'surface_examples:card',
       'props' => ['heading' => 'Talks start at seven', 'tone' => 'plain', 'link' => NULL],
       'slots' => ['body' => ['kind' => 'text', 'text' => 'In the main hall.']],
     ];
@@ -236,26 +235,26 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     // naming the one it expects; and a call to action in the section,
     // whose content expects a tag the call to action does not carry.
     $hero = self::HERO;
-    $inside = ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Inside']];
+    $inside = ['component' => 'surface_examples:hero', 'props' => ['title' => 'Inside']];
     $hero['settings']['slots'] = ['actions' => ['kind' => 'component', 'component' => $inside]];
     $this->assertSame([
       [
         'path' => '/settings/slots/actions/component/component',
         'code' => 'no_such_choice',
-        'message' => 'The value you selected is not a valid choice. Choose data_surface_examples:call_to_action (Call to action).',
+        'message' => 'The value you selected is not a valid choice. Choose surface_examples:call_to_action (Call to action).',
       ],
     ], $this->call('create', ['values' => $hero, 'dry_run' => TRUE])['violations']);
     $cta = [
-      'component' => 'data_surface_examples:call_to_action',
+      'component' => 'surface_examples:call_to_action',
       'props' => ['text' => 'Go', 'url' => 'https://example.com'],
     ];
     $settings = [
-      'component' => 'data_surface_examples:section',
+      'component' => 'surface_examples:section',
       'slots' => ['content' => ['kind' => 'component', 'component' => $cta]],
     ];
     $wrong_tag = $this->call('update', ['id' => 'tonight', 'values' => ['settings' => $settings], 'dry_run' => TRUE]);
     $this->assertSame('/settings/slots/content/component/component', $wrong_tag['violations'][0]['path']);
-    $this->assertSame('The value you selected is not a valid choice. Choose data_surface_examples:card (Card) or data_surface_examples:hero (Hero).', $wrong_tag['violations'][0]['message']);
+    $this->assertSame('The value you selected is not a valid choice. Choose surface_examples:card (Card) or surface_examples:hero (Hero).', $wrong_tag['violations'][0]['message']);
   }
 
   /**
@@ -314,7 +313,7 @@ class BlockPlacementToolsTest extends DataSurfaceKernelTestBase {
     $this->assertSame([['id' => 'request_path', 'negate' => FALSE, 'settings' => ['pages' => '/events']]], $read['values']['visibility']);
 
     $centered = [
-      'component' => 'data_surface_examples:hero',
+      'component' => 'surface_examples:hero',
       'props' => ['title' => 'Doors open at six', 'align' => 'center'],
     ];
     $rehearsed = $this->call('update', ['id' => 'doors_hero', 'values' => ['settings' => $centered], 'dry_run' => TRUE]);

@@ -2,28 +2,28 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Resource\SiteList;
-use Drupal\data_surface\ResourceBuild\ResourceBlueprint;
-use Drupal\data_surface_resource_test\Keys\Broken\DottedKeys;
-use Drupal\data_surface_resource_test\Keys\Broken\SchemaKeys;
-use Drupal\data_surface_resource_test\Keys\WorkshopBenches;
-use Drupal\data_surface_resource_test\Resource\Workshop\WorkshopResource;
-use Drupal\data_surface_resource_test\Shape\Sku;
-use Drupal\data_surface_resource_test\Structure\Broken\AccountKeysStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\DefaultedEntryStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\UncacheableKeysStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\UnwiredEntryStructure;
-use Drupal\data_surface_resource_test\Structure\Workshop\BenchStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
-use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Resource\SiteList;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface_resource_test\Keys\Broken\DottedKeys;
+use Drupal\surface_resource_test\Keys\Broken\SchemaKeys;
+use Drupal\surface_resource_test\Keys\WorkshopBenches;
+use Drupal\surface_resource_test\Resource\Workshop\WorkshopResource;
+use Drupal\surface_resource_test\Shape\Sku;
+use Drupal\surface_resource_test\Structure\Broken\AccountKeysStructure;
+use Drupal\surface_resource_test\Structure\Broken\DefaultedEntryStructure;
+use Drupal\surface_resource_test\Structure\Broken\UncacheableKeysStructure;
+use Drupal\surface_resource_test\Structure\Broken\UnwiredEntryStructure;
+use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\MapInputDefinition;
@@ -43,10 +43,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/resources.md#keys-that-come-from-the-site
  * @see docs/decisions.md#keys-that-come-from-the-site
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class KeysFromSiteTest extends DataSurfaceKernelTestBase {
+class KeysFromSiteTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use StaticRefinerAgreementTrait;
@@ -60,9 +60,8 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -90,31 +89,31 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
   }
 
   /**
    * Builds the workshop in its one operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built workshop.
    */
-  protected function workshop(): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->buildOperation(WorkshopResource::class, 'configure');
+  protected function workshop(): SurfaceInterface {
+    return $this->container->get('surface.resources')->buildOperation(WorkshopResource::class, 'configure');
   }
 
   /**
    * Reads what the workshop's storage holds.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The built workshop.
    *
    * @return array
    *   The stored values.
    */
-  protected function stored(DataSurfaceInterface $built): array {
-    $resources = $this->container->get('data_surface.resources');
+  protected function stored(SurfaceInterface $built): array {
+    $resources = $this->container->get('surface.resources');
     return $resources->storage(WorkshopResource::class, $resources->operation(WorkshopResource::class, 'configure'), $built)->load($built);
   }
 
@@ -192,7 +191,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
 
     // Not refused, and the caller is told, once per key: the result's
     // notes, and the tool's message after its own.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $storage = $resources->storage(WorkshopResource::class, $resources->operation(WorkshopResource::class, 'configure'), $workshop);
     $notes = static fn ($result): array => array_combine(
       array_map(static fn ($note): string => $note->fullPath(), $result->notes),
@@ -215,7 +214,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
     ], $storage, dry_run: TRUE);
     $this->assertSame([], $result->notes);
 
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:resource_test.workshop:configure');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.workshop:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['lights' => ['press' => TRUE]]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
@@ -227,7 +226,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
         'message' => 'Drill press is locked and kept as stored; the value sent was not taken.',
       ],
     ], $tool->getResult()->getContextValues()['notes'] ?? NULL);
-    $this->assertFalse($this->config('data_surface_resource_test.workshop')->get('lights.press'));
+    $this->assertFalse($this->config('surface_resource_test.workshop')->get('lights.press'));
   }
 
   /**
@@ -265,7 +264,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
   public function testTheProvidersCacheabilityReachesEveryDocument(): void {
     $workshop = $this->workshop();
     $this->assertContains(self::TAG, $workshop->getCacheTags());
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $this->assertContains(self::TAG, $emitter->emitFull($workshop, 'resource_test.workshop')->getCacheTags());
     $this->assertContains(self::TAG, $emitter->emit($workshop, $this->stored($workshop), 'resource_test.workshop')->getCacheTags());
 
@@ -281,7 +280,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
    */
   public function testBothDocuments(): void {
     $workshop = $this->workshop();
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $full = $this->decoded($emitter->emitFull($workshop, 'resource_test.workshop', 'configure', 'Configure the workshop')->document);
     $this->assertSame($this->expected('workshop.full.json'), $full);
     $these = $this->decoded($emitter->emit($workshop, $this->stored($workshop), 'resource_test.workshop', 'configure', 'Configure the workshop')->document);
@@ -305,7 +304,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
    */
   public function testTools(): void {
     $manager = $this->container->get('plugin.manager.tool');
-    $values = $manager->getDefinition('data_surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES);
+    $values = $manager->getDefinition('surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $properties = $values->getPropertyDefinitions();
     $this->assertSame(['closed', 'benches', 'lights', 'codes'], array_keys($properties));
@@ -321,16 +320,16 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
     // A bench added is in the listing at once: the listing is cleared by
     // the tag of the configuration it was read from.
     $this->addBench('bench', 'Workbench');
-    $properties = $manager->getDefinition('data_surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
+    $properties = $manager->getDefinition('surface:resource_test.workshop:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
     $this->assertSame(['lathe', 'press', 'saw', 'bench'], array_keys($properties['lights']->getPropertyDefinitions()));
-    $this->assertContains(self::TAG, $this->container->get('state')->get('data_surface_tool.listed_cache_tags'));
+    $this->assertContains(self::TAG, $this->container->get('state')->get('surface.tool_listed_cache_tags'));
 
-    $read = $manager->createInstance('data_surface:resource_test.workshop:configure:read');
+    $read = $manager->createInstance('surface:resource_test.workshop:configure:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::WORKSHOP, $read->getResult()->getContextValues()[OperationInputs::VALUES] ?? NULL);
 
-    $tool = $manager->createInstance('data_surface:resource_test.workshop:configure');
+    $tool = $manager->createInstance('surface:resource_test.workshop:configure');
     $tool->setInputValue(OperationInputs::VALUES, [
       'benches' => ['saw' => ['enabled' => FALSE, 'hours' => 3]] + self::WORKSHOP['benches'],
     ]);
@@ -338,14 +337,14 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('/benches/saw/hours', strip_tags((string) $tool->getResult()->getMessage()));
 
-    $tool = $manager->createInstance('data_surface:resource_test.workshop:configure');
+    $tool = $manager->createInstance('surface:resource_test.workshop:configure');
     $tool->setInputValue(OperationInputs::VALUES, [
       'lights' => ['lathe' => FALSE, 'bench' => TRUE],
       'codes' => ['saw' => 'BS3'],
     ]);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $stored = $this->config('data_surface_resource_test.workshop');
+    $stored = $this->config('surface_resource_test.workshop');
     $this->assertSame(['lathe' => FALSE, 'press' => FALSE, 'saw' => FALSE, 'bench' => TRUE], $stored->get('lights'));
     $this->assertSame('BS3', $stored->get('codes.saw'));
   }
@@ -355,8 +354,8 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
    */
   public function testUncacheableProviderIsRefused(): void {
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('Drupal\data_surface_resource_test\Keys\UncacheableKeys lists the keys of "moments" on resource_test.broken.uncacheable_keys with max-age 0. Keys from the site must be cacheable');
-    $this->container->get('data_surface.resources')->build(UncacheableKeysStructure::class, new OperationContext('configure'));
+    $this->expectExceptionMessage('Drupal\surface_resource_test\Keys\UncacheableKeys lists the keys of "moments" on resource_test.broken.uncacheable_keys with max-age 0. Keys from the site must be cacheable');
+    $this->container->get('surface.resources')->build(UncacheableKeysStructure::class, new OperationContext('configure'));
   }
 
   /**
@@ -365,7 +364,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
   public function testProviderVaryingByTheAccountIsRefused(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('varying by user.permissions. Which keys there are is the site\'s, the same for every account');
-    $this->container->get('data_surface.resources')->build(AccountKeysStructure::class, new OperationContext('configure'));
+    $this->container->get('surface.resources')->build(AccountKeysStructure::class, new OperationContext('configure'));
   }
 
   /**
@@ -374,7 +373,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
   public function testEntryOfStructureSaysNoDefault(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('says what the "first" entry of "benches" on resource_test.broken.defaulted_entry starts from, and each entry there is resource_test.workshop.bench, which starts from its own defaults.');
-    $this->container->get('data_surface.resources')->build(DefaultedEntryStructure::class, new OperationContext('configure'));
+    $this->container->get('surface.resources')->build(DefaultedEntryStructure::class, new OperationContext('configure'));
   }
 
   /**
@@ -383,30 +382,30 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
   public function testEntryRequiresItsPortWired(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('resource_test.broken.unwired_entry attaches resource_test.seating at every entry of "seats" without wiring the "layout" port it requires: attachEach(\'seats\', ..., reads: [\'layout\' => \'<map>\']) names a sibling map from');
-    $this->container->get('data_surface.resources')->build(UnwiredEntryStructure::class, new OperationContext('configure'));
+    $this->container->get('surface.resources')->build(UnwiredEntryStructure::class, new OperationContext('configure'));
   }
 
   /**
    * Tests what the blueprint refuses as it is declared.
    */
   public function testTheBlueprintRefuses(): void {
-    $blueprint = fn (): ResourceBlueprint => new ResourceBlueprint(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'));
+    $blueprint = fn (): ResourceBlueprint => new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
     $refusals = [
       'a structure where a value belongs' => [
         static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', BenchStructure::class, from: WorkshopBenches::class),
-        'addEach("rows") was handed Drupal\data_surface_resource_test\Structure\Workshop\BenchStructure, a resource or structure: an entry that is a group of keys is a child, attachEach(\'rows\', ...).',
+        'addEach("rows") was handed Drupal\surface_resource_test\Structure\Workshop\BenchStructure, a resource or structure: an entry that is a group of keys is a child, attachEach(\'rows\', ...).',
       ],
       'a class that is no shape' => [
         static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', WorkshopBenches::class, from: WorkshopBenches::class),
-        'addEach("rows") was handed Drupal\data_surface_resource_test\Keys\WorkshopBenches, which is no typed data type and no shape',
+        'addEach("rows") was handed Drupal\surface_resource_test\Keys\WorkshopBenches, which is no typed data type and no shape',
       ],
       'a shape where a child belongs' => [
         static fn (ResourceBlueprint $inputs) => $inputs->attachEach('rows', Sku::class, from: WorkshopBenches::class),
-        'attachEach("rows") was handed Drupal\data_surface_resource_test\Shape\Sku, a shape',
+        'attachEach("rows") was handed Drupal\surface_resource_test\Shape\Sku, a shape',
       ],
       'a provider that is none' => [
         static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', 'boolean', from: BenchStructure::class),
-        'addEach("rows") names Drupal\data_surface_resource_test\Structure\Workshop\BenchStructure as where its keys come from, which does not implement Drupal\data_surface\Resource\SiteListInterface',
+        'addEach("rows") names Drupal\surface_resource_test\Structure\Workshop\BenchStructure as where its keys come from, which does not implement Drupal\surface\Resource\SiteListInterface',
       ],
       'a key taken' => [
         static function (ResourceBlueprint $inputs) {
@@ -425,7 +424,7 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
         $this->assertStringContainsString($message, $e->getMessage(), $label);
       }
     }
-    $outputs = new ResourceBlueprint(new DataSurfaceBuilder(), $this->container->get('typed_data_manager'), TRUE);
+    $outputs = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'), TRUE);
     try {
       $outputs->addEach('rows', 'boolean', from: WorkshopBenches::class);
       $this->fail('Outputs hold no keys from the site.');
@@ -462,10 +461,10 @@ class KeysFromSiteTest extends DataSurfaceKernelTestBase {
    */
   public function testEntriesNoKeyCanBeAreRefused(): void {
     // The keys from the site are the attach phase's to read.
-    $build = $this->container->get('data_surface.resources');
+    $build = $this->container->get('surface.resources');
     $resources = (new \ReflectionProperty($build, 'attaching'))->getValue($build);
     $keysFrom = new \ReflectionMethod($resources, 'keysFrom');
-    $workshop = $this->container->get('data_surface.resource_registry')->getDefinition(WorkshopResource::class);
+    $workshop = $this->container->get('surface.resource_registry')->getDefinition(WorkshopResource::class);
     $refusals = [
       DottedKeys::class => DottedKeys::class . ' lists "lathe.left" for the keys of "lights" on resource_test.workshop. "lathe.left" cannot be the id of an entry: it becomes a key, which is not empty and holds no dot or colon.',
       SchemaKeys::class => SchemaKeys::class . ' lists "lathe" for the keys of "lights" on resource_test.workshop with a schema, which a key from the site does not read: each entry is the type or structure the blueprint names at "lights", with an id, a label, and optionally a start and a lock.',

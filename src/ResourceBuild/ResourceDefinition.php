@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
-use Drupal\data_surface\Resource\DefinesOutputsInterface;
-use Drupal\data_surface\Resource\ResourceCallable;
+use Drupal\surface\Resource\DefinesOutputsInterface;
+use Drupal\surface\Resource\ResourceCallable;
 
 /**
  * One resource or structure, and everything discovery attached to it.
@@ -61,18 +61,18 @@ final class ResourceDefinition {
    *   always NULL for a structure.
    * @param class-string|null $access
    *   The access class, or NULL.
-   * @param \Drupal\data_surface\ResourceBuild\RefinerDefinition[] $refiners
+   * @param \Drupal\surface\ResourceBuild\RefinerDefinition[] $refiners
    *   Its own #[RefinesInput] methods.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition[] $operations
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition[] $operations
    *   Every operation of it, from every provider.
-   * @param \Drupal\data_surface\ResourceBuild\AlterDefinition[] $alters
+   * @param \Drupal\surface\ResourceBuild\AlterDefinition[] $alters
    *   Every alter of it, in discovery order.
    * @param array<string, array<string, class-string>> $variants
    *   Classes marked #[Variant] for variants here, keyed by the key the
    *   variants are attached at, then by the deciding value.
-   * @param \Drupal\data_surface\Resource\ResourceCallable|null $inputs
+   * @param \Drupal\surface\Resource\ResourceCallable|null $inputs
    *   For a derived resource, what fills its input blueprint.
-   * @param \Drupal\data_surface\Resource\ResourceCallable|null $outputs
+   * @param \Drupal\surface\Resource\ResourceCallable|null $outputs
    *   For a derived resource, what fills its output blueprint, if it has one.
    * @param string|null $base
    *   For a derived resource, the base id it was derived under.
@@ -211,7 +211,7 @@ final class ResourceDefinition {
    *
    * Decision: see docs/decisions.md#a-parameter-is-identity-the-caller-knows.
    *
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   One of its operations.
    *
    * @return list<string>
@@ -239,7 +239,7 @@ final class ResourceDefinition {
   /**
    * Lists the parameters an operation cannot be asked without.
    *
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    *
    * @return array<string, true>
@@ -267,7 +267,7 @@ final class ResourceDefinition {
    *
    * Decision: see docs/decisions.md#a-parameter-is-identity-the-caller-knows.
    *
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   One of its operations.
    *
    * @return bool
@@ -292,9 +292,9 @@ final class ResourceDefinition {
   /**
    * Returns a copy with discovery's other findings attached.
    *
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition[] $operations
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition[] $operations
    *   The operations.
-   * @param \Drupal\data_surface\ResourceBuild\AlterDefinition[] $alters
+   * @param \Drupal\surface\ResourceBuild\AlterDefinition[] $alters
    *   The alters.
    * @param array<string, array<string, class-string>> $variants
    *   The variants.

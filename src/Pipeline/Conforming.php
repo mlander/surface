@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -10,13 +10,13 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionTypedData;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionTypedData;
 
 /**
  * The conform verb of the pipeline: outputs held to their declared shape.
  *
- * What DataSurfacePipelineInterface::conformOutput() does: every key sent
+ * What SurfacePipelineInterface::conformOutput() does: every key sent
  * as NotEmitted stripped, every key no output declares refused at any
  * depth, every leaf held to its type's PHP type with nothing coerced, and
  * then the constraints, through typed data.
@@ -25,7 +25,7 @@ use Drupal\data_surface\DefinitionTypedData;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Pipeline\DataSurfacePipeline
+ * @see \Drupal\surface\Pipeline\SurfacePipeline
  * @see docs/outputs.md
  */
 final class Conforming {
@@ -55,18 +55,18 @@ final class Conforming {
   /**
    * Checks an emitted array against what the data surface says it emits.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface whose outputs the values are held to.
    * @param array $output
    *   The emitted values, keyed by output key, NotEmitted included.
    *
-   * @return \Drupal\data_surface\Pipeline\ViolationSet
+   * @return \Drupal\surface\Pipeline\ViolationSet
    *   The violations, each carrying its output key, the property path
    *   within that key and an unrendered message.
    *
-   * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::conformOutput()
+   * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::conformOutput()
    */
-  public function conformOutput(DataSurfaceInterface $surface, array $output): ViolationSet {
+  public function conformOutput(SurfaceInterface $surface, array $output): ViolationSet {
     $definitions = $surface->getOutputDefinitions();
     // NotEmitted is the producer's way of saying "this key is not emitted"
     // from inside an array literal, so it is resolved into absence
@@ -137,7 +137,7 @@ final class Conforming {
    *   Set to FALSE when the value is in a shape the definition cannot
    *   hold, so the caller knows not to hand it to typed data.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The violations found.
    */
   protected function conformStructure(DataDefinitionInterface $definition, mixed $value, string $key, string $path, bool &$holdable): array {
@@ -221,7 +221,7 @@ final class Conforming {
    * @param string $path
    *   The property path within it.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation|null
+   * @return \Drupal\surface\Pipeline\Violation|null
    *   The violation, or NULL when the type is right or unknown here.
    */
   protected function outputTypeMismatch(DataDefinitionInterface $definition, mixed $value, string $key, string $path): ?Violation {
@@ -254,7 +254,7 @@ final class Conforming {
    * @param mixed $value
    *   What arrived instead.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation
+   * @return \Drupal\surface\Pipeline\Violation
    *   The violation.
    */
   protected function outputShapeViolation(string $key, string $path, string $expected, mixed $value): Violation {

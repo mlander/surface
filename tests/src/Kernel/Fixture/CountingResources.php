@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel\Fixture;
+namespace Drupal\Tests\surface\Kernel\Fixture;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceStorageInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
 
 /**
  * The build step, counting what it is asked to build.
  *
- * Set in a kernel test's container in place of data_surface.resources,
+ * Set in a kernel test's container in place of surface.resources,
  * so a test can say how often a host built its resource or structure.
  */
 final class CountingResources implements ResourcesInterface {
@@ -29,7 +29,7 @@ final class CountingResources implements ResourcesInterface {
   /**
    * Constructs a CountingResources.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $inner
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $inner
    *   The real build step.
    */
   public function __construct(
@@ -40,7 +40,7 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function build(string $resource, OperationContext $context): DataSurfaceInterface {
+  public function build(string $resource, OperationContext $context): SurfaceInterface {
     $this->builds[] = $resource;
     return $this->inner->build($resource, $context);
   }
@@ -48,7 +48,7 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function buildStatic(string $resource, OperationContext $context): DataSurfaceInterface {
+  public function buildStatic(string $resource, OperationContext $context): SurfaceInterface {
     $this->builds[] = $resource;
     return $this->inner->buildStatic($resource, $context);
   }
@@ -63,7 +63,7 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function buildDeclared(string $resource, OperationContext $context): DataSurfaceInterface {
+  public function buildDeclared(string $resource, OperationContext $context): SurfaceInterface {
     $this->builds[] = $resource;
     return $this->inner->buildDeclared($resource, $context);
   }
@@ -71,7 +71,7 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function holdDeclared(string $resource, OperationContext $context): DataSurfaceInterface {
+  public function holdDeclared(string $resource, OperationContext $context): SurfaceInterface {
     $this->builds[] = $resource;
     return $this->inner->holdDeclared($resource, $context);
   }
@@ -86,7 +86,7 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function buildOperation(string $resource, string $operation, array $arguments = []): DataSurfaceInterface {
+  public function buildOperation(string $resource, string $operation, array $arguments = []): SurfaceInterface {
     return $this->build($resource, $this->operation($resource, $operation, $arguments));
   }
 
@@ -114,7 +114,7 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function storage(string $resource, OperationContext $context, ?DataSurfaceInterface $built = NULL, ?AccountInterface $account = NULL): DataSurfaceStorageInterface {
+  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL): SurfaceStorageInterface {
     return $this->inner->storage($resource, $context, $built, $account);
   }
 

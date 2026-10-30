@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Resource\OperationContext;
 
 /**
  * Where the variants at one key sit, and the build they were held in.
@@ -27,7 +27,7 @@ final class VariantsToSettle {
   /**
    * Constructs a VariantsToSettle.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Resources|null $resources
+   * @param \Drupal\surface\ResourceBuild\Resources|null $resources
    *   The build step that builds them; NULL when it is not the container's,
    *   so what it holds is built before it is stored.
    * @param array $ancestry
@@ -59,7 +59,7 @@ final class VariantsToSettle {
   /**
    * The contexts the variants are invoked in, one object for each that differs.
    *
-   * @var \Drupal\data_surface\Resource\OperationContext[]
+   * @var \Drupal\surface\Resource\OperationContext[]
    */
   private array $contexts = [];
 
@@ -69,10 +69,10 @@ final class VariantsToSettle {
    * So the variants at a key invoked alike share their context, and a
    * build storing them stores it once.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   A variant's context.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The first one equal to it.
    */
   public function shared(OperationContext $context): OperationContext {
@@ -90,17 +90,17 @@ final class VariantsToSettle {
    *
    * @param string $name
    *   The variant, by name.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is invoked in.
    * @param string|null $locked
    *   Why its access locked it whole, or NULL.
    * @param bool $read
    *   Whether it is a structure read from a schema.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed variant.
    */
-  public function settle(string $name, OperationContext $context, ?string $locked, bool $read): DataSurfaceInterface {
+  public function settle(string $name, OperationContext $context, ?string $locked, bool $read): SurfaceInterface {
     $resources = $this->resources ?? throw new \LogicException(sprintf('The variant %s at "%s" was stored as what builds it and woke with no build step to build it.', $name, $this->key));
     return $resources->settleVariant($this, $name, $context, $locked, $read);
   }
@@ -173,11 +173,11 @@ final class VariantsToSettle {
   /**
    * Gets the container's build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Resources|null
+   * @return \Drupal\surface\ResourceBuild\Resources|null
    *   The build step, or NULL with no container.
    */
   protected static function buildStep(): ?Resources {
-    $resources = \Drupal::hasService('data_surface.resources') ? \Drupal::service('data_surface.resources') : NULL;
+    $resources = \Drupal::hasService('surface.resources') ? \Drupal::service('surface.resources') : NULL;
     return $resources instanceof Resources ? $resources : NULL;
   }
 

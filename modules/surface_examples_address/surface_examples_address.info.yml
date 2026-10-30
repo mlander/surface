@@ -1,0 +1,10 @@
+name: Surface API - Address field settings
+type: module
+description: 'Describes the address field type''s instance settings as a resource and lets Field UI render the generated form, without changing the address module: the field type class is swapped for a subclass through hook_field_info_alter().'
+package: Surface API
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface
+  - address:address

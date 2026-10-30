@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Traits;
+namespace Drupal\Tests\surface\Traits;
 
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Computed;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
 
 /**
  * Holds what the full schema states about access to what the build applies.
@@ -57,9 +57,9 @@ trait StaticAccessAgreementTrait {
    *   reached something.
    */
   protected function assertStaticAccessAgrees(string $resource, string $operation, array $accounts, array $situations, array $arguments = []): int {
-    $resources = \Drupal::service('data_surface.resources');
+    $resources = \Drupal::service('surface.resources');
     assert($resources instanceof ResourcesInterface);
-    $emitter = \Drupal::service('data_surface.contract_emitter');
+    $emitter = \Drupal::service('surface.contract_emitter');
     assert($emitter instanceof ContractEmitter);
     $compared = 0;
     foreach ($accounts as $who => $account) {
@@ -80,7 +80,7 @@ trait StaticAccessAgreementTrait {
   /**
    * Asserts a full schema states access as the data surface it came from.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $alone
+   * @param \Drupal\surface\SurfaceInterface $alone
    *   The data surface built for the account alone.
    * @param array $schema
    *   The full schema's frame for it, inline.
@@ -93,7 +93,7 @@ trait StaticAccessAgreementTrait {
    * @return int
    *   How many keys were compared.
    */
-  protected function assertSchemaStatesAccess(DataSurfaceInterface $alone, array $schema, string $label, bool $frozen = FALSE): int {
+  protected function assertSchemaStatesAccess(SurfaceInterface $alone, array $schema, string $label, bool $frozen = FALSE): int {
     $compared = 0;
     $properties = is_array($schema['properties'] ?? NULL) ? $schema['properties'] : [];
     $this->assertSame($alone->getDefinitions()->names(), array_keys($properties), sprintf('%s: the full schema states every key the account may see and no other.', $label));
@@ -117,9 +117,9 @@ trait StaticAccessAgreementTrait {
   /**
    * Asserts every key not marked runtime is as the build applied it.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $alone
+   * @param \Drupal\surface\SurfaceInterface $alone
    *   The data surface built for the account alone.
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The same, built with every answer applied.
    * @param string $label
    *   Where, for messages.
@@ -127,7 +127,7 @@ trait StaticAccessAgreementTrait {
    * @return int
    *   How many keys were compared.
    */
-  protected function assertStaticMarksHold(DataSurfaceInterface $alone, DataSurfaceInterface $built, string $label): int {
+  protected function assertStaticMarksHold(SurfaceInterface $alone, SurfaceInterface $built, string $label): int {
     $compared = 0;
     $at_runtime = $built->getDefinitions();
     foreach ($alone->getDefinitions()->entries() as $name => $entry) {

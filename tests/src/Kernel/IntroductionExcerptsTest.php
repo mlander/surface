@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\block\Entity\Block;
 use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Pipeline\Storage\PluginConfigurationStorage;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_intro_test\OutsideDiscovery\LooseningBadgeAlter;
-use Drupal\data_surface_intro_test\OutsideDiscovery\TeaserBadgeAlter;
-use Drupal\data_surface_intro_test\Plugin\Block\TeaserBlock;
-use Drupal\data_surface_intro_test\Structure\TeaserBlockStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ServedControllerTrait;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_intro_test\OutsideDiscovery\LooseningBadgeAlter;
+use Drupal\surface_intro_test\OutsideDiscovery\TeaserBadgeAlter;
+use Drupal\surface_intro_test\Plugin\Block\TeaserBlock;
+use Drupal\surface_intro_test\Structure\TeaserBlockStructure;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -32,7 +32,7 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
  * Pages 1, 2, 5, 6 and 8 describe my_module's settings, page 4 its
  * colors and the shape they share, and pages 3, 12, 13 and 17 a teaser
  * block and a badge alter, that no shipped module has; my_module and
- * data_surface_intro_test hold them as the pages show them
+ * surface_intro_test hold them as the pages show them
  * (IntroductionDocsTest holds the snippets to their lines). Each test
  * here runs the code, takes what it answers, and asserts the page says
  * that text: the settings' form, tool and HTTP path (page 1), their JSON
@@ -43,9 +43,9 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
  * 13), and one refused value at the form, the tool and HTTP (page 17).
  * The output is the authority: a page that drifts from it fails.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
+class IntroductionExcerptsTest extends SurfaceKernelTestBase {
 
   use ServedControllerTrait;
 
@@ -62,11 +62,10 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_block',
-    'data_surface_intro_test',
+    'surface',
+    'surface_react',
+    'surface_examples_block',
+    'surface_intro_test',
     'my_module',
   ];
 
@@ -157,7 +156,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
    *   `success`, then every output.
    */
   protected function call(string $operation, array $inputs): array {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:block.placement:' . $operation);
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:block.placement:' . $operation);
     foreach ($inputs as $name => $value) {
       $tool->setInputValue($name, $value);
     }
@@ -169,7 +168,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
   /**
    * Creates the teaser block.
    *
-   * @return \Drupal\data_surface_intro_test\Plugin\Block\TeaserBlock
+   * @return \Drupal\surface_intro_test\Plugin\Block\TeaserBlock
    *   The block plugin, its settings the defaults.
    */
   protected function teaser(): TeaserBlock {
@@ -203,7 +202,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
     $form_state = new FormState();
-    return $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state)[DataSurfaceOperationForm::SURFACE_KEY];
+    return $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $form_state)[SurfaceOperationForm::SURFACE_KEY];
   }
 
   /**
@@ -216,9 +215,9 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
    *   The schema of the values, through JSON and back.
    */
   protected function settingsSchema(string $resource = 'my_module.settings'): array {
-    $served = $this->container->get('data_surface_react.served_operations');
+    $served = $this->container->get('surface_react.served_operations');
     $operation = $served->resolve($resource, 'configure', []);
-    $contract = $this->container->get('data_surface.contract_emitter')->emit(
+    $contract = $this->container->get('surface.contract_emitter')->emit(
       $operation->surface,
       $served->current($operation),
       $operation->definition->id,
@@ -266,7 +265,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
    *   `success`, then every output.
    */
   protected function configure(array $values, string $resource = 'my_module.settings'): array {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('data_surface:' . $resource . ':configure');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:' . $resource . ':configure');
     $tool->setInputValue(OperationInputs::VALUES, $values);
     $tool->setInputValue(OperationInputs::DRY_RUN, TRUE);
     $tool->execute();
@@ -275,7 +274,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests page 1: one class, a form, a tool and an HTTP path.
+   * Tests page 1: one class, a form, a tool, its command and an HTTP path.
    */
   public function testOneDescriptionEveryDoor(): void {
     $form = $this->settingsForm();
@@ -285,13 +284,21 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     $this->assertPageSays('01-what-it-does.md', '| A form | a text field, a number field, a checkbox, an email field and a select |');
     $this->assertPageSays('05-keys.md', 'a text field for `title`, a number field for `items_per_page`, a checkbox for `show_author` and an email field for `notify_email`.');
 
-    $this->assertTrue($this->container->get('plugin.manager.tool')->hasDefinition('data_surface:my_module.settings:configure'));
-    $this->assertPageSays('01-what-it-does.md', '`data_surface:my_module.settings:configure`');
+    $this->assertTrue($this->container->get('plugin.manager.tool')->hasDefinition('surface:my_module.settings:configure'));
+    $this->assertPageSays('01-what-it-does.md', '`surface:my_module.settings:configure`');
+    // The tool module's command that runs a tool, read from its attribute in
+    // the source: loading the class loads Drush's base class, which raises
+    // a deprecation in Drush's own code.
+    $source = (string) file_get_contents($this->root . '/' . $this->container->get('extension.list.module')->getPath('tool') . '/src/Drush/Commands/ToolRunCommand.php');
+    $this->assertSame(1, preg_match("/#\\[Command\\(name: '([^']+)'[^\\n]*\\n(?:\\s*#\\[.*\\n)*\\s*public function runTool\\(/", $source, $match));
+    [, $command] = $match;
+    $this->assertSame('tool:run', $command);
+    $this->assertPageSays('01-what-it-does.md', '| The command line | `drush ' . $command . ' surface:my_module.settings:configure`, which runs the same tool |');
 
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $definition = $registry->getDefinition('my_module.settings');
     $operation = $registry->getOperation($definition->name(), 'configure');
-    $paths = $this->container->get('data_surface_react.served_paths');
+    $paths = $this->container->get('surface_react.served_paths');
     [$method, $named] = $paths->writes($definition, $operation);
     $path = $method . ' ' . $paths->url($definition, $operation, [], $named, FALSE)->getGeneratedUrl();
     $this->assertSame('PATCH /surface-api/my_module.settings', $path);
@@ -323,7 +330,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
     // The form, posted with no title: the same message, at the field.
     $form_state = new FormState();
     $form_state->setValues([
-      DataSurfaceOperationForm::SURFACE_KEY => [
+      SurfaceOperationForm::SURFACE_KEY => [
         'title' => '',
         'items_per_page' => '10',
         'show_author' => 1,
@@ -331,7 +338,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
         'layout' => 'list',
       ],
     ]);
-    $this->container->get('form_builder')->submitForm(DataSurfaceOperationForm::class, $form_state);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     $errors = array_map(static fn ($message): string => strip_tags((string) $message), $form_state->getErrors());
     $this->assertSame([$quoted['message']], array_values($errors));
     $this->assertPageSays('06-rules-on-a-key.md', 'The form says "' . $quoted['message'] . '" at the field.');
@@ -376,10 +383,10 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
    * Tests page 13: the badge tightens the limit, and loosening is refused.
    */
   public function testAnAlterTightensAndMayNotLoosen(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $built = function (string $alter) use ($resources) {
       $registry = new ResourceRegistry([
-        'resources' => [TeaserBlockStructure::class => 'data_surface_intro_test'],
+        'resources' => [TeaserBlockStructure::class => 'surface_intro_test'],
         'alters' => [$alter => 'my_badges'],
       ], $this->container->get('cache.discovery'));
       return $resources->withRegistry($registry, $this->container->get('class_resolver'))->build(TeaserBlockStructure::class, new OperationContext('configure'));
@@ -417,8 +424,8 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
   public function testOneValueOneAnswer(): void {
     // Code with no door: the page's call, as it writes it.
     $block = $this->teaser();
-    $result = \Drupal::service('data_surface.pipeline')->submit(
-      $block->getDataSurface(),
+    $result = \Drupal::service('surface.pipeline')->submit(
+      $block->getSurface(),
       ['headline' => 'Latest', 'limit' => '60'],
       new PluginConfigurationStorage($block),
     );

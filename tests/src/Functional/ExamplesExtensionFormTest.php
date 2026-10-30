@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -19,7 +19,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Decision: see
  * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesExtensionFormTest extends BrowserTestBase {
 
@@ -27,7 +27,7 @@ class ExamplesExtensionFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
+    'surface_examples',
   ];
 
   /**
@@ -38,7 +38,7 @@ class ExamplesExtensionFormTest extends BrowserTestBase {
   /**
    * The module that manages keys.
    */
-  protected const KEYS = 'data_surface_examples_keys';
+  protected const KEYS = 'surface_examples_keys';
 
   /**
    * Turns the module that manages keys on or off.
@@ -80,7 +80,7 @@ class ExamplesExtensionFormTest extends BrowserTestBase {
     $assert->elementNotExists('css', '.form-item-surface-source .form-required');
     $this->submitForm(['surface[credential][api_key]' => 'mk-form-1'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $stored = $this->stored('data_surface_examples.mailer');
+    $stored = $this->stored('surface_examples.mailer');
     $this->assertSame('pasted', $stored['source']);
     $this->assertSame(['api_key' => 'mk-form-1'], $stored['credential']);
     $assert->responseNotContains('mk-form-1');
@@ -96,7 +96,7 @@ class ExamplesExtensionFormTest extends BrowserTestBase {
     $assert->pageTextContains('Key is required.');
     $this->submitForm(['surface[source]' => 'managed', 'surface[credential][key_id]' => 'mail_service'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $this->assertSame(['key_id' => 'mail_service', 'api_key' => 'mk-form-1'], $this->stored('data_surface_examples.mailer')['credential'], 'The pasted key is kept beside the managed key.');
+    $this->assertSame(['key_id' => 'mail_service', 'api_key' => 'mk-form-1'], $this->stored('surface_examples.mailer')['credential'], 'The pasted key is kept beside the managed key.');
     $assert->responseNotContains('mk-form-1');
 
     // Back to the pasted source, nothing typed: the pasted key it holds
@@ -105,7 +105,7 @@ class ExamplesExtensionFormTest extends BrowserTestBase {
     $this->submitForm(['surface[source]' => 'pasted'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
     $assert->fieldExists('surface[credential][api_key]');
-    $this->assertSame(['api_key' => 'mk-form-1'], $this->stored('data_surface_examples.mailer')['credential'], 'Chosen back, the pasted key is the one it held.');
+    $this->assertSame(['api_key' => 'mk-form-1'], $this->stored('surface_examples.mailer')['credential'], 'Chosen back, the pasted key is the one it held.');
   }
 
   /**
@@ -121,21 +121,21 @@ class ExamplesExtensionFormTest extends BrowserTestBase {
     $this->keys(TRUE);
     $this->drupalGet('surface-examples/14/webhook');
     $assert->fieldExists('surface[api_key]');
-    $assert->optionExists('surface[third_party_settings][data_surface_examples_keys][key_id]', 'webhook_signing');
-    $this->submitForm(['surface[third_party_settings][data_surface_examples_keys][key_id]' => 'webhook_signing'], 'Save');
+    $assert->optionExists('surface[third_party_settings][surface_examples_keys][key_id]', 'webhook_signing');
+    $this->submitForm(['surface[third_party_settings][surface_examples_keys][key_id]' => 'webhook_signing'], 'Save');
     $assert->pageTextContains('The changes have been saved.');
     $this->drupalGet('surface-examples/14/webhook');
     $assert->fieldNotExists('surface[api_key]');
-    $this->assertSame('wh-form-1', $this->stored('data_surface_examples.webhook')['api_key'], 'What the pasted key holds is kept.');
+    $this->assertSame('wh-form-1', $this->stored('surface_examples.webhook')['api_key'], 'What the pasted key holds is kept.');
     $this->submitForm([], 'Save');
     $assert->pageTextContains('The changes have been saved.');
-    $this->assertSame('wh-form-1', $this->stored('data_surface_examples.webhook')['api_key']);
+    $this->assertSame('wh-form-1', $this->stored('surface_examples.webhook')['api_key']);
 
     $this->keys(FALSE);
     $this->drupalGet('surface-examples/14/webhook');
     $assert->fieldExists('surface[api_key]');
-    $assert->fieldNotExists('surface[third_party_settings][data_surface_examples_keys][key_id]');
-    $this->assertSame('wh-form-1', $this->stored('data_surface_examples.webhook')['api_key'], 'Back, with its value.');
+    $assert->fieldNotExists('surface[third_party_settings][surface_examples_keys][key_id]');
+    $this->assertSame('wh-form-1', $this->stored('surface_examples.webhook')['api_key'], 'Back, with its value.');
   }
 
 }

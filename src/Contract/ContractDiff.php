@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 /**
  * Compares a full schema with its baseline and classifies each difference.
@@ -154,7 +154,7 @@ final class ContractDiff {
    * @param array<string, string> $allowed
    *   Paths a breaking change is allowed at, each with its reason.
    *
-   * @return \Drupal\data_surface\Contract\ContractChange[]
+   * @return \Drupal\surface\Contract\ContractChange[]
    *   Every difference, judged.
    */
   public function compare(array $baseline, array $current, array $allowed = []): array {

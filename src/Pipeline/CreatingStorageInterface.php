@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 /**
  * A storage that knows whether the write it serves creates a thing.
@@ -13,7 +13,7 @@ namespace Drupal\data_surface\Pipeline;
  *
  * Decision: see docs/decisions.md#absent-keeps-null-clears.
  */
-interface CreatingStorageInterface extends DataSurfaceStorageInterface {
+interface CreatingStorageInterface extends SurfaceStorageInterface {
 
   /**
    * Answers whether the operation it serves creates what it writes.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * An alter that adds inputs to a resource or structure it does not own.
@@ -23,7 +23,7 @@ interface AltersInputsInterface {
   /**
    * Adds inputs to the resource or structure named on #[Alters].
    *
-   * @param \Drupal\data_surface\Resource\BlueprintAdditionsInterface $inputs
+   * @param \Drupal\surface\Resource\BlueprintAdditionsInterface $inputs
    *   The input blueprint, add-only.
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void;

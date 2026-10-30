@@ -18,13 +18,11 @@ by name. It returns the key narrowed. The placed block's region, from
 ```php
 #[RefinesInput('region')]
 public static function regionsOfTheme(DataDefinitionInterface $region, string $theme): DataDefinitionInterface {
-  return $region->addConstraint('DataSurfaceThemeRegion', ['theme' => $theme]);
+  return $region->addConstraint('SurfaceThemeRegion', ['theme' => $theme]);
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
-`DataSurfaceThemeRegion` is a constraint this module ships: it allows
+`SurfaceThemeRegion` is a constraint this module ships: it allows
 only the regions of the theme it names. `defineInputs()` declares
 `region` as a region of any installed theme. Once `theme` holds a
 value, the refiner narrows `region` to that theme's regions. A refiner
@@ -65,8 +63,6 @@ $inputs->narrow('end_date')
   ->when(Condition::present('start_date'))
   ->require();
 ```
-
-Where each class lives: [Namespaces](../concepts.md#namespaces).
 
 `when()` takes a condition on other keys' values, such as `present()`
 or `equals()`, and the last call is the effect. Because the rule is

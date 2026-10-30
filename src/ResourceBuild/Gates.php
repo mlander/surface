@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
@@ -41,7 +41,7 @@ final class Gates implements ContainerInjectionInterface {
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, whose handlers answer core's gates and whose
    *   storage loads the thing a gate asks about.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   The registry, which names an operation gate's operation.
    */
   public function __construct(
@@ -53,7 +53,7 @@ final class Gates implements ContainerInjectionInterface {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('entity_type.manager'), $container->get('data_surface.resource_registry'));
+    return new static($container->get('entity_type.manager'), $container->get('surface.resource_registry'));
   }
 
   /**
@@ -64,7 +64,7 @@ final class Gates implements ContainerInjectionInterface {
    * when the operation needs nothing, which is then asked once with no
    * subject.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Gate $gate
+   * @param \Drupal\surface\ResourceBuild\Gate $gate
    *   The gate.
    *
    * @return array{0: string|null, 1: string|null}
@@ -117,13 +117,13 @@ final class Gates implements ContainerInjectionInterface {
   /**
    * Answers one gate for the thing a call is about.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Gate $gate
+   * @param \Drupal\surface\ResourceBuild\Gate $gate
    *   The gate.
    * @param \Drupal\Core\Entity\EntityInterface|null $subject
    *   The thing, or NULL for an operation gate that asks about none.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account the call is made as.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which answers an operation gate.
    *
    * @return \Drupal\Core\Access\AccessResultInterface
@@ -163,7 +163,7 @@ final class Gates implements ContainerInjectionInterface {
    * gave one: core's "The 'edit any page content' permission is
    * required." Untranslated, as every access reason is.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Gate $gate
+   * @param \Drupal\surface\ResourceBuild\Gate $gate
    *   The gate.
    * @param \Drupal\Core\Entity\EntityInterface|null $subject
    *   The thing it was asked about.

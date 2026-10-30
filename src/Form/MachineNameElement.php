@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Form;
+namespace Drupal\surface\Form;
 
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element\MachineName;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Plugin\Validation\Constraint\UniqueConstraintValidator;
+use Drupal\surface\Plugin\Validation\Constraint\UniqueConstraintValidator;
 
 /**
  * Draws a machine name computed from a title as core's machine name element.
@@ -20,7 +20,7 @@ use Drupal\data_surface\Plugin\Validation\Constraint\UniqueConstraintValidator;
  * suggests is what MachineName computes for a call that leaves the key
  * out.
  *
- * Its `exists` callback asks the storage the question DataSurfaceUnique
+ * Its `exists` callback asks the storage the question SurfaceUnique
  * asks (UniqueConstraintValidator::taken()). The element's own validation
  * is left off: it would refuse a taken name in core's words before the
  * data surface refuses it in its own, and a form keeps the first error
@@ -40,12 +40,12 @@ final class MachineNameElement {
   /**
    * Where the element keeps the source key's name until it is processed.
    */
-  public const SOURCE_KEY = '#data_surface_machine_name_source';
+  public const SOURCE_KEY = '#surface_machine_name_source';
 
   /**
    * Where the element keeps the uniqueness constraint's options.
    */
-  public const UNIQUE_KEY = '#data_surface_unique';
+  public const UNIQUE_KEY = '#surface_unique';
 
   /**
    * Turns a key's text field into a machine name element.
@@ -67,7 +67,7 @@ final class MachineNameElement {
       'label' => $definition->getLabel(),
     ];
     $element[self::SOURCE_KEY] = $source;
-    $unique = $definition->getConstraints()['DataSurfaceUnique'] ?? NULL;
+    $unique = $definition->getConstraints()['SurfaceUnique'] ?? NULL;
     if (is_array($unique)) {
       $element[self::UNIQUE_KEY] = [
         'storage' => (string) ($unique['storage'] ?? ''),
@@ -113,7 +113,7 @@ final class MachineNameElement {
    * Answers whether a thing already holds the machine name.
    *
    * The element's `exists` callback: the storage's own answer, as the
-   * DataSurfaceUnique constraint asks it.
+   * SurfaceUnique constraint asks it.
    *
    * @param mixed $value
    *   The machine name.

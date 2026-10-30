@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Gettext\PoItem;
 use Drupal\Core\StringTranslation\PluralTranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface_examples\ExampleCalls;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_tool\PlainTextMarkup;
-use Drupal\Tests\data_surface\Kernel\Fixture\FakeLanguageTranslator;
+use Drupal\surface_examples\ExampleCalls;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Tool\PlainTextMarkup;
+use Drupal\Tests\surface\Kernel\Fixture\FakeLanguageTranslator;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\TypedData\MapInputDefinition;
 use PHPUnit\Framework\Attributes\Group;
@@ -30,9 +30,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/decisions.md#a-machine-document-carries-plain-text
  * @see docs/decisions.md#a-static-tool-definition-is-no-accounts
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ToolListingLanguageTest extends DataSurfaceKernelTestBase {
+class ToolListingLanguageTest extends SurfaceKernelTestBase {
 
   /**
    * The made-up language the listing is read back in.
@@ -48,9 +48,8 @@ class ToolListingLanguageTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_examples',
   ];
 
   /**
@@ -59,7 +58,7 @@ class ToolListingLanguageTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->container->get('string_translation')->addTranslator(new FakeLanguageTranslator(self::LANGCODE, [
       'Configure registration (step 3)' => 'XX Configure registration (step 3)',
       'Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.' => 'XX Sets the event registration.',

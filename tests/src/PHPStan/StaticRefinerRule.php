@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\PHPStan;
+namespace Drupal\Tests\surface\PHPStan;
 
 use PhpParser\Node;
 use PhpParser\Node\Arg;
@@ -37,12 +37,12 @@ final class StaticRefinerRule implements Rule {
   /**
    * The attribute that makes a method a refiner.
    */
-  public const ATTRIBUTE = 'Drupal\data_surface\Resource\Attribute\RefinesInput';
+  public const ATTRIBUTE = 'Drupal\surface\Resource\Attribute\RefinesInput';
 
   /**
    * The interface whose static compute() is held to the same rule.
    */
-  public const COMPUTES = 'Drupal\data_surface\Resource\ComputesValueInterface';
+  public const COMPUTES = 'Drupal\surface\Resource\ComputesValueInterface';
 
   /**
    * The `\Drupal::` shortcuts a compute() may call, by class.
@@ -53,7 +53,7 @@ final class StaticRefinerRule implements Rule {
    * @see docs/decisions.md#a-machine-name-is-a-computed-identity
    */
   public const COMPUTE_ALLOWED = [
-    'Drupal\data_surface\Compute\MachineName' => ['transliteration'],
+    'Drupal\surface\Compute\MachineName' => ['transliteration'],
   ];
 
   /**
@@ -72,12 +72,12 @@ final class StaticRefinerRule implements Rule {
       return [];
     }
     if (static::isCompute($method->name->toString(), $scope)) {
-      return static::errors($method, $scope, 'The computed key\'s %s::%s() calls \\Drupal::%s(), which reads a service or site state. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().', 'dataSurface.compute', self::COMPUTE_ALLOWED[$scope->getClassReflection()?->getName() ?? ''] ?? []);
+      return static::errors($method, $scope, 'The computed key\'s %s::%s() calls \\Drupal::%s(), which reads a service or site state. A computed key is a pure function of the keys it is computed from: a value that needs a service, the clock or the request is a storage\'s to add in its prepare().', 'surface.compute', self::COMPUTE_ALLOWED[$scope->getClassReflection()?->getName() ?? ''] ?? []);
     }
     if (!static::isStaticRefiner($method->attrGroups)) {
       return [];
     }
-    return static::errors($method, $scope, 'The static refiner %s::%s() calls \\Drupal::%s(), which reads a service or site state. A static refiner is a pure function of the keys it watches: point at a list with a constraint, or declare #[RefinesInput(..., runtime: TRUE)].', 'dataSurface.staticRefiner');
+    return static::errors($method, $scope, 'The static refiner %s::%s() calls \\Drupal::%s(), which reads a service or site state. A static refiner is a pure function of the keys it watches: point at a list with a constraint, or declare #[RefinesInput(..., runtime: TRUE)].', 'surface.staticRefiner');
   }
 
   /**

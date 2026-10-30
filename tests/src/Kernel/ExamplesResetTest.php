@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface_examples\Form\ResetExamplesForm;
+use Drupal\surface_examples\Form\ResetExamplesForm;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -18,9 +18,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * party settings — goes, and the files in config/install are what is
  * left.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ExamplesResetTest extends DataSurfaceKernelTestBase {
+class ExamplesResetTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -31,11 +31,10 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_examples_keys',
+    'surface',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_examples_keys',
   ];
 
   /**
@@ -43,7 +42,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
    */
   protected function setUp(): void {
     parent::setUp();
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
   }
 
   /**
@@ -56,7 +55,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
    *   The shipped values.
    */
   protected function shipped(string $name): array {
-    $path = $this->container->get('extension.list.module')->getPath('data_surface_examples');
+    $path = $this->container->get('extension.list.module')->getPath('surface_examples');
     return Yaml::decode((string) file_get_contents($path . '/config/install/' . $name . '.yml'));
   }
 
@@ -78,31 +77,31 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
    * Tests a changed example 2, a mounted key and a closed room are reset.
    */
   public function testTheResetPutsBackWhatTheModuleShips(): void {
-    $two = 'data_surface_examples.registration_step2';
-    $three = 'data_surface_examples.registration_step3';
+    $two = 'surface_examples.registration_step2';
+    $three = 'surface_examples.registration_step3';
     $hash = $this->config($two)->get('_core');
     $this->assertNotNull($hash);
     $this->config($two)->set('venue', 'harbour')->set('room', 'harbour_deck')->set('capacity', 120)->save();
     $this->config($three)
       ->set('title', 'Changed')
-      ->set('third_party_settings', ['data_surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]])
+      ->set('third_party_settings', ['surface_examples_compliance' => ['license' => '2048', 'stewards' => 3]])
       ->save();
     $this->assertSame('harbour_deck', $this->stored($two)['room']);
     // Example 4's closed rooms live in State, not in any example's
     // settings, and are opened again too.
-    $this->container->get('state')->set('data_surface_examples_compliance.closed_rooms', ['riverside_east']);
+    $this->container->get('state')->set('surface_examples_compliance.closed_rooms', ['riverside_east']);
     // So does example 10's workflow state, which is cleared.
-    $this->container->get('state')->set('data_surface_examples_workflow.state', 'published');
+    $this->container->get('state')->set('surface_examples_workflow.state', 'published');
     // Examples 7 to 11 too, and the ticket types example 9 reads.
-    $this->config('data_surface_examples.bulletin')->set('frequency', 'monthly')->save();
-    $this->config('data_surface_examples.ticket_types')->set('types.vip', ['label' => 'VIP', 'locked' => FALSE])->save();
+    $this->config('surface_examples.bulletin')->set('frequency', 'monthly')->save();
+    $this->config('surface_examples.ticket_types')->set('types.vip', ['label' => 'VIP', 'locked' => FALSE])->save();
     // Example 14's managed key, its pasted key kept beside it, and the
     // managed key another module stored on the webhook.
-    $this->config('data_surface_examples.mailer')
+    $this->config('surface_examples.mailer')
       ->set('source', 'managed')
       ->set('credential', ['key_id' => 'mail_service', 'api_key' => 'mk-1'])
       ->save();
-    $this->config('data_surface_examples.webhook')->set('third_party_settings', ['data_surface_examples_keys' => ['key_id' => 'webhook_signing']])->save();
+    $this->config('surface_examples.webhook')->set('third_party_settings', ['surface_examples_keys' => ['key_id' => 'webhook_signing']])->save();
     // Example 15's venues: one changed, one removed, one added.
     $venues = $this->container->get('entity_type.manager')->getStorage('event_venue');
     $riverside = $venues->load('riverside');
@@ -116,20 +115,20 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $form_state->getErrors());
 
     $names = [
-      'data_surface_examples.registration_step1',
+      'surface_examples.registration_step1',
       $two,
       $three,
-      'data_surface_examples.bulletin',
-      'data_surface_examples.ticket_types',
-      'data_surface_examples.mailer',
-      'data_surface_examples.webhook',
+      'surface_examples.bulletin',
+      'surface_examples.ticket_types',
+      'surface_examples.mailer',
+      'surface_examples.webhook',
     ];
     foreach ($names as $name) {
       $this->assertSame($this->shipped($name), $this->stored($name), $name);
     }
     $this->assertArrayNotHasKey('third_party_settings', $this->stored($three));
-    $this->assertNull($this->container->get('state')->get('data_surface_examples_compliance.closed_rooms'));
-    $this->assertNull($this->container->get('state')->get('data_surface_examples_workflow.state'));
+    $this->assertNull($this->container->get('state')->get('surface_examples_compliance.closed_rooms'));
+    $this->assertNull($this->container->get('state')->get('surface_examples_workflow.state'));
     // The venues shipped, as shipped, and no other; a venue kept keeps its
     // uuid.
     $venues->resetCache();
@@ -137,7 +136,7 @@ class ExamplesResetTest extends DataSurfaceKernelTestBase {
     sort($kept);
     $this->assertSame(['harbour', 'library', 'riverside'], $kept);
     foreach (['riverside', 'library', 'harbour'] as $id) {
-      $name = 'data_surface_examples.event_venue.' . $id;
+      $name = 'surface_examples.event_venue.' . $id;
       $this->assertSame($this->shipped($name), array_diff_key($this->stored($name), ['uuid' => TRUE]), $name);
     }
     $this->assertSame($uuid, $venues->load('riverside')->uuid());

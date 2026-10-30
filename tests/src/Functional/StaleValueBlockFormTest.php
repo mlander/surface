@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use Drupal\block\Entity\Block;
@@ -30,10 +30,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * place the trap can actually be sprung — a browser submits the select
  * it was handed, whether or not anybody touched it.
  *
- * @see \Drupal\Tests\data_surface\Kernel\StaleValueTest
- * @see \Drupal\Tests\data_surface\Kernel\DemoBlockTest
+ * @see \Drupal\Tests\surface\Kernel\StaleValueTest
+ * @see \Drupal\Tests\surface\Kernel\DemoBlockTest
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class StaleValueBlockFormTest extends BrowserTestBase {
 
@@ -45,8 +45,8 @@ class StaleValueBlockFormTest extends BrowserTestBase {
     'node',
     'field',
     'text',
-    'data_surface',
-    'data_surface_demo',
+    'surface',
+    'surface_examples_plugins',
   ];
 
   /**
@@ -93,11 +93,11 @@ class StaleValueBlockFormTest extends BrowserTestBase {
       'id' => self::BLOCK_ID,
       'theme' => 'stark',
       'region' => 'content',
-      'plugin' => 'data_surface_demo',
+      'plugin' => 'surface_examples_plugins',
       'settings' => [
-        'id' => 'data_surface_demo',
+        'id' => 'surface_examples_plugins',
         'label' => 'Featured',
-        'provider' => 'data_surface_demo',
+        'provider' => 'surface_examples_plugins',
         'headline' => 'Featured',
         'entity_type' => 'node',
         'bundle' => 'article',

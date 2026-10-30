@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Pipeline\DataSurfaceResult;
-use Drupal\data_surface\Pipeline\PreparedValues;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\Pipeline\ViolationSet;
+use Drupal\surface\Pipeline\SurfaceResult;
+use Drupal\surface\Pipeline\PreparedValues;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -27,16 +27,16 @@ use PHPUnit\Framework\Attributes\Group;
  * one that reported an empty violation set as invalid because nothing
  * was committed would make the dry run unusable.
  *
- * @see \Drupal\data_surface\Pipeline\DataSurfaceResult
- * @see \Drupal\data_surface\Pipeline\PreparedValues
+ * @see \Drupal\surface\Pipeline\SurfaceResult
+ * @see \Drupal\surface\Pipeline\PreparedValues
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class PipelineResultTest extends UnitTestCase {
 
   /**
    * Every combination of the three things isValid() must ignore.
    *
-   * @return array<string, array{0: \Drupal\data_surface\Pipeline\ViolationSet, 1: bool, 2: bool}>
+   * @return array<string, array{0: \Drupal\surface\Pipeline\ViolationSet, 1: bool, 2: bool}>
    *   Test cases: the violations, whether an artifact was prepared, and
    *   whether the run counts as valid.
    */
@@ -65,7 +65,7 @@ class PipelineResultTest extends UnitTestCase {
    */
   #[DataProvider('validityCases')]
   public function testIsValidCountsViolationsOnly(ViolationSet $violations, bool $prepared, bool $expected): void {
-    $result = new DataSurfaceResult(
+    $result = new SurfaceResult(
       values: ['title' => 'Hello'],
       violations: $violations,
       prepared: $prepared ? new PreparedValues(['title' => 'Hello'], ['title' => 'Hello']) : NULL,
@@ -78,7 +78,7 @@ class PipelineResultTest extends UnitTestCase {
    * Tests the defaults a result takes when a stage never ran.
    */
   public function testResultThatOnlyReachedAccept(): void {
-    $result = new DataSurfaceResult(values: ['title' => 'Hello']);
+    $result = new SurfaceResult(values: ['title' => 'Hello']);
 
     $this->assertTrue($result->isValid());
     // Nothing prepared and nothing written, which is what a caller that
@@ -98,7 +98,7 @@ class PipelineResultTest extends UnitTestCase {
    */
   public function testViolationMessagesStayObjects(): void {
     $message = new TranslatableMarkup('@label is required.', ['@label' => 'Title']);
-    $result = new DataSurfaceResult(
+    $result = new SurfaceResult(
       values: [],
       violations: new ViolationSet([new Violation('title', '', $message, 'invalid')]),
     );
@@ -117,18 +117,18 @@ class PipelineResultTest extends UnitTestCase {
    * apart from a 422 and a "you may not" apart from a "that is wrong".
    */
   public function testAccessAnswersAreReadableSeparately(): void {
-    $allowed = new DataSurfaceResult(
+    $allowed = new SurfaceResult(
       values: ['title' => 'Hello'],
       access: AccessResult::allowed(),
     );
-    $refused = new DataSurfaceResult(
+    $refused = new SurfaceResult(
       values: [],
       violations: new ViolationSet([
         new Violation('', '', 'Access refused.', Violation::ACCESS),
       ]),
       access: AccessResult::forbidden(),
     );
-    $invalid = new DataSurfaceResult(
+    $invalid = new SurfaceResult(
       values: ['title' => ''],
       violations: new ViolationSet([new Violation('title', '', 'Refused.', 'invalid')]),
       access: AccessResult::allowed(),
@@ -152,7 +152,7 @@ class PipelineResultTest extends UnitTestCase {
    * missing question into a positive answer.
    */
   public function testNoAccessAnswerIsNotRefusalEither(): void {
-    $result = new DataSurfaceResult(values: ['title' => 'Hello']);
+    $result = new SurfaceResult(values: ['title' => 'Hello']);
 
     $this->assertNull($result->access);
     $this->assertFalse($result->isAccessRefused());

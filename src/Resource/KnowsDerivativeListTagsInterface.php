@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 /**
  * A deriver that says what decides which derivatives there are.
@@ -20,7 +20,7 @@ namespace Drupal\data_surface\Resource;
  *
  * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
  *
- * @see \Drupal\data_surface\Resource\ResourceDeriverInterface
+ * @see \Drupal\surface\Resource\ResourceDeriverInterface
  */
 interface KnowsDerivativeListTagsInterface {
 

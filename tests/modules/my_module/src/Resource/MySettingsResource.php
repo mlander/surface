@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace Drupal\my_module\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\Resource\Attribute\Operation;
-use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\ResourceInterface;
+use Drupal\surface\Resource\Attribute\Operation;
+use Drupal\surface\Resource\Attribute\Resource;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\ResourceInterface;
 use Drupal\my_module\Storage\MySettingsStorage;
 
 /**

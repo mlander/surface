@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
-use Drupal\data_surface_examples\CodeLines;
-use Drupal\data_surface_examples\Series;
+use Drupal\surface_examples\CodeLines;
+use Drupal\surface_examples\Series;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -22,7 +22,7 @@ use PHPUnit\Framework\Attributes\Group;
  * docs page or a decision it points at is gone, and when a README table
  * is not the list's.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class ExampleFilesTest extends UnitTestCase {
 
   /**
@@ -34,13 +34,13 @@ class ExampleFilesTest extends UnitTestCase {
    * The modules the examples are made of.
    */
   protected const MODULES = [
-    'data_surface_examples',
-    'data_surface_examples_compliance',
-    'data_surface_examples_workflow',
-    'data_surface_component_block',
-    'data_surface_examples_keys',
-    'data_surface_examples_references',
-    'data_surface_examples_retitle',
+    'surface_examples',
+    'surface_examples_compliance',
+    'surface_examples_workflow',
+    'surface_examples_component_block',
+    'surface_examples_keys',
+    'surface_examples_references',
+    'surface_examples_retitle',
   ];
 
   /**
@@ -62,7 +62,7 @@ class ExampleFilesTest extends UnitTestCase {
   /**
    * The main module's namespace whose classes an example lists as its own.
    */
-  protected const PROVIDERS = 'Drupal\\data_surface\\Variants\\';
+  protected const PROVIDERS = 'Drupal\\surface\\Variants\\';
 
   /**
    * {@inheritdoc}
@@ -147,13 +147,13 @@ class ExampleFilesTest extends UnitTestCase {
       // A route an operation form serves; the others are this page's.
       $routing = self::ROOT . '/' . $base . $module . '.routing.yml';
       foreach (is_file($routing) ? self::keys($routing) : [] as $key) {
-        if (str_contains((string) FirstResourceDocsTest::entry($routing, $key), '_data_surface_resource:')) {
+        if (str_contains((string) FirstResourceDocsTest::entry($routing, $key), '_surface_resource:')) {
           $parts[] = $base . $module . '.routing.yml#' . $key;
         }
       }
       // A module of its own is an example's: its info and permissions,
       // its services and its install file.
-      if ($module !== 'data_surface_examples') {
+      if ($module !== 'surface_examples') {
         foreach (glob(self::ROOT . '/' . $base . $module . '.{info.yml,permissions.yml,services.yml,install}', GLOB_BRACE) ?: [] as $file) {
           $parts[] = $base . basename($file);
         }
@@ -216,8 +216,8 @@ class ExampleFilesTest extends UnitTestCase {
           }
         }
         if ($key !== NULL && str_ends_with($path, '.routing.yml')) {
-          $this->assertMatchesRegularExpression('/_data_surface_resource: \'([\w\\\\]+)\'/', $source);
-          preg_match('/_data_surface_resource: \'([\w\\\\]+)\'/', $source, $resource);
+          $this->assertMatchesRegularExpression('/_surface_resource: \'([\w\\\\]+)\'/', $source);
+          preg_match('/_surface_resource: \'([\w\\\\]+)\'/', $source, $resource);
           $this->assertArrayHasKey((string) self::path($resource[1]), $example['files'], sprintf('Example %d lists the route %s without its resource.', $number, $key));
           $this->assertContains($key, $example['routes'], sprintf('Example %d lists the route %s, which is not one of its pages.', $number, $key));
         }
@@ -293,7 +293,7 @@ class ExampleFilesTest extends UnitTestCase {
    */
   protected static function path(string $class): ?string {
     if (str_starts_with($class, self::PROVIDERS)) {
-      return 'src/' . str_replace('\\', '/', substr($class, strlen('Drupal\\data_surface\\'))) . '.php';
+      return 'src/' . str_replace('\\', '/', substr($class, strlen('Drupal\\surface\\'))) . '.php';
     }
     $parts = explode('\\', $class);
     if (count($parts) < 4 || !in_array($parts[1], self::MODULES, TRUE) || !in_array($parts[2], self::PARTS, TRUE)) {

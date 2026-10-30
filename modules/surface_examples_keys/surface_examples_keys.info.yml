@@ -1,0 +1,9 @@
+name: 'Surface API examples: managed keys'
+type: module
+description: 'Example 14 of the examples: simulates the Key module, a list of named keys the site manages, so a resource can offer one in place of a pasted secret.'
+package: Surface API
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface_examples

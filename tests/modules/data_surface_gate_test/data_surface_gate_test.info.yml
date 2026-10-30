@@ -1,9 +1,0 @@
-name: Data Surface Gate Test
-type: module
-description: 'Test support for gates: an operation that borrows core''s access on a node and its title, asked of the node a context knows and of each item of a collection, another that borrows a resource''s operation, an access class that narrows, a field access hook that locks a title, and gates naming what the site lacks.'
-package: Testing
-version: VERSION
-core_version_requirement: ^11.3 || ^12
-dependencies:
-  - data_surface:data_surface
-  - drupal:node

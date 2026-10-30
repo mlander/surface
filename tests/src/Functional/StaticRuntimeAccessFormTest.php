@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
-use Drupal\data_surface_resource_test\Access\ExhibitAccess;
+use Drupal\surface_resource_test\Access\ExhibitAccess;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -19,10 +19,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * open, and its full schema marks them as decided once the exhibit is
  * known, which a sealed exhibit then decides.
  *
- * @see \Drupal\Tests\data_surface\Kernel\StaticRuntimeAccessTest
+ * @see \Drupal\Tests\surface\Kernel\StaticRuntimeAccessTest
  * @see docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class StaticRuntimeAccessFormTest extends BrowserTestBase {
 
@@ -30,9 +30,9 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_react',
-    'data_surface_resource_test',
+    'surface',
+    'surface_react',
+    'surface_resource_test',
   ];
 
   /**
@@ -59,7 +59,7 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
    */
   protected function stored(): array {
     $this->container->get('config.factory')->reset();
-    return array_diff_key($this->config('data_surface_resource_test.exhibit')->getRawData(), ['_core' => TRUE]);
+    return array_diff_key($this->config('surface_resource_test.exhibit')->getRawData(), ['_core' => TRUE]);
   }
 
   /**
@@ -131,7 +131,7 @@ class StaticRuntimeAccessFormTest extends BrowserTestBase {
     $this->assertTrue($contract['schema']['properties']['loan']['readOnly'], 'The schema for these answers settles it.');
 
     // Withdrawn, it is left out of the form.
-    $this->config('data_surface_resource_test.exhibit')->set('status', 'open')->save();
+    $this->config('surface_resource_test.exhibit')->set('status', 'open')->save();
     \Drupal::state()->set(ExhibitAccess::WITHDRAWN, TRUE);
     $this->drupalGet('surface-test/exhibit');
     $assert->fieldNotExists('surface[source]');

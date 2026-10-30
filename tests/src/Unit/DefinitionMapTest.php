@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\Entry;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Entry;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -23,10 +23,10 @@ use PHPUnit\Framework\Attributes\Group;
  * map cannot be written to, which is the same statement the builder
  * makes about itself, kept true of the thing the builder produced.
  *
- * @see \Drupal\data_surface\DefinitionMap
- * @see \Drupal\data_surface\Entry
+ * @see \Drupal\surface\DefinitionMap
+ * @see \Drupal\surface\Entry
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class DefinitionMapTest extends UnitTestCase {
 
   /**
@@ -137,7 +137,7 @@ class DefinitionMapTest extends UnitTestCase {
     $entry = $map->entry('detail');
     $this->assertInstanceOf(Entry::class, $entry);
     $this->assertSame('detail', $entry->name);
-    $this->assertSame(DataSurfaceInterface::OWNER, $entry->contributor);
+    $this->assertSame(SurfaceInterface::OWNER, $entry->contributor);
     $this->assertFalse($entry->locked);
     $this->assertNull($map->entry('nothing'));
   }
@@ -179,7 +179,7 @@ class DefinitionMapTest extends UnitTestCase {
       ['extended', 'mounted'],
       array_keys($map->byContributor('other_module')),
     );
-    $this->assertSame(['owned', 'extended'], array_keys($map->byContributor(DataSurfaceInterface::OWNER)));
+    $this->assertSame(['owned', 'extended'], array_keys($map->byContributor(SurfaceInterface::OWNER)));
     $this->assertSame(
       ['extended' => ['other_module' => ['ribbon']]],
       $map->contributions(),

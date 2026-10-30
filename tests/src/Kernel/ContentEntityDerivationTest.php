@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourceCollectorPass;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
-use Drupal\data_surface_entity\Access\ContentEntityAccess;
-use Drupal\data_surface_entity\Access\FieldItemAccess;
-use Drupal\data_surface_entity\Resource\ContentEntityResources;
-use Drupal\data_surface_entity\Resource\FieldItemStructures;
-use Drupal\data_surface_entity\Storage\ContentEntityStorage;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourceCollectorPass;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface_examples_entity\Access\ContentEntityAccess;
+use Drupal\surface_examples_entity\Access\FieldItemAccess;
+use Drupal\surface_examples_entity\Resource\ContentEntityResources;
+use Drupal\surface_examples_entity\Resource\FieldItemStructures;
+use Drupal\surface_examples_entity\Storage\ContentEntityStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -28,12 +28,12 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * it cached with the rest of discovery under the tags of what it was
  * read from.
  *
- * @see \Drupal\data_surface_entity\Resource\ContentEntityResources
- * @see \Drupal\data_surface_entity\Resource\FieldItemStructures
+ * @see \Drupal\surface_examples_entity\Resource\ContentEntityResources
+ * @see \Drupal\surface_examples_entity\Resource\FieldItemStructures
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
+class ContentEntityDerivationTest extends SurfaceKernelTestBase {
 
   use ContentEntityFixtureTrait;
   use UserCreationTrait;
@@ -55,21 +55,21 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the registry.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceRegistry
+   * @return \Drupal\surface\ResourceBuild\ResourceRegistry
    *   The service.
    */
   protected function registry(): ResourceRegistry {
-    return $this->container->get('data_surface.resource_registry');
+    return $this->container->get('surface.resource_registry');
   }
 
   /**
    * Gets the build step.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourcesInterface
+   * @return \Drupal\surface\ResourceBuild\ResourcesInterface
    *   The service.
    */
   protected function resources(): ResourcesInterface {
-    return $this->container->get('data_surface.resources');
+    return $this->container->get('surface.resources');
   }
 
   /**
@@ -78,25 +78,25 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
    * @param string $bundle
    *   The node bundle.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function add(string $bundle): DataSurfaceInterface {
+  protected function add(string $bundle): SurfaceInterface {
     return $this->resources()->buildOperation('entity.content:node.' . $bundle, 'create');
   }
 
   /**
    * Gets the child at a key.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The parent.
    * @param string $key
    *   The key.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The child.
    */
-  protected static function child(DataSurfaceInterface $surface, string $key): DataSurfaceInterface {
+  protected static function child(SurfaceInterface $surface, string $key): SurfaceInterface {
     $attachment = $surface->getDefinitions()->entry($key)?->attachment;
     assert($attachment !== NULL, $key);
     return $attachment->child;
@@ -116,7 +116,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertSame('entity.content:node.page', $page->name());
     $this->assertSame('entity.content', $page->base);
     $this->assertSame(ContentEntityResources::class, $page->deriver);
-    $this->assertSame('data_surface_entity', $page->module);
+    $this->assertSame('surface_examples_entity', $page->module);
     $this->assertSame(['entity_type', 'bundle', 'id'], $page->identity);
     $this->assertSame(ContentEntityStorage::class, $page->storage);
     $this->assertSame(ContentEntityAccess::class, $page->access);
@@ -126,7 +126,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['create', 'update'], array_keys($operations));
     $this->assertSame([], $operations['create']->parameters);
     $this->assertSame(['entity:node $id'], array_map(static fn ($parameter): string => $parameter->describe(), $operations['update']->parameters));
-    $this->assertSame('node', $this->container->get('data_surface.operation_arguments')->entityTypeOf($operations['update']->parameters[0]));
+    $this->assertSame('node', $this->container->get('surface.operation_arguments')->entityTypeOf($operations['update']->parameters[0]));
 
     // The create operation knows the bundle, and that there is no id yet.
     $context = $this->resources()->operation('entity.content:node.page', 'create');
@@ -212,7 +212,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['basic'], $constraint('field_text_long', 'format', 'LabeledChoice')['choices']);
     // A reference's targets are its selection handler's, listed by the
     // options resolver while there are few enough.
-    $this->assertSame(['entityTypeId' => 'node', 'bundle' => 'kitchen', 'fieldName' => 'field_term'], $constraint('field_term', 'target_id', 'DataSurfaceReferenceable'));
+    $this->assertSame(['entityTypeId' => 'node', 'bundle' => 'kitchen', 'fieldName' => 'field_term'], $constraint('field_term', 'target_id', 'SurfaceReferenceable'));
     $terms = $this->options()->resolve(static::child($surface, 'field_term')->getDefinition('target_id'));
     $this->assertNotNull($terms);
     $this->assertSame(['Larder', 'Pantry'], array_values(array_map('strval', $terms->options)));
@@ -250,7 +250,7 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString('LinkType', (string) $this->registry()->getDefinition('field.item:node.kitchen.field_link')->notes['constraints']);
 
     // The catalog lists them as derived, by base, and lists the derivers.
-    $catalog = $this->container->get('data_surface.resource_catalog');
+    $catalog = $this->container->get('surface.resource_catalog');
     $entry = $catalog->describe()['entity.content:node.page'];
     $this->assertNull($entry['class']);
     $this->assertSame('entity.content', $entry['deriver']);
@@ -276,17 +276,17 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
   public function testDerivedDefinitionsRoundTripThroughTheCache(): void {
     $definitions = $this->registry()->getDefinitions();
     $classes = $this->container->getParameter(ResourceCollectorPass::PARAMETER);
-    $this->assertSame(['data_surface_entity'], array_values(array_unique($classes['derivers'])));
-    $plugins = $this->container->get('data_surface.resource_plugins');
+    $this->assertSame(['surface_examples_entity'], array_values(array_unique($classes['derivers'])));
+    $plugins = $this->container->get('surface.resource_plugins');
     // No plugin here is its own structure, so the ids hash the classes.
     $this->assertSame([], $plugins->ownStructures());
     $hash = hash('xxh3', serialize($classes));
     $bin = $this->container->get('cache.discovery');
-    $index = $bin->get('data_surface:resources:index:' . $hash);
+    $index = $bin->get('surface:resources:index:' . $hash);
     $this->assertNotFalse($index);
     $this->assertArrayHasKey('entity.content:node.page', $index->data['names']);
     $this->assertEqualsCanonicalizing(['entity_field_info', 'entity_bundles', 'config:entity_form_display_list'], $index->tags);
-    $page = $bin->get('data_surface:resources:entry:' . $hash . ':entity.content:node.page');
+    $page = $bin->get('surface:resources:entry:' . $hash . ':entity.content:node.page');
     $this->assertNotFalse($page);
     $this->assertContains('config:core.entity_form_display.node.page.default', $page->tags);
     $this->assertContains('config:node.type.page', $page->tags);
@@ -300,8 +300,8 @@ class ContentEntityDerivationTest extends DataSurfaceKernelTestBase {
     $display = EntityFormDisplay::load('node.page.default');
     assert($display !== NULL);
     $display->setComponent('field_subtitle', ['weight' => 100])->save();
-    $this->assertFalse($bin->get('data_surface:resources:index:' . $hash));
-    $this->assertFalse($bin->get('data_surface:resources:entry:' . $hash . ':entity.content:node.page'));
+    $this->assertFalse($bin->get('surface:resources:index:' . $hash));
+    $this->assertFalse($bin->get('surface:resources:entry:' . $hash . ':entity.content:node.page'));
     $this->assertTrue($this->registry()->hasDefinition('field.item:node.page.field_subtitle'));
     $this->assertSame('field.item:node.page.field_subtitle', $this->add('page')->getDefinitions()->entry('field_subtitle')?->attachment?->id);
   }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Resource;
+namespace Drupal\surface\Resource;
 
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 
@@ -24,7 +24,7 @@ use Drupal\Core\DependencyInjection\ClassResolverInterface;
  * class; an instance method on the class resolver's instance of it, so
  * a deriver's own methods may use the services it holds.
  *
- * @see \Drupal\data_surface\Resource\DerivedResource
+ * @see \Drupal\surface\Resource\DerivedResource
  */
 final class ResourceCallable {
 

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Cache\CacheableMetadata;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface_test\RecordingStorage;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface_test\RecordingStorage;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -23,17 +23,17 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * promise for every provider that has not answered for itself. An
  * allowed answer adds nothing but its cacheability.
  *
- * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::submit()
- * @see \Drupal\data_surface\DataSurfaceAccess
+ * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::submit()
+ * @see \Drupal\surface\SurfaceAccess
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class PipelineAccessTest extends DataSurfaceKernelTestBase {
+class PipelineAccessTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'data_surface', 'data_surface_test'];
+  protected static $modules = ['system', 'surface', 'surface_test'];
 
   /**
    * The shared log each recording storage appends its writes to.
@@ -53,7 +53,7 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
   /**
    * Builds storage that records what it was asked to do.
    *
-   * @return \Drupal\data_surface_test\RecordingStorage
+   * @return \Drupal\surface_test\RecordingStorage
    *   The storage.
    */
   protected function storage(): RecordingStorage {
@@ -227,7 +227,7 @@ class PipelineAccessTest extends DataSurfaceKernelTestBase {
    */
   public function testHostsDefaultToNoOpinion(): void {
     $block = $this->container->get('plugin.manager.block')
-      ->createInstance('data_surface_test_block');
+      ->createInstance('surface_test_block');
 
     $access = $block->surfaceAccess();
 

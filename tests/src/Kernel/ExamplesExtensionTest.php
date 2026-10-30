@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Refinement\Rule;
-use Drupal\data_surface\Resolve;
-use Drupal\data_surface_examples\ConceptPanel;
-use Drupal\data_surface_examples\Resource\MailerResource;
-use Drupal\data_surface_examples\Resource\WebhookResource;
-use Drupal\data_surface_examples\WebhookSigner;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Refinement\Rule;
+use Drupal\surface\Resolve;
+use Drupal\surface_examples\ConceptPanel;
+use Drupal\surface_examples\Resource\MailerResource;
+use Drupal\surface_examples\Resource\WebhookResource;
+use Drupal\surface_examples\WebhookSigner;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -33,9 +33,9 @@ use Symfony\Component\HttpFoundation\Request;
  * Decision: see
  * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
+class ExamplesExtensionTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -48,9 +48,8 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_examples',
   ];
 
   /**
@@ -425,7 +424,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                 "writeOnly": true,
                 "x-surface": {
                     "dependsOn": [
-                        "third_party_settings.data_surface_examples_keys.key_id"
+                        "third_party_settings.surface_examples_keys.key_id"
                     ]
                 }
             },
@@ -435,7 +434,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                     "null"
                 ],
                 "properties": {
-                    "data_surface_examples_keys": {
+                    "surface_examples_keys": {
                         "title": "Managed key",
                         "type": [
                             "object",
@@ -498,7 +497,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                                 "null"
                             ],
                             "properties": {
-                                "data_surface_examples_keys": {
+                                "surface_examples_keys": {
                                     "type": [
                                         "object",
                                         "null"
@@ -516,7 +515,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
                                 }
                             },
                             "required": [
-                                "data_surface_examples_keys"
+                                "surface_examples_keys"
                             ]
                         }
                     },
@@ -542,7 +541,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
   /**
    * The webhook's managed key, at the keys module's mount.
    */
-  protected const MOUNTED = ['third_party_settings' => ['data_surface_examples_keys' => ['key_id' => 'webhook_signing']]];
+  protected const MOUNTED = ['third_party_settings' => ['surface_examples_keys' => ['key_id' => 'webhook_signing']]];
 
   /**
    * {@inheritdoc}
@@ -552,7 +551,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     // Uninstalling a module clears its user data.
     $this->installSchema('user', ['users_data']);
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -578,10 +577,10 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
    *   The schema.
    */
   protected function full(string $id): array {
-    $resources = $this->container->get('data_surface.resources');
-    $registry = $this->container->get('data_surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
     $operation = $registry->getOperation($id, 'configure');
-    $schema = $this->container->get('data_surface.contract_emitter')
+    $schema = $this->container->get('surface.contract_emitter')
       ->emitFull($resources->buildStatic($id, $resources->operation($id, 'configure')), $id, 'configure', $operation->label, operation: $operation->facts())
       ->document['schema'];
     // As a client reads it.
@@ -598,10 +597,10 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
    *   The schema.
    */
   protected function now(string $id): array {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $built = $resources->buildOperation($id, 'configure');
     $values = array_replace($built->getDefaultValues(), $resources->storage($id, $resources->operation($id, 'configure'), $built)->load($built));
-    return $this->container->get('data_surface.contract_emitter')->emit($built, $values, $id, 'configure', NULL, TRUE)->document['schema'];
+    return $this->container->get('surface.contract_emitter')->emit($built, $values, $id, 'configure', NULL, TRUE)->document['schema'];
   }
 
   /**
@@ -618,7 +617,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
    *   Whether it succeeded, and its outputs.
    */
   protected function call(string $tool, ?array $values = NULL, bool $dry_run = FALSE): array {
-    $instance = $this->container->get('plugin.manager.tool')->createInstance('data_surface:' . $tool);
+    $instance = $this->container->get('plugin.manager.tool')->createInstance('surface:' . $tool);
     if ($values !== NULL) {
       $instance->setInputValue(OperationInputs::VALUES, $values);
       $instance->setInputValue(OperationInputs::DRY_RUN, $dry_run);
@@ -677,7 +676,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
     $form_state = new FormState();
-    return $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $form_state)[DataSurfaceOperationForm::SURFACE_KEY];
+    return $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $form_state)[SurfaceOperationForm::SURFACE_KEY];
   }
 
   /**
@@ -715,7 +714,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     $this->assertSame('fixed', $source['x-surface']['widget']);
     $this->assertSame('Pasted here', $source['x-surface']['fixed']);
     $this->assertArrayNotHasKey('emptyOption', $source['x-surface']);
-    $element = $this->formAt('data_surface_examples.step14')['source'];
+    $element = $this->formAt('surface_examples.step14')['source'];
     $this->assertSame('item', $element['#type']);
     $this->assertSame('Pasted here', $element['#plain_text']);
     $this->assertSame('pasted', $element['#value']);
@@ -727,7 +726,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     $this->assertArrayNotHasKey('const', $source);
     $this->assertSame(['pasted', 'managed'], array_column($source['oneOf'], 'const'));
     $this->assertSame('select', $source['x-surface']['widget']);
-    $element = $this->formAt('data_surface_examples.step14')['source'];
+    $element = $this->formAt('surface_examples.step14')['source'];
     $this->assertSame('select', $element['#type']);
     $this->assertSame(['pasted' => 'Pasted here', 'managed' => 'A managed key'], array_map('strval', $element['#options']));
     $this->assertArrayHasKey('#ajax', $element);
@@ -744,13 +743,13 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     $this->keys(TRUE);
     [$ok] = $this->call('event.mailer:configure', ['source' => 'pasted', 'credential' => ['api_key' => 'mk-kept-1']]);
     $this->assertTrue($ok);
-    $this->assertSame(['api_key' => 'mk-kept-1'], $this->stored('data_surface_examples.mailer')['credential']);
+    $this->assertSame(['api_key' => 'mk-kept-1'], $this->stored('surface_examples.mailer')['credential']);
 
     [$ok, $outputs] = $this->call('event.mailer:configure', self::MANAGED);
     $this->assertTrue($ok);
     $this->assertSame(['key_id' => 'mail_service'], $outputs[OperationInputs::VALUES]['credential'], 'The answer holds the managed key alone.');
-    $this->assertSame(['key_id' => 'mail_service', 'api_key' => 'mk-kept-1'], $this->stored('data_surface_examples.mailer')['credential'], 'The pasted key is kept beside it.');
-    $this->assertConfigHoldsToItsSchema('data_surface_examples.mailer');
+    $this->assertSame(['key_id' => 'mail_service', 'api_key' => 'mk-kept-1'], $this->stored('surface_examples.mailer')['credential'], 'The pasted key is kept beside it.');
+    $this->assertConfigHoldsToItsSchema('surface_examples.mailer');
     [, $read] = $this->call('event.mailer:configure:read');
     $this->assertSame('managed', $read[OperationInputs::VALUES]['source']);
     $this->assertSame(['key_id' => 'mail_service'], (array) $read[OperationInputs::VALUES]['credential'], 'The read names the managed key, and leaves the pasted one out.');
@@ -759,12 +758,12 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     // A save that changes nothing else keeps it too.
     [$ok] = $this->call('event.mailer:configure', ['sender' => 'box@example.com']);
     $this->assertTrue($ok);
-    $this->assertSame('mk-kept-1', $this->stored('data_surface_examples.mailer')['credential']['api_key']);
+    $this->assertSame('mk-kept-1', $this->stored('surface_examples.mailer')['credential']['api_key']);
 
     [$ok, $outputs] = $this->call('event.mailer:configure', ['source' => 'pasted']);
     $this->assertTrue($ok, 'Chosen back with nothing sent for it, the pasted key is the one kept.');
-    $this->assertSame(['api_key' => 'mk-kept-1'], $this->stored('data_surface_examples.mailer')['credential'], 'The managed key, a plain value, goes; the pasted key is the source\'s again.');
-    $this->assertConfigHoldsToItsSchema('data_surface_examples.mailer');
+    $this->assertSame(['api_key' => 'mk-kept-1'], $this->stored('surface_examples.mailer')['credential'], 'The managed key, a plain value, goes; the pasted key is the source\'s again.');
+    $this->assertConfigHoldsToItsSchema('surface_examples.mailer');
     [, $read] = $this->call('event.mailer:configure:read');
     $this->assertSame([], (array) $read[OperationInputs::VALUES]['credential']);
   }
@@ -790,7 +789,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     [$ok, $outputs] = $this->call('event.webhook:configure', ['api_key' => 'wh-1'] + self::MOUNTED, TRUE);
     $this->assertFalse($ok);
     $this->assertSame(['/api_key' => 'API key does not apply when Managed key: Key is set.'], self::refusals($outputs));
-    [$ok, $outputs] = $this->call('event.webhook:configure', ['third_party_settings' => ['data_surface_examples_keys' => ['key_id' => 'vault']]], TRUE);
+    [$ok, $outputs] = $this->call('event.webhook:configure', ['third_party_settings' => ['surface_examples_keys' => ['key_id' => 'vault']]], TRUE);
     $this->assertFalse($ok);
     $this->assertSame(["The site manages no key named 'vault'."], array_values(self::refusals($outputs)));
   }
@@ -803,23 +802,23 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($ok);
     $this->keys(TRUE);
     $this->assertArrayHasKey('api_key', $this->now('event.webhook')['properties'], 'No key chosen yet: the pasted key applies.');
-    [$ok] = $this->call('event.webhook:configure', ['third_party_settings' => ['data_surface_examples_keys' => ['key_id' => 'webhook_signing']]]);
+    [$ok] = $this->call('event.webhook:configure', ['third_party_settings' => ['surface_examples_keys' => ['key_id' => 'webhook_signing']]]);
     $this->assertTrue($ok);
     $this->assertArrayNotHasKey('api_key', $this->now('event.webhook')['properties'], 'A key chosen: the pasted key does not apply.');
-    $this->assertNotSame('password', $this->formAt('data_surface_examples.step14_webhook')['api_key']['#type'] ?? NULL, 'Nor is it drawn: its wrapper alone.');
+    $this->assertNotSame('password', $this->formAt('surface_examples.step14_webhook')['api_key']['#type'] ?? NULL, 'Nor is it drawn: its wrapper alone.');
     [$ok] = $this->call('event.webhook:configure', ['api_key' => ''], TRUE);
     $this->assertTrue($ok, 'Nothing sent for it is still nothing.');
-    $this->assertSame('wh-kept-1', $this->stored('data_surface_examples.webhook')['api_key'], 'What it holds is kept.');
+    $this->assertSame('wh-kept-1', $this->stored('surface_examples.webhook')['api_key'], 'What it holds is kept.');
     [, $read] = $this->call('event.webhook:configure:read');
-    $this->assertSame(['data_surface_examples_keys' => ['key_id' => 'webhook_signing']], json_decode((string) json_encode($read[OperationInputs::VALUES]['third_party_settings']), TRUE));
+    $this->assertSame(['surface_examples_keys' => ['key_id' => 'webhook_signing']], json_decode((string) json_encode($read[OperationInputs::VALUES]['third_party_settings']), TRUE));
     $this->assertArrayNotHasKey('api_key', (array) $read[OperationInputs::VALUES]);
 
     $this->keys(FALSE);
-    $this->assertArrayNotHasKey('third_party_settings', $this->stored('data_surface_examples.webhook'), 'The module took the managed key it stored away with it.');
-    $this->assertSame('password', $this->formAt('data_surface_examples.step14_webhook')['api_key']['#type'], 'Off: the pasted key is back.');
+    $this->assertArrayNotHasKey('third_party_settings', $this->stored('surface_examples.webhook'), 'The module took the managed key it stored away with it.');
+    $this->assertSame('password', $this->formAt('surface_examples.step14_webhook')['api_key']['#type'], 'Off: the pasted key is back.');
     [$ok, $outputs] = $this->call('event.webhook:configure', ['endpoint' => 'https://hooks.example.com/other']);
     $this->assertTrue($ok, 'A save with the module off, its stored key under the webhook: ' . json_encode($outputs));
-    $this->assertSame('wh-kept-1', $this->stored('data_surface_examples.webhook')['api_key'], 'With its value.');
+    $this->assertSame('wh-kept-1', $this->stored('surface_examples.webhook')['api_key'], 'With its value.');
   }
 
   /**
@@ -834,7 +833,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
   public function testTheSignerUsesTheKeyThatStandsAtUse(): void {
     $payload = ['sold' => 3, 'event' => 'spring'];
     $signed = static fn (string $key): string => hash_hmac('sha256', (string) json_encode($payload), $key);
-    $signer = fn (): WebhookSigner => $this->container->get('data_surface_examples.webhook_signer');
+    $signer = fn (): WebhookSigner => $this->container->get('surface_examples.webhook_signer');
     [$ok] = $this->call('event.webhook:configure', ['api_key' => 'wh-pasted-1']);
     $this->assertTrue($ok);
     $this->assertSame($signed('wh-pasted-1'), $signer()->sign($payload), 'Off: the pasted key.');
@@ -842,12 +841,12 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
 
     $this->keys(TRUE);
     $this->assertSame($signed('wh-pasted-1'), $signer()->sign($payload), 'On, with no key chosen: the pasted key still.');
-    $built = $this->container->get('data_surface.resources')->buildOperation('event.webhook', 'configure');
+    $built = $this->container->get('surface.resources')->buildOperation('event.webhook', 'configure');
     $this->assertEquals(['key_id' => 'third_party_settings.' . self::KEYS . '.key_id'], Resolve::of($built->getDefinition('api_key'))?->from, 'The alter\'s own key, read from its mount.');
     [$ok] = $this->call('event.webhook:configure', self::MOUNTED);
     $this->assertTrue($ok);
     $this->assertSame($signed('wh-managed-9a1f2c'), $signer()->sign($payload), 'A key chosen: its value.');
-    $stored = $this->stored('data_surface_examples.webhook');
+    $stored = $this->stored('surface_examples.webhook');
     $this->assertSame('wh-pasted-1', $stored['api_key'], 'The pasted key is kept as stored.');
     $this->assertSame(self::MOUNTED['third_party_settings'], $stored['third_party_settings']);
     $this->assertStringNotContainsString('wh-managed-9a1f2c', (string) json_encode($stored), 'The managed key\'s value is stored nowhere on the webhook.');
@@ -861,10 +860,10 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
 
     [$ok] = $this->call('event.webhook:configure', self::MOUNTED);
     $this->assertTrue($ok);
-    $keys = $this->config('data_surface_examples_keys.keys');
+    $keys = $this->config('surface_examples_keys.keys');
     $keys->set('keys', array_values(array_filter($keys->get('keys'), static fn (array $key): bool => $key['id'] !== 'webhook_signing')))->save();
-    $this->assertNull($this->container->get('data_surface.resources')->resolved('event.webhook')['api_key'], 'A name the site no longer manages resolves to nothing.');
-    $this->assertSame('wh-pasted-1', $this->stored('data_surface_examples.webhook')['api_key'], 'What is stored for the pasted key is kept, and not used.');
+    $this->assertNull($this->container->get('surface.resources')->resolved('event.webhook')['api_key'], 'A name the site no longer manages resolves to nothing.');
+    $this->assertSame('wh-pasted-1', $this->stored('surface_examples.webhook')['api_key'], 'What is stored for the pasted key is kept, and not used.');
     $this->expectException(\RuntimeException::class);
     $this->expectExceptionMessage('The webhook has no key to sign a post with.');
     $signer()->sign($payload);
@@ -877,7 +876,7 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
    * rule that gains one fails here, so the alternative is weighed again.
    */
   public function testTheReadmeQuotesWhatThePageShows(): void {
-    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/data_surface_examples/README.md');
+    $readme = (string) file_get_contents(dirname(__DIR__, 3) . '/modules/surface_examples/README.md');
     $flags = JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
     $keys = array_flip(['source', 'credential']);
     $excerpt = static fn (array $full): string => (string) json_encode(array_intersect_key($full['properties'], $keys), $flags);
@@ -886,10 +885,10 @@ class ExamplesExtensionTest extends DataSurfaceKernelTestBase {
     $this->assertStringContainsString("```json\n" . json_encode(self::rules(json_decode(self::WEBHOOK_ON, TRUE)), $flags) . "\n```", $readme);
     $this->assertStringContainsString("```php\n" . ConceptPanel::LOCKING . "\n```", $readme);
     $this->assertFalse((new \ReflectionClass(Rule::class))->hasMethod('lock'), 'A rule may lock now: weigh the alternative the page quotes again.');
-    $use = (string) preg_replace('#<code>(.*?)</code>#', '`$1`', htmlspecialchars_decode((string) $this->container->get('data_surface_examples.concept_panel')->atUse(), ENT_QUOTES));
+    $use = (string) preg_replace('#<code>(.*?)</code>#', '`$1`', htmlspecialchars_decode((string) $this->container->get('surface_examples.concept_panel')->atUse(), ENT_QUOTES));
     $this->assertStringContainsString($use, (string) preg_replace('/\s+/', ' ', $readme));
-    $this->assertSame(MailerResource::class, $this->container->get('data_surface.resource_registry')->getDefinition('event.mailer')->class);
-    $this->assertSame(WebhookResource::class, $this->container->get('data_surface.resource_registry')->getDefinition('event.webhook')->class);
+    $this->assertSame(MailerResource::class, $this->container->get('surface.resource_registry')->getDefinition('event.mailer')->class);
+    $this->assertSame(WebhookResource::class, $this->container->get('surface.resource_registry')->getDefinition('event.webhook')->class);
   }
 
   /**

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 /**
  * Everything one run refused, grouped by top level key.
@@ -34,17 +34,17 @@ namespace Drupal\data_surface\Pipeline;
  * learn anything new to keep saving a value that went stale, and a
  * reader that wants to say so out loud asks stale() on purpose.
  *
- * @see \Drupal\data_surface\Pipeline\Violation
- * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::validate()
+ * @see \Drupal\surface\Pipeline\Violation
+ * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::validate()
  *
- * @implements \IteratorAggregate<int, \Drupal\data_surface\Pipeline\Violation>
+ * @implements \IteratorAggregate<int, \Drupal\surface\Pipeline\Violation>
  */
 final class ViolationSet implements \IteratorAggregate, \Countable {
 
   /**
    * The violations, keyed by top level key, in first-refused order.
    *
-   * @var array<string, \Drupal\data_surface\Pipeline\Violation[]>
+   * @var array<string, \Drupal\surface\Pipeline\Violation[]>
    */
   private readonly array $grouped;
 
@@ -56,14 +56,14 @@ final class ViolationSet implements \IteratorAggregate, \Countable {
    * reader so far wants all of them — a messenger warning, an agent's
    * "re-choose these" list.
    *
-   * @var \Drupal\data_surface\Pipeline\Violation[]
+   * @var \Drupal\surface\Pipeline\Violation[]
    */
   private readonly array $staleEntries;
 
   /**
    * Constructs a ViolationSet.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation[] $violations
+   * @param \Drupal\surface\Pipeline\Violation[] $violations
    *   The violations, in the order they were found. Entries flagged
    *   stale are separated out here and answered by stale() alone.
    */
@@ -84,7 +84,7 @@ final class ViolationSet implements \IteratorAggregate, \Countable {
   /**
    * Gets the stale references, in the order they were found.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The stale entries; empty when nothing went stale.
    */
   public function stale(): array {
@@ -133,7 +133,7 @@ final class ViolationSet implements \IteratorAggregate, \Countable {
    * @param string $key
    *   The top level key.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   The violations, in the order they were found; empty when the key
    *   was not refused.
    */

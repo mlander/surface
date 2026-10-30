@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Options;
+namespace Drupal\surface\Options;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -72,10 +72,10 @@ final class OptionSet implements CacheableDependencyInterface {
    * and the cacheability of both is merged, since the answer is only
    * reusable for as long as its shorter-lived half.
    *
-   * @param \Drupal\data_surface\Options\OptionSet $other
+   * @param \Drupal\surface\Options\OptionSet $other
    *   The set to intersect with.
    *
-   * @return \Drupal\data_surface\Options\OptionSet
+   * @return \Drupal\surface\Options\OptionSet
    *   The intersected set.
    */
   public function intersect(OptionSet $other): OptionSet {

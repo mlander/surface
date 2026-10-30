@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Routing\RouteProviderInterface;
 use Drupal\Core\Url;
@@ -25,7 +25,7 @@ use Symfony\Component\Routing\Route;
  *
  * The form door is every such route the operation form serves. A route
  * whose controller is the React page's (OperationRoute::reactPage()) is
- * no form: data_surface_react's React door lists it beside the
+ * no form: surface_react's React door lists it beside the
  * operation's own page (reactPages(), reactPageLink()).
  */
 final class FormRouteDoors implements CatalogDoorLinksInterface {
@@ -70,9 +70,9 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
    * the form door names a form route: the React door lists them beside
    * the operation's own page.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   One of its operations.
    *
    * @return string[]
@@ -85,9 +85,9 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
   /**
    * Gives the first React page a module serves an operation at, as a URL.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   One of its operations.
    *
    * @return \Drupal\Core\Url|null
@@ -101,9 +101,9 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
   /**
    * Names each route of one kind that serves an operation.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   One of its operations.
    * @param bool $react
    *   TRUE for the React pages modules serve it at, FALSE for the
@@ -125,9 +125,9 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
   /**
    * Gives the first route of one kind serving an operation that has a URL.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   One of its operations.
    * @param bool $react
    *   TRUE for the React pages modules serve it at, FALSE for the
@@ -159,9 +159,9 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
    * Forms and React pages alike, as the catalog judges each of them
    * (SiteCatalog::refused()).
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $resource
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource or structure.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   One of its operations.
    *
    * @return array<string, array{0: \Symfony\Component\Routing\Route, 1: array<string, string>}>
@@ -269,7 +269,7 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
    *   The route.
    * @param array<string, string> $filled
    *   The raw value of each variable the resource's id fills.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation it serves.
    *
    * @return string

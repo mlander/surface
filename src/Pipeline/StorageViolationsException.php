@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 /**
  * Thrown when a storage refuses the values it cannot hold.
@@ -13,19 +13,19 @@ namespace Drupal\data_surface\Pipeline;
  * storage speaks second, inside prepare(), once it has shaped the values
  * into the thing the schema describes. This exception is how the second
  * opinion travels back: it carries violations in exactly the shape
- * DataSurfacePipeline::validate() returns them, so a caller folds them
+ * SurfacePipeline::validate() returns them, so a caller folds them
  * into a result without translating anything. The messages stay objects;
  * only the exception's own text, which PHP insists is a string, renders
  * them, and it names the first few and counts the rest.
  *
- * @see \Drupal\data_surface\Pipeline\ViolationSummary
+ * @see \Drupal\surface\Pipeline\ViolationSummary
  */
 final class StorageViolationsException extends \RuntimeException {
 
   /**
    * Constructs a StorageViolationsException.
    *
-   * @param \Drupal\data_surface\Pipeline\ViolationSet $violations
+   * @param \Drupal\surface\Pipeline\ViolationSet $violations
    *   What the storage refused, each violation carrying its key,
    *   the property path within that key and an unrendered message.
    */
@@ -38,7 +38,7 @@ final class StorageViolationsException extends \RuntimeException {
   /**
    * Gets the violations the storage reported.
    *
-   * @return \Drupal\data_surface\Pipeline\ViolationSet
+   * @return \Drupal\surface\Pipeline\ViolationSet
    *   The violations, ready to hand to a result.
    */
   public function getViolations(): ViolationSet {

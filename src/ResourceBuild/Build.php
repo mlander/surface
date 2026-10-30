@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\Resource\OperationContext;
 
 /**
  * What one build of one resource or structure carries, in one place.
@@ -44,18 +44,18 @@ use Drupal\data_surface\Resource\OperationContext;
  *
  * @internal
  *
- * @see \Drupal\data_surface\ResourceBuild\Resources
+ * @see \Drupal\surface\ResourceBuild\Resources
  */
 final readonly class Build {
 
   /**
    * Constructs a Build.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The builder the shape is written into.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure, or the owner of the keys a step reads.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is invoked in.
    * @param array<int, array{class: string, id: string, key: string, inputs: string[], held?: array|null}> $ancestry
    *   The parents it is built inside, outermost first; empty for one asked
@@ -68,7 +68,7 @@ final readonly class Build {
    *   The owner's keys holding an attached child or variants.
    * @param string[] $lists
    *   The owner's collection keys.
-   * @param array<string, \Drupal\data_surface\Port> $ports
+   * @param array<string, \Drupal\surface\Port> $ports
    *   The ports the owner reads.
    * @param array<string, mixed> $frame
    *   The owner, as a child is built under it (buildChild()): its `class`,
@@ -96,7 +96,7 @@ final readonly class Build {
    *   owner's key it is wired to.
    */
   public function __construct(
-    public DataSurfaceBuilderInterface $builder,
+    public SurfaceBuilderInterface $builder,
     public ResourceDefinition $definition,
     public OperationContext $context,
     public array $ancestry = [],
@@ -194,11 +194,11 @@ final readonly class Build {
    * input keys, no outputs, no children and no parents, and reads its
    * ports as the owner's keys they are wired to.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $structure
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
    *   The structure.
    * @param string[] $keys
    *   Its members still there.
-   * @param array<string, \Drupal\data_surface\Port> $ports
+   * @param array<string, \Drupal\surface\Port> $ports
    *   The ports it reads.
    * @param array<string, string> $translated
    *   Each port mapped to the owner's key it is wired to.

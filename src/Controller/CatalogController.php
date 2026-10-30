@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Controller;
+namespace Drupal\surface\Controller;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Url;
-use Drupal\data_surface\ResourceBuild\CatalogDocument;
-use Drupal\data_surface\ResourceBuild\SiteCatalog;
+use Drupal\surface\ResourceBuild\CatalogDocument;
+use Drupal\surface\ResourceBuild\SiteCatalog;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -30,7 +30,7 @@ final class CatalogController extends ControllerBase {
   /**
    * Constructs a CatalogController.
    *
-   * @param \Drupal\data_surface\ResourceBuild\SiteCatalog $catalog
+   * @param \Drupal\surface\ResourceBuild\SiteCatalog $catalog
    *   The site catalog.
    */
   public function __construct(
@@ -41,7 +41,7 @@ final class CatalogController extends ControllerBase {
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container): static {
-    return new static($container->get('data_surface.site_catalog'));
+    return new static($container->get('surface.site_catalog'));
   }
 
   /**
@@ -89,7 +89,7 @@ final class CatalogController extends ControllerBase {
           $this->t('Doors'),
         ],
         '#rows' => $rows,
-        '#attributes' => ['id' => 'data-surface-catalog'],
+        '#attributes' => ['id' => 'surface-catalog'],
       ],
       'refused' => $this->refusals($refused),
       '#cache' => ['max-age' => 0],
@@ -151,7 +151,7 @@ final class CatalogController extends ControllerBase {
           $this->t('Access: @access', ['@access' => CatalogDocument::access($entry['answers'])]),
           $this->t('Keys read in: @context', ['@context' => $entry['built'] ?? 'nothing: it did not build']),
         ],
-        '#attributes' => ['id' => 'data-surface-catalog-facts'],
+        '#attributes' => ['id' => 'surface-catalog-facts'],
       ],
       'operations' => [
         '#type' => 'table',
@@ -165,7 +165,7 @@ final class CatalogController extends ControllerBase {
         ],
         '#rows' => $operations,
         '#empty' => $this->t('No operation: its host or its parent configures it.'),
-        '#attributes' => ['id' => 'data-surface-catalog-operations'],
+        '#attributes' => ['id' => 'surface-catalog-operations'],
       ],
       'keys' => [
         '#type' => 'table',
@@ -179,13 +179,13 @@ final class CatalogController extends ControllerBase {
         ],
         '#rows' => $keys,
         '#empty' => $this->t('No keys: it did not build.'),
-        '#attributes' => ['id' => 'data-surface-catalog-keys'],
+        '#attributes' => ['id' => 'surface-catalog-keys'],
       ],
       'refused' => $this->refusals($entry['refused']),
       'back' => [
         '#type' => 'link',
         '#title' => $this->t('Every resource and structure'),
-        '#url' => Url::fromRoute('data_surface.catalog'),
+        '#url' => Url::fromRoute('surface.catalog'),
       ],
       '#cache' => ['max-age' => 0],
     ];
@@ -231,7 +231,7 @@ final class CatalogController extends ControllerBase {
     return [
       '#type' => 'link',
       '#title' => $resource,
-      '#url' => Url::fromRoute('data_surface.catalog.resource', ['resource' => $resource]),
+      '#url' => Url::fromRoute('surface.catalog.resource', ['resource' => $resource]),
     ];
   }
 
@@ -291,7 +291,7 @@ final class CatalogController extends ControllerBase {
         '#header' => [$this->t('Resource or structure'), $this->t('Operation'), $this->t('Message'), $this->t('File')],
         '#rows' => $rows,
         '#empty' => $this->t('Nothing discovery found was refused: every operation of every resource and structure built.'),
-        '#attributes' => ['id' => 'data-surface-catalog-refused'],
+        '#attributes' => ['id' => 'surface-catalog-refused'],
       ],
     ];
   }

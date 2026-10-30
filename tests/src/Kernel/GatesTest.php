@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\Gate;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface_gate_test\Access\GateNoteAccess;
-use Drupal\data_surface_gate_test\OutsideDiscovery\MissingEntityTypeGateStructure;
-use Drupal\data_surface_gate_test\OutsideDiscovery\MissingOperationGateStructure;
-use Drupal\data_surface_gate_test\OutsideDiscovery\MissingResourceGateStructure;
-use Drupal\data_surface_gate_test\OutsideDiscovery\FieldDeleteGateStructure;
-use Drupal\data_surface_gate_test\Resource\GatedBatchResource;
-use Drupal\data_surface_gate_test\Resource\GatedNoteResource;
-use Drupal\data_surface_gate_test\Resource\GatedRelayResource;
-use Drupal\data_surface_gate_test\Storage\GateBatchStorage;
-use Drupal\data_surface_gate_test\Storage\GateNoteStorage;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\Gate;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_gate_test\Access\GateNoteAccess;
+use Drupal\surface_gate_test\OutsideDiscovery\MissingEntityTypeGateStructure;
+use Drupal\surface_gate_test\OutsideDiscovery\MissingOperationGateStructure;
+use Drupal\surface_gate_test\OutsideDiscovery\MissingResourceGateStructure;
+use Drupal\surface_gate_test\OutsideDiscovery\FieldDeleteGateStructure;
+use Drupal\surface_gate_test\Resource\GatedBatchResource;
+use Drupal\surface_gate_test\Resource\GatedNoteResource;
+use Drupal\surface_gate_test\Resource\GatedRelayResource;
+use Drupal\surface_gate_test\Storage\GateBatchStorage;
+use Drupal\surface_gate_test\Storage\GateNoteStorage;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\node\NodeInterface;
@@ -40,9 +40,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-gate-is-borrowed-never-copied
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class GatesTest extends DataSurfaceKernelTestBase {
+class GatesTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -58,9 +58,8 @@ class GatesTest extends DataSurfaceKernelTestBase {
     'node',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_gate_test',
+    'surface',
+    'surface_gate_test',
   ];
 
   /**
@@ -78,7 +77,7 @@ class GatesTest extends DataSurfaceKernelTestBase {
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
     $this->installSchema('node', ['node_access']);
-    $this->installConfig(['system', 'node', 'filter', 'data_surface']);
+    $this->installConfig(['system', 'node', 'filter', 'surface']);
     // The super user takes uid 1 and is asked nothing.
     User::create(['uid' => 0, 'name' => '', 'status' => 0])->save();
     User::create(['uid' => 1, 'name' => 'admin', 'status' => 1])->save();
@@ -116,7 +115,7 @@ class GatesTest extends DataSurfaceKernelTestBase {
    * Tests the attribute's gates read in both spellings, in order.
    */
   public function testTheAttributeParsesBothForms(): void {
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $read = static fn (Gate $gate): array => [
       $gate->kind,
       $gate->resource,
@@ -146,7 +145,7 @@ class GatesTest extends DataSurfaceKernelTestBase {
       FieldDeleteGateStructure::class => 'The gate "field:node.title:delete" on the "update" operation of ' . FieldDeleteGateStructure::class . ' asks field access for "delete"; core\'s field access takes view or edit.',
     ];
     foreach ($refusals as $class => $message) {
-      $module = 'data_surface_gate_test';
+      $module = 'surface_gate_test';
       $classes = [GatedNoteResource::class => $module, $class => $module];
       $registry = new ResourceRegistry(['resources' => $classes, 'operations' => $classes], $this->container->get('cache.discovery'), NULL, NULL, $this->container->get('entity_type.manager'));
       try {
@@ -163,7 +162,7 @@ class GatesTest extends DataSurfaceKernelTestBase {
    * Tests a gate is asked about the node the context knows, and its reason.
    */
   public function testGateIsAskedAboutTheNodeTheContextKnows(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = static fn (string $class, NodeInterface $node) => $resources->operation($class, 'update', ['node' => $node]);
     $editor = $this->as(['write gated notes', 'edit any page content']);
     $this->assertTrue($resources->access(GatedNoteResource::class, $context(GatedNoteResource::class, $this->nodes['page']), $editor)->isAllowed());
@@ -190,7 +189,7 @@ class GatesTest extends DataSurfaceKernelTestBase {
    * Tests a gate's kind is read from its cacheability.
    */
   public function testGateIsStaticOnTheAccountAloneAndLiveOnTheSubject(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $this->as(['write gated notes', 'edit any page content']);
     $node = $this->nodes['page'];
     // Core's update access read the account's permissions alone: static,
@@ -209,7 +208,7 @@ class GatesTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($resources->isRuntimeAtTheTop(GatedBatchResource::class, $batch, $this->container->get('current_user')), 'Per item, nothing at the top waits.');
     $static = $resources->buildStatic(GatedBatchResource::class, $batch);
     $this->assertTrue($static->getDefinitions()->entry('items')->isRefinedAtRuntime() || $static->getDefinitions()->isRuntimeAccess('items'));
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($static, 'gate_test.batch', 'update', 'Note many nodes')->document['schema'];
+    $full = $this->container->get('surface.contract_emitter')->emitFull($static, 'gate_test.batch', 'update', 'Note many nodes')->document['schema'];
     $this->assertTrue($full['properties']['items']['x-surface']['live'] ?? FALSE, 'The full schema marks the list live.');
   }
 
@@ -224,7 +223,7 @@ class GatesTest extends DataSurfaceKernelTestBase {
       ['node' => (int) $this->nodes['locked']->id(), 'note' => 'Title locked'],
       ['node' => (int) $this->nodes['article']->id(), 'note' => 'Not a page'],
     ];
-    $answer = $this->call('data_surface:gate_test.batch:update', ['items' => $items]);
+    $answer = $this->call('surface:gate_test.batch:update', ['items' => $items]);
     $this->assertFalse($answer['ok']);
     $this->assertSame([
       [
@@ -240,12 +239,12 @@ class GatesTest extends DataSurfaceKernelTestBase {
     ], $answer['violations'], 'Each refusal on its item, with its gate\'s reason; the page passes, and field access is not entity access.');
     $this->assertSame([], $state->get(GateBatchStorage::SEEN, []), 'The storage saw none of it.');
     // The item every gate allows is written.
-    $answer = $this->call('data_surface:gate_test.batch:update', ['items' => [$items[0]]], FALSE);
+    $answer = $this->call('surface:gate_test.batch:update', ['items' => [$items[0]]], FALSE);
     $this->assertTrue($answer['ok']);
     $this->assertSame([[(int) $this->nodes['page']->id()]], $state->get(GateBatchStorage::SEEN));
     $this->assertSame([(int) $this->nodes['page']->id() => 'Fine'], $state->get(GateNoteStorage::KEY));
     // An id naming nothing is refused by the reference before any gate.
-    $answer = $this->call('data_surface:gate_test.batch:update', ['items' => [['node' => 999]]]);
+    $answer = $this->call('surface:gate_test.batch:update', ['items' => [['node' => 999]]]);
     $this->assertSame(['/items/0/node'], array_column($answer['violations'], 'path'));
   }
 
@@ -253,19 +252,19 @@ class GatesTest extends DataSurfaceKernelTestBase {
    * Tests the resource's own access narrows on top, and never widens.
    */
   public function testTheResourceNarrowsAndCannotWiden(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $state = $this->container->get('state');
     $editor = $this->as(['write gated notes', 'edit any page content']);
     $article = $resources->operation(GatedNoteResource::class, 'update', ['node' => $this->nodes['article']]);
     // The access class allows, and the gate's refusal stands.
     $this->assertTrue($resources->access(GatedNoteResource::class, $article, $editor)->isForbidden());
-    $answer = $this->call('data_surface:gate_test.batch:update', ['items' => [['node' => (int) $this->nodes['article']->id()]]]);
+    $answer = $this->call('surface:gate_test.batch:update', ['items' => [['node' => (int) $this->nodes['article']->id()]]]);
     $this->assertSame(['/items/0/node'], array_column($answer['violations'], 'path'), 'Per item too.');
     // The gates allow, and the access class refuses.
     $state->set(GateNoteAccess::CLOSED, TRUE);
     $page = $resources->operation(GatedNoteResource::class, 'update', ['node' => $this->nodes['page']]);
     $this->assertSame('The notes are closed.', $resources->access(GatedNoteResource::class, $page, $editor)->getReason());
-    $answer = $this->call('data_surface:gate_test.batch:update', ['items' => [['node' => (int) $this->nodes['page']->id()]]]);
+    $answer = $this->call('surface:gate_test.batch:update', ['items' => [['node' => (int) $this->nodes['page']->id()]]]);
     $this->assertFalse($answer['ok']);
     $this->assertSame([''], array_column($answer['violations'] ?? [['path' => '']], 'path'), 'Refused at the top, before any item.');
   }
@@ -276,13 +275,13 @@ class GatesTest extends DataSurfaceKernelTestBase {
   public function testTheToolListing(): void {
     $this->as(['write gated notes', 'edit any page content']);
     $tools = $this->container->get('plugin.manager.tool');
-    $batch = $tools->getDefinition('data_surface:gate_test.batch:update');
+    $batch = $tools->getDefinition('surface:gate_test.batch:update');
     $this->assertSame('write gated notes', $batch->getPermission() ?? NULL, "The operation's own permission is declared.");
     $this->assertStringNotContainsString('once the thing is known', (string) $batch->getDescription(), 'Asked per item, nothing at the top waits.');
-    $input = $tools->createInstance('data_surface:gate_test.batch:update')->getInputDefinitions()[OperationInputs::VALUES];
+    $input = $tools->createInstance('surface:gate_test.batch:update')->getInputDefinitions()[OperationInputs::VALUES];
     $items = $input->getPropertyDefinitions()['items'];
     $this->assertStringContainsString('Whether this may be changed is decided once the thing it belongs to is known', (string) $items->getDescription(), 'The list says it is settled per thing.');
-    $note = $tools->getDefinition('data_surface:gate_test.note:update');
+    $note = $tools->getDefinition('surface:gate_test.note:update');
     $this->assertStringEndsWith('Every key may be found locked or left out once the thing is known.', (string) $note->getDescription(), 'A gate asked about the node the call names waits for it.');
   }
 

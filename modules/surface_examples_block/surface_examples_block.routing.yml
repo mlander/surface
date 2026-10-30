@@ -1,0 +1,45 @@
+# Each route is one operation of the placement resource, served by the
+# generic operation form, whose route parameters are the operation's: the
+# update and delete routes' {id} is upcast to the block the operations take.
+#
+# One requirement, the operation's: its permission, "administer blocks",
+# the block layout's own. The form, the tool and the API read the same
+# answer. The delete route draws a confirmation, since a delete takes no
+# values. What stays this module's is the cosmetic layer: the message,
+# and the block layout of the block's theme to return to.
+#
+# Decision: see docs/decisions.md#a-placed-block-is-a-resource.
+surface_examples_block.create:
+  path: '/admin/structure/block/surface/add'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Place a block (resource)'
+    _surface_resource: 'Drupal\surface_examples_block\Resource\BlockPlacementResource'
+    _surface_operation: 'create'
+    _surface_cosmetics: 'surface_examples_block.form_cosmetics'
+
+surface_examples_block.update:
+  path: '/admin/structure/block/surface/{id}'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a placed block (resource)'
+    _surface_resource: 'Drupal\surface_examples_block\Resource\BlockPlacementResource'
+    _surface_operation: 'update'
+    _surface_cosmetics: 'surface_examples_block.form_cosmetics'
+  options:
+    parameters:
+      id:
+        type: 'entity:block'
+
+surface_examples_block.delete:
+  path: '/admin/structure/block/surface/{id}/delete'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Remove a placed block (resource)'
+    _surface_resource: 'Drupal\surface_examples_block\Resource\BlockPlacementResource'
+    _surface_operation: 'delete'
+    _surface_cosmetics: 'surface_examples_block.form_cosmetics'
+  options:
+    parameters:
+      id:
+        type: 'entity:block'

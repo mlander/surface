@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Refinement\Narrowing;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Refinement\Narrowing;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -30,21 +30,21 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * So this holds the three places that read a declared value list to
  * exactly that: the option resolver, which answers what a form offers;
  * `Narrowing` and the `ChoiceSet` it reads through, which answer whether
- * a refinement is legal; and `DataSurfaceBuilder::extendChoices()`,
+ * a refinement is legal; and `SurfaceBuilder::extendChoices()`,
  * which merges a contribution into what the owner declared. Each is
  * asked the same question in every spelling and has to give the same
  * answer.
  *
- * @see \Drupal\data_surface\Plugin\Validation\Constraint\LabeledChoiceConstraint
+ * @see \Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
+class ChoiceSpellingParityTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'data_surface'];
+  protected static $modules = ['system', 'surface'];
 
   /**
    * One vocabulary, written canonically.
@@ -281,11 +281,11 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
    * @param array $options
    *   The constraint options, in one spelling or the other.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The data surface.
    */
-  protected function surface(array $options): DataSurfaceInterface {
-    return new DataSurface(DefinitionMap::fromArrays(
+  protected function surface(array $options): SurfaceInterface {
+    return new Surface(DefinitionMap::fromArrays(
       definitions: ['badge' => $this->definition($options)],
     ));
   }
@@ -296,11 +296,11 @@ class ChoiceSpellingParityTest extends DataSurfaceKernelTestBase {
    * @param array $options
    *   The constraint options, in one spelling or the other.
    *
-   * @return \Drupal\data_surface\DataSurfaceBuilder
+   * @return \Drupal\surface\SurfaceBuilder
    *   The builder.
    */
-  protected function builderFor(array $options): DataSurfaceBuilder {
-    return new DataSurfaceBuilder(['badge' => $this->definition($options)]);
+  protected function builderFor(array $options): SurfaceBuilder {
+    return new SurfaceBuilder(['badge' => $this->definition($options)]);
   }
 
   /**

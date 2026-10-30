@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Variants;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entry;
+use Drupal\surface\Variants;
 
 /**
  * The choices a fetch of the full schema names, `?choose=<pointer>=<value>`.
@@ -22,8 +22,8 @@ use Drupal\data_surface\Variants;
  *
  * A pointer below a key with variants passes through the variant a choice
  * at that key names, so a nested key is named with its parent's choice
- * beside it: `/settings=data_surface_component` and
- * `/settings/props=data_surface_examples:card`. A choice at a key with
+ * beside it: `/settings=surface_component` and
+ * `/settings/props=surface_examples:card`. A choice at a key with
  * variants under the limit only says which variant to pass through. Below
  * a collection, the segment after the list is any item's index: every item
  * is one structure.
@@ -122,7 +122,7 @@ final class Choices {
   /**
    * Resolves choices against a built resource.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource or structure as the full schema is emitted from it.
    * @param list<array{0: string, 1: string}> $pairs
    *   Each choice: a JSON Pointer and a value. A parent's choice may come
@@ -131,12 +131,12 @@ final class Choices {
    * @return static
    *   The choices.
    *
-   * @throws \Drupal\data_surface\Contract\UnknownChoiceException
+   * @throws \Drupal\surface\Contract\UnknownChoiceException
    *   When a pointer names no key, a key with no list to choose from, or
    *   passes a key with variants nothing chose; or a value is not one the
    *   key's list holds.
    */
-  public static function resolve(DataSurfaceInterface $surface, array $pairs): static {
+  public static function resolve(SurfaceInterface $surface, array $pairs): static {
     $choices = new static();
     usort($pairs, static fn (array $a, array $b): int => count(static::segments($a[0])) <=> count(static::segments($b[0])));
     foreach ($pairs as [$pointer, $value]) {
@@ -174,7 +174,7 @@ final class Choices {
   /**
    * Gets the values chosen of one key's variants.
    *
-   * @param \Drupal\data_surface\Variants $variants
+   * @param \Drupal\surface\Variants $variants
    *   The key's variants.
    * @param string $pointer
    *   Where the key is: what is chosen there is matched too, for a child
@@ -190,7 +190,7 @@ final class Choices {
   /**
    * Gets the ids chosen of one map of keys from the site.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $map
+   * @param \Drupal\surface\SurfaceInterface $map
    *   The map's child, one key per thing the site has.
    * @param string $pointer
    *   Where the map is.
@@ -198,7 +198,7 @@ final class Choices {
    * @return list<string>
    *   The ids, or none.
    */
-  public function entries(DataSurfaceInterface $map, string $pointer): array {
+  public function entries(SurfaceInterface $map, string $pointer): array {
     return $this->of($map, $pointer);
   }
 
@@ -275,12 +275,12 @@ final class Choices {
    *
    * @param string $pointer
    *   The pointer, written as the emitter writes one.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param string $value
    *   The value chosen.
    *
-   * @throws \Drupal\data_surface\Contract\UnknownChoiceException
+   * @throws \Drupal\surface\Contract\UnknownChoiceException
    *   When the key has no list to choose from, or the list no such value.
    */
   protected function choose(string $pointer, Entry $entry, string $value): void {
@@ -311,7 +311,7 @@ final class Choices {
   /**
    * Walks a pointer to the keys it names.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $frame
+   * @param \Drupal\surface\SurfaceInterface $frame
    *   The frame the segment at `$i` is a key of.
    * @param list<string> $segments
    *   The pointer's segments, unescaped.
@@ -319,18 +319,18 @@ final class Choices {
    *   The segment to read.
    * @param string $at
    *   The pointer of the frame, written as the emitter writes one.
-   * @param \Drupal\data_surface\Contract\Choices $choices
+   * @param \Drupal\surface\Contract\Choices $choices
    *   The choices read so far, which a key with variants on the way is
    *   passed through by.
    *
-   * @return list<\Drupal\data_surface\Entry>
+   * @return list<\Drupal\surface\Entry>
    *   The keys at the end: one, or one per variant passed through.
    *
-   * @throws \Drupal\data_surface\Contract\UnknownChoiceException
+   * @throws \Drupal\surface\Contract\UnknownChoiceException
    *   When a segment names no key, or a key with variants on the way has
    *   no choice.
    */
-  protected static function walk(DataSurfaceInterface $frame, array $segments, int $i, string $at, Choices $choices): array {
+  protected static function walk(SurfaceInterface $frame, array $segments, int $i, string $at, Choices $choices): array {
     $name = $segments[$i];
     $here = $at . '/' . static::escape($name);
     $entry = $frame->getDefinitions()->entry($name);

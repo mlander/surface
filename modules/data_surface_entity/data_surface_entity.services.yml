@@ -1,8 +1,0 @@
-services:
-  # Which fields of a bundle's form display a resource can carry, and how
-  # each field item's properties become structure keys; read by both
-  # derivers and by the content entity storage.
-  data_surface_entity.field_item_derivation:
-    class: Drupal\data_surface_entity\FieldItemDerivation
-    arguments: ['@entity_type.manager', '@entity_field.manager', '@entity_type.bundle.info', '@typed_data_manager', '@string_translation']
-  Drupal\data_surface_entity\FieldItemDerivation: '@data_surface_entity.field_item_derivation'

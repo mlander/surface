@@ -17,7 +17,7 @@ Lanes:
              phpstan and cspell over the whole module. Required before
              handing work back.
   --fast     The fast lane: unit and kernel tests through phpunit, one
-             process per class, DATA_SURFACE_CHECK_CONCURRENCY at once,
+             process per class, SURFACE_CHECK_CONCURRENCY at once,
              previous defects first, with the result cache; then phpcs,
              phpstan and cspell on the files changed since HEAD (tracked
              and untracked). phpstan covers the whole module when no PHP
@@ -28,20 +28,20 @@ Each lane prints the wall time of every gate and ends with a PASS line
 only when no test errored or failed and every gate passed.
 
 Variables:
-  DATA_SURFACE_CHECK_FAST=1         Same as --fast.
-  DATA_SURFACE_CHECK_CONCURRENCY=N  Unit, kernel and functional classes
+  SURFACE_CHECK_FAST=1         Same as --fast.
+  SURFACE_CHECK_CONCURRENCY=N  Unit, kernel and functional classes
                                     run at once in the full lane, and
                                     unit and kernel classes in the fast
                                     lane (default 8).
-  DATA_SURFACE_CHECK_BROWSER_CONCURRENCY=N
+  SURFACE_CHECK_BROWSER_CONCURRENCY=N
                                     Browser classes run at once in the
                                     full lane, after the rest (default 4).
 EOF
 }
 
-FAST="${DATA_SURFACE_CHECK_FAST:-0}"
-CONCURRENCY="${DATA_SURFACE_CHECK_CONCURRENCY:-8}"
-BROWSER_CONCURRENCY="${DATA_SURFACE_CHECK_BROWSER_CONCURRENCY:-4}"
+FAST="${SURFACE_CHECK_FAST:-0}"
+CONCURRENCY="${SURFACE_CHECK_CONCURRENCY:-8}"
+BROWSER_CONCURRENCY="${SURFACE_CHECK_BROWSER_CONCURRENCY:-4}"
 for arg in "$@"; do
   case "$arg" in
     --fast) FAST=1 ;;
@@ -52,7 +52,7 @@ done
 [ "$FAST" = "0" ] || FAST=1
 for value in "$CONCURRENCY" "$BROWSER_CONCURRENCY"; do
   case "$value" in
-    ''|*[!0-9]*|0) echo "DATA_SURFACE_CHECK_CONCURRENCY and DATA_SURFACE_CHECK_BROWSER_CONCURRENCY are positive integers, not '$value'" >&2; exit 2 ;;
+    ''|*[!0-9]*|0) echo "SURFACE_CHECK_CONCURRENCY and SURFACE_CHECK_BROWSER_CONCURRENCY are positive integers, not '$value'" >&2; exit 2 ;;
   esac
 done
 
@@ -123,9 +123,9 @@ if [ "$FAST" = "1" ]; then
   echo "Unit and kernel test classes, $CONCURRENCY at a time; a class's output is printed only when it has a problem."
   { echo "SHARDS=$CONCURRENCY"; cat <<'SH'; } | in_container > "$WORK/phpunit.txt" 2>&1
 cd /var/www/html/web || exit 1
-CACHE=/tmp/data_surface-phpunit-cache
+CACHE=/tmp/surface-phpunit-cache
 OUT="$(mktemp -d)"
-find modules/custom/data_surface/tests/src/Unit modules/custom/data_surface/tests/src/Kernel -name '*Test.php' | php -r '
+find modules/custom/surface/tests/src/Unit modules/custom/surface/tests/src/Kernel -name '*Test.php' | php -r '
   $rows = [];
   while (($file = fgets(STDIN)) !== FALSE) {
     $file = trim($file);
@@ -213,7 +213,7 @@ RUNNER="\$(mktemp -d)"
 run() {
   php core/scripts/run-tests.sh --non-html --suppress-deprecations \\
     --sqlite "\$RUNNER/runner.sqlite" --dburl mysql://db:db@db/db \\
-    --url "\${SIMPLETEST_BASE_URL:-http://web}" --directory modules/custom/data_surface "\$@"
+    --url "\${SIMPLETEST_BASE_URL:-http://web}" --directory modules/custom/surface "\$@"
 }
 run --concurrency $CONCURRENCY --types PHPUnit-Unit,PHPUnit-Kernel,PHPUnit-Functional
 FIRST=\$?
@@ -305,7 +305,7 @@ fi
 gate_start phpcs
 PHPCS_FILES=""
 if [ "$FAST" = "1" ]; then
-  PHPCS_FILES="$(printf '%s\n' "$CHANGED" | grep -E '^(src|modules|tests|scripts)/|^data_surface\.(api\.php|module|info\.yml|services\.yml)$' \
+  PHPCS_FILES="$(printf '%s\n' "$CHANGED" | grep -E '^(src|modules|tests|scripts)/|^surface\.(api\.php|module|info\.yml|services\.yml)$' \
     | grep -E '\.(php|module|inc|install|info|yml|test|theme)$' | grep -v '/node_modules/')"
 fi
 if [ "$FAST" = "1" ] && [ -z "$PHPCS_FILES" ]; then
@@ -341,14 +341,14 @@ cat > "$WORK/merge.php" <<'PHP'
 [, $core, $module, $out] = $argv;
 $config = json_decode(file_get_contents($core . '/.cspell.json'), TRUE);
 $config['globRoot'] = $module;
-// data_surface_react's built app and its lock file are generated, and its
+// surface_react's built app and its lock file are generated, and its
 // Node dependencies are not this module's to spell. The dated reviews are
 // other readers' words, quoted as they wrote them (tool names, French).
 // The contract baselines are generated from code cspell already reads,
 // and an allowance in one names the path it accepted as it was, in the
 // old spelling when the change was a rename. The OpenAPI 3.1 schema is the
 // OpenAPI Initiative's file, copied unchanged.
-$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/data_surface_react/dist/**', '**/package-lock.json', 'docs/reviews-*/**', 'tests/fixtures/contracts/**', 'tests/fixtures/openapi/oas-*.json'];
+$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/surface_react/dist/**', '**/package-lock.json', 'docs/reviews-*/**', 'tests/fixtures/contracts/**', 'tests/fixtures/openapi/oas-*.json'];
 foreach ($config['dictionaryDefinitions'] as &$dictionary) {
   $dictionary['path'] = $core . '/' . ltrim($dictionary['path'], './');
 }

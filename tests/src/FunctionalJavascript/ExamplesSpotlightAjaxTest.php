@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * AJAX, the save stores the component and its props, and the page drawn
  * again reads them back.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesSpotlightAjaxTest extends ExamplesWebDriverTestBase {
 
@@ -26,12 +26,12 @@ class ExamplesSpotlightAjaxTest extends ExamplesWebDriverTestBase {
     $assert = $this->assertSession();
     $page = $this->getSession()->getPage();
     $this->drupalGet('surface-examples/12');
-    $this->assertSame('data_surface_examples:card', $assert->fieldExists('surface[component]')->getValue());
+    $this->assertSame('surface_examples:card', $assert->fieldExists('surface[component]')->getValue());
     $this->assertSame('Doors open at half past six', $assert->fieldExists('surface[props][heading]')->getValue());
     $assert->fieldNotExists('surface[props][overlay]');
 
     $this->probe(['surface[component]']);
-    $page->selectFieldOption('surface[component]', 'data_surface_examples:hero');
+    $page->selectFieldOption('surface[component]', 'surface_examples:hero');
     $assert->assertWaitOnAjaxRequest();
     $assert->fieldNotExists('surface[props][heading]');
     $title = $assert->fieldExists('surface[props][title]');
@@ -52,8 +52,8 @@ class ExamplesSpotlightAjaxTest extends ExamplesWebDriverTestBase {
     // The press returns before the saved page has loaded: wait for it.
     $this->assertNotNull($assert->waitForText('The changes have been saved.'));
 
-    $stored = $this->config('data_surface_examples.spotlight');
-    $this->assertSame('data_surface_examples:hero', $stored->get('component'));
+    $stored = $this->config('surface_examples.spotlight');
+    $this->assertSame('surface_examples:hero', $stored->get('component'));
     $this->assertSame([
       'title' => 'Doors open at six',
       'subtitle' => NULL,
@@ -64,7 +64,7 @@ class ExamplesSpotlightAjaxTest extends ExamplesWebDriverTestBase {
 
     // Drawn again, the page reads the hero and its props back.
     $this->drupalGet('surface-examples/12');
-    $this->assertSame('data_surface_examples:hero', $assert->fieldExists('surface[component]')->getValue());
+    $this->assertSame('surface_examples:hero', $assert->fieldExists('surface[component]')->getValue());
     $this->assertSame('Doors open at six', $assert->fieldExists('surface[props][title]')->getValue());
     $this->assertSame('60', $assert->fieldExists('surface[props][overlay]')->getValue());
     $assert->fieldNotExists('surface[props][heading]');

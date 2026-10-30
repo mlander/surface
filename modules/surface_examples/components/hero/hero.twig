@@ -1,0 +1,9 @@
+<header class="surface-hero surface-hero--{{ align|default('center') }}{{ full_width ? ' surface-hero--full' : '' }}" style="--surface-hero-overlay: {{ overlay|default(40) }}%">
+  <h2>{{ title }}</h2>
+  {% if subtitle %}
+    <p>{{ subtitle }}</p>
+  {% endif %}
+  {% if actions %}
+    <div class="surface-hero__actions">{% block actions %}{% endblock %}</div>
+  {% endif %}
+</header>

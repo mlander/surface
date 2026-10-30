@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableMetadata;
@@ -10,15 +10,15 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMap;
-use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\Refinement\DeclaredRefiner;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Refinement\Rule;
-use Drupal\data_surface\ResourceBuild\RefinesInputRefiner;
-use Drupal\data_surface\Entry;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMap;
+use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Refinement\DeclaredRefiner;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Refinement\Rule;
+use Drupal\surface\ResourceBuild\RefinesInputRefiner;
+use Drupal\surface\Entry;
 
 /**
  * Writes what a key's refiners answer as `if`/`then` on its frame.
@@ -44,7 +44,7 @@ use Drupal\data_surface\Entry;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Contract\ContractEmitter
+ * @see \Drupal\surface\Contract\ContractEmitter
  */
 final class Conditionals {
 
@@ -60,7 +60,7 @@ final class Conditionals {
    * was refined against; NULL outside ContractEmitter::emit() and
    * emitFull().
    *
-   * @var \WeakMap<\Drupal\data_surface\DataSurfaceInterface, array<string, \Drupal\data_surface\DataSurfaceInterface>>|null
+   * @var \WeakMap<\Drupal\surface\SurfaceInterface, array<string, \Drupal\surface\SurfaceInterface>>|null
    */
   protected ?\WeakMap $refined = NULL;
 
@@ -74,7 +74,7 @@ final class Conditionals {
   /**
    * Constructs a Conditionals.
    *
-   * @param \Drupal\data_surface\Contract\PropertySchema $propertySchema
+   * @param \Drupal\surface\Contract\PropertySchema $propertySchema
    *   What describes a key as a conditional states it.
    */
   public function __construct(
@@ -103,7 +103,7 @@ final class Conditionals {
    * @return array{refined: int, reused: int}
    *   The counts since this was made.
    *
-   * @see \Drupal\data_surface\Contract\ContractEmitter::refineCounts()
+   * @see \Drupal\surface\Contract\ContractEmitter::refineCounts()
    */
   public function refineCounts(): array {
     return $this->refineCounts;
@@ -112,9 +112,9 @@ final class Conditionals {
   /**
    * Answers whether a key watches anything that could hold another value.
    *
-   * @param \Drupal\data_surface\DefinitionMap $advertised
+   * @param \Drupal\surface\DefinitionMap $advertised
    *   The frame's definitions, as advertised.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param bool $declaring
    *   Whether the frame is described as declared, where nothing is
@@ -138,7 +138,7 @@ final class Conditionals {
   /**
    * Answers whether a runtime refiner narrows any key of a frame.
    *
-   * @param \Drupal\data_surface\DefinitionMap $advertised
+   * @param \Drupal\surface\DefinitionMap $advertised
    *   The frame's definitions.
    *
    * @return bool
@@ -157,10 +157,10 @@ final class Conditionals {
   /**
    * Stops requiring what a refiner not run here may rule out.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param int $runtime
-   *   The kind of refiner not run: DataSurfaceInterface::RUNTIME, or
+   *   The kind of refiner not run: SurfaceInterface::RUNTIME, or
    *   CODED when their answers cannot be listed.
    * @param array $property
    *   Its property schema.
@@ -180,7 +180,7 @@ final class Conditionals {
   /**
    * Answers whether a declared rule narrows any key of a frame.
    *
-   * @param \Drupal\data_surface\DefinitionMap $advertised
+   * @param \Drupal\surface\DefinitionMap $advertised
    *   The frame's definitions.
    *
    * @return bool
@@ -215,7 +215,7 @@ final class Conditionals {
    *
    * Decision: see docs/decisions.md#a-rule-declared-as-data.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key as the document states it.
@@ -225,7 +225,7 @@ final class Conditionals {
    *   The conditionals the coded refiners state for it.
    * @param bool $requires
    *   Whether the frame requires it so far.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame.
    * @param string[] $ports
    *   The ports of the frame: a rule reading one is not stated here, the
@@ -274,7 +274,7 @@ final class Conditionals {
           }
           $then = [];
           if (!$applicability) {
-            $answer = static::appliedAt(DataSurface::deepClone($definition), $below, $rule);
+            $answer = static::appliedAt(Surface::deepClone($definition), $below, $rule);
             $narrowed = static::onlyAdded($this->narrowed($this->stated($entry, $answer, $emission), $base), $base);
             if ($narrowed !== []) {
               $then['properties'] = [$name => $narrowed];
@@ -385,7 +385,7 @@ final class Conditionals {
    *   A copy of the key.
    * @param string $below
    *   The dotted path of a key below it, or '' for the key itself.
-   * @param \Drupal\data_surface\Refinement\Rule $rule
+   * @param \Drupal\surface\Refinement\Rule $rule
    *   The rule.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
@@ -470,18 +470,18 @@ final class Conditionals {
    * from the data surface refined for the combination so far, so a chain
    * composes: a bundle's list is read under each entity type.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   * @param \Drupal\surface\SurfaceInterface $declared
    *   The data surface of this frame, as advertised.
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The same data surface refined against the frame's values by its
    *   static refiners alone.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key, unrefined.
    * @param array $values
    *   The values of the frame.
    * @param array $base
    *   The key's schema as emitted, unrefined.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame: its cacheability collects what every
    *   list read and every refinement depends on, and its kinds are the
    *   kinds of refiner each combination is answered by (the coded ones
@@ -501,7 +501,7 @@ final class Conditionals {
    *   key with no list of values, or it would take more than
    *   ENUMERATION_CAP combinations.
    */
-  public function enumerate(DataSurfaceInterface $declared, DataSurfaceInterface $refined, Entry $entry, array $values, array $base, Emission $emission, bool $applicability = FALSE): ?array {
+  public function enumerate(SurfaceInterface $declared, SurfaceInterface $refined, Entry $entry, array $values, array $base, Emission $emission, bool $applicability = FALSE): ?array {
     $cacheability = $emission->cacheability;
     $kinds = $emission->kinds();
     $order = array_flip($declared->getDefinitions()->names());
@@ -606,11 +606,11 @@ final class Conditionals {
   /**
    * Describes what a key answers for one combination, as enumerate() reads it.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   Its definition, refined for the combination.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame.
    * @param bool $applicability
    *   Whether only whether it applies is asked: a key holding a child,
@@ -696,11 +696,11 @@ final class Conditionals {
   /**
    * Describes a key the way a conditional is diffed from.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   Its definition: as declared, or refined for a combination.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame.
    *
    * @return array
@@ -724,17 +724,17 @@ final class Conditionals {
    *
    * Decision: see docs/decisions.md#what-is-paid-once-and-what-per-request.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   * @param \Drupal\surface\SurfaceInterface $declared
    *   The data surface of the frame, as advertised.
    * @param array $values
    *   The values, with the combination over them.
    * @param int $kinds
    *   The kinds of refiner.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The refined surface.
    */
-  protected function refinedFor(DataSurfaceInterface $declared, array $values, int $kinds): DataSurfaceInterface {
+  protected function refinedFor(SurfaceInterface $declared, array $values, int $kinds): SurfaceInterface {
     try {
       $key = serialize([$kinds, $values]);
     }
@@ -769,16 +769,16 @@ final class Conditionals {
    *
    * Decision: see docs/decisions.md#static-by-default-runtime-by-declaration.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $declared
+   * @param \Drupal\surface\SurfaceInterface $declared
    *   The data surface of this frame, as advertised.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key, unrefined.
    * @param array $values
    *   The values of the frame with the combination laid over them.
    * @param array|false $schema
    *   What the first refinement answered for the key; FALSE where it does
    *   not apply.
-   * @param \Drupal\data_surface\Contract\Emission $emission
+   * @param \Drupal\surface\Contract\Emission $emission
    *   The walk, at the key's frame; its kinds are the kinds of refiner the
    *   combination was answered by.
    * @param bool $applicability
@@ -790,7 +790,7 @@ final class Conditionals {
    * @throws \LogicException
    *   Naming the key's static refiners and the values.
    */
-  protected function answersAgain(DataSurfaceInterface $declared, Entry $entry, array $values, array|false $schema, Emission $emission, bool $applicability = FALSE): bool {
+  protected function answersAgain(SurfaceInterface $declared, Entry $entry, array $values, array|false $schema, Emission $emission, bool $applicability = FALSE): bool {
     $again = $this->answer($entry, $declared->refine($values, $emission->kinds())->getDefinition($entry->name) ?? $entry->definition, $emission, $applicability);
     if (json_encode($again === FALSE ? FALSE : $this->propertySchema->withoutExtension($again)) === json_encode($schema === FALSE ? FALSE : $this->propertySchema->withoutExtension($schema))) {
       return TRUE;
@@ -814,7 +814,7 @@ final class Conditionals {
   /**
    * Lists the values a watched sibling can take, to enumerate over.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface, refined for the combination so far.
    * @param string $key
    *   The watched sibling.
@@ -829,7 +829,7 @@ final class Conditionals {
    *   value, a list of values, a child, or more values than
    *   ENUMERATION_CAP.
    */
-  protected function domain(DataSurfaceInterface $surface, string $key, array $values, CacheableMetadata $cacheability): ?array {
+  protected function domain(SurfaceInterface $surface, string $key, array $values, CacheableMetadata $cacheability): ?array {
     $entry = $surface->getDefinitions()->entry($key);
     if ($entry === NULL || $entry->isNested() || $entry->definition instanceof ListDataDefinitionInterface) {
       return NULL;

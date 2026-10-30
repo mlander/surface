@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
 use Drupal\Tests\BrowserTestBase;
 use Drupal\node\Entity\Node;
@@ -13,11 +13,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 /**
  * Tests a basic page added and edited through its derived resource.
  *
- * The two routes of data_surface_entity serve the derived resource
+ * The two routes of surface_examples_entity serve the derived resource
  * entity.content:node.page through the generic operation form; the
  * landing page lists what was derived from the bundle and what was not.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ContentEntityResourceFormTest extends BrowserTestBase {
 
@@ -26,8 +26,8 @@ class ContentEntityResourceFormTest extends BrowserTestBase {
    */
   protected static $modules = [
     'node',
-    'data_surface',
-    'data_surface_entity',
+    'surface',
+    'surface_examples_entity',
   ];
 
   /**

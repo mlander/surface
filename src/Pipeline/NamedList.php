@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Component\Render\MarkupInterface;
 
@@ -13,21 +13,21 @@ use Drupal\Component\Render\MarkupInterface;
  * ..."), set in a row with commas outside translation as the sentence's
  * placeholder, each one a Named rendered at the moment the row is.
  *
- * @see \Drupal\data_surface\Pipeline\Named
+ * @see \Drupal\surface\Pipeline\Named
  */
 final class NamedList implements MarkupInterface {
 
   /**
    * The values, in order.
    *
-   * @var array<int, \Drupal\data_surface\Pipeline\Named>
+   * @var array<int, \Drupal\surface\Pipeline\Named>
    */
   protected readonly array $named;
 
   /**
    * Constructs a NamedList.
    *
-   * @param \Drupal\data_surface\Pipeline\Named ...$named
+   * @param \Drupal\surface\Pipeline\Named ...$named
    *   The values, in order.
    */
   public function __construct(Named ...$named) {

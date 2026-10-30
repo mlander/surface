@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_demo\Structure\DemoBlockStructure;
-use Drupal\data_surface_examples\Resource\RegistrationStep2Resource;
-use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\data_surface_examples_compliance\Alter\RegistrationComplianceAlter;
-use Drupal\data_surface_resource_test\Structure\Broken\FickleStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\ServiceReadingStructure;
-use Drupal\data_surface_resource_test\Structure\Crate\CrateStructure;
-use Drupal\data_surface_resource_test\Structure\StockroomStructure;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples_plugins\Structure\DemoBlockStructure;
+use Drupal\surface_examples\Resource\RegistrationStep2Resource;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\surface_examples_compliance\Alter\RegistrationComplianceAlter;
+use Drupal\surface_resource_test\Structure\Broken\FickleStructure;
+use Drupal\surface_resource_test\Structure\Broken\ServiceReadingStructure;
+use Drupal\surface_resource_test\Structure\Crate\CrateStructure;
+use Drupal\surface_resource_test\Structure\StockroomStructure;
 use Drupal\node\Entity\NodeType;
-use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -35,9 +35,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#static-by-default-runtime-by-declaration
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
+class StaticRefinerEnforcementTest extends SurfaceKernelTestBase {
 
   use StaticRefinerAgreementTrait;
   use UserCreationTrait;
@@ -55,12 +55,11 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
     'block',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_test',
-    'data_surface_resource_test',
-    'data_surface_examples',
-    'data_surface_demo',
+    'surface',
+    'surface_test',
+    'surface_resource_test',
+    'surface_examples',
+    'surface_examples_plugins',
   ];
 
   /**
@@ -70,7 +69,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
-    $this->installConfig(['field', 'node', 'data_surface_examples']);
+    $this->installConfig(['field', 'node', 'surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
     FickleStructure::$calls = 0;
   }
@@ -81,11 +80,11 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
    * @param class-string $class
    *   The structure class.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built structure.
    */
-  protected function configure(string $class): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->build($class, new OperationContext('configure'));
+  protected function configure(string $class): SurfaceInterface {
+    return $this->container->get('surface.resources')->build($class, new OperationContext('configure'));
   }
 
   /**
@@ -94,11 +93,11 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
    * @param class-string $class
    *   The resource class.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function example(string $class): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function example(string $class): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build($class, $resources->operation($class, 'configure'));
   }
 
@@ -158,7 +157,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
     $surface = $this->configure(FickleStructure::class);
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('The refiner ' . FickleStructure::class . '::sizeOfKind() is declared static but answered differently when run again, for "size" with {"kind":"small"}');
-    $this->container->get('data_surface.contract_emitter')->emitFull($surface, 'resource_test.broken.fickle');
+    $this->container->get('surface.contract_emitter')->emitFull($surface, 'resource_test.broken.fickle');
   }
 
   /**
@@ -195,7 +194,7 @@ class StaticRefinerEnforcementTest extends DataSurfaceKernelTestBase {
     $compared = [];
     foreach (['without', 'with'] as $compliance) {
       if ($compliance === 'with') {
-        $this->enableModules(['data_surface_examples_compliance']);
+        $this->enableModules(['surface_examples_compliance']);
         // A closed room is the runtime refiner's, which no conditional
         // states; the static ones still agree.
         $this->container->get('state')->set(RegistrationComplianceAlter::CLOSED_ROOMS, ['riverside_main']);

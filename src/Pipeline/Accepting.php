@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -11,18 +11,18 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Entry;
-use Drupal\data_surface\Collection;
+use Drupal\surface\Computed;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Entry;
+use Drupal\surface\Collection;
 
 /**
  * The accept verb of the pipeline: raw values to typed values.
  *
- * What DataSurfacePipelineInterface::accept() does: each level merged from
+ * What SurfacePipelineInterface::accept() does: each level merged from
  * the declared defaults, what storage holds and the input; each value
  * coerced through the Tool API's coercion table (Coercion); the three-way
  * rule, where a key left out keeps what it holds, one sent nothing is
@@ -40,7 +40,7 @@ use Drupal\data_surface\Collection;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Pipeline\DataSurfacePipeline
+ * @see \Drupal\surface\Pipeline\SurfacePipeline
  * @see docs/semantics.md
  */
 final class Accepting {
@@ -61,7 +61,7 @@ final class Accepting {
    *
    * Decision: see docs/decisions.md#locked-at-the-top.
    *
-   * @var array<string, \Drupal\data_surface\Pipeline\Violation>
+   * @var array<string, \Drupal\surface\Pipeline\Violation>
    */
   protected array $notTaken = [];
 
@@ -76,21 +76,21 @@ final class Accepting {
    * Decision: see
    * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
    *
-   * @var array<string, \Drupal\data_surface\Pipeline\Violation>
+   * @var array<string, \Drupal\surface\Pipeline\Violation>
    */
   protected array $unmatched = [];
 
   /**
    * Constructs the accept verb.
    *
-   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
+   * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, whose values a near miss snaps onto (coerce()).
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service, for the sentences a refusal and a
    *   note say.
    */
   public function __construct(
-    protected readonly DataSurfaceOptions $options,
+    protected readonly SurfaceOptions $options,
     TranslationInterface $string_translation,
   ) {
     $this->stringTranslation = $string_translation;
@@ -101,7 +101,7 @@ final class Accepting {
    *
    * Starts again what one accept() collects beside the values.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface describing what the values may be.
    * @param array $input
    *   Raw input keyed by data surface key; may be partial.
@@ -112,18 +112,18 @@ final class Accepting {
    *   The accepted values: every data surface key present, each in its
    *   definition's native type.
    *
-   * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
+   * @throws \Drupal\surface\Pipeline\UnknownKeysException
    *   When the input carries a key no definition declares.
-   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When the input carries a value in a shape its definition cannot
    *   hold.
-   * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
+   * @throws \Drupal\surface\Pipeline\VariantMismatchException
    *   When the input at a key with variants carries keys of a variant
    *   its deciding key did not choose.
    *
-   * @see \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface::accept()
+   * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::accept()
    */
-  public function accept(DataSurfaceInterface $surface, array $input, array $current = []): array {
+  public function accept(SurfaceInterface $surface, array $input, array $current = []): array {
     $this->notTaken = [];
     $this->unmatched = [];
     return $this->acceptLevel($surface, $input, $current, '');
@@ -132,7 +132,7 @@ final class Accepting {
   /**
    * Lists the keys the last accept() was sent a value it did not take.
    *
-   * @return array<string, \Drupal\data_surface\Pipeline\Violation>
+   * @return array<string, \Drupal\surface\Pipeline\Violation>
    *   The notes, by full path.
    */
   public function notTaken(): array {
@@ -142,7 +142,7 @@ final class Accepting {
   /**
    * Lists the secrets the last accept() found a sent item would erase.
    *
-   * @return array<string, \Drupal\data_surface\Pipeline\Violation>
+   * @return array<string, \Drupal\surface\Pipeline\Violation>
    *   The refusals, by the secret's full path.
    */
   public function unmatched(): array {
@@ -160,7 +160,7 @@ final class Accepting {
    * ports, which read the accepted values of the keys they are wired to;
    * the result keeps declaration order.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface describing this level.
    * @param array $input
    *   The raw input for this level.
@@ -172,15 +172,15 @@ final class Accepting {
    * @return array
    *   The accepted values, in declaration order.
    *
-   * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
+   * @throws \Drupal\surface\Pipeline\UnknownKeysException
    *   When an input key is not a definition at any depth.
-   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When the input cannot be held by the definition at all.
-   * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
+   * @throws \Drupal\surface\Pipeline\VariantMismatchException
    *   When the value at a key with variants is shaped for a variant
    *   other than the chosen.
    */
-  protected function acceptLevel(DataSurfaceInterface $surface, array $input, array $current, string $prefix): array {
+  protected function acceptLevel(SurfaceInterface $surface, array $input, array $current, string $prefix): array {
     $definitions = $surface->getDefinitions();
     $unknown = array_keys(array_diff_key($input, $definitions->toArray()));
     if ($unknown !== []) {
@@ -224,7 +224,7 @@ final class Accepting {
    *
    * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface describing this level.
    * @param array $values
    *   The accepted values of this level, every key present.
@@ -236,7 +236,7 @@ final class Accepting {
    * @return array
    *   The accepted values, less what does not apply and was not sent.
    */
-  protected function withoutWhatDoesNotApply(DataSurfaceInterface $surface, array $values, array $input, array $current): array {
+  protected function withoutWhatDoesNotApply(SurfaceInterface $surface, array $values, array $input, array $current): array {
     $refined = $surface->refine($values);
     if ($refined === $surface) {
       return $values;
@@ -264,9 +264,9 @@ final class Accepting {
   /**
    * Accepts the value of one key.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the key belongs to.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The key.
    * @param array $input
    *   The raw input for the key's level.
@@ -285,7 +285,7 @@ final class Accepting {
    * @return mixed
    *   The accepted value.
    */
-  protected function acceptKey(DataSurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values, bool $open = FALSE): mixed {
+  protected function acceptKey(SurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values, bool $open = FALSE): mixed {
     $name = $entry->name;
     $path = static::joinPath($prefix, $name);
     if ($entry->locked && !$open) {
@@ -374,9 +374,9 @@ final class Accepting {
    * Decision: see
    * docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the key belongs to.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The computed key.
    * @param array $input
    *   The raw input for the key's level.
@@ -390,7 +390,7 @@ final class Accepting {
    * @return mixed
    *   The value it holds, or another value sent for it.
    */
-  protected function acceptComputed(DataSurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values): mixed {
+  protected function acceptComputed(SurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values): mixed {
     $name = $entry->name;
     $path = static::joinPath($prefix, $name);
     $computed = Computed::of($entry->definition);
@@ -417,17 +417,17 @@ final class Accepting {
   /**
    * Names the keys a computed key is computed from, for a sentence.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the key belongs to.
-   * @param \Drupal\data_surface\Computed $computed
+   * @param \Drupal\surface\Computed $computed
    *   What it is computed from.
    * @param string $prefix
    *   The dotted path of its level, with a trailing dot or empty.
    *
-   * @return \Drupal\data_surface\Pipeline\Named[]
+   * @return \Drupal\surface\Pipeline\Named[]
    *   Each key, by its label for a person and its path for a machine.
    */
-  public function sources(DataSurfaceInterface $surface, Computed $computed, string $prefix): array {
+  public function sources(SurfaceInterface $surface, Computed $computed, string $prefix): array {
     $prefix = $prefix === '' || str_ends_with($prefix, '.') ? $prefix : $prefix . '.';
     return array_map(static fn (string $source): Named => Named::key($surface->getDefinition($source)?->getLabel() ?? $source, $prefix . $source), $computed->from);
   }
@@ -447,7 +447,7 @@ final class Accepting {
    *
    * @param string|\Stringable $label
    *   The computed key's label.
-   * @param \Drupal\data_surface\Pipeline\Named[] $sources
+   * @param \Drupal\surface\Pipeline\Named[] $sources
    *   The keys it is computed from, at least one.
    * @param string $kind
    *   Which sentence: `note`, `refusal`, `after` or `unless`.
@@ -456,7 +456,7 @@ final class Accepting {
    *   The sentence.
    */
   public function computedFrom(string|\Stringable $label, array $sources, string $kind): TranslatableMarkup {
-    $context = ['context' => DataSurfacePipeline::REFUSAL_CONTEXT];
+    $context = ['context' => SurfacePipeline::REFUSAL_CONTEXT];
     $count = count($sources);
     $arguments = ['@label' => $label] + match ($count) {
       1 => ['@source' => $sources[0]],
@@ -488,9 +488,9 @@ final class Accepting {
    * value that could not be held at all was not taken. A secret is never
    * compared: anything sent for one was not taken.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the key belongs to.
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The locked key.
    * @param array $input
    *   The raw input for the key's level, which holds the key.
@@ -506,7 +506,7 @@ final class Accepting {
    * @return bool
    *   TRUE when the value sent is what the key keeps.
    */
-  protected function takes(DataSurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values, mixed $kept): bool {
+  protected function takes(SurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values, mixed $kept): bool {
     if (DefinitionMetadata::isSecret($entry->definition)) {
       return !ValueState::isConfigured($input[$entry->name]);
     }
@@ -598,9 +598,9 @@ final class Accepting {
    * Decision: see docs/decisions.md#empty-items-are-dropped, and
    * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The collection.
-   * @param \Drupal\data_surface\Collection $list
+   * @param \Drupal\surface\Collection $list
    *   The child every item is.
    * @param array $input
    *   The raw input for the collection's level.
@@ -614,9 +614,9 @@ final class Accepting {
    *   The accepted list, NULL for a list that holds nothing, or what the
    *   level held when the input said nothing.
    *
-   * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
+   * @throws \Drupal\surface\Pipeline\UnknownKeysException
    *   When an item carries a key the child does not declare.
-   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When the input is not a list, or an item is not a map.
    */
   protected function acceptCollection(Entry $entry, Collection $list, array $input, mixed $fallback, string $path): mixed {
@@ -681,17 +681,17 @@ final class Accepting {
   /**
    * Says that a collection item would erase a secret stored at its place.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child every item is.
    * @param string $at
    *   The dotted path of the item.
    * @param list<string> $parents
    *   The secret's parents inside the item.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation
+   * @return \Drupal\surface\Pipeline\Violation
    *   The refusal, filed under the secret's full path.
    */
-  protected function unmatchedSecret(DataSurfaceInterface $child, string $at, array $parents): Violation {
+  protected function unmatchedSecret(SurfaceInterface $child, string $at, array $parents): Violation {
     [$key, $below] = array_pad(explode('.', $at . '.' . implode('.', $parents), 2), 2, '');
     return new Violation($key, $below, $this->t('@label is stored for the item at this position, and items are matched to what is stored by position, which items added or removed have moved: send it again, or the clear marker to remove it.', [
       '@label' => Validating::definitionAt($child, $parents)?->getLabel() ?? end($parents),
@@ -701,9 +701,9 @@ final class Accepting {
   /**
    * Accepts a child's value through the built child describing it.
    *
-   * @param \Drupal\data_surface\Entry $entry
+   * @param \Drupal\surface\Entry $entry
    *   The attached key or key with variants.
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child answering for it: the attached one, or the chosen
    *   variant.
    * @param mixed $input
@@ -719,12 +719,12 @@ final class Accepting {
    * @return array
    *   The accepted map.
    *
-   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When the input is not a map.
-   * @throws \Drupal\data_surface\Pipeline\VariantMismatchException
+   * @throws \Drupal\surface\Pipeline\VariantMismatchException
    *   When the input carries another variant's keys.
    */
-  protected function acceptChild(Entry $entry, DataSurfaceInterface $child, mixed $input, mixed $fallback, string $path, ?string $chosen): array {
+  protected function acceptChild(Entry $entry, SurfaceInterface $child, mixed $input, mixed $fallback, string $path, ?string $chosen): array {
     if (!ValueState::isConfigured($input)) {
       // Nothing sent for a child is nothing sent for each of its keys: an
       // optional one is cleared, a required one is refused in its own
@@ -757,7 +757,7 @@ final class Accepting {
    * meaning to say anything about it at all.
    *
    * Which leaves no way to remove a secret, so there is one:
-   * DataSurfacePipelineInterface::CLEAR_SECRET, sent as the value, means
+   * SurfacePipelineInterface::CLEAR_SECRET, sent as the value, means
    * the key holds nothing from now on. Clearing is an explicit act, said
    * out loud, by a checkbox a host renders beside the box or by an API
    * caller that names the marker.
@@ -780,11 +780,11 @@ final class Accepting {
    *   The accepted value: the new secret, the fallback when the input
    *   said nothing, or NULL when the input asked for it to be cleared.
    *
-   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When the input carries a value the definition cannot hold.
    */
   protected function acceptSecret(DataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
-    if ($input === DataSurfacePipelineInterface::CLEAR_SECRET) {
+    if ($input === SurfacePipelineInterface::CLEAR_SECRET) {
       return NULL;
     }
     if (!ValueState::isConfigured($input)) {
@@ -819,9 +819,9 @@ final class Accepting {
    * @return mixed
    *   The accepted value.
    *
-   * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
+   * @throws \Drupal\surface\Pipeline\UnknownKeysException
    *   When a nested input key is not a property definition.
-   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When the input cannot be held by the definition at all.
    */
   public function acceptValue(DataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
@@ -912,9 +912,9 @@ final class Accepting {
    * @return mixed
    *   The accepted list, or the fallback when no list was given.
    *
-   * @throws \Drupal\data_surface\Pipeline\UnknownKeysException
+   * @throws \Drupal\surface\Pipeline\UnknownKeysException
    *   When an item's nested input key is not a property definition.
-   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When an item cannot be held by the item definition.
    */
   protected function acceptList(ListDataDefinitionInterface $definition, mixed $input, mixed $fallback, string $path): mixed {
@@ -943,7 +943,7 @@ final class Accepting {
    * Coerces one configured value that is not a structure to its type.
    *
    * The coercion table is the Tool API's, mirrored in
-   * \Drupal\data_surface\Pipeline\Coercion, and this is the only place
+   * \Drupal\surface\Pipeline\Coercion, and this is the only place
    * the pipeline applies it to a scalar. A near miss snaps onto the
    * values the key offers, read from the same options service a
    * generated select and the tool's advertised enum read. An array for a
@@ -961,13 +961,13 @@ final class Accepting {
    *   The value in the definition's type, or untouched when the table has
    *   no unambiguous reading of it.
    *
-   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When an array arrives for a type that holds a single value.
    */
   protected function coerce(DataDefinitionInterface $definition, mixed $value, string $path): mixed {
     $type = $definition->getDataType();
     if (is_array($value)) {
-      if (in_array($type, DataSurfacePipeline::SCALAR_TYPES, TRUE)) {
+      if (in_array($type, SurfacePipeline::SCALAR_TYPES, TRUE)) {
         throw new TypeMismatchException($path, $type, get_debug_type($value));
       }
       return $value;
@@ -1007,10 +1007,10 @@ final class Accepting {
    *
    * Decision: see docs/decisions.md#a-refusal-names-what-it-depends-on.
    *
-   * @param \Drupal\data_surface\Pipeline\UnknownKeysException $exception
+   * @param \Drupal\surface\Pipeline\UnknownKeysException $exception
    *   The refusal from accept().
    *
-   * @return \Drupal\data_surface\Pipeline\ViolationSet
+   * @return \Drupal\surface\Pipeline\ViolationSet
    *   The violations, filed under their top level keys.
    */
   public function unknownKeyViolations(UnknownKeysException $exception): ViolationSet {
@@ -1024,7 +1024,7 @@ final class Accepting {
       if ($near !== NULL) {
         $message = new Sentences($message, $this->t('Did you mean @key?', [
           '@key' => $exception->getPath() === '' ? $near : $exception->getPath() . '.' . $near,
-        ], ['context' => DataSurfacePipeline::REFUSAL_CONTEXT]));
+        ], ['context' => SurfacePipeline::REFUSAL_CONTEXT]));
       }
       $violations[] = new Violation(
         (string) $name,
@@ -1068,10 +1068,10 @@ final class Accepting {
    * variants, filed under the top level key that carries them, so a form
    * flags that key and a caller reads exactly which keys to move.
    *
-   * @param \Drupal\data_surface\Pipeline\VariantMismatchException $exception
+   * @param \Drupal\surface\Pipeline\VariantMismatchException $exception
    *   The refusal from accept().
    *
-   * @return \Drupal\data_surface\Pipeline\ViolationSet
+   * @return \Drupal\surface\Pipeline\ViolationSet
    *   The violations.
    */
   public function variantMismatchViolations(VariantMismatchException $exception): ViolationSet {
@@ -1092,10 +1092,10 @@ final class Accepting {
   /**
    * Turns a type mismatch into a violation, the way unknown keys are.
    *
-   * @param \Drupal\data_surface\Pipeline\TypeMismatchException $exception
+   * @param \Drupal\surface\Pipeline\TypeMismatchException $exception
    *   The refusal from accept().
    *
-   * @return \Drupal\data_surface\Pipeline\ViolationSet
+   * @return \Drupal\surface\Pipeline\ViolationSet
    *   One violation, filed under the top level key that carries the
    *   value.
    */
@@ -1110,12 +1110,12 @@ final class Accepting {
    * and refuses the value it could not hold with this violation, as the
    * other doors do.
    *
-   * @param \Drupal\data_surface\Pipeline\TypeMismatchException $exception
+   * @param \Drupal\surface\Pipeline\TypeMismatchException $exception
    *   The refusal from accept().
    * @param \Drupal\Core\StringTranslation\TranslationInterface $translation
    *   The string translation service.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation
+   * @return \Drupal\surface\Pipeline\Violation
    *   The violation, filed under the top level key that carries the value.
    */
   public static function typeMismatchViolation(TypeMismatchException $exception, TranslationInterface $translation): Violation {

@@ -1,6 +1,6 @@
 {
     "resource": "event.sponsorship",
-    "module": "data_surface_examples_references",
+    "module": "surface_examples_references",
     "contract": 4,
     "documents": [
         {
@@ -51,7 +51,7 @@
                             },
                             "checkedOnServer": [
                                 {
-                                    "constraint": "DataSurfaceValidReference",
+                                    "constraint": "SurfaceValidReference",
                                     "message": "Refers to an entity the account may reference"
                                 }
                             ]
@@ -87,7 +87,7 @@
                             },
                             "checkedOnServer": [
                                 {
-                                    "constraint": "DataSurfaceValidReference",
+                                    "constraint": "SurfaceValidReference",
                                     "message": "Refers to an entity the account may reference"
                                 }
                             ]
@@ -114,7 +114,7 @@
                             },
                             "checkedOnServer": [
                                 {
-                                    "constraint": "DataSurfaceValidReference",
+                                    "constraint": "SurfaceValidReference",
                                     "message": "Refers to an entity the account may reference"
                                 }
                             ]

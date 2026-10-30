@@ -1,0 +1,8 @@
+name: Surface API Tool Test
+type: module
+description: 'Test support for the Tool API bridge: a resource with storage, an operation that changes what exists, and a secret at two depths, for the read tool to leave out; a specimen with a key of every scalar type, for the matrix tests; and a logbook whose operations state how they behave.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Resource\ResourceCallable;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\ResourceCallable;
 
 /**
  * One operation, as discovery read it.
@@ -92,10 +92,10 @@ final class OperationDefinition {
    *   The static part of access, `%key` placeholders unresolved.
    * @param string $module
    *   The module that provides it.
-   * @param \Drupal\data_surface\ResourceBuild\OperationParameter[] $parameters
+   * @param \Drupal\surface\ResourceBuild\OperationParameter[] $parameters
    *   The method's parameters, in order: what a route or a tool has to
    *   supply, by name.
-   * @param \Drupal\data_surface\Resource\ResourceCallable|null $context
+   * @param \Drupal\surface\Resource\ResourceCallable|null $context
    *   For a derived resource's operation, the method and the arguments it
    *   is bound to, called with the resolved arguments by name first;
    *   NULL for an #[Operation] method, called with them as named
@@ -118,7 +118,7 @@ final class OperationDefinition {
    * @param string|null $structure
    *   The structure whose keys a call takes in place of the resource's,
    *   or NULL for the resource's own.
-   * @param \Drupal\data_surface\ResourceBuild\Gate[] $gates
+   * @param \Drupal\surface\ResourceBuild\Gate[] $gates
    *   The access it borrows from other things, asked after its
    *   permission for the thing a call is about.
    *
@@ -307,10 +307,10 @@ final class OperationDefinition {
    *
    * Decision: see docs/decisions.md#a-contexts-id-is-the-operation-id.
    *
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   What the operation's method returned.
    *
-   * @return \Drupal\data_surface\Resource\OperationContext
+   * @return \Drupal\surface\Resource\OperationContext
    *   The context, its id and `creates` the operation's.
    *
    * @throws \LogicException

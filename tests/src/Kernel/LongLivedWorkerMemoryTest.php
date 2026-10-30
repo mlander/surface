@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\OperationAccessInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface_examples\Resource\RegistrationStep3Resource;
-use Drupal\data_surface_resource_test\Access\ArchiveAccess;
+use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Resource\AccessAnswer;
+use Drupal\surface\Resource\OperationAccessInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
+use Drupal\surface_resource_test\Access\ArchiveAccess;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -27,9 +27,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * request: a worker building in one context after another keeps the
  * latest few.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
+class LongLivedWorkerMemoryTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -42,10 +42,9 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_resource_test',
+    'surface',
+    'surface_examples',
+    'surface_resource_test',
   ];
 
   /**
@@ -54,7 +53,7 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_examples']);
+    $this->installConfig(['surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -66,7 +65,7 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
    * the memo was weak a thousand of them kept about 2.7 MB; now none.
    */
   public function testValidatingThousandsOfTimesKeepsNothing(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $surface = $resources->build(RegistrationStep3Resource::class, $resources->operation(RegistrationStep3Resource::class, 'configure'));
     $values = [
       'title' => 'Meetup',
@@ -112,7 +111,7 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
     // is left behind and starts again empty.
     $kept = DataDefinition::create('string')->addConstraint('Choice', ['choices' => ['c']]);
     $options->resolve($kept);
-    $woken = unserialize(serialize($options), ['allowed_classes' => [DataSurfaceOptions::class]]);
+    $woken = unserialize(serialize($options), ['allowed_classes' => [SurfaceOptions::class]]);
     $this->assertCount(0, $memo->getValue($woken));
     $this->assertSame(['c'], array_keys($woken->resolve($kept)->options ?? []));
   }
@@ -128,7 +127,7 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
    */
   public function testStaticAnswersStayBoundedAcrossEntities(): void {
     // The static answers are the access phase's to keep.
-    $build = $this->container->get('data_surface.resources');
+    $build = $this->container->get('surface.resources');
     $resources = (new \ReflectionProperty($build, 'gating'))->getValue($build);
     $memo = new \ReflectionProperty($resources, 'staticAnswers');
     $limit = (new \ReflectionClassConstant($resources, 'STATIC_ANSWERS_KEPT'))->getValue();
@@ -155,7 +154,7 @@ class LongLivedWorkerMemoryTest extends DataSurfaceKernelTestBase {
    * is never kept at all.
    */
   public function testKeptBuildsStayBoundedAcrossContexts(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $memo = new \ReflectionProperty($resources, 'builds');
     $limit = (new \ReflectionClassConstant($resources, 'BUILDS_KEPT'))->getValue();
     $this->assertIsInt($limit);

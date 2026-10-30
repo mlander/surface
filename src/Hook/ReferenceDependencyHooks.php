@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Hook;
+namespace Drupal\surface\Hook;
 
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Hook\Attribute\Hook;
-use Drupal\data_surface\Reference\ReferenceDependencies;
+use Drupal\surface\Reference\ReferenceDependencies;
 
 /**
  * Adds a config entity's reference dependencies once it calculated its own.
  *
- * @see \Drupal\data_surface\Reference\ReferenceDependencies
+ * @see \Drupal\surface\Reference\ReferenceDependencies
  */
 final class ReferenceDependencyHooks {
 

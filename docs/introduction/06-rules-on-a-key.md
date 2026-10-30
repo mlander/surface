@@ -32,8 +32,6 @@ $inputs->add('layout', 'string', t('Layout'), default: 'list')
   ]);
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 - `setRequired(TRUE)`: the key must hold a value. `FALSE`, `0` and an
   empty list count as a value; only nothing and the empty string do
   not. `show_author` and `notify_email` are not required, so a caller

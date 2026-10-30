@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
@@ -13,15 +13,15 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Reference\References;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Resource\AccessAnswer;
-use Drupal\data_surface\Resource\OperationAccessInterface;
-use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Resource\AccessAnswer;
+use Drupal\surface\Resource\OperationAccessInterface;
+use Drupal\surface\Resource\AltersInputsInterface;
+use Drupal\surface\Resource\OperationContext;
 
 /**
  * The access phase of the build: who may ask, and what they may see.
@@ -42,7 +42,7 @@ use Drupal\data_surface\Resource\OperationContext;
  *
  * @internal
  *
- * @see \Drupal\data_surface\ResourceBuild\Resources
+ * @see \Drupal\surface\ResourceBuild\Resources
  */
 final class Gating {
 
@@ -74,7 +74,7 @@ final class Gating {
    * add one entry per entity for the life of a worker. The most recently
    * asked last.
    *
-   * @var array<string, \Drupal\data_surface\Resource\AccessAnswer>
+   * @var array<string, \Drupal\surface\Resource\AccessAnswer>
    */
   protected array $staticAnswers = [];
 
@@ -95,7 +95,7 @@ final class Gating {
   /**
    * Where each operation's gates are asked, once read, by name and id.
    *
-   * @var array<string, array<int, array{gate: \Drupal\data_surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null}>>
+   * @var array<string, array<int, array{gate: \Drupal\surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null}>>
    */
   protected array $gatePlaces = [];
 
@@ -109,7 +109,7 @@ final class Gating {
   /**
    * Constructs the access phase.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, for the blueprints read again.
@@ -120,11 +120,11 @@ final class Gating {
    * @param \Drupal\Core\Session\PermissionsHashGeneratorInterface|null $permissionsHashGenerator
    *   What tells two accounts' permissions apart, which a static access
    *   answer is kept by; NULL keeps none.
-   * @param \Drupal\data_surface\ResourceBuild\Declaring $declaring
+   * @param \Drupal\surface\ResourceBuild\Declaring $declaring
    *   The declaring phase, for the access classes and alters discovery
    *   names, the blueprints read again and the context a child is invoked
    *   in.
-   * @param \Drupal\data_surface\ResourceBuild\Resources $resources
+   * @param \Drupal\surface\ResourceBuild\Resources $resources
    *   The build step, which access() builds the resource with and a gate
    *   asks another resource's operation of.
    */
@@ -150,17 +150,17 @@ final class Gating {
    * as a child's is, and every key is marked, since any of them may be
    * found locked once the subject is known.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The builder, which the answer's cacheability reaches.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Its context.
    *
    * @return string|null
    *   Why it is locked, or NULL when it is not.
    */
-  public function lockedAtTheTop(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context): ?string {
+  public function lockedAtTheTop(SurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context): ?string {
     // A gate asked about the thing the context knows refuses rather than
     // locks, and access() asks it; built for the account alone or for no
     // account, one the subject decides marks every key.
@@ -218,7 +218,7 @@ final class Gating {
   /**
    * Says why an answer locked, in the sentence a caller is shown.
    *
-   * @param \Drupal\data_surface\Resource\AccessAnswer $answer
+   * @param \Drupal\surface\Resource\AccessAnswer $answer
    *   A locked answer.
    *
    * @return string
@@ -270,11 +270,11 @@ final class Gating {
    * carrying the cache contexts the set-aside answer read, since which
    * kind it is was decided by them, and the key is marked.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $child
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $child
    *   The child.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition|null $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition|null $operation
    *   The operation the build resolved for it, or NULL for none.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The child's context.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
@@ -283,7 +283,7 @@ final class Gating {
    *   asking the same one narrows nothing, its parent's gate having asked
    *   it already.
    *
-   * @return array{0: \Drupal\data_surface\Resource\AccessAnswer|null, 1: bool}
+   * @return array{0: \Drupal\surface\Resource\AccessAnswer|null, 1: bool}
    *   Open, locked or omitted, with what the answer read, or NULL for a
    *   child with no operation and no access class, which stays open; and
    *   whether a runtime answer was set aside, which only a build for the
@@ -347,9 +347,9 @@ final class Gating {
    * Decision: see
    * docs/decisions.md#an-alter-may-answer-access-and-the-stricter-stands.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is built in, which says which alters apply.
    * @param bool $locking
    *   TRUE to list only those that can answer locked (mayLock()), as the
@@ -385,12 +385,12 @@ final class Gating {
    *
    * @param array<int, array{0: class-string, 1: string}> $answering
    *   What answering() listed.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
    *
-   * @return array{0: \Drupal\data_surface\Resource\AccessAnswer|null, 1: bool, 2: string[]}
+   * @return array{0: \Drupal\surface\Resource\AccessAnswer|null, 1: bool, 2: string[]}
    *   The answers applied, combined, or NULL when none was; whether a
    *   runtime answer was set aside; and the cache contexts the answers set
    *   aside read, which chose their kind.
@@ -441,12 +441,12 @@ final class Gating {
    *   The role it answers in: PipelineGuard::ACCESS for an access class,
    *   PipelineGuard::ALTER for an alter. Both implement
    *   OperationAccessInterface; an alter's neutral is read as open.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context of what it answers for.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
    *
-   * @return \Drupal\data_surface\Resource\AccessAnswer
+   * @return \Drupal\surface\Resource\AccessAnswer
    *   The class's answer, read the way a child reads it.
    *
    * @throws \LogicException
@@ -480,7 +480,7 @@ final class Gating {
    *
    * @param string $class
    *   The access class.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is asked in.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
@@ -512,15 +512,15 @@ final class Gating {
    *
    * @param string $class
    *   The access class, or the alter.
-   * @param \Drupal\data_surface\Resource\OperationAccessInterface $instance
+   * @param \Drupal\surface\Resource\OperationAccessInterface $instance
    *   It, as built.
    * @param string $role
    *   PipelineGuard::ACCESS or PipelineGuard::ALTER, as ask() takes it.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
-   * @param \Drupal\data_surface\Resource\AccessAnswer $first
+   * @param \Drupal\surface\Resource\AccessAnswer $first
    *   What it answered first, which read static.
    *
    * @return bool
@@ -552,7 +552,7 @@ final class Gating {
    *
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account, or NULL for the current user.
@@ -560,7 +560,7 @@ final class Gating {
    * @return \Drupal\Core\Access\AccessResultInterface
    *   The access answer.
    *
-   * @see \Drupal\data_surface\ResourceBuild\ResourcesInterface::access()
+   * @see \Drupal\surface\ResourceBuild\ResourcesInterface::access()
    */
   public function access(string $resource, OperationContext $context, ?AccountInterface $account = NULL): AccessResultInterface {
     $definition = $this->registry->getDefinition($resource);
@@ -592,7 +592,7 @@ final class Gating {
    *
    * @param string $resource
    *   The class, or its id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
@@ -600,7 +600,7 @@ final class Gating {
    * @return bool
    *   TRUE when an answer at the top waits for the subject.
    *
-   * @see \Drupal\data_surface\ResourceBuild\ResourcesInterface::isRuntimeAtTheTop()
+   * @see \Drupal\surface\ResourceBuild\ResourcesInterface::isRuntimeAtTheTop()
    */
   public function isRuntimeAtTheTop(string $resource, OperationContext $context, AccountInterface $account): bool {
     $definition = $this->registry->getDefinition($resource);
@@ -635,7 +635,7 @@ final class Gating {
    *   The operation id.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account, or NULL for the current user.
-   * @param \Drupal\data_surface\Resource\OperationContext|null $context
+   * @param \Drupal\surface\Resource\OperationContext|null $context
    *   The context, once built, whose identity fills a `%key` placeholder;
    *   NULL asks the permission as written.
    *
@@ -644,7 +644,7 @@ final class Gating {
    *   has no permission, or one with a `%key` placeholder the context
    *   cannot fill.
    *
-   * @see \Drupal\data_surface\ResourceBuild\ResourcesInterface::permissionAccess()
+   * @see \Drupal\surface\ResourceBuild\ResourcesInterface::permissionAccess()
    */
   public function permissionAccess(string $resource, string $operation, ?AccountInterface $account = NULL, ?OperationContext $context = NULL): ?AccessResultInterface {
     $found = $this->registry->getOperation($this->registry->getDefinition($resource)->name(), $operation);
@@ -657,7 +657,7 @@ final class Gating {
   /**
    * Gets what answers the gates an operation borrows.
    *
-   * @return \Drupal\data_surface\ResourceBuild\Gates
+   * @return \Drupal\surface\ResourceBuild\Gates
    *   The gates.
    */
   protected function gates(): Gates {
@@ -679,12 +679,12 @@ final class Gating {
    *
    * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource the operation is of.
    * @param string $operation
    *   The operation id.
    *
-   * @return array<int, array{gate: \Drupal\data_surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null}>
+   * @return array<int, array{gate: \Drupal\surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null}>
    *   Per gate: the entity type it asks about (NULL for none); for one
    *   asked at the top, the identity key naming the thing (empty for the
    *   `entity_type` and `id` pair); for one asked per item, the
@@ -702,7 +702,7 @@ final class Gating {
     if ($found === NULL || $found->gates === []) {
       return $this->gatePlaces[$memo] = [];
     }
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $inputs = $this->declaring->blueprint($builder, $definition);
     $this->declaring->fillBlueprints($definition, $inputs);
     $top = [];
@@ -718,14 +718,14 @@ final class Gating {
     // place.
     $shaped = $found->structure === NULL ? $definition : $this->registry->getDefinition($found->structure);
     if ($shaped !== $definition) {
-      $builder = new DataSurfaceBuilder();
+      $builder = new SurfaceBuilder();
       $inputs = $this->declaring->blueprint($builder, $shaped);
       $this->declaring->fillBlueprints($shaped, $inputs);
     }
     $items = [];
     foreach ($inputs->lists() as $key => $child) {
       $item = $this->registry->getDefinition((string) $child);
-      $item_builder = new DataSurfaceBuilder();
+      $item_builder = new SurfaceBuilder();
       $item_inputs = $this->declaring->blueprint($item_builder, $item);
       $this->declaring->fillBlueprints($item, $item_inputs);
       foreach ($item_inputs->keys() as $item_key) {
@@ -769,9 +769,9 @@ final class Gating {
   /**
    * Finds the thing a gate asked at the top asks about.
    *
-   * @param array{gate: \Drupal\data_surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null} $place
+   * @param array{gate: \Drupal\surface\ResourceBuild\Gate, type: string|null, top: string|null, list: string|null, item: string|null} $place
    *   Where the gate is asked (gatePlaces()).
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context, which knows the identity.
    *
    * @return array{0: bool, 1: \Drupal\Core\Entity\EntityInterface|null}
@@ -801,9 +801,9 @@ final class Gating {
    *
    * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Its context.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
@@ -857,9 +857,9 @@ final class Gating {
    *
    * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Its context.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
@@ -897,9 +897,9 @@ final class Gating {
   /**
    * Lists the collections whose items an operation's gates are asked of.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource the operation is of.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Its context.
    *
    * @return array<string, true>
@@ -918,12 +918,12 @@ final class Gating {
   /**
    * Gets the gates an operation asks once per item, for its storage.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource the operation is of.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Its context.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ItemGates|null
+   * @return \Drupal\surface\ResourceBuild\ItemGates|null
    *   The gates by collection, or NULL when none is asked per item.
    */
   public function itemGates(ResourceDefinition $definition, OperationContext $context): ?ItemGates {
@@ -941,9 +941,9 @@ final class Gating {
   /**
    * Answers access for one alone: its permission, then its class.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
@@ -1006,9 +1006,9 @@ final class Gating {
    *
    * @param \Drupal\Core\Access\AccessResultInterface $result
    *   The answer so far.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
@@ -1033,7 +1033,7 @@ final class Gating {
    * the top is built locked whole, shown and fixed, and its pipeline
    * refuses a submit (lockedAtTheTop()).
    *
-   * @param \Drupal\Core\Access\AccessResultInterface|\Drupal\data_surface\Resource\AccessAnswer $answer
+   * @param \Drupal\Core\Access\AccessResultInterface|\Drupal\surface\Resource\AccessAnswer $answer
    *   The access class's answer.
    *
    * @return \Drupal\Core\Access\AccessResultInterface
@@ -1065,7 +1065,7 @@ final class Gating {
    *
    * Decision: see docs/decisions.md#a-chosen-variant-may-refuse.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure being asked about.
    *
    * @return bool
@@ -1134,7 +1134,7 @@ final class Gating {
     foreach ($definition->variants as $variants) {
       array_push($children, ...array_values($variants));
     }
-    $builder = new DataSurfaceBuilder();
+    $builder = new SurfaceBuilder();
     $inputs = $this->declaring->blueprint($builder, $definition);
     $blueprints = [$inputs];
     try {
@@ -1177,19 +1177,19 @@ final class Gating {
    * refuses nothing above it. Recursively, through every child the build
    * carries.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $parent
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $parent
    *   The parent.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The parent's context.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
-   * @param \Drupal\data_surface\DataSurfaceInterface $built
+   * @param \Drupal\surface\SurfaceInterface $built
    *   The parent, built in that context.
    *
    * @return \Drupal\Core\Access\AccessResultInterface[]
    *   The chosen variants' answers, outermost first.
    */
-  protected function childAnswers(ResourceDefinition $parent, OperationContext $context, AccountInterface $account, DataSurfaceInterface $built): array {
+  protected function childAnswers(ResourceDefinition $parent, OperationContext $context, AccountInterface $account, SurfaceInterface $built): array {
     $answers = [];
     foreach ($built->getDefinitions()->entries() as $key => $entry) {
       $key = (string) $key;
@@ -1231,7 +1231,7 @@ final class Gating {
    *
    * @param string $permission
    *   The permission, as the operation declares it.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
    *
    * @return string|null
@@ -1256,12 +1256,12 @@ final class Gating {
    *
    * @param class-string $class
    *   The access class.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it answers for.
    * @param \Drupal\Core\Session\AccountInterface $account
    *   The account.
    *
-   * @return \Drupal\Core\Access\AccessResultInterface|\Drupal\data_surface\Resource\AccessAnswer
+   * @return \Drupal\Core\Access\AccessResultInterface|\Drupal\surface\Resource\AccessAnswer
    *   Its answer.
    */
   protected function answerAccess(string $class, OperationContext $context, AccountInterface $account): AccessResultInterface|AccessAnswer {

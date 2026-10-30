@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormInterface;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceHostTrait;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Attachment;
-use Drupal\data_surface\Widget\DataSurfaceWidgetBase;
-use Drupal\data_surface_resource_test\Resource\Pantry\PantryResource;
-use Drupal\data_surface_test\Plugin\Block\DataSurfaceChainTestBlock;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceHostTrait;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Attachment;
+use Drupal\surface\Widget\SurfaceWidgetBase;
+use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
+use Drupal\surface_test\Plugin\Block\SurfaceChainTestBlock;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -53,12 +53,12 @@ use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
  * replaced. One line, both halves: the error nobody caused, and the
  * select that would not follow its own parent.
  *
- * @see \Drupal\Tests\data_surface\Kernel\StaleValueTest
+ * @see \Drupal\Tests\surface\Kernel\StaleValueTest
  * @see docs/forms.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RefinementDiscardTest extends DataSurfaceKernelTestBase {
+class RefinementDiscardTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -70,10 +70,10 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     'node',
     'field',
     'text',
-    'data_surface',
-    'data_surface_demo',
-    'data_surface_test',
-    'data_surface_resource_test',
+    'surface',
+    'surface_examples_plugins',
+    'surface_test',
+    'surface_resource_test',
   ];
 
   /**
@@ -109,8 +109,8 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    */
   protected function rebuild(array $stored, string $trigger, array $input, ?FormStateInterface $form_state = NULL): array {
     $block = $this->container->get('plugin.manager.block')
-      ->createInstance('data_surface_chain_test_block', $stored);
-    $this->assertInstanceOf(DataSurfaceChainTestBlock::class, $block);
+      ->createInstance('surface_chain_test_block', $stored);
+    $this->assertInstanceOf(SurfaceChainTestBlock::class, $block);
     $form_state ??= new FormState();
     $form_state->setTriggeringElement(['#parents' => ['settings', $trigger]]);
     $form_state->setUserInput(['settings' => $input]);
@@ -146,7 +146,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
 
     $form_state = new FormState();
     $form_state->setUserInput([
-      'form_id' => 'data_surface_demo_form',
+      'form_id' => 'surface_examples_plugins_form',
       'surface' => [
         'headline' => 'Featured content',
         // Changed. The entity type is what everything else narrows on.
@@ -161,7 +161,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       '_triggering_element_name' => 'surface[entity_type]',
     ]);
     $form = $this->container->get('form_builder')
-      ->buildForm('Drupal\data_surface_demo\Form\DataSurfaceDemoForm', $form_state);
+      ->buildForm('Drupal\surface_examples_plugins\Form\ExampleForm', $form_state);
 
     // Nothing was submitted, so nothing is judged: the container's AJAX is
     // limited to the one element that was touched.
@@ -220,8 +220,8 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     // folds it into the list while processing, which a container read
     // straight off the builder has not been through.
     $this->assertSame('', $form['tier_two']['#empty_value']);
-    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $form['tier_two']);
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STALE_MARKER_KEY, $form);
+    $this->assertArrayNotHasKey(SurfaceWidgetBase::STALE_KEY, $form['tier_two']);
+    $this->assertArrayNotHasKey(SurfaceFormBuilderInterface::STALE_MARKER_KEY, $form);
     $this->assertSame([], $form_state->getErrors());
     $this->assertSame([], $this->container->get('messenger')->all());
     // The withdrawal reaches the raw input too, because Form API
@@ -296,7 +296,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     );
 
     $this->assertSame('', $form['tier_two']['#default_value']);
-    $this->assertSame('one', $form['tier_two'][DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame('one', $form['tier_two'][SurfaceWidgetBase::STALE_KEY]);
     // Neither the stored value nor the withdrawn input is offered, and
     // nothing names either of them: the new parent's list and the empty
     // option are all there is.
@@ -304,7 +304,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $this->assertSame('', $form['tier_two']['#empty_value']);
     // The container posts the path, so the Save that follows can read
     // the empty select as the stored value it stands for.
-    $this->assertSame('tier_two', $form[DataSurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
+    $this->assertSame('tier_two', $form[SurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
   }
 
   /**
@@ -322,15 +322,15 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $form = $this->rebuild($stored, 'tier_one', [
       'tier_one' => 'b',
       'tier_two' => '',
-      DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'tier_two',
+      SurfaceFormBuilderInterface::STALE_MARKER_KEY => 'tier_two',
     ]);
 
     $this->assertSame('', $form['tier_two']['#default_value']);
-    $this->assertSame('gone', $form['tier_two'][DataSurfaceWidgetBase::STALE_KEY]);
+    $this->assertSame('gone', $form['tier_two'][SurfaceWidgetBase::STALE_KEY]);
     $this->assertSame(['two', 'three'], array_keys($form['tier_two']['#options']));
     // Nothing was written: a rebuild is not a submit.
     $this->assertSame('gone', $this->container->get('plugin.manager.block')
-      ->createInstance('data_surface_chain_test_block', $stored)
+      ->createInstance('surface_chain_test_block', $stored)
       ->getConfiguration()['tier_two']);
   }
 
@@ -350,13 +350,13 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       [
         'tier_one' => 'a',
         'tier_two' => '',
-        DataSurfaceFormBuilderInterface::STALE_MARKER_KEY => 'tier_two',
+        SurfaceFormBuilderInterface::STALE_MARKER_KEY => 'tier_two',
       ],
       $form_state,
     );
 
     $this->assertSame('one', $form['tier_two']['#default_value']);
-    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $form['tier_two']);
+    $this->assertArrayNotHasKey(SurfaceWidgetBase::STALE_KEY, $form['tier_two']);
     // Out of the raw input, so the rebuilt select takes its default.
     $this->assertArrayNotHasKey('tier_two', $form_state->getUserInput()['settings']);
   }
@@ -376,7 +376,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     );
 
     $this->assertSame('', $form['tier_two']['#default_value']);
-    $this->assertArrayNotHasKey(DataSurfaceWidgetBase::STALE_KEY, $form['tier_two']);
+    $this->assertArrayNotHasKey(SurfaceWidgetBase::STALE_KEY, $form['tier_two']);
   }
 
   /**
@@ -428,8 +428,8 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    */
   public function testOnlyInputIsEverNamed(): void {
     $block = $this->container->get('plugin.manager.block')
-      ->createInstance('data_surface_chain_test_block', ['tier_one' => 'a', 'tier_two' => 'one']);
-    $surface = $block->getDataSurface();
+      ->createInstance('surface_chain_test_block', ['tier_one' => 'a', 'tier_two' => 'one']);
+    $surface = $block->getSurface();
     $stored = $block->getConfiguration();
 
     // A key that is only stored, never sent, is never named: there is no
@@ -462,7 +462,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    * names what it drops below the parent's key.
    */
   public function testTheOrphanOfChildIsNamedByItsPath(): void {
-    $parent = new DataSurfaceBuilder();
+    $parent = new SurfaceBuilder();
     $parent->attach('style', new Attachment($this->casingVariantSurface()));
     $surface = $parent->seal();
     $stored = ['style' => ['casing' => 'uppercase', 'variant' => 'bold']];
@@ -501,7 +501,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $this->container->get('request_stack')->push($request);
     $form_state = new FormState();
     $form_state->setUserInput([
-      'form_id' => 'data_surface_demo_form',
+      'form_id' => 'surface_examples_plugins_form',
       'surface' => $surface + [
         'headline' => 'Featured content',
         'limit' => '10',
@@ -510,7 +510,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       ],
       '_triggering_element_name' => 'surface[' . $trigger . ']',
     ] + ($build_id === NULL ? [] : ['form_build_id' => $build_id]));
-    $this->container->get('form_builder')->buildForm('Drupal\data_surface_demo\Form\DataSurfaceDemoForm', $form_state);
+    $this->container->get('form_builder')->buildForm('Drupal\surface_examples_plugins\Form\ExampleForm', $form_state);
     $this->assertTrue($form_state->isRebuilding());
     $this->assertSame([], $form_state->getErrors());
     return $form_state;
@@ -571,22 +571,22 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
    *   The form.
    */
   protected function pantryForm(): FormInterface {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     return new class($resources->build(PantryResource::class, PantryResource::create())) extends FormBase {
 
-      use DataSurfaceHostTrait;
+      use SurfaceHostTrait;
 
       /**
        * Constructs the form around a built pantry.
        */
-      public function __construct(protected DataSurfaceInterface $surface) {
+      public function __construct(protected SurfaceInterface $surface) {
       }
 
       /**
        * {@inheritdoc}
        */
       public function getFormId(): string {
-        return 'data_surface_pantry_test_form';
+        return 'surface_pantry_test_form';
       }
 
       /**
@@ -625,7 +625,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $this->container->get('request_stack')->push($request);
     $form_state = new FormState();
     $form_state->setUserInput([
-      'form_id' => 'data_surface_pantry_test_form',
+      'form_id' => 'surface_pantry_test_form',
       'surface' => array_replace_recursive([
         'pantry' => 'larder',
         'kind' => 'jar',
@@ -654,7 +654,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
   public function testTheOwnDependencyOfChildReplacesOnlyInsideIt(): void {
     $state = $this->postPantry(['shelf' => ['unit' => 'in']], 'surface[shelf][unit]');
     $this->assertSame([['surface', 'shelf', 'unit']], $state->getTriggeringElement()['#limit_validation_errors']);
-    $this->assertSame(['shelf', 'unit'], $state->getTriggeringElement()[DataSurfaceFormBuilderInterface::TRIGGER_KEY]['path']);
+    $this->assertSame(['shelf', 'unit'], $state->getTriggeringElement()[SurfaceFormBuilderInterface::TRIGGER_KEY]['path']);
     $container = $state->getCompleteForm()['surface'];
     $this->assertEquals(80, $container['shelf']['height']['#max']);
 
@@ -664,7 +664,7 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
       $this->ajaxSelectors($response, 'replaceWith'),
     );
     $this->assertSame('#' . $container['#attributes']['id'] . '--shelf--height', $this->wrapperSelector($container['shelf']['height']));
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['shelf']);
+    $this->assertArrayNotHasKey(SurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['shelf']);
     $this->assertNotContains($this->wrapperSelector($container['shelf']['unit']), $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertStringContainsString('max="80"', $this->ajaxMarkup($response, $this->wrapperSelector($container['shelf']['height'])));
 
@@ -688,15 +688,15 @@ class RefinementDiscardTest extends DataSurfaceKernelTestBase {
     $state = $this->postPantry(['kind' => ''], 'surface[kind]');
     $container = $state->getCompleteForm()['surface'];
     // No kind, no variant: the key is its wrapper and nothing else.
-    $this->assertArrayHasKey(DataSurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['kind_settings']);
+    $this->assertArrayHasKey(SurfaceFormBuilderInterface::REFRESH_ID_KEY, $container['kind_settings']);
     $this->assertSame([], array_values(array_filter(array_keys($container['kind_settings']), static fn ($key): bool => !str_starts_with((string) $key, '#'))));
     $response = $this->ajaxResponse($state);
     $this->assertSame([$this->wrapperSelector($container['kind_settings'])], $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertSame(
-      '<div id="' . $container['kind_settings'][DataSurfaceFormBuilderInterface::REFRESH_ID_KEY] . '"></div>',
+      '<div id="' . $container['kind_settings'][SurfaceFormBuilderInterface::REFRESH_ID_KEY] . '"></div>',
       trim($this->ajaxMarkup($response, $this->wrapperSelector($container['kind_settings']))),
     );
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $surface = $resources->build(PantryResource::class, PantryResource::create());
     $values = $this->formBuilder()->extractSurfaceValues($surface, $container, $state, ['kind_settings' => ['lid' => 'clip']]);
     $this->assertSame(['lid' => 'clip'], $values['kind_settings']);

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinition;
@@ -12,20 +12,20 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Port;
-use Drupal\data_surface\Reference\EntityReferenceStructure;
-use Drupal\data_surface\Resource\ArrangementGroup;
-use Drupal\data_surface\Resource\BlueprintInterface;
-use Drupal\data_surface\Resource\DefinesInputsInterface;
-use Drupal\data_surface\Resource\Compute;
-use Drupal\data_surface\Resource\ComputesValueInterface;
-use Drupal\data_surface\Resource\DefinesOutputsInterface;
-use Drupal\data_surface\Resource\ResourceCallable;
-use Drupal\data_surface\Resource\SiteListInterface;
-use Drupal\data_surface\Contract\SchemaReader;
+use Drupal\surface\Computed;
+use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Port;
+use Drupal\surface\Reference\EntityReferenceStructure;
+use Drupal\surface\Resource\ArrangementGroup;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\DefinesInputsInterface;
+use Drupal\surface\Resource\Compute;
+use Drupal\surface\Resource\ComputesValueInterface;
+use Drupal\surface\Resource\DefinesOutputsInterface;
+use Drupal\surface\Resource\ResourceCallable;
+use Drupal\surface\Resource\SiteListInterface;
+use Drupal\surface\Contract\SchemaReader;
 
 /**
  * The owner's blueprint: keys land at the top of the data surface.
@@ -58,7 +58,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * The provider of variants from the site at each key that names one.
    *
-   * @var array<string, class-string<\Drupal\data_surface\Resource\SiteListInterface>>
+   * @var array<string, class-string<\Drupal\surface\Resource\SiteListInterface>>
    */
   protected array $variantsFrom = [];
 
@@ -75,21 +75,21 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * The maps of keys from the site declared through this blueprint, by key.
    *
-   * @var array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
+   * @var array<string, array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
    */
   protected array $fromSite = [];
 
   /**
    * The ports declared through this blueprint, by name.
    *
-   * @var array<string, \Drupal\data_surface\Port>
+   * @var array<string, \Drupal\surface\Port>
    */
   protected array $ports = [];
 
   /**
    * The structures mixed in through this blueprint, in order.
    *
-   * @var array<int, array{class: class-string, reads: array<string, string>, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint}>
+   * @var array<int, array{class: class-string, reads: array<string, string>, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint}>
    */
   protected array $mixins = [];
 
@@ -113,24 +113,24 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Constructs a blueprint.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The engine's builder the blueprint fills.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager.
    * @param bool $outputs
    *   TRUE when this blueprint describes outputs rather than inputs.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry|null $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry|null $registry
    *   What discovery found, which names a structure mixed in and says
    *   whether it may be; NULL to name it by its class and check nothing.
    * @param string|null $owner
    *   The resource or structure declaring through this blueprint, by
    *   name, for messages and the cycle check.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint|null $into
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint|null $into
    *   For a structure being mixed in, the blueprint it is mixed into;
    *   NULL for the owner's own.
    */
   public function __construct(
-    DataSurfaceBuilderInterface $builder,
+    SurfaceBuilderInterface $builder,
     TypedDataManagerInterface $typedDataManager,
     bool $outputs = FALSE,
     protected readonly ?ResourceRegistry $registry = NULL,
@@ -208,7 +208,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the structures mixed in through this blueprint.
    *
-   * @return array<int, array{class: class-string, reads: array<string, string>, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint}>
+   * @return array<int, array{class: class-string, reads: array<string, string>, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint}>
    *   Each structure's class, its ports' wiring, and the blueprint it was
    *   declared through, which holds its keys (those of a structure it
    *   mixes in itself among them), its ports and its rules; in order.
@@ -279,7 +279,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the owner's blueprint, which every structure mixed in fills.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceBlueprint
+   * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
    *   The outermost blueprint.
    */
   protected function root(): ResourceBlueprint {
@@ -348,7 +348,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
       $this->attachments[$key] = $this->registry->defineReference(
         ($owner->id ?? $this->name($this->owner)) . '.' . $key,
-        $owner->module ?? 'data_surface',
+        $owner->module ?? 'surface',
         EntityReferenceStructure::filter($shell),
       );
     }
@@ -410,7 +410,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
    *
-   * @return array<string, class-string<\Drupal\data_surface\Resource\SiteListInterface>>
+   * @return array<string, class-string<\Drupal\surface\Resource\SiteListInterface>>
    *   The provider of each key that names one.
    */
   public function variantsFrom(): array {
@@ -446,7 +446,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     $hash ??= static::documentHash($root);
     return $this->registry->defineRead(
       $id,
-      $owner->module ?? 'data_surface',
+      $owner->module ?? 'surface',
       new ResourceCallable(SchemaReader::class, 'fill', [$root, $pointer, $hash]),
       hash('xxh128', serialize([$id, $hash, $pointer])),
     );
@@ -465,7 +465,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * @param string $id
    *   Its id: the owner's, the key, then the entry's.
-   * @param class-string<\Drupal\data_surface\Resource\EntrySchemasInterface> $from
+   * @param class-string<\Drupal\surface\Resource\EntrySchemasInterface> $from
    *   The provider.
    * @param string $value
    *   The entry's id.
@@ -483,7 +483,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
     return $this->registry->defineRead(
       $id,
-      $owner->module ?? 'data_surface',
+      $owner->module ?? 'surface',
       new ResourceCallable(SiteEntries::class, 'fill', [$from, $value]),
       hash('xxh128', serialize([$id, $from, $value])),
     );
@@ -707,7 +707,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the maps of keys from the site declared through this blueprint.
    *
-   * @return array<string, array{each: string, from: class-string<\Drupal\data_surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
+   * @return array<string, array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
    *   What each entry is, the provider, the default for every entry,
    *   whether each entry is a child, and the sibling map each of its ports
    *   reads per entry, by key, in declaration order.
@@ -793,7 +793,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the ports declared through this blueprint.
    *
-   * @return array<string, \Drupal\data_surface\Port>
+   * @return array<string, \Drupal\surface\Port>
    *   The ports, by name, in declaration order.
    */
   public function ports(): array {

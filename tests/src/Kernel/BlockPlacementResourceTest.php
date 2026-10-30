@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\block\Entity\Block;
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface_block\Resource\BlockPlacementResource;
-use Drupal\data_surface_block\Structure\VisibilityConditionStructure;
-use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface_examples_block\Resource\BlockPlacementResource;
+use Drupal\surface_examples_block\Structure\VisibilityConditionStructure;
+use Drupal\surface_examples_component_block\Structure\ComponentBlockStructure;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -25,9 +25,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the theme held on edit, and both documents, pinned whole beside this
  * test and in part here.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
+class BlockPlacementResourceTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -41,12 +41,11 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_component_block',
-    'data_surface_block',
-    'data_surface_block_test',
+    'surface',
+    'surface_examples',
+    'surface_examples_component_block',
+    'surface_examples_block',
+    'surface_block_test',
   ];
 
   /**
@@ -58,20 +57,20 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
    * The components a test site has: the three the examples ship.
    */
   protected const COMPONENTS = [
-    'data_surface_examples:call_to_action',
-    'data_surface_examples:card',
-    'data_surface_examples:hero',
-    'data_surface_examples:section',
+    'surface_examples:call_to_action',
+    'surface_examples:card',
+    'surface_examples:hero',
+    'surface_examples:section',
   ];
 
   /**
    * The plugins the block layout offers on this site, by id.
    */
   protected const PLUGINS = [
-    'data_surface_component',
     'local_actions_block',
     'local_tasks_block',
     'page_title_block',
+    'surface_component',
     'system_branding_block',
     'system_breadcrumb_block',
     'system_clear_cache_block',
@@ -149,11 +148,11 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
    * @param array $parameters
    *   Its parameters.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The resource, built.
    */
   protected function built(string $operation = 'create', array $parameters = []) {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     return $resources->build(BlockPlacementResource::class, $resources->operation(BlockPlacementResource::class, $operation, $parameters));
   }
 
@@ -171,12 +170,12 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     // The plugins the block layout offers, less one reading a context,
     // which the test module declares.
     $reading = array_keys(array_filter($this->container->get('plugin.manager.block')->getDefinitions(), static fn (array $definition): bool => !empty($definition['context_definitions'])));
-    $this->assertContains('data_surface_block_test_context', $reading);
+    $this->assertContains('surface_block_test_context', $reading);
     $plugins = $this->options()->resolve($built->getDefinition('plugin'));
     $this->assertSame(self::PLUGINS, array_keys($plugins->options));
     $this->assertSame([], array_intersect($reading, array_keys($plugins->options)));
     $this->assertSame('Site branding', (string) $plugins->options['system_branding_block']);
-    $this->assertSame('Component', (string) $plugins->options['data_surface_component']);
+    $this->assertSame('Component', (string) $plugins->options['surface_component']);
 
     // The themes installed, cached by the extension list.
     $themes = $this->options()->resolve($built->getDefinition('theme'));
@@ -217,7 +216,7 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(self::PLUGINS, array_keys($variants->variants));
     // The component block's own structure, as declared, its components
     // its variants in turn.
-    $component = $variants->variants['data_surface_component'];
+    $component = $variants->variants['surface_component'];
     $this->assertSame(ComponentBlockStructure::class, $component->source);
     $this->assertSame(self::COMPONENTS, array_keys($component->child->getDefinitions()->entry('props')->variants->variants));
     $this->assertSame(self::COMPONENTS, array_keys($component->child->getDefinitions()->entry('slots')->variants->variants));
@@ -247,7 +246,7 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     $roles = $variants['user_role']->child;
     $this->assertSame(['roles', 'context_mapping'], $roles->getDefinitions()->names());
     $this->assertSame(['user' => '@user.current_user_context:current_user'], $roles->getDefaultValues()['context_mapping'] ?? NULL, 'The context the block layout assigns is the default.');
-    $this->assertSame(VisibilityConditionStructure::class, $this->container->get('data_surface.resource_registry')->getDefinition('block.placement.condition')->class);
+    $this->assertSame(VisibilityConditionStructure::class, $this->container->get('surface.resource_registry')->getDefinition('block.placement.condition')->class);
   }
 
   /**
@@ -267,12 +266,12 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
    *
    * The full schema of add, and the schema for a placed component block
    * holding the card, are pinned beside this test, written again with
-   * DATA_SURFACE_CONTRACT_WRITE=1.
+   * SURFACE_CONTRACT_WRITE=1.
    */
   public function testBothDocumentsArePinned(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
-    $operations = $this->container->get('data_surface.resource_registry')->getOperations(BlockPlacementResource::class);
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
+    $operations = $this->container->get('surface.resource_registry')->getOperations(BlockPlacementResource::class);
     $context = $resources->operation(BlockPlacementResource::class, 'create');
     $full = $emitter->emitFull($resources->buildStatic(BlockPlacementResource::class, $context), 'block.placement', 'create', $operations['create']->label, operation: $operations['create']->facts())->document;
 
@@ -280,10 +279,10 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
       'id' => 'spotlight',
       'theme' => 'stark',
       'region' => 'content',
-      'plugin' => 'data_surface_component',
+      'plugin' => 'surface_component',
       'settings' => [
         'label' => 'Spotlight',
-        'component' => 'data_surface_examples:card',
+        'component' => 'surface_examples:card',
         'props' => ['heading' => 'Doors open at half past six'],
       ],
     ]);
@@ -294,7 +293,7 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     $now = $emitter->emit($built, $values, 'block.placement', 'update', $operations['update']->label, operation: $operations['update']->facts())->document;
 
     foreach (['block.placement.create.full.json' => $full, 'block.placement.update.now.json' => $now] as $file => $document) {
-      if (getenv('DATA_SURFACE_CONTRACT_WRITE')) {
+      if (getenv('SURFACE_CONTRACT_WRITE')) {
         @mkdir(self::FIXTURES, 0777, TRUE);
         file_put_contents(self::FIXTURES . $file, self::encode($document) . "\n");
       }
@@ -327,10 +326,10 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     ], $schema['$defs']['block.placement.settings.system_branding_block']);
     // The three components, under the component block's own id.
     foreach (self::COMPONENTS as $component) {
-      $this->assertArrayHasKey('block.data_surface_component.props.' . $component, $schema['$defs']);
+      $this->assertArrayHasKey('block.surface_component.props.' . $component, $schema['$defs']);
     }
-    $this->assertSame('#/$defs/block.data_surface_component', $schema['properties']['settings'][ContractEmitter::EXTENSION]['variants']['data_surface_component']);
-    $this->assertSame(['heading'], $schema['$defs']['block.data_surface_component.props.data_surface_examples:card']['required']);
+    $this->assertSame('#/$defs/block.surface_component', $schema['properties']['settings'][ContractEmitter::EXTENSION]['variants']['surface_component']);
+    $this->assertSame(['heading'], $schema['$defs']['block.surface_component.props.surface_examples:card']['required']);
     // The region per theme, enumerated.
     $this->assertTrue($schema['properties']['region'][ContractEmitter::EXTENSION]['enumerated']);
     $this->assertSame(['theme'], $schema['properties']['region'][ContractEmitter::EXTENSION]['dependsOn']);
@@ -340,9 +339,9 @@ class BlockPlacementResourceTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['$ref' => '#/$defs/block.placement.condition'], $schema['properties']['visibility']['items']);
 
     // For the card placed: the component block chosen, the card within it.
-    $this->assertSame('data_surface_component', $now['schema']['properties']['settings'][ContractEmitter::EXTENSION]['chosen']);
+    $this->assertSame('surface_component', $now['schema']['properties']['settings'][ContractEmitter::EXTENSION]['chosen']);
     $this->assertSame('Spotlight', $now['values']['label']);
-    $this->assertSame('data_surface_examples:card', $now['values']['settings']['component']);
+    $this->assertSame('surface_examples:card', $now['values']['settings']['component']);
   }
 
   /**

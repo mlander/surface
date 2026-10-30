@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
@@ -10,11 +10,11 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\data_surface_address\Resource\AddressFieldSettingsResource;
-use Drupal\data_surface_tool\Resource\FieldInstanceResource;
-use Drupal\data_surface\Resource\OperationContext;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface_examples_address\Resource\AddressFieldSettingsResource;
+use Drupal\surface_examples_field\Resource\FieldInstanceResource;
+use Drupal\surface\Resource\OperationContext;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\field\FieldConfigInterface;
@@ -32,21 +32,20 @@ use PHPUnit\Framework\Attributes\Group;
 /**
  * Tests the field tools, derived from the field instance resource.
  *
- * `data_surface:field.instance:create`, `:reuse` and `:update`, one per
- * operation of FieldInstanceResource, replace the two hand-written tools
- * this module used to ship. What has to hold is what held for them: a
- * tool contributes nothing of its own to the settings. The field type's
+ * `surface:field.instance:create`, `:reuse` and `:update`, one per operation of
+ * FieldInstanceResource (surface_examples_field), replace the two hand-written
+ * tools the Tool API bridge used to ship. What has to hold is what held for
+ * them: a tool contributes nothing of its own to the settings. The field type's
  * settings resource says what the values may be, the pipeline accepts,
- * validates, prepares and commits them, and the tool is the caller. So a
- * valid payload reaches storage in the layout the field type reads back,
- * an invalid one is refused with the path that names it and leaves
- * nothing behind, and a partial edit changes only the keys it carries —
- * including clearing one by sending it as null, which is the thing a
- * null-stripping merge cannot express.
+ * validates, prepares and commits them, and the tool is the caller. So a valid
+ * payload reaches storage in the layout the field type reads back, an invalid
+ * one is refused with the path that names it and leaves nothing behind, and a
+ * partial edit changes only the keys it carries — including clearing one by
+ * sending it as null, which is the thing a null-stripping merge cannot express.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class FieldToolsTest extends DataSurfaceKernelTestBase {
+class FieldToolsTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -58,17 +57,17 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   /**
    * The tool adding a field with a storage of its own.
    */
-  protected const ADD = 'data_surface:field.instance:create';
+  protected const ADD = 'surface:field.instance:create';
 
   /**
    * The tool adding an existing storage's field to a bundle.
    */
-  protected const REUSE = 'data_surface:field.instance:reuse';
+  protected const REUSE = 'surface:field.instance:reuse';
 
   /**
    * The tool editing a field.
    */
-  protected const EDIT = 'data_surface:field.instance:update';
+  protected const EDIT = 'surface:field.instance:update';
 
   /**
    * {@inheritdoc}
@@ -84,9 +83,9 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     'address',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_address',
-    'data_surface_tool',
+    'surface',
+    'surface_examples_address',
+    'surface_examples_field',
   ];
 
   /**
@@ -498,7 +497,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $this->assertContains('string', $choices);
     $this->assertContains('integer', $choices);
 
-    $surface = $this->container->get('data_surface.resources')->build(FieldInstanceResource::class, new OperationContext('configure'));
+    $surface = $this->container->get('surface.resources')->build(FieldInstanceResource::class, new OperationContext('configure'));
     $variants = $surface->getDefinitions()->entry('settings')?->variants;
     $this->assertNotNull($variants);
     $this->assertSame(AddressFieldSettingsResource::class, $variants->variant('address')->source);
@@ -592,7 +591,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
    *   The executed tool.
    */
   protected function editCodeStorage(array $values) {
-    $tool = $this->toolManager->createInstance('data_surface:field.storage:update');
+    $tool = $this->toolManager->createInstance('surface:field.storage:update');
     $tool->setInputValue('entity_type', 'entity_test');
     $tool->setInputValue('field_name', 'field_code');
     $tool->setInputValue(OperationInputs::VALUES, $values);
@@ -668,7 +667,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
   public function testStorageEditChangesOneStorageSetting(): void {
     $this->addShortStringField();
 
-    $tool = $this->toolManager->createInstance('data_surface:field.storage:update');
+    $tool = $this->toolManager->createInstance('surface:field.storage:update');
     $tool->setInputValue('entity_type', 'entity_test');
     $tool->setInputValue('field_name', 'field_code');
     $values = $tool->getInputDefinition(OperationInputs::VALUES);
@@ -806,7 +805,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
     $meta->setPropertyDefinition('count', DataDefinition::create('integer')
       ->setLabel(new TranslatableMarkup('Count'))
       ->setRequired(TRUE));
-    $builder = new DataSurfaceBuilder([
+    $builder = new SurfaceBuilder([
       'mode' => DataDefinition::create('string')->setLabel(new TranslatableMarkup('Mode')),
     ]);
     $builder
@@ -828,7 +827,7 @@ class FieldToolsTest extends DataSurfaceKernelTestBase {
         ->setLabel(new TranslatableMarkup('Tags')));
     $surface = $builder->seal();
 
-    $outputs = $this->container->get('data_surface_tool.input_definitions')->outputsFromSurface($surface);
+    $outputs = $this->container->get('surface.input_definitions')->outputsFromSurface($surface);
 
     $this->assertSame(['text', 'note', 'meta', 'tags'], array_keys($outputs));
     foreach ($outputs as $definition) {

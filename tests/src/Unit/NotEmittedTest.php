@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface\Pipeline\NotEmitted;
+use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -16,10 +16,10 @@ use PHPUnit\Framework\Attributes\Group;
  * accidentally have meant. NULL is a value — emitted, and held to the
  * definition — and absence is the other thing entirely.
  *
- * @see \Drupal\data_surface\Pipeline\NotEmitted
+ * @see \Drupal\surface\Pipeline\NotEmitted
  * @see docs/outputs.md
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class NotEmittedTest extends UnitTestCase {
 
   /**

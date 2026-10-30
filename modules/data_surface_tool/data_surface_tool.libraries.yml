@@ -1,6 +1,0 @@
-# Sets the contract panel beside the form's elements on a wide screen,
-# below them on a narrow one.
-contract_panel:
-  css:
-    component:
-      css/contract-panel.css: {}

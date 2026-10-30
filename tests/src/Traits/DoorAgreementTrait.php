@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Traits;
+namespace Drupal\Tests\surface\Traits;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\data_surface\DataSurfaceInterface;
+use Drupal\surface\SurfaceInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\DataSurfaceAccess;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Pipeline\Outbound;
-use Drupal\data_surface\ResourceBuild\OperationDefinition;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
-use Drupal\data_surface\ResourceBuild\ResourceCatalog;
-use Drupal\data_surface\ResourceBuild\ResourceDefinition;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Kernel\Fixture\DoorAgreementForm;
+use Drupal\surface\SurfaceAccess;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\Outbound;
+use Drupal\surface\ResourceBuild\OperationDefinition;
+use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface\ResourceBuild\ResourceCatalog;
+use Drupal\surface\ResourceBuild\ResourceDefinition;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\Kernel\Fixture\DoorAgreementForm;
 use Drupal\tool\Tool\ToolInterface;
 use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
@@ -128,13 +128,13 @@ trait DoorAgreementTrait {
    * The declared defaults, then each key sent null, and each key sent a
    * value of another type, over the defaults.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource, built in the operation.
    *
    * @return array<string, array>
    *   The documents, by label.
    */
-  protected static function generated(DataSurfaceInterface $surface): array {
+  protected static function generated(SurfaceInterface $surface): array {
     $defaults = $surface->getDefaultValues();
     $documents = ['the declared defaults' => $defaults];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
@@ -169,9 +169,9 @@ trait DoorAgreementTrait {
   /**
    * Compares every door of one operation over rows of documents.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param array<string, scalar> $parameters
    *   The parameters naming the thing, by name; none for an operation
@@ -189,8 +189,8 @@ trait DoorAgreementTrait {
     if ($definition->storage === NULL) {
       return ['compared' => 0, 'skipped' => [static::SKIPPED_NO_STORAGE => count($rows)]];
     }
-    $standalone = ResourceCatalog::standalone($definition, $operation, $this->container->get('data_surface.resource_plugins')->usedBy($definition->name()));
-    $tool = 'data_surface:' . $definition->id . ':' . $operation->id;
+    $standalone = ResourceCatalog::standalone($definition, $operation, $this->container->get('surface.resource_plugins')->usedBy($definition->name()));
+    $tool = 'surface:' . $definition->id . ':' . $operation->id;
     if ($standalone) {
       $this->assertTrue($this->container->get('plugin.manager.tool')->hasDefinition($tool), $id . ': the tool ' . $tool . ' is derived.');
     }
@@ -274,9 +274,9 @@ trait DoorAgreementTrait {
   /**
    * Runs values through the pipeline, dry, as a door would.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param array<string, scalar> $parameters
    *   The parameters naming the thing.
@@ -287,12 +287,12 @@ trait DoorAgreementTrait {
    *   What every door is compared by.
    */
   protected function pipelineDoor(ResourceDefinition $definition, OperationDefinition $operation, array $parameters, array $input): array {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation($definition->name(), $operation->id, $parameters);
     $surface = $resources->build($definition->name(), $context);
     // A door makes the answer decisive: no opinion is a refusal, as on a
     // route.
-    $access = DataSurfaceAccess::decisive($resources->access($definition->name(), $context), 'The resource may not be written by this account.');
+    $access = SurfaceAccess::decisive($resources->access($definition->name(), $context), 'The resource may not be written by this account.');
     $result = $this->pipeline()->submit($surface, $input, $resources->storage($definition->name(), $context, $surface), TRUE, $access);
     return static::compared($result->document($this->pipeline()->outbound($surface, $result->held())));
   }
@@ -374,9 +374,9 @@ trait DoorAgreementTrait {
    * (and its parameters, in the path), drawn with what the pipeline
    * accepts of the document over what is stored, and posted as drawn.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param array<string, scalar> $parameters
    *   The parameters naming the thing.
@@ -389,7 +389,7 @@ trait DoorAgreementTrait {
    *   cannot carry the document.
    */
   protected function formDoor(ResourceDefinition $definition, OperationDefinition $operation, array $parameters, array $input): array|string {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation($definition->name(), $operation->id, $parameters);
     $surface = $resources->build($definition->name(), $context);
     $stored = array_intersect_key($resources->storage($definition->name(), $context, $surface)->load($surface), $surface->getDefinitions()->toArray());
@@ -424,7 +424,7 @@ trait DoorAgreementTrait {
         // The form's floor under its route: the access answer refuses.
         return static::refusedByTheForm([''], []);
       }
-      $container = $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY] ?? [];
+      $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY] ?? [];
       $drawn = static::drawn($container);
       if (array_diff(array_keys($input), $drawn) !== []) {
         return static::SKIPPED_FORM_NOT_DRAWN;
@@ -438,7 +438,7 @@ trait DoorAgreementTrait {
       $errors = array_map(static fn ($message): string => strip_tags((string) $message), $state->getErrors());
       foreach (array_keys($state->getErrors()) as $name) {
         $parts = explode('][', (string) $name);
-        if ($parts[0] === DataSurfaceOperationForm::SURFACE_KEY) {
+        if ($parts[0] === SurfaceOperationForm::SURFACE_KEY) {
           array_shift($parts);
         }
         $paths[] = $parts === [] || $parts === [''] ? '' : '/' . implode('/', $parts);
@@ -458,9 +458,9 @@ trait DoorAgreementTrait {
   /**
    * Builds the request the form door answers: a route naming the operation.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param array<string, scalar> $parameters
    *   The parameters, each a slug of the path.
@@ -469,14 +469,14 @@ trait DoorAgreementTrait {
    *   The request, its route matched.
    */
   protected function formRequest(ResourceDefinition $definition, OperationDefinition $operation, array $parameters): Request {
-    $path = '/data-surface-door-agreement' . implode('', array_map(static fn (string $name): string => '/{' . $name . '}', array_keys($parameters)));
+    $path = '/surface-door-agreement' . implode('', array_map(static fn (string $name): string => '/{' . $name . '}', array_keys($parameters)));
     $route = new Route($path, [
-      '_form' => DataSurfaceOperationForm::class,
+      '_form' => SurfaceOperationForm::class,
       OperationRoute::RESOURCE => $definition->id,
       OperationRoute::OPERATION => $operation->id,
     ]);
     $request = Request::create(strtr($path, array_combine(array_map(static fn (string $name): string => '{' . $name . '}', array_keys($parameters)), array_map('strval', $parameters)) ?: []), 'POST');
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'data_surface.door_agreement.' . str_replace(['.', ':'], '_', $definition->id . '.' . $operation->id));
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface.door_agreement.' . str_replace(['.', ':'], '_', $definition->id . '.' . $operation->id));
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     foreach ($parameters as $name => $value) {
       $request->attributes->set($name, $value);

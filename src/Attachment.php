@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\MapDataDefinition;
@@ -38,23 +38,23 @@ use Drupal\Core\TypedData\MapDataDefinition;
  * first time something reads it (SettlesChildInterface), and kept.
  * Reading `child` settles it; isSettled() asks without building.
  *
- * @property-read \Drupal\data_surface\DataSurfaceInterface $child
+ * @property-read \Drupal\surface\SurfaceInterface $child
  *   The sealed child, as it was advertised, built now if it was not yet.
  *
- * @see \Drupal\data_surface\DataSurfaceBuilderInterface::attach()
- * @see \Drupal\data_surface\Variants
+ * @see \Drupal\surface\SurfaceBuilderInterface::attach()
+ * @see \Drupal\surface\Variants
  */
 final class Attachment {
 
   /**
    * The sealed child, or what builds it the first time it is read.
    */
-  private readonly DataSurfaceInterface|SettlesChildInterface $holds;
+  private readonly SurfaceInterface|SettlesChildInterface $holds;
 
   /**
    * Constructs an Attachment.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface|\Drupal\data_surface\SettlesChildInterface $child
+   * @param \Drupal\surface\SurfaceInterface|\Drupal\surface\SettlesChildInterface $child
    *   The sealed child, as it was advertised; or, for a child built only
    *   when read, what builds it.
    * @param string|null $source
@@ -76,7 +76,7 @@ final class Attachment {
    *   refinement of the container has read it; NULL until then.
    */
   public function __construct(
-    DataSurfaceInterface|SettlesChildInterface $child,
+    SurfaceInterface|SettlesChildInterface $child,
     public readonly ?string $source = NULL,
     public readonly ?string $id = NULL,
     public readonly array $reads = [],
@@ -92,10 +92,10 @@ final class Attachment {
    * @param string $name
    *   The property: `child`.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed child.
    */
-  public function __get(string $name): DataSurfaceInterface {
+  public function __get(string $name): SurfaceInterface {
     if ($name !== 'child') {
       throw new \LogicException(sprintf('An attachment has no "%s" property.', $name));
     }
@@ -138,10 +138,10 @@ final class Attachment {
   /**
    * Gets the child if it is built, without building it.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   * @return \Drupal\surface\SurfaceInterface|null
    *   The child, or NULL when it is held unsettled and nothing read it.
    */
-  public function settledChild(): ?DataSurfaceInterface {
+  public function settledChild(): ?SurfaceInterface {
     return $this->holds instanceof SettlesChildInterface ? $this->holds->settled() : $this->holds;
   }
 
@@ -209,11 +209,11 @@ final class Attachment {
    *   The values of the container's frame, read when no refinement of the
    *   container has bound the ports yet (readFrom()).
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The child, each wired port holding what its key holds; the child
    *   itself when it reads none.
    */
-  public function bound(array $values): DataSurfaceInterface {
+  public function bound(array $values): SurfaceInterface {
     if ($this->reads === []) {
       return $this->child;
     }
@@ -230,13 +230,13 @@ final class Attachment {
    * @param \Drupal\Core\TypedData\MapDataDefinition $shell
    *   The map describing the key itself: its label, description and
    *   required flag. Not changed; a clone is filled.
-   * @param \Drupal\data_surface\DataSurfaceInterface $child
+   * @param \Drupal\surface\SurfaceInterface $child
    *   The child, advertised or refined.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map.
    */
-  public static function mapOf(MapDataDefinition $shell, DataSurfaceInterface $child): MapDataDefinition {
+  public static function mapOf(MapDataDefinition $shell, SurfaceInterface $child): MapDataDefinition {
     $map = clone $shell;
     foreach ($child->getDefinitions() as $name => $definition) {
       $map->setPropertyDefinition((string) $name, $definition);

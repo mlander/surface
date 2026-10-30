@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Fixtures;
+namespace Drupal\Tests\surface\Fixtures;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Resource\ComputesValueInterface;
+use Drupal\surface\Resource\ComputesValueInterface;
 
 /**
  * Computes a key for StaticRefinerRuleTest, reading the clock: flagged.

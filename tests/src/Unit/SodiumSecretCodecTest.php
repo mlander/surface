@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface\Storage\SecretCodecException;
-use Drupal\data_surface\Storage\SodiumSecretCodec;
+use Drupal\surface\Storage\SecretCodecException;
+use Drupal\surface\Storage\SodiumSecretCodec;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -18,9 +18,9 @@ use PHPUnit\Framework\Attributes\Group;
  * needing the key, a refusal when the bytes have been altered, and a
  * fresh nonce per value so the same secret never looks the same twice.
  *
- * @see \Drupal\data_surface\Storage\SodiumSecretCodec
+ * @see \Drupal\surface\Storage\SodiumSecretCodec
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class SodiumSecretCodecTest extends UnitTestCase {
 
   /**
@@ -37,7 +37,7 @@ class SodiumSecretCodecTest extends UnitTestCase {
    * @param string $salt
    *   The salt to derive the key from.
    *
-   * @return \Drupal\data_surface\Storage\SodiumSecretCodec
+   * @return \Drupal\surface\Storage\SodiumSecretCodec
    *   The codec.
    */
   protected function codec(string $salt = self::SALT): SodiumSecretCodec {

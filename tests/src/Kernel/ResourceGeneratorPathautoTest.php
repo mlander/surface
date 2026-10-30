@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * and whose punctuation is a sequence stored as a map. Skipped where the
  * code base has no Pathauto.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ResourceGeneratorPathautoTest extends ResourceGeneratorTestBase {
 
@@ -29,7 +29,7 @@ class ResourceGeneratorPathautoTest extends ResourceGeneratorTestBase {
     'path',
     'token',
     'pathauto',
-    'data_surface',
+    'surface',
   ];
 
   /**
@@ -52,7 +52,7 @@ class ResourceGeneratorPathautoTest extends ResourceGeneratorTestBase {
   public function testTheKeysOfPathautoSettings(): void {
     $out = $this->sandbox . '/pathauto';
     $display = $this->generate([
-      'data_surface_first', 'adopter.generated.pathauto', 'Pathauto settings', '', '1',
+      'surface_examples_first', 'adopter.generated.pathauto', 'Pathauto settings', '', '1',
       'Configure Pathauto',
       'Sets how Pathauto writes aliases: the separator, case, lengths, punctuation and the words it removes.',
       '', '', '',
@@ -80,7 +80,7 @@ PHP, $resource, 'Defaults from the install file; no key required, the object not
     $this->assertStringContainsString("public const CONFIG = 'pathauto.settings';", $storage);
     $this->assertStringContainsString("    'safe_tokens',\n  ];", $storage, 'Each optional key with a default that refuses null is always held.');
     $this->assertStringNotContainsString("'punctuation'", $storage);
-    $this->assertFileDoesNotExist($out . '/config/schema/data_surface_first.schema.yml');
+    $this->assertFileDoesNotExist($out . '/config/schema/surface_examples_first.schema.yml');
     $this->assertStringContainsString('No config schema entry and no install file: pathauto.settings is pathauto\'s', $display);
     $this->assertParses(['src/Resource/PathautoResource.php', 'src/Storage/PathautoStorage.php'], $out);
   }

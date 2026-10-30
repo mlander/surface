@@ -1,6 +1,6 @@
 # Configuration file for PHPStan static code checking, see https://phpstan.org .
 # Run it from the Drupal root:
-#   vendor/bin/phpstan analyse -c web/modules/custom/data_surface/phpstan.neon
+#   vendor/bin/phpstan analyse -c web/modules/custom/surface/phpstan.neon
 # A static #[RefinesInput] method is a pure function of the keys it
 # watches: one that calls \Drupal:: is flagged before it ever runs
 # (tests/src/PHPStan/StaticRefinerRule.php); and nothing an operation runs
@@ -13,7 +13,7 @@ parameters:
   reportUnmatchedIgnoredErrors: false
   paths:
     - .
-  # data_surface_react's app installs its Node dependencies beside it.
+  # surface_react's app installs its Node dependencies beside it.
   excludePaths:
     analyseAndScan:
       - */node_modules/*
@@ -23,10 +23,10 @@ parameters:
       # Fixtures that say what was removed on 2026-10-24, which discovery
       # refuses by name: an argument the attributes no longer take, an
       # interface that is gone.
-      - tests/modules/data_surface_resource_test/src/OutsideDiscovery/DefaultOperationStructure.php
-      - tests/modules/data_surface_resource_test/src/OutsideDiscovery/OperationOfAlter.php
-      - tests/modules/data_surface_resource_test/src/OutsideDiscovery/OutputsInterfaceAlter.php
-      - tests/modules/data_surface_resource_test/src/OutsideDiscovery/WatchesRefinerStructure.php
+      - tests/modules/surface_resource_test/src/OutsideDiscovery/DefaultOperationStructure.php
+      - tests/modules/surface_resource_test/src/OutsideDiscovery/OperationOfAlter.php
+      - tests/modules/surface_resource_test/src/OutsideDiscovery/OutputsInterfaceAlter.php
+      - tests/modules/surface_resource_test/src/OutsideDiscovery/WatchesRefinerStructure.php
   fileExtensions:
     - php
     - module
@@ -44,13 +44,13 @@ parameters:
     # The broken fixtures exist to be refused when they run; a static
     # refiner, or a compute(), that reaches for the container is one of them.
     -
-      identifier: dataSurface.staticRefiner
+      identifier: surface.staticRefiner
       path: tests/modules/*/src/*/Broken/*
     -
-      identifier: dataSurface.compute
+      identifier: surface.compute
       path: tests/modules/*/src/*/Broken/*
     -
-      identifier: dataSurface.doorSpecific
+      identifier: surface.doorSpecific
       path: tests/modules/*/src/*/Broken/*
     - identifier: missingType.iterableValue
     - identifier: missingType.generics
@@ -60,14 +60,14 @@ parameters:
     # the resolvers that share its signature.
     -
       identifier: new.static
-      path: src/Options/DataSurfaceOptionsResolverBase.php
+      path: src/Options/SurfaceOptionsResolverBase.php
     # ContainerInjectionInterface::create() is declared to return static,
     # and core's own form base classes are extended freely, so the form a
     # route names stays extensible rather than being sealed to satisfy
     # the rule.
     -
       identifier: new.static
-      path: src/Form/DataSurfaceOperationForm.php
+      path: src/Form/SurfaceOperationForm.php
     # An assertion that static analysis can prove today is exactly the
     # assertion that has to fail when the code it guards changes, so
     # these stay in the tests rather than being deleted as redundant.

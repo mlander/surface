@@ -1,7 +1,7 @@
 my_module.settings:
   path: '/admin/config/system/my-module'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'My module settings'
-    _data_surface_resource: 'Drupal\my_module\Resource\MySettingsResource'
-    _data_surface_operation: 'configure'
+    _surface_resource: 'Drupal\my_module\Resource\MySettingsResource'
+    _surface_operation: 'configure'

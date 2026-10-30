@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface\Form\FieldSurfaceProviderInterface;
-use Drupal\data_surface\Pipeline\DataSurfaceResult;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
-use Drupal\data_surface\Storage\SecretCodecInterface;
+use Drupal\surface\Form\FieldSurfaceProviderInterface;
+use Drupal\surface\Pipeline\SurfaceResult;
+use Drupal\surface\Pipeline\SurfacePipelineInterface;
+use Drupal\surface\Storage\SecretCodecInterface;
 use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use PHPUnit\Framework\Attributes\Group;
@@ -32,12 +32,12 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *   it, through the whole stack rather than in `accept()` alone;
  * - the generated element is a password box carrying no value anywhere.
  *
- * @see \Drupal\data_surface_test\Plugin\Field\FieldType\SurfaceSecretItem
- * @see \Drupal\data_surface\Storage\EncryptedStorageLayout
+ * @see \Drupal\surface_test\Plugin\Field\FieldType\SurfaceSecretItem
+ * @see \Drupal\surface\Storage\EncryptedStorageLayout
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class SecretSettingsTest extends DataSurfaceKernelTestBase {
+class SecretSettingsTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -47,8 +47,8 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     'user',
     'field',
     'entity_test',
-    'data_surface',
-    'data_surface_test',
+    'surface',
+    'surface_test',
   ];
 
   /**
@@ -66,7 +66,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     FieldStorageConfig::create([
       'field_name' => 'field_secret',
       'entity_type' => 'entity_test',
-      'type' => 'data_surface_secret',
+      'type' => 'surface_secret',
     ])->save();
     $this->field = FieldConfig::create([
       'field_name' => 'field_secret',
@@ -84,7 +84,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
    * the settings form's static callback does, so nothing here keeps a
    * storage object across a save that changed what it describes.
    *
-   * @return \Drupal\data_surface\Form\FieldSurfaceProviderInterface
+   * @return \Drupal\surface\Form\FieldSurfaceProviderInterface
    *   The field item.
    */
   protected function item(): FieldSurfaceProviderInterface {
@@ -95,11 +95,11 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the site's secret codec.
    *
-   * @return \Drupal\data_surface\Storage\SecretCodecInterface
+   * @return \Drupal\surface\Storage\SecretCodecInterface
    *   The codec.
    */
   protected function codec(): SecretCodecInterface {
-    return $this->container->get('data_surface.secret_codec');
+    return $this->container->get('surface.secret_codec');
   }
 
   /**
@@ -118,12 +118,12 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
    * @param array $input
    *   The raw input, keyed by structure key.
    *
-   * @return \Drupal\data_surface\Pipeline\DataSurfaceResult
+   * @return \Drupal\surface\Pipeline\SurfaceResult
    *   The result.
    */
-  protected function submit(array $input): DataSurfaceResult {
+  protected function submit(array $input): SurfaceResult {
     $item = $this->item();
-    $result = $this->pipeline()->submit($item->getFieldSurface(), $input, $item->getDataSurfaceStorage());
+    $result = $this->pipeline()->submit($item->getFieldSurface(), $input, $item->getSurfaceStorage());
     $this->assertCount(0, $result->violations);
     $this->assertTrue($result->committed);
     return $result;
@@ -149,7 +149,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     // What the pipeline is handed back is the secret itself, which is
     // what makes the next partial update legal.
     $item = $this->item();
-    $loaded = $item->getDataSurfaceStorage()->load($item->getFieldSurface());
+    $loaded = $item->getSurfaceStorage()->load($item->getFieldSurface());
     $this->assertSame('sk-1234', $loaded['token']);
   }
 
@@ -181,7 +181,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     $this->assertSame('sk-1234', $this->codec()->decrypt($this->storedSettings()['token']));
 
     $item = $this->item();
-    $this->assertSame('sk-1234', $item->getDataSurfaceStorage()->load($item->getFieldSurface())['token']);
+    $this->assertSame('sk-1234', $item->getSurfaceStorage()->load($item->getFieldSurface())['token']);
   }
 
   /**
@@ -191,11 +191,11 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     $this->submit(['token' => 'sk-1234']);
     $this->assertTrue($this->codec()->isEncrypted($this->storedSettings()['token']));
 
-    $this->submit(['token' => DataSurfacePipelineInterface::CLEAR_SECRET]);
+    $this->submit(['token' => SurfacePipelineInterface::CLEAR_SECRET]);
     $this->assertNull($this->storedSettings()['token']);
 
     $item = $this->item();
-    $this->assertNull($item->getDataSurfaceStorage()->load($item->getFieldSurface())['token']);
+    $this->assertNull($item->getSurfaceStorage()->load($item->getFieldSurface())['token']);
   }
 
   /**
@@ -212,13 +212,13 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
     $field->setSettings(['endpoint' => 'https://example.com', 'token' => 'sk-legacy'] + $field->getSettings())->save();
 
     $item = $this->item();
-    $this->assertSame('sk-legacy', $item->getDataSurfaceStorage()->load($item->getFieldSurface())['token']);
+    $this->assertSame('sk-legacy', $item->getSurfaceStorage()->load($item->getFieldSurface())['token']);
 
     $this->submit(['endpoint' => 'https://example.test']);
     $this->assertTrue($this->codec()->isEncrypted($this->storedSettings()['token']));
 
     $item = $this->item();
-    $this->assertSame('sk-legacy', $item->getDataSurfaceStorage()->load($item->getFieldSurface())['token']);
+    $this->assertSame('sk-legacy', $item->getSurfaceStorage()->load($item->getFieldSurface())['token']);
   }
 
   /**
@@ -229,7 +229,7 @@ class SecretSettingsTest extends DataSurfaceKernelTestBase {
 
     $item = $this->item();
     $surface = $item->getFieldSurface();
-    $values = $item->getDataSurfaceStorage()->load($surface);
+    $values = $item->getSurfaceStorage()->load($surface);
     $this->assertSame('sk-1234', $values['token']);
 
     // Built from the values that do hold the secret, which is the point:

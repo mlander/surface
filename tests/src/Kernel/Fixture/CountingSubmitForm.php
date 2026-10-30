@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel\Fixture;
+namespace Drupal\Tests\surface\Kernel\Fixture;
 
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\SurfacePipelineInterface;
 
 /**
  * The operation form, its pipeline counting what it is asked.
  */
-final class CountingSubmitForm extends DataSurfaceOperationForm {
+final class CountingSubmitForm extends SurfaceOperationForm {
 
   /**
    * The pipeline every instance of the form shares in a test.
@@ -38,7 +38,7 @@ final class CountingSubmitForm extends DataSurfaceOperationForm {
   /**
    * {@inheritdoc}
    */
-  protected function surfacePipeline(): DataSurfacePipelineInterface {
+  protected function surfacePipeline(): SurfacePipelineInterface {
     return static::$pipeline ??= new CountingPipeline(parent::surfacePipeline());
   }
 

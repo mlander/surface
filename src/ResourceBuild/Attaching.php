@@ -2,31 +2,31 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\data_surface\DataSurface;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceBuilderInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Refinement\ChoiceSet;
-use Drupal\data_surface\Pipeline\PipelineGuard;
-use Drupal\data_surface\Refinement\WatchedValueCheckInterface;
-use Drupal\data_surface\Resource\SiteList;
-use Drupal\data_surface\Resource\SiteListInterface;
-use Drupal\data_surface\Resource\ClosedSiteListInterface;
-use Drupal\data_surface\Resource\EntrySchemasInterface;
-use Drupal\data_surface\Contract\SchemaReader;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\Resource\Attribute\Variant;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Attachment;
-use Drupal\data_surface\Collection;
-use Drupal\data_surface\Mixin;
-use Drupal\data_surface\Port;
+use Drupal\surface\Surface;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Refinement\ChoiceSet;
+use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Refinement\WatchedValueCheckInterface;
+use Drupal\surface\Resource\SiteList;
+use Drupal\surface\Resource\SiteListInterface;
+use Drupal\surface\Resource\ClosedSiteListInterface;
+use Drupal\surface\Resource\EntrySchemasInterface;
+use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Resource\Attribute\Variant;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Attachment;
+use Drupal\surface\Collection;
+use Drupal\surface\Mixin;
+use Drupal\surface\Port;
 
 /**
  * The attach phase of the build: children, collections, variants, mixins.
@@ -45,14 +45,14 @@ use Drupal\data_surface\Port;
  *
  * @internal
  *
- * @see \Drupal\data_surface\ResourceBuild\Resources
+ * @see \Drupal\surface\ResourceBuild\Resources
  */
 final class Attaching {
 
   /**
    * The ports and keys of each read structure, once read, by name.
    *
-   * @var array<string, array{0: array<string, \Drupal\data_surface\Port>, 1: string[]}>
+   * @var array<string, array{0: array<string, \Drupal\surface\Port>, 1: string[]}>
    */
   protected array $readPorts = [];
 
@@ -66,21 +66,21 @@ final class Attaching {
   /**
    * Constructs the attach phase.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, for the definitions a map of keys from the
    *   site creates.
-   * @param \Drupal\data_surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
+   * @param \Drupal\surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it, sealed
    *   into every map and every owner read again.
-   * @param \Drupal\data_surface\ResourceBuild\Declaring $declaring
+   * @param \Drupal\surface\ResourceBuild\Declaring $declaring
    *   The declaring phase.
-   * @param \Drupal\data_surface\ResourceBuild\Binding $binding
+   * @param \Drupal\surface\ResourceBuild\Binding $binding
    *   The binding phase, for a map's keys its storage always holds.
-   * @param \Drupal\data_surface\ResourceBuild\Gating $gating
+   * @param \Drupal\surface\ResourceBuild\Gating $gating
    *   The access phase, which answers for each child.
-   * @param \Drupal\data_surface\ResourceBuild\Resources $resources
+   * @param \Drupal\surface\ResourceBuild\Resources $resources
    *   The build step, which builds a variant held unsettled when a door
    *   reads it (VariantsToSettle).
    * @param \Closure $buildsResource
@@ -104,7 +104,7 @@ final class Attaching {
   /**
    * Builds one child at a key, invoked the way invokeChild() resolves.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The parent's build: its context, its frame (the parent, for messages
    *   and the cycle check, with the permission its own operation asks,
    *   resolved) and its own ancestry.
@@ -122,11 +122,11 @@ final class Attaching {
    * @param array{resource: string, at: string, values: array<string, mixed>}|null $siteDefaults
    *   The defaults the site sets on the child's keys, from its parent's;
    *   NULL for none. A child with some is built here, never reused.
-   * @param \Drupal\data_surface\ResourceBuild\VariantsToSettle|null $deferred
+   * @param \Drupal\surface\ResourceBuild\VariantsToSettle|null $deferred
    *   For a variant the site lists, what it is built in when a door reads
    *   it, its access asked now; NULL to build the child now.
    *
-   * @return array{0: \Drupal\data_surface\Attachment|null, 1: \Drupal\data_surface\Resource\AccessAnswer|null, 2: \Drupal\data_surface\Resource\OperationContext, 3: bool}
+   * @return array{0: \Drupal\surface\Attachment|null, 1: \Drupal\surface\Resource\AccessAnswer|null, 2: \Drupal\surface\Resource\OperationContext, 3: bool}
    *   The sealed child, or NULL when its access omits it; that access
    *   answer, or NULL for a child that invokes no operation of its own and
    *   has no access class, which is open and was asked nothing; the
@@ -188,9 +188,9 @@ final class Attaching {
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The read structure.
-   * @param \Drupal\data_surface\ResourceBuild\SiteEntries $entries
+   * @param \Drupal\surface\ResourceBuild\SiteEntries $entries
    *   What reads an entry a provider lists without its schema: that
    *   entry's schema alone is read.
    *
@@ -220,9 +220,9 @@ final class Attaching {
   /**
    * Attaches the owner's fixed children, each built at its key.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's inputs blueprint.
    * @param array<string, array{resource: string, at: string, values: array<string, mixed>}> $childDefaults
    *   The defaults the site sets on each child's keys, by key
@@ -275,7 +275,7 @@ final class Attaching {
    */
   public function registerVariantsOf(string $owner): void {
     $definition = $this->registry->getDefinition($owner);
-    $builder = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
+    $builder = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $inputs = $this->declaring->blueprint($builder, $definition);
     $this->declaring->fillBlueprints($definition, $inputs);
     $this->variantKeysOf($definition, $inputs, $inputs->keys(), $builder);
@@ -294,21 +294,21 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build: its builder, the owner, its context, and the
    *   frame and ancestry its children are built under.
    * @param string $key
    *   The key the map sits at.
-   * @param array{each: string, from: class-string<\Drupal\data_surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>} $each
+   * @param array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>} $each
    *   What the blueprint recorded for it.
    * @param array<string, array> $maps
    *   Every map of keys from the site the owner declared, by key, as the
    *   blueprint recorded them: what a port on an entry may read.
-   * @param array<string, \Drupal\data_surface\DataSurfaceInterface|null> $listed
+   * @param array<string, \Drupal\surface\SurfaceInterface|null> $listed
    *   The maps built so far, by key: the sealed map, or NULL for one left
    *   out.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface|null
+   * @return \Drupal\surface\SurfaceInterface|null
    *   The sealed map, or NULL when its access left it out.
    *
    * @throws \LogicException
@@ -318,7 +318,7 @@ final class Attaching {
    *   structure stores itself, or its ports are wired to what an entry
    *   cannot read (assertEachWiring()).
    */
-  protected function buildEach(Build $build, string $key, array $each, array $maps = [], array $listed = []): ?DataSurfaceInterface {
+  protected function buildEach(Build $build, string $key, array $each, array $maps = [], array $listed = []): ?SurfaceInterface {
     $builder = $build->builder;
     $definition = $build->definition;
     $frame = $build->frame;
@@ -328,10 +328,10 @@ final class Attaching {
     // schema is written from.
     $shell = $builder->getDefinition($key);
     if ($shell !== NULL) {
-      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new DataSurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->add($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
+      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->add($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
     }
     $entries = $keys->entries();
-    $map = (new DataSurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
+    $map = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $access = NULL;
     $runtime = FALSE;
     if ($each['child']) {
@@ -414,9 +414,9 @@ final class Attaching {
   /**
    * Attaches the owner's maps of keys from the site.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's inputs blueprint.
    */
   public function attachMaps(Build $build, ResourceBlueprint $inputs): void {
@@ -446,7 +446,7 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The owner.
    * @param string $key
    *   The key the map sits at.
@@ -456,7 +456,7 @@ final class Attaching {
    *   What its provider listed, by id.
    * @param array<string, array> $maps
    *   Every map of keys from the site the owner declared, by key.
-   * @param array<string, \Drupal\data_surface\DataSurfaceInterface|null> $listed
+   * @param array<string, \Drupal\surface\SurfaceInterface|null> $listed
    *   The maps built so far, by key.
    *
    * @return array<string, array<string, \Drupal\Core\TypedData\DataDefinitionInterface>>
@@ -500,7 +500,7 @@ final class Attaching {
           $shape = DefinitionMetadata::shapeOf($match);
           throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", whose "%s" entry is declared with %s, and the port reads the shape %s: the sibling map declares its entries with it, addEach(\'%s\', <shape>::class, ...).', $definition->id, $port, $id, $key, $sibling, $entry, $shape === NULL ? 'a type alone' : 'the shape ' . $shape, $ports[$port]->shape, $sibling));
         }
-        $wired[$entry][$port] = DataSurface::deepClone($match);
+        $wired[$entry][$port] = Surface::deepClone($match);
       }
     }
     foreach ($ports as $port) {
@@ -516,14 +516,14 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The owner, for the messages.
    * @param string $key
    *   The key the map sits at, for the messages.
-   * @param class-string<\Drupal\data_surface\Resource\SiteListInterface> $from
+   * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
    *
-   * @return \Drupal\data_surface\Resource\SiteList
+   * @return \Drupal\surface\Resource\SiteList
    *   What it listed.
    *
    * @throws \LogicException
@@ -555,10 +555,10 @@ final class Attaching {
   /**
    * Asks a provider named by `from:` for what it lists.
    *
-   * @param class-string<\Drupal\data_surface\Resource\SiteListInterface> $from
+   * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
    *
-   * @return \Drupal\data_surface\Resource\SiteList
+   * @return \Drupal\surface\Resource\SiteList
    *   What it listed.
    */
   protected function siteList(string $from): SiteList {
@@ -569,7 +569,7 @@ final class Attaching {
   /**
    * Gets the cache contexts of a list that vary by the account.
    *
-   * @param \Drupal\data_surface\Resource\SiteList $list
+   * @param \Drupal\surface\Resource\SiteList $list
    *   The list.
    *
    * @return string[]
@@ -591,15 +591,15 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build: its builder, the owner, its context, its frame
    *   (with the permission its operation asks), and its input keys, every
    *   structure's members among them, the keys holding a child or
    *   variants, and its collection keys.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's input blueprint.
    *
-   * @return array{bind: array<int, array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]}
+   * @return array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]}
    *   What to bind in the owner's frame, innermost first, each with the
    *   members still there; every member, and every member of a structure
    *   with an access answer (an access class, or an alter's), each mapped
@@ -660,11 +660,11 @@ final class Attaching {
    *
    * @param array $mixed
    *   What mixIn() collects so far.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $blueprint
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $blueprint
    *   The blueprint the structure was declared through.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $structure
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
    *   The structure.
-   * @param callable(string): \Drupal\data_surface\ResourceBuild\ResourceDefinition $definitions
+   * @param callable(string): \Drupal\surface\ResourceBuild\ResourceDefinition $definitions
    *   Reads a structure it mixes in itself.
    *
    * @return array
@@ -693,16 +693,16 @@ final class Attaching {
   /**
    * Lists what to bind in the owner's frame for one structure mixed in.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $structure
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
    *   The structure.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $blueprint
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $blueprint
    *   The blueprint it was declared through.
    * @param array<string, string> $reads
    *   Its ports, wired to the owner's keys.
    * @param string[] $present
    *   The members still there.
    *
-   * @return array<int, array{definition: \Drupal\data_surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\data_surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>
+   * @return array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>
    *   A structure it mixes in itself first, unless its members are gone,
    *   then this one.
    */
@@ -735,12 +735,12 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build: its builder, the owner, its plain input keys,
    *   the keys holding a child or variants, and its collection keys.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $structure
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
    *   The structure.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $blueprint
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $blueprint
    *   The blueprint it was declared through.
    * @param array<string, string> $reads
    *   The wiring.
@@ -804,13 +804,13 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The owner.
    * @param array $mixins
    *   What mixIn() answered.
-   * @param array<int, array{0: object|string, 1: \Drupal\data_surface\ResourceBuild\RefinerDefinition[], 2: string|null}> $links
+   * @param array<int, array{0: object|string, 1: \Drupal\surface\ResourceBuild\RefinerDefinition[], 2: string|null}> $links
    *   The owner's refiners and its alters'.
-   * @param \Drupal\data_surface\Refinement\Rule[] $rules
+   * @param \Drupal\surface\Refinement\Rule[] $rules
    *   The owner's rules and its alters'.
    * @param array<string, array<string, string>> $wirings
    *   The ports of each child the owner or an alter attached, wired.
@@ -880,7 +880,7 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build: its builder, the owner, its context, the frame
    *   and ancestry the structure is built under, and its input keys, the
    *   keys holding a child or variants, and its collection keys.
@@ -955,9 +955,9 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build.
-   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceBlueprintAdditions> $additions
+   * @param array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions> $additions
    *   Each alter's additions, by module.
    *
    * @return array{0: array<string, string[]>, 1: array<string, string[]>}
@@ -994,7 +994,7 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The container's build: its builder, holding its keys, the container
    *   (the owner, or the owner an alter adapts), its plain input keys,
    *   the keys holding a child or variants, and its collection keys.
@@ -1075,7 +1075,7 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
    *
-   * @param \Drupal\data_surface\Port $port
+   * @param \Drupal\surface\Port $port
    *   The port.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $wired
    *   The key wired to it.
@@ -1101,7 +1101,7 @@ final class Attaching {
   /**
    * Gets the container's key each port is wired to, as declared.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The container's builder.
    * @param array<string, string> $reads
    *   The wiring.
@@ -1109,12 +1109,12 @@ final class Attaching {
    * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
    *   Each wired key's definition, by port.
    */
-  protected static function wiredKeys(DataSurfaceBuilderInterface $builder, array $reads): array {
+  protected static function wiredKeys(SurfaceBuilderInterface $builder, array $reads): array {
     $wired = [];
     foreach ($reads as $port => $key) {
       $definition = $builder->getDefinition($key);
       if ($definition !== NULL) {
-        $wired[$port] = DataSurface::deepClone($definition);
+        $wired[$port] = Surface::deepClone($definition);
       }
     }
     return $wired;
@@ -1126,7 +1126,7 @@ final class Attaching {
    * @param string $child
    *   The child, by name.
    *
-   * @return array{0: array<string, \Drupal\data_surface\Port>, 1: string[]}
+   * @return array{0: array<string, \Drupal\surface\Port>, 1: string[]}
    *   Its ports, by name, and every key it declares.
    */
   protected function portsOf(string $child): array {
@@ -1135,7 +1135,7 @@ final class Attaching {
     if ($definition->isRead() && isset($this->readPorts[$definition->name()])) {
       return $this->readPorts[$definition->name()];
     }
-    $blueprint = $this->declaring->blueprint(new DataSurfaceBuilder(), $definition);
+    $blueprint = $this->declaring->blueprint(new SurfaceBuilder(), $definition);
     $this->declaring->fillBlueprints($definition, $blueprint);
     $ports = [$blueprint->ports(), $blueprint->declared()];
     if ($definition->isRead()) {
@@ -1170,24 +1170,24 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The container's builder.
    * @param string $prefix
    *   The child's path in the container's frame, with its trailing dot.
-   * @param \Drupal\data_surface\Attachment $attachment
+   * @param \Drupal\surface\Attachment $attachment
    *   The child, wired.
    * @param bool $internal
    *   Whether the child's edges between its own keys are recorded too.
    * @param string $container
    *   The container, in words, for a cycle's refusal.
    */
-  protected function wirePorts(DataSurfaceBuilderInterface $builder, string $prefix, Attachment $attachment, bool $internal, string $container): void {
+  protected function wirePorts(SurfaceBuilderInterface $builder, string $prefix, Attachment $attachment, bool $internal, string $container): void {
     $map = $attachment->child->getDefinitions();
     $ports = $map->ports();
     $kinds = [
-      DataSurfaceInterface::CODED => [FALSE, FALSE],
-      DataSurfaceInterface::DECLARED => [FALSE, TRUE],
-      DataSurfaceInterface::RUNTIME => [TRUE, FALSE],
+      SurfaceInterface::CODED => [FALSE, FALSE],
+      SurfaceInterface::DECLARED => [FALSE, TRUE],
+      SurfaceInterface::RUNTIME => [TRUE, FALSE],
     ];
     foreach ($map->refinementPaths() as $target => $dependencies) {
       $entry = $map->entry(explode('.', (string) $target)[0]);
@@ -1199,7 +1199,7 @@ final class Attaching {
         }
         $mapped = $port ? $attachment->reads[$dependency] : $prefix . $dependency;
         $wiring = $port ? sprintf('the "%s" port of %s, which %s wires to "%s"', $dependency, $attachment->id ?? $attachment->source, $container, $mapped) : NULL;
-        $mask = $entry === NULL ? DataSurfaceInterface::CODED : ($entry->watchedBy[$dependency] ?? DataSurfaceInterface::CODED);
+        $mask = $entry === NULL ? SurfaceInterface::CODED : ($entry->watchedBy[$dependency] ?? SurfaceInterface::CODED);
         foreach ($kinds as $kind => [$runtime, $declared]) {
           if (($mask & $kind) !== 0) {
             $builder->addRefinement($prefix . $target, [$mapped], $runtime, $declared, $wiring);
@@ -1212,13 +1212,13 @@ final class Attaching {
   /**
    * Resolves the variants at each key and checks their deciding key.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure with the variants.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's input blueprint.
    * @param string[] $input_keys
    *   The owner's plain input keys.
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The owner's builder, which what a provider of variants read reaches.
    *
    * @return array<string, array{by: string, children: array<string, string>, labels: array<string, string|\Stringable>, site: array<string, true>}>
@@ -1233,7 +1233,7 @@ final class Attaching {
    *   When a deciding key is not a plain input of the owner, or a provider
    *   of variants answers what cannot be kept.
    */
-  public function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys, DataSurfaceBuilderInterface $builder): array {
+  public function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys, SurfaceBuilderInterface $builder): array {
     $variantKeys = [];
     foreach ($inputs->variants() as $key => $by) {
       if (!in_array($by, $input_keys, TRUE)) {
@@ -1313,7 +1313,7 @@ final class Attaching {
    * A variant the site lists is held unsettled, built when a door reads
    * it (VariantsToSettle); any other is built now.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build.
    * @param array<string, array{by: string, children: array<string, string>, labels: array<string, string|\Stringable>, site: array<string, true>}> $variantKeys
    *   What variantKeysOf() answered.
@@ -1375,9 +1375,9 @@ final class Attaching {
   /**
    * Attaches each collection's child, built once for the list.
    *
-   * @param \Drupal\data_surface\ResourceBuild\Build $build
+   * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceBlueprint $inputs
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's inputs blueprint.
    * @param array<string, true> $gated_lists
    *   The collections a gate asks about per item, which are marked
@@ -1416,14 +1416,14 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The owner, for the messages.
    * @param string $key
    *   The key the variants sit at, for the messages.
-   * @param class-string<\Drupal\data_surface\Resource\SiteListInterface> $from
+   * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
    *
-   * @return \Drupal\data_surface\Resource\SiteList
+   * @return \Drupal\surface\Resource\SiteList
    *   What it listed, each entry of a closed provider naming the structure
    *   its structures() names for it.
    *
@@ -1480,9 +1480,9 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#variants-not-slots.
    *
-   * @param \Drupal\data_surface\DataSurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The builder, holding the deciding key as declared and extended.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure being built.
    * @param string $key
    *   The key the variants sit at.
@@ -1495,7 +1495,7 @@ final class Attaching {
    * @throws \LogicException
    *   Naming the key and each value no variant is for.
    */
-  protected static function assertListNarrowsVariants(DataSurfaceBuilderInterface $builder, ResourceDefinition $definition, string $key, string $by, array $values): void {
+  protected static function assertListNarrowsVariants(SurfaceBuilderInterface $builder, ResourceDefinition $definition, string $key, string $by, array $values): void {
     $deciding = $builder->getDefinition($by);
     $set = $deciding === NULL ? NULL : ChoiceSet::of($deciding);
     if ($set === NULL) {
@@ -1547,7 +1547,7 @@ final class Attaching {
    *
    * @param string $resource
    *   The class, or its id.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   Where it is being asked for.
    * @param array $ancestry
    *   The parents it is built inside, outermost first.
@@ -1558,10 +1558,10 @@ final class Attaching {
    * @param array{resource: string, at: string, values: array<string, mixed>}|null $siteDefaults
    *   The defaults the site sets on its keys, from its parent's, or NULL.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface.
    */
-  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE, ?array $siteDefaults = NULL): DataSurfaceInterface {
+  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE, ?array $siteDefaults = NULL): SurfaceInterface {
     return ($this->buildsResource)($resource, $context, $ancestry, $locked, $top, $siteDefaults);
   }
 
@@ -1572,15 +1572,15 @@ final class Attaching {
    *
    * @param string $name
    *   The read structure's name.
-   * @param \Drupal\data_surface\Resource\OperationContext $context
+   * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is invoked in.
    * @param array $ancestry
    *   Where it is first attached, for messages and the cycle check.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The sealed structure.
    */
-  protected function buildRead(string $name, OperationContext $context, array $ancestry): DataSurfaceInterface {
+  protected function buildRead(string $name, OperationContext $context, array $ancestry): SurfaceInterface {
     return ($this->buildsRead)($name, $context, $ancestry);
   }
 

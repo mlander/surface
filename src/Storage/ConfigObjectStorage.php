@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Config\ConfigFactoryInterface;
@@ -13,15 +13,15 @@ use Drupal\Core\DependencyInjection\DependencySerializationTrait;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\StorageViolationsException;
-use Drupal\data_surface\Pipeline\Violation;
-use Drupal\data_surface\Pipeline\ViolationSet;
-use Drupal\data_surface\Reference\ReferenceStorageLayout;
-use Drupal\data_surface\Resource\HeldToConfigSchemaInterface;
-use Drupal\data_surface\Resource\KnowsClearableKeysInterface;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Resource\ResourceStorageInterface;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\ViolationSet;
+use Drupal\surface\Reference\ReferenceStorageLayout;
+use Drupal\surface\Resource\HeldToConfigSchemaInterface;
+use Drupal\surface\Resource\KnowsClearableKeysInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\ResourceStorageInterface;
 use Drupal\Core\Session\AccountInterface;
 
 /**
@@ -33,7 +33,7 @@ use Drupal\Core\Session\AccountInterface;
  *
  * @code
  * final class NewsletterStorage extends ConfigObjectStorage {
- *   public const CONFIG = 'data_surface_first.newsletter';
+ *   public const CONFIG = 'surface_examples_first.newsletter';
  * }
  * @endcode
  *
@@ -55,7 +55,7 @@ use Drupal\Core\Session\AccountInterface;
  *   nullable.
  * - widerThanSchema() says where the resource advertises more than the
  *   schema allows, which the build refuses: never, for a schema generated
- *   from the resource (drush data_surface:config-schema).
+ *   from the resource (drush surface:config-schema).
  * - layout() says how the object keeps a key it stores otherwise than it
  *   is asked for; load() and prepare() translate through it, and
  *   translatedKeys() tells the check and the generator its stored schema.
@@ -176,7 +176,7 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
    * Decision: see
    * docs/decisions.md#a-layout-is-the-storages-one-word-on-its-shape.
    *
-   * @return \Drupal\data_surface\Storage\StorageLayoutInterface|null
+   * @return \Drupal\surface\Storage\StorageLayoutInterface|null
    *   The layout, or NULL when the object holds each key as it is asked.
    */
   protected function layout(): ?StorageLayoutInterface {
@@ -190,7 +190,7 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
    * layout says of the keys at its mount, and each reference to a content
    * entity, stored by uuid.
    */
-  public function translatedKeys(DataSurfaceInterface $built): array {
+  public function translatedKeys(SurfaceInterface $built): array {
     $layout = $this->layout();
     return ($layout instanceof StoredSchemaInterface ? $layout->storedSchema() : []) + static::mountedLayouts($built) + ReferenceStorageLayout::storedSchemaOf($built);
   }
@@ -430,7 +430,7 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
    * @param array $prepared
    *   The values being written.
    *
-   * @return \Drupal\data_surface\Pipeline\Violation[]
+   * @return \Drupal\surface\Pipeline\Violation[]
    *   One violation per module whose settings no schema describes.
    */
   protected function mountsWithoutSchema(string $name, array $whole, array $prepared): array {

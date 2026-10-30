@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Compute;
+namespace Drupal\surface\Compute;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Resource\ComputesValueInterface;
+use Drupal\surface\Resource\ComputesValueInterface;
 
 /**
  * Computes a machine name from a title, as core's machine name element does.

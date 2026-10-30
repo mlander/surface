@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Element;
+namespace Drupal\surface\Element;
 
 use Drupal\Component\Utility\Html;
 use Drupal\Core\Render\Attribute\RenderElement;
@@ -16,24 +16,24 @@ use Drupal\Core\Template\Attribute;
  * Properties:
  * - #code: (string|\Stringable) The text, raw: the element escapes it.
  * - #language: (string|null, optional) A Prism language id, such as
- *   `json`, `yaml`, `php`, `bash` or `twig`, one the `data_surface/prism`
+ *   `json`, `yaml`, `php`, `bash` or `twig`, one the `surface/prism`
  *   library loads; NULL for plain text, which is shown as it is and
  *   attaches nothing.
  *
  * Renders `<pre><code class="language-X">` and attaches
- * `data_surface/highlight`, which highlights the block once it is on the
+ * `surface/highlight`, which highlights the block once it is on the
  * page, over AJAX too.
  *
  * Usage example:
  * @code
  * $build['schema'] = [
- *   '#type' => 'data_surface_code',
+ *   '#type' => 'surface_code',
  *   '#code' => json_encode($schema, JSON_PRETTY_PRINT),
  *   '#language' => 'json',
  * ];
  * @endcode
  */
-#[RenderElement('data_surface_code')]
+#[RenderElement('surface_code')]
 final class Code extends RenderElementBase {
 
   /**
@@ -63,7 +63,7 @@ final class Code extends RenderElementBase {
     $attributes = new Attribute();
     if ($language !== NULL && $language !== '') {
       $attributes->addClass('language-' . $language);
-      $element['#attached']['library'][] = 'data_surface/highlight';
+      $element['#attached']['library'][] = 'surface/highlight';
     }
     $element['#markup'] = Markup::create('<pre><code' . $attributes . '>' . Html::escape((string) $element['#code']) . '</code></pre>');
     return $element;

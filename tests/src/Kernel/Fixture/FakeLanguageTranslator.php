@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel\Fixture;
+namespace Drupal\Tests\surface\Kernel\Fixture;
 
 use Drupal\Core\StringTranslation\Translator\TranslatorInterface;
 

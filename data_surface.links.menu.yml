@@ -1,5 +1,0 @@
-data_surface.catalog:
-  title: 'Data surface catalog'
-  description: 'Every resource and structure on the site, the doors each operation reaches, and what did not build.'
-  route_name: data_surface.catalog
-  parent: system.admin_config_development

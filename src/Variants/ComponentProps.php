@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Variants;
+namespace Drupal\surface\Variants;
 
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
-use Drupal\data_surface\Resource\EntrySchemasInterface;
-use Drupal\data_surface\Resource\SiteList;
+use Drupal\surface\Resource\EntrySchemasInterface;
+use Drupal\surface\Resource\SiteList;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * One variant per single-directory component, from its props.
  *
  * Every component the site's modules and themes provide, or those
- * `data_surface.settings:components_offered` allows (ComponentsOffered),
+ * `surface.settings:components_offered` allows (ComponentsOffered),
  * in the order of their ids, each labeled with its name, its props schema
  * as the component declares it, read only when a door reads that
  * component's variant (entrySchema()). Which components there are follows from
  * the extensions installed and the setting, so the list is cached by both
  * configurations' tags. Example 12 reads the props of its spotlight with
- * it, and the component block of data_surface_component_block the props
+ * it, and the component block of surface_examples_component_block the props
  * of a placed block.
  */
 final class ComponentProps implements EntrySchemasInterface, ContainerInjectionInterface {
@@ -32,7 +32,7 @@ final class ComponentProps implements EntrySchemasInterface, ContainerInjectionI
   /**
    * Constructs the provider.
    *
-   * @param \Drupal\data_surface\Variants\ComponentsOffered $components
+   * @param \Drupal\surface\Variants\ComponentsOffered $components
    *   The components the site offers.
    */
   public function __construct(

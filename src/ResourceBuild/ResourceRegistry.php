@@ -2,37 +2,37 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
-use Drupal\data_surface\Contract\SchemaReader;
+use Drupal\surface\Contract\SchemaReader;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\FieldableEntityInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\data_surface\Hook\ResourcePluginHooks;
-use Drupal\data_surface\Resource\Attribute\Alters;
-use Drupal\data_surface\Resource\Attribute\DerivesResources;
-use Drupal\data_surface\Refinement\DoesNotApply;
-use Drupal\data_surface\Resource\Attribute\RefinesInput;
-use Drupal\data_surface\Resource\Attribute\Operation;
-use Drupal\data_surface\Resource\Attribute\Resource;
-use Drupal\data_surface\Resource\Attribute\Shape;
-use Drupal\data_surface\Resource\Attribute\Structure;
-use Drupal\data_surface\Resource\Attribute\Variant;
-use Drupal\data_surface\Resource\DerivedOperation;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Reference\EntityReferenceStructure;
-use Drupal\data_surface\Resource\ResourceCallable;
-use Drupal\data_surface\Resource\DefinesOutputsInterface;
-use Drupal\data_surface\Resource\AltersInputsInterface;
-use Drupal\data_surface\Resource\OperationAccessInterface;
-use Drupal\data_surface\Resource\ResourceInterface;
-use Drupal\data_surface\Resource\ShapeInterface;
-use Drupal\data_surface\Resource\StructureInterface;
-use Drupal\data_surface\Resource\ResourceDeriverInterface;
-use Drupal\data_surface\Resource\KnowsDerivativeListTagsInterface;
+use Drupal\surface\Hook\ResourcePluginHooks;
+use Drupal\surface\Resource\Attribute\Alters;
+use Drupal\surface\Resource\Attribute\DerivesResources;
+use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Resource\Attribute\RefinesInput;
+use Drupal\surface\Resource\Attribute\Operation;
+use Drupal\surface\Resource\Attribute\Resource;
+use Drupal\surface\Resource\Attribute\Shape;
+use Drupal\surface\Resource\Attribute\Structure;
+use Drupal\surface\Resource\Attribute\Variant;
+use Drupal\surface\Resource\DerivedOperation;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Reference\EntityReferenceStructure;
+use Drupal\surface\Resource\ResourceCallable;
+use Drupal\surface\Resource\DefinesOutputsInterface;
+use Drupal\surface\Resource\AltersInputsInterface;
+use Drupal\surface\Resource\OperationAccessInterface;
+use Drupal\surface\Resource\ResourceInterface;
+use Drupal\surface\Resource\ShapeInterface;
+use Drupal\surface\Resource\StructureInterface;
+use Drupal\surface\Resource\ResourceDeriverInterface;
+use Drupal\surface\Resource\KnowsDerivativeListTagsInterface;
 
 /**
  * Every resource, structure and shape, with operations, alters, variants.
@@ -84,7 +84,7 @@ final class ResourceRegistry {
   /**
    * The cache id prefix in the discovery bin.
    */
-  protected const CACHE_PREFIX = 'data_surface:resources:';
+  protected const CACHE_PREFIX = 'surface:resources:';
 
   /**
    * The attribute arguments removed on 2026-10-24, with what replaced each.
@@ -107,7 +107,7 @@ final class ResourceRegistry {
    * `ids` maps an id to its name where they differ (a class's), `refusing`
    * names the holders of a variant that answers access.
    *
-   * @var array{names: array<string, array{id: string, kind: string, module: string, base: string|null, stored: bool}>, ids: array<string, string>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>, refusing: array<string, true>}|null
+   * @var array{names: array<string, array{id: string, kind: string, module: string, base: string|null, stored: bool}>, ids: array<string, string>, shapes: array<class-string, \Drupal\surface\ResourceBuild\ShapeDefinition>, refusing: array<string, true>}|null
    */
   protected ?array $index = NULL;
 
@@ -126,7 +126,7 @@ final class ResourceRegistry {
   /**
    * The definitions read so far in this request, by name.
    *
-   * @var array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   * @var array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>
    */
   protected array $definitions = [];
 
@@ -140,7 +140,7 @@ final class ResourceRegistry {
   /**
    * Every definition, in discovery order, once all were read.
    *
-   * @var array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>|null
+   * @var array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>|null
    */
   protected ?array $all = NULL;
 
@@ -150,7 +150,7 @@ final class ResourceRegistry {
    * Answered to the calls made then, so a deriver asking many times does
    * not discover each time, and never kept past them.
    *
-   * @var array<string, array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}>
+   * @var array<string, array{resources: array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\surface\ResourceBuild\ShapeDefinition>}>
    */
   protected array $provisional = [];
 
@@ -161,7 +161,7 @@ final class ResourceRegistry {
    * baseline or tool sees them. Each is registered again, under the same
    * name, whenever what reads it is built.
    *
-   * @var array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   * @var array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>
    */
   protected array $read = [];
 
@@ -181,7 +181,7 @@ final class ResourceRegistry {
    *   the class carrying its override attribute.
    * @param \Drupal\Core\Cache\CacheBackendInterface $cache
    *   The discovery cache bin.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcePlugins|null $plugins
+   * @param \Drupal\surface\ResourceBuild\ResourcePlugins|null $plugins
    *   The plugin definitions, for the plugins that are their own
    *   structure; NULL reads none.
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface|null $classResolver
@@ -207,7 +207,7 @@ final class ResourceRegistry {
    * deriver) asks for this; what builds one resource asks for it by name
    * (getDefinition()), which reads only its entry.
    *
-   * @return array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   * @return array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>
    *   The definitions, keyed by name: a class, or a derived resource's
    *   id.
    *
@@ -332,7 +332,7 @@ final class ResourceRegistry {
    * memo and the discovery bin only ever hold what every host said,
    * whichever was asked first.
    *
-   * @return array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}|null
+   * @return array{resources: array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\surface\ResourceBuild\ShapeDefinition>}|null
    *   The provisional read, or NULL once every host was read whole.
    */
   protected function provisional(): ?array {
@@ -352,7 +352,7 @@ final class ResourceRegistry {
   /**
    * Reads the index, from the bin or by reading discovery again.
    *
-   * @return array{names: array<string, array{id: string, kind: string, module: string, base: string|null, stored: bool}>, ids: array<string, string>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>, refusing: array<string, true>}
+   * @return array{names: array<string, array{id: string, kind: string, module: string, base: string|null, stored: bool}>, ids: array<string, string>, shapes: array<class-string, \Drupal\surface\ResourceBuild\ShapeDefinition>, refusing: array<string, true>}
    *   The index.
    */
   protected function index(): array {
@@ -440,7 +440,7 @@ final class ResourceRegistry {
    *
    * @param string $name
    *   Its name.
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The definition.
    * @param string[] $tags
    *   The tags its entry carries.
@@ -479,7 +479,7 @@ final class ResourceRegistry {
   /**
    * Says what the index keeps of one definition.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceDefinition $definition
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The definition.
    *
    * @return array{id: string, kind: string, module: string, base: string|null, stored: bool}
@@ -498,7 +498,7 @@ final class ResourceRegistry {
   /**
    * Lists the definitions holding a variant that answers access.
    *
-   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   * @param array<string, \Drupal\surface\ResourceBuild\ResourceDefinition> $resources
    *   Every definition, by name.
    *
    * @return array<string, true>
@@ -596,7 +596,7 @@ final class ResourceRegistry {
    * these, so a structure a provider or a document supplies is on the
    * map too.
    *
-   * @return array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>
+   * @return array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>
    *   The definitions, by the name each is built by, `schema:<id>:<hash>`,
    *   sorted.
    *
@@ -625,7 +625,7 @@ final class ResourceRegistry {
    *   The id it has in the document: a def's key, or `<owner>.<key>`.
    * @param string $module
    *   The module of what reads it, which it is reported under.
-   * @param \Drupal\data_surface\Resource\ResourceCallable $inputs
+   * @param \Drupal\surface\Resource\ResourceCallable $inputs
    *   What fills its blueprint.
    * @param string $hash
    *   A hash of what it is read from.
@@ -664,10 +664,10 @@ final class ResourceRegistry {
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
    *
-   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $definitions
+   * @param array<string, \Drupal\surface\ResourceBuild\ResourceDefinition> $definitions
    *   The definitions, by the name each is built by.
    *
-   * @return array{documents: array<string, array>, schema: array<string, array{0: string, 1: string, 2: string, 3: string}>, other: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>}
+   * @return array{documents: array<string, array>, schema: array<string, array{0: string, 1: string, 2: string, 3: string}>, other: array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>}
    *   Each document once, by its hash; each structure read from one, as
    *   its id, module, pointer and document hash; and the rest as they are.
    *
@@ -692,7 +692,7 @@ final class ResourceRegistry {
   /**
    * Registers again what exportRead() wrote down.
    *
-   * @param array{documents?: array<string, array>, schema?: array<string, array{0: string, 1: string, 2: string, 3: string}>, other?: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>} $export
+   * @param array{documents?: array<string, array>, schema?: array<string, array{0: string, 1: string, 2: string, 3: string}>, other?: array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>} $export
    *   What it answered.
    *
    * @internal
@@ -729,7 +729,7 @@ final class ResourceRegistry {
    * @param string $name
    *   The name it is built by.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceDefinition|null
+   * @return \Drupal\surface\ResourceBuild\ResourceDefinition|null
    *   Its definition, or NULL when this request registered none by it.
    *
    * @internal
@@ -785,7 +785,7 @@ final class ResourceRegistry {
   /**
    * Gets every discovered shape.
    *
-   * @return array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>
+   * @return array<class-string, \Drupal\surface\ResourceBuild\ShapeDefinition>
    *   The shapes, keyed by class.
    */
   public function getShapes(): array {
@@ -811,7 +811,7 @@ final class ResourceRegistry {
    * @param string $shape
    *   The class, or its #[Shape] id.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ShapeDefinition
+   * @return \Drupal\surface\ResourceBuild\ShapeDefinition
    *   The shape.
    *
    * @throws \InvalidArgumentException
@@ -831,7 +831,7 @@ final class ResourceRegistry {
    * @param string $shape
    *   The class or id.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ShapeDefinition|null
+   * @return \Drupal\surface\ResourceBuild\ShapeDefinition|null
    *   The shape, or NULL.
    */
   protected function findShape(string $shape): ?ShapeDefinition {
@@ -853,7 +853,7 @@ final class ResourceRegistry {
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceDefinition
+   * @return \Drupal\surface\ResourceBuild\ResourceDefinition
    *   The definition.
    *
    * @throws \InvalidArgumentException
@@ -872,7 +872,7 @@ final class ResourceRegistry {
    * @param string $resource
    *   The class or id.
    *
-   * @return array<string, \Drupal\data_surface\ResourceBuild\OperationDefinition>
+   * @return array<string, \Drupal\surface\ResourceBuild\OperationDefinition>
    *   The operations, keyed by id.
    *
    * @throws \LogicException
@@ -904,7 +904,7 @@ final class ResourceRegistry {
    * @param string $id
    *   The operation id.
    *
-   * @return \Drupal\data_surface\ResourceBuild\OperationDefinition
+   * @return \Drupal\surface\ResourceBuild\OperationDefinition
    *   The operation.
    *
    * @throws \InvalidArgumentException
@@ -926,7 +926,7 @@ final class ResourceRegistry {
    * @param string $resource
    *   The class or id.
    *
-   * @return \Drupal\data_surface\ResourceBuild\AlterDefinition[]
+   * @return \Drupal\surface\ResourceBuild\AlterDefinition[]
    *   The alters.
    */
   public function getAlters(string $resource): array {
@@ -957,7 +957,7 @@ final class ResourceRegistry {
    * @param string $resource
    *   The class or id.
    *
-   * @return \Drupal\data_surface\ResourceBuild\ResourceDefinition|null
+   * @return \Drupal\surface\ResourceBuild\ResourceDefinition|null
    *   The definition, or NULL.
    */
   protected function find(string $resource): ?ResourceDefinition {
@@ -1041,7 +1041,7 @@ final class ResourceRegistry {
    * @param string[] $list_tags
    *   Filled with the tags of what decides which derivatives there are.
    *
-   * @return array{resources: array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition>}
+   * @return array{resources: array<string, \Drupal\surface\ResourceBuild\ResourceDefinition>, shapes: array<class-string, \Drupal\surface\ResourceBuild\ShapeDefinition>}
    *   The resources and structures, keyed by name, and the shapes, keyed
    *   by class.
    */
@@ -1229,9 +1229,9 @@ final class ResourceRegistry {
    *
    * Decision: see docs/decisions.md#a-gate-is-borrowed-never-copied.
    *
-   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   * @param array<string, \Drupal\surface\ResourceBuild\ResourceDefinition> $resources
    *   Every resource and structure discovered, by name.
-   * @param array<string, \Drupal\data_surface\ResourceBuild\OperationDefinition[]> $operations
+   * @param array<string, \Drupal\surface\ResourceBuild\OperationDefinition[]> $operations
    *   Their operations, by name.
    *
    * @throws \LogicException
@@ -1347,7 +1347,7 @@ final class ResourceRegistry {
    *
    * @param string $class
    *   The class carrying it.
-   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   * @param array<string, \Drupal\surface\ResourceBuild\ResourceDefinition> $resources
    *   What discovery found.
    * @param string $where
    *   The attribute and where it is, for the message.
@@ -1438,9 +1438,9 @@ final class ResourceRegistry {
    *   What its #[Alters] names.
    * @param array<string, string> $ids
    *   Every discovered id, with the class that claimed it.
-   * @param array<string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   * @param array<string, \Drupal\surface\ResourceBuild\ResourceDefinition> $resources
    *   The resources and structures, keyed by name.
-   * @param array<class-string, \Drupal\data_surface\ResourceBuild\ShapeDefinition> $shapes
+   * @param array<class-string, \Drupal\surface\ResourceBuild\ShapeDefinition> $shapes
    *   The shapes, keyed by class.
    * @param array<string, string[]> $bases
    *   The derived ids, keyed by their deriver's base id.
@@ -1469,9 +1469,9 @@ final class ResourceRegistry {
    *
    * @param \ReflectionClass $class
    *   The alter.
-   * @param \Drupal\data_surface\Resource\Attribute\Alters $attribute
+   * @param \Drupal\surface\Resource\Attribute\Alters $attribute
    *   Its attribute.
-   * @param \Drupal\data_surface\ResourceBuild\ShapeDefinition $shape
+   * @param \Drupal\surface\ResourceBuild\ShapeDefinition $shape
    *   The shape it names.
    *
    * @throws \LogicException
@@ -1501,7 +1501,7 @@ final class ResourceRegistry {
    *   each deriver's own answer (KnowsDerivativeListTagsInterface), or
    *   every tag its derivatives carry.
    *
-   * @return array<string, array{0: \Drupal\data_surface\ResourceBuild\ResourceDefinition, 1: \Drupal\data_surface\ResourceBuild\OperationDefinition[]}>
+   * @return array<string, array{0: \Drupal\surface\ResourceBuild\ResourceDefinition, 1: \Drupal\surface\ResourceBuild\OperationDefinition[]}>
    *   Each derived resource's definition, and its operations, keyed by id.
    *
    * @throws \LogicException
@@ -1597,7 +1597,7 @@ final class ResourceRegistry {
   /**
    * Reads one #[Operation] into its definition.
    *
-   * @param \Drupal\data_surface\Resource\Attribute\Operation $operation
+   * @param \Drupal\surface\Resource\Attribute\Operation $operation
    *   The attribute.
    * @param string $of
    *   The resource or structure it is an operation of.
@@ -1607,13 +1607,13 @@ final class ResourceRegistry {
    *   The method, or empty for an operation on the class.
    * @param string $module
    *   The module it is in.
-   * @param \Drupal\data_surface\ResourceBuild\OperationParameter[] $parameters
+   * @param \Drupal\surface\ResourceBuild\OperationParameter[] $parameters
    *   The method's parameters.
    * @param string|\Stringable|null $description
    *   The description: the attribute's, else the method's docblock
    *   summary.
    *
-   * @return \Drupal\data_surface\ResourceBuild\OperationDefinition
+   * @return \Drupal\surface\ResourceBuild\OperationDefinition
    *   The definition.
    */
   protected static function operationDefinition(Operation $operation, string $of, string $class, string $method, string $module, array $parameters, string|\Stringable|null $description): OperationDefinition {
@@ -1682,7 +1682,7 @@ final class ResourceRegistry {
    *
    * Decision: see docs/decisions.md#a-contexts-id-is-the-operation-id.
    *
-   * @param \Drupal\data_surface\ResourceBuild\OperationDefinition $operation
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    *
    * @throws \LogicException
@@ -1781,7 +1781,7 @@ final class ResourceRegistry {
    *
    * @param string $class
    *   The referenced class.
-   * @param array<class-string, \Drupal\data_surface\ResourceBuild\ResourceDefinition> $resources
+   * @param array<class-string, \Drupal\surface\ResourceBuild\ResourceDefinition> $resources
    *   The discovered resources and structures.
    * @param string $referrer
    *   What referenced it, for the message.
@@ -1814,7 +1814,7 @@ final class ResourceRegistry {
    * @param \ReflectionClass $class
    *   The resource, structure or alter class.
    *
-   * @return \Drupal\data_surface\ResourceBuild\RefinerDefinition[]
+   * @return \Drupal\surface\ResourceBuild\RefinerDefinition[]
    *   The refiners, in method order.
    */
   protected static function refinersOf(\ReflectionClass $class): array {

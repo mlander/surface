@@ -13,7 +13,7 @@ there.
 
 The placed block, `block.placement`, declares `label_display`, "Display
 title", with a default of `TRUE`. A site whose blocks rarely show their
-title sets its own default in the config object `data_surface.defaults`,
+title sets its own default in the config object `surface.defaults`,
 not in code:
 
 ```yaml
@@ -46,18 +46,18 @@ This route places blocks in the Olivero theme's sidebar:
 my_module.place_in_sidebar:
   path: '/admin/structure/block/sidebar/add'
   defaults:
-    _form: 'Drupal\data_surface\Form\DataSurfaceOperationForm'
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Place a block in the sidebar'
-    _data_surface_resource: 'Drupal\data_surface_block\Resource\BlockPlacementResource'
-    _data_surface_operation: 'create'
-    _data_surface_fixed: { theme: 'olivero' }
-    _data_surface_defaults: { region: 'sidebar' }
+    _surface_resource: 'Drupal\surface_examples_block\Resource\BlockPlacementResource'
+    _surface_operation: 'create'
+    _surface_fixed: { theme: 'olivero' }
+    _surface_defaults: { region: 'sidebar' }
 ```
 
-- **`_data_surface_fixed`** fixes `theme`. The form draws it as that
+- **`_surface_fixed`** fixes `theme`. The form draws it as that
   value, the page's JSON Schema states it as `const`, and any other
   value posted for `theme` is refused, with a message at that key.
-- **`_data_surface_defaults`** starts `region` at `sidebar`. The visitor
+- **`_surface_defaults`** starts `region` at `sidebar`. The visitor
   may pick another region. Only an operation that creates takes
   defaults. On an update the key starts from the stored value, so the
   module refuses a route that sets defaults for an update operation.
@@ -73,7 +73,7 @@ before it:
 1. the default the owner declares;
 2. the site default;
 3. values the operation's own code sets ([Operations](09-operations.md));
-4. the route's `_data_surface_defaults`.
+4. the route's `_surface_defaults`.
 
 A fixed value is laid over all of them.
 

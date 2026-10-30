@@ -36,14 +36,12 @@ refuses writes, and no method adds a key or loosens a rule. It can only
 be read:
 
 ```php
-$resources = \Drupal::service('data_surface.resources');
+$resources = \Drupal::service('surface.resources');
 $context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $surface = $resources->build(NodeTypeResource::class, $context);
 
 $surface->isLocked('type');   // TRUE: the operation knows which one.
 ```
-
-Where each class lives: [Namespaces](../concepts.md#namespaces).
 
 ## Access, twice
 

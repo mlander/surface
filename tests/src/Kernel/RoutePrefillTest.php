@@ -2,19 +2,19 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\data_surface\Form\DataSurfaceFormBuilderInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\data_surface\ResourceBuild\OperationRoute;
-use Drupal\data_surface_resource_test\Resource\Badge\BadgeResource;
-use Drupal\data_surface_resource_test\Resource\Larder\LarderResource;
-use Drupal\data_surface_resource_test\Resource\Studio\StudioResource;
-use Drupal\data_surface_resource_test\Resource\Venue\HallResource;
-use Drupal\data_surface_resource_test\Storage\LarderStorage;
-use Drupal\data_surface_route_test\Storage\CardStorage;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\OperationRoute;
+use Drupal\surface_resource_test\Resource\Badge\BadgeResource;
+use Drupal\surface_resource_test\Resource\Larder\LarderResource;
+use Drupal\surface_resource_test\Resource\Studio\StudioResource;
+use Drupal\surface_resource_test\Resource\Venue\HallResource;
+use Drupal\surface_resource_test\Storage\LarderStorage;
+use Drupal\surface_route_test\Storage\CardStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -26,18 +26,18 @@ use Symfony\Component\Routing\Route;
  *
  * On the first draw alone: the values the code building the form hands
  * it, then the value a link sends for each key the route lists under
- * `_data_surface_query`, held to its key and dropped when the key refuses
+ * `_surface_query`, held to its key and dropped when the key refuses
  * it. Neither is the context, so no document states them; a submission's
  * own input stands over them, and a key the build fixes or locks keeps
  * what the build says. A key no such value reaches is the route or the
  * code written wrong, refused on the first draw.
  *
- * @see \Drupal\data_surface\Form\DataSurfaceOperationForm
+ * @see \Drupal\surface\Form\SurfaceOperationForm
  * @see docs/forms.md#a-route-that-fixes-or-fills-keys
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class RoutePrefillTest extends DataSurfaceKernelTestBase {
+class RoutePrefillTest extends SurfaceKernelTestBase {
 
   use OperationRouteTrait;
   use UserCreationTrait;
@@ -48,9 +48,9 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_resource_test',
-    'data_surface_route_test',
+    'surface',
+    'surface_resource_test',
+    'surface_route_test',
   ];
 
   /**
@@ -59,7 +59,7 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface']);
+    $this->installConfig(['surface']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -73,7 +73,7 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
    *   The form.
    */
   protected function form(mixed ...$args): array {
-    return $this->container->get('form_builder')->getForm(DataSurfaceOperationForm::class, ...$args);
+    return $this->container->get('form_builder')->getForm(SurfaceOperationForm::class, ...$args);
   }
 
   /**
@@ -102,13 +102,13 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
       // The page renders the token in place of the form's placeholder.
       'form_token' => $this->container->get('csrf_token')->get($form['#token']),
       'op' => 'Save',
-      DataSurfaceOperationForm::SURFACE_KEY => $surface,
+      SurfaceOperationForm::SURFACE_KEY => $surface,
     ]);
     $request->setSession($stack->getSession());
     $request->attributes->add($drawn->attributes->all());
     $stack->push($request);
     $state = (new FormState())->addBuildInfo('args', $args)->disableRedirect();
-    $this->container->get('form_builder')->buildForm(DataSurfaceOperationForm::class, $state);
+    $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $state);
     return $state;
   }
 
@@ -136,7 +136,7 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
   public function testLinkStartsTheKeysItsRouteLists(): void {
     $this->visit('/surface-test/card/add-prefilled?subject=Pricing&copies=4&occasion=birthday&stamps=3&name=birthday_card');
     $form = $this->form();
-    $surface = $form[DataSurfaceOperationForm::SURFACE_KEY];
+    $surface = $form[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('Pricing', $surface['title']['#default_value']);
     // Read by the coercion table, as a form posts it.
     $this->assertSame(4, $surface['copies']['#default_value']);
@@ -152,7 +152,7 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
     // Input, never the context: what the documents state is unchanged.
     $served = $this->served();
     $this->assertSame([], $served->context->defaults());
-    $built = $this->container->get('data_surface.resources')->build($served->resource, $served->context);
+    $built = $this->container->get('surface.resources')->build($served->resource, $served->context);
     $this->assertSame('Hello', $built->getDefault('title'));
     $this->assertSame(1, $built->getDefault('copies'));
   }
@@ -162,7 +162,7 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
    */
   public function testWhatTheKeyRefusesOrTheBuildFixesStartsNothing(): void {
     $this->visit('/surface-test/card/add-prefilled?subject=&copies=40&occasion=funeral&format=plain');
-    $surface = $this->form()[DataSurfaceOperationForm::SURFACE_KEY];
+    $surface = $this->form()[SurfaceOperationForm::SURFACE_KEY];
     // Sent empty: the declared value.
     $this->assertSame('Hello', $surface['title']['#default_value']);
     // Past the key's range, and none of its list: each dropped, saying
@@ -184,7 +184,7 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
    */
   public function testListOrMapForOneValueStartsNothing(): void {
     $this->visit('/surface-test/card/add-prefilled?subject[]=Pricing&copies[]=4&stamps[a]=2');
-    $surface = $this->form()[DataSurfaceOperationForm::SURFACE_KEY];
+    $surface = $this->form()[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('Hello', $surface['title']['#default_value']);
     $this->assertSame(1, $surface['copies']['#default_value']);
     $this->assertSame(1, $surface['envelope']['stamps']['#default_value']);
@@ -192,7 +192,7 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
 
     // The code's own values, the same way.
     $this->visit('/surface-test/card/add');
-    $surface = $this->form(['title' => ['Handed'], 'envelope' => ['stamps' => [2]]])[DataSurfaceOperationForm::SURFACE_KEY];
+    $surface = $this->form(['title' => ['Handed'], 'envelope' => ['stamps' => [2]]])[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('Hello', $surface['title']['#default_value']);
     $this->assertSame(1, $surface['envelope']['stamps']['#default_value']);
   }
@@ -207,31 +207,31 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
    */
   public function testKeyAnAlterMountsIsStartedByItsPath(): void {
     $studio = static fn (array $query): Route => new Route('/surface-test/studio/linked', [
-      '_form' => DataSurfaceOperationForm::class,
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Configure the studio',
       OperationRoute::RESOURCE => StudioResource::class,
       OperationRoute::OPERATION => 'configure',
       OperationRoute::QUERY => $query,
     ]);
-    $fee = ['third_party_settings.data_surface_resource_test.booking_fee' => 'fee'];
-    $this->serveBuilt('data_surface_resource_test.studio.linked', $studio($fee), [], ['fee' => '25']);
-    $this->assertSame(25, $this->form()[DataSurfaceOperationForm::SURFACE_KEY]['third_party_settings']['data_surface_resource_test']['booking_fee']['#default_value']);
+    $fee = ['third_party_settings.surface_resource_test.booking_fee' => 'fee'];
+    $this->serveBuilt('surface_resource_test.studio.linked', $studio($fee), [], ['fee' => '25']);
+    $this->assertSame(25, $this->form()[SurfaceOperationForm::SURFACE_KEY]['third_party_settings']['surface_resource_test']['booking_fee']['#default_value']);
     // Below the fee's range: the declared value.
-    $this->serveBuilt('data_surface_resource_test.studio.linked', $studio($fee), [], ['fee' => '-5']);
-    $this->assertSame(0, $this->form()[DataSurfaceOperationForm::SURFACE_KEY]['third_party_settings']['data_surface_resource_test']['booking_fee']['#default_value']);
+    $this->serveBuilt('surface_resource_test.studio.linked', $studio($fee), [], ['fee' => '-5']);
+    $this->assertSame(0, $this->form()[SurfaceOperationForm::SURFACE_KEY]['third_party_settings']['surface_resource_test']['booking_fee']['#default_value']);
 
-    $this->serveBuilt('data_surface_resource_test.hall.linked', new Route('/surface-test/hall/linked', [
-      '_form' => DataSurfaceOperationForm::class,
+    $this->serveBuilt('surface_resource_test.hall.linked', new Route('/surface-test/hall/linked', [
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Configure the hall',
       OperationRoute::RESOURCE => HallResource::class,
       OperationRoute::OPERATION => 'configure',
-      OperationRoute::QUERY => ['third_party_settings.data_surface_resource_test.rows' => 'rows'],
+      OperationRoute::QUERY => ['third_party_settings.surface_resource_test.rows' => 'rows'],
     ]), [], ['rows' => '12']);
-    $this->assertSame(12, $this->form()[DataSurfaceOperationForm::SURFACE_KEY]['third_party_settings']['data_surface_resource_test']['rows']['#default_value']);
+    $this->assertSame(12, $this->form()[SurfaceOperationForm::SURFACE_KEY]['third_party_settings']['surface_resource_test']['rows']['#default_value']);
 
-    foreach (['third_party_settings', 'third_party_settings.data_surface_resource_test'] as $path) {
-      $this->serveBuilt('data_surface_resource_test.studio.grouped', $studio([$path => 'fee']), [], ['fee' => '{}']);
-      $this->assertRefusedOnTheFirstDraw(sprintf('The data_surface_resource_test.studio.grouped route\'s "_data_surface_query": resource_test.studio has no key "%s". A prefill names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).', $path));
+    foreach (['third_party_settings', 'third_party_settings.surface_resource_test'] as $path) {
+      $this->serveBuilt('surface_resource_test.studio.grouped', $studio([$path => 'fee']), [], ['fee' => '{}']);
+      $this->assertRefusedOnTheFirstDraw(sprintf('The surface_resource_test.studio.grouped route\'s "_surface_query": resource_test.studio has no key "%s". A prefill names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).', $path));
     }
   }
 
@@ -247,23 +247,23 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
   public function testKeyAnAlterMountsInLockedFrameKeepsWhatIsStored(): void {
     \Drupal::state()->set(LarderStorage::key('pantry'), [
       'larder' => 'pantry',
-      'spare_rack' => ['third_party_settings' => ['data_surface_resource_test' => ['supplier' => 'Acme']]],
+      'spare_rack' => ['third_party_settings' => ['surface_resource_test' => ['supplier' => 'Acme']]],
     ]);
     $route = new Route('/surface-test/larder/{larder}/supplied', [
-      '_form' => DataSurfaceOperationForm::class,
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Edit a larder',
       OperationRoute::RESOURCE => LarderResource::class,
       OperationRoute::OPERATION => 'update',
-      OperationRoute::QUERY => ['spare_rack.third_party_settings.data_surface_resource_test.supplier' => 'supplier'],
+      OperationRoute::QUERY => ['spare_rack.third_party_settings.surface_resource_test.supplier' => 'supplier'],
     ], ['larder' => '[a-z]+']);
     $supplier = function () use ($route): array {
-      $this->serveBuilt('data_surface_resource_test.larder.supplied', $route, ['larder' => 'pantry'], ['supplier' => 'Spice Co']);
-      return $this->form()[DataSurfaceOperationForm::SURFACE_KEY]['spare_rack']['third_party_settings']['data_surface_resource_test']['supplier'];
+      $this->serveBuilt('surface_resource_test.larder.supplied', $route, ['larder' => 'pantry'], ['supplier' => 'Spice Co']);
+      return $this->form()[SurfaceOperationForm::SURFACE_KEY]['spare_rack']['third_party_settings']['surface_resource_test']['supplier'];
     };
     $this->setUpCurrentUser([], ['keep a larder', 'stock spice rack']);
     $this->assertSame('Spice Co', $supplier()['#default_value']);
 
-    $this->container->get('data_surface.resources')->forgetBuilds();
+    $this->container->get('surface.resources')->forgetBuilds();
     $this->setUpCurrentUser([], ['keep a larder', 'stock spice rack', 'inspect spice rack']);
     $element = $supplier();
     $this->assertTrue($element['#disabled']);
@@ -281,18 +281,18 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
   public function testLockedKeyKeepsWhatTheBuildSays(): void {
     $this->setUpCurrentUser([], ['keep a larder', 'stock spice rack']);
     $route = new Route('/surface-test/larder/{larder}/linked', [
-      '_form' => DataSurfaceOperationForm::class,
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Edit a larder',
       OperationRoute::RESOURCE => LarderResource::class,
       OperationRoute::OPERATION => 'update',
       OperationRoute::QUERY => ['note' => 'note', 'spare_rack.shelf' => 'shelf', 'rack.label' => 'label'],
     ], ['larder' => '[a-z]+']);
-    $this->serveBuilt('data_surface_resource_test.larder.linked', $route, ['larder' => 'pantry'], [
+    $this->serveBuilt('surface_resource_test.larder.linked', $route, ['larder' => 'pantry'], [
       'note' => 'Restock soon',
       'shelf' => 'bottom',
       'label' => 'Herbs',
     ]);
-    $surface = $this->form()[DataSurfaceOperationForm::SURFACE_KEY];
+    $surface = $this->form()[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('Restock soon', $surface['note']['#default_value']);
     $this->assertSame('Herbs', $surface['rack']['label']['#default_value']);
     $this->assertTrue($surface['spare_rack']['shelf']['#disabled']);
@@ -310,7 +310,7 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
       'occasion' => 'funeral',
       'envelope' => ['stamps' => '4'],
       'greeting' => ['value' => 'Dear you'],
-    ])[DataSurfaceOperationForm::SURFACE_KEY];
+    ])[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('Handed', $surface['title']['#default_value']);
     // In the key's type, by the coercion table.
     $this->assertSame(4, $surface['envelope']['stamps']['#default_value']);
@@ -320,11 +320,11 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
     // if it were stored.
     $this->assertSame(1, $surface['copies']['#default_value']);
     $this->assertEmpty($surface['occasion']['#default_value'] ?? NULL);
-    $this->assertArrayNotHasKey(DataSurfaceFormBuilderInterface::STALE_MARKER_KEY, $surface);
+    $this->assertArrayNotHasKey(SurfaceFormBuilderInterface::STALE_MARKER_KEY, $surface);
 
     // A link's value over the code's; what the route fixes over both.
     $this->visit('/surface-test/card/add-prefilled?subject=Pricing');
-    $surface = $this->form(['title' => 'Handed', 'greeting' => ['format' => 'plain']])[DataSurfaceOperationForm::SURFACE_KEY];
+    $surface = $this->form(['title' => 'Handed', 'greeting' => ['format' => 'plain']])[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('Pricing', $surface['title']['#default_value']);
     $this->assertSame('html', $surface['greeting']['format']['#value']);
   }
@@ -338,33 +338,33 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
   public function testKeyNoPrefillReachesIsRefusedOnTheFirstDraw(): void {
     \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored']);
     foreach ([
-      '/surface-test/card/query-secret' => 'The data_surface_route_test.query_secret route\'s "_data_surface_query": "code" on route_test.card is a secret, which no form draws, so no prefill starts it.',
-      '/surface-test/card/query-undeclared?font=serif' => 'The data_surface_route_test.query_undeclared route\'s "_data_surface_query": route_test.card has no key "greeting.font". A prefill names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).',
-      '/surface-test/card/query-inside' => 'The data_surface_route_test.query_inside route\'s "_data_surface_query": "paper_settings.weight" on route_test.card is inside "paper_settings", a key with variants, each starting from its own defaults, so a prefill does not reach it.',
-      '/surface-test/card/query-map?greeting={"value":"Hi"}' => 'The data_surface_route_test.query_map route\'s "_data_surface_query": "greeting" on route_test.card holds a map: name each of its keys, as "greeting.<key>".',
-      '/surface-test/card/six/rename-by-link?name=other' => 'The data_surface_route_test.edit_renamed_by_link route\'s "_data_surface_query": "card" on route_test.card is an identity key the context knows: identity is the operation\'s to say, from its parameters, so no prefill starts it.',
+      '/surface-test/card/query-secret' => 'The surface_route_test.query_secret route\'s "_surface_query": "code" on route_test.card is a secret, which no form draws, so no prefill starts it.',
+      '/surface-test/card/query-undeclared?font=serif' => 'The surface_route_test.query_undeclared route\'s "_surface_query": route_test.card has no key "greeting.font". A prefill names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).',
+      '/surface-test/card/query-inside' => 'The surface_route_test.query_inside route\'s "_surface_query": "paper_settings.weight" on route_test.card is inside "paper_settings", a key with variants, each starting from its own defaults, so a prefill does not reach it.',
+      '/surface-test/card/query-map?greeting={"value":"Hi"}' => 'The surface_route_test.query_map route\'s "_surface_query": "greeting" on route_test.card holds a map: name each of its keys, as "greeting.<key>".',
+      '/surface-test/card/six/rename-by-link?name=other' => 'The surface_route_test.edit_renamed_by_link route\'s "_surface_query": "card" on route_test.card is an identity key the context knows: identity is the operation\'s to say, from its parameters, so no prefill starts it.',
     ] as $path => $message) {
       $this->visit($path);
       $this->assertRefusedOnTheFirstDraw($message);
     }
-    $this->serveBuilt('data_surface_resource_test.badge.queried', new Route('/surface-test/badge/queried', [
-      '_form' => DataSurfaceOperationForm::class,
+    $this->serveBuilt('surface_resource_test.badge.queried', new Route('/surface-test/badge/queried', [
+      '_form' => SurfaceOperationForm::class,
       '_title' => 'Configure the badge',
       OperationRoute::RESOURCE => BadgeResource::class,
       OperationRoute::OPERATION => 'configure',
       OperationRoute::QUERY => ['code' => 'code'],
     ]));
-    $this->assertRefusedOnTheFirstDraw('The data_surface_resource_test.badge.queried route\'s "_data_surface_query": "code" on resource_test.badge is computed from first, so no prefill starts it.');
+    $this->assertRefusedOnTheFirstDraw('The surface_resource_test.badge.queried route\'s "_surface_query": "code" on resource_test.badge is computed from first, so no prefill starts it.');
 
     // A link may start a key of an update the path names.
     $this->visit('/surface-test/card/six/edit-queried?subject=Renamed');
-    $this->assertSame('Renamed', $this->form()[DataSurfaceOperationForm::SURFACE_KEY]['title']['#default_value']);
+    $this->assertSame('Renamed', $this->form()[SurfaceOperationForm::SURFACE_KEY]['title']['#default_value']);
 
     // The code's own values, the same way.
     $this->visit('/surface-test/card/add');
-    $this->assertRefusedOnTheFirstDraw('The values handed to the form at the data_surface_route_test.add route: route_test.card has no key "nope". A prefill names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).', ['nope' => 1]);
-    $this->assertRefusedOnTheFirstDraw('The values handed to the form at the data_surface_route_test.add route: "envelope" on route_test.card holds a structure: name each of its keys, as "envelope.<key>".', ['envelope' => 'cream']);
-    $this->assertRefusedOnTheFirstDraw('The values handed to the form at the data_surface_route_test.add route: "greeting" on route_test.card holds a map: name each of its keys, as "greeting.<key>".', ['greeting' => '{"value":"Hi"}']);
+    $this->assertRefusedOnTheFirstDraw('The values handed to the form at the surface_route_test.add route: route_test.card has no key "nope". A prefill names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).', ['nope' => 1]);
+    $this->assertRefusedOnTheFirstDraw('The values handed to the form at the surface_route_test.add route: "envelope" on route_test.card holds a structure: name each of its keys, as "envelope.<key>".', ['envelope' => 'cream']);
+    $this->assertRefusedOnTheFirstDraw('The values handed to the form at the surface_route_test.add route: "greeting" on route_test.card holds a map: name each of its keys, as "greeting.<key>".', ['greeting' => '{"value":"Hi"}']);
   }
 
   /**
@@ -375,12 +375,12 @@ class RoutePrefillTest extends DataSurfaceKernelTestBase {
     $this->visit('/surface-test/card/add');
     $state = $this->post(['card' => 'one'], ['title' => 'Handed']);
     $this->assertSame([], $state->getErrors());
-    $this->assertSame('Hello', $state->getCompleteForm()[DataSurfaceOperationForm::SURFACE_KEY]['title']['#value'], 'An element left out takes the declared value, not the prefill.');
+    $this->assertSame('Hello', $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY]['title']['#value'], 'An element left out takes the declared value, not the prefill.');
     $this->assertSame('Hello', \Drupal::state()->get(CardStorage::key('one'))['title']);
 
     // A select a link started, cleared by the visitor, stays cleared.
     $this->visit('/surface-test/card/add-prefilled?occasion=birthday&subject=Pricing');
-    $this->assertSame('birthday', $this->form()[DataSurfaceOperationForm::SURFACE_KEY]['occasion']['#default_value']);
+    $this->assertSame('birthday', $this->form()[SurfaceOperationForm::SURFACE_KEY]['occasion']['#default_value']);
     $state = $this->post(['card' => 'two', 'title' => 'Posted', 'occasion' => '']);
     $this->assertSame([], $state->getErrors());
     $stored = \Drupal::state()->get(CardStorage::key('two'));

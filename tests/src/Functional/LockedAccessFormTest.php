@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
-use Drupal\data_surface_tool_test\Storage\CabinetStorage;
+use Drupal\surface_tool_test\Storage\CabinetStorage;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -17,10 +17,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * sets no codes finds the code lock offered and fixed. Counting the
  * drawers, an operation that changes nothing, writes nothing.
  *
- * @see \Drupal\Tests\data_surface\Kernel\LockedAccessTest
+ * @see \Drupal\Tests\surface\Kernel\LockedAccessTest
  * @see docs/decisions.md#locked-at-the-top
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class LockedAccessFormTest extends BrowserTestBase {
 
@@ -28,9 +28,9 @@ class LockedAccessFormTest extends BrowserTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_react',
-    'data_surface_tool_test',
+    'surface',
+    'surface_react',
+    'surface_tool_test',
   ];
 
   /**

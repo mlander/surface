@@ -26,7 +26,7 @@ migrated.
 
 From the first tagged release on:
 
-- Every resource and structure of the examples and `data_surface_first`,
+- Every resource and structure of the examples and `surface_examples_first`,
   the pages the documentation is pinned to, keeps a committed contract
   baseline, as will any resource the main module ships, and the suite
   fails on a breaking change to one that is neither versioned nor
@@ -235,13 +235,13 @@ What the runner will do:
   owner's map and allowed to change only its members).
 - **The ledger is the storage's.** A storage owns the layout, so it
   says where the stamp lives, and stamps the declared versions at
-  commit. `ConfigObjectStorage` keeps `_data_surface.versions`, keyed by
+  commit. `ConfigObjectStorage` keeps `_surface.versions`, keyed by
   id, beside `_core`, owning it as it owns `_core` and `langcode`:
   `load()` leaves it out, `commit()` writes it, the module describes it
   for every config object by altering core's `config_object` type, and
   it is written only once a version above 1 is stored, so every config
   object today stays as it is. A config entity keeps it in its
-  `third_party_settings.data_surface`. A storage that keeps no ledger
+  `third_party_settings.surface`. A storage that keeps no ledger
   (State, a plugin's configuration, today) makes a version above 1 on
   what it stores a refusal at discovery.
 - **The stamp travels with the data.** A config export carries it, so an
@@ -289,7 +289,7 @@ removes only theirs, and the version of the contract its documents are
 written in (`"contract"`), so a baseline from before the wire moved is
 re-pinned rather than compared ([the contract's own
 version](#the-contracts-own-version)).
-This module pins the examples and `data_surface_first` in its own
+This module pins the examples and `surface_examples_first` in its own
 `tests/fixtures/contracts/`: nineteen files, the resources and the
 structures they hold. An adopter commits its own, in its own module.
 
@@ -333,14 +333,14 @@ on a declaration with no baseline. Compatible changes pass; the
 baseline is the promise last made, and it is pinned again when a change
 is accepted. An adopter gets the same test, per resource, from
 `ResourceTestBase`: `$baselines` names its directory, and
-`DATA_SURFACE_BASELINES_WRITE=1` pins today's ([Testing a resource](testing-a-resource.md#the-baselines)).
+`SURFACE_BASELINES_WRITE=1` pins today's ([Testing a resource](testing-a-resource.md#the-baselines)).
 
 **The command.**
 
 ```
-ddev drush data_surface:contract-diff \
-  --module=data_surface_examples,data_surface_examples_compliance,data_surface_first \
-  --baselines=modules/custom/data_surface/tests/fixtures/contracts
+ddev drush surface:contract-diff \
+  --module=surface_examples,surface_examples_compliance,surface_examples_first \
+  --baselines=modules/custom/surface/tests/fixtures/contracts
 ```
 
 prints every difference with its verdict, and a summary naming the

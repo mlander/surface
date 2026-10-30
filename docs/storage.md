@@ -34,7 +34,7 @@ subclass:
 ```php
 final class NewsletterStorage extends ConfigObjectStorage {
 
-  public const CONFIG = 'data_surface_first.newsletter';
+  public const CONFIG = 'surface_examples_first.newsletter';
 
 }
 ```
@@ -68,7 +68,7 @@ so it is the whole of the storage code. What it does:
   default, and the first write creates the object. The module still
   ships it in `config/install`; on a site that installed the module
   before the object shipped, a post-update hook calling
-  `data_surface_install_missing_config('<module>')` creates it from that
+  `surface_install_missing_config('<module>')` creates it from that
   file and leaves every existing object alone.
 - **A config schema must describe the object**: a missing schema is a
   `\LogicException` naming the object, since the storage exists to hold
@@ -107,8 +107,8 @@ core can read a data definition as the schema
 (why: [decision](decisions.md#a-config-object-is-described-by-its-resource)):
 
 ```bash
-drush data_surface:config-schema --module=my_module
-drush data_surface:config-schema --module=my_module --write
+drush surface:config-schema --module=my_module
+drush surface:config-schema --module=my_module --write
 ```
 
 The first writes nothing: it prints how each file differs from what the
@@ -131,9 +131,9 @@ run writes both modules' files, the owner's schema typing the mount,
 with nothing printed between them:
 
 ```bash
-drush data_surface:config-schema --module=my_module,my_module_extras --write
+drush surface:config-schema --module=my_module,my_module_extras --write
 drush pm:install my_module my_module_extras
-drush data_surface:config-schema --module=my_module,my_module_extras
+drush surface:config-schema --module=my_module,my_module_extras
 ```
 
 The last line is the drift check: after a change to a resource or an
@@ -162,7 +162,7 @@ resource the command writes:
   ```php
   final class DoorsStorage extends ConfigObjectStorage {
 
-    public const CONFIG = 'data_surface_examples.doors';
+    public const CONFIG = 'surface_examples.doors';
 
     public const ALWAYS_HELD = ['badges', 'greeters'];
 
@@ -201,7 +201,7 @@ The other entries in the file, and the comments above an entry, are
 kept as they are; each entry written says so on the line above it. A
 test holds the shipped ones to it, `ConfigSchemaDriftTest`, which also
 writes the test modules' files (they are never installed on a site) when
-run with `DATA_SURFACE_CONFIG_SCHEMA_WRITE=1`.
+run with `SURFACE_CONFIG_SCHEMA_WRITE=1`.
 
 What fully validatable asks, which the generated schema does: a type on
 every key, since config validation lets data no schema describes through
@@ -218,10 +218,10 @@ the keywords and the holidays, which `OpeningHoursStorage::ALWAYS_HELD`
 names, and may hold nothing for the notes and for the door code, which
 is installed holding nothing:
 
-<!-- yaml: tests/modules/data_surface_resource_test/config/schema/data_surface_resource_test.schema.yml#data_surface_resource_test.opening_hours -->
+<!-- yaml: tests/modules/surface_resource_test/config/schema/surface_resource_test.schema.yml#surface_resource_test.opening_hours -->
 
 ```yaml
-data_surface_resource_test.opening_hours:
+surface_resource_test.opening_hours:
   type: config_object
   label: 'Opening hours'
   constraints:
@@ -317,8 +317,8 @@ Where the resource is wider, the build refuses it, naming each key:
 
 ```
 The schema_test.narrowed resource advertises more than
-data_surface_schema_test.narrowed, the config schema
-Drupal\data_surface_schema_test\Storage\NarrowedStorage holds what it
+surface_schema_test.narrowed, the config schema
+Drupal\surface_schema_test\Storage\NarrowedStorage holds what it
 stores to, so storage would refuse what every door offers. Where:
 "code": the schema refuses a value that does not match /^[a-z0-9_]+$/,
 which the resource does not; "limit": it may be more than 10, which the
@@ -375,7 +375,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   path belongs to a schema its owner wrote, which the build holds the
   resource to.
 
-`data_surface_performance` is the shipped case: three settings of
+`surface_examples_performance` is the shipped case: three settings of
 core's performance form, stored in core's `system.performance` and held
 to core's schema as core wrote it
 (why: [decision](decisions.md#a-resource-may-hold-some-keys-of-a-config-object-it-does-not-own)).
@@ -454,7 +454,7 @@ setting:
   uuid at the next write. Config validation still
   names it, since the schema's `Uuid` refuses it. A module that stored
   ids converts them in a post-update:
-  `data_surface_store_references_by_uuid(MyResource::class, 'configure')`
+  `surface_store_references_by_uuid(MyResource::class, 'configure')`
   reads and writes the object through its storage.
 - **To keep the id**, the key says so:
   `->setSetting(References::STORED_AS, References::BY_ID)` (on a bare
@@ -483,20 +483,20 @@ the owner advertises a mount no schema describes until the second run.
 Example 3's, from the compliance module:
 
 ```yaml
-# The owner, data_surface_examples.registration_step3:
+# The owner, surface_examples.registration_step3:
 third_party_settings:
   type: sequence
   label: 'Third party settings'
   requiredKey: false
   sequence:
-    type: 'data_surface_examples.registration_step3.third_party.[%key]'
+    type: 'surface_examples.registration_step3.third_party.[%key]'
 ```
 
-<!-- code: modules/data_surface_examples_compliance/config/schema/data_surface_examples_compliance.schema.yml -->
+<!-- code: modules/surface_examples_compliance/config/schema/surface_examples_compliance.schema.yml -->
 
 ```yaml
-# Generated from the registration.step3 resource by drush data_surface:config-schema.
-data_surface_examples.registration_step3.third_party.data_surface_examples_compliance:
+# Generated from the registration.step3 resource by drush surface:config-schema.
+surface_examples.registration_step3.third_party.surface_examples_compliance:
   type: mapping
   label: 'Compliance'
   constraints:
@@ -600,7 +600,7 @@ config entity type puts a resource over it from the start: the entity
 class carries `#[ConfigEntityType]` with its keys and `config_export`,
 and no form classes, no list builder and no links, since the resource's
 operations are what create, update and delete one, at every door. Its config
-schema is written from the resource by `drush data_surface:config-schema
+schema is written from the resource by `drush surface:config-schema
 --write`, as a config object's is: for a resource whose
 `ConfigEntityStorage` names an entity type its own module declares, the
 command writes the entry `<module>.<config prefix>.*`, a `config_entity`
@@ -614,8 +614,8 @@ describes. An entity type of core or of another module (the block, the
 content type) has a schema of its own and is left alone. Example 15's:
 
 ```yaml
-# Generated from the event.venue resource by drush data_surface:config-schema.
-data_surface_examples.event_venue.*:
+# Generated from the event.venue resource by drush surface:config-schema.
+surface_examples.event_venue.*:
   type: config_entity
   label: 'Venue'
   constraints:
@@ -657,17 +657,17 @@ as stored, at the owner's level or inside a child the owner stores.
 ### The site's defaults are not stored values
 
 A site's own defaults live in their own config object,
-`data_surface.defaults`, which the build reads and no storage writes
+`surface.defaults`, which the build reads and no storage writes
 ([A site's own defaults](declaring-a-resource.md#a-sites-own-defaults)).
 A default is what a key with nothing stored starts from: changing one
 changes a new thing and a key no write has set, never a value already
 stored, and the install file written from the resource keeps the
-module's defaults. Set them with `drush config:set data_surface.defaults`;
+module's defaults. Set them with `drush config:set surface.defaults`;
 a config export carries them with the rest of the site's configuration.
 
 ### Config overrides change what the site runs on
 
-A `settings.php` override (`$config['data_surface_first.newsletter']['frequency']
+A `settings.php` override (`$config['surface_examples_first.newsletter']['frequency']
 = 'monthly';`) and config split change what the site runs on, not what
 is stored. The form, the read tool and both documents show the stored
 value, as core's own config forms do (they load the editable object,
@@ -676,7 +676,7 @@ and holds it to the schema. A key overridden on a site therefore reads
 here differently from what the site runs on; that is core's behavior,
 and on purpose: a form that showed the override would save it into
 storage on the next submit, and the override would stop being one. To
-see it, `drush config:get data_surface_first.newsletter --include-overridden`
+see it, `drush config:get surface_examples_first.newsletter --include-overridden`
 prints the value with overrides applied, beside the stored one plain
 `drush config:get` prints.
 
@@ -686,12 +686,12 @@ Two interfaces with the same three verbs. A resource's own storage class
 implements the second, and nothing an author writes implements the
 first:
 
-- `Drupal\data_surface\Pipeline\DataSurfaceStorageInterface`, what the
+- `Drupal\surface\Pipeline\SurfaceStorageInterface`, what the
   pipeline writes to, over the data surface. The engine's storage
   classes below implement it, all but `ConfigObjectStorage` and
   `ConfigEntityStorage`, and `StorageAdapter` adapts a resource's
   storage to it.
-- `Drupal\data_surface\Resource\ResourceStorageInterface`, what
+- `Drupal\surface\Resource\ResourceStorageInterface`, what
   `#[Resource(storage:)]` names, over the context; its write verbs,
   `prepare()` and `commit()` (and a deleting storage's
   `prepareDelete()` and `delete()`), are handed the account the write
@@ -744,7 +744,7 @@ among the field storage's settings.
 ## Getting one
 
 ```php
-$resources = \Drupal::service('data_surface.resources');
+$resources = \Drupal::service('surface.resources');
 $context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $storage = $resources->storage(NodeTypeResource::class, $context);
 ```
@@ -760,15 +760,15 @@ host holds the instance its values belong to. The host supplies it:
 
 | Host family | Answers with |
 | --- | --- |
-| Any configurable plugin (block, condition, action) | `PluginConfigurationStorage` over itself, from `DataSurfaceHostFormTrait`: the one construction path for the family, which the form submit asks for rather than building inline. |
-| Field types | `FieldSettingsStorage` over the field config entity the item is bound to, from `DataSurfaceFieldTypeTrait`. A field type whose storage layout differs overrides `getDataSurfaceStorage()` and hands `FieldSettingsStorage` a layout. |
+| Any configurable plugin (block, condition, action) | `PluginConfigurationStorage` over itself, from `SurfaceHostFormTrait`: the one construction path for the family, which the form submit asks for rather than building inline. |
+| Field types | `FieldSettingsStorage` over the field config entity the item is bound to, from `SurfaceFieldTypeTrait`. A field type whose storage layout differs overrides `getSurfaceStorage()` and hands `FieldSettingsStorage` a layout. |
 | Field formatters | Nothing: they throw. |
 
 ### The refusal, and why it is a refusal
 
 `ResourcesInterface::storage()` throws `\LogicException` for a class
 that names no storage, and a host whose values have no destination of
-its own throws from `getDataSurfaceStorage()`. Two kinds legitimately do:
+its own throws from `getSurfaceStorage()`. Two kinds legitimately do:
 
 1. **A host that owns the write.** A field formatter's settings are one
    component of an entity view display, and Field UI copies whatever the
@@ -833,7 +833,7 @@ settings.
 
 ### Dry runs
 
-`DataSurfacePipelineInterface::submit()` takes a `$dry_run` flag: it runs
+`SurfacePipelineInterface::submit()` takes a `$dry_run` flag: it runs
 everything up to and including prepare and hands back the artifact with
 `committed` false.
 
@@ -848,7 +848,7 @@ accepted values instead (why: [decision](decisions.md#every-door-projects-what-t
 
 | Storage | Destination | Artifact | Used by |
 | --- | --- | --- | --- |
-| `ConfigObjectStorage` | One simple config object, named by a subclass, laid out by its `layout()`, a key kept under a path by its `STORED_AT`. A `ResourceStorageInterface`, named by a resource. | The values to write, in storage layout, a key kept under a path by that path, references to content by uuid, plus the language code when the schema asks for one. | the examples, `data_surface_first`, `data_surface_performance` |
+| `ConfigObjectStorage` | One simple config object, named by a subclass, laid out by its `layout()`, a key kept under a path by its `STORED_AT`. A `ResourceStorageInterface`, named by a resource. | The values to write, in storage layout, a key kept under a path by that path, references to content by uuid, plus the language code when the schema asks for one. | the examples, `surface_examples_first`, `surface_examples_performance` |
 | `ConfigEntityStorage` | One config entity, named by a subclass with its properties, plus core's third party settings. A `ResourceStorageInterface` that can delete, named by a resource. | The entity's exported array, references to content by uuid, its dependencies calculated, those of what its keys refer to among them. | `BlockPlacementStorage`, `NodeTypeStorage` |
 | `StateStorage` | One State key. | The accepted values. | the demo form |
 | `FieldSettingsStorage` | One field instance's settings. | The settings array. | the field type host |
@@ -869,8 +869,8 @@ you name on `#[Resource(storage:)]` or extend: `ConfigObjectStorage`
 and `ConfigEntityStorage`, and beside them what such a class works
 with, the layouts, the secret codec and `SchemaViolations`. The other
 five implement the pipeline's
-`DataSurfaceStorageInterface` and live beside it in `Pipeline\Storage\`
-(`use Drupal\data_surface\Pipeline\Storage\StateStorage;`): a plugin's
+`SurfaceStorageInterface` and live beside it in `Pipeline\Storage\`
+(`use Drupal\surface\Pipeline\Storage\StateStorage;`): a plugin's
 host supplies one, and a resource's storage class may delegate to one,
 but `#[Resource(storage: StateStorage::class)]` is refused, since it is
 no `ResourceStorageInterface`.
@@ -951,7 +951,7 @@ none, and storage that insisted would be unusable there.
 
 ## StorageLayoutInterface
 
-`Drupal\data_surface\Storage\StorageLayoutInterface` has two methods,
+`Drupal\surface\Storage\StorageLayoutInterface` has two methods,
 `toStorage(array $values): array` and `fromStorage(array $settings):
 array`. `FieldSettingsStorage` takes one, optionally, and a
 `ConfigObjectStorage` subclass answers one from `layout()`; without one
@@ -1005,7 +1005,7 @@ what will actually be stored; `fromStorage()` after it loads. The layout
 sees only that module's own settings, keyed by the keys it mounted. A
 layout for a module that mounts nothing is refused.
 
-`data_surface_demo_extras` is the worked example: `NodeTypeAlter` asks
+`surface_examples_extras` is the worked example: `NodeTypeAlter` asks
 for a content type's review deadline as an amount and a unit, and its
 `ReviewDeadlineLayout` stores seconds, through `NodeTypeStorage`, which
 knows nothing about it. `StorageAdapter` applies the layout for a
@@ -1031,10 +1031,10 @@ nonce per value, keyed by HKDF-SHA256 from the site's hash salt. It is
 correct encryption and it is not key management: an attacker who can
 read `settings.php` can read the secrets, and rotating the hash salt
 makes every stored secret unreadable. A site holding real secrets
-replaces the `data_surface.secret_codec` service with one backed by a key
+replaces the `surface.secret_codec` service with one backed by a key
 manager, an HSM or a cloud KMS, and nothing else changes: no resource,
 no structure, no storage class, no form. The envelope is
-`data_surface:sodium:v1:` followed by base64 of the nonce and
+`surface:sodium:v1:` followed by base64 of the nonce and
 ciphertext, and the prefix is what lets a migration tell ciphertext from
 plaintext.
 
@@ -1116,10 +1116,10 @@ So each element carries strings, and each static callback rebuilds:
 
 | Host | The element carries | The callback rebuilds from |
 | --- | --- | --- |
-| Field formatter | `#data_surface` (plugin id), `#data_surface_field_name`, `#data_surface_current` | the entity display the host form is editing, which has the real field definition; failing that, the formatter plugin manager |
-| Field type | `#data_surface` (field config id), `#data_surface_current` | the field config the host form is editing, which is also the only way to find an unsaved one; failing that, a load by id |
+| Field formatter | `#surface` (plugin id), `#surface_field_name`, `#surface_current` | the entity display the host form is editing, which has the real field definition; failing that, the formatter plugin manager |
+| Field type | `#surface` (field config id), `#surface_current` | the field config the host form is editing, which is also the only way to find an unsaved one; failing that, a load by id |
 
-`#data_surface_current` is the values the form started from, and it is an
+`#surface_current` is the values the form started from, and it is an
 array, so it stores as it is. It is there because a key with no rendered
 element has said nothing and must keep what is stored rather than fall
 back to its declared default.
@@ -1156,7 +1156,7 @@ A resource's storage class, a `ResourceStorageInterface` named by
    container-built, it translates with `$this->t()`.
 5. Compose `DependencySerializationTrait`, and hold no closures.
 
-An engine storage class, a `DataSurfaceStorageInterface` the pipeline
+An engine storage class, a `SurfaceStorageInterface` the pipeline
 writes to directly:
 
 1. `load($surface)` reads in input layout and returns an empty array when

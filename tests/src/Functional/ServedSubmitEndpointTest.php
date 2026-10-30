@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Functional;
+namespace Drupal\Tests\surface\Functional;
 
-use Drupal\data_surface\Pipeline\ResultDocument;
+use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\Tests\BrowserTestBase;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Drupal\Tests\data_surface\Traits\ServedApiTrait;
+use Drupal\Tests\surface\Traits\ServedApiTrait;
 
 /**
  * Tests the API's writes over HTTP: contract 3.
@@ -24,7 +24,7 @@ use Drupal\Tests\data_surface\Traits\ServedApiTrait;
  * POST to the collection, answered 201 with its Location, and edited with
  * a PATCH on that Location.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ServedSubmitEndpointTest extends BrowserTestBase {
 
@@ -35,9 +35,9 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
    */
   protected static $modules = [
     'node',
-    'data_surface_examples',
-    'data_surface_react',
-    'data_surface_demo_node_type',
+    'surface_examples',
+    'surface_react',
+    'surface_examples_node_type',
   ];
 
   /**
@@ -48,7 +48,7 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
   /**
    * The config object example 2 keeps its settings in.
    */
-  protected const CONFIG = 'data_surface_examples.registration_step2';
+  protected const CONFIG = 'surface_examples.registration_step2';
 
   /**
    * Example 2's path.

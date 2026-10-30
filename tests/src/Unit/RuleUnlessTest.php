@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Unit;
+namespace Drupal\Tests\surface\Unit;
 
-use Drupal\data_surface\Refinement\Condition;
-use Drupal\data_surface\Refinement\Rule;
+use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Refinement\Rule;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 
@@ -17,7 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
  *
  * @see docs/decisions.md#a-rule-declared-as-data
  */
-#[Group('data_surface')]
+#[Group('surface')]
 class RuleUnlessTest extends UnitTestCase {
 
   /**

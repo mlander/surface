@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\data_surface\DataSurfaceBuilder;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Reference\ReferenceStorageLayout;
-use Drupal\data_surface\Storage\ConfigObjectStorage;
-use Drupal\data_surface_demo_node_type\Storage\NodeTypeStorage;
-use Drupal\data_surface_schema_test\Storage\AliasSettingsStorage;
-use Drupal\data_surface_schema_test\Storage\NarrowedStorage;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Reference\ReferenceStorageLayout;
+use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
+use Drupal\surface_schema_test\Storage\AliasSettingsStorage;
+use Drupal\surface_schema_test\Storage\NarrowedStorage;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -29,9 +29,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Decision: see docs/decisions.md#a-config-object-is-described-by-its-resource.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
+class ConfigSchemaCheckTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -44,11 +44,11 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
     'text',
     'node',
     'block',
-    'data_surface',
-    'data_surface_demo',
-    'data_surface_demo_extras',
-    'data_surface_demo_node_type',
-    'data_surface_schema_test',
+    'surface',
+    'surface_examples_plugins',
+    'surface_examples_extras',
+    'surface_examples_node_type',
+    'surface_schema_test',
   ];
 
   /**
@@ -58,16 +58,16 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
-    $this->installConfig(['field', 'node', 'data_surface_schema_test']);
+    $this->installConfig(['field', 'node', 'surface_schema_test']);
   }
 
   /**
    * Tests a hand-written schema narrower than its resource refuses the build.
    */
   public function testNarrowerSchemaIsRefusedAtBuild(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation('schema_test.narrowed', 'configure');
-    $expected = 'The schema_test.narrowed resource advertises more than data_surface_schema_test.narrowed, the config schema ' . NarrowedStorage::class . ' holds what it stores to, so storage would refuse what every door offers. Where: "code": the schema refuses a value that does not match /^[a-z0-9_]+$/, which the resource does not; "limit": it may be more than 10, which the schema refuses; "mode": it allows silent, which the schema\'s Choice does not; "size": it is an integer, which the schema types string, a string. Narrow the resource to what the schema states; a schema generated from the resource is written again with drush data_surface:config-schema --write.';
+    $expected = 'The schema_test.narrowed resource advertises more than surface_schema_test.narrowed, the config schema ' . NarrowedStorage::class . ' holds what it stores to, so storage would refuse what every door offers. Where: "code": the schema refuses a value that does not match /^[a-z0-9_]+$/, which the resource does not; "limit": it may be more than 10, which the schema refuses; "mode": it allows silent, which the schema\'s Choice does not; "size": it is an integer, which the schema types string, a string. Narrow the resource to what the schema states; a schema generated from the resource is written again with drush surface:config-schema --write.';
     foreach (['build', 'buildStatic', 'buildDeclared'] as $method) {
       try {
         $resources->{$method}('schema_test.narrowed', $context);
@@ -81,8 +81,8 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
     // on disk is what is being replaced.
     $declared = $resources->declaration('schema_test.narrowed', $context);
     $this->assertSame(['code', 'limit', 'mode', 'size', 'note'], $declared->getDefinitions()->names());
-    $generated = $this->container->get('data_surface.config_schema')->files(['data_surface_schema_test']);
-    $schema = $generated[$this->container->get('extension.list.module')->getPath('data_surface_schema_test') . '/config/schema/data_surface_schema_test.schema.yml'];
+    $generated = $this->container->get('surface.config_schema')->files(['surface_schema_test']);
+    $schema = $generated[$this->container->get('extension.list.module')->getPath('surface_schema_test') . '/config/schema/surface_schema_test.schema.yml'];
     $this->assertStringContainsString(<<<'YAML'
           limit:
             type: integer
@@ -105,7 +105,7 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
    * the generator writes that schema rather than the asked one.
    */
   public function testTranslatedKeyIsToldToTheCheck(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $context = $resources->operation('schema_test.aliases', 'configure');
     $built = $resources->build('schema_test.aliases', $context);
     $this->assertSame(['types', 'marks'], $built->getDefinitions()->names());
@@ -121,7 +121,7 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public const CONFIG = 'data_surface_schema_test.aliases';
+      public const CONFIG = 'surface_schema_test.aliases';
 
     };
     $this->assertSame([
@@ -129,8 +129,8 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
       'types.term' => 'it is a boolean, which the schema types string, a string',
       'types.user' => 'it is a boolean, which the schema types string, a string',
     ], $untold->widerThanSchema($built));
-    $generated = $this->container->get('data_surface.config_schema')->files(['data_surface_schema_test']);
-    $schema = $generated[$this->container->get('extension.list.module')->getPath('data_surface_schema_test') . '/config/schema/data_surface_schema_test.schema.yml'];
+    $generated = $this->container->get('surface.config_schema')->files(['surface_schema_test']);
+    $schema = $generated[$this->container->get('extension.list.module')->getPath('surface_schema_test') . '/config/schema/surface_schema_test.schema.yml'];
     $this->assertStringContainsString(<<<'YAML'
           types:
             type: sequence
@@ -150,12 +150,12 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
    * skips both, and the generator writes each as it is stored.
    */
   public function testAnAltersMountLayoutIsToldToTheCheck(): void {
-    $this->enableModules(['data_surface_mount_test']);
-    $resources = $this->container->get('data_surface.resources');
+    $this->enableModules(['surface_mount_test']);
+    $resources = $this->container->get('surface.resources');
     $built = $resources->build('schema_test.aliases', $resources->operation('schema_test.aliases', 'configure'));
     $storage = $this->container->get('class_resolver')->getInstanceFromDefinition(AliasSettingsStorage::class);
     $translated = $storage->translatedKeys($built);
-    $mount = 'third_party_settings.data_surface_mount_test.';
+    $mount = 'third_party_settings.surface_mount_test.';
     $this->assertSame(['type' => 'string'], $translated[$mount . 'delay'], 'What the alter\'s layout says.');
     $this->assertSame(ReferenceStorageLayout::UUID_SCHEMA, $translated[$mount . 'reviewer'], 'A reference at the mount, by uuid.');
     $this->assertSame([], $storage->widerThanSchema($built));
@@ -170,21 +170,21 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
       /**
        * {@inheritdoc}
        */
-      public const CONFIG = 'data_surface_schema_test.aliases';
+      public const CONFIG = 'surface_schema_test.aliases';
 
       /**
        * {@inheritdoc}
        */
-      public function translatedKeys(DataSurfaceInterface $built): array {
+      public function translatedKeys(SurfaceInterface $built): array {
         return ReferenceStorageLayout::storedSchemaOf($built);
       }
 
     };
     $this->assertSame(['it is an integer, which the schema types string, a string'], array_values(array_intersect_key($references->widerThanSchema($built), [$mount . 'delay' => TRUE])));
 
-    $modules = ['data_surface_schema_test', 'data_surface_mount_test'];
-    $generated = $this->container->get('data_surface.config_schema')->files($modules);
-    $schema = $generated[$this->container->get('extension.list.module')->getPath('data_surface_mount_test') . '/config/schema/data_surface_mount_test.schema.yml'] ?? '';
+    $modules = ['surface_schema_test', 'surface_mount_test'];
+    $generated = $this->container->get('surface.config_schema')->files($modules);
+    $schema = $generated[$this->container->get('extension.list.module')->getPath('surface_mount_test') . '/config/schema/surface_mount_test.schema.yml'] ?? '';
     $this->assertStringContainsString(<<<'YAML'
           delay:
             type: string
@@ -208,7 +208,7 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
    * a value.
    */
   public function testTheNodeTypeIsHeldToCoresSchema(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $add = $resources->build('node.type', $resources->operation('node.type', 'create'));
     NodeType::create(['type' => 'page', 'name' => 'Basic page'])->save();
     $edit = $resources->build('node.type', $resources->operation('node.type', 'update', ['type' => NodeType::load('page')]));
@@ -225,7 +225,7 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
     $this->assertSame([], $storage->widerThanSchema($add));
     // The node type's keys as the review found them: no pattern, and the
     // booleans clearable, which the schema refuses.
-    $found = new DataSurfaceBuilder([
+    $found = new SurfaceBuilder([
       'name' => DataDefinition::create('string')->setLabel('Name')->setRequired(TRUE)->addConstraint('Length', ['max' => 255]),
       'type' => DataDefinition::create('string')->setLabel('Machine name')->setRequired(TRUE)
         ->addConstraint('Length', ['max' => 32])
@@ -245,7 +245,7 @@ class ConfigSchemaCheckTest extends DataSurfaceKernelTestBase {
       'display_submitted' => 'it may be cleared, which the schema refuses: boolean is not nullable',
     ], $storage->widerThanSchema($found->seal()));
     // A machine name allowed longer than core's 32: refused too.
-    $longer = new DataSurfaceBuilder([
+    $longer = new SurfaceBuilder([
       'type' => DataDefinition::create('string')->setRequired(TRUE)->addConstraint('Length', ['max' => 64])->addConstraint('Regex', ['pattern' => '/^[a-z0-9_]+$/D']),
     ]);
     $this->assertSame(['type' => 'it may be more than 32 characters long, which the schema refuses'], $storage->widerThanSchema($longer->seal()));

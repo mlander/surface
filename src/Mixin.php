@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 /**
  * A structure mixed into its owner: its members are the owner's own keys.
@@ -17,7 +17,7 @@ namespace Drupal\data_surface;
  * owner's `allOf`, so one def serves every owner it is mixed into and
  * every place it is attached.
  *
- * @see \Drupal\data_surface\Resource\BlueprintAdditionsInterface::mixIn()
+ * @see \Drupal\surface\Resource\BlueprintAdditionsInterface::mixIn()
  * @see docs/resources.md#mixins
  */
 final class Mixin {
@@ -25,7 +25,7 @@ final class Mixin {
   /**
    * Constructs a Mixin.
    *
-   * @param \Drupal\data_surface\Attachment $structure
+   * @param \Drupal\surface\Attachment $structure
    *   The structure built in its own frame, by itself, with its source
    *   and id: what its def is written from.
    * @param string[] $keys

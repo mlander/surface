@@ -1,0 +1,6 @@
+name: 'Surface API target test'
+type: module
+description: 'Ships the config schema the storage tests write against: third party settings on a test configuration entity, and two simple config objects with their storage classes.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12

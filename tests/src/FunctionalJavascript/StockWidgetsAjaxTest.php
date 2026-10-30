@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -17,9 +17,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * and nothing else on the page, and the save stores the rows in the order
  * the page shows them, a row left empty dropped.
  *
- * @see \Drupal\data_surface\Plugin\DataSurfaceWidget\ListWidget
+ * @see \Drupal\surface\Plugin\SurfaceWidget\ListWidget
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class StockWidgetsAjaxTest extends WebDriverTestBase {
 
@@ -29,8 +29,8 @@ class StockWidgetsAjaxTest extends WebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -56,24 +56,24 @@ class StockWidgetsAjaxTest extends WebDriverTestBase {
     $assert_session->fieldNotExists('surface[keywords][0]');
 
     $this->probe(['surface[notes]', 'surface[holidays]']);
-    $page->pressButton('data_surface_keywords_add');
+    $page->pressButton('surface_keywords_add');
     $assert_session->waitForField('surface[keywords][0]');
     $assert_session->assertWaitOnAjaxRequest();
     $this->assertTrue($this->stillProbed('surface[notes]'), 'Only the list is replaced.');
     $this->assertTrue($this->stillProbed('surface[holidays]'));
     $page->fillField('surface[keywords][0]', 'maps');
 
-    $page->pressButton('data_surface_keywords_add');
+    $page->pressButton('surface_keywords_add');
     $assert_session->waitForField('surface[keywords][1]');
     $assert_session->assertWaitOnAjaxRequest();
     $assert_session->fieldValueEquals('surface[keywords][0]', 'maps');
     $page->fillField('surface[keywords][1]', 'archives');
-    $page->pressButton('data_surface_keywords_add');
+    $page->pressButton('surface_keywords_add');
     $assert_session->waitForField('surface[keywords][2]');
     $assert_session->assertWaitOnAjaxRequest();
 
     // Remove the first: the others move up one, the empty one with them.
-    $page->pressButton('data_surface_keywords_remove-0');
+    $page->pressButton('surface_keywords_remove-0');
     $assert_session->assertWaitOnAjaxRequest();
     $assert_session->fieldNotExists('surface[keywords][2]');
     $assert_session->fieldValueEquals('surface[keywords][0]', 'archives');
@@ -82,7 +82,7 @@ class StockWidgetsAjaxTest extends WebDriverTestBase {
     $page->pressButton('Save');
     $this->assertTrue($assert_session->waitForText('The changes have been saved.'));
     $this->container->get('config.factory')->reset();
-    $this->assertSame(['archives'], $this->config('data_surface_resource_test.opening_hours')->get('keywords'));
+    $this->assertSame(['archives'], $this->config('surface_resource_test.opening_hours')->get('keywords'));
 
     $this->drupalGet('surface-test/opening-hours');
     $assert_session->fieldValueEquals('surface[keywords][0]', 'archives');

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface;
+namespace Drupal\surface;
 
 use Drupal\Core\Cache\CacheableMetadata;
 
@@ -24,13 +24,13 @@ final class SettledCacheability {
   /**
    * Gathers the cacheability of a data surface and every child built in it.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    *
    * @return \Drupal\Core\Cache\CacheableMetadata
    *   What it and every child of it built so far read.
    */
-  public static function of(DataSurfaceInterface $surface): CacheableMetadata {
+  public static function of(SurfaceInterface $surface): CacheableMetadata {
     $cacheability = CacheableMetadata::createFromObject($surface);
     $seen = [spl_object_id($surface) => TRUE];
     static::gather($surface, $cacheability, $seen);
@@ -40,14 +40,14 @@ final class SettledCacheability {
   /**
    * Adds the cacheability of each child built in one frame, at any depth.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The frame.
    * @param \Drupal\Core\Cache\CacheableMetadata $cacheability
    *   Added to.
    * @param array<int, true> $seen
    *   The frames read, by object id.
    */
-  protected static function gather(DataSurfaceInterface $surface, CacheableMetadata $cacheability, array &$seen): void {
+  protected static function gather(SurfaceInterface $surface, CacheableMetadata $cacheability, array &$seen): void {
     $children = [];
     foreach ($surface->getDefinitions()->entries() as $entry) {
       array_push(

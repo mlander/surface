@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Form;
+namespace Drupal\surface\Form;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Extension\ModuleHandlerInterface;
@@ -14,18 +14,18 @@ use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Computed;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\Pipeline\Accepting;
-use Drupal\data_surface\Pipeline\DataSurfacePipelineInterface;
-use Drupal\data_surface\Pipeline\TypeMismatchException;
-use Drupal\data_surface\Pipeline\ValueState;
-use Drupal\data_surface\Pipeline\ViolationSet;
-use Drupal\data_surface\Variants;
-use Drupal\data_surface\Collection;
-use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
+use Drupal\surface\Computed;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Pipeline\Accepting;
+use Drupal\surface\Pipeline\SurfacePipelineInterface;
+use Drupal\surface\Pipeline\TypeMismatchException;
+use Drupal\surface\Pipeline\ValueState;
+use Drupal\surface\Pipeline\ViolationSet;
+use Drupal\surface\Variants;
+use Drupal\surface\Collection;
+use Drupal\surface\Widget\SurfaceWidgetManager;
 
 /**
  * Reads what a form posted back into the data surface's shape.
@@ -46,7 +46,7 @@ use Drupal\data_surface\Widget\DataSurfaceWidgetManager;
  *
  * @internal
  *
- * @see \Drupal\data_surface\Form\DataSurfaceFormBuilder
+ * @see \Drupal\surface\Form\SurfaceFormBuilder
  */
 final class Extracting {
 
@@ -57,7 +57,7 @@ final class Extracting {
    * flagSurfaceErrors(), read by refreshSurface(), keyed by the
    * container's place in the form and the trigger's dotted path.
    */
-  protected const TRIGGER_ERRORS = 'data_surface_trigger_errors';
+  protected const TRIGGER_ERRORS = 'surface_trigger_errors';
 
   /**
    * Where a request keeps the delta each extracted item was drawn at.
@@ -67,19 +67,19 @@ final class Extracting {
    * so the items after it are accepted at a smaller delta than they were
    * drawn at, and a violation about one is flagged on the one drawn.
    */
-  protected const LIST_DELTAS = 'data_surface_list_deltas';
+  protected const LIST_DELTAS = 'surface_list_deltas';
 
   /**
    * Constructs the reading of what a form posted.
    *
-   * @param \Drupal\data_surface\Widget\DataSurfaceWidgetManager $widgetManager
+   * @param \Drupal\surface\Widget\SurfaceWidgetManager $widgetManager
    *   The widget manager, whose widgets read each element's value.
-   * @param \Drupal\data_surface\Pipeline\DataSurfacePipelineInterface $pipeline
+   * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
    *   The pipeline, which accepts and validates what the form collects.
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
    *   The messenger, which says that a stored value went stale and is
    *   being kept.
-   * @param \Drupal\data_surface\Options\DataSurfaceOptions $options
+   * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, which answers whether the refined definition
    *   still offers the value an in-progress edit left behind.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
@@ -90,10 +90,10 @@ final class Extracting {
    *   shape refused.
    */
   public function __construct(
-    protected readonly DataSurfaceWidgetManager $widgetManager,
-    protected readonly DataSurfacePipelineInterface $pipeline,
+    protected readonly SurfaceWidgetManager $widgetManager,
+    protected readonly SurfacePipelineInterface $pipeline,
     protected readonly MessengerInterface $messenger,
-    protected readonly DataSurfaceOptions $options,
+    protected readonly SurfaceOptions $options,
     protected readonly ModuleHandlerInterface $moduleHandler,
     protected readonly TranslationInterface $stringTranslation,
   ) {
@@ -102,18 +102,18 @@ final class Extracting {
   /**
    * Names the in-progress input a rebuild has just invalidated.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::discardedRefinementInput()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::discardedRefinementInput()
    */
-  public function discardedRefinementInput(DataSurfaceInterface $surface, array $stored, array $input): array {
+  public function discardedRefinementInput(SurfaceInterface $surface, array $stored, array $input): array {
     return $this->settle($surface, $stored, $input)[0];
   }
 
   /**
    * Builds the values a refinement rebuild's container is built from.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::refinementOverlay()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::refinementOverlay()
    */
-  public function refinementOverlay(DataSurfaceInterface $surface, array $stored, array $input): array {
+  public function refinementOverlay(SurfaceInterface $surface, array $stored, array $input): array {
     [$discarded, $orphaned] = $this->settle($surface, $stored, $input);
     foreach ($discarded as $dotted) {
       NestedArray::unsetValue($input, explode('.', $dotted));
@@ -139,7 +139,7 @@ final class Extracting {
     // docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources.
     $values = Computed::apply($surface, $values, $stored);
     if ($orphaned !== []) {
-      $values[DataSurfaceFormBuilderInterface::STANDING_KEY] = $orphaned;
+      $values[SurfaceFormBuilderInterface::STANDING_KEY] = $orphaned;
     }
     return $values;
   }
@@ -153,7 +153,7 @@ final class Extracting {
    *
    * Decision: see docs/decisions.md#a-key-that-does-not-apply.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface or child, as advertised.
    * @param array $stored
    *   What is stored for its keys.
@@ -163,7 +163,7 @@ final class Extracting {
    * @return array
    *   The input over what is stored.
    */
-  protected static function overlaid(DataSurfaceInterface $surface, array $stored, array $input): array {
+  protected static function overlaid(SurfaceInterface $surface, array $stored, array $input): array {
     $values = array_replace($stored, $input);
     foreach ($input as $name => $held) {
       $child = $surface->getDefinitions()->entry((string) $name)?->attachment?->child;
@@ -197,7 +197,7 @@ final class Extracting {
   /**
    * Reads a definition by key, or by dotted path to a mounted key.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param string $path
    *   A key, or `third_party_settings.<module>.<key>`.
@@ -205,7 +205,7 @@ final class Extracting {
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition, or NULL when nothing is declared there.
    */
-  protected static function definitionAt(DataSurfaceInterface $surface, string $path): ?DataDefinitionInterface {
+  protected static function definitionAt(SurfaceInterface $surface, string $path): ?DataDefinitionInterface {
     $parents = explode('.', $path);
     $definition = $surface->getDefinition((string) array_shift($parents));
     foreach ($parents as $property) {
@@ -217,7 +217,7 @@ final class Extracting {
   /**
    * Settles a rebuild's input: what it drops, and what it leaves orphaned.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface or built child, as advertised.
    * @param array $stored
    *   What is stored for its keys.
@@ -229,7 +229,7 @@ final class Extracting {
    *   the keys, or dotted paths, held unanswered, each mapped to the
    *   stored value its element stands for.
    */
-  protected function settle(DataSurfaceInterface $surface, array $stored, array $input): array {
+  protected function settle(SurfaceInterface $surface, array $stored, array $input): array {
     [$discarded, $orphaned] = $this->settleFrame($surface, $stored, $input);
     // A child refines in its own frame, under its own names, so what its
     // own refiners orphan is asked of the child, against the value the
@@ -297,7 +297,7 @@ final class Extracting {
    * ends within twice the number of targets, and in practice within the
    * depth of the longest dependency chain.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface or built child, as advertised.
    * @param array $stored
    *   What is stored for its keys.
@@ -309,7 +309,7 @@ final class Extracting {
    *   the keys held unanswered, each mapped to the stored value it
    *   stands for. A key an alter mounted is named by its dotted path.
    */
-  protected function settleFrame(DataSurfaceInterface $surface, array $stored, array $input): array {
+  protected function settleFrame(SurfaceInterface $surface, array $stored, array $input): array {
     // One mounted key at a time: a moved capacity drops the stewards
     // count it narrows, and not the license beside it.
     $refinements = $surface->getDefinitions()->refinementPaths();
@@ -413,7 +413,7 @@ final class Extracting {
    * go on being narrowed by it — a capacity capped by a room no longer on
    * the screen.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The data surface refined against the values as they now stand.
    * @param string $name
    *   The target key, or a mounted key's dotted path.
@@ -427,7 +427,7 @@ final class Extracting {
    * @return bool
    *   TRUE when the key is to be held unanswered.
    */
-  protected function isOrphaned(DataSurfaceInterface $refined, string $name, array $dependencies, array $values, array $stored): bool {
+  protected function isOrphaned(SurfaceInterface $refined, string $name, array $dependencies, array $values, array $stored): bool {
     $value = NestedArray::getValue($values, explode('.', $name));
     if ((!is_int($value) && !is_string($value)) || !ValueState::isConfigured($value)) {
       return FALSE;
@@ -490,7 +490,7 @@ final class Extracting {
    * nothing to have fallen out of, and an open string that narrowed to
    * another open string is still holding exactly what was typed into it.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $refined
+   * @param \Drupal\surface\SurfaceInterface $refined
    *   The data surface refined against the values as they now stand.
    * @param string $name
    *   The target key, or a mounted key's dotted path.
@@ -507,7 +507,7 @@ final class Extracting {
    *   TRUE when the input is still the person's own answer to the
    *   question in front of them.
    */
-  protected function stillStands(DataSurfaceInterface $refined, string $name, array $dependencies, mixed $value, array $overlay, array $values): bool {
+  protected function stillStands(SurfaceInterface $refined, string $name, array $dependencies, mixed $value, array $overlay, array $values): bool {
     foreach ($dependencies as $dependency) {
       // A key an alter mounted is named by its dotted path.
       $parents = explode('.', $dependency);
@@ -547,10 +547,10 @@ final class Extracting {
   /**
    * Extracts data surface values from a built container via the widgets.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::extractSurfaceValues()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::extractSurfaceValues()
    */
-  public function extractSurfaceValues(DataSurfaceInterface $surface, array $container, FormStateInterface $form_state, array $current = []): array {
-    $container = DataSurfaceFormBuilder::findSurfaceContainer($container);
+  public function extractSurfaceValues(SurfaceInterface $surface, array $container, FormStateInterface $form_state, array $current = []): array {
+    $container = SurfaceFormBuilder::findSurfaceContainer($container);
     $raw = [];
     $definitions = $surface->getDefinitions();
     $variantKeys = [];
@@ -589,7 +589,7 @@ final class Extracting {
           continue;
         }
         $child = $chosen === NULL ? NULL : $variants->variant($chosen)->child;
-        if ($child !== NULL && Drawing::nestsVariants($child) && is_array($container[$name] ?? NULL) && empty($container[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+        if ($child !== NULL && Drawing::nestsVariants($child) && is_array($container[$name] ?? NULL) && empty($container[$name][SurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
           // Variants inside the variant (a component's slots, each holding
           // a component that chooses its own props): each level is read
           // through what its own deciding key chose in this submission.
@@ -602,7 +602,7 @@ final class Extracting {
     // A key drawn as nothing when the page was drawn sent nothing, even
     // where this build draws it: left out, it keeps what is stored.
     // Decision: see docs/decisions.md#a-key-that-does-not-apply.
-    foreach (DataSurfaceFormBuilder::markedAbsent($form_state->getUserInput(), $container['#parents'] ?? []) as $dotted) {
+    foreach (SurfaceFormBuilder::markedAbsent($form_state->getUserInput(), $container['#parents'] ?? []) as $dotted) {
       NestedArray::unsetValue($raw, explode('.', $dotted));
     }
     // One coercion path for every caller: the form hands its raw tree to
@@ -619,7 +619,7 @@ final class Extracting {
    * through a form it is one too: an error on the element, the value left
    * out and the rest accepted, never an exception.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param array $raw
    *   What the form posted, by key.
@@ -633,10 +633,10 @@ final class Extracting {
    * @return array
    *   The accepted values.
    *
-   * @throws \Drupal\data_surface\Pipeline\TypeMismatchException
+   * @throws \Drupal\surface\Pipeline\TypeMismatchException
    *   When the value refused is not one the form posted.
    */
-  protected function accepted(DataSurfaceInterface $surface, array $raw, array $current, array $container, FormStateInterface $form_state): array {
+  protected function accepted(SurfaceInterface $surface, array $raw, array $current, array $container, FormStateInterface $form_state): array {
     $refused = [];
     while (TRUE) {
       try {
@@ -668,7 +668,7 @@ final class Extracting {
    * Starts afresh each variant whose deciding key moved since it was drawn.
    *
    * Read from the form as drawn: each variant key's element says the
-   * variant it was drawn for (DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY).
+   * variant it was drawn for (SurfaceFormBuilderInterface::DRAWN_FOR_KEY).
    * Where the deciding key's input now chooses another, the input under
    * the key was drawn for the variant no longer chosen, and is replaced by
    * what the chosen one starts from, as a reload would draw it: what is
@@ -678,7 +678,7 @@ final class Extracting {
    * Decision: see
    * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface, as advertised.
    * @param array|null $form
    *   The form as it was drawn, or NULL when there is none.
@@ -693,7 +693,7 @@ final class Extracting {
    *   The dotted paths whose posted input is dropped, and the input with
    *   what each starts from in its place.
    */
-  public static function switchedVariants(DataSurfaceInterface $surface, ?array $form, array $path, array $input, array $stored): array {
+  public static function switchedVariants(SurfaceInterface $surface, ?array $form, array $path, array $input, array $stored): array {
     $switched = [];
     foreach (static::drawnVariants($form ?? [], $path) as [$parents, $drawn]) {
       foreach ($switched as $done) {
@@ -736,8 +736,8 @@ final class Extracting {
   protected static function drawnVariants(array $element, array $path): array {
     $found = [];
     $parents = $element['#parents'] ?? NULL;
-    if (isset($element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY]) && is_array($parents) && count($parents) > count($path) && array_slice($parents, 0, count($path)) === $path) {
-      $found[] = [array_slice($parents, count($path)), $element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY]];
+    if (isset($element[SurfaceFormBuilderInterface::DRAWN_FOR_KEY]) && is_array($parents) && count($parents) > count($path) && array_slice($parents, 0, count($path)) === $path) {
+      $found[] = [array_slice($parents, count($path)), $element[SurfaceFormBuilderInterface::DRAWN_FOR_KEY]];
     }
     foreach ($element as $key => $child) {
       if (is_array($child) && !str_starts_with((string) $key, '#')) {
@@ -750,7 +750,7 @@ final class Extracting {
   /**
    * Finds the variants at a path, each level read through what it chose.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface, as advertised.
    * @param string[] $parents
    *   The path of the key with variants.
@@ -759,10 +759,10 @@ final class Extracting {
    * @param array $stored
    *   What is stored, by key.
    *
-   * @return \Drupal\data_surface\Variants|null
+   * @return \Drupal\surface\Variants|null
    *   The variants, or NULL when nothing holds variants there.
    */
-  protected static function variantsAt(DataSurfaceInterface $surface, array $parents, array $input, array $stored): ?Variants {
+  protected static function variantsAt(SurfaceInterface $surface, array $parents, array $input, array $stored): ?Variants {
     $frame = $surface;
     foreach ($parents as $position => $name) {
       $entry = $frame->getDefinitions()->entry((string) $name);
@@ -801,7 +801,7 @@ final class Extracting {
    *   TRUE when the element says it was drawn for another.
    */
   protected static function drawnForAnother(mixed $element, ?string $chosen): bool {
-    $drawn = is_array($element) ? ($element[DataSurfaceFormBuilderInterface::DRAWN_FOR_KEY]['for'] ?? NULL) : NULL;
+    $drawn = is_array($element) ? ($element[SurfaceFormBuilderInterface::DRAWN_FOR_KEY]['for'] ?? NULL) : NULL;
     return $drawn !== NULL && $drawn !== $chosen;
   }
 
@@ -813,7 +813,7 @@ final class Extracting {
    * was just read, so an element drawn for another variant gives nothing
    * of its own; a collection item by item.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The child.
    * @param array $element
    *   Its element.
@@ -826,12 +826,12 @@ final class Extracting {
    * @return array
    *   The raw values read, by key.
    */
-  protected function extractFrame(DataSurfaceInterface $surface, array $element, FormStateInterface $form_state, string $container_key): array {
+  protected function extractFrame(SurfaceInterface $surface, array $element, FormStateInterface $form_state, string $container_key): array {
     $raw = [];
     foreach ($surface->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       $at = $element[$name] ?? NULL;
-      if (!is_array($at) || !empty($at[DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+      if (!is_array($at) || !empty($at[SurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
         continue;
       }
       if ($entry->list !== NULL || Collection::holdsMaps($entry->definition)) {
@@ -868,7 +868,7 @@ final class Extracting {
    *   The list's key in its frame.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The list.
-   * @param \Drupal\data_surface\Collection|null $list
+   * @param \Drupal\surface\Collection|null $list
    *   The collection attachList() declared, or NULL for a list of maps no
    *   collection stands behind.
    * @param array $container
@@ -955,7 +955,7 @@ final class Extracting {
    *   What the map's widget read.
    * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $definition
    *   The map.
-   * @param \Drupal\data_surface\DataSurfaceInterface|null $frame
+   * @param \Drupal\surface\SurfaceInterface|null $frame
    *   The child the map was drawn from, or NULL for a plain map.
    * @param array $element
    *   The map's element.
@@ -967,7 +967,7 @@ final class Extracting {
    * @return array
    *   The value, each collection inside it read.
    */
-  protected function collectionsIn(array $value, ComplexDataDefinitionInterface $definition, ?DataSurfaceInterface $frame, array $element, FormStateInterface $form_state, string $container_key): array {
+  protected function collectionsIn(array $value, ComplexDataDefinitionInterface $definition, ?SurfaceInterface $frame, array $element, FormStateInterface $form_state, string $container_key): array {
     foreach ($definition->getPropertyDefinitions() as $name => $property) {
       $name = (string) $name;
       if (!is_array($element[$name] ?? NULL)) {
@@ -1002,7 +1002,7 @@ final class Extracting {
    *   The data surface container.
    * @param \Drupal\Core\Form\FormStateInterface $form_state
    *   The form state.
-   * @param \Drupal\data_surface\DataSurfaceInterface|null $frame
+   * @param \Drupal\surface\SurfaceInterface|null $frame
    *   The child a map is drawn from (an attached child, a variant), or
    *   NULL: what a list of maps inside it is read through.
    * @param string|null $container_key
@@ -1013,8 +1013,8 @@ final class Extracting {
    *   element: it was never offered, so it has nothing to say, and
    *   accept() keeps whatever the key already holds.
    */
-  protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state, ?DataSurfaceInterface $frame = NULL, ?string $container_key = NULL): array {
-    if ($definition === NULL || !isset($container[$name]) || !is_array($container[$name]) || !empty($container[$name][DataSurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
+  protected function extractKey(string $name, ?DataDefinitionInterface $definition, array $container, FormStateInterface $form_state, ?SurfaceInterface $frame = NULL, ?string $container_key = NULL): array {
+    if ($definition === NULL || !isset($container[$name]) || !is_array($container[$name]) || !empty($container[$name][SurfaceFormBuilderInterface::PLACEHOLDER_KEY])) {
       // A placeholder is a wrapper and nothing else (variants nothing
       // chose, a key that does not apply): no element was offered, so the
       // key has said nothing.
@@ -1031,9 +1031,9 @@ final class Extracting {
   /**
    * Validates extracted values against the refined data surface.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::validateSurfaceForm()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::validateSurfaceForm()
    */
-  public function validateSurfaceForm(DataSurfaceInterface $surface, array $values, array $container, FormStateInterface $form_state, array $current = []): bool {
+  public function validateSurfaceForm(SurfaceInterface $surface, array $values, array $container, FormStateInterface $form_state, array $current = []): bool {
     $errors = $this->pipeline->validate($surface, $values, $current);
     $this->flagSurfaceErrors($errors, $container, $form_state);
     return $errors->isEmpty();
@@ -1045,10 +1045,10 @@ final class Extracting {
    * A violation inside a nested map carries a property path; without
    * wrapper nesting the walk is direct: one child per path segment.
    *
-   * @see \Drupal\data_surface\Form\DataSurfaceFormBuilderInterface::flagSurfaceErrors()
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::flagSurfaceErrors()
    */
   public function flagSurfaceErrors(ViolationSet $errors, array $container, FormStateInterface $form_state): void {
-    $container = DataSurfaceFormBuilder::findSurfaceContainer($container);
+    $container = SurfaceFormBuilder::findSurfaceContainer($container);
     $trigger = Refreshing::triggerPath($container, $form_state);
     $state = $form_state instanceof SubformStateInterface ? $form_state->getCompleteFormState() : $form_state;
     // Printed at the top of the page, a message is named for its element;
@@ -1077,11 +1077,11 @@ final class Extracting {
           $deltas = $state->getTemporaryValue([self::LIST_DELTAS, Refreshing::containerKey($container), $list]) ?? [];
           $segment = $segments[$position] = (string) ($deltas[(int) $segment] ?? $segment);
         }
-        if (!empty($element[DataSurfaceFormBuilderInterface::ROWS_KEY]) && ctype_digit((string) $segment) && isset($element['#array_parents'])) {
+        if (!empty($element[SurfaceFormBuilderInterface::ROWS_KEY]) && ctype_digit((string) $segment) && isset($element['#array_parents'])) {
           // An item of a free list is flagged on the row it was drawn as,
           // which an empty row dropped before it may have moved.
           $rows = $state->getTemporaryValue([
-            DataSurfaceFormBuilderInterface::ROW_DELTAS,
+            SurfaceFormBuilderInterface::ROW_DELTAS,
             implode('][', $element['#array_parents']),
           ]) ?? [];
           $segment = $segments[$position] = (string) ($rows[(int) $segment] ?? $segment);
@@ -1158,7 +1158,7 @@ final class Extracting {
     // it, and Inline Form Errors, which would print it without one, is
     // told the element's message is printed elsewhere.
     $error_id = isset($element['#id']) && is_string($element['#id']) ? $element['#id'] . '--error' : NULL;
-    $element[DataSurfaceFormBuilderInterface::INLINE_ERROR_KEY] = $error_id ?? TRUE;
+    $element[SurfaceFormBuilderInterface::INLINE_ERROR_KEY] = $error_id ?? TRUE;
     if ($error_id !== NULL) {
       $element['#error_no_message'] = TRUE;
       $described = trim(($element['#attributes']['aria-describedby'] ?? '') . ' ' . $error_id);
@@ -1176,7 +1176,7 @@ final class Extracting {
     // settings are amended where they are attached: its next request
     // says it showed an error, and is answered by replacing it again.
     if (isset($element['#id'], $element['#attached']['drupalSettings']['ajax'][$element['#id']])) {
-      $element['#attached']['drupalSettings']['ajax'][$element['#id']]['submit'][DataSurfaceFormBuilderInterface::INVALID_INPUT] = '1';
+      $element['#attached']['drupalSettings']['ajax'][$element['#id']]['submit'][SurfaceFormBuilderInterface::INVALID_INPUT] = '1';
     }
     return $element;
   }

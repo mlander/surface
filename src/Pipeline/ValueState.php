@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Pipeline;
+namespace Drupal\surface\Pipeline;
 
 /**
  * The one answer to "does this key hold a value?".
@@ -10,7 +10,7 @@ namespace Drupal\data_surface\Pipeline;
  * Every stage needs the same distinction and none of them may answer it
  * differently: accept() decides whether input replaces the fallback,
  * validate() decides whether a required key was configured, and
- * DataSurface::refine() decides whether a dependency is known. Before
+ * Surface::refine() decides whether a dependency is known. Before
  * this class each of them carried its own variation, so a boolean FALSE
  * was a value to one stage and an absence to another.
  *

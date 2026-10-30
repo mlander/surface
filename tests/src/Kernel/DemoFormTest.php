@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface_demo\Form\DataSurfaceDemoForm;
+use Drupal\surface_examples_plugins\Form\ExampleForm;
 use Drupal\node\Entity\NodeType;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use PHPUnit\Framework\Attributes\Group;
@@ -19,9 +19,9 @@ use PHPUnit\Framework\Attributes\Group;
  * the storage class owns the storage layout and the structure never hears
  * about it.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class DemoFormTest extends DataSurfaceKernelTestBase {
+class DemoFormTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -33,14 +33,14 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
     'node',
     'field',
     'text',
-    'data_surface',
-    'data_surface_demo',
+    'surface',
+    'surface_examples_plugins',
   ];
 
   /**
    * The state key the demo form writes to.
    */
-  protected const STATE_KEY = 'data_surface_demo.settings';
+  protected const STATE_KEY = 'surface_examples_plugins.settings';
 
   /**
    * {@inheritdoc}
@@ -72,7 +72,7 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
     // what tells the host which in-progress choice to refine against.
     $form_state->setTriggeringElement(['#parents' => ['surface', 'entity_type']]);
     $this->container->get('form_builder')
-      ->submitForm(DataSurfaceDemoForm::class, $form_state);
+      ->submitForm(ExampleForm::class, $form_state);
     return $form_state;
   }
 
@@ -82,7 +82,7 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
   public function testFormIsGeneratedFromThePluginStructure(): void {
     $form_state = new FormState();
     $form = $this->container->get('form_builder')
-      ->getForm(DataSurfaceDemoForm::class, $form_state);
+      ->getForm(ExampleForm::class, $form_state);
 
     // Every element the block declares, and nothing this class authored.
     $this->assertSame('textfield', $form['surface']['headline']['#type']);
@@ -158,7 +158,7 @@ class DemoFormTest extends DataSurfaceKernelTestBase {
     ]);
 
     $form = $this->container->get('form_builder')
-      ->getForm(DataSurfaceDemoForm::class, new FormState());
+      ->getForm(ExampleForm::class, new FormState());
 
     $this->assertSame('Latest articles', $form['surface']['headline']['#default_value']);
     $this->assertSame('article', $form['surface']['bundle']['#default_value']);

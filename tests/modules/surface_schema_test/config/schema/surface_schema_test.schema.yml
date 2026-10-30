@@ -1,0 +1,57 @@
+# Written by hand, as an adopter's or core's schema is, and narrower than
+# the resource that stores in it: the build refuses that resource, naming
+# each key the schema says less for.
+surface_schema_test.narrowed:
+  type: config_object
+  label: 'Narrowed settings'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    code:
+      type: machine_name
+      label: 'Code'
+    limit:
+      type: integer
+      label: 'Limit'
+      constraints:
+        Range:
+          max: 10
+    mode:
+      type: string
+      label: 'Mode'
+      constraints:
+        Choice:
+          choices: [quiet, loud]
+    size:
+      type: string
+      label: 'Size'
+    note:
+      type: string
+      label: 'Note'
+      nullable: true
+
+# Written by hand, as pathauto's is: the types are stored as a list of ids
+# though the resource asks for a checkbox per type, which its storage
+# translates and tells the check about.
+surface_schema_test.aliases:
+  type: config_object
+  label: 'Alias settings'
+  mapping:
+    types:
+      type: sequence
+      label: 'Types with aliases'
+      sequence:
+        type: string
+        label: 'Type'
+    marks:
+      type: sequence
+      label: 'Punctuation'
+      sequence:
+        type: integer
+        label: 'Action'
+    third_party_settings:
+      type: sequence
+      label: 'Third party settings'
+      requiredKey: false
+      sequence:
+        type: surface_schema_test.aliases.third_party.[%key]

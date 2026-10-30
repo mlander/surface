@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Refinement;
+namespace Drupal\surface\Refinement;
 
-use Drupal\data_surface\Pipeline\ValueState;
+use Drupal\surface\Pipeline\ValueState;
 
 /**
  * What a declared rule waits for: a test of sibling values.
@@ -80,7 +80,7 @@ final class Condition {
    *   The key it tests, for a test of one key.
    * @param mixed $operand
    *   The value, the values or the bound it tests against.
-   * @param \Drupal\data_surface\Refinement\Condition[] $conditions
+   * @param \Drupal\surface\Refinement\Condition[] $conditions
    *   What a `not`, `allOf` or `anyOf` combines.
    */
   private function __construct(
@@ -216,7 +216,7 @@ final class Condition {
   /**
    * Holds when the condition does not.
    *
-   * @param \Drupal\data_surface\Refinement\Condition $condition
+   * @param \Drupal\surface\Refinement\Condition $condition
    *   The condition.
    *
    * @return self
@@ -229,7 +229,7 @@ final class Condition {
   /**
    * Holds when every condition does.
    *
-   * @param \Drupal\data_surface\Refinement\Condition ...$conditions
+   * @param \Drupal\surface\Refinement\Condition ...$conditions
    *   At least one condition.
    *
    * @return self
@@ -245,7 +245,7 @@ final class Condition {
   /**
    * Holds when at least one condition does.
    *
-   * @param \Drupal\data_surface\Refinement\Condition ...$conditions
+   * @param \Drupal\surface\Refinement\Condition ...$conditions
    *   At least one condition.
    *
    * @return self
@@ -278,7 +278,7 @@ final class Condition {
   /**
    * Lists the tests of one key the condition is made of.
    *
-   * @return \Drupal\data_surface\Refinement\Condition[]
+   * @return \Drupal\surface\Refinement\Condition[]
    *   Every condition inside it that tests a key, itself included.
    */
   public function tests(): array {

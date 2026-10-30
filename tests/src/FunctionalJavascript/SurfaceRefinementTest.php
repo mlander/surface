@@ -1,0 +1,291 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\Tests\surface\FunctionalJavascript;
+
+use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
+use Drupal\block\Entity\Block;
+use Drupal\node\Entity\NodeType;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+
+/**
+ * Tests the refinement chain over AJAX, in a browser, on the real form.
+ *
+ * The claim the module is built on is that a host never re-implements a
+ * dependency between its settings: the structure declares which key
+ * narrows which, and the form rebuilds that part of itself. Every piece
+ * of that had been tested by calling the pieces — the refiner, the
+ * builder, the callback — and the one thing that had never run was the
+ * whole of it: a person choosing a value in a browser, Form API
+ * rebuilding, the callback answering with one replace command per
+ * element the change moved, and the browser replacing exactly those:
+ * never the select the person just touched, and never the container
+ * around everything.
+ *
+ * Three keys, two links in the chain: the entity type narrows the
+ * bundle, and the two together narrow the field. Changing the entity
+ * type replaces the bundle and the field; changing the bundle replaces
+ * the field alone.
+ *
+ * What is also proven, and is only visible here, is that the rebuild
+ * judges nothing: the region is still unchosen and required while the
+ * chain runs, the dependent a change has just orphaned holds a value
+ * that would not validate, and no error is raised over either: the
+ * data surface's AJAX is scoped to the one element that was touched.
+ *
+ * @see \Drupal\Tests\surface\Functional\SurfaceBlockPlacementTest
+ *   For the same form without JavaScript.
+ */
+#[Group('surface')]
+#[RunTestsInSeparateProcesses]
+class SurfaceRefinementTest extends WebDriverTestBase {
+
+  use ReplacedElementsTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected static $modules = [
+    'block',
+    'node',
+    'field',
+    'surface',
+    'surface_examples_plugins',
+  ];
+
+  /**
+   * {@inheritdoc}
+   */
+  protected $defaultTheme = 'stark';
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function setUp(): void {
+    parent::setUp();
+    NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
+    NodeType::create(['type' => 'lesson', 'name' => 'Lesson'])->save();
+    $this->drupalLogin($this->drupalCreateUser([
+      'administer blocks',
+      'access administration pages',
+    ]));
+  }
+
+  /**
+   * Tests entity type to bundle to field, each narrowing the next.
+   */
+  public function testRefinementChainRebuildsTheSurface(): void {
+    $assert_session = $this->assertSession();
+    $page = $this->getSession()->getPage();
+    $this->drupalGet('admin/structure/block/add/surface_examples_plugins/' . $this->defaultTheme);
+
+    // Leave the region unchosen. It is required, and the host form is
+    // what must not be validated while a dependency is touched.
+    $assert_session->selectExists('region');
+
+    // The first page load already refined against the declared default,
+    // with no JavaScript involved: a user has one bundle, itself, and no
+    // node bundles are offered.
+    $assert_session->optionExists('settings[bundle]', 'user');
+    $assert_session->optionNotExists('settings[bundle]', 'article');
+
+    // Choosing node rebuilds the data surface against the new choice, and
+    // the bundles arrive with the labels the site gives them, from the
+    // definition the refiner replaced rather than from a second list
+    // kept somewhere beside it. Only what the entity type moves is
+    // replaced: the bundle and the field, and not the entity type select
+    // itself or the headline beside it. A trigger is redrawn only when
+    // its own value is refused or the rebuild moved its options, and
+    // neither is the case for a required select already on a choice.
+    $this->probe(['settings[entity_type]', 'settings[headline]', 'settings[bundle]', 'settings[field]']);
+    $assert_session->selectExists('settings[entity_type]')->selectOption('node');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->assertTrue($this->stillProbed('settings[entity_type]'));
+    $this->assertTrue($this->stillProbed('settings[headline]'));
+    $this->assertFalse($this->stillProbed('settings[bundle]'));
+    $this->assertFalse($this->stillProbed('settings[field]'));
+    $assert_session->optionExists('settings[bundle]', 'article');
+    $assert_session->optionExists('settings[bundle]', 'lesson');
+    $assert_session->elementTextContains('css', 'select[name="settings[bundle]"] option[value="article"]', 'Article');
+    $assert_session->elementTextContains('css', 'select[name="settings[bundle]"] option[value="lesson"]', 'Lesson');
+    // The refined description says what the list is a list of.
+    $assert_session->pageTextContains('A node bundle.');
+
+    // The second link: while the bundle was empty the field stayed an
+    // open text input, and choosing one narrows it to that bundle's
+    // fields.
+    $assert_session->elementExists('css', 'input[name="settings[field]"]');
+    $this->probe(['settings[entity_type]', 'settings[bundle]', 'settings[field]']);
+    $assert_session->selectExists('settings[bundle]')->selectOption('article');
+    $assert_session->assertWaitOnAjaxRequest();
+    // The bundle moves the field and nothing above it. The bundle is
+    // optional, so its - None - option stays and it is not redrawn.
+    $this->assertTrue($this->stillProbed('settings[entity_type]'));
+    $this->assertTrue($this->stillProbed('settings[bundle]'));
+    $this->assertFalse($this->stillProbed('settings[field]'));
+    $assert_session->selectExists('settings[field]');
+    $assert_session->optionExists('settings[field]', 'title');
+    $assert_session->optionExists('settings[field]', 'created');
+    $assert_session->pageTextContains('A field on node article.');
+
+    // Two rebuilds of a required host form, and the host was never
+    // validated: the region is still unchosen and unremarked.
+    $assert_session->pageTextNotContains('Region field is required.');
+
+    // Now finish the form the way a person would. Nothing refines
+    // against the field, so it is no trigger and choosing it asks nothing.
+    $this->assertNull($this->getSession()->evaluateScript('return Drupal.ajax.instances.find((i) => i && i.element && i.element.name === "settings[field]") || null;'));
+    $assert_session->selectExists('settings[field]')->selectOption('title');
+    $page->fillField('settings[headline]', 'Latest articles');
+    $page->fillField('settings[limit]', '5');
+    $id = $assert_session->fieldExists('id')->getValue();
+    $page->selectFieldOption('region', 'content');
+    $page->pressButton('Save block');
+    // The click returns before the next page has loaded.
+    $this->assertTrue($assert_session->waitForText('The block configuration has been saved.'));
+
+    $block = Block::load($id);
+    $this->assertInstanceOf(Block::class, $block);
+    $settings = $block->get('settings');
+    // What the chain offered is what storage holds, in the definitions'
+    // native types.
+    $this->assertSame('Latest articles', $settings['headline']);
+    $this->assertSame('node', $settings['entity_type']);
+    $this->assertSame('article', $settings['bundle']);
+    $this->assertSame('title', $settings['field']);
+    $this->assertSame(5, $settings['limit']);
+  }
+
+  /**
+   * Tests the entity type replaces the bundle and the field, and only them.
+   *
+   * Every named element on the placement form is marked first, the
+   * block's own and the structure's: the headline, the limit, the
+   * presentation and its variants, the region, the machine name. Afterwards
+   * the two the entity type moves are new nodes and every other one is
+   * the node it was.
+   */
+  public function testTheEntityTypeReplacesTheBundleAndTheFieldOnly(): void {
+    $assert_session = $this->assertSession();
+    $this->drupalGet('admin/structure/block/add/surface_examples_plugins/' . $this->defaultTheme);
+
+    $this->probeAll();
+    $assert_session->selectExists('settings[entity_type]')->selectOption('node');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->assertSame(['settings[bundle]', 'settings[field]'], $this->replacedSinceProbe());
+    $assert_session->optionExists('settings[bundle]', 'article');
+    $assert_session->elementNotExists('css', '.messages');
+    $assert_session->elementNotExists('css', '.error');
+  }
+
+  /**
+   * Tests that changing a parent resets its dependent, silently.
+   *
+   * The scenario as it was reported: choose a bundle, then change the
+   * entity type above it. The bundle that was chosen is not a bundle of
+   * anything any more, and what used to happen is the two halves of one
+   * bug — the select was flagged as a wrong answer to a question nobody
+   * had asked, and the container came back still offering the old entity
+   * type's bundles, because Form API skips the rebuild outright once
+   * anything has errored.
+   *
+   * Nothing was submitted, so nothing may be judged and nothing may be
+   * said. The unsaved choice is withdrawn, the list follows its parent,
+   * and the select comes up on the empty option.
+   *
+   * @see \Drupal\Tests\surface\Kernel\RefinementDiscardTest
+   */
+  public function testChangingTheParentResetsItsDependentSilently(): void {
+    $assert_session = $this->assertSession();
+    $this->drupalGet('admin/structure/block/add/surface_examples_plugins/' . $this->defaultTheme);
+
+    // The declared entity type is user, whose one bundle is itself.
+    // Choosing it is an ordinary, valid answer at the moment it is made.
+    $assert_session->selectExists('settings[bundle]')->selectOption('user');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->assertSame('user', $assert_session->selectExists('settings[bundle]')->getValue());
+
+    // Now change what it depends on.
+    $assert_session->selectExists('settings[entity_type]')->selectOption('node');
+    $assert_session->assertWaitOnAjaxRequest();
+
+    // The list followed its parent: node's bundles, and not user's.
+    $bundle = $assert_session->selectExists('settings[bundle]');
+    $assert_session->optionExists('settings[bundle]', 'article');
+    $assert_session->optionExists('settings[bundle]', 'lesson');
+    $assert_session->optionNotExists('settings[bundle]', 'user');
+    // And nothing is chosen in it. Nothing is stored for this block yet,
+    // so there is nothing to fall back to and nothing to keep.
+    $this->assertSame('', $bundle->getValue());
+
+    // Not one word about it. No error, because nothing was submitted;
+    // no warning either, because a warning is what an orphaned *stored*
+    // value earns and nothing here was ever saved.
+    $assert_session->pageTextNotContains('The value you selected is not a valid choice.');
+    $assert_session->pageTextNotContains('no longer available');
+    $assert_session->elementNotExists('css', '.messages--error');
+    $assert_session->elementNotExists('css', '.messages--warning');
+    $assert_session->elementNotExists('css', 'select[name="settings[bundle]"].error');
+    // Nor about the host form around it, which is still unanswered and
+    // still not being asked.
+    $assert_session->pageTextNotContains('Region field is required.');
+    // And no marker: the empty select stands for nothing stored.
+    $assert_session->hiddenFieldNotExists('settings[@stale]');
+  }
+
+  /**
+   * Tests a stored dependent orphaned by a parent change, then saved.
+   *
+   * The empty option rule over AJAX: the stored bundle is not among the
+   * new entity type's bundles, so the select comes up on its empty
+   * option with the stored bundle standing behind it. Saving refuses it,
+   * because this edit moved the entity type it belongs to; moving the
+   * entity type back shows it chosen again.
+   */
+  public function testStoredDependentOrphanedByTheParentIsRefusedOnSave(): void {
+    $assert_session = $this->assertSession();
+    $block = Block::create([
+      'id' => 'orphaned',
+      'theme' => $this->defaultTheme,
+      'region' => 'content',
+      'plugin' => 'surface_examples_plugins',
+      'settings' => [
+        'id' => 'surface_examples_plugins',
+        'label' => 'Featured',
+        'provider' => 'surface_examples_plugins',
+        'headline' => 'Featured',
+        'entity_type' => 'node',
+        'bundle' => 'article',
+        'limit' => 5,
+      ],
+    ]);
+    $block->save();
+    $this->drupalGet($block->toUrl('edit-form'));
+    $assert_session->fieldValueEquals('settings[bundle]', 'article');
+
+    $assert_session->selectExists('settings[entity_type]')->selectOption('user');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->assertSame('', $assert_session->selectExists('settings[bundle]')->getValue());
+    $assert_session->optionNotExists('settings[bundle]', 'article');
+    $assert_session->pageTextNotContains('no longer available');
+    $assert_session->hiddenFieldValueEquals('settings[@stale]', 'bundle');
+
+    $assert_session->selectExists('settings[entity_type]')->selectOption('node');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->assertSame('article', $assert_session->selectExists('settings[bundle]')->getValue());
+    // Nothing stands for a stored value any more, so the marker the
+    // previous response appended has been taken away again.
+    $assert_session->hiddenFieldNotExists('settings[@stale]');
+
+    $assert_session->selectExists('settings[entity_type]')->selectOption('user');
+    $assert_session->assertWaitOnAjaxRequest();
+    $this->getSession()->getPage()->pressButton('Save block');
+    // The click returns before the next page has loaded.
+    $this->assertNotNull($assert_session->waitForElement('css', 'select[name="settings[bundle]"].error'));
+    $assert_session->pageTextNotContains('The block configuration has been saved.');
+    $this->assertSame('article', Block::load('orphaned')->get('settings')['bundle']);
+  }
+
+}

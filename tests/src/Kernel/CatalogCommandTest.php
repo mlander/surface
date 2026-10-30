@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\Drush\Commands\CatalogCommand;
-use Drupal\data_surface\ResourceBuild\SiteCatalog;
+use Drupal\surface\Drush\Commands\CatalogCommand;
+use Drupal\surface\ResourceBuild\SiteCatalog;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -21,9 +21,9 @@ use Symfony\Component\Console\Tester\CommandTester;
  * fails. The table ends with the URL of the catalog page, which lists the
  * same rows (CatalogPageTest holds the two to each other).
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class CatalogCommandTest extends DataSurfaceKernelTestBase {
+class CatalogCommandTest extends SurfaceKernelTestBase {
 
   /**
    * {@inheritdoc}
@@ -34,11 +34,10 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_react',
-    'data_surface_first',
-    'data_surface_resource_test',
+    'surface',
+    'surface_react',
+    'surface_examples_first',
+    'surface_resource_test',
   ];
 
   /**
@@ -47,7 +46,7 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_first', 'data_surface_resource_test']);
+    $this->installConfig(['surface_examples_first', 'surface_resource_test']);
   }
 
   /**
@@ -60,7 +59,7 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
    *   The exit status and what it printed.
    */
   protected function catalog(array $options = []): array {
-    $tester = new CommandTester(new CatalogCommand($this->container->get('data_surface.site_catalog')));
+    $tester = new CommandTester(new CatalogCommand($this->container->get('surface.site_catalog')));
     $status = $tester->execute($options);
     return [$status, $tester->getDisplay()];
   }
@@ -72,7 +71,7 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
     [$status, $display] = $this->catalog();
     $this->assertSame(0, $status, $display);
     $line = static fn (string $resource): string => (string) preg_replace('/\s+/', ' ', implode("\n", preg_grep('/^\s*' . preg_quote($resource, '/') . '\s/', explode("\n", $display)) ?: []));
-    $this->assertSame(' first.newsletter resource configure (update) administer data_surface_first nothing form, http, tool, read tool, react ', $line('first.newsletter'));
+    $this->assertSame(' first.newsletter resource configure (update) administer surface_examples_first nothing form, http, tool, read tool, react ', $line('first.newsletter'));
     // A structure no operation asks for on its own.
     $this->assertStringContainsString(' resource_test.digest.daily structure none ', $line('resource_test.digest.daily'));
     $this->assertMatchesRegularExpression('/\d+ resources and \d+ structures, \d+ operations, \d+ structures read from a schema; [1-9]\d* refused \(drush surface:catalog --refused lists them\)\./', (string) preg_replace('/\s+/', ' ', $display));
@@ -91,10 +90,10 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
     $configure = $decoded['resources']['first.store']['operations'][0];
     $this->assertSame('configure', $configure['id']);
     $this->assertSame([
-      SiteCatalog::FORM => '/admin/config/services/surface-store (data_surface_first.store)',
+      SiteCatalog::FORM => '/admin/config/services/surface-store (surface_examples_first.store)',
       SiteCatalog::HTTP => 'PATCH /surface-api/first.store',
-      SiteCatalog::TOOL => 'data_surface:first.store:configure',
-      SiteCatalog::READ_TOOL => 'data_surface:first.store:configure:read',
+      SiteCatalog::TOOL => 'surface:first.store:configure',
+      SiteCatalog::READ_TOOL => 'surface:first.store:configure:read',
       SiteCatalog::REACT => '/surface-react/first.store/configure',
     ], $configure['doors']);
     $this->assertNotSame([], $decoded['refused']);
@@ -112,7 +111,7 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
 
     [$status, $markdown] = $this->catalog(['--format' => 'markdown']);
     $this->assertSame(0, $status);
-    $this->assertSame($this->container->get('data_surface.site_catalog')->markdown(), $markdown);
+    $this->assertSame($this->container->get('surface.site_catalog')->markdown(), $markdown);
     $this->assertStringStartsWith("# Catalog\n", $markdown);
     $this->assertStringContainsString("\n## Refused\n", $markdown);
     $this->assertStringContainsString("\n## Read from a schema\n", $markdown);
@@ -137,7 +136,7 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
     $this->assertTrue($keys['region']['required']);
     $this->assertSame('CA-ON', $keys['region']['default']);
     $this->assertSame(['LabeledChoice'], array_keys($keys['region']['constraints']));
-    $this->assertSame(['Drupal\data_surface_first\Resource\StoreResource::regionOfCountry() watching country'], $keys['region']['refiners']);
+    $this->assertSame(['Drupal\surface_examples_first\Resource\StoreResource::regionOfCountry() watching country'], $keys['region']['refiners']);
     $this->assertSame(['country'], $keys['region']['watches']);
 
     // A table, with the keys and the doors.
@@ -176,7 +175,7 @@ class CatalogCommandTest extends DataSurfaceKernelTestBase {
     $this->assertSame(SiteCatalog::BUILD, $refusal['stage']);
     $this->assertNull($refusal['operation']);
     $this->assertStringContainsString('ghost', $refusal['message']);
-    $this->assertSame('modules/custom/data_surface/tests/modules/data_surface_resource_test/src/Resource/Broken/UndeclaredIdentityResource.php', $refusal['file']);
+    $this->assertSame('modules/custom/surface/tests/modules/surface_resource_test/src/Resource/Broken/UndeclaredIdentityResource.php', $refusal['file']);
     // Only what did not build: nothing of the first resource.
     $this->assertSame([], array_filter($refused, static fn (array $refusal): bool => str_starts_with((string) $refusal['resource'], 'first.')));
 

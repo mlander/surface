@@ -2,41 +2,41 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Refinement\Condition;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface\ResourceBuild\ShapeBlueprint;
-use Drupal\data_surface\ResourceBuild\Shapes;
-use Drupal\data_surface_resource_test\Alter\MountingShapeAlter;
-use Drupal\data_surface_resource_test\Alter\SkuAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\AccessShapeAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\ClashingShape;
-use Drupal\data_surface_resource_test\OutsideDiscovery\InstanceDefineShape;
-use Drupal\data_surface_resource_test\OutsideDiscovery\OperationsShapeAlter;
-use Drupal\data_surface_resource_test\OutsideDiscovery\RequiredShape;
-use Drupal\data_surface_resource_test\OutsideDiscovery\ShapeAndStructureClass;
-use Drupal\data_surface_resource_test\OutsideDiscovery\UnimplementedShape;
-use Drupal\data_surface_resource_test\Resource\Depot\DepotResource;
-use Drupal\data_surface_resource_test\Resource\Journal\LedgerResource;
-use Drupal\data_surface_resource_test\Shape\Broken\MountedShape;
-use Drupal\data_surface_resource_test\Shape\Sku;
-use Drupal\data_surface_resource_test\Structure\Broken\AttachesShapeStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\DefaultedShapeStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\MountedShapeStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WideningShapeStructure;
-use Drupal\data_surface_resource_test\Structure\Broken\WiresShapePortStructure;
-use Drupal\data_surface_resource_test\Structure\Depot\ShelfTagStructure;
-use Drupal\data_surface_tool\OperationInputs;
-use Drupal\Tests\data_surface\Traits\ContractValidationTrait;
-use Drupal\Tests\data_surface\Traits\StaticRefinerAgreementTrait;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\ShapeBlueprint;
+use Drupal\surface\ResourceBuild\Shapes;
+use Drupal\surface_resource_test\Alter\MountingShapeAlter;
+use Drupal\surface_resource_test\Alter\SkuAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\AccessShapeAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\ClashingShape;
+use Drupal\surface_resource_test\OutsideDiscovery\InstanceDefineShape;
+use Drupal\surface_resource_test\OutsideDiscovery\OperationsShapeAlter;
+use Drupal\surface_resource_test\OutsideDiscovery\RequiredShape;
+use Drupal\surface_resource_test\OutsideDiscovery\ShapeAndStructureClass;
+use Drupal\surface_resource_test\OutsideDiscovery\UnimplementedShape;
+use Drupal\surface_resource_test\Resource\Depot\DepotResource;
+use Drupal\surface_resource_test\Resource\Journal\LedgerResource;
+use Drupal\surface_resource_test\Shape\Broken\MountedShape;
+use Drupal\surface_resource_test\Shape\Sku;
+use Drupal\surface_resource_test\Structure\Broken\AttachesShapeStructure;
+use Drupal\surface_resource_test\Structure\Broken\DefaultedShapeStructure;
+use Drupal\surface_resource_test\Structure\Broken\MountedShapeStructure;
+use Drupal\surface_resource_test\Structure\Broken\WideningShapeStructure;
+use Drupal\surface_resource_test\Structure\Broken\WiresShapePortStructure;
+use Drupal\surface_resource_test\Structure\Depot\ShelfTagStructure;
+use Drupal\surface\Tool\OperationInputs;
+use Drupal\Tests\surface\Traits\ContractValidationTrait;
+use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use PHPUnit\Framework\Attributes\Group;
@@ -54,10 +54,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/declaring-a-resource.md#named-shapes
  * @see docs/decisions.md#a-shape-is-a-named-definition
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 #[IgnoreDeprecations]
-class ShapesTest extends DataSurfaceKernelTestBase {
+class ShapesTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use StaticRefinerAgreementTrait;
@@ -71,9 +71,8 @@ class ShapesTest extends DataSurfaceKernelTestBase {
     'user',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -112,18 +111,18 @@ class ShapesTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_resource_test']);
+    $this->installConfig(['surface_resource_test']);
     $this->setUpCurrentUser([], ['administer site configuration']);
   }
 
   /**
    * Builds the depot in its one operation.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built depot.
    */
-  protected function depot(): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->buildOperation(DepotResource::class, 'configure');
+  protected function depot(): SurfaceInterface {
+    return $this->container->get('surface.resources')->buildOperation(DepotResource::class, 'configure');
   }
 
   /**
@@ -137,7 +136,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
    *   The schema.
    */
   protected function schema(?array $values = NULL): array {
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $emitter = $this->container->get('surface.contract_emitter');
     $served = $values === NULL
       ? $emitter->emitFull($this->depot(), 'resource_test.depot', 'configure')
       : $emitter->emit($this->depot(), $values, 'resource_test.depot', 'configure');
@@ -180,9 +179,9 @@ class ShapesTest extends DataSurfaceKernelTestBase {
    * Tests discovery finds each shape by its attribute, with its alters.
    */
   public function testShapesAreDiscovered(): void {
-    $registry = $this->container->get('data_surface.resource_registry');
+    $registry = $this->container->get('surface.resource_registry');
     $shape = $registry->getShape(Sku::class);
-    $this->assertSame(['resource_test.sku', 'data_surface_resource_test'], [$shape->id, $shape->module]);
+    $this->assertSame(['resource_test.sku', 'surface_resource_test'], [$shape->id, $shape->module]);
     $this->assertSame([SkuAlter::class], array_map(static fn ($alter): string => $alter->class, $shape->alters));
     $this->assertSame($shape, $registry->getShape('resource_test.sku'), 'Asked by its id, the same shape.');
     $this->assertSame([MountingShapeAlter::class], array_map(static fn ($alter): string => $alter->class, $registry->getShape(MountedShape::class)->alters));
@@ -196,7 +195,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
    */
   public function testDiscoveryRefusesWhatIsNoShape(): void {
     $cache = $this->container->get('cache.discovery');
-    $module = 'data_surface_resource_test';
+    $module = 'surface_resource_test';
     foreach ([
       'both kinds, as a shape' => [
         ['shapes' => [ShapeAndStructureClass::class => $module]],
@@ -208,11 +207,11 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       ],
       'an instance define()' => [
         ['shapes' => [InstanceDefineShape::class => $module]],
-        InstanceDefineShape::class . ' carries #[Shape] and declares define() as an instance method. What a shape allows belongs to the class: declare it `public static function define(): DataDefinition`, and implement Drupal\data_surface\Resource\ShapeInterface.',
+        InstanceDefineShape::class . ' carries #[Shape] and declares define() as an instance method. What a shape allows belongs to the class: declare it `public static function define(): DataDefinition`, and implement Drupal\surface\Resource\ShapeInterface.',
       ],
       'no interface' => [
         ['shapes' => [UnimplementedShape::class => $module]],
-        UnimplementedShape::class . ' carries #[Shape] but does not implement Drupal\data_surface\Resource\ShapeInterface.',
+        UnimplementedShape::class . ' carries #[Shape] but does not implement Drupal\surface\Resource\ShapeInterface.',
       ],
       'an id a resource claims' => [
         ['resources' => [LedgerResource::class => $module], 'shapes' => [ClashingShape::class => $module]],
@@ -224,7 +223,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
       ],
       'an alter answering access' => [
         ['shapes' => [Sku::class => $module], 'alters' => [AccessShapeAlter::class => $module]],
-        AccessShapeAlter::class . ' alters the shape resource_test.sku and implements Drupal\data_surface\Resource\OperationAccessInterface, and a shape is one value with no access of its own: answer for the resource or structure that asks for it.',
+        AccessShapeAlter::class . ' alters the shape resource_test.sku and implements Drupal\surface\Resource\OperationAccessInterface, and a shape is one value with no access of its own: answer for the resource or structure that asks for it.',
       ],
     ] as $case => [$classes, $message]) {
       try {
@@ -270,18 +269,18 @@ class ShapesTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['Regex' => self::PATTERN], self::declared(Shapes::unaltered(Sku::class)));
     $this->assertSame('Letters and digits.', (string) Shapes::unaltered(Sku::class)->getDescription());
     // The shelf tag's port reads the shape, wired to the stock code.
-    $this->assertSame('resource_test.sku', $this->container->get('data_surface.resources')->build(ShelfTagStructure::class, new OperationContext('configure'))->getDefinitions()->ports()['code']->shape);
+    $this->assertSame('resource_test.sku', $this->container->get('surface.resources')->build(ShelfTagStructure::class, new OperationContext('configure'))->getDefinitions()->ports()['code']->shape);
   }
 
   /**
    * Tests each refusal, in its own words.
    */
   public function testEachRefusal(): void {
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     foreach ([
       WideningShapeStructure::class => 'resource_test.broken.widening_shape declares "sku" with the shape resource_test.sku and widens it: the max of the Length constraint moved from 12 to 40. A key narrows the shape it uses, as a refiner narrows a key: declare a shape of its own, or narrow less.',
       MountedShapeStructure::class => MountingShapeAlter::class . ' alters the shape resource_test.broken.mounted and calls add("note"). A shape is one value, with no keys to mount and nothing to attach: an alter of it tightens it with narrow("resource_test.broken.mounted") and rewords it with describe("resource_test.broken.mounted"), at every key that uses it.',
-      DefaultedShapeStructure::class => 'The shape resource_test.broken.defaulted (Drupal\data_surface_resource_test\Shape\Broken\DefaultedShape) declares a default: a default belongs to the key, add(\'<key>\', DefaultedShape::class, ..., default: ...).',
+      DefaultedShapeStructure::class => 'The shape resource_test.broken.defaulted (Drupal\surface_resource_test\Shape\Broken\DefaultedShape) declares a default: a default belongs to the key, add(\'<key>\', DefaultedShape::class, ..., default: ...).',
       AttachesShapeStructure::class => 'attachList("codes") was handed ' . Sku::class . ', a shape: a shape is one value, declared at a key with add(\'codes\', Sku::class, ...); attachList() holds a resource or structure.',
       WiresShapePortStructure::class => 'resource_test.broken.wires_shape_port wires the "code" port of resource_test.shelf_tag at "tag" to "code", which is declared with a type alone, and the port reads the shape resource_test.sku: a port that reads a shape reads a key declared with it, add(\'<key>\', <shape>::class, ...).',
     ] as $class => $message) {
@@ -494,7 +493,7 @@ class ShapesTest extends DataSurfaceKernelTestBase {
    */
   public function testToolsReadTheShapeFlat(): void {
     $manager = $this->container->get('plugin.manager.tool');
-    $properties = $manager->getDefinition('data_surface:resource_test.depot:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
+    $properties = $manager->getDefinition('surface:resource_test.depot:configure')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
     $this->assertSame(['sku', 'spare', 'tag'], array_keys($properties));
     // An update: required in words, a stored value standing when left out.
     $this->assertFalse($properties['sku']->isRequired());
@@ -503,22 +502,22 @@ class ShapesTest extends DataSurfaceKernelTestBase {
     $this->assertFalse($properties['spare']->isRequired());
     $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['max' => 6]], self::declared($properties['spare']));
 
-    $read = $manager->createInstance('data_surface:resource_test.depot:configure:read');
+    $read = $manager->createInstance('surface:resource_test.depot:configure:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::DEPOT, $read->getResult()->getContextValues()[OperationInputs::VALUES] ?? NULL);
 
-    $tool = $manager->createInstance('data_surface:resource_test.depot:configure');
+    $tool = $manager->createInstance('surface:resource_test.depot:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['sku' => 'xy99'] + self::DEPOT);
     $tool->execute();
     $this->assertFalse($tool->getResult()->isSuccess());
     // The pipeline holds it to the shape's pattern, in the shape's words.
     $this->assertSame("The values were refused:\n" . '/sku: A stock code is two capitals and digits, such as AB12.', strip_tags((string) $tool->getResult()->getMessage()));
-    $tool = $manager->createInstance('data_surface:resource_test.depot:configure');
+    $tool = $manager->createInstance('surface:resource_test.depot:configure');
     $tool->setInputValue(OperationInputs::VALUES, ['sku' => 'XY99', 'spare' => 'ZZ1'] + self::DEPOT);
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
-    $stored = $this->config('data_surface_resource_test.depot');
+    $stored = $this->config('surface_resource_test.depot');
     $this->assertSame(['XY99', 'ZZ1'], [$stored->get('sku'), $stored->get('spare')]);
   }
 

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\block\Entity\Block;
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Variants\ComponentSlots;
-use Drupal\data_surface_component_block\Plugin\Block\ComponentBlock;
-use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Variants\ComponentSlots;
+use Drupal\surface_examples_component_block\Plugin\Block\ComponentBlock;
+use Drupal\surface_examples_component_block\Structure\ComponentBlockStructure;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -29,9 +29,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * list of them at any depth, and nothing for no component or one the site
  * does not have.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ComponentBlockTest extends DataSurfaceKernelTestBase {
+class ComponentBlockTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -45,32 +45,31 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_component_block',
+    'surface',
+    'surface_examples',
+    'surface_examples_component_block',
   ];
 
   /**
    * The components a test site has: the three the examples ship.
    */
   protected const COMPONENTS = [
-    'data_surface_examples:call_to_action',
-    'data_surface_examples:card',
-    'data_surface_examples:hero',
-    'data_surface_examples:section',
+    'surface_examples:call_to_action',
+    'surface_examples:card',
+    'surface_examples:hero',
+    'surface_examples:section',
   ];
 
   /**
    * Where the schema for one set of answers is pinned.
    */
-  protected const NOW = __DIR__ . '/../../fixtures/component-block/block.data_surface_component.now.json';
+  protected const NOW = __DIR__ . '/../../fixtures/component-block/block.surface_component.now.json';
 
   /**
    * The answers it is pinned for: the card, with its heading and its text.
    */
   protected const VALUES = [
-    'component' => 'data_surface_examples:card',
+    'component' => 'surface_examples:card',
     'props' => ['heading' => 'Doors open at half past six'],
     'slots' => ['body' => ['kind' => 'text', 'text' => 'Bring your ticket.']],
   ];
@@ -84,18 +83,18 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
    * The hero, with two calls to action in its actions slot.
    */
   protected const HERO_VALUES = [
-    'component' => 'data_surface_examples:hero',
+    'component' => 'surface_examples:hero',
     'props' => ['title' => 'Doors open at half past six'],
     'slots' => [
       'actions' => [
         'kind' => 'components',
         'components' => [
           [
-            'component' => 'data_surface_examples:call_to_action',
+            'component' => 'surface_examples:call_to_action',
             'props' => ['text' => 'Find your ticket', 'url' => 'https://example.com/tickets'],
           ],
           [
-            'component' => 'data_surface_examples:call_to_action',
+            'component' => 'surface_examples:call_to_action',
             'props' => ['text' => 'See the program', 'url' => 'https://example.com/program', 'style' => 'secondary'],
           ],
         ],
@@ -142,32 +141,32 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
    * Tests the structure: no component to start from, one variant per one.
    */
   public function testTheStructureIsComponentPropsAndSlots(): void {
-    $built = $this->container->get('data_surface.resources')->build(ComponentBlockStructure::class, new OperationContext('configure'));
+    $built = $this->container->get('surface.resources')->build(ComponentBlockStructure::class, new OperationContext('configure'));
     $this->assertSame(['component', 'props', 'slots'], $built->getDefinitions()->names());
     $this->assertFalse($built->getDefinition('component')->isRequired(), 'The block is built before anything is chosen, so no component is required.');
     $this->assertNull($built->getDefault('component'));
     $this->assertSame(self::COMPONENTS, array_keys($built->getDefinitions()->entry('props')->variants->variants));
     $this->assertSame(self::COMPONENTS, array_keys($built->getDefinitions()->entry('slots')->variants->variants), 'The slots offer the same components: one with none is a variant with no keys.');
     $this->assertContains('config:core.extension', $built->getCacheTags());
-    $this->assertSame('Hero', (string) $this->options()->resolve($built->getDefinition('component'))->options['data_surface_examples:hero']);
-    $card = $built->getDefinitions()->entry('props')->variants->variants['data_surface_examples:card']->child;
+    $this->assertSame('Hero', (string) $this->options()->resolve($built->getDefinition('component'))->options['surface_examples:hero']);
+    $card = $built->getDefinitions()->entry('props')->variants->variants['surface_examples:card']->child;
     $this->assertSame(['heading', 'tone', 'link'], $card->getDefinitions()->names());
     $this->assertTrue($card->getDefinition('heading')->isRequired());
 
     // One key per slot, each its kind and what that kind holds.
     $slots = array_map(static fn ($variant): array => $variant->child->getDefinitions()->names(), $built->getDefinitions()->entry('slots')->variants->variants);
     $this->assertSame([
-      'data_surface_examples:call_to_action' => [],
-      'data_surface_examples:card' => ['body'],
-      'data_surface_examples:hero' => ['actions'],
-      'data_surface_examples:section' => ['content'],
+      'surface_examples:call_to_action' => [],
+      'surface_examples:card' => ['body'],
+      'surface_examples:hero' => ['actions'],
+      'surface_examples:section' => ['content'],
     ], $slots);
     $slot = static fn (string $component, string $name) => $built->getDefinitions()->entry('slots')->variants->variants[$component]->child->getDefinitions()->entry($name)->attachment->child;
-    $this->assertSame(['kind', 'text'], $slot('data_surface_examples:card', 'body')->getDefinitions()->names());
-    $this->assertSame(['kind', 'text', 'component', 'components'], $slot('data_surface_examples:hero', 'actions')->getDefinitions()->names());
-    $nested = $slot('data_surface_examples:section', 'content')->getDefinitions()->entry('component')->attachment->child;
+    $this->assertSame(['kind', 'text'], $slot('surface_examples:card', 'body')->getDefinitions()->names());
+    $this->assertSame(['kind', 'text', 'component', 'components'], $slot('surface_examples:hero', 'actions')->getDefinitions()->names());
+    $nested = $slot('surface_examples:section', 'content')->getDefinitions()->entry('component')->attachment->child;
     $this->assertSame(['component', 'props', 'slots'], $nested->getDefinitions()->names(), 'A nested component is the same three keys again.');
-    $this->assertSame(['data_surface_examples:card', 'data_surface_examples:hero'], array_keys($nested->getDefinitions()->entry('slots')->variants->variants));
+    $this->assertSame(['surface_examples:card', 'surface_examples:hero'], array_keys($nested->getDefinitions()->entry('slots')->variants->variants));
 
     // The plugin names it, and its defaults are its configuration's.
     $block = $this->container->get('plugin.manager.block')->createInstance(ComponentBlock::ID, []);
@@ -176,8 +175,8 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
     $this->assertNull($configuration['component']);
     $this->assertNull($configuration['props']);
     $this->assertNull($configuration['slots']);
-    $this->assertSame([], $this->container->get('data_surface.resource_catalog')->describe()['block.data_surface_component']['operations'] ?? []);
-    $this->assertFalse($this->container->get('plugin.manager.tool')->hasDefinition('data_surface:block.data_surface_component:configure'), 'The plugin\'s structure is held by its host: no tool.');
+    $this->assertSame([], $this->container->get('surface.resource_catalog')->describe()['block.surface_component']['operations'] ?? []);
+    $this->assertFalse($this->container->get('plugin.manager.tool')->hasDefinition('surface:block.surface_component:configure'), 'The plugin\'s structure is held by its host: no tool.');
   }
 
   /**
@@ -185,36 +184,36 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
    *
    * The full schema is the one the contract baseline pins; the schema for
    * the card and its heading is pinned beside this test, both written again
-   * with DATA_SURFACE_CONTRACT_WRITE=1.
+   * with SURFACE_CONTRACT_WRITE=1.
    */
   public function testBothDocumentsArePinned(): void {
-    $resources = $this->container->get('data_surface.resources');
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
     $context = new OperationContext('configure');
-    $full = $emitter->emitFull($resources->buildStatic(ComponentBlockStructure::class, $context), 'block.data_surface_component')->document;
-    $baselines = $this->container->get('data_surface.contract_baselines');
-    $baseline = $baselines->read($baselines->directory('data_surface'))['block.data_surface_component'] ?? [];
-    $this->assertSame('data_surface_component_block', $baseline['module'] ?? NULL);
+    $full = $emitter->emitFull($resources->buildStatic(ComponentBlockStructure::class, $context), 'block.surface_component')->document;
+    $baselines = $this->container->get('surface.contract_baselines');
+    $baseline = $baselines->read($baselines->directory('surface'))['block.surface_component'] ?? [];
+    $this->assertSame('surface_examples_component_block', $baseline['module'] ?? NULL);
     // Read as the baseline is: an empty object, a variant with no keys,
     // decodes as an empty array.
     $this->assertSame(self::encode($baseline['documents'][0] ?? []), self::encode(json_decode((string) json_encode($full), TRUE)));
 
-    $now = $emitter->emit($resources->build(ComponentBlockStructure::class, $context), self::VALUES, 'block.data_surface_component')->document;
+    $now = $emitter->emit($resources->build(ComponentBlockStructure::class, $context), self::VALUES, 'block.surface_component')->document;
     // The hero's: the defs its slots use in the full schema, and the
     // schema for two calls to action in its actions.
-    $hero_now = $emitter->emit($resources->build(ComponentBlockStructure::class, $context), self::HERO_VALUES, 'block.data_surface_component')->document;
+    $hero_now = $emitter->emit($resources->build(ComponentBlockStructure::class, $context), self::HERO_VALUES, 'block.surface_component')->document;
     $defs = [
-      'block.data_surface_component.slots.data_surface_examples:hero',
-      'component.slot.data_surface_examples:hero.actions.1',
-      'component.nested.data_surface_examples:call_to_action.1',
-      'component.props.data_surface_examples:call_to_action',
-      'component.slots.data_surface_examples:call_to_action.2',
+      'block.surface_component.slots.surface_examples:hero',
+      'component.slot.surface_examples:hero.actions.1',
+      'component.nested.surface_examples:call_to_action.1',
+      'component.props.surface_examples:call_to_action',
+      'component.slots.surface_examples:call_to_action.2',
     ];
     $hero = [
       'full' => array_intersect_key($full['schema']['$defs'], array_flip($defs)),
       'now' => $hero_now['schema']['properties']['slots'],
     ];
-    if (getenv('DATA_SURFACE_CONTRACT_WRITE')) {
+    if (getenv('SURFACE_CONTRACT_WRITE')) {
       @mkdir(dirname(self::NOW), 0777, TRUE);
       file_put_contents(self::NOW, self::encode($now) . "\n");
       file_put_contents(self::HERO, self::encode($hero) . "\n");
@@ -225,43 +224,43 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
     // What the two pin, said once more: the components offered, the card
     // chosen, its def, and its slot holding text.
     $this->assertSame([...self::COMPONENTS, NULL], array_column($now['schema']['properties']['component']['oneOf'], 'const'));
-    $this->assertSame('data_surface_examples:card', $now['schema']['properties']['props'][ContractEmitter::EXTENSION]['chosen']);
-    $this->assertSame('data_surface_examples:card', $now['schema']['properties']['slots'][ContractEmitter::EXTENSION]['chosen']);
-    $this->assertSame(['heading'], $full['schema']['$defs']['block.data_surface_component.props.data_surface_examples:card']['required']);
-    $this->assertSame('#/$defs/' . ComponentSlots::TEXT, $full['schema']['$defs']['block.data_surface_component.slots.data_surface_examples:card']['properties']['body']['$ref']);
+    $this->assertSame('surface_examples:card', $now['schema']['properties']['props'][ContractEmitter::EXTENSION]['chosen']);
+    $this->assertSame('surface_examples:card', $now['schema']['properties']['slots'][ContractEmitter::EXTENSION]['chosen']);
+    $this->assertSame(['heading'], $full['schema']['$defs']['block.surface_component.props.surface_examples:card']['required']);
+    $this->assertSame('#/$defs/' . ComponentSlots::TEXT, $full['schema']['$defs']['block.surface_component.slots.surface_examples:card']['properties']['body']['$ref']);
 
     // The hero's actions, narrowed to what they expect: one component, the
     // call to action alone, or a list of two at most.
-    $actions = $hero['full']['component.slot.data_surface_examples:hero.actions.1'];
+    $actions = $hero['full']['component.slot.surface_examples:hero.actions.1'];
     $this->assertSame(['text', 'component', 'components'], array_column($actions['properties']['kind']['oneOf'], 'const'));
     $this->assertSame(2, $actions['properties']['components']['maxItems']);
-    $this->assertSame('#/$defs/component.nested.data_surface_examples:call_to_action.1', $actions['properties']['components']['items']['$ref']);
-    $nested = $hero['full']['component.nested.data_surface_examples:call_to_action.1'];
+    $this->assertSame('#/$defs/component.nested.surface_examples:call_to_action.1', $actions['properties']['components']['items']['$ref']);
+    $nested = $hero['full']['component.nested.surface_examples:call_to_action.1'];
     $kept = ['const' => TRUE, 'title' => TRUE];
     $choices = array_map(static fn (array $choice): array => array_intersect_key($choice, $kept), $nested['properties']['component']['oneOf']);
-    $this->assertSame([['const' => 'data_surface_examples:call_to_action', 'title' => 'Call to action']], $choices);
-    $this->assertSame([['$ref' => '#/$defs/component.props.data_surface_examples:call_to_action'], ['type' => 'null']], $nested['properties']['props']['anyOf']);
+    $this->assertSame([['const' => 'surface_examples:call_to_action', 'title' => 'Call to action']], $choices);
+    $this->assertSame([['$ref' => '#/$defs/component.props.surface_examples:call_to_action'], ['type' => 'null']], $nested['properties']['props']['anyOf']);
   }
 
   /**
    * Tests the plugin renders the component with the props it holds.
    */
   public function testTheBlockRendersItsComponent(): void {
-    $block = $this->place('spotlight', ['component' => 'data_surface_examples:card', 'props' => self::VALUES['props']]);
-    $this->assertSame(['module' => ['data_surface_component_block', 'data_surface_examples'], 'theme' => ['stark']], $block->getDependencies(), 'The block goes with the module whose component it embeds.');
+    $block = $this->place('spotlight', ['component' => 'surface_examples:card', 'props' => self::VALUES['props']]);
+    $this->assertSame(['module' => ['surface_examples', 'surface_examples_component_block'], 'theme' => ['stark']], $block->getDependencies(), 'The block goes with the module whose component it embeds.');
     $build = $block->getPlugin()->build();
     $this->assertSame('component', $build['#type']);
-    $this->assertSame('data_surface_examples:card', $build['#component']);
+    $this->assertSame('surface_examples:card', $build['#component']);
     $this->assertSame(['heading' => 'Doors open at half past six', 'tone' => 'plain'], $build['#props'], 'A prop that holds nothing is not passed.');
     $this->assertArrayNotHasKey('#slots', $build, 'A slot that holds nothing is not passed.');
     $this->assertContains('config:core.extension', $build['#cache']['tags']);
     $html = (string) $this->container->get('renderer')->renderInIsolation($build);
-    $this->assertStringContainsString('<article class="data-surface-card data-surface-card--plain">', $html);
+    $this->assertStringContainsString('<article class="surface-card surface-card--plain">', $html);
     $this->assertStringContainsString('<h3>Doors open at half past six</h3>', $html);
     $this->assertStringNotContainsString('<p>', $html);
 
     // No component, or one the site does not have: nothing, and no error.
-    foreach ([NULL, 'data_surface_examples:gone'] as $component) {
+    foreach ([NULL, 'surface_examples:gone'] as $component) {
       $plugin = $this->container->get('plugin.manager.block')->createInstance(ComponentBlock::ID, []);
       $configuration = $plugin->getConfiguration();
       // Set as stored, not through the pipeline: a component the site no
@@ -294,7 +293,7 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
     $this->assertCount(2, $build['#slots']['actions']);
     $this->assertSame([
       '#type' => 'component',
-      '#component' => 'data_surface_examples:call_to_action',
+      '#component' => 'surface_examples:call_to_action',
       '#props' => [
         'text' => 'See the program',
         'url' => 'https://example.com/program',
@@ -303,18 +302,18 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
       ],
     ], $build['#slots']['actions'][1]);
     $html = (string) $renderer->renderInIsolation($build);
-    $this->assertStringContainsString('<a class="data-surface-cta data-surface-cta--primary" href="https://example.com/tickets">Find your ticket</a>', $html);
-    $this->assertStringContainsString('<a class="data-surface-cta data-surface-cta--secondary" href="https://example.com/program">See the program</a>', $html);
+    $this->assertStringContainsString('<a class="surface-cta surface-cta--primary" href="https://example.com/tickets">Find your ticket</a>', $html);
+    $this->assertStringContainsString('<a class="surface-cta surface-cta--secondary" href="https://example.com/program">See the program</a>', $html);
 
     // One component, nested: a section holding a card holding text.
     $section = $this->place('section', [
-      'component' => 'data_surface_examples:section',
+      'component' => 'surface_examples:section',
       'props' => ['heading' => 'Tonight'],
       'slots' => [
         'content' => [
           'kind' => 'component',
           'component' => [
-            'component' => 'data_surface_examples:card',
+            'component' => 'surface_examples:card',
             'props' => ['heading' => 'Talks start at seven'],
             'slots' => ['body' => ['kind' => 'text', 'text' => 'In the main hall.']],
           ],
@@ -322,25 +321,25 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
       ],
     ]);
     $build = $section->getPlugin()->build();
-    $this->assertSame('data_surface_examples:card', $build['#slots']['content']['#component']);
+    $this->assertSame('surface_examples:card', $build['#slots']['content']['#component']);
     $this->assertSame(['body' => ['#plain_text' => 'In the main hall.']], $build['#slots']['content']['#slots']);
     $html = preg_replace('/\s+/', ' ', (string) $renderer->renderInIsolation($build));
-    $this->assertMatchesRegularExpression('#<section class="data-surface-section"> <h2>Tonight</h2> <article class="data-surface-card data-surface-card--plain"> <h3>Talks start at seven</h3> <p> In the main hall. </p> </article> </section>#', $html);
+    $this->assertMatchesRegularExpression('#<section class="surface-section"> <h2>Tonight</h2> <article class="surface-card surface-card--plain"> <h3>Talks start at seven</h3> <p> In the main hall. </p> </article> </section>#', $html);
 
     // Nulls dropped: a slot holding nothing, a kind with nothing chosen,
     // a component the site no longer has, an empty list.
     $plugin = $this->container->get('plugin.manager.block')->createInstance(ComponentBlock::ID, []);
     $reflection = new \ReflectionProperty($plugin, 'configuration');
     $reflection->setValue($plugin, [
-      'component' => 'data_surface_examples:section',
+      'component' => 'surface_examples:section',
       'props' => ['heading' => NULL],
       'slots' => [
         'content' => [
           'kind' => 'components',
           'components' => [
-            ['component' => 'data_surface_examples:gone'],
+            ['component' => 'surface_examples:gone'],
             [
-              'component' => 'data_surface_examples:card',
+              'component' => 'surface_examples:card',
               'props' => ['heading' => 'Kept', 'link' => NULL],
               'slots' => ['body' => ['kind' => 'text', 'text' => NULL]],
             ],
@@ -351,7 +350,7 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
     $build = $plugin->build();
     $this->assertSame([], $build['#props']);
     $this->assertSame([
-      ['#type' => 'component', '#component' => 'data_surface_examples:card', '#props' => ['heading' => 'Kept']],
+      ['#type' => 'component', '#component' => 'surface_examples:card', '#props' => ['heading' => 'Kept']],
     ], $build['#slots']['content']);
     $empties = [
       ['kind' => 'text', 'text' => ''],
@@ -361,12 +360,12 @@ class ComponentBlockTest extends DataSurfaceKernelTestBase {
       NULL,
     ];
     foreach ($empties as $empty) {
-      $reflection->setValue($plugin, ['component' => 'data_surface_examples:section', 'slots' => ['content' => $empty]] + $plugin->getConfiguration());
+      $reflection->setValue($plugin, ['component' => 'surface_examples:section', 'slots' => ['content' => $empty]] + $plugin->getConfiguration());
       $this->assertArrayNotHasKey('#slots', $plugin->build(), (string) json_encode($empty));
     }
 
     // The block goes with the module of every component it embeds.
-    $this->assertSame(['module' => ['data_surface_component_block', 'data_surface_examples'], 'theme' => ['stark']], $section->getDependencies());
+    $this->assertSame(['module' => ['surface_examples', 'surface_examples_component_block'], 'theme' => ['stark']], $section->getDependencies());
   }
 
   /**

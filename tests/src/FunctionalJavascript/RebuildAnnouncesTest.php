@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -18,7 +18,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/decisions.md#an-element-hints-and-the-rule-speaks
  * @see docs/decisions.md#an-error-on-the-trigger-renders-inline
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class RebuildAnnouncesTest extends ExamplesWebDriverTestBase {
 
@@ -26,14 +26,14 @@ class RebuildAnnouncesTest extends ExamplesWebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface_examples',
-    'data_surface_examples_compliance',
+    'surface_examples',
+    'surface_examples_compliance',
   ];
 
   /**
    * The license element's name, in example 3 with the compliance alter.
    */
-  protected const LICENSE = 'surface[third_party_settings][data_surface_examples_compliance][license]';
+  protected const LICENSE = 'surface[third_party_settings][surface_examples_compliance][license]';
 
   /**
    * The constraint message a malformed license earns.
@@ -120,14 +120,14 @@ class RebuildAnnouncesTest extends ExamplesWebDriverTestBase {
    */
   protected function recordAnnouncements(): void {
     $this->getSession()->executeScript(<<<'JS'
-      window.dataSurfaceAnnounced = [];
-      if (!Drupal.AjaxCommands.prototype.dataSurfaceRecorded) {
+      window.surfaceAnnounced = [];
+      if (!Drupal.AjaxCommands.prototype.surfaceRecorded) {
         const announce = Drupal.AjaxCommands.prototype.announce;
         Drupal.AjaxCommands.prototype.announce = function (ajax, response, status) {
-          window.dataSurfaceAnnounced.push([response.text, response.priority || null]);
+          window.surfaceAnnounced.push([response.text, response.priority || null]);
           return announce.call(this, ajax, response, status);
         };
-        Drupal.AjaxCommands.prototype.dataSurfaceRecorded = true;
+        Drupal.AjaxCommands.prototype.surfaceRecorded = true;
       }
       JS);
   }
@@ -139,7 +139,7 @@ class RebuildAnnouncesTest extends ExamplesWebDriverTestBase {
    *   Each announcement's text and priority, NULL for polite.
    */
   protected function announced(): array {
-    return $this->getSession()->evaluateScript('return window.dataSurfaceAnnounced;');
+    return $this->getSession()->evaluateScript('return window.surfaceAnnounced;');
   }
 
   /**

@@ -34,15 +34,13 @@ Range, 1 to 50. Code with no door at all calls the same service:
 
 ```php
 // $block is the teaser block plugin.
-$result = \Drupal::service('data_surface.pipeline')->submit(
-  $block->getDataSurface(),
+$result = \Drupal::service('surface.pipeline')->submit(
+  $block->getSurface(),
   ['headline' => 'Latest', 'limit' => '60'],
   new PluginConfigurationStorage($block),
 );
 $result->isValid();   // FALSE: nothing was written.
 ```
-
-Where each class lives: [Namespaces](../concepts.md#namespaces).
 
 A placed block's form, asked for 60 items, prints the rule's message in
 the messages at the top of the page, after the field's label:

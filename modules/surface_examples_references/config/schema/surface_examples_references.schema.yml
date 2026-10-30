@@ -1,0 +1,54 @@
+# Generated from the event.sponsorship resource by drush surface:config-schema.
+surface_examples_references.sponsorship:
+  type: config_object
+  label: 'event.sponsorship'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    venue:
+      type: string
+      label: 'Venue'
+    contact:
+      type: uuid
+      label: 'Contact'
+      nullable: true
+    page:
+      type: uuid
+      label: 'Announcement'
+      nullable: true
+    thing:
+      type: mapping
+      label: 'Featured beside'
+      mapping:
+        entity_type:
+          type: string
+          label: 'Entity type'
+          nullable: true
+        id:
+          type: string
+          label: 'ID'
+          nullable: true
+    setting:
+      type: mapping
+      label: 'Linked to'
+      mapping:
+        entity_type:
+          type: string
+          label: 'Entity type'
+          nullable: true
+        id:
+          type: string
+          label: 'ID'
+          nullable: true
+    credit:
+      type: mapping
+      label: 'Credited on'
+      mapping:
+        entity_type:
+          type: string
+          label: 'Entity type'
+          nullable: true
+        id:
+          type: string
+          label: 'ID'
+          nullable: true

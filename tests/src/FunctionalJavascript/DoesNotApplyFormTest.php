@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
 use PHPUnit\Framework\Attributes\Group;
@@ -17,10 +17,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * stored before a month of monthly sends is the one shown, and saved,
  * when the bulletin goes weekly again.
  *
- * @see \Drupal\data_surface_resource_test\Resource\Bulletin\BulletinResource
+ * @see \Drupal\surface_resource_test\Resource\Bulletin\BulletinResource
  * @see docs/decisions.md#a-key-that-does-not-apply
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class DoesNotApplyFormTest extends WebDriverTestBase {
 
@@ -28,8 +28,8 @@ class DoesNotApplyFormTest extends WebDriverTestBase {
    * {@inheritdoc}
    */
   protected static $modules = [
-    'data_surface',
-    'data_surface_resource_test',
+    'surface',
+    'surface_resource_test',
   ];
 
   /**
@@ -40,7 +40,7 @@ class DoesNotApplyFormTest extends WebDriverTestBase {
   /**
    * The bulletin's config object.
    */
-  protected const CONFIG = 'data_surface_resource_test.bulletin';
+  protected const CONFIG = 'surface_resource_test.bulletin';
 
   /**
    * {@inheritdoc}

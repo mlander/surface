@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Storage;
+namespace Drupal\surface\Storage;
 
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
 
 /**
  * Encrypts a data surface's secret keys on their way into storage.
@@ -69,8 +69,8 @@ use Drupal\data_surface\DefinitionMetadata;
  * secret to keep in "no secret", and enciphering nothing would only make
  * the absence of a value look like the presence of one.
  *
- * @see \Drupal\data_surface\Storage\SecretCodecInterface
- * @see \Drupal\data_surface\DefinitionMetadata::setSecret()
+ * @see \Drupal\surface\Storage\SecretCodecInterface
+ * @see \Drupal\surface\DefinitionMetadata::setSecret()
  * @see docs/storage.md
  */
 final class EncryptedStorageLayout implements StorageLayoutInterface {
@@ -78,14 +78,14 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
   /**
    * Constructs an EncryptedStorageLayout.
    *
-   * @param \Drupal\data_surface\Storage\SecretCodecInterface $codec
+   * @param \Drupal\surface\Storage\SecretCodecInterface $codec
    *   The codec that enciphers and deciphers one value.
    * @param string[] $secretKeys
    *   The data surface keys whose values are secret. A key not in this
    *   list is carried through untouched, which is what keeps this
    *   decorator invisible to every data surface that declares no secret
    *   at all.
-   * @param \Drupal\data_surface\Storage\StorageLayoutInterface|null $inner
+   * @param \Drupal\surface\Storage\StorageLayoutInterface|null $inner
    *   The layout this one decorates, or NULL when the input layout is
    *   the storage layout and encryption is the only translation.
    */
@@ -104,18 +104,18 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
    * is a data surface with nothing to encrypt, and wrapping it would add
    * a layer that does nothing to every field type on the site.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface whose definitions carry the secret flags.
-   * @param \Drupal\data_surface\Storage\SecretCodecInterface $codec
+   * @param \Drupal\surface\Storage\SecretCodecInterface $codec
    *   The codec to encrypt with.
-   * @param \Drupal\data_surface\Storage\StorageLayoutInterface|null $inner
+   * @param \Drupal\surface\Storage\StorageLayoutInterface|null $inner
    *   The layout to decorate, or NULL when there is none.
    *
-   * @return \Drupal\data_surface\Storage\StorageLayoutInterface|null
+   * @return \Drupal\surface\Storage\StorageLayoutInterface|null
    *   The decorator, or the inner layout unchanged (NULL included) when
    *   the data surface declares no secret key.
    */
-  public static function forSurface(DataSurfaceInterface $surface, SecretCodecInterface $codec, ?StorageLayoutInterface $inner = NULL): ?StorageLayoutInterface {
+  public static function forSurface(SurfaceInterface $surface, SecretCodecInterface $codec, ?StorageLayoutInterface $inner = NULL): ?StorageLayoutInterface {
     $keys = static::secretKeys($surface);
     return $keys === [] ? $inner : new static($codec, $keys, $inner);
   }
@@ -123,13 +123,13 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
   /**
    * Names the keys a data surface declared secret.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface to read.
    *
    * @return string[]
    *   The secret keys, in declaration order.
    */
-  public static function secretKeys(DataSurfaceInterface $surface): array {
+  public static function secretKeys(SurfaceInterface $surface): array {
     $keys = [];
     foreach ($surface->getDefinitions() as $name => $definition) {
       if (DefinitionMetadata::isSecret($definition)) {
@@ -178,7 +178,7 @@ final class EncryptedStorageLayout implements StorageLayoutInterface {
    *   The ciphertext, or the value unchanged when it holds no secret or
    *   is already enciphered.
    *
-   * @throws \Drupal\data_surface\Storage\SecretCodecException
+   * @throws \Drupal\surface\Storage\SecretCodecException
    *   When the value is neither a string nor empty. A secret holds one
    *   scalar string; anything else is a declaration mistake, and storing
    *   it in the clear because it was an unexpected shape is exactly the

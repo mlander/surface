@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\ResourceBuild;
+namespace Drupal\surface\ResourceBuild;
 
-use Drupal\data_surface\Resource\Attribute\UsesStructure;
+use Drupal\surface\Resource\Attribute\UsesStructure;
 
 /**
  * Which plugins name which structure with #[UsesStructure].
@@ -21,7 +21,7 @@ use Drupal\data_surface\Resource\Attribute\UsesStructure;
  * reads those from here rather than from a directory, because a plugin
  * lives where its plugin type says, not in src/Structure.
  *
- * @see \Drupal\data_surface\Hook\ResourcePluginHooks
+ * @see \Drupal\surface\Hook\ResourcePluginHooks
  */
 final class ResourcePlugins {
 

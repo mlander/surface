@@ -1,0 +1,48 @@
+# The page an operation's React form mounts on, and the API it calls.
+#
+# The page names the resource and the operation by id:
+# /surface-react/registration.step3/configure, its parameters in the query
+# string. The API addresses the resource, not the operation, and the
+# method is the operation (contract 3): /surface-api/{resource} for a
+# singleton or a collection, /surface-api/{resource}/{id} for one thing, up
+# to four identity segments (an operation's parameters named for identity
+# keys, in identity order; a create's name its parent), then `schema`;
+# `:{operation}` after the last segment names an operation the method does
+# not imply; DELETE on a thing's path is its default delete. ServedPaths
+# reads the path; ResourceApiController answers it.
+#
+# One requirement on both, the operation's: its permission, then the
+# resource's access class, and no opinion is a refusal. A POST, a PATCH or
+# a DELETE also wants the X-CSRF-Token header a session token from /session/token
+# is, when it carries the session cookie.
+#
+# Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
+
+surface_react.page:
+  path: '/surface-react/{resource}/{operation}'
+  defaults:
+    _controller: '\Drupal\surface_react\Controller\ResourceReactPage::page'
+    _title_callback: '\Drupal\surface_react\Controller\ResourceReactPage::title'
+  requirements:
+    _surface_react_access: 'TRUE'
+
+surface_react.api:
+  path: '/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'
+  defaults:
+    _controller: '\Drupal\surface_react\Controller\ResourceApiController::handle'
+    s1: ''
+    s2: ''
+    s3: ''
+    s4: ''
+    s5: ''
+  methods: [GET, POST, PATCH, DELETE]
+  requirements:
+    # One segment each; a colon in the last one names an operation.
+    resource: '[^/]+'
+    s1: '[^/]+'
+    s2: '[^/]+'
+    s3: '[^/]+'
+    s4: '[^/]+'
+    s5: '[^/]+'
+    _surface_react_access: 'TRUE'
+    _csrf_request_header_token: 'TRUE'

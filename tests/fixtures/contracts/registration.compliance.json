@@ -1,6 +1,6 @@
 {
     "resource": "registration.compliance",
-    "module": "data_surface_examples_compliance",
+    "module": "surface_examples_compliance",
     "contract": 4,
     "documents": [
         {

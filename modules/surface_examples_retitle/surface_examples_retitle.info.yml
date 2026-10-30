@@ -1,0 +1,11 @@
+name: 'Surface API examples: retitle'
+type: module
+description: 'Example 17 of the examples: a bulk retitle of nodes that borrows the access core and every module give each node and its title, asked per node.'
+package: Surface API
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface_examples
+  - drupal:node
+  - drupal:user

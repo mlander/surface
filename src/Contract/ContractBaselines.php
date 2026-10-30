@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Drupal\data_surface\Contract;
+namespace Drupal\surface\Contract;
 
 use Drupal\Core\Extension\ModuleExtensionList;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\ResourceBuild\ResourceRegistry;
-use Drupal\data_surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\ResourceBuild\ResourcesInterface;
 
 /**
  * Emits, reads, writes and compares the contract baselines of modules.
@@ -44,11 +44,11 @@ final class ContractBaselines {
   /**
    * Constructs a ContractBaselines.
    *
-   * @param \Drupal\data_surface\ResourceBuild\ResourceRegistry $registry
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   The registry.
-   * @param \Drupal\data_surface\ResourceBuild\ResourcesInterface $resources
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step.
-   * @param \Drupal\data_surface\Contract\ContractEmitter $emitter
+   * @param \Drupal\surface\Contract\ContractEmitter $emitter
    *   The emitter.
    * @param \Drupal\Core\Extension\ModuleExtensionList $modules
    *   The module list, for where a module's baselines live.
@@ -224,7 +224,7 @@ final class ContractBaselines {
    * @param array<string, array> $current
    *   Today's, by id, as emit() answers them.
    *
-   * @return \Drupal\data_surface\Contract\ContractChange[]
+   * @return \Drupal\surface\Contract\ContractChange[]
    *   Every difference, judged, in id order. A declaration or a document
    *   no longer emitted breaks; one with no baseline yet fails, unpinned,
    *   until writing the baselines pins it. Baselines written in another

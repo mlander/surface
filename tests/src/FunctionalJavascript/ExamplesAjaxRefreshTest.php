@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -14,10 +14,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the dependents a change moved and nothing else, the trigger the person
  * touched left the same node unless what it shows is wrong.
  *
- * @see \Drupal\Tests\data_surface\Kernel\ExamplesStepsTest
+ * @see \Drupal\Tests\surface\Kernel\ExamplesStepsTest
  *   For the same rebuilds, asked of the form state.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
 
@@ -115,7 +115,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
       'title, anyOf, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
     ], $this->todayRow('ticket'));
     $this->assertSame($documents, $this->todayDocuments());
-    $assert->elementsCount('css', 'details.data-surface-today-panel', 1);
+    $assert->elementsCount('css', 'details.surface-today-panel', 1);
   }
 
   /**
@@ -128,7 +128,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
    *   What core answers, then the plain mapping.
    */
   protected function todayDocuments(): array {
-    return $this->getSession()->evaluateScript('return Array.from(document.querySelectorAll("details.data-surface-today-panel pre")).map((e) => e.textContent);');
+    return $this->getSession()->evaluateScript('return Array.from(document.querySelectorAll("details.surface-today-panel pre")).map((e) => e.textContent);');
   }
 
   /**
@@ -143,7 +143,7 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
   protected function todayRow(string $key): array {
     return $this->getSession()->evaluateScript(sprintf(
       'return Array.from(document.querySelectorAll(%s)).map((e) => e.textContent.trim());',
-      json_encode('table.data-surface-today-comparison tr[data-today-key="' . $key . '"] td'),
+      json_encode('table.surface-today-comparison tr[data-today-key="' . $key . '"] td'),
     ));
   }
 

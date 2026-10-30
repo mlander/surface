@@ -2,16 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Traits;
+namespace Drupal\Tests\surface\Traits;
 
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Pipeline\TypeMismatchException;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Pipeline\VariantMismatchException;
-use Drupal\data_surface\Pipeline\Violation;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Pipeline\TypeMismatchException;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Pipeline\VariantMismatchException;
+use Drupal\surface\Pipeline\Violation;
 
 /**
  * Holds both documents to the pipeline, on the accepted document.
@@ -40,7 +40,7 @@ trait NeverStricterTrait {
    *
    * @param string $id
    *   The resource's id, for the documents.
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface, built in its operation.
    * @param array $stored
    *   What storage holds.
@@ -50,7 +50,7 @@ trait NeverStricterTrait {
    *   schema and the schema for these answers accept its document anyway:
    *   FALSE, exact, unless given, and NULL for what the schema's marks at
    *   each refused key say.
-   * @param \Drupal\data_surface\DataSurfaceInterface|null $declared
+   * @param \Drupal\surface\SurfaceInterface|null $declared
    *   The data surface the full schema is emitted from, built for the
    *   account alone, when access in it differs from $surface's; NULL for
    *   $surface.
@@ -58,9 +58,9 @@ trait NeverStricterTrait {
    * @return int
    *   How many rows the pipeline accepted.
    */
-  protected function assertTable(string $id, DataSurfaceInterface $surface, array $stored, array $rows, ?DataSurfaceInterface $declared = NULL): int {
+  protected function assertTable(string $id, SurfaceInterface $surface, array $stored, array $rows, ?SurfaceInterface $declared = NULL): int {
     $pipeline = $this->pipeline();
-    $emitter = \Drupal::service('data_surface.contract_emitter');
+    $emitter = \Drupal::service('surface.contract_emitter');
     assert($emitter instanceof ContractEmitter);
     // As a client holds them: an empty object stays one.
     $full = json_decode((string) json_encode($emitter->emitFull($declared ?? $surface, $id)->document['schema']));
@@ -128,7 +128,7 @@ trait NeverStricterTrait {
    *
    * @param array|\stdClass $schema
    *   The schema, as a client decoded it.
-   * @param \Drupal\data_surface\Pipeline\Violation[] $violations
+   * @param \Drupal\surface\Pipeline\Violation[] $violations
    *   What the pipeline refused.
    *
    * @return bool
@@ -225,7 +225,7 @@ trait NeverStricterTrait {
   /**
    * Names where the pipeline refused, for a message.
    *
-   * @param \Drupal\data_surface\Pipeline\Violation[] $violations
+   * @param \Drupal\surface\Pipeline\Violation[] $violations
    *   What it refused.
    *
    * @return string
@@ -239,7 +239,7 @@ trait NeverStricterTrait {
   /**
    * Leaves out each secret a document's values mask as null.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the values are of.
    * @param mixed $values
    *   The values, as the document carries them, decoded with objects.
@@ -248,7 +248,7 @@ trait NeverStricterTrait {
    *   The same, a secret holding null left out, in a child or a chosen
    *   variant too.
    */
-  protected function unmasked(DataSurfaceInterface $surface, mixed $values): mixed {
+  protected function unmasked(SurfaceInterface $surface, mixed $values): mixed {
     if (!$values instanceof \stdClass) {
       return $values;
     }

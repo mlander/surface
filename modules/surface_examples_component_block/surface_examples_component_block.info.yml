@@ -1,0 +1,10 @@
+name: Surface API component block
+type: module
+description: 'A block that embeds a single-directory component: the component chosen from the components the site has, and its props read from the schema the component declares.'
+package: Surface API
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface
+  - drupal:block

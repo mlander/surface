@@ -30,7 +30,7 @@ final class TeaserBlockStructure implements StructureInterface {
 ```php
 #[Block(id: 'my_teaser', admin_label: new TranslatableMarkup('Teaser'))]
 #[UsesStructure(TeaserBlockStructure::class)]
-final class TeaserBlock extends DataSurfaceBlockBase {
+final class TeaserBlock extends TypedBlockBase {
 
   public function build(): array {
     return ['#markup' => $this->getConfiguration()['headline']];
@@ -56,7 +56,7 @@ and the same static `defineInputs()` on it:
 ```php
 #[Block(id: 'my_teaser', admin_label: new TranslatableMarkup('Teaser'))]
 #[UsesStructure]
-final class TeaserBlock extends DataSurfaceBlockBase implements StructureInterface {
+final class TeaserBlock extends TypedBlockBase implements StructureInterface {
 
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('headline', 'string', t('Headline'), default: 'Featured content')
@@ -81,8 +81,8 @@ settings.
 The same data surface answers a caller that never renders anything:
 
 ```php
-$result = \Drupal::service('data_surface.pipeline')->submit(
-  $block->getDataSurface(),
+$result = \Drupal::service('surface.pipeline')->submit(
+  $block->getSurface(),
   ['headline' => 'Latest', 'limit' => '5'],
   new PluginConfigurationStorage($block),
 );
@@ -98,7 +98,7 @@ would have shown.
 A structure describes values something else stores, here the block's
 configuration. It has no identity and no operations, so it has no form
 route, tool or endpoint of its own. A resource has all three. The placed
-block is one: `block.placement`, in the `data_surface_block` submodule,
+block is one: `block.placement`, in the `surface_examples_block` submodule,
 is the block config entity by its machine name, with `create`, `update`
 and `delete` operations, and its `settings` key is chosen by its `plugin`
 key. Once `my_teaser` is chosen, the teaser's structure is what every
@@ -108,14 +108,14 @@ the block:
 | Door | Where |
 | --- | --- |
 | Form API | `/admin/structure/block/surface/add`: choose the plugin and its settings are drawn |
-| Tool API | `data_surface:block.placement:create`, with `data_surface_tool` |
-| HTTP | `POST /surface-api/block.placement`, with `data_surface_react` |
+| Tool API | `surface:block.placement:create`, with `tool` |
+| HTTP | `POST /surface-api/block.placement`, with `surface_react` |
 | React | `/surface-react/block.placement/create` |
 
 The same placement from the command line, as a dry run:
 
 ```bash
-drush tool:run data_surface:block.placement:create --uid=1 --input='{"values":{"label":"Teaser","id":"teaser_front","plugin":"my_teaser","settings":{"headline":"Latest","limit":5},"theme":"olivero","region":"content"}}' --input=dry_run=true
+drush tool:run surface:block.placement:create --uid=1 --input='{"values":{"label":"Teaser","id":"teaser_front","plugin":"my_teaser","settings":{"headline":"Latest","limit":5},"theme":"olivero","region":"content"}}' --input=dry_run=true
 ```
 
 A `limit` of 60 is refused at every door with the Range message, at the
@@ -124,5 +124,5 @@ key's path, and a machine name already in use is refused by name.
 To make something of your own a resource, the same class takes
 `#[Resource]`, naming its identity keys and its storage class, and an
 `#[Operation]` for each thing a caller may do. Routes, tools and
-endpoints are generated from those: [Your first resource](first-resource.md) for a settings page, [example 15](https://github.com/mlander/data_surface/blob/main/modules/data_surface_examples/README.md#example-15-a-config-entity-of-your-own)
+endpoints are generated from those: [Your first resource](first-resource.md) for a settings page, [example 15](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-15-a-config-entity-of-your-own)
 for a config entity type of your own, and [Declaring a resource or structure](declaring-a-resource.md) for the whole vocabulary.

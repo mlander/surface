@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\FunctionalJavascript;
+namespace Drupal\Tests\surface\FunctionalJavascript;
 
 use Drupal\block\Entity\Block;
 use Drupal\FunctionalJavascriptTests\WebDriverTestBase;
@@ -18,7 +18,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * block is placed and the page moves to its edit, which opens on what is
  * stored and saves a change.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class BlockPlacementReactTest extends WebDriverTestBase {
 
@@ -27,8 +27,8 @@ class BlockPlacementReactTest extends WebDriverTestBase {
    */
   protected static $modules = [
     'block',
-    'data_surface_block',
-    'data_surface_react',
+    'surface_examples_block',
+    'surface_react',
   ];
 
   /**

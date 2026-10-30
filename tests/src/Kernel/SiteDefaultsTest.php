@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface_tool\OperationInputs;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * A site sets a key's default in data_surface.defaults, and every door sees it.
+ * A site sets a key's default in surface.defaults, and every door sees it.
  *
  * The examples' registration (example 3) and venue (example 15) declare
  * their defaults; the site sets its own over them, each entry a resource
@@ -25,9 +25,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @see docs/declaring-a-resource.md#a-sites-own-defaults
  * @see docs/decisions.md#a-site-sets-a-default-in-configuration
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class SiteDefaultsTest extends DataSurfaceKernelTestBase {
+class SiteDefaultsTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -40,9 +40,8 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
+    'surface',
+    'surface_examples',
   ];
 
   /**
@@ -51,7 +50,7 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface', 'data_surface_examples']);
+    $this->installConfig(['surface', 'surface_examples']);
     $this->setUpCurrentUser(admin: TRUE);
   }
 
@@ -62,7 +61,7 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
    *   Each a resource id, a key path and a value.
    */
   protected function setDefaults(array $entries): void {
-    $this->config('data_surface.defaults')->set('defaults', array_map(static fn (array $entry): array => [
+    $this->config('surface.defaults')->set('defaults', array_map(static fn (array $entry): array => [
       'resource' => $entry[0],
       'key' => $entry[1],
       'value' => $entry[2],
@@ -77,11 +76,11 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
    * @param string $operation
    *   The operation id.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The built resource.
    */
-  protected function built(string $resource, string $operation): DataSurfaceInterface {
-    $resources = $this->container->get('data_surface.resources');
+  protected function built(string $resource, string $operation): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
     return $resources->build($resource, $resources->operation($resource, $operation, []));
   }
 
@@ -94,14 +93,14 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
 
     $built = $this->built('registration.step3', 'configure');
     $this->assertSame(40, $built->getDefault('capacity'), 'Read through the coercion table: "40" is the integer 40.');
-    $this->assertContains('config:data_surface.defaults', $built->getCacheTags());
-    $emitter = $this->container->get('data_surface.contract_emitter');
+    $this->assertContains('config:surface.defaults', $built->getCacheTags());
+    $emitter = $this->container->get('surface.contract_emitter');
     $this->assertSame(40, $emitter->emitFull($built, 'registration.step3', 'configure')->document['schema']['properties']['capacity']['default']);
     $this->assertSame(40, $emitter->emit($built, $built->getDefaultValues(), 'registration.step3', 'configure')->document['schema']['properties']['capacity']['default']);
 
     // The declaration a config schema and an install file are written
     // from keeps the module's.
-    $resources = $this->container->get('data_surface.resources');
+    $resources = $this->container->get('surface.resources');
     $this->assertSame(50, $resources->declaration('registration.step3', $resources->operation('registration.step3', 'configure', []))->getDefault('capacity'));
 
     // A key with nothing stored starts from the site's on the form.
@@ -123,7 +122,7 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
     ]);
     $manager = $this->container->get('plugin.manager.tool');
     $manager->clearCachedDefinitions();
-    $values = $manager->getDefinition('data_surface:event.venue:create')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
+    $values = $manager->getDefinition('surface:event.venue:create')->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
     $this->assertSame(5, $values['weight']->getDefaultValue());
     $this->assertFalse($values['status']->getDefaultValue());
 
@@ -141,7 +140,7 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
     $built = $this->built('registration.step3', 'configure');
     $this->assertSame(['email' => NULL, 'phone' => '+1 555 0100'], $built->getDefault('contact'));
     // Stated where the full schema states the contact's phone.
-    $full = json_encode($this->container->get('data_surface.contract_emitter')->emitFull($built, 'registration.step3', 'configure')->document['schema']);
+    $full = json_encode($this->container->get('surface.contract_emitter')->emitFull($built, 'registration.step3', 'configure')->document['schema']);
     $this->assertStringContainsString('"default":"+1 555 0100"', (string) $full);
   }
 
@@ -151,7 +150,7 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
   public function testValueThatDoesNotFitIsRefused(): void {
     $this->setDefaults([['registration.step3', 'venue', 'nowhere']]);
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('data_surface.defaults sets "venue" on registration.step3 to "nowhere", which the key does not accept: The value you selected is not a valid choice.');
+    $this->expectExceptionMessage('surface.defaults sets "venue" on registration.step3 to "nowhere", which the key does not accept: The value you selected is not a valid choice.');
     $this->built('registration.step3', 'configure');
   }
 
@@ -161,7 +160,7 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
   public function testValueOutOfRangeIsRefused(): void {
     $this->setDefaults([['event.venue', 'weight', '5000']]);
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('data_surface.defaults sets "weight" on event.venue to "5000", which the key does not accept: This value should be between -1000 and 1000.');
+    $this->expectExceptionMessage('surface.defaults sets "weight" on event.venue to "5000", which the key does not accept: This value should be between -1000 and 1000.');
     $this->built('event.venue', 'create');
   }
 
@@ -171,7 +170,7 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
   public function testKeyThatDoesNotExistIsRefused(): void {
     $this->setDefaults([['registration.step3', 'contact.fax', '0']]);
     $this->expectException(\LogicException::class);
-    $this->expectExceptionMessage('data_surface.defaults: registration.step3 has no key "contact.fax". A site default names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).');
+    $this->expectExceptionMessage('surface.defaults: registration.step3 has no key "contact.fax". A site default names a key the resource declares, a key inside a map it declares or a structure it attaches (contact.phone), or a key an alter mounts (third_party_settings.<module>.<key>).');
     $this->built('registration.step3', 'configure');
   }
 
@@ -184,25 +183,25 @@ class SiteDefaultsTest extends DataSurfaceKernelTestBase {
         ['registration.step3', 'ticket.price', '3'],
         'registration.step3',
         'configure',
-        'data_surface.defaults: "ticket.price" on registration.step3 is inside "ticket", a key with variants, each starting from its own defaults, so a site default does not reach it.',
+        'surface.defaults: "ticket.price" on registration.step3 is inside "ticket", a key with variants, each starting from its own defaults, so a site default does not reach it.',
       ],
       [
         ['registration.step3', 'contact', '{}'],
         'registration.step3',
         'configure',
-        'data_surface.defaults: "contact" on registration.step3 holds a structure: set each of its keys, as "contact.<key>".',
+        'surface.defaults: "contact" on registration.step3 holds a structure: set each of its keys, as "contact.<key>".',
       ],
       [
         ['event.venue', 'slug', 'hall'],
         'event.venue',
         'create',
-        'data_surface.defaults: "slug" on event.venue is computed from label, so it takes no default.',
+        'surface.defaults: "slug" on event.venue is computed from label, so it takes no default.',
       ],
       [
         ['event.venue', 'rooms.label', 'Main'],
         'event.venue',
         'create',
-        'data_surface.defaults: "rooms.label" on event.venue is inside "rooms", a collection, each item starting from its structure\'s defaults, so a site default does not reach it.',
+        'surface.defaults: "rooms.label" on event.venue is inside "rooms", a collection, each item starting from its structure\'s defaults, so a site default does not reach it.',
       ],
     ] as [$entry, $resource, $operation, $message]) {
       $this->setDefaults([$entry]);

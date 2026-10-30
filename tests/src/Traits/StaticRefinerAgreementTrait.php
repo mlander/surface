@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Traits;
+namespace Drupal\Tests\surface\Traits;
 
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\data_surface\Contract\ContractEmitter;
-use Drupal\data_surface\Contract\SchemaResolver;
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\DefinitionMetadata;
-use Drupal\data_surface\Options\DataSurfaceOptions;
-use Drupal\data_surface\Refinement\DoesNotApply;
+use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\Refinement\DoesNotApply;
 use Opis\JsonSchema\CompliantValidator;
 
 /**
@@ -54,7 +54,7 @@ trait StaticRefinerAgreementTrait {
   /**
    * Asserts every enumerated conditional is what a fresh refine() answers.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param array|null $values
    *   The values to emit the schema for, whose conditionals hold each
@@ -67,8 +67,8 @@ trait StaticRefinerAgreementTrait {
    *   How many conditionals were compared, parts included, so a
    *   caller can assert the check reached something.
    */
-  protected function assertStaticRefinersAgree(DataSurfaceInterface $surface, ?array $values = NULL, string $label = 'surface'): int {
-    $emitter = \Drupal::service('data_surface.contract_emitter');
+  protected function assertStaticRefinersAgree(SurfaceInterface $surface, ?array $values = NULL, string $label = 'surface'): int {
+    $emitter = \Drupal::service('surface.contract_emitter');
     assert($emitter instanceof ContractEmitter);
     $served = $values === NULL ? $emitter->emitFull($surface, $label) : $emitter->emit($surface, $values, $label);
     // Each marker where the emitter's pass wrote it: a declared rule's on
@@ -95,7 +95,7 @@ trait StaticRefinerAgreementTrait {
     // What an enumerated conditional states: the coded refiners' answer in
     // the full schema, which states a declared rule apart; the static
     // ones' for one set of values, which evaluates it.
-    $kinds = $values === NULL ? DataSurfaceInterface::CODED : DataSurfaceInterface::STATIC;
+    $kinds = $values === NULL ? SurfaceInterface::CODED : SurfaceInterface::STATIC;
     // What a conditional is laid over: the key as those refiners leave it
     // while their gate is closed, as declared but for a rule already
     // evaluated for these values.
@@ -180,7 +180,7 @@ trait StaticRefinerAgreementTrait {
   /**
    * Asserts every declared rule's conditional is what refinement answers.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param array $schema
    *   Its full schema, decoded.
@@ -192,8 +192,8 @@ trait StaticRefinerAgreementTrait {
    * @return int
    *   How many sampled values were compared.
    */
-  protected function assertDeclaredRulesAgree(DataSurfaceInterface $surface, array $schema, array $known, string $label): int {
-    $emitter = \Drupal::service('data_surface.contract_emitter');
+  protected function assertDeclaredRulesAgree(SurfaceInterface $surface, array $schema, array $known, string $label): int {
+    $emitter = \Drupal::service('surface.contract_emitter');
     assert($emitter instanceof ContractEmitter);
     $rules = [];
     foreach ($schema['allOf'] ?? [] as $condition) {
@@ -219,7 +219,7 @@ trait StaticRefinerAgreementTrait {
         $samples = array_merge([NULL], $samples, self::held($definition));
         $samples = array_values(array_filter(
           array_unique($samples, SORT_REGULAR),
-          static fn (mixed $value): bool => $value === NULL || ($definition !== NULL && \Drupal::service('data_surface.watched_value_check')->admits($definition, $value)),
+          static fn (mixed $value): bool => $value === NULL || ($definition !== NULL && \Drupal::service('surface.watched_value_check')->admits($definition, $value)),
         ));
         $next = [];
         foreach ($points as $point) {
@@ -237,10 +237,10 @@ trait StaticRefinerAgreementTrait {
         }
         // Only a document the pipeline could accept: no value for a key
         // that does not apply, none its own key refuses as refined.
-        $standing = $surface->refine($sampled, DataSurfaceInterface::STATIC);
+        $standing = $surface->refine($sampled, SurfaceInterface::STATIC);
         foreach ($point as $path => $value) {
           $definition = self::definitionAt($standing, (string) $path);
-          if ($value !== NULL && ($definition === NULL || DoesNotApply::marks($definition) || !\Drupal::service('data_surface.watched_value_check')->admits($definition, $value))) {
+          if ($value !== NULL && ($definition === NULL || DoesNotApply::marks($definition) || !\Drupal::service('surface.watched_value_check')->admits($definition, $value))) {
             continue 2;
           }
         }
@@ -264,7 +264,7 @@ trait StaticRefinerAgreementTrait {
             $expected = self::tightened($expected, $then);
           }
         }
-        $refined = $surface->refine($sampled, DataSurfaceInterface::DECLARED)->getDefinition($key) ?? $entry->definition;
+        $refined = $surface->refine($sampled, SurfaceInterface::DECLARED)->getDefinition($key) ?? $entry->definition;
         $actual = $emitter->describeKey($entry, $refined);
         $at = sprintf('In %s, "%s" for %s', $label, $key, json_encode($point));
         $this->assertSame($ruled, $actual === FALSE, $at . ' does not apply where its rules say otherwise.');
@@ -321,7 +321,7 @@ trait StaticRefinerAgreementTrait {
   /**
    * Reads the definition of a key, or of a key an alter mounted.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $surface
+   * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface.
    * @param string $path
    *   The key, or its dotted path.
@@ -329,7 +329,7 @@ trait StaticRefinerAgreementTrait {
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
    *   The definition.
    */
-  protected static function definitionAt(DataSurfaceInterface $surface, string $path): ?DataDefinitionInterface {
+  protected static function definitionAt(SurfaceInterface $surface, string $path): ?DataDefinitionInterface {
     $parents = explode('.', $path);
     $definition = $surface->getDefinition((string) array_shift($parents));
     foreach ($parents as $property) {
@@ -351,8 +351,8 @@ trait StaticRefinerAgreementTrait {
     if ($definition === NULL || $definition instanceof ListDataDefinitionInterface) {
       return [];
     }
-    $options = \Drupal::service('data_surface.options');
-    assert($options instanceof DataSurfaceOptions);
+    $options = \Drupal::service('surface.options');
+    assert($options instanceof SurfaceOptions);
     $set = $options->resolve($definition);
     if ($set !== NULL) {
       return array_keys($set->options);

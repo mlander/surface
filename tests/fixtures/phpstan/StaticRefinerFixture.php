@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Fixtures;
+namespace Drupal\Tests\surface\Fixtures;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\data_surface\Resource\Attribute\RefinesInput;
+use Drupal\surface\Resource\Attribute\RefinesInput;
 
 /**
  * Refiners for StaticRefinerRuleTest: which the rule flags, and which not.
@@ -25,7 +25,7 @@ final class StaticRefinerFixture {
    */
   #[RefinesInput('room')]
   public static function asksForService(DataDefinitionInterface $room): DataDefinitionInterface {
-    \Drupal::service('data_surface.options');
+    \Drupal::service('surface.options');
     return $room;
   }
 

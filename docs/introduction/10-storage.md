@@ -37,8 +37,6 @@ final class MySettingsStorage extends ConfigObjectStorage {
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 `ConfigObjectStorage` does the three steps: it reads
 `my_module.settings`, checks the values against the object's config
 schema, and saves them, each key under its own name. The config schema
@@ -53,11 +51,11 @@ a `STORED_AT` constant; this one needs none.
 | --- | --- | --- |
 | A config object | a subclass of `ConfigObjectStorage` | your module's settings |
 | A config entity | a subclass of `ConfigEntityStorage` | the placed block (`block`), the content type (`node_type`) |
-| A content entity | `ContentEntityStorage`, in the `data_surface_entity` submodule, used as it is | a node |
+| A content entity | `ContentEntityStorage`, in the `surface_examples_entity` submodule, used as it is | a node |
 
 A config entity's storage names the entity type and the keys that are
 the entity's own properties. The placed block's, `BlockPlacementStorage`
-in the `data_surface_block` submodule, sets `ENTITY_TYPE_ID` to
+in the `surface_examples_block` submodule, sets `ENTITY_TYPE_ID` to
 `block` and `PROPERTIES` to `id`, `status`, `weight`, `theme`, `region`
 and `plugin`. The rest of that class turns the
 resource's `settings` and `visibility` keys into the arrays core's

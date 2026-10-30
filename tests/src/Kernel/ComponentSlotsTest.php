@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
-use Drupal\data_surface\DataSurfaceInterface;
-use Drupal\data_surface\Pipeline\UnknownKeysException;
-use Drupal\data_surface\Resource\OperationContext;
-use Drupal\data_surface\Variants\ComponentSlots;
-use Drupal\data_surface_component_block\Structure\ComponentBlockStructure;
+use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\UnknownKeysException;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Variants\ComponentSlots;
+use Drupal\surface_examples_component_block\Structure\ComponentBlockStructure;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -26,9 +26,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * @see docs/decisions.md#a-slot-holds-text-a-component-or-components
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class ComponentSlotsTest extends DataSurfaceKernelTestBase {
+class ComponentSlotsTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -42,17 +42,16 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
     'field',
     'serialization',
     'tool',
-    'data_surface',
-    'data_surface_tool',
-    'data_surface_examples',
-    'data_surface_component_block',
-    'data_surface_component_test',
+    'surface',
+    'surface_examples',
+    'surface_examples_component_block',
+    'surface_component_test',
   ];
 
   /**
    * The nest's id.
    */
-  protected const NEST = 'data_surface_component_test:nest';
+  protected const NEST = 'surface_component_test:nest';
 
   /**
    * {@inheritdoc}
@@ -67,7 +66,7 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the provider.
    *
-   * @return \Drupal\data_surface\Variants\ComponentSlots
+   * @return \Drupal\surface\Variants\ComponentSlots
    *   ComponentSlots, as the build step makes it.
    */
   protected function provider(): ComponentSlots {
@@ -79,27 +78,27 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
   /**
    * Builds the component block's structure.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The structure, built to configure.
    */
-  protected function block(): DataSurfaceInterface {
-    return $this->container->get('data_surface.resources')->build(ComponentBlockStructure::class, new OperationContext('configure'));
+  protected function block(): SurfaceInterface {
+    return $this->container->get('surface.resources')->build(ComponentBlockStructure::class, new OperationContext('configure'));
   }
 
   /**
    * Gets the slot of one component at the top, or below one in a slot.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $frame
+   * @param \Drupal\surface\SurfaceInterface $frame
    *   The frame holding `slots`: the block, or a nested component.
    * @param string $component
    *   The component the frame chooses.
    * @param string $slot
    *   The slot.
    *
-   * @return \Drupal\data_surface\DataSurfaceInterface
+   * @return \Drupal\surface\SurfaceInterface
    *   The slot's structure.
    */
-  protected function slot(DataSurfaceInterface $frame, string $component, string $slot): DataSurfaceInterface {
+  protected function slot(SurfaceInterface $frame, string $component, string $slot): SurfaceInterface {
     $slots = $frame->getDefinitions()->entry('slots')->variants->variants[$component]->child;
     return $slots->getDefinitions()->entry($slot)->attachment->child;
   }
@@ -107,13 +106,13 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the components a nested component's key offers.
    *
-   * @param \Drupal\data_surface\DataSurfaceInterface $slot
+   * @param \Drupal\surface\SurfaceInterface $slot
    *   The slot holding it.
    *
    * @return string[]
    *   Their ids, in order.
    */
-  protected function offered(DataSurfaceInterface $slot): array {
+  protected function offered(SurfaceInterface $slot): array {
     $nested = $slot->getDefinitions()->entry('component')->attachment->child;
     return array_map('strval', array_keys($this->options()->resolve($nested->getDefinition('component'))->options));
   }
@@ -123,28 +122,28 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
    */
   public function testExpectedIsReadFromMetadata(): void {
     $provider = $this->provider();
-    $hero = $provider->metadata('data_surface_examples:hero');
+    $hero = $provider->metadata('surface_examples:hero');
     $this->assertSame(['actions'], array_keys($hero));
-    $this->assertSame(['data_surface_examples:call_to_action'], $hero['actions']['expected']);
+    $this->assertSame(['surface_examples:call_to_action'], $hero['actions']['expected']);
     $this->assertSame(2, $hero['actions']['maxItems']);
-    $this->assertSame([], $provider->metadata('data_surface_examples:call_to_action'), 'A component with no slot has none.');
+    $this->assertSame([], $provider->metadata('surface_examples:call_to_action'), 'A component with no slot has none.');
 
     // By id, by tag, none for an empty list, every one for no list.
-    $this->assertSame(['data_surface_examples:call_to_action'], $provider->expected($hero['actions']));
-    $this->assertSame(['data_surface_examples:card', 'data_surface_examples:hero'], $provider->expected($provider->metadata('data_surface_examples:section')['content']), 'The tag block: the card and the hero carry it.');
-    $this->assertSame([], $provider->expected($provider->metadata('data_surface_examples:card')['body']));
+    $this->assertSame(['surface_examples:call_to_action'], $provider->expected($hero['actions']));
+    $this->assertSame(['surface_examples:card', 'surface_examples:hero'], $provider->expected($provider->metadata('surface_examples:section')['content']), 'The tag block: the card and the hero carry it.');
+    $this->assertSame([], $provider->expected($provider->metadata('surface_examples:card')['body']));
     $this->assertSame([
-      'data_surface_component_test:nest',
-      'data_surface_examples:call_to_action',
-      'data_surface_examples:card',
-      'data_surface_examples:hero',
-      'data_surface_examples:section',
+      'surface_component_test:nest',
+      'surface_examples:call_to_action',
+      'surface_examples:card',
+      'surface_examples:hero',
+      'surface_examples:section',
     ], $provider->expected(['title' => 'Anything']));
 
     // The kinds follow: a list unless one at most, text alone at the cap
     // or where no component is expected.
     $this->assertSame(ComponentSlots::KINDS, $provider->kinds($hero['actions'], 1));
-    $this->assertSame(['text'], $provider->kinds($provider->metadata('data_surface_examples:card')['body'], 1));
+    $this->assertSame(['text'], $provider->kinds($provider->metadata('surface_examples:card')['body'], 1));
     $this->assertSame(['text', 'component'], $provider->kinds($provider->metadata(self::NEST)['single'], 1));
     $this->assertSame(ComponentSlots::KINDS, $provider->kinds($hero['actions'], ComponentSlots::DEPTH - 1));
     $this->assertSame(['text'], $provider->kinds($hero['actions'], ComponentSlots::DEPTH));
@@ -152,13 +151,13 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
     // Built: the hero's actions offer the call to action alone, in a list
     // of two at most, and the section's content the components tagged.
     $built = $this->block();
-    $actions = $this->slot($built, 'data_surface_examples:hero', 'actions');
+    $actions = $this->slot($built, 'surface_examples:hero', 'actions');
     $this->assertSame(['kind', 'text', 'component', 'components'], $actions->getDefinitions()->names());
-    $this->assertSame(['data_surface_examples:call_to_action'], $this->offered($actions));
+    $this->assertSame(['surface_examples:call_to_action'], $this->offered($actions));
     $count = $actions->getDefinition('components')->getConstraint('Count');
     $this->assertSame(['max' => 2], $count);
-    $this->assertSame(['data_surface_examples:card', 'data_surface_examples:hero'], $this->offered($this->slot($built, 'data_surface_examples:section', 'content')));
-    $body = $this->slot($built, 'data_surface_examples:card', 'body');
+    $this->assertSame(['surface_examples:card', 'surface_examples:hero'], $this->offered($this->slot($built, 'surface_examples:section', 'content')));
+    $body = $this->slot($built, 'surface_examples:card', 'body');
     $this->assertSame(['kind', 'text'], $body->getDefinitions()->names(), 'An empty list expects no component: text alone.');
     $single = $this->slot($built, self::NEST, 'single');
     $this->assertSame(['kind', 'text', 'component'], $single->getDefinitions()->names(), 'One at most: text or one component, no list.');
@@ -182,7 +181,7 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(['text'], array_map('strval', array_keys($this->options()->resolve($capped->getDefinition('kind'))->options)));
 
     // The same in the full schema: a def per depth, text alone at the cap.
-    $full = $this->container->get('data_surface.contract_emitter')->emitFull($this->container->get('data_surface.resources')->buildStatic(ComponentBlockStructure::class, new OperationContext('configure')), 'block.data_surface_component')->document['schema'];
+    $full = $this->container->get('surface.contract_emitter')->emitFull($this->container->get('surface.resources')->buildStatic(ComponentBlockStructure::class, new OperationContext('configure')), 'block.surface_component')->document['schema'];
     $defs = $full['$defs'];
     $this->assertArrayHasKey('component.slot.' . self::NEST . '.inner.1', $defs);
     $this->assertArrayHasKey('component.slot.' . self::NEST . '.inner.2', $defs);
@@ -213,11 +212,11 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
    */
   public function testExpectationsAreRefusals(): void {
     $cta = [
-      'component' => 'data_surface_examples:call_to_action',
+      'component' => 'surface_examples:call_to_action',
       'props' => ['text' => 'Find your ticket', 'url' => 'https://example.com/tickets'],
     ];
     $hero = static fn (array $actions): array => [
-      'component' => 'data_surface_examples:hero',
+      'component' => 'surface_examples:hero',
       'props' => ['title' => 'Doors open at half past six'],
       'slots' => ['actions' => $actions],
     ];
@@ -228,14 +227,14 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
       ['slots.actions.component.component' => 'The value you selected is not a valid choice. Choose Call to action.'],
       $this->refused($hero([
         'kind' => 'component',
-        'component' => ['component' => 'data_surface_examples:hero', 'props' => ['title' => 'Inside']],
+        'component' => ['component' => 'surface_examples:hero', 'props' => ['title' => 'Inside']],
       ])),
     );
     // A tag the component does not carry.
     $this->assertSame(
       ['slots.content.component.component' => 'The value you selected is not a valid choice. Choose Card or Hero.'],
       $this->refused([
-        'component' => 'data_surface_examples:section',
+        'component' => 'surface_examples:section',
         'slots' => ['content' => ['kind' => 'component', 'component' => $cta]],
       ]),
     );
@@ -253,7 +252,7 @@ class ComponentSlotsTest extends DataSurfaceKernelTestBase {
     $this->assertSame(
       ['slots.body.kind' => 'The value you selected is not a valid choice. Choose Text.'],
       $this->refused([
-        'component' => 'data_surface_examples:card',
+        'component' => 'surface_examples:card',
         'props' => ['heading' => 'Doors'],
         'slots' => ['body' => ['kind' => 'component']],
       ]),

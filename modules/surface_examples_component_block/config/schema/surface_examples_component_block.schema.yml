@@ -1,0 +1,19 @@
+block.settings.surface_component:
+  type: block_settings
+  label: 'Component block settings'
+  mapping:
+    component:
+      type: string
+      label: 'Component'
+      nullable: true
+    # Which components a site has is the site's, so no schema written once
+    # can name their props: the variant the component chooses holds them
+    # to its own keys before anything is written.
+    props:
+      type: ignore
+      label: 'Props'
+    # The same for the slots: the variant the component chooses holds them
+    # to its slots, and each nested component to its own.
+    slots:
+      type: ignore
+      label: 'Slots'

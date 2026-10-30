@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Drupal\Tests\data_surface\Kernel;
+namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
-use Drupal\data_surface\Form\DataSurfaceOperationForm;
-use Drupal\Tests\data_surface\Kernel\Fixture\CountingPipeline;
-use Drupal\Tests\data_surface\Kernel\Fixture\CountingSubmitForm;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\Tests\surface\Kernel\Fixture\CountingPipeline;
+use Drupal\Tests\surface\Kernel\Fixture\CountingSubmitForm;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -26,9 +26,9 @@ use Symfony\Component\HttpFoundation\Request;
  * Decision: see
  * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
  */
-#[Group('data_surface')]
+#[Group('surface')]
 #[RunTestsInSeparateProcesses]
-class OnePreparePerSubmitTest extends DataSurfaceKernelTestBase {
+class OnePreparePerSubmitTest extends SurfaceKernelTestBase {
 
   use UserCreationTrait;
 
@@ -38,8 +38,8 @@ class OnePreparePerSubmitTest extends DataSurfaceKernelTestBase {
   protected static $modules = [
     'system',
     'user',
-    'data_surface',
-    'data_surface_first',
+    'surface',
+    'surface_examples_first',
   ];
 
   /**
@@ -48,8 +48,8 @@ class OnePreparePerSubmitTest extends DataSurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
-    $this->installConfig(['data_surface_first']);
-    $this->setUpCurrentUser(permissions: ['administer data_surface_first']);
+    $this->installConfig(['surface_examples_first']);
+    $this->setUpCurrentUser(permissions: ['administer surface_examples_first']);
     CountingSubmitForm::$pipeline = NULL;
     CountingSubmitForm::$between = NULL;
   }
@@ -64,7 +64,7 @@ class OnePreparePerSubmitTest extends DataSurfaceKernelTestBase {
    *   The form state after the submission.
    */
   protected function submitTheForm(array $values): FormStateInterface {
-    $route_name = 'data_surface_first.newsletter';
+    $route_name = 'surface_examples_first.newsletter';
     $route = $this->container->get('router.route_provider')->getRouteByName($route_name);
     $stack = $this->container->get('request_stack');
     $request = Request::create($route->getPath(), 'POST');
@@ -73,7 +73,7 @@ class OnePreparePerSubmitTest extends DataSurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
     $form_state = new FormState();
-    $form_state->setValues([DataSurfaceOperationForm::SURFACE_KEY => $values]);
+    $form_state->setValues([SurfaceOperationForm::SURFACE_KEY => $values]);
     $this->container->get('form_builder')->submitForm(CountingSubmitForm::class, $form_state);
     return $form_state;
   }
@@ -81,7 +81,7 @@ class OnePreparePerSubmitTest extends DataSurfaceKernelTestBase {
   /**
    * Gets the pipeline the form asked.
    *
-   * @return \Drupal\Tests\data_surface\Kernel\Fixture\CountingPipeline
+   * @return \Drupal\Tests\surface\Kernel\Fixture\CountingPipeline
    *   The counting pipeline.
    */
   protected function pipeline(): CountingPipeline {
@@ -97,7 +97,7 @@ class OnePreparePerSubmitTest extends DataSurfaceKernelTestBase {
    */
   protected function stored(): array {
     $this->container->get('config.factory')->reset();
-    return $this->config('data_surface_first.newsletter')->getRawData();
+    return $this->config('surface_examples_first.newsletter')->getRawData();
   }
 
   /**
@@ -142,7 +142,7 @@ class OnePreparePerSubmitTest extends DataSurfaceKernelTestBase {
    */
   public function testStorageMovingInBetweenRunsTheSubmitAgain(): void {
     CountingSubmitForm::$between = function (): void {
-      $this->config('data_surface_first.newsletter')->set('sender_name', 'Moved')->save();
+      $this->config('surface_examples_first.newsletter')->set('sender_name', 'Moved')->save();
     };
     $form_state = $this->submitTheForm([
       'sender_name' => 'After',
