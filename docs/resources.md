@@ -66,8 +66,7 @@ module the way core scans `src/Hook`:
   structure, found through its plugin definition rather than a
   directory ([Plugins](#plugins)).
 - A class in `src/Shape/` carrying `#[Shape]` is a shape: one scalar
-  value, declared once and used at many keys ([Named
-  shapes](declaring-a-resource.md#named-shapes)).
+  value, declared once and used at many keys ([Named shapes](declaring-a-resource.md#named-shapes)).
 - A class in `src/Alter/` carrying `#[Alters]` is an alter. It is
   registered as an autowired service, so it may hold services.
 - `#[Operation]` on a resource's or structure's class, or on a static
@@ -170,8 +169,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **The framework checks every refinement is narrower**, so a refiner
   cannot widen, retype, or turn off required. The two type changes it
   accepts are away from `any` and to a derivative of the type
-  (`entity` to `entity:node` to `entity:node:article`); see [the
-  narrowing table](refinement.md#the-narrowing-table).
+  (`entity` to `entity:node` to `entity:node:article`); see [the narrowing table](refinement.md#the-narrowing-table).
 
 ## Reading a class
 
@@ -693,7 +691,7 @@ says on it that whether it may be changed is decided once the thing is
 known. The tool listing declares only the operation's own permission.
 
 The worked example is example 17, a bulk retitle of nodes
-([its README](../modules/data_surface_examples/README.md#example-17-retitle-in-bulk-access-borrowed)),
+([its README](https://github.com/mlander/data_surface/blob/main/modules/data_surface_examples/README.md#example-17-retitle-in-bulk-access-borrowed)),
 and the fixture the test module's notes (`GatesTest`).
 
 ## Storage
@@ -1753,8 +1751,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   stated at the site, on the container's `allOf`, an `if` on the
   container's key and a `then` reaching into the structure where it
   sits; the site's `x-surface.reads` says which key each port reads, and
-  its `dependsOn` names those keys ([the served
-  contract](served-contract.md#a-port-is-stated-at-its-site)).
+  its `dependsOn` names those keys ([the served contract](served-contract.md#a-port-is-stated-at-its-site)).
 
 The test module's seating structure reads a layout (required) and a
 number of guests (optional); the venue attaches it at `seating`, wiring
@@ -2278,8 +2275,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   draws: the form, the envelope over HTTP, the React page, and what the
   pipeline accepts and validates. A locked entry that starts checked is
   drawn checked. A save leaves the entry unstored until a caller sends
-  another value, since [a default storage never held is not
-  written](decisions.md#absent-keeps-null-clears), and the read tool,
+  another value, since [a default storage never held is not written](decisions.md#absent-keeps-null-clears), and the read tool,
   which answers what storage holds, leaves it out; no door reads it as
   `null` (why: [decision](decisions.md#defaults-follow-the-definitions-under-a-stored-value)).
 - **When.** The build step asks the provider every time the resource is
@@ -2370,8 +2366,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   apply when on_sale.student is off.`).
 - **What depends on it is stated per entry**, on the owner's `allOf`: an
   `if` on `on_sale.<id>` and a `then` reaching into `limits.<id>`, a
-  locked entry's too ([the served
-  contract](served-contract.md#a-port-is-stated-at-its-site)). The
+  locked entry's too ([the served contract](served-contract.md#a-port-is-stated-at-its-site)). The
   schema for these answers settles each entry, and the React page
   narrows each one from the full schema with no request.
 - **Refused** when the structure does not read the port; when the
@@ -2487,7 +2482,6 @@ what is derived from what, and where core's APIs fell short.
 ## Not built yet
 
 A collection whose items choose their own child (`attachListBy()`),
-input shapes, and options sources with their alters are deferred; [the
-pattern](pattern.md#deferred) records the position each is held to.
+input shapes, and options sources with their alters are deferred; [the pattern](pattern.md#deferred) records the position each is held to.
 Until options sources exist, a live list is a constraint with an
 options resolver.

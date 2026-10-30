@@ -124,8 +124,5 @@ key's path, and a machine name already in use is refused by name.
 To make something of your own a resource, the same class takes
 `#[Resource]`, naming its identity keys and its storage class, and an
 `#[Operation]` for each thing a caller may do. Routes, tools and
-endpoints are generated from those: [Your first
-resource](first-resource.md) for a settings page, [example
-15](../modules/data_surface_examples/README.md#example-15-a-config-entity-of-your-own)
-for a config entity type of your own, and [Declaring a resource or
-structure](declaring-a-resource.md) for the whole vocabulary.
+endpoints are generated from those: [Your first resource](first-resource.md) for a settings page, [example 15](https://github.com/mlander/data_surface/blob/main/modules/data_surface_examples/README.md#example-15-a-config-entity-of-your-own)
+for a config entity type of your own, and [Declaring a resource or structure](declaring-a-resource.md) for the whole vocabulary.

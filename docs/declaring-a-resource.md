@@ -153,8 +153,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 A constraint's message is a sentence a person reads, so a translator
 should find it beside every label: a message option may be written with
 `t()`, as the license's is; the build hands Symfony its source string,
-which core's validator translates when it refuses a value ([Violation
-messages are objects](semantics.md#violation-messages-are-objects)).
+which core's validator translates when it refuses a value ([Violation messages are objects](semantics.md#violation-messages-are-objects)).
 
 A `Regex` reaches both JSON Schema documents as `pattern` only when it
 stays inside the subset PHP and a JavaScript engine read alike: no
@@ -606,8 +605,7 @@ drush config:set data_surface.defaults defaults.1 \
 drush config:delete data_surface.defaults defaults.1
 ```
 
-The value is text. The build reads it through [the coercion
-table](semantics.md#the-coercion-table), as a form's values are read:
+The value is text. The build reads it through [the coercion table](semantics.md#the-coercion-table), as a form's values are read:
 `40` is an integer for an integer key, `true` or `false` a boolean, a
 JSON list `["a","b"]` a list, a JSON object a map, and an empty value
 none. Quote it in YAML, so `false` stays the word and not a boolean

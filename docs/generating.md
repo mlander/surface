@@ -163,8 +163,7 @@ vocabulary `narrow()->when()`. The config object is a new one of the
 module's, so its schema entry and install file are written.
 
 A `oneOf` of titled constants is a `LabeledChoice` written as its
-`labels` alone, each value a key ([Three ways to write
-it](options.md#three-ways-to-write-it)). Where a value is a numeric
+`labels` alone, each value a key ([Three ways to write it](options.md#three-ways-to-write-it)). Where a value is a numeric
 string, PHP would key it as an integer (`'1'` as `1`), so the values stay
 in `choices` with the `labels` beside them:
 

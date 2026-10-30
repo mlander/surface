@@ -624,8 +624,7 @@ fall back on, `accept()` would replace every one of them with its declared defau
 
 The same reasoning is why the elements that carry a pipeline into a
 static callback also carry `#data_surface_current`: the values the form
-started from, as a plain array, so it survives the form cache. See [the
-serialization rule](storage.md#the-serialization-rule) for what may and
+started from, as a plain array, so it survives the form cache. See [the serialization rule](storage.md#the-serialization-rule) for what may and
 may not ride on a form array.
 
 `validateSurfaceForm()` takes the same `$current` and for a second
@@ -783,8 +782,7 @@ of losing the value:
   save used to write that first option over the stored value without
   anybody choosing anything.
 - **The element carries the value it stands for** on
-  `#data_surface_stale` (a plain value, per [the serialization
-  rule](storage.md#the-serialization-rule)), and extraction reads an
+  `#data_surface_stale` (a plain value, per [the serialization rule](storage.md#the-serialization-rule)), and extraction reads an
   empty submission from such an element as that value, so **leaving the
   select alone sends the stored value back**, and a save keeps it as
   long as nothing it depends on moved in the same submission. Reading it
@@ -1080,16 +1078,14 @@ after the operation has built its context, and applies them to it:
   defaults on one is refused.
 
 **Values.** YAML types a value (`3` an integer, `true` a boolean, `'3'`
-a string). Either way it is read through [the coercion
-table](semantics.md#the-coercion-table), so `copies: '3'` and `copies: 3`
+a string). Either way it is read through [the coercion table](semantics.md#the-coercion-table), so `copies: '3'` and `copies: 3`
 are the same integer, and held to the key's definition with typed data,
 its constraints included, before the build uses it. A key that holds one
 value takes one: a list or a map given to it is refused before any
 constraint reads it, as a context's own default or fixed value is, and
 the message says "it holds one string, not a list or a map."
 
-**Reach.** A path reaches what [a site
-default](declaring-a-resource.md#a-sites-own-defaults) reaches: a key
+**Reach.** A path reaches what [a site default](declaring-a-resource.md#a-sites-own-defaults) reaches: a key
 the resource declares, a key inside a map it declares
 (`greeting.format`), a key of a structure attached at a fixed key
 (`title.value`), which the build hands to that child's own context, and
@@ -1501,7 +1497,7 @@ route lists, as the form does, and `servedTitle()` titles it with the
 operation's label. The generic page,
 `/surface-react/{resource}/{operation}`, carries no seeds, and answers a
 URL that names nothing as the form's route does
-([React](../modules/data_surface_react/README.md#a-page-at-a-modules-route)).
+([React](https://github.com/mlander/data_surface/blob/main/modules/data_surface_react/README.md#a-page-at-a-modules-route)).
 
 ### Access, twice
 

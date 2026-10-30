@@ -164,10 +164,8 @@ modules declare, with the doors each operation reaches, and `drush
 surface:catalog --refused` what did not build, with the file to open
 ([The site's catalog](catalog-command.md)). The same listing, each door
 linked, is the page at `/admin/config/development/surfaces`, for a role
-with "View the data surface catalog" ([the catalog
-page](catalog-command.md#the-catalog-page)). To hold your own resources
-to the invariants from your module's tests, see [Testing a
-resource](testing-a-resource.md).
+with "View the data surface catalog" ([the catalog page](catalog-command.md#the-catalog-page)). To hold your own resources
+to the invariants from your module's tests, see [Testing a resource](testing-a-resource.md).
 
 The examples, in the order they are written to be shown and with the
 submodules each one needs, are in [Examples](examples/index.md).

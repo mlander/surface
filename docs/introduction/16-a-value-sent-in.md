@@ -1,7 +1,6 @@
 # A value sent in
 
-Every door hands the values it receives to the same service, [the
-pipeline](../pipeline.md). It runs the same steps whatever door the
+Every door hands the values it receives to the same service, [the pipeline](../pipeline.md). It runs the same steps whatever door the
 values came from: it turns each value into its key's type, checks it
 against the sealed data surface, and then refuses it or saves it
 through the storage. The steps are the same and the data surface is the

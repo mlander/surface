@@ -299,8 +299,7 @@ every door. A bench marked locked there is drawn fixed and keeps what is
 stored. The bench structure's rule, no hours for a bench out of use,
 applies at every bench. Store the map as a `sequence` in config schema.
 A list that cannot be cached is refused: declare the tags of what the
-provider reads ([Keys that come from the
-site](resources.md#keys-that-come-from-the-site)).
+provider reads ([Keys that come from the site](resources.md#keys-that-come-from-the-site)).
 
 ## Asked as checkboxes, stored as a list of ids
 
@@ -439,5 +438,4 @@ storage a `ConfigEntityStorage`. That is all it takes:
   kept whatever is sent.
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
-The rules in full: [A title and its machine
-name](declaring-a-resource.md#a-title-and-its-machine-name).
+The rules in full: [A title and its machine name](declaring-a-resource.md#a-title-and-its-machine-name).

@@ -24,7 +24,7 @@ each layer changes one thing about it and nothing else:
 | --- | --- | --- | --- |
 | Coercion, at the door | A raw value into the declared type, before validation: `'7'` becomes `7` for an integer, `'yes'` becomes `TRUE` for a boolean. Only when the intended value is unambiguous; anything else is left for a constraint to refuse. | Nobody: one table, the Tool API's, mirrored in `Pipeline\Coercion` and run by `accept()` for every door. | [The coercion table](semantics.md#the-coercion-table) (why: [decision](decisions.md#one-coercion-table-the-tool-apis)) |
 | Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface) (why: [decision](decisions.md#blueprints-and-layouts)) |
-| Wire representation | How a value travels at one door: an operation's entity parameter as its id at the tool door, an update's body as a merge patch over HTTP. | The door: the tool bridge's `OperationInputs`, the React submodule's API controller. | [The Tool API bridge](../modules/data_surface_tool/README.md), [The write](served-contract.md#the-write) |
+| Wire representation | How a value travels at one door: an operation's entity parameter as its id at the tool door, an update's body as a merge patch over HTTP. | The door: the tool bridge's `OperationInputs`, the React submodule's API controller. | [The Tool API bridge](https://github.com/mlander/data_surface/blob/main/modules/data_surface_tool/README.md), [The write](served-contract.md#the-write) |
 
 The resource's keys, as declared, are the one document all three layers
 translate to and from. Coercion produces it from what a caller sent, a
@@ -364,7 +364,7 @@ changes no value and writes nothing.
   value after validation stores something the contract never described,
   and code that changes it before validation makes the contract describe
   something the pipeline does not judge. The roadmap rejects both
-  ([Rejected, on the record](../ROADMAP.md#rejected-on-the-record)), and
+  ([Rejected, on the record](https://github.com/mlander/data_surface/blob/main/ROADMAP.md#rejected-on-the-record)), and
   the rework removed the build event and the output refiners that
   allowed them ([What it replaced](pattern.md#what-it-replaced)).
 - **Validation must be safe to run ahead.** A dry run, the served

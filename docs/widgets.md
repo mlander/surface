@@ -267,8 +267,7 @@ come back `NULL`, which the data surface reports as "not configured": a
 spurious violation for a required key, and a stored value silently
 replaced by nothing for an optional one.
 
-`DataSurfaceWidgetBase::rawValue()` handles it ([the SubformState
-lesson](forms.md#the-subformstate-lesson) is the whole story), and a
+`DataSurfaceWidgetBase::rawValue()` handles it ([the SubformState lesson](forms.md#the-subformstate-lesson) is the whole story), and a
 widget that overrides `extractValue()` should go through it rather than
 reading `$form_state` directly. An absolute path is read against the complete
 form state it is absolute in; an element with no `#parents` has not been

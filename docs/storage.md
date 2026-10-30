@@ -20,8 +20,7 @@ is the other half, and the stage names below are its.
 
 A settings page needs none of this page but the next section: its
 resource names a subclass of `ConfigObjectStorage` and is done ([A
-simple config object](#a-simple-config-object), and [Your first
-resource](first-resource.md) for the whole module). A thing with a
+simple config object](#a-simple-config-object), and [Your first resource](first-resource.md) for the whole module). A thing with a
 machine name kept as a config entity names a subclass of
 `ConfigEntityStorage` ([A config entity](#a-config-entity)).
 

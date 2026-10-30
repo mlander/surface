@@ -356,7 +356,7 @@ it `x-surface.reference`. The room keeps what no stock constraint
 says, a room of one of the site's venues: one constraint with its
 validator and its resolver, and a narrower one its refiner adds for the
 venue chosen
-([example 2](../modules/data_surface_examples/README.md#example-2-answers-depend-on-answers)).
+([example 2](https://github.com/mlander/data_surface/blob/main/modules/data_surface_examples/README.md#example-2-answers-depend-on-answers)).
 
 ## A key that refers to an entity
 

@@ -87,8 +87,7 @@ names it as the field.
 | `entity_reference` | `target_id` | `integer` or `string`, as the target entity type's ids are |
 
 A date travels as the string core stores, and a timestamp as the
-integer it stores, because those are the two the [coercion
-table](semantics.md#the-coercion-table) carries without guessing: a
+integer it stores, because those are the two the [coercion table](semantics.md#the-coercion-table) carries without guessing: a
 string is a number written out, an integer is a whole number in any
 notation. An ISO date with a zone, or a timestamp given as a date,
 would be a conversion the pipeline does not make; the `Regex` says the

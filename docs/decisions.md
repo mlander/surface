@@ -1885,7 +1885,7 @@ is invisible until the refiner runs, and the full schema and the tool's
 listing must know before anything runs which keys may not apply, or a
 `refine` or `live` key required in them would be stricter than the
 pipeline. A blueprint declaration, `add(..., appliesWhen:)`, is
-declarative narrowing ([ROADMAP](../ROADMAP.md) item 3), which cannot
+declarative narrowing ([ROADMAP](https://github.com/mlander/data_surface/blob/main/ROADMAP.md) item 3), which cannot
 state a runtime rule; it has since landed as a refiner too, whose
 `doesNotApply()` gives this same answer ([A rule declared as
 data](#a-rule-declared-as-data)). The
@@ -2792,8 +2792,7 @@ context is carried (`Collection::contextFor()`), and nothing reads an
 item's delta yet: a child that names storage of its own is not routed
 per item, and the parent stores the list. A child may hold a collection
 of its own: every door recurses, and the form draws a list inside an
-item as a list in its place ([A collection on a
-form](forms.md#a-collection-on-a-form), decided 2026-10-19). *Open:*
+item as a list in its place ([A collection on a form](forms.md#a-collection-on-a-form), decided 2026-10-19). *Open:*
 routing an item to its child's storage, which needs an identity key on
 the child to say which stored item it is. (`Resources::buildResource()`,
 `Collection`, `Form\Drawing::buildCollection()`)
@@ -2891,8 +2890,7 @@ The resource definition is the single description of a config object,
 and its config schema is derived from it, as a stepping stone until core
 can read a data definition as the schema. Decided by the owner on
 2026-10-20, from the first change three reviews proposed (laravel,
-creative-generalist, drupal-architecture; [synthesis
-3.1](reviews-2026-10-20/synthesis.md)): the first settings page declared
+creative-generalist, drupal-architecture; [synthesis 3.1](reviews-2026-10-20/synthesis.md)): the first settings page declared
 each key twice and two defaults three times. Seeding the class from the
 schema, the architecture review's direction, was rejected: it would
 entrench what the module means to retire, a second declaration in the
@@ -5402,7 +5400,7 @@ value as JSON for an `any` key holding no variants and a list the list
 widget refuses, decoded on save and accepted and validated as any value,
 text that is not JSON an error on the element. It is the worst
 acceptable form of an editable key, and it is marked for replacement
-([roadmap](../ROADMAP.md), item 29): a text field for a value of several
+([roadmap](https://github.com/mlander/data_surface/blob/main/ROADMAP.md), item 29): a text field for a value of several
 scalar types, and rows for a list of maps. The served contract names no
 widget for it, since it says nothing about the key.
 
@@ -5511,8 +5509,7 @@ page never saw the content type's groups, and a block had none to give.
   cosmetic layer. A group of several keys, or of one key that is not a
   map, draws as before, so no shipped form's markup moved. The React app
   still draws the map's fieldset inside the group's details.
-- **One spelling, `describe()`** (*amended 2026-10-27*, from [the
-  adopter log of 2026-10-26](adopters-2026-10-26.md), where the owner's
+- **One spelling, `describe()`** (*amended 2026-10-27*, from [the adopter log of 2026-10-26](adopters-2026-10-26.md), where the owner's
   `DefinitionMetadata::setArrangement($definition, new Arrangement(...))`
   beside each key read worse than the Form API form it replaced). An
   owner and an alter arrange a key the same way, `$inputs->describe('key',
@@ -8176,8 +8173,7 @@ a flag. (`ServedPaths`, `ServedTarget`, `ResourceApiController`,
 
 ### Contract 4: fewer keywords, nothing new on the wire
 
-Decided 2026-10-24, by the owner, from group D of [the API
-consolidation review](reviews-2026-10-24/api-consolidation.md) (section
+Decided 2026-10-24, by the owner, from group D of [the API consolidation review](reviews-2026-10-24/api-consolidation.md) (section
 2.5, D1 to D5), held when groups A to C were built
 ([The surface was counted and cut](#the-surface-was-counted-and-cut)).
 `ContractEmitter::CONTRACT` is 4, the `Contract-Version` header says
@@ -8583,8 +8579,7 @@ stricter than the pipeline, judged on the accepted document after stored
 values are converted. Any other change is breaking, and a breaking
 change is made in the open: the version of what owns it is raised and
 its stored values are migrated, or its contract baseline records why it
-was accepted. The table, change by change, is [Evolving a
-resource](evolution.md#compatible-and-breaking). Each choice, and why:
+was accepted. The table, change by change, is [Evolving a resource](evolution.md#compatible-and-breaking). Each choice, and why:
 
 - **Judged by the pipeline, the authority.** What a client asked for is
   what value semantics already say: a key left out keeps what it holds,
@@ -8824,5 +8819,4 @@ every check.
 `FirstResourceInvariantsTest`, `ExamplesSecretsInvariantsTest`,
 `Traits\NeverStricterTrait`,
 `Traits\SchemaRoundTripTrait`, `SchemaRoundTripTest`,
-`ResourceOperationTool::execute()`, [Testing a
-resource](testing-a-resource.md))
+`ResourceOperationTool::execute()`, [Testing a resource](testing-a-resource.md))

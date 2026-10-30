@@ -55,8 +55,7 @@ install; read it first.
 - [Declaring a resource or structure](declaring-a-resource.md): the
   class, adopting it [on a plugin](declaring-a-resource.md#on-a-plugin),
   defaults, locking, secrets, required.
-- [Resources and structures](resources.md): [which way to
-  compose](resources.md#which-way-to-compose), operations, alters,
+- [Resources and structures](resources.md): [which way to compose](resources.md#which-way-to-compose), operations, alters,
   attached structures and variants, variants from the site, ports,
   mixins, collections, keys from the site, access, storage, tools, the
   catalog.
@@ -98,20 +97,20 @@ install; read it first.
 - [Value semantics](semantics.md): configured or not, the coercion
   table (the Tool API's), secrets, stale values, type mismatches,
   required, locked keys.
-- [The Tool API bridge](../modules/data_surface_tool/README.md): one
+- [The Tool API bridge](https://github.com/mlander/data_surface/blob/main/modules/data_surface_tool/README.md): one
   tool per operation and a read tool beside it, who may run them, the
   contract panel, and what MCP and the Tool API are told. Enabling it:
   [Installation: Tool](installation.md#tool), for an agent, MCP and
   Drush.
-- [The React app](../modules/data_surface_react/README.md): the served
+- [The React app](https://github.com/mlander/data_surface/blob/main/modules/data_surface_react/README.md): the served
   contract's endpoints and the React form drawn from them.
-- [The OpenAPI document](../modules/data_surface_openapi/README.md):
+- [The OpenAPI document](https://github.com/mlander/data_surface/blob/main/modules/data_surface_openapi/README.md):
   every operation's endpoints as OpenAPI 3.1, for any OpenAPI client,
   generator or UI.
-- [The component block](../modules/data_surface_component_block/README.md):
+- [The component block](https://github.com/mlander/data_surface/blob/main/modules/data_surface_component_block/README.md):
   a block that embeds a single-directory component, its settings a
   structure.
-- [Block placement](../modules/data_surface_block/README.md): a placed
+- [Block placement](https://github.com/mlander/data_surface/blob/main/modules/data_surface_block/README.md): a placed
   block of any plugin as a resource, placed, configured and removed
   through a tool, HTTP and a form.
 

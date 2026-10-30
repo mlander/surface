@@ -743,8 +743,7 @@ declared rule; a client finds the keys each narrows in its `then`.
 Why: the two always travel together; the app already evaluates
 `enumerated || declared` as one case.
 Cost: S to M. The emitter (`ContractEmitter::frame()` writes it),
-the app's `contract.ts`, 11 baselines regenerated, the `x-surface` table, [reading a
-schema](../reading-a-schema.md#our-own-keywords).
+the app's `contract.ts`, 11 baselines regenerated, the `x-surface` table, [reading a schema](../reading-a-schema.md#our-own-keywords).
 Concepts after: 44.
 
 **D2. `fetch` and `entries` inside `deferred`.**

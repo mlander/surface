@@ -30,9 +30,7 @@ storage of its own, held by a parent (attached or as a variant) or a
 plugin's host.
 
 This page is the pattern: what an author writes, where it goes, and why
-it is shaped that way. [Resources and structures as
-classes](resources.md) is the reference for each part, [How it
-fits](how-it-fits.md) walks one build from caller to sealed data
+it is shaped that way. [Resources and structures as classes](resources.md) is the reference for each part, [How it fits](how-it-fits.md) walks one build from caller to sealed data
 surface, and [Decisions](decisions.md) lists the points the pattern left
 open and how the module settled them.
 

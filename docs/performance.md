@@ -12,8 +12,7 @@ only when a door reads it; the operation form prepares a write once; the
 OpenAPI document is kept and served with an `ETag`. Every other build is
 per request, kept by the request's memo. The reasons are in
 [Decisions](decisions.md#the-static-build-is-cached-the-rest-is-per-request);
-what was paid once before this is in [What is paid once and what per
-request](decisions.md#what-is-paid-once-and-what-per-request).
+what was paid once before this is in [What is paid once and what per request](decisions.md#what-is-paid-once-and-what-per-request).
 
 ## Method
 
