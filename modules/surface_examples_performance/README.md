@@ -22,7 +22,7 @@ With the `tool` module installed, the resource is also the tool
 drush tool:run surface:system.performance:configure --uid=1 --input='{"values":{"max_age":300,"css_preprocess":true,"js_preprocess":true},"dry_run":true}'
 ```
 
-With `surface_openapi` enabled, the OpenAPI document at
+The OpenAPI document at
 `/surface-api/openapi.json` describes `PATCH /surface-api/system.performance`.
 
 A write keeps every key of `system.performance` the resource does not

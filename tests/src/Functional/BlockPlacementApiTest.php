@@ -35,7 +35,6 @@ class BlockPlacementApiTest extends BrowserTestBase {
     'surface_examples',
     'surface_examples_component_block',
     'surface_examples_block',
-    'surface_react',
   ];
 
   /**

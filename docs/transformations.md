@@ -24,7 +24,7 @@ each layer changes one thing about it and nothing else:
 | --- | --- | --- | --- |
 | Coercion, at the door | A raw value into the declared type, before validation: `'7'` becomes `7` for an integer, `'yes'` becomes `TRUE` for a boolean. Only when the intended value is unambiguous; anything else is left for a constraint to refuse. | Nobody: one table, the Tool API's, mirrored in `Pipeline\Coercion` and run by `accept()` for every door. | [The coercion table](semantics.md#the-coercion-table) (why: [decision](decisions.md#one-coercion-table-the-tool-apis)) |
 | Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface) (why: [decision](decisions.md#blueprints-and-layouts)) |
-| Wire representation | How a value travels at one door: an operation's entity parameter as its id at the tool door, an update's body as a merge patch over HTTP. | The door: the tool door's `OperationInputs`, the React submodule's API controller. | [The Tool API door](tools.md), [The write](served-contract.md#the-write) |
+| Wire representation | How a value travels at one door: an operation's entity parameter as its id at the tool door, an update's body as a merge patch over HTTP. | The door: the tool door's `OperationInputs`, the HTTP door's API controller. | [The Tool API door](tools.md), [The write](served-contract.md#the-write) |
 
 The resource's keys, as declared, are the one document all three layers
 translate to and from. Coercion produces it from what a caller sent, a
@@ -259,7 +259,7 @@ Over HTTP, an update's body is the values document itself, with RFC
 stored, `null` clears it), so `PATCH` takes a merge patch as well as
 plain JSON:
 
-<!-- excerpt: modules/surface_react/src/Controller/ResourceApiController.php -->
+<!-- excerpt: src/Http/ResourceApiController.php -->
 
 ```php
 $this->assertMediaType($request, $method === 'PATCH' ? [self::MERGE_PATCH, 'application/json'] : ['application/json']);

@@ -37,7 +37,6 @@ class ArraySentForAScalarTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_react',
     'surface_examples',
   ];
 

@@ -87,7 +87,7 @@ These keep the word, as product names or on-the-wire identifiers:
   `_surface_operation`, `_surface_operation_access`,
   `_surface_panel`, `_surface_cosmetics`,
   `_surface_fixed`, `_surface_defaults`,
-  `_surface_query`, `_surface_react_access`) and URL paths
+  `_surface_query`, `_surface_served_access`) and URL paths
   (`/surface-api/...`, `/surface-react/...`, `/surface-examples/...`);
 - config names and State keys;
 - the served contract's `x-surface` keyword, because clients already
@@ -5963,8 +5963,9 @@ why:
   opens a door implements `CatalogDoorsInterface`, a service tagged
   `surface.catalog_doors`: the main module names the form routes
   (any route naming the operation in `_surface_resource`), the
-  tool bridge the tool and the read tool it derived, the React module
-  the HTTP path and the page, the OpenAPI module its operation. The
+  tool bridge the tool and the read tool it derived, the HTTP door
+  its path, the OpenAPI document its operation, the React example
+  (`surface_examples_react`) the page. The
   main module cannot know a submodule's paths, and a door listed where
   its module is off would be a promise nothing keeps. The tool door is
   read off the Tool API's definitions, so it lists the tools that
@@ -6924,7 +6925,8 @@ canonical contract the operation form's contract panel shows and
 `/surface-api` serves. The roadmap rejects widget vocabulary in the
 contract, so `x-surface.widget`, the Form API mapping said for a
 renderer, and `multiple`, its qualifier, are written only when a caller
-passes `widgets: TRUE`; `surface_react` does, for its app. The rest
+passes `widgets: TRUE`; the HTTP door does, for a client such as the
+React example's app. The rest
 of `x-surface` (locked, dependsOn, refined, stale, emptyOption, fixed, by,
 variants and chosen, rules, within, checkedOnServer, enumerated,
 refine, live) is the
@@ -7835,7 +7837,7 @@ Decided 2026-10-20, from the DX reviews (group E of
 of the wire format, the contract's own, distinct from a resource's
 version: `x-surface.contract`, at the top of both, first under
 `x-surface`, and the `Contract-Version` header every route of
-`surface_react` answers with, but for an error. Contract 1 is what `main` serves and
+the HTTP door answers with, but for an error. Contract 1 is what `main` serves and
 what every document said before it had a number; `next` serves 2. Every
 wire change the reviews asked for moved together, once, so a client
 moves once. The changes, each with why ([the table](served-contract.md#contract-2)):
@@ -8299,8 +8301,8 @@ the contract baselines did not move. (`ContractEmitter`,
 
 ### An OpenAPI document is one more door
 
-`surface_openapi` serves `GET /surface-api/openapi.json` (and
-`.yaml`): an OpenAPI 3.1 document of the API of `surface_react`
+The base module serves `GET /surface-api/openapi.json` (and
+`.yaml`): an OpenAPI 3.1 document of its HTTP door's API
 for every operation that can be asked on its own, so any OpenAPI
 client, generator or UI drives a resource without reading these pages.
 Decided 2026-10-21; its paths are contract 3's since 2026-10-22

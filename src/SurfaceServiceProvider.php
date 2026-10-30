@@ -11,7 +11,6 @@ use Drupal\surface\Tool\InputDefinitions;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Tool\ToolDefinitionsInvalidator;
 use Drupal\surface\Tool\ToolDoors;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Reference;
 
 /**
@@ -59,8 +58,7 @@ final class SurfaceServiceProvider implements ServiceProviderInterface {
       ->addArgument(new Reference('surface.operation_arguments'))
       ->addArgument(new Reference('surface.input_definitions'))
       ->addArgument(new Reference('string_translation'))
-      ->addArgument(new Reference('module_handler'))
-      ->addArgument(new Reference('surface_react.served_paths', ContainerInterface::IGNORE_ON_INVALID_REFERENCE));
+      ->addArgument(new Reference('surface.served_paths'));
 
     // The derived tools are kept by the Tool API until the next cache
     // rebuild; this clears them when what they were derived from changes.

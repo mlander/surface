@@ -10,7 +10,7 @@ use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\SiteCatalog;
-use Drupal\surface_react\Controller\ResourceReactPage;
+use Drupal\surface_examples_react\Controller\ResourceReactPage;
 use Drupal\surface_route_test\Storage\CardStorage;
 use Drupal\Tests\HttpKernelUiHelperTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -33,7 +33,7 @@ use Symfony\Component\Routing\Route;
  * it is titled by the operation's label. The catalog lists it under the
  * React door, beside the operation's own page, and not as a form.
  *
- * @see \Drupal\surface_react\Controller\ResourceReactPage::served()
+ * @see \Drupal\surface_examples_react\Controller\ResourceReactPage::served()
  * @see docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for
  */
 #[Group('surface')]
@@ -51,7 +51,7 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
     'system',
     'user',
     'surface',
-    'surface_react',
+    'surface_examples_react',
     'surface_route_test',
   ];
 
@@ -68,7 +68,7 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
   /**
    * Gets the page's controller.
    *
-   * @return \Drupal\surface_react\Controller\ResourceReactPage
+   * @return \Drupal\surface_examples_react\Controller\ResourceReactPage
    *   The controller.
    */
   protected function controller(): ResourceReactPage {
@@ -165,7 +165,7 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
    */
   public function testEachDefaultIsNamedByItsKeysPath(): void {
     $page = [
-      '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
+      '_controller' => '\Drupal\surface_examples_react\Controller\ResourceReactPage::served',
       '_title' => 'A card',
       OperationRoute::RESOURCE => 'route_test.card',
     ];
@@ -280,7 +280,7 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
   public function testTheParametersAreTheRoutes(): void {
     \Drupal::state()->set(CardStorage::key('six'), ['card' => 'six', 'title' => 'Stored']);
     $page = [
-      '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
+      '_controller' => '\Drupal\surface_examples_react\Controller\ResourceReactPage::served',
       '_title' => 'A card',
       OperationRoute::RESOURCE => 'route_test.card',
     ];
@@ -315,8 +315,8 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
 
     // A resource id the path fills that no resource has names nothing.
     $kind = new Route('/surface-test/{kind}/react', [
-      '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
-      '_title_callback' => '\Drupal\surface_react\Controller\ResourceReactPage::servedTitle',
+      '_controller' => '\Drupal\surface_examples_react\Controller\ResourceReactPage::served',
+      '_title_callback' => '\Drupal\surface_examples_react\Controller\ResourceReactPage::servedTitle',
       OperationRoute::RESOURCE => 'route_test.{kind}',
       OperationRoute::OPERATION => 'create',
     ], ['kind' => '[a-z]+']);
@@ -328,7 +328,7 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
     // A route written wrong is no page not found, at the React page and at
     // the operation form's route alike.
     $this->serveBuilt('surface_route_test.react_wrong', new Route('/surface-test/card/react-wrong', [
-      '_controller' => '\Drupal\surface_react\Controller\ResourceReactPage::served',
+      '_controller' => '\Drupal\surface_examples_react\Controller\ResourceReactPage::served',
       OperationRoute::RESOURCE => 'route_test.card',
       OperationRoute::OPERATION => 'nothing',
     ]));
@@ -364,7 +364,7 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
     // An operation no module serves a page for has its own alone.
     $this->assertSame('/surface-react/route_test.card/update', $doors['update'][SiteCatalog::REACT]);
     // The operation's own page is the door's link.
-    $this->assertSame('surface_react.page', $catalog->links('route_test.card', 'create')[SiteCatalog::REACT]->getRouteName());
+    $this->assertSame('surface_examples_react.page', $catalog->links('route_test.card', 'create')[SiteCatalog::REACT]->getRouteName());
 
     // An operation that cannot be asked on its own has no page of its own:
     // the pages modules serve it at are its React door, and one a URL needs
@@ -372,7 +372,7 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
     $registry = $this->container->get('surface.resource_registry');
     $card = $registry->getDefinition('route_test.card');
     $create = $registry->getOperation($card->name(), 'create');
-    $served = $this->container->get('surface_react.catalog_doors');
+    $served = $this->container->get('surface_examples_react.react_doors');
     $this->assertSame([SiteCatalog::REACT => '/surface-test/card/react/{copies} (surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]'], $served->doors($card, $create, FALSE, FALSE));
     $this->assertSame([], $served->links($card, $create, FALSE, FALSE), 'Its one page needs the copies.');
   }

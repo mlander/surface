@@ -36,7 +36,6 @@ class ServedSubmitEndpointTest extends BrowserTestBase {
   protected static $modules = [
     'node',
     'surface_examples',
-    'surface_react',
     'surface_examples_node_type',
   ];
 

@@ -46,7 +46,6 @@ class ToolResultShapeTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_react',
     'surface_tool_test',
     'surface_examples',
   ];

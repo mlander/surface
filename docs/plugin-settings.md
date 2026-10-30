@@ -109,8 +109,8 @@ the block:
 | --- | --- |
 | Form API | `/admin/structure/block/surface/add`: choose the plugin and its settings are drawn |
 | Tool API | `surface:block.placement:create`, with `tool` |
-| HTTP | `POST /surface-api/block.placement`, with `surface_react` |
-| React | `/surface-react/block.placement/create` |
+| HTTP | `POST /surface-api/block.placement` |
+| React | `/surface-react/block.placement/create`, with `surface_examples_react` |
 
 The same placement from the command line, as a dry run:
 

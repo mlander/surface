@@ -156,8 +156,9 @@ final class OperationRoute {
   /**
    * What the controller of a React page served at a module's route ends in.
    *
-   * Compared as text: the main module does not depend on
-   * surface_react, whose ResourceReactPage::served() it is.
+   * Compared as text, by the class's short name: the main module does not
+   * depend on the React example, surface_examples_react, whose
+   * ResourceReactPage::served() it is.
    */
   protected const REACT_PAGE = 'ResourceReactPage::served';
 

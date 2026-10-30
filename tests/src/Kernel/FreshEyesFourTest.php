@@ -43,7 +43,6 @@ class FreshEyesFourTest extends SurfaceKernelTestBase {
     'surface_examples',
     'surface_examples_compliance',
     'surface_examples_workflow',
-    'surface_react',
     'surface_tool_test',
   ];
 

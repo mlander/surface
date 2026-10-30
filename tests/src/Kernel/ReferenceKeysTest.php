@@ -428,18 +428,12 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
         ['harbour', 'library', 'riverside'],
       ],
       'thing' => [
-        'The id of an entity of the entity type chosen. Send the id of an entity of the entity type chosen. Depends on thing.entity_type.',
+        'The id of an entity of the entity type chosen. Send the id of an entity of the entity type chosen; GET /surface-api/event.sponsorship:lookup?key=/thing/id&type={entity type}&q={text} looks one up by its label. Depends on thing.entity_type.',
         NULL,
       ],
-    ], $listed(), 'Under the limit, the enum; the site serves no API, so no lookup is named.');
-    $past = $this->container->get('surface.references')->withLimit(1, $listed);
-    $this->assertSame([
-      "Where the sponsor's stand is. Too many to list (more than 1): send the id of one. Required; a value already stored stands when left out.",
-      NULL,
-    ], $past['venue']);
+    ], $listed(), 'Under the limit, the enum; a bare key names the lookup on the API.');
 
-    // With the API served, the listing names the lookup.
-    $this->container->get('module_installer')->install(['surface_react']);
+    // Past the limit, the listing names the lookup the HTTP door serves.
     $past = $this->container->get('surface.references')->withLimit(1, $listed);
     $this->assertSame([
       "Where the sponsor's stand is. Too many to list (more than 1): send the id of one; GET /surface-api/event.sponsorship:lookup?key=/venue&q={text} looks one up by its label. Required; a value already stored stands when left out.",
@@ -452,7 +446,6 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
    * Tests the page: each key, both documents, the lookups and the calls.
    */
   public function testThePageShowsEachKey(): void {
-    $this->container->get('module_installer')->install(['surface_react']);
     $this->container->get('router.builder')->rebuild();
     $route = $this->container->get('router.route_provider')->getRouteByName('surface_examples.step16');
     $stack = $this->container->get('request_stack');
@@ -503,8 +496,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
    * Tests the OpenAPI document describes the lookup.
    */
   public function testTheOpenApiDocumentDescribesTheLookup(): void {
-    $this->container->get('module_installer')->install(['surface_openapi']);
-    $document = $this->container->get('surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document;
+    $document = $this->container->get('surface.openapi_document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document;
     $lookup = $document['paths']['/surface-api/event.sponsorship:lookup']['get'];
     $this->assertSame('event.sponsorship:lookup', $lookup['operationId']);
     $this->assertSame('read', $lookup['x-surface-kind']);

@@ -11,9 +11,10 @@ form.
 A resource built in one of its operations, served as a JSON document a
 client with no PHP can render a form from, re-narrow as answers change,
 rehearse a write against before anything is written, and then write
-through. The emitter is the main module's; the API, where the path is
-the resource and the method the operation, and a React app that renders
-from it are the experimental submodule `surface_react`.
+through. The emitter and the API, where the path is the resource and
+the method the operation, are the base module's; a React app that
+renders from it is an example client, the experimental submodule
+`surface_examples_react`.
 
 This is the roadmap's "served contract": one operation at a time, read,
 rehearsed and written.
@@ -29,8 +30,9 @@ qualifier on a list of allowed values) is presentation, the Form API
 mapping said out loud for a renderer, and so is `x-surface.arrangement`,
 how a key is laid out where it is drawn; the roadmap rejects widget
 vocabulary in the contract, so they are written only when a caller asks:
-`emit(..., widgets: TRUE)`. `surface_react` is that caller; its
-endpoints serve the contract with the hints, for its app to draw from.
+`emit(..., widgets: TRUE)`. The HTTP door is that caller; its
+endpoints serve the contract with the hints, for a client such as the
+React example's app to draw from.
 Everything else under `x-surface` is the data surface's own reading of
 a key and is always there.
 
@@ -53,8 +55,8 @@ JSON Schema cannot say them. This one can.
   beside the full schema key by key
   (`modules/surface_examples/README.md`).
 - **Over HTTP.** `GET /surface-api/{resource}`, or
-  `/surface-api/{resource}/{id}` for one thing, with `surface_react`
-  enabled: the whole document, widget hints included. The full schema is
+  `/surface-api/{resource}/{id}` for one thing: the whole document,
+  widget hints included. The full schema is
   `GET .../schema` beside it ([the API](#the-api)).
 - **Not `drush tool:info`.** That prints the Tool API's rendering of the
   derived tool, which cannot say keys a sibling chooses: variants a class
@@ -451,7 +453,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | Keyword | Holds |
 | --- | --- |
 | `contract` | At the top always, first: the version of the wire format the document is written in, `4` ([Contract 4](#contract-4)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
-| `widget` | Only when the caller asks for widget hints (`surface_react` does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, or a key its operation's context fixes to one, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
+| `widget` | Only when the caller asks for widget hints (the HTTP door does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, or a key its operation's context fixes to one, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
 | `dependsOn` | Only where it names one: the sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Only when `true`, in the schema for these answers: the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
 | `stale` | Only when `true`, in the schema for these answers: the stored value is no longer offered; the key is shown on its empty option, standing for it. |
@@ -1190,7 +1192,7 @@ draw a declared key
 
 The path is the resource and the method is the operation
 (why: [decision](decisions.md#contract-3-the-operation-is-the-method)). One
-route, `surface_react.api`, answers every path below;
+route, `surface.api`, answers every path below;
 `ServedPaths` reads which operation a path and a method name.
 
 | Method and path | What it does |
@@ -1262,7 +1264,7 @@ is `POST /surface-api/field.instance/node/page/body:reuse`; example
 `entity.content:node.page`, is read whole first. A default may be named
 the same way.
 
-Every path is gated by `_surface_react_access`: the operation's
+Every path is gated by `_surface_served_access`: the operation's
 permission, then the access class the resource or structure names,
 through `Resources::access()`, with no opinion read as a refusal. The
 permission is asked first, from the two ids alone, before a parameter
@@ -1757,18 +1759,24 @@ another account's labels
 
 ## An OpenAPI document
 
-With `surface_openapi` enabled, `GET /surface-api/openapi.json`
-(and `/surface-api/openapi.yaml`) answers an OpenAPI 3.1 document of the
-API above, for every operation that can be asked on its own, so an
-OpenAPI client, a code generator or a UI drives a resource from it
+`GET /surface-api/openapi.json`
+(and `/surface-api/openapi.yaml`, `application/yaml`) answers an
+OpenAPI 3.1 document of the API above, for every operation that can be
+asked on its own, so an OpenAPI client, a code generator or a UI drives
+a resource from it. It is the base module's own, on a route of its own,
+not the contributed `openapi` module's, and needs nothing contributed
 (why: [decision](decisions.md#an-openapi-document-is-one-more-door)).
 OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
 dialect both documents are written in. `GET /surface-api/docs` renders
 Swagger UI over it, whose "try it out" calls the API with the logged-in
-session, sending the token and, as `If-Match`, the last `ETag` it saw
-for the path; `GET /surface-api/redoc` renders Redoc, to read. Both
-pages need the permission `access surface api docs`; the document
-is open.
+session, sending every `POST`, `PATCH` and `DELETE` with the token
+`/session/token` answers and, as `If-Match`, the last `ETag` it saw
+for the path, so a write after someone else's is refused (412);
+`GET /surface-api/redoc` renders Redoc, to read. Both pages need the
+permission `access surface api docs`: each runs a script from a CDN
+on the site (Swagger UI 5.29.1 from cdnjs, Redoc 2.5.1 from jsDelivr,
+each pinned and held to its integrity hash in `surface.libraries.yml`),
+so a site grants them to the roles it chooses. The document is open.
 
 - **Paths.** One path item per resource path, the methods on it as
   [the API](#the-api) answers them: `/surface-api/first.newsletter` with
@@ -1826,7 +1834,8 @@ is open.
 - **For no account.** Built as the tool definitions are, every key as
   declared and each one an access answer could lock or leave out marked
   `x-surface.live`, so it is the same for everyone and
-  cacheable; an operation that addresses one thing is built knowing no
+  cached until discovery, a build it was made from, the site's name, the
+  modules or the anonymous role change; an operation that addresses one thing is built knowing no
   subject, as its tool's listing is. The read and `/schema` answer for
   the account that asks; the read's `x-surface-schema` names the
   component its schema was built from for no account.
@@ -1836,13 +1845,26 @@ is open.
 - **Examples.** A run's request example is the operation's declared
   defaults, as the pipeline accepts them with nothing stored.
 
+`drush surface:catalog` names, per operation, the OpenAPI operation
+that runs it (`<resource>:<operation>:write`, a listing's `:list`),
+beside its other doors ([The site's catalog](catalog-command.md)).
+`OpenApiDocumentTest` holds the document to the official OpenAPI 3.1
+schema in `tests/fixtures/openapi/`, every reference resolving, the
+components byte for byte the full schemas and outputs, and the examples
+pinned in `tests/fixtures/openapi/examples.json`; `SchemaComponentsTest`
+the components, their sharing and patches; `OpenApiEndpointTest` the
+same document for an account and for anonymous, as JSON and as YAML,
+and the two pages under their permission, each script pinned with its
+integrity hash.
+
 ## A drawing client that narrows locally
 
 The schema for these answers is still what a drawing client loads first:
 it carries the values and the stale paths, its `ETag` the fingerprint, and it is
 refined by the runtime refiners for those values. Beside it, once, the
 client may fetch the full schema, and from then on answer most changes
-itself. The rule, as `surface_react` applies it:
+itself. The rule, as the React example (`surface_examples_react`)
+applies it:
 
 - **Narrow from the full schema.** On a change of a key, collect every
   key that depends on it, transitively, through `dependsOn` in the frame
@@ -1924,8 +1946,7 @@ component, or call surface:event.spotlight:configure:schema with
 your values, to get this key's schema." So changing a prop of the stored
 component is one call. A map of keys from the site past the limit is
 listed open too, its description naming the fetch of an entry and the
-narrowing tool. The fetch is named where the site serves the API
-(surface_react on), and answers
+narrowing tool. The fetch is on the HTTP door, and answers
 [the fetch per choice](#the-fetch-per-choice), which an agent with an
 HTTP client keeps per component; under the limit it answers the full
 schema, which states every variant already. The narrowing tool is the

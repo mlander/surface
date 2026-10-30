@@ -63,7 +63,6 @@ class IntroductionExcerptsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_react',
     'surface_examples_block',
     'surface_intro_test',
     'my_module',
@@ -215,7 +214,7 @@ class IntroductionExcerptsTest extends SurfaceKernelTestBase {
    *   The schema of the values, through JSON and back.
    */
   protected function settingsSchema(string $resource = 'my_module.settings'): array {
-    $served = $this->container->get('surface_react.served_operations');
+    $served = $this->container->get('surface.served_operations');
     $operation = $served->resolve($resource, 'configure', []);
     $contract = $this->container->get('surface.contract_emitter')->emit(
       $operation->surface,
@@ -298,7 +297,7 @@ class IntroductionExcerptsTest extends SurfaceKernelTestBase {
     $registry = $this->container->get('surface.resource_registry');
     $definition = $registry->getDefinition('my_module.settings');
     $operation = $registry->getOperation($definition->name(), 'configure');
-    $paths = $this->container->get('surface_react.served_paths');
+    $paths = $this->container->get('surface.served_paths');
     [$method, $named] = $paths->writes($definition, $operation);
     $path = $method . ' ' . $paths->url($definition, $operation, [], $named, FALSE)->getGeneratedUrl();
     $this->assertSame('PATCH /surface-api/my_module.settings', $path);

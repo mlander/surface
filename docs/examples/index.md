@@ -27,21 +27,18 @@ drush pm:install surface_examples_compliance
 drush pm:install surface_examples_workflow
 ```
 
-With `surface_react` enabled as well, the landing page links each
-of examples 1 to 3 in React, rendered from the contract it serves
+With `surface_examples_react` enabled as well, the landing page links
+each of examples 1 to 3 in React, rendered from the contract the HTTP
+door serves
 ([In React](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#in-react)):
 
 ```bash
-drush pm:install surface_react
+drush pm:install surface_examples_react
 ```
 
-With `surface_openapi` as well, `/surface-api/openapi.json` describes
-every operation's paths for an OpenAPI client, and the landing page
-links it under example 6:
-
-```bash
-drush pm:install surface_openapi
-```
+The base module's `/surface-api/openapi.json` describes every
+operation's paths for an OpenAPI client, and the landing page links it
+under example 6.
 
 Which permission each page asks for, and how to reset the examples to
 the shipped settings, are in
@@ -66,7 +63,7 @@ of their own.
 | [3: made of parts](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-3-made-of-parts) | Structures: a child attached at a key, and variants. | `surface_examples` | `/surface-examples/3` | [Children](../resources.md#children) |
 | [4: others get a say](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-4-others-get-a-say) | An alter: another module adds keys and rules to example 3's resource, which does not know it. | `drush pm:install surface_examples_compliance` | `/surface-examples/4` | [A whole alter](../resources.md#a-whole-alter) |
 | [5: same contract, no form](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-5-same-contract-no-form) | Example 3 called as a tool, with no form: the tool and the read tool. | `surface_examples` (needs Tool) | `/surface-examples/5` | [The Tool API door](../tools.md) |
-| [6: every door](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-6-every-door) | The same contract through every door: the served contract, React and OpenAPI. | `drush pm:install surface_react surface_openapi` | The landing page's React and OpenAPI links, `/surface-api/openapi.json`, `/surface-api/docs` | [The served contract](../served-contract.md) |
+| [6: every door](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-6-every-door) | The same contract through every door: the served contract, React and OpenAPI. | `drush pm:install surface_examples_react` | The landing page's React and OpenAPI links, `/surface-api/openapi.json`, `/surface-api/docs` | [The served contract](../served-contract.md) |
 | [7: a rule written as data](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-7-a-rule-written-as-data) | A declared rule, and a key that does not apply. | `surface_examples` | `/surface-examples/7` | [Declaring a rule](../refinement.md#declaring-a-rule) |
 | [8: one part, used twice](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-8-one-part-used-twice) | A port, a mixin, a named shape and a collection. | `surface_examples` | `/surface-examples/8`, `/surface-examples/8/desk` | [Ports](../resources.md#ports) |
 | [9: keys that come from the site](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-9-keys-that-come-from-the-site) | A key per thing the site has, listed by a provider. | `surface_examples` | `/surface-examples/9` | [Keys that come from the site](../resources.md#keys-that-come-from-the-site) |

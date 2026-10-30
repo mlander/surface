@@ -27,9 +27,13 @@ drush pm:install surface
 
 On its own the base module adds the resource and structure model, the
 pipeline, the two plugin types (widgets and options resolvers), the stock
-storage classes, and the host adoption layer. It adds no resources or
-structures, no routes and no permissions. Those come from the modules
-that declare them. `drush generate surface:resource` writes a settings
+storage classes, the host adoption layer, and two doors: the form, and
+HTTP at `/surface-api/{resource}` with its OpenAPI 3.1 document at
+`/surface-api/openapi.json`, Swagger UI at `/surface-api/docs` and
+Redoc at `/surface-api/redoc`
+([The served contract](served-contract.md)). It adds no resources or
+structures.
+Those come from the modules that declare them. `drush generate surface:resource` writes a settings
 page's files into one ([Generating a resource](generating.md)).
 
 ## In production: compile assertions out
@@ -137,8 +141,7 @@ teaches, in reading order, is in [Examples](examples/index.md).
 | `drush pm:install surface_examples_retitle` | Example 17: a bulk retitle of nodes with keys, storage and a permission of its own, which borrows each node's update access and its title's edit access as gates, asked per node, a refusal on the node's own item. Needs node; ships the page bundle for a site that has none, two roles, and writes three pages its calls name. | `/surface-examples/17` |
 | `drush pm:install surface_examples_component_block` | Example 13: a block, "Component", that embeds a single-directory component: the component chosen from those the site has and its props read from the schema it declares, example 12's two lines named by `#[UsesStructure]`, so the block's form, validation and storage come from them, placed through the placement resource of `surface_examples_block`. Needs `block`. | `/surface-examples/13` |
 | `drush pm:install surface_examples_block` | A placed block as a resource, `block.placement`, by its machine name: its plugin chooses its settings (a plugin's declared structure, or its config schema read), its theme its region, and its visibility is a list of conditions. Placed, configured, read and removed through four tools, HTTP (`DELETE` removes) and a form. Needs `block`. | `/admin/structure/block/surface/add` |
-| `drush pm:install surface_react` | The served contract: an operation as JSON Schema 2020-12 with an `x-surface` extension, served over HTTP, the method its operation (`GET` reads, `PATCH` updates, `POST` creates, `DELETE` removes), with a narrowing that re-narrows it as answers change and a dry run that rehearses the write, and a React app that renders the form from it. Its built app is committed, so it needs no Node. | `/surface-api/{resource}`, `/surface-react/{resource}/{operation}` |
-| `drush pm:install surface_openapi` | An OpenAPI 3.1 document of every operation's paths (and `.yaml`), each operation's full schema as components, built for no account so it is the same for everyone, for any OpenAPI client, generator or UI. Needs `surface_react`. | `/surface-api/openapi.json`, Swagger UI at `/surface-api/docs`, Redoc at `/surface-api/redoc` |
+| `drush pm:install surface_examples_react` | An example client of the HTTP door: a React app that renders an operation's form from the served contract, narrows it as answers change, rehearses the write with a dry run and writes through `/surface-api`. Its built app is committed, so it needs no Node. | `/surface-react/{resource}/{operation}` |
 
 Each submodule's own README says what it shows, how to try it, and which
 tests gate it.

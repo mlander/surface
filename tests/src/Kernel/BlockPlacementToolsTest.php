@@ -75,6 +75,9 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntitySchema('user');
+    // The tool descriptions name the API's paths, whose URLs the alias
+    // processor reads.
+    $this->installEntitySchema('path_alias');
     $this->installConfig(['system']);
     $this->container->get('theme_installer')->install(['stark', 'claro']);
     $this->config('system.theme')->set('default', 'stark')->save();

@@ -621,7 +621,7 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 
 `scripts/check.sh` bakes all four in; read it rather than retyping them.
 
-## The React submodule and its app
+## The HTTP door, OpenAPI, and the React example's app
 
 The served contract's emitter is the main module's:
 `Contract\ContractEmitter` (`surface.contract_emitter`) turns a
@@ -640,8 +640,8 @@ It names no widget unless asked
 (`emit(..., widgets: TRUE)`); the contract panel (`Form\ContractPanel`)
 shows it without, beside what the Tool API can advertise where the tool
 module is installed (which flattens
-variants, and is what `tool:info` prints). `modules/surface_react`
-serves it with the widget hints, through the main module's service, on
+variants, and is what `tool:info` prints). The base module's HTTP door
+(`src/Http/`, route `surface.api`) serves it with the widget hints on
 an API where the path is the resource and the method the operation
 (contract 3's paths, `ServedPaths`, both documents in contract 4's
 keywords): `GET /surface-api/{resource}[/{id}]` the
@@ -653,23 +653,26 @@ listed `stale`); `PATCH` the default update, `POST` on the collection
 the default create (201 with `Location`), `:{operation}` any other,
 `?dryRun=true` a run that writes nothing, `If-Match` a 412 when storage
 changed since, a refusal 422 problem details, every path a JSON Pointer
-and every contract 2 path a 410.
+and every contract 2 path a 410. `src/OpenApi/` describes that API as
+an OpenAPI 3.1 document at `/surface-api/openapi.json`, with Swagger UI
+and Redoc over it (`docs/served-contract.md#an-openapi-document`).
+The example `surface_examples_react` is a JavaScript client of the door:
 `/surface-react/{resource}/{operation}` renders it with a React app,
 which answers a URL that names nothing as the form's route does; a
 module's own route serves the same page with `ResourceReactPage::served()`
 and `servedTitle()`, handing the app `seeds.defaults` and `prefill`, the
 values the app starts from over the stored ones, and fixing nothing
-(`modules/surface_react/README.md`).
+(`modules/surface_examples_react/README.md`).
 `docs/served-contract.md` has the format, with children and variants
 as `$defs` that the properties reference; `docs/decisions.md` (Served
 contract) has the points it settled.
 
-The app is `modules/surface_react/app/`: Vite, React 18 and
+The app is `modules/surface_examples_react/app/`: Vite, React 18 and
 TypeScript, every version pinned exactly. Run npm on the host, never
 inside ddev:
 
 ```
-cd modules/surface_react/app
+cd modules/surface_examples_react/app
 npm ci          # node_modules/ is ignored
 npm test        # Vitest + React Testing Library
 npm run build   # tsc --noEmit, then dist/app.js and dist/app.css
@@ -820,6 +823,11 @@ src/Form/                Form builder, host traits, the operation form
                          The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
                          Drawing.php, Extracting.php and Refreshing.php.
+src/Http/                The HTTP door: the /surface-api routes' controller,
+                         ServedPaths and ServedOperations, the access check,
+                         problem details, and its catalog door.
+src/OpenApi/             The HTTP door's OpenAPI document, its controller
+                         and its catalog door.
 src/Tool/                The Tool API door: what a tool takes and answers
                          (OperationInputs, InputDefinitions), its catalog
                          doors and the invalidator, registered by
@@ -831,7 +839,7 @@ src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constrain
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Twenty experimental submodules; each has its own README.
+modules/                 Nineteen experimental submodules; each has its own README.
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```

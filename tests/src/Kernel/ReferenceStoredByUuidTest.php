@@ -51,7 +51,6 @@ class ReferenceStoredByUuidTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_react',
     'surface_examples',
     'surface_examples_references',
   ];

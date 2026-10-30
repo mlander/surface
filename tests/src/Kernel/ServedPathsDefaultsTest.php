@@ -34,7 +34,6 @@ class ServedPathsDefaultsTest extends SurfaceKernelTestBase {
     'system',
     'user',
     'surface',
-    'surface_react',
     'surface_paths_test',
   ];
 
@@ -82,7 +81,7 @@ class ServedPathsDefaultsTest extends SurfaceKernelTestBase {
    */
   protected function defaults(string $class): array {
     $definition = $this->container->get('surface.resource_registry')->getDefinition($class);
-    return $this->container->get('surface_react.served_paths')->defaults($definition);
+    return $this->container->get('surface.served_paths')->defaults($definition);
   }
 
 }

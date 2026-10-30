@@ -88,7 +88,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     foreach ([...array_keys(self::PAGES), 'surface-examples/15'] as $path) {
       $assert->linkByHrefExists('/' . $path);
     }
-    $assert->pageTextContains('In React at /surface-react/event.doors/configure, once surface_react is enabled.');
+    $assert->pageTextContains('In React at /surface-react/event.doors/configure, once surface_examples_react is enabled.');
 
     foreach (self::PAGES as $path => $paragraph) {
       $this->drupalGet($path);

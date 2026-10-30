@@ -32,8 +32,8 @@ namespace Drupal\surface\Contract;
  *
  * A reference that leads back into a def being read is left as it is, so
  * a recursive schema ends. A def's own `title` is its id, not a label, so
- * it is not laid over a site. This is surface_react's
- * `resolveSchema()` and `inlineSchema()`, in PHP.
+ * it is not laid over a site. This is the React example's
+ * (surface_examples_react) `resolveSchema()` and `inlineSchema()`, in PHP.
  *
  * The inline reading is the emitter's own, before the placement rules of
  * the contract's version moved its markers (DocumentHead::settled()):

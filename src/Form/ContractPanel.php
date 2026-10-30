@@ -148,7 +148,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       '#open' => FALSE,
       '#title' => $this->t('The schema for these answers'),
       'note' => [
-        '#markup' => '<p>' . $this->t('What the resource states for the answers as they stand, as JSON Schema: each part a shape of its own defined once under <code>$defs</code> and referred to where it is used, each set of variants as one conditional per variant on the key that chooses between them, allowed values with their labels, under <code>x-surface</code> what each key depends on, and a locked key <code>readOnly</code>. A key another answer narrows is shown as narrowed, so this describes these answers and no others. It is the document surface_react serves at <code>/surface-api</code>, less the widget hints that renderer asks for.') . '</p>',
+        '#markup' => '<p>' . $this->t('What the resource states for the answers as they stand, as JSON Schema: each part a shape of its own defined once under <code>$defs</code> and referred to where it is used, each set of variants as one conditional per variant on the key that chooses between them, allowed values with their labels, under <code>x-surface</code> what each key depends on, and a locked key <code>readOnly</code>. A key another answer narrows is shown as narrowed, so this describes these answers and no others. It is the document the HTTP door serves at <code>/surface-api</code>, less the widget hints a renderer asks for.') . '</p>',
       ],
       'json' => $this->json($contract->document['schema']),
     ];

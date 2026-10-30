@@ -19,7 +19,7 @@
   <file>surface.info.yml</file>
   <file>surface.services.yml</file>
 
-  <!-- surface_react's app installs its Node dependencies beside it. -->
+  <!-- surface_examples_react's app installs its Node dependencies beside it. -->
   <exclude-pattern>*/node_modules/*</exclude-pattern>
 
   <!-- Test modules are never packaged by drupal.org, so the version line

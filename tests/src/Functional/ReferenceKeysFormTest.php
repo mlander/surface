@@ -36,7 +36,7 @@ class ReferenceKeysFormTest extends BrowserTestBase {
    */
   protected static $modules = [
     'surface_examples_references',
-    'surface_react',
+    'surface_examples_react',
   ];
 
   /**

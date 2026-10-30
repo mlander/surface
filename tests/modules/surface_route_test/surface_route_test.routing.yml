@@ -425,15 +425,15 @@ surface_route_test.add_thanks:
     _surface_operation: 'create'
     _surface_fixed: { occasion: 'thanks' }
 
-# The card's create as a React page (surface_react, which a test
+# The card's create as a React page (surface_examples_react, which a test
 # enables) served at the module's own route: the title starting filled,
 # the copies from the path, and the keys a link may start. A React page
 # fixes nothing; the router's rebuild refuses `_surface_fixed` here.
 surface_route_test.react_add:
   path: '/surface-test/card/react/{copies}'
   defaults:
-    _controller: '\Drupal\surface_react\Controller\ResourceReactPage::served'
-    _title_callback: '\Drupal\surface_react\Controller\ResourceReactPage::servedTitle'
+    _controller: '\Drupal\surface_examples_react\Controller\ResourceReactPage::served'
+    _title_callback: '\Drupal\surface_examples_react\Controller\ResourceReactPage::servedTitle'
     _surface_resource: 'route_test.card'
     _surface_operation: 'create'
     _surface_defaults: { title: 'Dear you', copies: '{copies}' }

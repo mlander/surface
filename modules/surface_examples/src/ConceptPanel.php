@@ -37,7 +37,7 @@ use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\Keys\TicketTypes;
 use Drupal\surface_examples\Resource\SpotlightResource;
 use Drupal\surface_examples\Resource\VenueResource;
-use Drupal\surface_react\Controller\ResourceApiController;
+use Drupal\surface\Http\ResourceApiController;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
@@ -553,19 +553,12 @@ final class ConceptPanel {
   }
 
   /**
-   * Example 16: the lookups, made now through the API, or where they are.
+   * Example 16: the lookups, made now through the API.
    *
    * @return array
    *   A render array: each path and its answer.
    */
   protected function lookups(): array {
-    if (!$this->moduleHandler->moduleExists('surface_react')) {
-      return [
-        '#markup' => '<p>' . $this->t('The lookup is served by surface_react, which is not on: enable it to ask @path.', [
-          '@path' => self::LOOKUPS[0],
-        ]) . '</p>',
-      ];
-    }
     $answers = [];
     $controller = $this->classResolver->getInstanceFromDefinition(ResourceApiController::class);
     foreach (self::LOOKUPS as $path) {
@@ -1130,7 +1123,7 @@ final class ConceptPanel {
     return [
       'paths' => [
         '#type' => 'table',
-        '#caption' => $this->t("The paths of the venues, with surface_react on: the collection is the resource, one venue its path, and the method the operation. GET on the collection answers the listing, since the resource declares one; a resource with none answers its create's envelope there."),
+        '#caption' => $this->t("The paths of the venues: the collection is the resource, one venue its path, and the method the operation. GET on the collection answers the listing, since the resource declares one; a resource with none answers its create's envelope there."),
         '#header' => [$this->t('Method'), $this->t('Path'), $this->t('Operation'), $this->t('Answers')],
         '#rows' => $rows,
         '#attributes' => ['class' => ['surface-concept-paths']],

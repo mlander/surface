@@ -170,8 +170,7 @@ with none required (example 3's ticket). Variants the site lists state
 the keys of the variant the stored values choose and no other
 ([the narrowing tool](#the-narrowing-tool)). The full contract, with an `if`/`then` per variant on the key
 that chooses it, is the module's `surface.contract_emitter`:
-see it in the contract panel below, or, with `surface_react`
-enabled, at `/surface-api/{resource}`
+see it in the contract panel below, or at `/surface-api/{resource}`
 ([`docs/served-contract.md`](served-contract.md)). Since
 contract 3 the tool and HTTP agree: one call per operation, with a dry
 run as a flag (`dry_run` here, `?dryRun=true` there), and every path
@@ -257,8 +256,8 @@ of the variant the stored values choose, where the listing reads what
 is stored (an operation that needs nothing to start from, or the refined
 `values` once the parameters arrive), and none otherwise, and its
 description names two ways to learn the keys of any other: the full
-schema fetched with the choice stated, once per value, where the site
-serves its API (surface_react on), and a third tool beside the
+schema fetched with the choice stated, once per value, on the HTTP
+door, and a third tool beside the
 write and read tools, asked with the values:
 
 > Its keys depend on component: listed here are those of

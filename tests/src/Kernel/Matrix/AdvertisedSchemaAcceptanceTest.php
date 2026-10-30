@@ -137,7 +137,6 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_examples',
-    'surface_react',
     'surface_resource_test',
     'surface_tool_test',
     'surface_examples_component_block',
@@ -1418,7 +1417,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     $stored = $this->stored('registration.step3');
     $served = $this->decoded($emitter->emit($step3, $stored, 'registration.step3')->document);
     $this->assertSame(['/room'], $served['stale']);
-    $back = $this->container->get('surface_react.served_operations')->keepStale($served['values'], $stored, $served['stale']);
+    $back = $this->container->get('surface.served_operations')->keepStale($served['values'], $stored, $served['stale']);
     $result = $this->pipeline()->submit($step3, $back, $resources->storage('registration.step3', $context, $step3));
     $this->assertTrue($result->committed, 'Untouched, the stale room is kept.');
     $this->assertSame('riverside_east', $this->stored('registration.step3')['room']);

@@ -41,8 +41,6 @@ class PerformanceSurfaceTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_react',
-    'surface_openapi',
     'surface_examples_performance',
   ];
 
@@ -178,7 +176,7 @@ class PerformanceSurfaceTest extends SurfaceKernelTestBase {
     $this->assertSame(PerformanceResource::PERIODS, $constraints['Choice']['choices']);
     $this->assertSame($labels, $constraints['LabeledChoice']['labels']);
 
-    $document = json_decode((string) json_encode($this->container->get('surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document, JSON_THROW_ON_ERROR), TRUE);
+    $document = json_decode((string) json_encode($this->container->get('surface.openapi_document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document, JSON_THROW_ON_ERROR), TRUE);
     $this->assertArrayHasKey('/surface-api/system.performance', $document['paths']);
     $schema = $document['components']['schemas']['system.performance.configure']['properties']['max_age'];
     $this->assertSame('integer', $schema['type']);

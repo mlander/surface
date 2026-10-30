@@ -7,9 +7,9 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Cache\Cache;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\ResourceBuild\ResourceCatalog;
-use Drupal\surface_openapi\OpenApiDescription;
-use Drupal\surface_openapi\OpenApiDocument;
-use Drupal\surface_openapi\SchemaComponents;
+use Drupal\surface\OpenApi\OpenApiDescription;
+use Drupal\surface\OpenApi\OpenApiDocument;
+use Drupal\surface\OpenApi\SchemaComponents;
 use Drupal\user\Entity\Role;
 use Opis\JsonSchema\Errors\ErrorFormatter;
 use Opis\JsonSchema\CompliantValidator;
@@ -54,8 +54,6 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
     'system',
     'user',
     'surface',
-    'surface_react',
-    'surface_openapi',
     'surface_examples_first',
     'surface_tool_test',
     'block',
@@ -102,17 +100,17 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
   /**
    * Builds the document for a request to example.com.
    *
-   * @return \Drupal\surface_openapi\OpenApiDescription
+   * @return \Drupal\surface\OpenApi\OpenApiDescription
    *   The document.
    */
   protected function description(): OpenApiDescription {
-    return $this->container->get('surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'));
+    return $this->container->get('surface.openapi_document')->build(Request::create('https://example.com/surface-api/openapi.json'));
   }
 
   /**
    * Gets the document as a client decodes it.
    *
-   * @param \Drupal\surface_openapi\OpenApiDescription|null $description
+   * @param \Drupal\surface\OpenApi\OpenApiDescription|null $description
    *   The document, or NULL to build it.
    *
    * @return array
@@ -140,7 +138,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
     $this->assertSame('3.1.0', $document['openapi']);
     $this->assertSame(ContractEmitter::DIALECT, $document['jsonSchemaDialect']);
     $this->assertSame((string) ContractEmitter::CONTRACT, $document['info']['version'], 'info.version is the contract version.');
-    $this->assertSame('Test site: resources', $document['info']['title']);
+    $this->assertSame('Test site: Surface API', $document['info']['title']);
     $this->assertStringContainsString('Built for no account', $document['info']['description']);
     $this->assertSame('no account', $document['x-surface']['builtFor']);
     $this->assertSame(['GET /surface-api/{resource}[/{id}]', 'GET /surface-api/{resource}[/{id}]/schema'], $document['x-surface']['perAccount']);
@@ -206,7 +204,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
       $name = $registry->getDefinition($entry['resource'])->name();
       $operation = $registry->getOperation($name, $entry['operation']);
       // Built for no account, and knowing nothing of a subject.
-      $built = $this->container->get('surface_openapi.document')->neutral($registry->getDefinition($name), $operation);
+      $built = $this->container->get('surface.openapi_document')->neutral($registry->getDefinition($name), $operation);
       $full = json_decode((string) json_encode($emitter->emitFull($built, $entry['resource'], $operation->id, $operation->label, operation: $operation->facts())->document, JSON_THROW_ON_ERROR), TRUE);
       $emitted = $full['schema'];
       $this->assertSame(isset($full['outputs']), $entry['outputs'] !== NULL, $id . ': an outputs component where outputs are declared.');

@@ -73,7 +73,6 @@ class ServedContractTest extends SurfaceKernelTestBase {
     'surface_examples',
     'surface_examples_plugins',
     'surface_examples_node_type',
-    'surface_react',
   ];
 
   /**
@@ -105,7 +104,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The contract, through JSON and back.
    */
   protected function contract(string $resource, string $operation, array $parameters = [], array $values = [], bool $widgets = TRUE): array {
-    $served = $this->container->get('surface_react.served_operations');
+    $served = $this->container->get('surface.served_operations');
     $operation = $served->resolve($resource, $operation, $parameters);
     $contract = $this->container->get('surface.contract_emitter')->emit(
       $operation->surface,
@@ -313,7 +312,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    * widget, and the value itself never handed over.
    */
   public function testRefinementOverlay(): void {
-    $served = $this->container->get('surface_react.served_operations');
+    $served = $this->container->get('surface.served_operations');
     $operation = $served->resolve('registration.step2', 'configure', []);
     $overlay = $this->container->get('surface.form_builder')->refinementOverlay(
       $operation->surface,
@@ -587,7 +586,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The built resource, in its configure operation.
    */
   protected function operationSurface(string $resource): SurfaceInterface {
-    return $this->container->get('surface_react.served_operations')->resolve($resource, 'configure', [])->surface;
+    return $this->container->get('surface.served_operations')->resolve($resource, 'configure', [])->surface;
   }
 
   /**
@@ -880,7 +879,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The document, through JSON and back.
    */
   protected function full(string $resource): array {
-    $operation = $this->container->get('surface_react.served_operations')->resolve($resource, 'configure', []);
+    $operation = $this->container->get('surface.served_operations')->resolve($resource, 'configure', []);
     $served = $this->container->get('surface.contract_emitter')->emitFull(
       $operation->surface,
       $operation->definition->id,

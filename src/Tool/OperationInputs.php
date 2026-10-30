@@ -6,7 +6,6 @@ namespace Drupal\surface\Tool;
 
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -22,7 +21,7 @@ use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\OperationParameter;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface_react\ServedPaths;
+use Drupal\surface\Http\ServedPaths;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\ListOutputDefinition;
@@ -193,20 +192,16 @@ final class OperationInputs {
    *   The converter from a data surface to the Tool API's definitions.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
-   * @param \Drupal\Core\Extension\ModuleHandlerInterface|null $moduleHandler
-   *   The module handler, which says whether the site serves the API a
-   *   reference key's lookup is on.
-   * @param \Drupal\surface_react\ServedPaths|null $servedPaths
-   *   The API's paths, where the site serves it: the path a key left out
-   *   for its size names to fetch one of its entries at.
+   * @param \Drupal\surface\Http\ServedPaths $servedPaths
+   *   The API's paths: the path a key left out for its size names to
+   *   fetch one of its entries at, and a reference key's lookup.
    */
   public function __construct(
     protected readonly ResourcesInterface $resources,
     protected readonly OperationArguments $operationArguments,
     protected readonly InputDefinitions $inputDefinitions,
     TranslationInterface $string_translation,
-    protected readonly ?ModuleHandlerInterface $moduleHandler = NULL,
-    protected readonly ?ServedPaths $servedPaths = NULL,
+    protected readonly ServedPaths $servedPaths,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -776,11 +771,11 @@ final class OperationInputs {
   }
 
   /**
-   * Names the resource's lookup, where the site serves its API.
+   * Names the resource's lookup on the API.
    *
    * `GET /surface-api/{resource}:lookup`, or for an operation whose
    * parameters name identity `/surface-api/{resource}/{<key>}/...:lookup`,
-   * as surface_react serves it (ServedPaths::lookupTemplate()).
+   * as the HTTP door serves it (ServedPaths::lookupTemplate()).
    *
    * Decision: see
    * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
@@ -790,13 +785,10 @@ final class OperationInputs {
    * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    *
-   * @return string|null
-   *   The path, or NULL when surface_react is not on.
+   * @return string
+   *   The path.
    */
-  protected function lookup(ResourceDefinition $resource, OperationDefinition $operation): ?string {
-    if ($this->servedPaths === NULL || !$this->moduleHandler?->moduleExists('surface_react')) {
-      return NULL;
-    }
+  protected function lookup(ResourceDefinition $resource, OperationDefinition $operation): string {
     [$path] = $this->servedPaths->lookupTemplate($resource, $operation);
     return $path;
   }
@@ -1086,20 +1078,18 @@ final class OperationInputs {
     $arguments = [
       '@label' => self::operationLabel($operation),
       '@needs' => $this->needs($operation),
-      '@path' => (string) $this->schemaPath($resource, $operation),
+      '@path' => $this->schemaPath($resource, $operation),
     ];
     $arguments['@fetch'] = 'GET ' . $arguments['@path'] . (str_contains($arguments['@path'], '?') ? '&' : '?') . Choices::PARAMETER . '={key}={value}';
     // Decision: see
     // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
-    return $arguments['@path'] === ''
-      ? $this->t('Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full: choose the key that decides them, send your values here, and read the keys the choice offers under schema. Send the values again when a choice changes.', $arguments)
-      : $this->t("Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full, each naming two ways to learn its keys once you choose the key that decides them: fetch @fetch once per value and keep the answer, a schema that changes only when the site's list does; or send your values here and read the keys the choice offers under schema, again when a choice changes.", $arguments);
+    return $this->t("Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full, each naming two ways to learn its keys once you choose the key that decides them: fetch @fetch once per value and keep the answer, a schema that changes only when the site's list does; or send your values here and read the keys the choice offers under schema, again when a choice changes.", $arguments);
   }
 
   /**
    * Names the URL an operation's full schema is fetched at.
    *
-   * Where the site serves its API: `/surface-api/{resource}[/{key}...]/schema`,
+   * On the API: `/surface-api/{resource}[/{key}...]/schema`,
    * `:{operation}` before `/schema` for an operation `GET` does not serve
    * at the plain path, each identity segment a `{parameter}`, and each
    * parameter that is not identity in the query, `?name={name}`: every
@@ -1113,13 +1103,10 @@ final class OperationInputs {
    * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    *
-   * @return string|null
-   *   The path, or NULL when surface_react is not on.
+   * @return string
+   *   The path.
    */
-  protected function schemaPath(ResourceDefinition $resource, OperationDefinition $operation): ?string {
-    if ($this->servedPaths === NULL || !$this->moduleHandler?->moduleExists('surface_react')) {
-      return NULL;
-    }
+  protected function schemaPath(ResourceDefinition $resource, OperationDefinition $operation): string {
     [$path] = $this->servedPaths->template($resource, $operation, !$this->servedPaths->readsPlain($resource, $operation), TRUE, TRUE);
     return $path;
   }

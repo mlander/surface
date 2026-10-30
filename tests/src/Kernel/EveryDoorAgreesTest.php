@@ -73,7 +73,6 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_examples_field',
-    'surface_react',
   ];
 
   /**

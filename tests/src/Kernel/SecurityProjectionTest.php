@@ -18,7 +18,7 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\PreparedValues;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_examples_workflow\Alter\FeesWorkflowAlter;
-use Drupal\surface_react\Access\ServedOperationAccessCheck;
+use Drupal\surface\Http\ServedOperationAccessCheck;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Plugin\tool\Tool\ResourceOperationToolBase;
 use Drupal\surface_tool_test\Storage\VaultStorage;
@@ -74,7 +74,6 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
     'surface_examples_field',
     'surface_examples',
     'surface_examples_workflow',
-    'surface_react',
     'surface_tool_test',
   ];
 
@@ -150,10 +149,10 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
    *   Whether it is allowed, and the reason given.
    */
   protected function reactAccess(string $resource, string $operation, array $query, ?AccountInterface $account = NULL): array {
-    $check = $this->container->get('surface_react.access');
+    $check = $this->container->get('surface.served_access');
     assert($check instanceof ServedOperationAccessCheck);
     $ids = ['resource' => $resource, 'operation' => $operation];
-    $route_match = new RouteMatch('surface_react.page', new Route('/surface-react/{resource}/{operation}'), $ids, $ids);
+    $route_match = new RouteMatch('surface_examples_react.page', new Route('/surface-react/{resource}/{operation}'), $ids, $ids);
     $result = $check->access($route_match, $account ?? User::getAnonymousUser(), Request::create('/surface-react/' . $resource . '/' . $operation, 'GET', $query));
     return [$result->isAllowed(), $result instanceof AccessResultReasonInterface ? (string) $result->getReason() : ''];
   }

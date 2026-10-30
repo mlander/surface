@@ -26,7 +26,7 @@ use Symfony\Component\HttpFoundation\Request;
  * resource the path names that discovery does not have is not found to
  * any account, since nothing is there to hold a permission for. The
  * operation form's route (OperationAccessCheck) and the React page and
- * the API (surface_react's ServedOperationAccessCheck) ask both
+ * the API (the HTTP door's ServedOperationAccessCheck) ask both
  * answers here, so the two doors cannot give them differently; the order
  * they are asked in, and the permission asked again of the URL's values,
  * each door writes itself.

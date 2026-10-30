@@ -11,7 +11,7 @@ drush pm:install surface_examples_block
 ```
 
 It needs `block` and nothing contributed. The tools need
-the `tool` module, the HTTP door `surface_react`.
+the `tool` module; the HTTP door is the base module's.
 
 ## What it shows
 
@@ -75,7 +75,7 @@ plugin is chosen
 | Door | Where |
 | --- | --- |
 | Tools | `surface:block.placement:create` (`values`, `dry_run`), `:update` (`id`, `values`, `dry_run`), `:update:read` (`id`), `:delete` (`id`, `dry_run`), with the `tool` module; and `:create:schema` and `:update:schema`, since a plugin's settings are variants the site lists, which a tool's listing never spells out ([the narrowing tool](../../docs/tools.md#the-narrowing-tool)) |
-| HTTP | `POST /surface-api/block.placement` (201, `Location`), `GET` and `PATCH /surface-api/block.placement/{id}`, `DELETE /surface-api/block.placement/{id}`, with `surface_react` |
+| HTTP | `POST /surface-api/block.placement` (201, `Location`), `GET` and `PATCH /surface-api/block.placement/{id}`, `DELETE /surface-api/block.placement/{id}` |
 | Forms | `/admin/structure/block/surface/add`, `/admin/structure/block/surface/{id}`, and `/admin/structure/block/surface/{id}/delete`, a confirmation |
 | React | `/surface-react/block.placement/create`, `/surface-react/block.placement/update?id={id}` |
 
@@ -97,7 +97,7 @@ region named header_nope."), props of another component by their path
 | --- | --- |
 | `/admin/structure/block/surface/add` | Choose a plugin and its settings are drawn; choose a theme and its regions are offered. |
 | `/surface-examples/13`, with `surface_examples` and `surface_examples_component_block` | The Spotlight block, placed through `create`, and the calls that place, change and remove it. |
-| `/surface-api/docs`, with `surface_openapi` | The placement's paths, `DELETE` among them. |
+| `/surface-api/docs` | The placement's paths, `DELETE` among them. |
 
 ## Tests
 

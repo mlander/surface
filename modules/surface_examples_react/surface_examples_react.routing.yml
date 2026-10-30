@@ -1,0 +1,17 @@
+# The page an operation's React form mounts on. It names the resource and
+# the operation by id: /surface-react/registration.step3/configure, its
+# parameters in the query string. The app it mounts calls the base
+# module's HTTP door, /surface-api.
+#
+# Its requirement is the API's, the operation's: its permission, then the
+# resource's access class, and no opinion is a refusal.
+#
+# Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
+
+surface_examples_react.page:
+  path: '/surface-react/{resource}/{operation}'
+  defaults:
+    _controller: '\Drupal\surface_examples_react\Controller\ResourceReactPage::page'
+    _title_callback: '\Drupal\surface_examples_react\Controller\ResourceReactPage::title'
+  requirements:
+    _surface_served_access: 'TRUE'

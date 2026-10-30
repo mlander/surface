@@ -37,7 +37,7 @@ drush pm:install surface_examples_entity
 | `/surface-entity` | Every content entity resource on the site, what it carries and what it leaves out |
 | `/surface-entity/node/page/add` | Add a basic page through `entity.content:node.page` |
 | `/surface-entity/node/{id}/edit` | Edit one |
-| `/surface-react/entity.content:node.page/create` | The same, as the React app, with `surface_react` |
+| `/surface-react/entity.content:node.page/create` | The same, as the React app, with `surface_examples_react` |
 
 With the `tool` module installed, every bundle's resource is three tools:
 

@@ -1,0 +1,9 @@
+name: Surface API examples - React
+type: module
+description: 'An example client of the HTTP door: a React form drawn from the served contract, a JavaScript client that reads, narrows and writes an operation through /surface-api.'
+package: 'Surface API examples'
+lifecycle: experimental
+lifecycle_link: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/README.md#experimental-submodules'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

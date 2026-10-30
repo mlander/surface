@@ -33,7 +33,6 @@ class RetitleFormTest extends BrowserTestBase {
    */
   protected static $modules = [
     'surface_examples_retitle',
-    'surface_react',
   ];
 
   /**

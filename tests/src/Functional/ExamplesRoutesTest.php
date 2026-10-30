@@ -87,8 +87,8 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->linkByHrefExists('/surface-examples/2/classic');
     $assert->pageTextContains(sprintf('The classic twin, a config form: %d lines of code, against %d for the resource and its storage.', $classic, $resource));
     $assert->linkByHrefExists('/surface-examples/reset');
-    // Without surface_react the React twin is named, not linked.
-    $assert->pageTextContains('In React at /surface-react/registration.step2/configure, once surface_react is enabled.');
+    // Without surface_examples_react the React twin is named, not linked.
+    $assert->pageTextContains('In React at /surface-react/registration.step2/configure, once surface_examples_react is enabled.');
 
     $this->drupalGet('surface-examples/3');
     $assert->pageTextContains('The contract, as it stands');

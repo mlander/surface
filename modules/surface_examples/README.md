@@ -52,8 +52,8 @@ Every code block on the pages is highlighted with Prism 1.30.0: the
 contract panel's JSON, the commands and their answers, and each file
 shown whole, by its extension. The core, the JSON, YAML, PHP, Twig and
 Bash languages and the default theme come from cdnjs, each pinned and
-held to its integrity hash (`surface.libraries.yml`), as
-`surface_openapi` loads Swagger UI. The React page bundles Prism
+held to its integrity hash (`surface.libraries.yml`), as the OpenAPI
+document's page loads Swagger UI. The React page bundles Prism
 for its JSON and takes the same theme. When the CDN cannot be reached,
 the blocks show as plain text.
 
@@ -1185,11 +1185,11 @@ example 3.
 ## In React
 
 Examples 1 to 3 again, with no Form API: the same operation served as a
-JSON contract and rendered by a React app, from the experimental
-submodule `surface_react`.
+JSON contract by the base module's HTTP door and rendered by a React
+app, from the experimental example `surface_examples_react`.
 
 ```bash
-drush pm:install surface_react
+drush pm:install surface_examples_react
 ```
 
 The landing page then links each example "In React":
@@ -1222,8 +1222,7 @@ contract as it stands.
 The same contract through every door. The decoupled page is the one
 above, [In React](#in-react): the contract served as JSON and drawn by a
 React app. ECA and an AI agent, through the tool of example 5, are yours
-to show on your own site. With `surface_openapi` enabled, the
-landing page links `/surface-api/openapi.json`, every example's paths
+to show on your own site. The landing page links `/surface-api/openapi.json`, every example's paths
 described for any OpenAPI client, and `/surface-api/docs`, Swagger UI
 over it, to try each call with your session.
 
@@ -4354,7 +4353,7 @@ surface_examples.event_venue.*:
 
 ### On HTTP
 
-With `surface_react` on, the collection is the resource, one venue
+Over HTTP, the collection is the resource, one venue
 its path, and the method the operation. `GET` on the collection answers
 the listing, since the resource declares one: its query string the
 listing's values, its answer the outputs. A resource with no listing

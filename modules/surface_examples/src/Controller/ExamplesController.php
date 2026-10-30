@@ -94,14 +94,9 @@ final class ExamplesController extends ControllerBase {
   public const WORKFLOW_ALTERS = ['src/Alter/ProgramWorkflowAlter.php', 'src/Alter/FeesWorkflowAlter.php'];
 
   /**
-   * The module serving examples 1 to 3 as React forms.
+   * The example module serving examples 1 to 3 as React forms.
    */
-  public const REACT = 'surface_react';
-
-  /**
-   * The module serving the OpenAPI document of every operation's endpoints.
-   */
-  public const OPENAPI = 'surface_openapi';
+  public const REACT = 'surface_examples_react';
 
   /**
    * The module the component block of example 13 lives in.
@@ -496,7 +491,10 @@ final class ExamplesController extends ControllerBase {
       ];
       if ($react) {
         $links[] = ['#markup' => ' '];
-        $react_edit = Url::fromRoute('surface_react.page', ['resource' => 'event.venue', 'operation' => 'update'], [
+        $react_edit = Url::fromRoute('surface_examples_react.page', [
+          'resource' => 'event.venue',
+          'operation' => 'update',
+        ], [
           'query' => ['id' => $id],
         ]);
         $links[] = Link::fromTextAndUrl($this->t('Edit in React'), $react_edit)->toRenderable();
@@ -513,7 +511,7 @@ final class ExamplesController extends ControllerBase {
     }
     $add = [$this->route('surface_examples.step15_create')];
     if ($react) {
-      $react_add = Url::fromRoute('surface_react.page', ['resource' => 'event.venue', 'operation' => 'create']);
+      $react_add = Url::fromRoute('surface_examples_react.page', ['resource' => 'event.venue', 'operation' => 'create']);
       $add[] = Link::fromTextAndUrl($this->t('Add in React: @path', ['@path' => $react_add->toString()]), $react_add)->toRenderable();
     }
     else {
@@ -814,9 +812,9 @@ final class ExamplesController extends ControllerBase {
   /**
    * Links an example's form in React, or says where it will be.
    *
-   * The same operation, rendered by surface_react from the contract
-   * it serves; the examples do not depend on that module, so while it is
-   * off the path is named rather than linked.
+   * The same operation, rendered by surface_examples_react from the
+   * contract the HTTP door serves; the examples do not depend on that
+   * module, so while it is off the path is named rather than linked.
    *
    * @param string $resource
    *   The example's resource id.
@@ -834,42 +832,33 @@ final class ExamplesController extends ControllerBase {
         '@module' => self::REACT,
       ]);
     }
-    $url = Url::fromRoute('surface_react.page', ['resource' => $resource, 'operation' => $operation]);
+    $url = Url::fromRoute('surface_examples_react.page', ['resource' => $resource, 'operation' => $operation]);
     return Link::fromTextAndUrl($this->t('In React: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**
-   * Links the OpenAPI document, or says where it will be.
+   * Links the OpenAPI document.
    *
-   * Every example's paths, described for any OpenAPI client; the
-   * examples do not depend on that module, so while it is off the path is
-   * named rather than linked.
+   * Every example's paths, described for any OpenAPI client.
    *
-   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
-   *   A link render array, or the sentence naming the path.
+   * @return array
+   *   A link render array.
    */
-  protected function openApi(): array|TranslatableMarkup {
-    if (!$this->moduleHandler()->moduleExists(self::OPENAPI)) {
-      return $this->t('As OpenAPI at /surface-api/openapi.json, once @module is enabled.', ['@module' => self::OPENAPI]);
-    }
-    $url = Url::fromRoute('surface_openapi.json');
+  protected function openApi(): array {
+    $url = Url::fromRoute('surface.openapi.json');
     return Link::fromTextAndUrl($this->t('As OpenAPI: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 
   /**
-   * Links Swagger UI over the OpenAPI document, or says where it will be.
+   * Links Swagger UI over the OpenAPI document.
    *
-   * Each example's calls, to try with the logged-in session; named rather
-   * than linked while the module is off.
+   * Each example's calls, to try with the logged-in session.
    *
-   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
-   *   A link render array, or the sentence naming the path.
+   * @return array
+   *   A link render array.
    */
-  protected function openApiDocs(): array|TranslatableMarkup {
-    if (!$this->moduleHandler()->moduleExists(self::OPENAPI)) {
-      return $this->t('To try out at /surface-api/docs, once @module is enabled.', ['@module' => self::OPENAPI]);
-    }
-    $url = Url::fromRoute('surface_openapi.docs');
+  protected function openApiDocs(): array {
+    $url = Url::fromRoute('surface.openapi.docs');
     return Link::fromTextAndUrl($this->t('To try out: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
 

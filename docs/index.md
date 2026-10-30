@@ -103,9 +103,10 @@ install; read it first.
   [Installation: Tool](installation.md#tool), for an agent, MCP and
   Drush. The field tools are an example of their own,
   [`surface_examples_field`](https://github.com/mlander/surface/blob/main/modules/surface_examples_field/README.md).
-- [The React app](https://github.com/mlander/surface/blob/main/modules/surface_react/README.md): the served
-  contract's endpoints and the React form drawn from them.
-- [The OpenAPI document](https://github.com/mlander/surface/blob/main/modules/surface_openapi/README.md):
+- [The React app](https://github.com/mlander/surface/blob/main/modules/surface_examples_react/README.md):
+  an example client of the served contract's endpoints, the React form
+  drawn from them.
+- [The OpenAPI document](served-contract.md#an-openapi-document):
   every operation's endpoints as OpenAPI 3.1, for any OpenAPI client,
   generator or UI.
 - [The component block](https://github.com/mlander/surface/blob/main/modules/surface_examples_component_block/README.md):

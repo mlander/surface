@@ -25,7 +25,7 @@ use Symfony\Component\Routing\Route;
  *
  * The form door is every such route the operation form serves. A route
  * whose controller is the React page's (OperationRoute::reactPage()) is
- * no form: surface_react's React door lists it beside the
+ * no form: surface_examples_react's React door lists it beside the
  * operation's own page (reactPages(), reactPageLink()).
  */
 final class FormRouteDoors implements CatalogDoorLinksInterface {

@@ -46,8 +46,6 @@ class IdentityPathsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
-    'surface_react',
-    'surface_openapi',
     'surface_examples_address',
     'surface_examples_field',
     'surface_resource_test',
@@ -88,7 +86,7 @@ class IdentityPathsTest extends SurfaceKernelTestBase {
    */
   protected function template(string $resource, string $operation, bool $schema = FALSE): string {
     $registry = $this->container->get('surface.resource_registry');
-    $paths = $this->container->get('surface_react.served_paths');
+    $paths = $this->container->get('surface.served_paths');
     $definition = $registry->getDefinition($resource);
     $found = $registry->getOperation($definition->name(), $operation);
     [$path] = $paths->template($definition, $found, !$paths->readsPlain($definition, $found), $schema, TRUE);
@@ -118,7 +116,7 @@ class IdentityPathsTest extends SurfaceKernelTestBase {
     $this->assertSame('/surface-api/paths_test.shelf:create', $this->template('paths_test.shelf', 'create'));
 
     $registry = $this->container->get('surface.resource_registry');
-    $paths = $this->container->get('surface_react.served_paths');
+    $paths = $this->container->get('surface.served_paths');
     $field = $registry->getDefinition('field.instance');
     $operations = $registry->getOperations($field->name());
     $this->assertSame(['POST', FALSE], $paths->writes($field, $operations['create']), 'A create is POSTed to the parent it names.');
@@ -168,7 +166,7 @@ class IdentityPathsTest extends SurfaceKernelTestBase {
    * Tests the OpenAPI document writes the identity as path parameters.
    */
   public function testTheOpenApiDocumentWritesTheRule(): void {
-    $document = $this->container->get('surface_openapi.document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document;
+    $document = $this->container->get('surface.openapi_document')->build(Request::create('https://example.com/surface-api/openapi.json'))->document;
     $document = json_decode((string) json_encode($document, JSON_THROW_ON_ERROR), TRUE);
     $parameters = static function (array $call): array {
       $own = [];

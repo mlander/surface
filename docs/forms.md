@@ -1468,8 +1468,8 @@ query prefills as starting values, and fixes nothing:
 example.card_app:
   path: '/example/cards/app/{copies}'
   defaults:
-    _controller: '\Drupal\surface_react\Controller\ResourceReactPage::served'
-    _title_callback: '\Drupal\surface_react\Controller\ResourceReactPage::servedTitle'
+    _controller: '\Drupal\surface_examples_react\Controller\ResourceReactPage::served'
+    _title_callback: '\Drupal\surface_examples_react\Controller\ResourceReactPage::servedTitle'
     _surface_resource: 'example.card'
     _surface_operation: 'create'
     _surface_defaults: { title: 'Dear you', copies: '{copies}' }
@@ -1499,7 +1499,7 @@ route lists, as the form does, and `servedTitle()` titles it with the
 operation's label. The generic page,
 `/surface-react/{resource}/{operation}`, carries no seeds, and answers a
 URL that names nothing as the form's route does
-([React](https://github.com/mlander/surface/blob/main/modules/surface_react/README.md#a-page-at-a-modules-route)).
+([React](https://github.com/mlander/surface/blob/main/modules/surface_examples_react/README.md#a-page-at-a-modules-route)).
 
 ### Access, twice
 
