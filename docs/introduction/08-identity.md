@@ -33,8 +33,6 @@ These are the two attributes in full, the settings' from
 )]
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 The settings name no `identity`, so they are a singleton. The content
 type names `type`. The other arguments name the class that saves the
 values and the class that decides who may change them, which later

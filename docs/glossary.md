@@ -248,14 +248,17 @@ Reference: [Variants](resources.md#variants).
 ### Door
 
 A door is a place that asks for an operation's values: the form, a Tool
-API tool, MCP for AI agents, ECA for automation, HTTP with an OpenAPI
-document, a React page.
+API tool, the command line (`drush tool:run`), MCP for AI agents, ECA
+for automation, HTTP with an OpenAPI document, a React page. One tool
+made from an operation can be run by everything that runs Tool API
+tools: the command line, ECA, FlowDrop, Maestro, MCP servers and AI
+agents.
 
 Precisely: every door reads the one sealed data surface and nothing
-else: the generated form, the tool, MCP, ECA, HTTP with its OpenAPI
-document, and the React page. That is why they agree on what is
-accepted, and why one module can change all of them at once without
-touching any.
+else: the generated form, the tool, the command line, MCP, ECA, HTTP
+with its OpenAPI document, and the React page. That is why they agree
+on what is accepted, and why one module can change all of them at once
+without touching any.
 
 Introduced in [Doors](introduction/12-doors.md). Reference:
 [The doors](catalog-command.md#the-doors),

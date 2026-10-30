@@ -57,8 +57,6 @@ Inside the class, the permission they share and the two methods:
   }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 - **On the class**, when asking needs nothing more. `create` knows
   nothing yet: the caller chooses the machine name. Your module's
   settings declare their one operation this way, with the id

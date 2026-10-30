@@ -14,10 +14,14 @@ use PHPUnit\Framework\Attributes\Group;
  * A snippet that names one of the module's classes either imports it, a
  * `use` line inside the snippet, or finds it in the "Namespaces" table on
  * the concepts page, which the section the snippet sits in links: from
- * `docs/`, `concepts.md#namespaces`; from a section below it, the
- * introduction or the examples, `../concepts.md#namespaces`. The
- * third fresh-eyes run found `KeysFromSiteInterface` and `KeyedList` with
- * no namespace in any doc and had to search `src/` (its log, entry 16).
+ * `docs/`, `concepts.md#namespaces`; from the examples,
+ * `../concepts.md#namespaces`. The third fresh-eyes run found
+ * `KeysFromSiteInterface` and `KeyedList` with no namespace in any doc
+ * and had to search `src/` (its log, entry 16).
+ *
+ * The introduction is not held: its snippets show the code each page is
+ * about, and the series does not point at the Namespaces table while the
+ * module's classes are still being settled.
  *
  * The dated records, the fresh-eyes logs and the adopters' trial, keep
  * what was written then and are not held.
@@ -41,7 +45,6 @@ class NamespacesDocsTest extends UnitTestCase {
    */
   protected const DIRECTORIES = [
     'docs' => '',
-    'docs/introduction' => '../',
     'docs/examples' => '../',
   ];
 

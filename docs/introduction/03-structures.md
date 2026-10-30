@@ -62,8 +62,6 @@ final class TeaserBlock extends DataSurfaceBlockBase {
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 The block loses its `defaultConfiguration()`, `blockForm()`,
 `blockValidate()` and `blockSubmit()`: `DataSurfaceBlockBase` supplies
 them from the structure. Core's block form asks the plugin for its

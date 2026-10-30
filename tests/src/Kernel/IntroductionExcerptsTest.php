@@ -275,7 +275,7 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
   }
 
   /**
-   * Tests page 1: one class, a form, a tool and an HTTP path.
+   * Tests page 1: one class, a form, a tool, its command and an HTTP path.
    */
   public function testOneDescriptionEveryDoor(): void {
     $form = $this->settingsForm();
@@ -287,6 +287,14 @@ class IntroductionExcerptsTest extends DataSurfaceKernelTestBase {
 
     $this->assertTrue($this->container->get('plugin.manager.tool')->hasDefinition('data_surface:my_module.settings:configure'));
     $this->assertPageSays('01-what-it-does.md', '`data_surface:my_module.settings:configure`');
+    // The tool module's command that runs a tool, read from its attribute in
+    // the source: loading the class loads Drush's base class, which raises
+    // a deprecation in Drush's own code.
+    $source = (string) file_get_contents($this->root . '/' . $this->container->get('extension.list.module')->getPath('tool') . '/src/Drush/Commands/ToolRunCommand.php');
+    $this->assertSame(1, preg_match("/#\\[Command\\(name: '([^']+)'[^\\n]*\\n(?:\\s*#\\[.*\\n)*\\s*public function runTool\\(/", $source, $match));
+    [, $command] = $match;
+    $this->assertSame('tool:run', $command);
+    $this->assertPageSays('01-what-it-does.md', '| The command line | `drush ' . $command . ' data_surface:my_module.settings:configure`, which runs the same tool |');
 
     $registry = $this->container->get('data_surface.resource_registry');
     $definition = $registry->getDefinition('my_module.settings');

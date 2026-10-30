@@ -35,8 +35,6 @@ The attribute's first argument is the resource's id. The settings of
 )]
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 The second attribute, `#[Operation]`, and the `storage:` argument are
 the ideas of [Operations](09-operations.md) and [Storage](10-storage.md).
 

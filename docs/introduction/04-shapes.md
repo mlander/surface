@@ -36,8 +36,6 @@ final class HexColor implements ShapeInterface {
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 `Regex` is Drupal's validation constraint for a pattern, and its
 `message` is what a caller reads when a value does not match.
 `DefinitionMetadata::setExamples()` adds an example of a good value. A
@@ -69,8 +67,6 @@ final class MyColorsResource implements ResourceInterface {
 
 }
 ```
-
-Where each class lives: [Namespaces](../concepts.md#namespaces).
 
 Each `add()` starts from a copy of the shape, so `link_color` and
 `background_color` take the same pattern and the same message. A use

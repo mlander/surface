@@ -22,8 +22,6 @@ public static function regionsOfTheme(DataDefinitionInterface $region, string $t
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 `DataSurfaceThemeRegion` is a constraint this module ships: it allows
 only the regions of the theme it names. `defineInputs()` declares
 `region` as a region of any installed theme. Once `theme` holds a
@@ -65,8 +63,6 @@ $inputs->narrow('end_date')
   ->when(Condition::present('start_date'))
   ->require();
 ```
-
-Where each class lives: [Namespaces](../concepts.md#namespaces).
 
 `when()` takes a condition on other keys' values, such as `present()`
 or `equals()`, and the last call is the effect. Because the rule is

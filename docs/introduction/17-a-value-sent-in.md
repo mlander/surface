@@ -42,8 +42,6 @@ $result = \Drupal::service('data_surface.pipeline')->submit(
 $result->isValid();   // FALSE: nothing was written.
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 A placed block's form, asked for 60 items, prints the rule's message in
 the messages at the top of the page, after the field's label:
 

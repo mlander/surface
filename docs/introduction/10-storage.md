@@ -37,8 +37,6 @@ final class MySettingsStorage extends ConfigObjectStorage {
 }
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 `ConfigObjectStorage` does the three steps: it reads
 `my_module.settings`, checks the values against the object's config
 schema, and saves them, each key under its own name. The config schema

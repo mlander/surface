@@ -2,9 +2,11 @@
 
 You describe once what a thing on your site accepts: each value, its
 type, and what it allows. From that one description the module makes
-the settings form, a tool an AI agent can call, an HTTP API with its
-OpenAPI document, and a React page. All of them accept the same values,
-because they all read the same description.
+the settings form, a Tool API tool, the command line (`drush tool:run`),
+an HTTP API with its OpenAPI document, and a React page. All of them
+accept the same values, because they all read the same description.
+Everything that runs Tool API tools can run that one tool: the command
+line, ECA, FlowDrop, Maestro, MCP servers and AI agents.
 
 The module exists to prove this out for
 [the core issue behind it](https://www.drupal.org/project/drupal/issues/3622144).

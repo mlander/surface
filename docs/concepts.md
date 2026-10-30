@@ -64,7 +64,7 @@ first resource's (`data_surface_first`); a dash where none does.
 | Reference key, `add($key, 'entity:<type>[:<bundle>]')` and `add($key, 'entity')` | - | Does a key hold an entity's id: a user, an article, a venue, or an entity of any type? Its candidates are core's selection handler's for the account, listed up to `data_surface.settings:reference_list_limit` and looked up past it with the resource's `:lookup` ([Options](options.md#a-key-that-refers-to-an-entity)). | It holds a value of its own, not an entity's id. | 16 | `/surface-examples/16` (with `data_surface_examples_references`) |
 | Widget plugin | - | Does a key need an element no stock widget draws? Checkboxes, radios, rows for a list of free values, a time input and a date input are stock, asked for with `setSetting('widget', ...)` where the rule does not pick them ([Widgets](widgets.md#which-element-a-list-of-choices-is)). Should my module's widget draw every key of a kind on the site, every string whose `format` setting is `color`? It claims them, `claims:`, and a key whose owner asks for a widget keeps its own ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)). | The stock widgets draw it. | 11 | The stock widgets, `/surface-examples/11` |
 | Stale values | - | What happens to a stored value a refiner no longer allows? ([Value semantics](semantics.md#stale-values-the-third-state)) | No refiner narrows a key that has a stored value. | 2 | `/surface-examples/2` |
-| Tool and read tool | [Doors](introduction/12-doors.md) | Should an agent, MCP or Drush call it? | You do not enable `data_surface_tool`; there is nothing to write either way. | 5 | `/surface-examples/5` |
+| Tool and read tool | [Doors](introduction/12-doors.md) | Should the command line (`drush tool:run`), ECA, FlowDrop, Maestro, an MCP server or an AI agent run it? One tool made from an operation can be run by everything that runs Tool API tools. | You do not enable `data_surface_tool`; there is nothing to write either way. | 5 | `/surface-examples/5` |
 | Served contract and React | [Doors](introduction/12-doors.md) | Will a client with no PHP read, render or write it over HTTP, the path its resource and the method its operation? ([The served contract](served-contract.md#the-api)) | The form and the tool are enough. | 6 | `/surface-api/registration.step2`; in React, `/surface-react/registration.step2/configure` |
 | OpenAPI document | [Doors](introduction/12-doors.md) | Will an OpenAPI client, generator or UI call its paths? ([An OpenAPI document](served-contract.md#an-openapi-document)) | Nobody reads OpenAPI: leave `data_surface_openapi` off. | 6 | `/surface-api/openapi.json`; try it in `/surface-api/docs` |
 | Pipeline, dry run | [A value sent in](introduction/17-a-value-sent-in.md) | Do I submit values from my own code? ([The pipeline](pipeline.md)) | The form and the tool submit for you. | 5 | `/surface-examples/5` |
@@ -75,6 +75,16 @@ first resource's (`data_surface_first`); a dash where none does.
 | Version, `version:`, and the contract diff | - | Will a change I make break the values already stored, or a client that read the contract? Which changes are compatible, and what does a breaking one need? ([Evolving a resource](evolution.md)) | Nothing is stored or read yet: leave it at 1, and pin a baseline so the contract diff says when that stops being true. | - | - |
 
 ## Namespaces
+
+The classes in this table are the module's own, written to prove the
+pattern. Not every one is a finished design: some exist only to show
+an idea or to try it on a Drupal thing. Where Drupal core has a system
+that does the job (typed data definitions, validation constraints,
+config schema, Form API), the module uses it, and where core has one
+that is close, the aim is to evolve that system rather than keep a
+class here. [Core gaps](core-gaps.md) records where core falls short
+today and what the module does instead, and
+[Decisions](decisions.md) records each choice.
 
 Every class of the module a snippet in these pages names, beside the
 `use` line that imports it. A snippet that quotes a whole file carries

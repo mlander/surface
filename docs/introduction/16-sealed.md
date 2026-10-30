@@ -43,8 +43,6 @@ $surface = $resources->build(NodeTypeResource::class, $context);
 $surface->isLocked('type');   // TRUE: the operation knows which one.
 ```
 
-Where each class lives: [Namespaces](../concepts.md#namespaces).
-
 ## Access, twice
 
 Access has a say in the build, and the pipeline that handles values
