@@ -19,10 +19,12 @@ use Drupal\surface\Port;
 use Drupal\surface\Reference\EntityReferenceStructure;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\BoundSiteListInterface;
 use Drupal\surface\Resource\DefinesInputsInterface;
 use Drupal\surface\Resource\Compute;
 use Drupal\surface\Resource\ComputesValueInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
+use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\Resource\SiteListInterface;
 use Drupal\surface\Contract\SchemaReader;
@@ -61,6 +63,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @var array<string, class-string<\Drupal\surface\Resource\SiteListInterface>>
    */
   protected array $variantsFrom = [];
+
+  /**
+   * The arguments each provider of variants from the site is bound to.
+   *
+   * @var array<string, list<string|int>>
+   */
+  protected array $variantsArguments = [];
 
   /**
    * The variants a schema read into this blueprint states, by key.
@@ -391,18 +400,41 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, ?string $from = NULL): MapDataDefinition {
+  public function attachVariants(string $key, string $by, ?string $from = NULL, array $arguments = []): MapDataDefinition {
     $this->assertHoldsNoChild('attaches variants', $key);
     if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
       throw new \LogicException(sprintf('attachVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema or structure, with list().', $key, $from, SiteListInterface::class));
+    }
+    if ($arguments !== []) {
+      // Decision: see
+      // docs/decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type.
+      if ($from === NULL || !is_subclass_of($from, BoundSiteListInterface::class)) {
+        throw new \LogicException(sprintf('attachVariants("%s") hands arguments to %s, which does not implement %s: only a provider that lists for what its owner binds takes them, with listFor().', $key, $from ?? 'no provider', BoundSiteListInterface::class));
+      }
+      if (is_subclass_of($from, EntrySchemasInterface::class)) {
+        throw new \LogicException(sprintf('attachVariants("%s") hands arguments to %s, which answers an entry\'s schema when it is read: that is asked by value alone, so such a provider takes no arguments.', $key, $from));
+      }
     }
     $shell = $this->reserveChild('attachVariants', $key);
     $this->variants[$key] = $by;
     if ($from !== NULL) {
       $this->variantsFrom[$key] = $from;
+      if ($arguments !== []) {
+        $this->variantsArguments[$key] = $arguments;
+      }
       DefinitionMetadata::setVariantsFrom($shell, $from);
     }
     return $shell;
+  }
+
+  /**
+   * Gets the arguments each provider of variants from the site is bound to.
+   *
+   * @return array<string, list<string|int>>
+   *   The arguments of each key whose provider was handed some.
+   */
+  public function variantsArguments(): array {
+    return $this->variantsArguments;
   }
 
   /**

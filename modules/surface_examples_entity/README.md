@@ -19,6 +19,14 @@ Two derivers in `src/Resource/`, each a class carrying
   operations, `create` and `update` (which takes the entity as `id`), one
   child per field the form display shows, in its order, the entity's own
   access and `Storage\ContentEntityStorage`.
+- The same deriver makes `entity.content:<entity type>` for every
+  content entity type with such a bundle: one resource for all its
+  bundles, identity `entity_type` and `id`, `bundle` a key that chooses
+  the fields at `fields`, one variant per bundle
+  (`entity.content:<entity type>.<bundle>.fields`, a structure holding
+  the same field children). On `create` the bundle is one the account
+  may create; on `update` it is the entity's. A test holds each bundle's
+  variant equal to that bundle's resource.
 - `FieldItemStructures` makes `field.item:<entity type>.<bundle>.<field>`
   for every field that resource carries: a structure, stored by its
   parent, derived from the item's typed data by `FieldItemDerivation`,
@@ -44,14 +52,21 @@ drush pm:install surface_examples_entity
 | `/surface-entity/node/{id}/edit` | Edit one |
 | `/surface-react/entity.content:node.page/create` | The same, as the React app, with `surface_examples_react` |
 
-With the `tool` module installed, every bundle's resource is three tools:
+With the `tool` module installed, every bundle's resource is three tools,
+and every entity type's five (its two writes each with a narrowing
+tool, `:schema`):
 
 ```bash
 drush tool:info surface:entity.content:node.page:create
 drush tool:run surface:entity.content:node.page:create --uid=1 \
   --input='{"values":{"title":{"value":"Hello"},"field_description":{"value":"A page."}}}'
 drush tool:run surface:entity.content:node.page:update:read --uid=1 --input=id=1
+drush tool:run surface:entity.content:node:create --uid=1 \
+  --input='{"values":{"bundle":"page","fields":{"title":{"value":"Hello"},"field_description":{"value":"A page."}}}}'
 ```
+
+The entity type's resource holds the fields under `fields`. Both kinds
+are at every door; `docs/entities.md` says which to call when.
 
 ## Requirements
 

@@ -263,11 +263,14 @@ copied](#a-gate-is-borrowed-never-copied); 31 until 2026-10-31, when
 `#[Structure]`, [A resource and a structure may say what they are
 called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)), 16 blueprint methods (17
 before; 15 until 2026-10-27, when `resolve()` was added, [A key may
-stand for another at use](#a-key-may-stand-for-another-at-use)), 21
+stand for another at use](#a-key-may-stand-for-another-at-use)), 22
 interfaces (23 before; 20 until 2026-10-28, when
 `EntrySchemasInterface` was added, a provider that answers an entry's
 schema when a door reads it, [The static build is cached, the rest is
-per request](#the-static-build-is-cached-the-rest-is-per-request)). It
+per request](#the-static-build-is-cached-the-rest-is-per-request); 21
+until 2026-10-31, when `BoundSiteListInterface` was added, a provider
+that lists for what its owner binds, [Two entity resources from one
+deriver](#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)). It
 is the concept budget for the code, as
 [Your first resource](first-resource.md) is for the docs.
 
@@ -6186,6 +6189,81 @@ those are. It maps an entity violation to a key by its property path,
 the delta dropped, and one about the whole entity to `@entity`; it
 drops one about a field the resource does not carry, or one the account
 may not edit, as core's form does. (`ContentEntityStorage::prepare()`)
+
+### Two entity resources from one deriver: static per bundle, runtime per entity type
+
+Decided 2026-10-31, from that day's design conversation.
+`ContentEntityResources` derives, beside one
+`entity.content:<entity type>.<bundle>` per bundle with a form display,
+one `entity.content:<entity type>` per content entity type that has
+such a bundle: `bundle` is a key, and the fields are variants at
+`fields` that it chooses, one per bundle, each
+`entity.content:<entity type>.<bundle>.fields`, a structure the same
+deriver derives. That structure attaches the same field item structures
+the bundle's resource does, through the one method both call
+(`defineFields()`).
+
+- **Why both.** A resource per bundle states its fields outright: no
+  conditional, its refiners the fields' own, and a precise path per
+  bundle, `/surface-api/entity.content:node.page`. A resource per entity
+  type keeps the tool list short as bundles grow (five tools per entity
+  type, where each bundle adds three) and has the shape agents expect
+  from the services this module replaces: one create and one update per
+  entity type, the bundle an input.
+- **One deriver, proven equal.** Both are derived from the same field
+  definitions by the same method, so nothing is declared twice.
+  `ContentEntityTypeResourceTest` holds the entity type's resource,
+  narrowed by each bundle, equal byte for byte to that bundle's root
+  less its identity: the full schema and the schema for empty values,
+  of the add and the edit, for two accounts. A difference is a defect in
+  the deriver, never something to allow.
+- **Both at every door.** Each operation is standalone, so each has its
+  HTTP paths, its OpenAPI operations and its tools, and a form wherever
+  a route names it; no declaration chooses between them. Consumers
+  choose, where they already select tools: the MCP server's tool
+  configuration and an agent's own selection.
+- **The fields sit under a key.** Variants attach at a key: the pipeline
+  hands a variant the value at that key, storage composes along the
+  tree, and the emitter states each variant as a def at the key with a
+  conditional on the deciding key. Mixing the chosen variant's keys into
+  the root would teach each of the three a second placement. The
+  payload is `{bundle: 'article', fields: {title: ...}}`, and a refusal's
+  path `fields.title.value`.
+- **Variants from the site, bound to the entity type.** A provider lists
+  the variants (`BundleFieldStructures`), so past
+  `surface.settings:site_list_limit` the full schema names the bundles
+  and leaves their fields to the schema call that chooses one. One
+  provider serves every entity type, so it implements
+  `BoundSiteListInterface` and is named with the entity type as its
+  argument: `attachVariants('fields', by: 'bundle', from:
+  BundleFieldStructures::class, arguments: ['node'])`.
+- **The bundle: the account's to choose on add, the entity's on edit.**
+  `create` holds `bundle` to the bundles the account may create, a
+  constraint with an options resolver (`SurfaceCreatableBundle`) that
+  asks core's create access per bundle. A missing, unknown or refused
+  bundle is refused at `bundle` once a value is sent, and create access
+  is never asked for an empty bundle; the operation itself is open to an
+  account that may create at least one bundle. `update` knows the
+  bundle from the entity and fixes the key to it: stated `const`, any
+  other value refused.
+- **Rejected: one generic resource with a conditional per bundle**, and
+  no resource per bundle. The fields are better stated outright per
+  bundle, with a path each.
+- **Rejected: a family tool at the tool door, routing by bundle.** A
+  router that is no resource, and a policy that lives in one door.
+- **Rejected: a door declaration that hides the per-bundle tools by
+  default.** The maintainer prefers both available, with consumers
+  choosing. A declaration that closes a door for some of a deriver's
+  resources can come later, if a site needs it.
+
+*Open:* whether a deferred variant set is an honest contract for an
+agent that reads the full schema once and never calls back. The
+reference list past its budget poses the same question; the answer so
+far is yes: the deferred marker tells the reader to ask, and the schema
+call is the second step. (`ContentEntityResources`,
+`BundleFieldStructures`, `BoundSiteListInterface`,
+`CreatableBundleOptions`, `ContentEntityStorage::FIELDS_AT`,
+`ContentEntityTypeResourceTest`)
 
 ### Tool definitions after a field changes
 

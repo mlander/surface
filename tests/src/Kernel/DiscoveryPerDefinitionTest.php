@@ -153,8 +153,9 @@ class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
    * Tests that one field saved clears its entries and the index, and no more.
    *
    * The next request reads the index again, which derives everything, and
-   * writes only the two entries that went: the field's structure and its
-   * bundle's resource.
+   * writes only the three entries that went: the field's structure, its
+   * bundle's resource and its bundle's fields, the variant the entity
+   * type's resource holds for it.
    */
   public function testOneFieldSavedLeavesTheRestCached(): void {
     $this->container->get('surface.resource_registry')->getDefinitions();
@@ -165,7 +166,9 @@ class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
     $this->assertFalse($this->cached());
     $this->assertFalse($this->cached('field.item:node.page.field_description'));
     $this->assertFalse($this->cached('entity.content:node.page'));
+    $this->assertFalse($this->cached('entity.content:node.page.fields'));
     $kept = [
+      'entity.content:node',
       'field.item:node.page.body',
       'field.item:node.page.title',
       'entity.content:node.kitchen',
@@ -178,7 +181,7 @@ class DiscoveryPerDefinitionTest extends SurfaceKernelTestBase {
 
     $next = $this->nextRequest();
     $this->assertSame('Summary', (string) $next->getDefinition('field.item:node.page.field_description')->label);
-    $this->assertSame(['index' => 1, 'entries' => 0, 'rebuilds' => 1, 'written' => 2], $next->reads());
+    $this->assertSame(['index' => 1, 'entries' => 0, 'rebuilds' => 1, 'written' => 3], $next->reads());
     $this->assertTrue($this->cached('entity.content:node.page'));
   }
 
