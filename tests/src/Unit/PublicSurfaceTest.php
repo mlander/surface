@@ -62,7 +62,7 @@ class PublicSurfaceTest extends UnitTestCase {
     'attributes' => 9,
     'attribute arguments' => 35,
     'blueprint methods' => 16,
-    'interfaces' => 21,
+    'interfaces' => 22,
   ];
 
   /**

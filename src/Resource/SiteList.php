@@ -97,9 +97,9 @@ final class SiteList implements RefinableCacheableDependencyInterface {
    *   changed.
    * @param array|null $schema
    *   For a variant: the JSON Schema of its keys, an object.
-   * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface>|null $structure
-   *   For a variant: the structure's class, discovered as any is, built as
-   *   declared.
+   * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface>|string|null $structure
+   *   For a variant: the structure's class, discovered as any is, or a
+   *   derived one's id, built as declared.
    *
    * @return $this
    *

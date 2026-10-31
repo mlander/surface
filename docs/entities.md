@@ -1,8 +1,9 @@
 # Content entities
 
 This page covers content entities, such as nodes: how the module
-derives a resource for each bundle's create and update form, with one
-structure per field. Use it when you want an entity's form, tool or API
+derives a resource for each bundle's create and update form, and one
+for every bundle of an entity type at once, with one structure per
+field. Use it when you want an entity's form, tool or API
 from the module instead of from a class you write.
 [Storage](introduction/10-storage.md) and
 [Access](introduction/15-access.md) introduce a content entity as
@@ -22,6 +23,8 @@ the derivation is not enough.
 | Deriver | Derives | One per |
 | --- | --- | --- |
 | `Resource\ContentEntityResources` | `entity.content:<entity type>.<bundle>`, `entity.content:node.page` | bundle of a content entity type with a bundle key and a stored default form display |
+| `Resource\ContentEntityResources` | `entity.content:<entity type>`, `entity.content:node` | content entity type with at least one such bundle |
+| `Resource\ContentEntityResources` | `entity.content:<entity type>.<bundle>.fields`, `entity.content:node.page.fields`, a structure | such bundle: its fields, the variant the entity type's resource holds for it |
 | `Resource\FieldItemStructures` | `field.item:<entity type>.<bundle>.<field>`, `field.item:node.page.body` | field that bundle's resource carries |
 
 Both are read at discovery, and each derivative is cached as an entry
@@ -63,10 +66,34 @@ leaves out and why, read from the registry.
 | What settings narrow | a list field's allowed values (`LabeledChoice`), a text field's formats (`LabeledChoice`, then a runtime refiner), a reference's targets (a constraint and its options resolver), a date's form (`Regex`) |
 | Its operations | `create` and `update`, which the parent invokes to match its own; each knows the entity type, the bundle and the field, and `update` the entity's id |
 | Its access | field access, as the child's access: open, locked or omitted |
+| The entity type resource's keys | the identity (`entity_type`, `id`), `bundle`, and `fields`: variants `bundle` chooses, one per bundle with a form display, each that bundle's `.fields` structure, which attaches the same field children the bundle's resource holds at its root |
+| Its operations | `create`, knowing the entity type and that there is no id, `bundle` held to the bundles the account may create (`SurfaceCreatableBundle`); `update`, taking the entity as `id`, `bundle` fixed to the entity's |
+| Its access | on create, open to an account that may create at least one bundle, the chosen bundle's create access asked at `bundle` once a value is sent; on update, the entity's update access |
+| Its storage | `ContentEntityStorage`, the bundle read from the values on create and from the entity on update, the fields under `fields` |
 
 The parent labels each child's key with the field's label and
 description, so the form draws a fieldset per field and the contract
 names it as the field.
+
+The entity type's resource holds the fields under `fields`, not at its
+root, since variants attach at a key
+(why: [decision](decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)):
+
+```json
+{"bundle": "page", "fields": {"title": {"value": "Hello"}, "field_description": {"value": "A page."}}}
+```
+
+where the bundle's resource takes `{"title": {"value": "Hello"}, ...}`,
+and a refusal's path is `fields.title.value`. The variants come from
+the site (`Variants\BundleFieldStructures`), so while an entity type
+has at most `surface.settings:site_list_limit` bundles both documents
+state each bundle's fields as a conditional on `bundle`; past it the
+full schema names the bundles and marks `fields` deferred, and the
+fields of one bundle come from `GET .../schema?choose=/fields=<bundle>`
+or the narrowing tool, `surface:entity.content:node:create:schema`
+([Variants from the site](resources.md#variants-from-the-site)).
+`ContentEntityTypeResourceTest` holds each bundle's variant equal to
+that bundle's resource.
 
 ## Covered field types
 
@@ -236,7 +263,24 @@ would, a field whose view access is denied left out
 - **The tools**: `surface:entity.content:node.page:create`, `:update`
   and `:update:read`, derived like every other operation's. The field item
   structures have no storage, so they are no tools. Every bundle with a form
-  display has its three.
+  display has its three. Every entity type with such a bundle has five:
+  `surface:entity.content:node:create`, `:update`, `:update:read`, and a
+  narrowing tool beside each write, `:create:schema` and
+  `:update:schema`, since its fields are variants the site lists.
+- **Both kinds**: a site has `surface:entity.content:node:create` and
+  `surface:entity.content:node.page:create`, `POST
+  /surface-api/entity.content:node` and `POST
+  /surface-api/entity.content:node.page`, and the same for the edit,
+  `PATCH /surface-api/entity.content:node/{id}`. Call the bundle's
+  resource when the bundle is known ahead and a contract stated
+  outright matters: a client generated from the OpenAPI document, a
+  form. Call the entity type's when the bundle is chosen at call time or
+  the tool list must stay short: choose the bundle, ask the schema with
+  it, then create. Nothing here declares which; the MCP server's tool
+  configuration and an agent's own selection choose
+  (why: [decision](decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)). The
+  entity type's resource has no form route here; a route that names it
+  gets the bundle select, whose change redraws the fields.
 - **The React app**: `/surface-react/entity.content:node.page/create` and
   `/surface-react/entity.content:node.page/update?id=<nid>`. The derived id
   holds a colon, which a route parameter takes as it is.
@@ -376,5 +420,8 @@ alter by base id, an override by field type), `ContentEntityStorageTest`
 (create, update with a revision, an entity violation on its key, a dry run,
 the derived tools, the React door's `created`, the contracts) and
 `ContentEntityResourceFormTest` (the two routes and the landing page in
-a browser). No field refines another, so there is no browser test of a
+a browser) and `ContentEntityTypeResourceTest` (the entity type's
+resource narrowed by each bundle equal to that bundle's, the bundles an
+account may create, a bundle refused at its key, the edit's fixed
+bundle, the deferred fields past the limit, the tools and the paths). No field refines another, so there is no browser test of a
 refinement.

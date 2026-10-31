@@ -6,3 +6,9 @@ services:
     class: Drupal\surface_examples_entity\FieldItemDerivation
     arguments: ['@entity_type.manager', '@entity_field.manager', '@entity_type.bundle.info', '@typed_data_manager', '@string_translation']
   Drupal\surface_examples_entity\FieldItemDerivation: '@surface_examples_entity.field_item_derivation'
+
+  # The variants an entity type's resource holds at `fields`, one per
+  # bundle with a form display, named by its class where the blueprint
+  # attaches them.
+  Drupal\surface_examples_entity\Variants\BundleFieldStructures:
+    arguments: ['@surface_examples_entity.field_item_derivation']

@@ -2034,6 +2034,13 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `<owner>.<key>.<value>` (`event.spotlight.props.surface_examples:card`),
   built by the build step as a class is: its keys, their constraints,
   its maps, children, variants and rules, what its schema says.
+- **Bound to its owner.** A provider that lists for several owners
+  implements `BoundSiteListInterface`, whose `listFor($arguments)` the
+  build asks with what the owner bound, `attachVariants('fields', by:
+  'bundle', from: BundleFieldStructures::class, arguments: ['node'])`:
+  one provider lists every entity type's bundles, each owner its own
+  (why: [decision](decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)).
+  An entry may name a derived structure by its id.
 - **Beside the classes.** Every `#[Variant]` at the key is a variant as
   before, and wins for a value both name; the deciding key offers each
   value under the provider's label, unless it declares a list of its

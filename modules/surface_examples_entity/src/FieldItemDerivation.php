@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_entity;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
@@ -12,6 +13,7 @@ use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
@@ -150,6 +152,39 @@ final class FieldItemDerivation {
       }
     }
     return $bundles;
+  }
+
+  /**
+   * Lists the bundles of an entity type an account may create.
+   *
+   * Of the bundles a content entity resource is derived for, those the
+   * entity type's access control handler lets the account create, as
+   * core's add page lists them. With no account, the handler answers for
+   * the account the request is made as, as a reference's selection
+   * handler does.
+   *
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account, or NULL for the one the request is made as.
+   *
+   * @return array{0: array<string, \Drupal\Core\StringTranslation\TranslatableMarkup|string>, 1: \Drupal\Core\Cache\CacheableMetadata}
+   *   The bundles' labels, by bundle, in the order bundles() gives them,
+   *   and what the answers read: the bundle list's tags and every create
+   *   access answer's cacheability.
+   */
+  public function creatableBundles(string $entity_type_id, ?AccountInterface $account = NULL): array {
+    $cacheability = (new CacheableMetadata())->addCacheTags($this->listCacheTags());
+    $creatable = [];
+    $handler = $this->entityTypeManager->getAccessControlHandler($entity_type_id);
+    foreach ($this->bundles()[$entity_type_id] ?? [] as $bundle => $label) {
+      $access = $handler->createAccess((string) $bundle, $account, [], TRUE);
+      $cacheability->addCacheableDependency($access);
+      if ($access->isAllowed()) {
+        $creatable[(string) $bundle] = $label;
+      }
+    }
+    return [$creatable, $cacheability];
   }
 
   /**

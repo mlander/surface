@@ -133,7 +133,9 @@ the record of the rework that brought the module to the pattern.
 - **Variants from the site**: variants a provider lists rather than
   classes declare, `attachVariants($key, by: $sibling, from:
   Provider::class)`; the provider is the one keys from the site name, a
-  `SiteListInterface`, whose `list()` answers a `SiteList` (per value,
+  `SiteListInterface` (one listing for several owners a
+  `BoundSiteListInterface`, handed `arguments:` and asked `listFor()`),
+  whose `list()` answers a `SiteList` (per value,
   its label and the JSON Schema of what it chooses, `schema:`, or a
   structure class, `structure:`; a start or a lock refused), asked at
   every build and refused uncacheable or varying by the account. Each variant is a structure read
@@ -477,7 +479,9 @@ it was read from. Its kind follows from what it names: one that names
 storage or identity keys is a resource, any other a structure.
 `surface_examples_entity` derives a resource per content entity bundle
 (`entity.content:*`) and a structure per field (`field.item:*`), with
-field access as each field child's access (`docs/entities.md`). A
+field access as each field child's access, and a resource per entity
+type, `entity.content:node`, whose `bundle` chooses the bundle's fields
+as variants under `fields` (`docs/entities.md`). A
 child is built by the same build step in its own frame and sealed into
 the parent's entry as an `Attachment`, or among its `Variants`; the
 pipeline, refinement, the form and the tool bridge recurse through those
@@ -546,7 +550,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1811, Assertions: 41197, Errors: 0, Failures: 0, Skipped: 3. Classes: 253 of 253, 8 at a time, browser classes 4.
+phpunit: Tests: 1818, Assertions: 41468, Errors: 0, Failures: 0, Skipped: 3. Classes: 254 of 254, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped

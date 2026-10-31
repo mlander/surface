@@ -59,8 +59,8 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
    * One build per write tool's operation, shared by its inputs, its read
    * tool and its outputs; and one more for the outputs of each operation
    * that needs nothing and creates, built in the bare context: the two
-   * bundles' `create`. Before the derivation memo it was about 1.6 per tool,
-   * read tools included.
+   * bundles' `create` and the node type's. Before the derivation memo it
+   * was about 1.6 per tool, read tools included.
    */
   public function testDerivingEveryToolBuildsEachOperationOnce(): void {
     $this->resources()->forgetBuilds();
@@ -68,8 +68,8 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
     $built = $this->resources()->buildCounts()['built'] - $before;
     $writes = array_filter(array_keys($definitions), static fn (string $id): bool => str_starts_with($id, 'surface:') && !str_ends_with($id, ':read') && !str_ends_with($id, ':schema'));
-    $this->assertCount(8, $writes);
-    $this->assertLessThanOrEqual(count($writes) + 2, $built);
+    $this->assertCount(10, $writes);
+    $this->assertLessThanOrEqual(count($writes) + 3, $built);
   }
 
   /**

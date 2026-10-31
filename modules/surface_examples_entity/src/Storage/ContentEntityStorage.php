@@ -13,6 +13,7 @@ use Drupal\user\EntityOwnerInterface;
 use Drupal\Core\Entity\RevisionLogInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Pipeline\ViolationMessage;
 use Drupal\surface\Pipeline\StorageViolationsException;
@@ -48,16 +49,28 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * revision, with this account as its author; one that does not leaves
  * revisions to the entity type's own default.
  *
+ * A bundle's resource holds its fields at its root and knows its bundle.
+ * An entity type's resource holds them under a key its context names
+ * (self::FIELDS_AT), and knows its bundle on edit, from the entity; on
+ * add the bundle is the value the caller chose. A violation about a field
+ * is then filed under that key.
+ *
  * Decision: see docs/decisions.md#the-content-entity-storage.
  */
 final class ContentEntityStorage implements ResourceStorageInterface, ContainerInjectionInterface {
 
   use DependencySerializationTrait;
+  use StringTranslationTrait;
 
   /**
    * The resource key a violation about the whole entity is filed under.
    */
   public const ENTITY = '@entity';
+
+  /**
+   * What a context knows the key the fields sit under by, when not the root.
+   */
+  public const FIELDS_AT = 'fields_at';
 
   /**
    * The entity the last commit saved: entity type id, bundle and id.
@@ -91,12 +104,14 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
    */
   public static function create(ContainerInterface $container): static {
     $classes = $container->getParameter('surface.resource_classes');
-    return new static(
+    $storage = new static(
       $container->get('entity_type.manager'),
       $container->get('surface_examples_entity.field_item_derivation'),
       $container->get('datetime.time'),
       is_array($classes) ? ($classes['overrides'][FieldItemStructures::class] ?? []) : [],
     );
+    $storage->setStringTranslation($container->get('string_translation'));
+    return $storage;
   }
 
   /**
@@ -104,7 +119,11 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
    */
   public function load(OperationContext $context): array {
     [$entity_type_id, $bundle, $id] = static::identity($context);
-    if ($id === NULL && !$context->creates && $this->committed !== NULL && [$entity_type_id, $bundle] === array_slice($this->committed, 0, 2)) {
+    // An entity type's resource knows no bundle before there is an entity.
+    $committed = $this->committed !== NULL
+      && $entity_type_id === $this->committed[0]
+      && in_array($bundle, ['', $this->committed[1]], TRUE);
+    if ($id === NULL && !$context->creates && $committed) {
       $id = $this->committed[2];
     }
     if ($id === NULL) {
@@ -114,19 +133,22 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
     if (!$entity instanceof ContentEntityInterface) {
       return [];
     }
+    $bundle = $entity->bundle();
     $values = [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
       'id' => $this->derivation->idType($entity_type_id) === 'integer' ? (int) $entity->id() : (string) $entity->id(),
     ];
+    $fields = [];
     foreach ($this->fields($entity_type_id, $bundle) as $name => $field) {
       $item = $entity->get($name)->first();
       if ($item === NULL || $item->isEmpty()) {
         continue;
       }
-      $values[$name] = $this->read($field, $item->getValue());
+      $fields[$name] = $this->read($field, $item->getValue());
     }
-    return $values;
+    $at = static::fieldsAt($context);
+    return $at === NULL ? $values + $fields : $values + [$at => $fields];
   }
 
   /**
@@ -134,13 +156,24 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
    */
   public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
     [$entity_type_id, $bundle, $id] = static::identity($context);
+    $at = static::fieldsAt($context);
+    if ($bundle === '' && $at !== NULL) {
+      // An entity type's resource on add: the bundle the caller chose,
+      // which its key held to those the account may create.
+      $bundle = is_string($values['bundle'] ?? NULL) ? $values['bundle'] : '';
+      if ($bundle === '' || $this->derivation->formDisplay($entity_type_id, $bundle) === NULL) {
+        $refused = new Violation('bundle', '', $this->t('Choose a bundle of the @entity_type with a form display.', ['@entity_type' => $entity_type_id]), 'invalid');
+        throw new StorageViolationsException(new ViolationSet([$refused]));
+      }
+    }
+    $given = $at === NULL ? $values : (is_array($values[$at] ?? NULL) ? $values[$at] : []);
     $fields = $this->fields($entity_type_id, $bundle);
     $items = [];
     foreach ($fields as $name => $field) {
-      if (!array_key_exists($name, $values)) {
+      if (!array_key_exists($name, $given)) {
         continue;
       }
-      $item = is_array($values[$name]) ? $values[$name] : [];
+      $item = is_array($given[$name]) ? $given[$name] : [];
       $empty = array_filter($item, static fn (mixed $value): bool => $value !== NULL) === [];
       // A new entity's field nobody answered keeps what the entity gives
       // it: a default value callback, the field type's own default.
@@ -164,7 +197,7 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
     $violations->filterByFields(array_diff(array_keys($entity->getFieldDefinitions()), array_keys($fields)));
     $refused = [];
     foreach ($violations as $violation) {
-      $refused[] = static::violation($violation->getPropertyPath(), ViolationMessage::of($violation), Violation::codeOf($violation));
+      $refused[] = static::violation($violation->getPropertyPath(), ViolationMessage::of($violation), Violation::codeOf($violation), $at);
     }
     if ($refused !== []) {
       throw new StorageViolationsException(new ViolationSet($refused));
@@ -324,12 +357,14 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
    *   Its message.
    * @param string $code
    *   Its code (Violation::codeOf()).
+   * @param string|null $at
+   *   The key the fields sit under, or NULL for the root.
    *
    * @return \Drupal\surface\Pipeline\Violation
    *   The violation, under the field's key and at the property inside it,
-   *   or under self::ENTITY.
+   *   that key under $at when the fields sit there, or under self::ENTITY.
    */
-  public static function violation(string $path, string|\Stringable $message, string $code = 'invalid'): Violation {
+  public static function violation(string $path, string|\Stringable $message, string $code = 'invalid', ?string $at = NULL): Violation {
     if ($path === '') {
       return new Violation(self::ENTITY, '', $message, $code);
     }
@@ -339,7 +374,24 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
     if ($segments !== [] && ctype_digit($segments[0])) {
       array_shift($segments);
     }
+    if ($at !== NULL) {
+      return new Violation($at, implode('.', [$field, ...$segments]), $message, $code);
+    }
     return new Violation($field, implode('.', $segments), $message, $code);
+  }
+
+  /**
+   * Reads where a context's resource holds the fields.
+   *
+   * @param \Drupal\surface\Resource\OperationContext $context
+   *   The context.
+   *
+   * @return string|null
+   *   The key they sit under, or NULL for the root.
+   */
+  protected static function fieldsAt(OperationContext $context): ?string {
+    $at = $context->known[self::FIELDS_AT] ?? NULL;
+    return is_string($at) && $at !== '' ? $at : NULL;
   }
 
 }

@@ -17,6 +17,7 @@ use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Resource\SiteList;
 use Drupal\surface\Resource\SiteListInterface;
+use Drupal\surface\Resource\BoundSiteListInterface;
 use Drupal\surface\Resource\ClosedSiteListInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Contract\SchemaReader;
@@ -561,12 +562,18 @@ final class Attaching {
    *
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
+   * @param list<string|int> $arguments
+   *   What its owner bound it to, for a BoundSiteListInterface; none for
+   *   its list().
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed.
    */
-  protected function siteList(string $from): SiteList {
+  protected function siteList(string $from, array $arguments = []): SiteList {
     $provider = $this->declaring->instance($from, SiteListInterface::class);
+    if ($arguments !== [] && $provider instanceof BoundSiteListInterface) {
+      return PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'listFor', static fn (): SiteList => $provider->listFor($arguments));
+    }
     return PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'list', static fn (): SiteList => $provider->list());
   }
 
@@ -1271,7 +1278,7 @@ final class Attaching {
       }
       $from = $inputs->variantsFrom()[$key] ?? NULL;
       if ($from !== NULL) {
-        $list = $this->variantsFrom($definition, (string) $key, $from);
+        $list = $this->variantsFrom($definition, (string) $key, $from, $inputs->variantsArguments()[$key] ?? []);
         $builder->addCacheableDependency($list);
         // A provider that answers an entry's schema when it is read: the
         // entry is registered by name, its schema read when it is built.
@@ -1426,6 +1433,8 @@ final class Attaching {
    *   The key the variants sit at, for the messages.
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
+   * @param list<string|int> $arguments
+   *   What the owner bound the provider to, if anything.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed, each entry of a closed provider naming the structure
@@ -1438,8 +1447,8 @@ final class Attaching {
    *   one of a closed provider names one, or a value its structures() do
    *   not name.
    */
-  protected function variantsFrom(ResourceDefinition $definition, string $key, string $from): SiteList {
-    $list = $this->siteList($from);
+  protected function variantsFrom(ResourceDefinition $definition, string $key, string $from, array $arguments = []): SiteList {
+    $list = $this->siteList($from, $arguments);
     if ($list->getCacheMaxAge() === 0) {
       throw new \LogicException(sprintf('%s lists the variants at "%s" on %s with max-age 0. Variants from the site must be cacheable, since the form, both schema documents and the tool listing are kept with them: declare the cache tags of what it reads instead.', $from, $key, $definition->id));
     }
