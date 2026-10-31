@@ -95,7 +95,11 @@ group of values held by something else, which
 A resource is one of three kinds of thing the module describes. The
 next two pages give the others: a group of values held by a resource
 ([Structures](03-structures.md)), and one value used under many names
-([Shapes](04-shapes.md)).
+([Shapes](04-shapes.md)). Only a resource is asked for on its own, so
+only a resource names a permission for each way of asking for it; an
+access class named with `access:` on `#[Resource]` may then lock its
+values for an account or refuse the whole request
+([Access](15-access.md)).
 
 Next: [Structures](03-structures.md)
 

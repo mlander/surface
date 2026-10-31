@@ -40,7 +40,9 @@ final class HexColor implements ShapeInterface {
 `message` is what a caller reads when a value does not match.
 `DefinitionMetadata::setExamples()` adds an example of a good value. A
 shape has no default and is never required: each place that uses it
-decides those.
+decides those. Nor does it have a permission or an access answer of
+its own, since `#[Shape]` takes only an id; the value takes the
+[access](15-access.md) of whatever holds it.
 
 ## Using it twice
 

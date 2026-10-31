@@ -34,6 +34,7 @@ nav:
   - Installation: installation.md
   - The pattern: pattern.md
   - How it fits: how-it-fits.md
+  - Built on typed data: on-typed-data.md
   - Resources and structures: resources.md
   - Reading a schema: reading-a-schema.md
   - Catalog: catalog.md

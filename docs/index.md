@@ -46,6 +46,9 @@ install; read it first.
   why it is shaped that way.
 - [How it fits](how-it-fits.md): one build followed from the caller to
   a sealed data surface.
+- [Built on typed data](on-typed-data.md): what core's Typed Data API
+  gives, the three parts the module adds on top of it (the blueprint,
+  the build and the seal), and why core alone does not do each today.
 - [Transformations](transformations.md): a value asked for one way and
   stored another (coercion, layouts, the doors' wire forms), what runs
   because something was saved, and a value nobody types.
