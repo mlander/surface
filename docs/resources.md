@@ -340,6 +340,19 @@ the field has data, with `withConstraint()`, and knows the storage's
 identity, the entity type, the field name and the field type, which
 locks its settings to that type's.
 
+A resource that can be changed can also be read, by an operation of its
+own, `read`. Neither class above declares one: the build adds it beside
+the default update, `update` here and `configure` on the newsletter,
+taking that update's parameters and permission and asked as that update
+is, so it answers the keys the update takes to an account that may
+change them. The catalog lists it as "default read of `update`", the
+way `configure` is a singleton's default update. A resource that should
+be readable by an account that may not change it declares `read` itself,
+read only, and its access class answers for it, as the content entity
+example does with view access
+([The read operation](tools.md#the-read-operation),
+[decision](decisions.md#a-read-is-an-operation-of-the-resource)).
+
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ```php
@@ -401,8 +414,11 @@ structure's inputs are what it takes and its outputs what it answers
   the collection: its storage loads every venue's id and weight, and
   its `prepare()` refuses an id that names no venue (`not_found`) or is
   named twice (`taken`), by its place in the list, and rehearses the rest;
-  `commit()` saves them. Its read tool answers the current order, and on
-  HTTP it is a custom method, `PATCH /surface-api/event.venue:reorder`.
+  `commit()` saves them. The listing answers the current order, each
+  venue with its weight; the resource's one read is its default update's
+  (why: [decision](decisions.md#a-read-is-an-operation-of-the-resource)).
+  On HTTP the reorder is a custom method,
+  `PATCH /surface-api/event.venue:reorder`.
 - **Refused** on an operation that creates or deletes, which is about
   the thing's own keys.
 
@@ -879,8 +895,9 @@ own is a tool, `surface:<resource id>:<operation id>`, derived by
   riverside_main (Main hall) or riverside_east (East room)."
 - **Title and description** are the operation's. The title is its
   label; where operations of several resources share one, each tool
-  adds its resource, and the read tool's is "Current values:" and the
-  write tool's. The description is the operation's description, or its
+  adds its resource; the read the build adds is labeled "Current
+  values:" and its update's label, so its title is that and the
+  update's resource where the update's is shared. The description is the operation's description, or its
   label where it says none, then one line of call rules for its kind,
   with no literal quotes, which an MCP bridge would escape:
   - create: "Create: a key left out takes its default, and every key
@@ -919,19 +936,15 @@ two (`ResourceCatalog::standalone()`):
 A resource or operation that cannot be described is left out and
 logged.
 
-Beside the write tool of an operation that changes a thing that exists
-is a read tool, `surface:<resource id>:<operation id>:read`
-(`ResourceOperationReadTool`, derived by the same deriver): a
-`ToolOperation::Read` whose inputs are the operation's parameters,
-exactly as the write tool declares them, and whose one output, `values`,
-is what the composed storage loads, in the shape the write tool's
-`values` takes, less the identity keys the operation knows and less
-every secret, at any depth. Its access is the write tool's. Which
-operations those are is `ResourceCatalog::reads()`: the updates, read
-off the attribute, an operation that neither creates nor is read only.
-So `node.type:update`, `field.instance:update` and `field.storage:update`
-read, and `node.type:create`, `field.instance:create` and
-`field.instance:reuse` do not.
+The read of one thing, `read`, is a tool of its own class,
+`surface:<resource id>:read` (`ResourceOperationReadTool`, derived by
+the same deriver): a `ToolOperation::Read` whose inputs are the
+operation's parameters, and whose one output, `values`, is what the
+composed storage loads, in the shape the update's `values` takes, less
+the identity keys the operation knows and less every secret, at any
+depth ([The read operation](tools.md#the-read-operation)). So
+`node.type`, `field.instance` and `field.storage` each have a read, and
+no operation has one beside it.
 
 ## Catalog
 

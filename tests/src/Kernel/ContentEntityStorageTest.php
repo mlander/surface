@@ -268,7 +268,7 @@ class ContentEntityStorageTest extends SurfaceKernelTestBase {
    */
   public function testTheDerivedToolsWriteAndRead(): void {
     $ids = array_keys($this->container->get('plugin.manager.tool')->getDefinitions());
-    foreach (['create', 'update', 'update:read'] as $suffix) {
+    foreach (['create', 'update', 'read'] as $suffix) {
       $this->assertContains('surface:' . self::RESOURCE . ':' . $suffix, $ids);
     }
     // A field item is no tool: its parent stores it.
@@ -295,7 +295,7 @@ class ContentEntityStorageTest extends SurfaceKernelTestBase {
     $this->assertTrue($edited['success'], $edited['message']);
     $this->assertSame('Changed by a tool', $this->newest()->label());
 
-    $read = $this->runTool('surface:' . self::RESOURCE . ':update:read', ['id' => (string) $node->id()]);
+    $read = $this->runTool('surface:' . self::RESOURCE . ':read', ['id' => (string) $node->id()]);
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame(['value' => 'Changed by a tool'], $read['outputs'][OperationInputs::VALUES]['title']);
     $this->assertSame(['value' => 'By the tool.'], $read['outputs'][OperationInputs::VALUES]['field_description']);

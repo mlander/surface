@@ -181,8 +181,8 @@ class RouteCatalogTest extends SurfaceKernelTestBase {
       $provider = $this->createMock(RouteProviderInterface::class);
       $provider->method('getAllRoutes')->willReturn(new \ArrayIterator([$name => $routes->getRouteByName($name)]));
       $doors = new FormRouteDoors($provider);
-      $this->assertStringContainsString('(' . $name . ')', $doors->doors($card, $create, TRUE, FALSE)[SiteCatalog::FORM], 'Listed.');
-      $link = $doors->links($card, $create, TRUE, FALSE)[SiteCatalog::FORM] ?? NULL;
+      $this->assertStringContainsString('(' . $name . ')', $doors->doors($card, $create, TRUE)[SiteCatalog::FORM], 'Listed.');
+      $link = $doors->links($card, $create, TRUE)[SiteCatalog::FORM] ?? NULL;
       return $link === NULL ? [] : [$link->getRouteName(), $link->toString()];
     };
     $this->assertSame(['surface_route_test.add', '/surface-test/card/add'], $linked('surface_route_test.add'));

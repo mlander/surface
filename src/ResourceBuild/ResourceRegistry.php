@@ -1251,6 +1251,15 @@ final class ResourceRegistry {
       }
     }
 
+    // Every resource that can be changed can be read: where it declares
+    // no read of its own, the build adds one beside its default update.
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    foreach ($resources as $class => $definition) {
+      $read = $this->defaultRead($definition, $operations[$class] ?? []);
+      if ($read !== NULL) {
+        $operations[$class][] = $read;
+      }
+    }
     foreach ($resources as $class => $definition) {
       $resources[$class] = $definition->with($operations[$class] ?? [], $alters[$class] ?? [], $variants[$class] ?? []);
     }
@@ -1259,6 +1268,51 @@ final class ResourceRegistry {
       $shapes[$class] = $shape->withAlters($shape_alters[$class] ?? []);
     }
     return ['resources' => $resources, 'shapes' => $shapes];
+  }
+
+  /**
+   * Makes the read the build adds to a resource, where it adds one.
+   *
+   * A resource with storage, no plugin's configuration, that declares no
+   * operation with the id `read` and has a default update that can be
+   * asked on its own (ResourceCatalog::standalone()): the update whose id
+   * is its kind's standard one (`update`, or `configure` on a singleton),
+   * else its only update. On a resource with identity the update has to
+   * name the thing by its parameters: an update over the collection, a
+   * reorder, changes no one thing to read.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition[] $operations
+   *   The operations it declares, in discovery order.
+   *
+   * @return \Drupal\surface\ResourceBuild\OperationDefinition|null
+   *   The read, or NULL where none is added.
+   */
+  protected function defaultRead(ResourceDefinition $definition, array $operations): ?OperationDefinition {
+    if (!$definition->isResource() || $definition->storage === NULL) {
+      return NULL;
+    }
+    $plugins = $definition->isDerived() ? [] : ($this->plugins?->usedBy((string) $definition->class) ?? []);
+    $singleton = $definition->identity === [];
+    $updates = [];
+    foreach ($operations as $operation) {
+      if ($operation->id === OperationDefinition::READ_ID) {
+        return NULL;
+      }
+      if ($operation->kind() === OperationDefinition::UPDATE && ($singleton || $operation->parameters !== []) && ResourceCatalog::standalone($definition, $operation, $plugins)) {
+        $updates[] = $operation;
+      }
+    }
+    $named = array_values(array_filter($updates, static fn (OperationDefinition $operation): bool => in_array($operation->id, OperationDefinition::defaultIds(OperationDefinition::UPDATE, $singleton), TRUE)));
+    $update = match (TRUE) {
+      count($named) === 1 => $named[0],
+      $named === [] && count($updates) === 1 => $updates[0],
+      default => NULL,
+    };
+    return $update === NULL ? NULL : OperationDefinition::defaultRead($update);
   }
 
   /**

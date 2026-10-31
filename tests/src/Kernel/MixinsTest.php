@@ -544,7 +544,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertStringEndsWith('Required; a value already stored stands when left out.', (string) $properties['owner']->getDescription());
     $this->assertFalse($properties['shared']->isRequired());
 
-    $read = $manager->createInstance('surface:resource_test.journal:configure:read');
+    $read = $manager->createInstance('surface:resource_test.journal:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::JOURNAL, $read->getResult()->getContextValues()[OperationInputs::VALUES] ?? NULL);

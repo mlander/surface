@@ -239,7 +239,7 @@ class ResultCodesTest extends SurfaceKernelTestBase {
     // A parameter that names nothing, at the write and the read tool.
     $tools = [
       'surface:node.type:update' => [OperationInputs::VALUES => []],
-      'surface:node.type:update:read' => [],
+      'surface:node.type:read' => [],
     ];
     foreach ($tools as $tool => $inputs) {
       $missing = $this->runTool($tool, ['type' => 'nowhere'] + $inputs);

@@ -152,7 +152,7 @@ class ToolDefinitionsPerResourceTest extends SurfaceKernelTestBase {
       ['release', ResourceOperationToolDeriver::LOCK],
     ], $this->lock->asked, 'After the wait this request read what the other wrote, and derived nothing.');
     $this->assertArrayHasKey('surface:entity.content:node.page:update', $tools->getDefinitions());
-    $this->assertArrayHasKey('surface:entity.content:node.kitchen:update:read', $tools->getDefinitions());
+    $this->assertArrayHasKey('surface:entity.content:node.kitchen:read', $tools->getDefinitions());
   }
 
 }

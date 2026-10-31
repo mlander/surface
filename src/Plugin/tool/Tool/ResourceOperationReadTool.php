@@ -10,37 +10,36 @@ use Drupal\tool\ExecutableResult;
 use Drupal\tool\FailureCategory;
 
 /**
- * Reads what one operation of one resource would change; writes nothing.
+ * Reads one thing of a resource: what is stored for it; writes nothing.
  *
- * Beside the write tool of every operation that changes a thing that
- * exists, `surface:<resource>:<operation>:read`, so a caller (Drush,
- * ECA, an agent over MCP) can see what is stored before it changes it.
- * It carries no #[Tool] of its own: ResourceOperationToolDeriver derives
- * it under the write tool's base plugin id and names this class on the
- * derivative, so one deriver says which operations have tools.
+ * The tool of the read of one thing, `surface:<resource>:read`
+ * (OperationDefinition::readsOne()), so a caller (Drush, ECA, an agent
+ * over MCP) can see what is stored before it changes it. The operation is
+ * the one the owner declares, or the one the build adds beside the
+ * default update (OperationDefinition::defaultRead()). It carries no
+ * #[Tool] of its own: ResourceOperationToolDeriver derives it under the
+ * base plugin id and names this class on the derivative, so one deriver
+ * says which operations have tools.
  *
- * - **Inputs**: the operation's parameters, exactly as the write tool
- *   declares them, and nothing else.
- * - **Access**: the write tool's, for the same context. A caller who may
- *   not change the thing may not read it either; a read permission of
- *   its own is a later question.
+ * - **Inputs**: the operation's parameters, and nothing else.
+ * - **Access**: the operation's, for its context: its permission, then
+ *   the resource's access class. The read the build adds is asked in its
+ *   update's context, so a caller who may not change the thing may not
+ *   read it either; an owner that declares its read answers access for
+ *   reading (the content entity example asks core's view access).
  * - **Execution**: the operation builds the context, the resource is
  *   built in it, and its composed storage loads. A context that turns
- *   out to create, which the deriver can only read off the signature for
- *   an operation that needs a subject, is refused: nothing is stored yet.
- * - **Output**: `values`, what the storage loads, in the shape the write
- *   tool's `values` input takes, less the identity keys the operation
- *   knows and less every secret.
+ *   out to create is refused: nothing is stored yet.
+ * - **Output**: `values`, what the storage loads, in the shape the
+ *   update's `values` input takes, less the identity keys the operation
+ *   knows, every secret and every key the account may not see.
+ *
+ * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
  *
  * @see \Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver
  * @see \Drupal\surface\Tool\OperationInputs::stored()
  */
 final class ResourceOperationReadTool extends ResourceOperationToolBase {
-
-  /**
-   * {@inheritdoc}
-   */
-  public const SUFFIX = ':read';
 
   /**
    * {@inheritdoc}
@@ -57,12 +56,14 @@ final class ResourceOperationReadTool extends ResourceOperationToolBase {
     if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
       return $this->accessRefused($resource, $operation, $context);
     }
+    // The read the build adds speaks of the update it reads.
+    $label = (string) ($operation->reads === NULL ? $operation->label : $this->resourceRegistry->getOperation($resource->name(), $operation->reads)->label);
     if ($context->creates) {
-      return $this->refused($this->t('@label creates what it is about, so nothing is stored to read.', ['@label' => (string) $operation->label]), Violation::NOT_FOUND, FailureCategory::Input);
+      return $this->refused($this->t('@label creates what it is about, so nothing is stored to read.', ['@label' => $label]), Violation::NOT_FOUND, FailureCategory::Input);
     }
     $built = $this->resources->build($resource->name(), $context);
     return ExecutableResult::success(
-      $this->t('@label: the stored values were read, and nothing was written.', ['@label' => (string) $operation->label]),
+      $this->t('@label: the stored values were read, and nothing was written.', ['@label' => $label]),
       [OperationInputs::VALUES => $this->operationInputs->stored($resource, $built, $context)],
     );
   }

@@ -70,7 +70,7 @@ class ReadWriteRoundTripTest extends SurfaceKernelTestBase {
    *   The values it answers.
    */
   protected function read(): array {
-    $tool = $this->container->get('plugin.manager.tool')->createInstance(self::TOOL . ':read');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:registration.step3:read');
     $tool->execute();
     $result = $tool->getResult();
     $this->assertTrue($result->isSuccess(), (string) $result->getMessage());

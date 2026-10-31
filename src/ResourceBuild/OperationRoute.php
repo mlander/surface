@@ -619,6 +619,7 @@ final class OperationRoute {
     $variables = $route->compile()->getVariables();
     static::assertPlainDefaultsRead($route, $name, $operation, $variables);
     static::assertDeleteTakesNoValues($route, $name, $operation);
+    static::assertNotTheDefaultRead($name, $operation);
     $given = $arguments->fromRoute($operation, $route_match);
     // What the page is about is a value of its path, never a default.
     // Decision: see
@@ -813,6 +814,37 @@ final class OperationRoute {
       $classes[$container] = $known;
     }
     return $known[$id];
+  }
+
+  /**
+   * Refuses a route to the read the build adds.
+   *
+   * That read is asked in the context of the update it reads, so a form
+   * for it would be the update's form under another name, and its submit
+   * would write. The update's own route serves the form.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+   *
+   * @param string $name
+   *   The route's name, for the refusal.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
+   *   The operation it serves.
+   *
+   * @throws \InvalidArgumentException
+   *   When the operation is the read the build adds.
+   */
+  protected static function assertNotTheDefaultRead(string $name, OperationDefinition $operation): void {
+    if ($operation->reads !== NULL) {
+      throw new \InvalidArgumentException(sprintf(
+        'The %s route serves the "%s" operation of %s, the read the build adds beside "%s", which is asked as that update is: a form for it would write. Serve the "%s" operation, or declare "%s" on the resource.',
+        $name,
+        $operation->id,
+        $operation->resource,
+        $operation->reads,
+        $operation->reads,
+        $operation->id,
+      ));
+    }
   }
 
   /**

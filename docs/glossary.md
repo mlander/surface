@@ -198,7 +198,10 @@ per operation that can be asked on its own. Who may submit is the
 operation's permission and then the resource's access class, and the
 pipeline consults that answer before it reads or writes anything, so a
 form, a tool and the agent or Drush command calling it resolve one gate
-rather than several.
+rather than several. A resource that can be changed has a `read` too,
+read only: the one its owner declares, or the one the build adds beside
+the default update, asked as that update is
+([decision](decisions.md#a-read-is-an-operation-of-the-resource)).
 
 Introduced in [Operations](introduction/09-operations.md). Reference:
 [Operations: create, update, and the rest](resources.md#operations-create-update-and-the-rest).

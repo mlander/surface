@@ -1047,7 +1047,7 @@ nothing, so the Tool API door derives a tool
 from it, `surface:registration.step3:configure`. It takes what
 example 3's form takes, refuses what it refuses, with the same messages,
 and can rehearse a write without making it. Beside it is a read tool,
-`surface:registration.step3:configure:read`, which takes nothing
+`surface:registration.step3:read`, which takes nothing
 and answers with what is stored, in the shape the write tool takes, so
 a caller can see what is there before it changes it.
 
@@ -1103,7 +1103,7 @@ what is stored:
 ```bash
 drush tool:info surface:registration.step3:configure
 
-drush tool:run surface:registration.step3:configure:read --uid=1
+drush tool:run surface:registration.step3:read --uid=1
 
 drush tool:run surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Autumn meetup","capacity":50,"venue":"harbour","room":"harbour_deck","pricing":"paid","ticket":{"price":12.5,"currency":"EUR"}}}'
 
@@ -3500,7 +3500,7 @@ Failed: The values were refused:
 ```
 
 ```bash
-drush tool:run surface:event.mailer:configure:read --uid=1
+drush tool:run surface:event.mailer:read --uid=1
 ```
 
 ```
@@ -4440,7 +4440,7 @@ Success: Add a venue: the values were accepted and written.
 ```
 
 ```bash
-drush tool:run surface:event.venue:update:read --uid=1 --input='{"id":"town_hall"}'
+drush tool:run surface:event.venue:read --uid=1 --input='{"id":"town_hall"}'
 ```
 
 ```

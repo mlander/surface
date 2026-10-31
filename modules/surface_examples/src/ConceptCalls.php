@@ -270,7 +270,7 @@ final class ConceptCalls {
       ],
       'read' => [
         'label' => 'The mailer read: the pasted key is left out',
-        'operation' => 'configure:read',
+        'operation' => 'read',
         'dry_run' => FALSE,
       ],
     ],
@@ -313,7 +313,7 @@ final class ConceptCalls {
       ],
       'read' => [
         'label' => 'Town Hall read back: its slug, computed from its name',
-        'operation' => 'update:read',
+        'operation' => 'read',
         'parameters' => ['id' => 'town_hall'],
         'dry_run' => FALSE,
       ],

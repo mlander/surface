@@ -60,7 +60,7 @@ final class EntityResourcesController extends ControllerBase {
   public function index(): array {
     $build = [
       'intro' => [
-        '#markup' => '<p>' . $this->t('Each bundle with a form display is a resource, derived from its fields\' typed data: one part per field the form shows, in the same order, each asking field access whether you may change it, only see it, or not see it at all. A basic page can be <a href=":add">added</a> and edited through it here, and every resource below is also a tool (<code>surface:&lt;resource&gt;:create</code>, <code>:update</code>, <code>:update:read</code>).', [
+        '#markup' => '<p>' . $this->t('Each bundle with a form display is a resource, derived from its fields\' typed data: one part per field the form shows, in the same order, each asking field access whether you may change it, only see it, or not see it at all. A basic page can be <a href=":add">added</a> and edited through it here, and every resource below is also a tool (<code>surface:&lt;resource&gt;:create</code>, <code>:update</code>, <code>:read</code>); its read asks view access, so an account that may view a page and not edit it reads it.', [
           ':add' => Url::fromRoute('surface_examples_entity.node_page_create')->toString(),
         ]) . '</p>',
       ],

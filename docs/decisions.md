@@ -436,7 +436,10 @@ is "Configure the newsletter" or "Edit a content type", `delete` is
   type, the field and its storage, every content entity resource and
   field item, and the test modules'. Tool ids follow
   (`surface:event.venue:update`, `:update:read`, `:delete`); the
-  read tool's suffix stays `:read`. Route names follow the id
+  read tool's suffix stays `:read`. (*Amended 2026-10-31:* the read is
+  an operation of its own, `surface:event.venue:read`, [A read is an
+  operation of the resource](#a-read-is-an-operation-of-the-resource).)
+  Route names follow the id
   (`surface_examples_block.update`, `surface_examples.step15_delete`).
   A path keeps Drupal's own convention where it had one, `/add` and
   `/edit` (`/admin/structure/block/surface/add`,
@@ -4925,8 +4928,10 @@ that destroys, or that is not idempotent, is refused at discovery.
   title (`ResourceOperationToolDeriver::title()`,
   `OperationInputs::description()`).
 - **No read tool beside a read only operation.** It changes nothing, so
-  there is nothing to read before changing it
-  (`ResourceCatalog::reads()`).
+  there is nothing to read before changing it. (*Amended 2026-10-31:* no
+  operation has a read beside it; the read is the resource's own
+  operation, [A read is an operation of the
+  resource](#a-read-is-an-operation-of-the-resource).)
 
 A read only operation writes nothing at any door (decided 2026-10-19,
 closing the point this entry left open): the build marks the data
@@ -5041,6 +5046,79 @@ listing changed. (`OperationInputs::declaredValues()`,
 `InputDefinitions::withoutDefaults()`, `InputDefinitions::withStored()`,
 `OperationKindsTest`)
 
+### A read is an operation of the resource
+
+Every resource that can be changed can be read, by an operation of its
+own, `read` (decided 2026-10-31): read only, its inputs the parameters
+that name the thing, its answer the stored values in the shape the
+update's `values` takes, less the identity keys it knows, every secret
+and every key the account may not see. Where a resource with storage,
+no plugin's configuration, has a default update that can be asked on
+its own (the one whose id is `update`, or `configure` on a singleton,
+else its only update; on a resource with identity, one whose parameters
+name the thing) and declares no `read`, the build adds one
+(`OperationDefinition::defaultRead()`, `ResourceRegistry::defaultRead()`).
+It takes the update's parameters, permission and gates, its label is
+"Current values:" and the update's, and the catalog lists it as the
+resource's own operation, provided by "default read of" the update, as
+`configure` is the singleton's default update. It is asked in the
+update's own context (`OperationDefinition::contextId()`,
+`ResourcesInterface::operation()`), so its access, its alters and the
+operations its children are invoked through are the update's: an
+account reads exactly what it may change, and nothing loosens. An owner
+that declares `read` replaces it and answers access for reading: the
+content entity example asks core's view access for the entity and view
+field access for each field, so an account that may view a page and not
+edit it reads it ([Field access is child access](#field-access-is-child-access)).
+
+Every door serves it. The tool door derives `surface:<resource>:read`
+(`ResourceOperationReadTool`), its inputs the parameters and its one
+output `values`. HTTP `GET .../{id}` serves the read; the one the build
+adds is served as the update it reads (`ServedOperations::resolve()`),
+so its envelope, its schema and every existing `GET` are byte for byte
+what they were, while a read an owner declares serves its own envelope
+and schema, and its update's are at `.../{id}:update`. The OpenAPI
+document describes `GET` from the read and the update by its run. The
+form still opens with the update's stored values, through the update:
+it is the update's door.
+
+- **Why.** A read of one thing existed three times, once per door, with
+  no operation behind it: `GET` served the default update's envelope,
+  the form opened with the update's values, and the tool door derived
+  `:read` beside every update. Each borrowed the update's permission and
+  access, so an account that may view a thing and not change it could
+  read it through no door, and there was nowhere to say otherwise. As an
+  operation it is declared once, held to the same discovery checks as
+  every other, and a module that owns view access says it there.
+- **Why the default keeps the update's access.** The build cannot know
+  who may view a thing that only declares who may change it; asking the
+  update's access is what every door asked before, so adding the read
+  changes no answer.
+- **Rejected: keep deriving a read per door.** Three derivations of one
+  idea, each its own rule for which operations read, and still no place
+  for view access.
+- **Rejected: every owner declares its read.** Every resource would
+  restate what its update already says, and one that forgot would have
+  no read at all.
+- **What went with it.** The read derived beside every update that
+  changes a thing is gone, `<operation>:read` with it: a resource has one
+  read, its default update's, so an update beside the default (the
+  venues' reorder, the logbook's append and clear) has none of its own.
+  `ResourceCatalog::reads()` and the catalog's "Read on its own" column
+  are gone; the read is a row of its own.
+- **Outputs.** The read's answer is the update's `values` said as an
+  output (`InputDefinitions::outputFromInput()`), at the tool door, and
+  at HTTP the envelope's `values` under the schema the update takes; it
+  is not declared through `defineOutputs()`, which stays what a write
+  answers beside its values. *Open:* stating it once as the operation's
+  outputs, for every door to read.
+
+This closes the open point of [Reading asks what writing
+asks](#reading-asks-what-writing-asks).
+(`OperationDefinition::readsOne()`, `ResourceRegistry::defaultRead()`,
+`ResourceOperationToolDeriver::read()`, `ServedPaths::defaults()`,
+`ServedPaths::readsPlain()`, `ReadToolTest`, `ContentEntityReadTest`)
+
 ### Which operations read
 
 An operation that can be asked on its own has a read tool when it changes
@@ -5056,7 +5134,12 @@ context the way its id is, replaced the reading, closing the point this
 entry left open. The narrowing tool, `:schema`, is a read beside the
 write tool for another reason, a key the listing states open
 ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
-(`ResourceCatalog::reads()`)
+*Amended 2026-10-31:* no operation has a read beside it any more; the
+read is an operation of the resource, the one its owner declares or the
+one the build adds beside its default update, and `ResourceCatalog::reads()`
+is gone ([A read is an operation of the
+resource](#a-read-is-an-operation-of-the-resource)). The narrowing tool
+stays beside a write.
 
 ### A read promises shape, not membership
 
@@ -5155,6 +5238,12 @@ then the resource's access class, for the context its parameters build.
 A caller who may not change a thing may not read it through the tool
 either. *Open:* a read permission of its own.
 (`ResourceOperationToolBase::checkAccess()`)
+*Amended 2026-10-31:* a read is an operation, `read`, with access of its
+own: the one the build adds asks its update's, so this entry still holds
+for it, and an owner that declares `read` answers access for reading,
+as the content entity example does with core's view access. The open
+point is closed ([A read is an operation of the
+resource](#a-read-is-an-operation-of-the-resource)).
 
 ## Forms
 

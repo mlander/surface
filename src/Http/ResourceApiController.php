@@ -34,10 +34,12 @@ use Symfony\Component\HttpFoundation\Response;
  * (ServedPaths reads which). Four answers, each the served twin of
  * something the operation form already does:
  *
- * - `GET /surface-api/{resource}[/{id}]`: the envelope, the values the
- *   form would open with (what the storage holds over the built
- *   resource's defaults) and the schema for them, with the `ETag` of
- *   what is stored and a `Link` to the full schema.
+ * - `GET /surface-api/{resource}[/{id}]`: the read's envelope, the
+ *   values the form would open with (what the storage holds over the
+ *   built resource's defaults) and the schema for them, with the `ETag`
+ *   of what is stored and a `Link` to the full schema. The read the build
+ *   adds is served as the update it reads, so its envelope is the
+ *   update's.
  * - `GET .../schema`: the full schema itself, `application/schema+json`,
  *   which reads nothing stored and so may be cached; a client narrows
  *   from it where its conditionals state the answer. With `?choose=`, the
@@ -640,6 +642,11 @@ final class ResourceApiController implements ContainerInjectionInterface {
     }
     catch (\InvalidArgumentException) {
       return NULL;
+    }
+    // Where GET at the thing's path reads it, that path is where it lives.
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    if ($this->servedPaths->readsThingAt($served->definition, $served->operation)) {
+      return $this->servedPaths->url($served->definition, $served->operation, array_filter($served->parameters, 'is_scalar'), FALSE, FALSE, ['absolute' => TRUE])->getGeneratedUrl();
     }
     return $this->location($served)->getGeneratedUrl();
   }

@@ -47,10 +47,10 @@ use Drupal\tool\TypedData\OutputDefinition;
  *   whether anything was `committed`, and the resource's own outputs,
  *   from defineOutputs().
  *
- * And the read tool beside it, for an operation that changes a thing that
- * exists: the same parameters, nothing else, and one output, `values`,
- * the same map as the write tool's input, holding what is stored now,
- * less every secret.
+ * And the read of one thing (OperationDefinition::readsOne()), the one an
+ * owner declares or the one the build adds beside the default update: its
+ * parameters, nothing else, and one output, `values`, the same map as the
+ * update's input, holding what is stored now, less every secret.
  *
  * The static definition has to be written before any caller has said
  * anything, so for an operation that needs a subject, which identity keys
@@ -248,7 +248,7 @@ final class OperationInputs {
   }
 
   /**
-   * Gets the inputs of the read tool for one operation: its parameters.
+   * Gets the inputs of the read of one thing: its parameters.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -266,10 +266,11 @@ final class OperationInputs {
   }
 
   /**
-   * Gets the outputs of the read tool for one operation.
+   * Gets the outputs of the read of one thing.
    *
-   * One output, `values`: the map the write tool takes as its `values`
-   * input, built the same way, said as an output. What it promises is the
+   * One output, `values`: the map the update takes as its `values` input,
+   * built the same way in the read's context, said as an output. What it
+   * promises is the
    * shape and nothing more: every property is optional, because a key
    * storage holds nothing for is absent, and none carries a constraint,
    * because a stored value may have gone stale, and a read reports
@@ -303,7 +304,7 @@ final class OperationInputs {
   }
 
   /**
-   * Gets what the read tool answers: what is stored now, less secrets.
+   * Gets what the read of one thing answers: what is stored, less secrets.
    *
    * What the resource's composed storage loads, projected as every door
    * projects its answer (Outbound::project(): no key the build left out
@@ -447,7 +448,7 @@ final class OperationInputs {
     }
     else {
       // Decision: see docs/decisions.md#identity-before-the-parameters.
-      $built = $neutral ?? $this->listed($resource, new OperationContext($operation->id), $declared);
+      $built = $neutral ?? $this->listed($resource, new OperationContext($operation->contextId()), $declared);
       $map = $this->map($resource, $built, $this->suppliedIdentity($resource, $operation), $operation, !$input);
     }
     if ($input) {
@@ -571,7 +572,7 @@ final class OperationInputs {
     if ($operation->kind() === OperationDefinition::DELETE) {
       return FALSE;
     }
-    $context = $operation->needsNothing() ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->id);
+    $context = $operation->needsNothing() ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->contextId());
     return $this->inputDefinitions->anyDeferred($this->listed($resource, $context, TRUE));
   }
 
@@ -584,10 +585,11 @@ final class OperationInputs {
    *   The operation.
    *
    * @return string
-   *   `surface:<resource id>:<operation id>:schema`, the plugin id.
+   *   `surface:<resource id>:<operation id>:schema`, the plugin id; for
+   *   the read the build adds, its update's.
    */
   public static function narrowingTool(ResourceDefinition $resource, OperationDefinition $operation): string {
-    return self::TOOL . ':' . $resource->id . ':' . $operation->id . ':' . self::SCHEMA;
+    return self::TOOL . ':' . $resource->id . ':' . $operation->contextId() . ':' . self::SCHEMA;
   }
 
   /**
@@ -641,7 +643,7 @@ final class OperationInputs {
    *   nothing else, or NULL for an operation that takes no parameters.
    */
   protected function neutral(ResourceDefinition $resource, OperationDefinition $operation, bool $declared): ?SurfaceInterface {
-    return $operation->parameters === [] ? NULL : $this->listed($resource, new OperationContext($operation->id), $declared);
+    return $operation->parameters === [] ? NULL : $this->listed($resource, new OperationContext($operation->contextId()), $declared);
   }
 
   /**
@@ -750,7 +752,9 @@ final class OperationInputs {
       $this->t('@resource values', ['@resource' => $resource->id]),
       $this->t('The values, as the @resource resource describes them: every key it takes that the operation does not already know, including those other modules add, with its label, its meaning and the values it allows.', ['@resource' => $resource->id]),
       runtimeAccessSaidOnce: $operation !== NULL && $this->runtimeAccessWhole($resource, $operation),
-      narrowing: $operation === NULL ? NULL : static::narrowingTool($resource, $operation),
+      // A read an owner declares has no narrowing tool of its own; the
+      // one the build adds names its update's.
+      narrowing: $operation === NULL || ($operation->readsOne() && !$operation->isDefaultRead()) ? NULL : static::narrowingTool($resource, $operation),
       schema: $operation === NULL ? NULL : $this->schemaPath($resource, $operation),
       stored: $stored,
     );
@@ -864,7 +868,7 @@ final class OperationInputs {
     if (!$resource->hasOutputs() && $operation->structure === NULL) {
       return $outputs;
     }
-    $built = $this->listed($resource, new OperationContext($operation->id), TRUE);
+    $built = $this->listed($resource, new OperationContext($operation->contextId()), TRUE);
     return $outputs + $this->inputDefinitions->outputsFromSurface($built);
   }
 
@@ -956,7 +960,7 @@ final class OperationInputs {
     if (isset($this->saidOnce[$key])) {
       return $this->saidOnce[$key];
     }
-    $context = $operation->parameters === [] ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->id);
+    $context = $operation->parameters === [] ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->contextId());
     return $this->saidOnce[$key] = $this->resources->isRuntimeAtTheTop($resource->name(), $context, new AnonymousUserSession());
   }
 
@@ -996,19 +1000,22 @@ final class OperationInputs {
   }
 
   /**
-   * Describes the read tool for one operation.
+   * Describes the tool of the read of one thing.
+   *
+   * The operation's own description, or its label as a sentence, then
+   * what it starts from and what it answers.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
-   *   The operation.
+   *   The read (OperationDefinition::readsOne()).
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
    *   The description.
    */
   public function readDescription(ResourceDefinition $resource, OperationDefinition $operation): TranslatableMarkup {
-    $description = $this->t('Reads what is stored for @label, and writes nothing. @needs The values output is the resource itself, less what the operation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
-      '@label' => self::operationLabel($operation),
+    $description = $this->t('@description @needs The values output is the resource itself, less what the operation already knows, in the shape the write tool takes, so a caller can read what is there before changing it. A secret is never returned.', [
+      '@description' => $this->operationDescription($operation),
       '@needs' => $this->needs($operation),
     ]);
     return $this->runtimeAccessWhole($resource, $operation) ? $this->withRuntimeAccessWhole($description) : $description;

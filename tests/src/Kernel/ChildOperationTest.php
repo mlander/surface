@@ -65,9 +65,9 @@ class ChildOperationTest extends SurfaceKernelTestBase {
   protected const TOOL = 'surface:resource_test.larder:update';
 
   /**
-   * The read tool beside it.
+   * The resource's read.
    */
-  protected const READ_TOOL = 'surface:resource_test.larder:update:read';
+  protected const READ_TOOL = 'surface:resource_test.larder:read';
 
   /**
    * What the larder holds before each test.

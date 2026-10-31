@@ -71,7 +71,7 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     [$status, $display] = $this->catalog();
     $this->assertSame(0, $status, $display);
     $line = static fn (string $resource): string => (string) preg_replace('/\s+/', ' ', implode("\n", preg_grep('/^\s*' . preg_quote($resource, '/') . '\s/', explode("\n", $display)) ?: []));
-    $this->assertSame(' first.newsletter resource configure (update) administer surface_examples_first nothing form, http, tool, read tool, openapi, react ', $line('first.newsletter'));
+    $this->assertSame(' first.newsletter resource configure (update) administer surface_examples_first nothing form, http, tool, openapi, react first.newsletter resource read (read, default read of configure) administer surface_examples_first nothing http, tool, openapi ', $line('first.newsletter'));
     // A structure no operation asks for on its own.
     $this->assertStringContainsString(' resource_test.digest.daily structure none ', $line('resource_test.digest.daily'));
     $this->assertMatchesRegularExpression('/\d+ resources and \d+ structures, \d+ operations, \d+ structures read from a schema; [1-9]\d* refused \(drush surface:catalog --refused lists them\)\./', (string) preg_replace('/\s+/', ' ', $display));
@@ -93,10 +93,17 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
       SiteCatalog::FORM => '/admin/config/services/surface-store (surface_examples_first.store)',
       SiteCatalog::HTTP => 'PATCH /surface-api/first.store',
       SiteCatalog::TOOL => 'surface:first.store:configure',
-      SiteCatalog::READ_TOOL => 'surface:first.store:configure:read',
       SiteCatalog::OPENAPI => 'first.store:configure:write',
       SiteCatalog::REACT => '/surface-react/first.store/configure',
     ], $configure['doors']);
+    // The read is an operation of its own, its doors its own.
+    $read = $decoded['resources']['first.store']['operations'][1];
+    $this->assertSame(['read', 'configure'], [$read['id'], $read['default']]);
+    $this->assertSame([
+      SiteCatalog::HTTP => 'GET /surface-api/first.store',
+      SiteCatalog::TOOL => 'surface:first.store:read',
+      SiteCatalog::OPENAPI => 'first.store:read:read',
+    ], $read['doors']);
     $this->assertNotSame([], $decoded['refused']);
     // A structure read from a schema, a variant the poster's provider
     // lists, by the name it is built by.

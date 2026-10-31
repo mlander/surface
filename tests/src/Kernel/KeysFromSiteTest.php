@@ -324,7 +324,7 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     $this->assertSame(['lathe', 'press', 'saw', 'bench'], array_keys($properties['lights']->getPropertyDefinitions()));
     $this->assertContains(self::TAG, $this->container->get('state')->get('surface.tool_listed_cache_tags'));
 
-    $read = $manager->createInstance('surface:resource_test.workshop:configure:read');
+    $read = $manager->createInstance('surface:resource_test.workshop:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::WORKSHOP, $read->getResult()->getContextValues()[OperationInputs::VALUES] ?? NULL);

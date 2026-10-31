@@ -122,7 +122,7 @@ class FreshEyesFourTest extends SurfaceKernelTestBase {
    */
   public function testMarkFromTheTopIsSaidOnce(): void {
     $tools = $this->container->get('plugin.manager.tool');
-    foreach (['surface:event.program:configure', 'surface:event.program:configure:read'] as $id) {
+    foreach (['surface:event.program:configure', 'surface:event.program:read'] as $id) {
       $this->assertStringEndsWith(self::ONCE, (string) $tools->getDefinition($id)->getDescription(), $id);
     }
     $this->assertStringNotContainsString(self::ONCE, (string) $tools->getDefinition('surface:event.program:check')->getDescription());
@@ -133,7 +133,7 @@ class FreshEyesFourTest extends SurfaceKernelTestBase {
       $own = $key === 'fees';
       $this->assertSame($own, str_contains((string) $property->getDescription(), self::OWN), $key);
     }
-    $read = $this->container->get('tool.definition_serializer')->normalizeOutputSchema($tools->createInstance('surface:event.program:configure:read'));
+    $read = $this->container->get('tool.definition_serializer')->normalizeOutputSchema($tools->createInstance('surface:event.program:read'));
     foreach (['headline', 'sessions', 'published'] as $key) {
       $this->assertStringNotContainsString(self::OWN, $read['properties'][OperationInputs::VALUES]['properties'][$key]['description'] ?? '', 'Nor does the read tool say it on ' . $key);
     }
@@ -173,7 +173,7 @@ class FreshEyesFourTest extends SurfaceKernelTestBase {
     $written = $this->runTool($id, [OperationInputs::VALUES => ['title' => 'Autumn meetup']]);
     $this->assertTrue($written['success'], $written['message']);
     $this->assertSame(['/title'], $written['outputs']['changes']);
-    $read = $this->runTool($id . ':read', []);
+    $read = $this->runTool('surface:registration.step3:read', []);
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $written['outputs'][OperationInputs::VALUES], 'The write answers what the read tool answers after it.');
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $dry['outputs'][OperationInputs::VALUES] + ['title' => 'Autumn meetup'], 'And so did the dry run.');
 
@@ -182,7 +182,7 @@ class FreshEyesFourTest extends SurfaceKernelTestBase {
     $written = $this->runTool($id, [OperationInputs::VALUES => $license]);
     $this->assertTrue($written['success'], $written['message']);
     $this->assertSame('2048', $written['outputs'][OperationInputs::VALUES]['third_party_settings']['surface_examples_compliance']['license']);
-    $read = $this->runTool($id . ':read', []);
+    $read = $this->runTool('surface:registration.step3:read', []);
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $written['outputs'][OperationInputs::VALUES]);
   }
 

@@ -471,7 +471,7 @@ class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
     $this->assertSame(AccessAnswer::STATIC, AccessAnswer::kindOf($refused), 'Refused by the account alone.');
     $this->assertTrue($resources->access(ExhibitResource::class, $context, $this->accounts['keeper'])->isAllowed());
     $tools = $this->container->get('plugin.manager.tool');
-    foreach (['surface:resource_test.exhibit:configure', 'surface:resource_test.exhibit:configure:read'] as $id) {
+    foreach (['surface:resource_test.exhibit:configure', 'surface:resource_test.exhibit:read'] as $id) {
       $this->assertSame('keep an exhibit', $tools->getDefinition($id)->getPermission(), $id);
     }
     // A placeholder names the subject's permission: never declared.
@@ -513,7 +513,7 @@ class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
   public function testTheReadToolLeavesOutWhatIsLeftOut(): void {
     $tools = $this->container->get('plugin.manager.tool');
     $read = function (): array {
-      $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.exhibit:configure:read');
+      $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.exhibit:read');
       $this->assertTrue($tool->access());
       $tool->execute();
       return $tool->getOutputValue(OperationInputs::VALUES);
@@ -526,7 +526,7 @@ class StaticRuntimeAccessTest extends SurfaceKernelTestBase {
     $this->container->get('state')->set(ExhibitAccess::WITHDRAWN, TRUE);
     $this->assertSame(['title', 'status', 'room'], array_keys($read()), 'Left out once the thing is known.');
     $this->actAs('stranger');
-    $this->assertFalse($tools->createInstance('surface:resource_test.exhibit:configure:read')->access(), 'Reading asks what writing asks: the static permission.');
+    $this->assertFalse($tools->createInstance('surface:resource_test.exhibit:read')->access(), 'Reading asks what writing asks: the static permission.');
   }
 
   /**

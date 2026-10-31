@@ -68,6 +68,13 @@ Inside the class, the permission they share and the two methods:
   and `delete` each act on one block, so each knows that block's
   machine name.
 
+Every resource that can be changed can also be read, by an operation
+whose id is `read`. The placed block declares none, so the module adds
+one beside `update`: it takes the same `$id`, asks the same permission,
+and answers the block's values, changing nothing. A module that wants an
+account to read what it may not change declares `read` itself, with
+`readOnly: TRUE`.
+
 The method's parameters are what the operation needs, and a route or a
 tool supplies them by name. The parameter `$id` is named after the
 identity key. The update route declares `{id}` as `entity:block` in

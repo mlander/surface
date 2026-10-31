@@ -20,7 +20,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * Create access for the bundle when the context creates, update access
  * for the entity when it knows one: exactly what core's own form route
  * asks, so the resource never lets anyone write what core's form would
- * not. Each field then answers for itself (FieldItemAccess).
+ * not. A read asks view access for the entity, as core's own page does,
+ * so an account that may view a node and not edit it reads it. Each field
+ * then answers for itself (FieldItemAccess).
+ *
+ * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
  *
  * An entity type's resource creates with no bundle known: the bundle is a
  * value the caller chooses, held to those the account may create by its
@@ -30,6 +34,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * and forbidden to any other.
  */
 final class ContentEntityAccess implements OperationAccessInterface, ContainerInjectionInterface {
+
+  /**
+   * The operation that reads an entity, asked view access for.
+   */
+  public const READ = 'read';
 
   /**
    * Constructs a ContentEntityAccess.
@@ -72,7 +81,7 @@ final class ContentEntityAccess implements OperationAccessInterface, ContainerIn
     if ($entity === NULL) {
       return AccessResult::forbidden(sprintf('There is no %s %s.', $entity_type_id, $id));
     }
-    return $entity->access('update', $account, TRUE);
+    return $entity->access($context->id === self::READ ? 'view' : 'update', $account, TRUE);
   }
 
 }

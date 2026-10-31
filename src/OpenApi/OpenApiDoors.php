@@ -34,7 +34,7 @@ final class OpenApiDoors implements CatalogDoorLinksInterface {
   /**
    * {@inheritdoc}
    */
-  public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array {
+  public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     if (!$standalone) {
       return [];
     }
@@ -48,7 +48,7 @@ final class OpenApiDoors implements CatalogDoorLinksInterface {
    * `operation/<operationId>`. The document itself is JSON, which a
    * browser shows with no anchor to land on.
    */
-  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array {
+  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     if (!$standalone) {
       return [];
     }
@@ -64,10 +64,15 @@ final class OpenApiDoors implements CatalogDoorLinksInterface {
    *   The operation.
    *
    * @return string
-   *   `<id>:<operation>:write`, a listing's `:list`.
+   *   `<id>:<operation>:write`, a listing's `:list`, the read of one
+   *   thing's `:read`, its `GET`.
    */
   protected function operationId(ResourceDefinition $resource, OperationDefinition $operation): string {
-    $run = $this->paths->listing($resource) === $operation->id ? 'list' : 'write';
+    $run = match (TRUE) {
+      $this->paths->listing($resource) === $operation->id => 'list',
+      $operation->readsOne() => 'read',
+      default => 'write',
+    };
     return $resource->id . ':' . $operation->id . ':' . $run;
   }
 

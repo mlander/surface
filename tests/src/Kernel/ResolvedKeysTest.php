@@ -155,7 +155,7 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
     $serializer = $this->container->get('tool.definition_serializer');
     $input = static fn (string $id): array => $serializer->normalizeInputSchema($tools->createInstance('surface:' . $id . ':configure'))['properties'][OperationInputs::VALUES]['properties'];
     $this->assertSame($input('resource_test.relay.plain'), $input('resource_test.relay'));
-    $read = $tools->createInstance('surface:resource_test.relay:configure:read');
+    $read = $tools->createInstance('surface:resource_test.relay:read');
     $read->execute();
     $this->assertSame(['vault_id' => 'north'], (array) $read->getResult()->getContextValues()[OperationInputs::VALUES], 'The read answers what is stored, less the secret.');
   }

@@ -147,7 +147,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     $assert->pageTextContains('Both are enabled on this site now.');
     $assert->pageTextContains("The same three lines: example 12's resource and the block's structure");
     $assert->pageTextContains("The hero's actions slot, narrowed to what it expects");
-    $assert->pageTextContains('surface:block.placement:update:read');
+    $assert->pageTextContains('surface:block.placement:read');
     $assert->pageTextContains('Ask the tool');
     $assert->pageTextContains('Success: Dry run of Edit a placed block');
     $assert->pageTextContains('Success: Dry run of Remove a placed block');

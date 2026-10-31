@@ -15,24 +15,26 @@ Two derivers in `src/Resource/`, each a class carrying
 
 - `ContentEntityResources` makes `entity.content:<entity type>.<bundle>`
   for every content entity bundle with a stored default form display: a
-  resource with its identity (`entity_type`, `bundle`, `id`), two
-  operations, `create` and `update` (which takes the entity as `id`), one
-  child per field the form display shows, in its order, the entity's own
-  access and `Storage\ContentEntityStorage`.
+  resource with its identity (`entity_type`, `bundle`, `id`), three
+  operations, `create`, `update` and `read` (each of the last two takes
+  the entity as `id`), one child per field the form display shows, in
+  its order, the entity's own access and `Storage\ContentEntityStorage`.
+  Its `read` asks view access, of the entity and of each field, so an
+  account that may view a page and not edit it reads it.
 - The same deriver makes `entity.content:<entity type>` for every
   content entity type with such a bundle: one resource for all its
   bundles, identity `entity_type` and `id`, `bundle` a key that chooses
   the fields at `fields`, one variant per bundle
   (`entity.content:<entity type>.<bundle>.fields`, a structure holding
   the same field children). On `create` the bundle is one the account
-  may create; on `update` it is the entity's. A test holds each bundle's
+  may create; on `update` and `read` it is the entity's. A test holds each bundle's
   variant equal to that bundle's resource.
 - `FieldItemStructures` makes `field.item:<entity type>.<bundle>.<field>`
   for every field that resource carries: a structure, stored by its
   parent, derived from the item's typed data by `FieldItemDerivation`,
   or written by hand by a class marked
   `#[FieldItemStructure(type: '...')]`. Its access is field access:
-  open, locked, or omitted.
+  open, locked, or omitted; on a read, open or omitted.
 
 Fields it cannot carry yet (more than one value, a type not covered,
 computed ones) are left out, each with the reason, which the landing
@@ -60,7 +62,7 @@ tool, `:schema`):
 drush tool:info surface:entity.content:node.page:create
 drush tool:run surface:entity.content:node.page:create --uid=1 \
   --input='{"values":{"title":{"value":"Hello"},"field_description":{"value":"A page."}}}'
-drush tool:run surface:entity.content:node.page:update:read --uid=1 --input=id=1
+drush tool:run surface:entity.content:node.page:read --uid=1 --input=id=1
 drush tool:run surface:entity.content:node:create --uid=1 \
   --input='{"values":{"bundle":"page","fields":{"title":{"value":"Hello"},"field_description":{"value":"A page."}}}}'
 ```

@@ -138,7 +138,7 @@ final class ConceptPanel {
     ['GET', '/surface-api/event.venue?limit=2', 'list', 'the listing: its outputs, a page of venues and the total'],
     ['POST', '/surface-api/event.venue', 'create', "201 with the new venue's Location"],
     ['GET', '/surface-api/event.venue:create', 'create', 'the envelope a create starts from'],
-    ['GET', '/surface-api/event.venue/riverside', 'update', 'the envelope: what is stored, its schema and its ETag'],
+    ['GET', '/surface-api/event.venue/riverside', 'read', "the read: the update's envelope, its ETag"],
     ['PATCH', '/surface-api/event.venue/riverside', 'update', 'the update, held by If-Match'],
     ['DELETE', '/surface-api/event.venue/riverside', 'delete', 'the removal, no body'],
     ['PATCH', '/surface-api/event.venue:reorder', 'reorder', 'the reorder, a custom method on the collection'],
@@ -330,7 +330,7 @@ final class ConceptPanel {
       'event.bulletin' => $this->t('A rule between keys whose condition and effect a schema can state is declared as data, <code>narrow()->when()</code>, beside the keys it is about. Two rules read the frequency here: a weekly issue holds at most five items, and a monthly bulletin has no send day. The send day is required wherever it applies; where it does not, the form draws no element for it, a value sent for it is refused, and what is stored is kept for the day it applies again. Nothing is run to learn either rule: the full schema states both as written, each an <code>if</code>/<code>then</code> its frame lists under <code>x-surface.rules</code>.'),
       'event.press', 'event.desk' => $this->t("A person to contact is one structure, declared once and attached by two resources: the press page at /surface-examples/8, and the information desk at /surface-examples/8/desk. The person asks for an email while it is listed publicly, which only its container knows, so it reads a port, <code>listed</code>, and each container wires it to a key of its own: <code>public</code> on the press page, <code>in_program</code> at the desk. The desk also holds a collection of up to four volunteers, each the same structure, whose port nothing wires. The phone is a named shape, asked for by the person and by the desk itself, and the two keys of the review are mixed into the press page, so they are its own. The review date asks for a date input, <code>setSetting('widget', 'date')</code>, which both documents state as <code>format: date</code>. Both documents write each part once, under <code>\$defs</code>, and refer to it where it is used."),
       'event.sales' => $this->t("The ticket types are the site's, not the code's: one checkbox and one set of limits per type, listed by a provider that reads the site's configuration and says so in its cacheability. Add a type and reload: the form, both documents and the tool have its keys at the next request, with no cache rebuild. Each type's limits read whether that type is on sale, through a port the resource wires per type, <code>reads: ['selling' => 'on_sale']</code>: untick a type and its limits go, tick it and they return as stored. The full schema states the rule once per type, an <code>if</code> on <code>on_sale.&lt;type&gt;</code> and a <code>then</code> reaching into <code>limits.&lt;type&gt;</code>, and a tool that sends a limit for a type off sale is refused. The speaker type is locked there, so it is drawn fixed, <code>readOnly</code> in both documents, and a value a tool sends for it is not taken, which the answer says."),
-      'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: live</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read and has no read tool beside it.'),
+      'event.program' => $this->t('Access says whether keys may be changed, seen, or neither, and its kind is read from its cacheability, never declared. The access class of the fees locks them for an account without "set event fees", which the account alone decides, so the full schema states the lock for that account. For any other account the program decides: once it is published, the fees are fixed, which only what is stored can say, so the full schema marks the fees <code>access: live</code> and the schema for these answers settles it. Each operation also states how a call behaves: configuring changes what exists and may be repeated, and checking, at /surface-examples/10/check, changes nothing, so its tool is a read; the program\'s own read, which the module adds beside configuring, answers what is stored.'),
       'event.doors' => $this->t('Every stock widget, each chosen by what its key declares: a time input for a string that asks for one, checkboxes for a short list of choices, radios for one choice that asks for them, a text area for a multiline string, and rows with "Add another" for a list of free values. The config schema is fully validatable, so the storage knows which keys may hold nothing. A key a call leaves out keeps what is stored, null clears it, and a value replaces it; the badges, which the storage always holds, refuse null and name their default. The four dry runs below show each.'),
       'event.spotlight' => $this->componentsListed()['listed']
         ? $this->t("A JSON Schema the site already has is read into a structure, keyword by keyword: each single-directory component says what props it takes, and that schema is a variant at <code>props</code>, chosen by the component. The class names no component and no prop: a provider lists the components, with their schemas, and the reader turns each schema into keys with their types, labels, defaults, lists of values, bounds and required keys, and a nested object into a map. Choose another component and the props below it are that component's, over AJAX, and in React with no request. The site has @count components, at most @limit, the site list limit (<code>surface.settings:site_list_limit</code>), so both documents state the components as variants, <code>anyOf</code> of each component's def and one conditional per component, and the full schema of a component read back from them is the same document again. Whatever the count, the tool listing states the props and slots with the keys of the component stored and no other, and names two ways an agent learns another component's keys: <code>GET /surface-api/event.spotlight/schema?choose=/props={component}</code>, or the tool it asks with its values, <code>surface:event.spotlight:configure:schema</code>. What the reader cannot say is kept, as a JsonSchema constraint the server checks, and noted. A tool that sends one component's props for another is refused, naming the component they belong to. Beside the props, the component's slots are a second key the same component chooses, read from its metadata: each slot holds text, one component or a list of them, narrowed to what the slot expects, three deep at most.", $this->componentsListed())
@@ -809,7 +809,6 @@ final class ConceptPanel {
         $tool_id,
         $tool_kind,
         $hints,
-        self::yesNo($this->toolManager->hasDefinition($tool_id . ':read')),
       ];
     }
     // Another module answering too, after the program's own answers.
@@ -836,7 +835,6 @@ final class ConceptPanel {
           $this->t('Tool'),
           $this->t('Tool API kind'),
           $this->t('MCP hints'),
-          $this->t('Read tool beside it'),
         ],
         '#rows' => $rows,
         '#attributes' => ['class' => ['surface-concept-facts']],
@@ -1005,7 +1003,7 @@ final class ConceptPanel {
       $actions[$def] = $these['$defs'][$def] ?? NULL;
     }
     $tools = [];
-    foreach (['create', 'create:schema', 'update', 'update:read', 'update:schema', 'delete'] as $suffix) {
+    foreach (['create', 'create:schema', 'update', 'read', 'update:schema', 'delete'] as $suffix) {
       $tool_id = 'surface:block.placement:' . $suffix;
       $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
       if ($tool instanceof ToolDefinition) {
@@ -1108,7 +1106,7 @@ final class ConceptPanel {
       $rows[] = [$method, ['data' => ['#markup' => '<code>' . $path . '</code>']], $operation, $what];
     }
     $tools = [];
-    foreach (['create', 'list', 'reorder', 'reorder:read', 'update', 'update:read', 'delete'] as $suffix) {
+    foreach (['create', 'list', 'reorder', 'update', 'read', 'delete'] as $suffix) {
       $tool_id = 'surface:event.venue:' . $suffix;
       $tool = $this->toolManager->hasDefinition($tool_id) ? $this->toolManager->getDefinition($tool_id) : NULL;
       if ($tool instanceof ToolDefinition) {
@@ -1130,7 +1128,7 @@ final class ConceptPanel {
       ],
       'tools' => [
         '#type' => 'table',
-        '#caption' => $this->t('The tools of the venues: one per operation, and a read tool beside each update. The listing is a read, with no dry run; its tool answers the page and the total beside the one result shape.'),
+        '#caption' => $this->t('The tools of the venues: one per operation, the read among them, which the module adds beside the edit. The listing is a read, with no dry run; its tool answers the page and the total beside the one result shape.'),
         '#header' => [$this->t('Tool'), $this->t('Title'), $this->t('Tool API kind'), $this->t('Inputs')],
         '#rows' => $tools,
         '#attributes' => ['class' => ['surface-concept-tools']],

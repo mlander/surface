@@ -177,7 +177,7 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
     $this->assertArrayNotHasKey('fees', $dry['outputs'][OperationInputs::VALUES]);
     $this->assertStringNotContainsString('concession', (string) json_encode($dry['outputs']));
 
-    $read = $this->runTool('surface:event.program:configure:read', []);
+    $read = $this->runTool('surface:event.program:read', []);
     $this->assertSame($read['outputs'][OperationInputs::VALUES], $dry['outputs'][OperationInputs::VALUES], 'The dry run answers what the read answers.');
 
     $validated = $this->validate('event.program', 'configure', []);
@@ -258,7 +258,7 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
         ],
       ],
     ]);
-    $read = $this->runTool('surface:tool_test.vault:configure:read', []);
+    $read = $this->runTool('surface:tool_test.vault:read', []);
     $mirrors = $read['outputs'][OperationInputs::VALUES]['mirrors'];
     $mirrors[1]['host'] = 'west-2.example.com';
 

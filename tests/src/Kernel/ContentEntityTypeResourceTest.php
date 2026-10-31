@@ -30,7 +30,8 @@ use Symfony\Component\HttpFoundation\Request;
  * for every bundle of every entity type with a form display on the test
  * site, the variant the bundle chooses, as the document states it at its
  * site, is the bundle's root less its identity, byte for byte, in the full
- * schema and the schema for empty values, of the add and of the edit. The
+ * schema and the schema for empty values, of the add, the edit and the
+ * read, and the read of one that exists answers the same fields. The
  * bundle offered on add are those the account may create; an unknown or a
  * refused bundle is refused at `bundle`; the edit holds the bundle to the
  * entity's; past the site list limit the variants are deferred and the
@@ -122,9 +123,9 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
         foreach ($type_bundles as $bundle) {
           $own = $type . '.' . $bundle;
           // The full schema, built for the account knowing no subject.
-          foreach (['create', 'update'] as $operation) {
-            $context = $operation === 'create' ? $this->resources()->operation($own, 'create') : new OperationContext('update');
-            $wide = $operation === 'create' ? $this->resources()->operation($type, 'create') : new OperationContext('update');
+          foreach (['create', 'update', 'read'] as $operation) {
+            $context = $operation === 'create' ? $this->resources()->operation($own, 'create') : new OperationContext($operation);
+            $wide = $operation === 'create' ? $this->resources()->operation($type, 'create') : new OperationContext($operation);
             $root = $emitter->emitFull($this->resources()->buildStatic($own, $context), $own, $operation)->document['schema'];
             $whole = $emitter->emitFull($this->resources()->buildStatic($type, $wide), $type, $operation)->document['schema'];
             $this->assertSame(static::encode(static::rootFields($root)), static::encode(static::variantAtSite($whole, $entity_type_id, $bundle)), sprintf('%s narrowed by %s is %s, the full schema of %s, for %s.', $type, $bundle, $own, $operation, $account->getAccountName()));
@@ -147,7 +148,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
         }
       }
     }
-    $this->assertSame(11, $compared);
+    $this->assertSame(15, $compared);
 
     // And for one that exists, its stored values.
     $this->setCurrentUser($this->admin);
@@ -160,6 +161,25 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
     $identity = ['entity_type' => TRUE, 'bundle' => TRUE, 'id' => TRUE];
     $this->assertSame(array_diff_key($root['values'], $identity), $whole['values'][ContentEntityResources::FIELDS], 'The same stored values, under fields.');
     $this->assertSame(array_intersect_key($root['values'], $identity), array_intersect_key($whole['values'], $identity));
+
+    // The read: the entity type's narrowed by the page's bundle is the
+    // page's own read, its schema and what it answers, for an account
+    // that may only view.
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    $this->setCurrentUser($this->createUser(['access content']));
+    [$own_surface, $own_storage] = $this->operation('entity.content:node.page', 'read', ['id' => $node->id()]);
+    [$whole_surface, $whole_storage] = $this->operation(self::RESOURCE, 'read', ['id' => $node->id()]);
+    $root = $emitter->emit($own_surface, array_replace($own_surface->getDefaultValues(), $own_storage->load($own_surface)), 'entity.content:node.page', 'read')->document;
+    $whole = $emitter->emit($whole_surface, array_replace($whole_surface->getDefaultValues(), $whole_storage->load($whole_surface)), self::RESOURCE, 'read')->document;
+    $this->assertSame(static::encode(static::rootFields($root['schema'])), static::encode(static::variantAtSite($whole['schema'], 'node', 'page')));
+    $this->assertSame(array_diff_key($root['values'], $identity), $whole['values'][ContentEntityResources::FIELDS]);
+    $read = function (string $resource) use ($node): array {
+      $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:' . $resource . ':read');
+      $tool->setInputValue('id', (string) $node->id());
+      $tool->execute();
+      return $tool->getResult()->getContextValues()[OperationInputs::VALUES];
+    };
+    $this->assertSame($read('entity.content:node.page'), $read(self::RESOURCE)[ContentEntityResources::FIELDS], 'The two read tools answer the same fields.');
   }
 
   /**
@@ -268,7 +288,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
   public function testEveryDoorOpensBesideTheBundles(): void {
     $ids = array_keys($this->container->get('plugin.manager.tool')->getDefinitions());
     foreach (['entity.content:node', 'entity.content:node.page', 'entity.content:node.kitchen'] as $resource) {
-      foreach (['create', 'update', 'update:read'] as $suffix) {
+      foreach (['create', 'update', 'read'] as $suffix) {
         $this->assertContains('surface:' . $resource . ':' . $suffix, $ids);
       }
     }

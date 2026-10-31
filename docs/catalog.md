@@ -21,8 +21,10 @@ Such an operation reaches the doors the installed modules open: a form
 route a module declares, the HTTP path and the OpenAPI operation (the
 base module), the tool `surface:<id>:<operation>` (the base module,
 with `tool` installed) and the React page (`surface_examples_react`).
-One that changes a thing that exists, neither creating nor read only, is
-"read on its own" too, a read tool, `surface:<id>:<operation>:read`.
+Every resource with a default update that can be asked on its own can
+be read: by a `read` its owner declares, or by the one the build adds,
+provided by "default read of" the update it reads, asked as that update
+is (`docs/decisions.md#a-read-is-an-operation-of-the-resource`).
 A structure a plugin uses is configured through the plugin's host. Every
 operation is built for no account, and what did not build, with every
 route written wrong for the operation it serves, is listed last, under
@@ -30,47 +32,47 @@ Refused. `docs/resources.md` says how each part works.
 
 | Resource or structure | Label | Class | Identity | Operations |
 | --- | --- | --- | --- | --- |
-| [`block.placement`](#blockplacement) | Placed block | `BlockPlacementResource` | `id` | `create`, `update`, `delete` |
+| [`block.placement`](#blockplacement) | Placed block | `BlockPlacementResource` | `id` | `create`, `update`, `delete`, `read` |
 | [`block.placement.condition`](#blockplacementcondition) |  | `VisibilityConditionStructure` | none | none |
 | [`block.surface_component`](#blocksurface_component) | Component | `ComponentBlockStructure` | none | none |
 | [`block.surface_examples_plugins`](#blocksurface_examples_plugins) | Surface API example | `ExampleBlockStructure` | none | none |
 | [`block.surface_examples_plugins.presentation.grid`](#blocksurface_examples_pluginspresentationgrid) | Grid presentation | `GridPresentationStructure` | none | none |
 | [`block.surface_examples_plugins.presentation.list`](#blocksurface_examples_pluginspresentationlist) | List presentation | `ListPresentationStructure` | none | none |
-| [`event.bulletin`](#eventbulletin) |  | `BulletinResource` | none | `configure` |
-| [`event.desk`](#eventdesk) |  | `InfoDeskResource` | none | `configure` |
-| [`event.doors`](#eventdoors) |  | `DoorsResource` | none | `configure` |
+| [`event.bulletin`](#eventbulletin) |  | `BulletinResource` | none | `configure`, `read` |
+| [`event.desk`](#eventdesk) |  | `InfoDeskResource` | none | `configure`, `read` |
+| [`event.doors`](#eventdoors) |  | `DoorsResource` | none | `configure`, `read` |
 | [`event.fees`](#eventfees) |  | `FeesStructure` | none | none |
-| [`event.mailer`](#eventmailer) |  | `MailerResource` | none | `configure` |
+| [`event.mailer`](#eventmailer) |  | `MailerResource` | none | `configure`, `read` |
 | [`event.mailer.credential.managed`](#eventmailercredentialmanaged) | Managed credential | `ManagedCredentialStructure` | none | none |
 | [`event.mailer.credential.pasted`](#eventmailercredentialpasted) | Pasted credential | `PastedCredentialStructure` | none | none |
 | [`event.person`](#eventperson) |  | `PersonStructure` | none | none |
-| [`event.press`](#eventpress) |  | `PressResource` | none | `configure` |
-| [`event.program`](#eventprogram) |  | `ProgramResource` | none | `configure`, `check` |
+| [`event.press`](#eventpress) |  | `PressResource` | none | `configure`, `read` |
+| [`event.program`](#eventprogram) |  | `ProgramResource` | none | `configure`, `check`, `read` |
 | [`event.review`](#eventreview) |  | `ReviewStructure` | none | none |
-| [`event.sales`](#eventsales) |  | `TicketSalesResource` | none | `configure` |
-| [`event.spotlight`](#eventspotlight) |  | `SpotlightResource` | none | `configure` |
+| [`event.sales`](#eventsales) |  | `TicketSalesResource` | none | `configure`, `read` |
+| [`event.spotlight`](#eventspotlight) |  | `SpotlightResource` | none | `configure`, `read` |
 | [`event.ticket_limit`](#eventticket_limit) |  | `TicketLimitStructure` | none | none |
-| [`event.venue`](#eventvenue) |  | `VenueResource` | `id` | `create`, `list`, `reorder`, `update`, `delete` |
+| [`event.venue`](#eventvenue) |  | `VenueResource` | `id` | `create`, `list`, `reorder`, `update`, `delete`, `read` |
 | [`event.venue.listing`](#eventvenuelisting) |  | `VenueListingStructure` | none | none |
 | [`event.venue.order`](#eventvenueorder) |  | `VenueOrderStructure` | none | none |
 | [`event.venue.reorder`](#eventvenuereorder) |  | `VenueReorderStructure` | none | none |
 | [`event.venue.room`](#eventvenueroom) |  | `VenueRoomStructure` | none | none |
-| [`event.webhook`](#eventwebhook) |  | `WebhookResource` | none | `configure` |
-| [`field.instance`](#fieldinstance) |  | `FieldInstanceResource` | `entity_type`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update` |
+| [`event.webhook`](#eventwebhook) |  | `WebhookResource` | none | `configure`, `read` |
+| [`field.instance`](#fieldinstance) |  | `FieldInstanceResource` | `entity_type`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update`, `read` |
 | [`field.settings.address`](#fieldsettingsaddress) | Address | `AddressFieldSettingsResource` | none | none |
-| [`field.storage`](#fieldstorage) |  | `FieldStorageResource` | `entity_type`, `field_name`, `field_type` | `create`, `update` |
+| [`field.storage`](#fieldstorage) |  | `FieldStorageResource` | `entity_type`, `field_name`, `field_type` | `create`, `update`, `read` |
 | [`field_formatter:surface_examples_plugins_string`](#field_formattersurface_examples_plugins_string) | Surface API example formatter | `ExampleFormatter` | none | none |
-| [`first.newsletter`](#firstnewsletter) | Newsletter settings | `NewsletterResource` | none | `configure` |
-| [`first.store`](#firststore) | Store location | `StoreResource` | none | `configure` |
-| [`node.type`](#nodetype) | Content type | `NodeTypeResource` | `type` | `create`, `update` |
+| [`first.newsletter`](#firstnewsletter) | Newsletter settings | `NewsletterResource` | none | `configure`, `read` |
+| [`first.store`](#firststore) | Store location | `StoreResource` | none | `configure`, `read` |
+| [`node.type`](#nodetype) | Content type | `NodeTypeResource` | `type` | `create`, `update`, `read` |
 | [`registration.compliance`](#registrationcompliance) |  | `ComplianceStructure` | none | none |
 | [`registration.contact`](#registrationcontact) |  | `ContactStructure` | none | none |
-| [`registration.step1`](#registrationstep1) |  | `RegistrationStep1Resource` | none | `configure` |
-| [`registration.step2`](#registrationstep2) |  | `RegistrationStep2Resource` | none | `configure` |
-| [`registration.step3`](#registrationstep3) |  | `RegistrationStep3Resource` | none | `configure` |
+| [`registration.step1`](#registrationstep1) |  | `RegistrationStep1Resource` | none | `configure`, `read` |
+| [`registration.step2`](#registrationstep2) |  | `RegistrationStep2Resource` | none | `configure`, `read` |
+| [`registration.step3`](#registrationstep3) |  | `RegistrationStep3Resource` | none | `configure`, `read` |
 | [`registration.step3.ticket.free`](#registrationstep3ticketfree) | Free ticket | `FreeTicketStructure` | none | none |
 | [`registration.step3.ticket.paid`](#registrationstep3ticketpaid) | Paid ticket | `PaidTicketStructure` | none | none |
-| [`system.performance`](#systemperformance) | Performance settings | `PerformanceResource` | none | `configure` |
+| [`system.performance`](#systemperformance) | Performance settings | `PerformanceResource` | none | `configure`, `read` |
 
 ## block.placement
 
@@ -83,15 +85,17 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples_block\Storage\BlockPlacementStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Place a block | nothing | yes | `administer blocks` | yes | no: it creates | `#[Operation] on BlockPlacementResource` (`surface_examples_block`) |
-| `update` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | yes | `BlockPlacementResource::update()` (`surface_examples_block`) |
-| `delete` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | no: it deletes | `BlockPlacementResource::delete()` (`surface_examples_block`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `create` | Place a block | nothing | yes | `administer blocks` | yes | `#[Operation] on BlockPlacementResource` (`surface_examples_block`) |
+| `update` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | `BlockPlacementResource::update()` (`surface_examples_block`) |
+| `delete` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | `BlockPlacementResource::delete()` (`surface_examples_block`) |
+| `read` | Current values: Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | default read of `update` (`surface_examples_block`) |
 
 - `create` reaches form `/admin/structure/block/surface/add (surface_examples_block.create)`, http `POST /surface-api/block.placement`, tool `surface:block.placement:create`, schema tool `surface:block.placement:create:schema`, openapi `block.placement:create:write`, react `/surface-react/block.placement/create`.
-- `update` reaches form `/admin/structure/block/surface/{id} (surface_examples_block.update)`, http `PATCH /surface-api/block.placement/{id}`, tool `surface:block.placement:update`, read tool `surface:block.placement:update:read`, schema tool `surface:block.placement:update:schema`, openapi `block.placement:update:write`, react `/surface-react/block.placement/update`.
+- `update` reaches form `/admin/structure/block/surface/{id} (surface_examples_block.update)`, http `PATCH /surface-api/block.placement/{id}`, tool `surface:block.placement:update`, schema tool `surface:block.placement:update:schema`, openapi `block.placement:update:write`, react `/surface-react/block.placement/update`.
 - `delete` reaches form `/admin/structure/block/surface/{id}/delete (surface_examples_block.delete)`, http `DELETE /surface-api/block.placement/{id}`, tool `surface:block.placement:delete`, openapi `block.placement:delete:write`, react `/surface-react/block.placement/delete`.
+- `read` reaches http `GET /surface-api/block.placement/{id}`, tool `surface:block.placement:read`, openapi `block.placement:read:read`.
 
 ## block.placement.condition
 
@@ -159,11 +163,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\BulletinStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the bulletin | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on BulletinResource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the bulletin | nothing | no | `administer site configuration` | yes | `#[Operation] on BulletinResource` (`surface_examples`) |
+| `read` | Current values: Configure the bulletin | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/7 (surface_examples.step7)`, http `PATCH /surface-api/event.bulletin`, tool `surface:event.bulletin:configure`, read tool `surface:event.bulletin:configure:read`, openapi `event.bulletin:configure:write`, react `/surface-react/event.bulletin/configure`.
+- `configure` reaches form `/surface-examples/7 (surface_examples.step7)`, http `PATCH /surface-api/event.bulletin`, tool `surface:event.bulletin:configure`, openapi `event.bulletin:configure:write`, react `/surface-react/event.bulletin/configure`.
+- `read` reaches http `GET /surface-api/event.bulletin`, tool `surface:event.bulletin:read`, openapi `event.bulletin:read:read`.
 
 ## event.desk
 
@@ -174,11 +180,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\InfoDeskStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the information desk | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on InfoDeskResource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the information desk | nothing | no | `administer site configuration` | yes | `#[Operation] on InfoDeskResource` (`surface_examples`) |
+| `read` | Current values: Configure the information desk | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/8/desk (surface_examples.step8_desk)`, http `PATCH /surface-api/event.desk`, tool `surface:event.desk:configure`, read tool `surface:event.desk:configure:read`, openapi `event.desk:configure:write`, react `/surface-react/event.desk/configure`.
+- `configure` reaches form `/surface-examples/8/desk (surface_examples.step8_desk)`, http `PATCH /surface-api/event.desk`, tool `surface:event.desk:configure`, openapi `event.desk:configure:write`, react `/surface-react/event.desk/configure`.
+- `read` reaches http `GET /surface-api/event.desk`, tool `surface:event.desk:read`, openapi `event.desk:read:read`.
 
 ## event.doors
 
@@ -189,11 +197,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\DoorsStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the doors | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on DoorsResource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the doors | nothing | no | `administer site configuration` | yes | `#[Operation] on DoorsResource` (`surface_examples`) |
+| `read` | Current values: Configure the doors | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/11 (surface_examples.step11)`, http `PATCH /surface-api/event.doors`, tool `surface:event.doors:configure`, read tool `surface:event.doors:configure:read`, openapi `event.doors:configure:write`, react `/surface-react/event.doors/configure`.
+- `configure` reaches form `/surface-examples/11 (surface_examples.step11)`, http `PATCH /surface-api/event.doors`, tool `surface:event.doors:configure`, openapi `event.doors:configure:write`, react `/surface-react/event.doors/configure`.
+- `read` reaches http `GET /surface-api/event.doors`, tool `surface:event.doors:read`, openapi `event.doors:read:read`.
 
 ## event.fees
 
@@ -215,11 +225,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\MailerStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the mailer | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on MailerResource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the mailer | nothing | no | `administer site configuration` | yes | `#[Operation] on MailerResource` (`surface_examples`) |
+| `read` | Current values: Configure the mailer | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/14 (surface_examples.step14)`, http `PATCH /surface-api/event.mailer`, tool `surface:event.mailer:configure`, read tool `surface:event.mailer:configure:read`, schema tool `surface:event.mailer:configure:schema`, openapi `event.mailer:configure:write`, react `/surface-react/event.mailer/configure`.
+- `configure` reaches form `/surface-examples/14 (surface_examples.step14)`, http `PATCH /surface-api/event.mailer`, tool `surface:event.mailer:configure`, schema tool `surface:event.mailer:configure:schema`, openapi `event.mailer:configure:write`, react `/surface-react/event.mailer/configure`.
+- `read` reaches http `GET /surface-api/event.mailer`, tool `surface:event.mailer:read`, openapi `event.mailer:read:read`.
 
 ## event.mailer.credential.managed
 
@@ -261,11 +273,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\PressStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the press page | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on PressResource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the press page | nothing | no | `administer site configuration` | yes | `#[Operation] on PressResource` (`surface_examples`) |
+| `read` | Current values: Configure the press page | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/8 (surface_examples.step8)`, http `PATCH /surface-api/event.press`, tool `surface:event.press:configure`, read tool `surface:event.press:configure:read`, openapi `event.press:configure:write`, react `/surface-react/event.press/configure`.
+- `configure` reaches form `/surface-examples/8 (surface_examples.step8)`, http `PATCH /surface-api/event.press`, tool `surface:event.press:configure`, openapi `event.press:configure:write`, react `/surface-react/event.press/configure`.
+- `read` reaches http `GET /surface-api/event.press`, tool `surface:event.press:read`, openapi `event.press:read:read`.
 
 ## event.program
 
@@ -276,13 +290,15 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\ProgramStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the program | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on ProgramResource` (`surface_examples`) |
-| `check` | Check a program | nothing | no | `administer site configuration` | yes | no: it changes nothing | `#[Operation] on ProgramResource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the program | nothing | no | `administer site configuration` | yes | `#[Operation] on ProgramResource` (`surface_examples`) |
+| `check` | Check a program | nothing | no | `administer site configuration` | yes | `#[Operation] on ProgramResource` (`surface_examples`) |
+| `read` | Current values: Configure the program | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/10 (surface_examples.step10)`, http `PATCH /surface-api/event.program`, tool `surface:event.program:configure`, read tool `surface:event.program:configure:read`, openapi `event.program:configure:write`, react `/surface-react/event.program/configure`.
+- `configure` reaches form `/surface-examples/10 (surface_examples.step10)`, http `PATCH /surface-api/event.program`, tool `surface:event.program:configure`, openapi `event.program:configure:write`, react `/surface-react/event.program/configure`.
 - `check` reaches form `/surface-examples/10/check (surface_examples.step10_check)`, http `POST /surface-api/event.program:check`, tool `surface:event.program:check`, openapi `event.program:check:write`, react `/surface-react/event.program/check`.
+- `read` reaches http `GET /surface-api/event.program`, tool `surface:event.program:read`, openapi `event.program:read:read`.
 
 - Altered by `Drupal\surface_examples_workflow\Alter\ProgramWorkflowAlter` (`surface_examples_workflow`), in `configure`; it answers access.
 
@@ -304,11 +320,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\TicketSalesStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure ticket sales | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on TicketSalesResource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure ticket sales | nothing | no | `administer site configuration` | yes | `#[Operation] on TicketSalesResource` (`surface_examples`) |
+| `read` | Current values: Configure ticket sales | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/9 (surface_examples.step9)`, http `PATCH /surface-api/event.sales`, tool `surface:event.sales:configure`, read tool `surface:event.sales:configure:read`, openapi `event.sales:configure:write`, react `/surface-react/event.sales/configure`.
+- `configure` reaches form `/surface-examples/9 (surface_examples.step9)`, http `PATCH /surface-api/event.sales`, tool `surface:event.sales:configure`, openapi `event.sales:configure:write`, react `/surface-react/event.sales/configure`.
+- `read` reaches http `GET /surface-api/event.sales`, tool `surface:event.sales:read`, openapi `event.sales:read:read`.
 
 ## event.spotlight
 
@@ -319,11 +337,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\SpotlightStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the spotlight | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on SpotlightResource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the spotlight | nothing | no | `administer site configuration` | yes | `#[Operation] on SpotlightResource` (`surface_examples`) |
+| `read` | Current values: Configure the spotlight | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/12 (surface_examples.step12)`, http `PATCH /surface-api/event.spotlight`, tool `surface:event.spotlight:configure`, read tool `surface:event.spotlight:configure:read`, schema tool `surface:event.spotlight:configure:schema`, openapi `event.spotlight:configure:write`, react `/surface-react/event.spotlight/configure`.
+- `configure` reaches form `/surface-examples/12 (surface_examples.step12)`, http `PATCH /surface-api/event.spotlight`, tool `surface:event.spotlight:configure`, schema tool `surface:event.spotlight:configure:schema`, openapi `event.spotlight:configure:write`, react `/surface-react/event.spotlight/configure`.
+- `read` reaches http `GET /surface-api/event.spotlight`, tool `surface:event.spotlight:read`, openapi `event.spotlight:read:read`.
 
 ## event.ticket_limit
 
@@ -343,19 +363,21 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\VenueStorage`
 - Access: `Drupal\surface_examples\Access\VenueAccess`
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a venue | nothing | yes | `administer event venues` | yes | no: it creates | `#[Operation] on VenueResource` (`surface_examples`) |
-| `list` | List the venues | nothing | no | `view event venues` | yes | no: it changes nothing | `#[Operation] on VenueResource` (`surface_examples`) |
-| `reorder` | Reorder the venues | nothing | no | `administer event venues` | yes | yes | `#[Operation] on VenueResource` (`surface_examples`) |
-| `update` | Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | yes | `VenueResource::update()` (`surface_examples`) |
-| `delete` | Remove a venue | `EventVenue $id` | no | `administer event venues` | yes | no: it deletes | `VenueResource::delete()` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `create` | Add a venue | nothing | yes | `administer event venues` | yes | `#[Operation] on VenueResource` (`surface_examples`) |
+| `list` | List the venues | nothing | no | `view event venues` | yes | `#[Operation] on VenueResource` (`surface_examples`) |
+| `reorder` | Reorder the venues | nothing | no | `administer event venues` | yes | `#[Operation] on VenueResource` (`surface_examples`) |
+| `update` | Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | `VenueResource::update()` (`surface_examples`) |
+| `delete` | Remove a venue | `EventVenue $id` | no | `administer event venues` | yes | `VenueResource::delete()` (`surface_examples`) |
+| `read` | Current values: Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | default read of `update` (`surface_examples`) |
 
 - `create` reaches form `/surface-examples/15/add (surface_examples.step15_create)`, http `POST /surface-api/event.venue`, tool `surface:event.venue:create`, openapi `event.venue:create:write`, react `/surface-react/event.venue/create`.
 - `list` reaches http `GET /surface-api/event.venue`, tool `surface:event.venue:list`, openapi `event.venue:list:list`, react `/surface-react/event.venue/list`.
-- `reorder` reaches http `PATCH /surface-api/event.venue:reorder`, tool `surface:event.venue:reorder`, read tool `surface:event.venue:reorder:read`, openapi `event.venue:reorder:write`, react `/surface-react/event.venue/reorder`.
-- `update` reaches form `/surface-examples/15/venue/{id} (surface_examples.step15_update)`, http `PATCH /surface-api/event.venue/{id}`, tool `surface:event.venue:update`, read tool `surface:event.venue:update:read`, openapi `event.venue:update:write`, react `/surface-react/event.venue/update`.
+- `reorder` reaches http `PATCH /surface-api/event.venue:reorder`, tool `surface:event.venue:reorder`, openapi `event.venue:reorder:write`, react `/surface-react/event.venue/reorder`.
+- `update` reaches form `/surface-examples/15/venue/{id} (surface_examples.step15_update)`, http `PATCH /surface-api/event.venue/{id}`, tool `surface:event.venue:update`, openapi `event.venue:update:write`, react `/surface-react/event.venue/update`.
 - `delete` reaches form `/surface-examples/15/venue/{id}/delete (surface_examples.step15_delete)`, http `DELETE /surface-api/event.venue/{id}`, tool `surface:event.venue:delete`, openapi `event.venue:delete:write`, react `/surface-react/event.venue/delete`.
+- `read` reaches http `GET /surface-api/event.venue/{id}`, tool `surface:event.venue:read`, openapi `event.venue:read:read`.
 
 ## event.venue.listing
 
@@ -402,11 +424,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\WebhookStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the sales webhook | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on WebhookResource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the sales webhook | nothing | no | `administer site configuration` | yes | `#[Operation] on WebhookResource` (`surface_examples`) |
+| `read` | Current values: Configure the sales webhook | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/14/webhook (surface_examples.step14_webhook)`, http `PATCH /surface-api/event.webhook`, tool `surface:event.webhook:configure`, read tool `surface:event.webhook:configure:read`, openapi `event.webhook:configure:write`, react `/surface-react/event.webhook/configure`.
+- `configure` reaches form `/surface-examples/14/webhook (surface_examples.step14_webhook)`, http `PATCH /surface-api/event.webhook`, tool `surface:event.webhook:configure`, openapi `event.webhook:configure:write`, react `/surface-react/event.webhook/configure`.
+- `read` reaches http `GET /surface-api/event.webhook`, tool `surface:event.webhook:read`, openapi `event.webhook:read:read`.
 
 ## field.instance
 
@@ -417,15 +441,17 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples_field\Storage\FieldInstanceStorage`
 - Access: `Drupal\surface_examples_field\Access\FieldInstanceAccess`
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a field to a bundle | `string $entity_type`, `string $bundle` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::create()` (`surface_examples_field`) |
-| `reuse` | Add an existing field to another bundle | `string $entity_type`, `string $bundle`, `string $field_name` | yes | `administer %entity_type fields` | yes | no: it creates | `FieldInstanceResource::reuse()` (`surface_examples_field`) |
-| `update` | Edit a field | `string $entity_type`, `string $bundle`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldInstanceResource::update()` (`surface_examples_field`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `create` | Add a field to a bundle | `string $entity_type`, `string $bundle` | yes | `administer %entity_type fields` | yes | `FieldInstanceResource::create()` (`surface_examples_field`) |
+| `reuse` | Add an existing field to another bundle | `string $entity_type`, `string $bundle`, `string $field_name` | yes | `administer %entity_type fields` | yes | `FieldInstanceResource::reuse()` (`surface_examples_field`) |
+| `update` | Edit a field | `string $entity_type`, `string $bundle`, `string $field_name` | no | `administer %entity_type fields` | yes | `FieldInstanceResource::update()` (`surface_examples_field`) |
+| `read` | Current values: Edit a field | `string $entity_type`, `string $bundle`, `string $field_name` | no | `administer %entity_type fields` | yes | default read of `update` (`surface_examples_field`) |
 
 - `create` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}`, tool `surface:field.instance:create`, schema tool `surface:field.instance:create:schema`, openapi `field.instance:create:write`, react `/surface-react/field.instance/create`.
 - `reuse` reaches http `POST /surface-api/field.instance/{entity_type}/{bundle}/{field_name}:reuse`, tool `surface:field.instance:reuse`, schema tool `surface:field.instance:reuse:schema`, openapi `field.instance:reuse:write`, react `/surface-react/field.instance/reuse`.
-- `update` reaches http `PATCH /surface-api/field.instance/{entity_type}/{bundle}/{field_name}`, tool `surface:field.instance:update`, read tool `surface:field.instance:update:read`, schema tool `surface:field.instance:update:schema`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
+- `update` reaches http `PATCH /surface-api/field.instance/{entity_type}/{bundle}/{field_name}`, tool `surface:field.instance:update`, schema tool `surface:field.instance:update:schema`, openapi `field.instance:update:write`, react `/surface-react/field.instance/update`.
+- `read` reaches http `GET /surface-api/field.instance/{entity_type}/{bundle}/{field_name}`, tool `surface:field.instance:read`, openapi `field.instance:read:read`.
 
 - Variants at `settings`: `address` → `Drupal\surface_examples_address\Resource\AddressFieldSettingsResource`.
 
@@ -450,12 +476,14 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples_field\Storage\FieldStorageStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | New field storage | nothing | yes | `administer %entity_type fields` | no: nothing supplies `%entity_type` | no: not on its own | `FieldStorageResource::create()` (`surface_examples_field`) |
-| `update` | Edit a field storage | `string $entity_type`, `string $field_name` | no | `administer %entity_type fields` | yes | yes | `FieldStorageResource::update()` (`surface_examples_field`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `create` | New field storage | nothing | yes | `administer %entity_type fields` | no: nothing supplies `%entity_type` | `FieldStorageResource::create()` (`surface_examples_field`) |
+| `update` | Edit a field storage | `string $entity_type`, `string $field_name` | no | `administer %entity_type fields` | yes | `FieldStorageResource::update()` (`surface_examples_field`) |
+| `read` | Current values: Edit a field storage | `string $entity_type`, `string $field_name` | no | `administer %entity_type fields` | yes | default read of `update` (`surface_examples_field`) |
 
-- `update` reaches http `PATCH /surface-api/field.storage/{entity_type}/{field_name}`, tool `surface:field.storage:update`, read tool `surface:field.storage:update:read`, schema tool `surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
+- `update` reaches http `PATCH /surface-api/field.storage/{entity_type}/{field_name}`, tool `surface:field.storage:update`, schema tool `surface:field.storage:update:schema`, openapi `field.storage:update:write`, react `/surface-react/field.storage/update`.
+- `read` reaches http `GET /surface-api/field.storage/{entity_type}/{field_name}`, tool `surface:field.storage:read`, openapi `field.storage:read:read`.
 
 ## field_formatter:surface_examples_plugins_string
 
@@ -480,11 +508,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples_first\Storage\NewsletterStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the newsletter | nothing | no | `administer surface_examples_first` | yes | yes | `#[Operation] on NewsletterResource` (`surface_examples_first`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the newsletter | nothing | no | `administer surface_examples_first` | yes | `#[Operation] on NewsletterResource` (`surface_examples_first`) |
+| `read` | Current values: Configure the newsletter | nothing | no | `administer surface_examples_first` | yes | default read of `configure` (`surface_examples_first`) |
 
-- `configure` reaches form `/admin/config/services/surface-newsletter (surface_examples_first.newsletter)`, http `PATCH /surface-api/first.newsletter`, tool `surface:first.newsletter:configure`, read tool `surface:first.newsletter:configure:read`, openapi `first.newsletter:configure:write`, react `/surface-react/first.newsletter/configure`.
+- `configure` reaches form `/admin/config/services/surface-newsletter (surface_examples_first.newsletter)`, http `PATCH /surface-api/first.newsletter`, tool `surface:first.newsletter:configure`, openapi `first.newsletter:configure:write`, react `/surface-react/first.newsletter/configure`.
+- `read` reaches http `GET /surface-api/first.newsletter`, tool `surface:first.newsletter:read`, openapi `first.newsletter:read:read`.
 
 ## first.store
 
@@ -496,11 +526,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples_first\Storage\StoreStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure the store location | nothing | no | `administer surface_examples_first` | yes | yes | `#[Operation] on StoreResource` (`surface_examples_first`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the store location | nothing | no | `administer surface_examples_first` | yes | `#[Operation] on StoreResource` (`surface_examples_first`) |
+| `read` | Current values: Configure the store location | nothing | no | `administer surface_examples_first` | yes | default read of `configure` (`surface_examples_first`) |
 
-- `configure` reaches form `/admin/config/services/surface-store (surface_examples_first.store)`, http `PATCH /surface-api/first.store`, tool `surface:first.store:configure`, read tool `surface:first.store:configure:read`, openapi `first.store:configure:write`, react `/surface-react/first.store/configure`.
+- `configure` reaches form `/admin/config/services/surface-store (surface_examples_first.store)`, http `PATCH /surface-api/first.store`, tool `surface:first.store:configure`, openapi `first.store:configure:write`, react `/surface-react/first.store/configure`.
+- `read` reaches http `GET /surface-api/first.store`, tool `surface:first.store:read`, openapi `first.store:read:read`.
 
 ## node.type
 
@@ -513,13 +545,15 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples_node_type\Storage\NodeTypeStorage`
 - Access: `Drupal\surface_examples_node_type\Access\NodeTypeAccess`
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `create` | Add a content type | nothing | yes | `administer surface examples content types` | yes | no: it creates | `#[Operation] on NodeTypeResource` (`surface_examples_node_type`) |
-| `update` | Edit a content type | `NodeTypeInterface $type` | no | `administer surface examples content types` | yes | yes | `NodeTypeResource::update()` (`surface_examples_node_type`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `create` | Add a content type | nothing | yes | `administer surface examples content types` | yes | `#[Operation] on NodeTypeResource` (`surface_examples_node_type`) |
+| `update` | Edit a content type | `NodeTypeInterface $type` | no | `administer surface examples content types` | yes | `NodeTypeResource::update()` (`surface_examples_node_type`) |
+| `read` | Current values: Edit a content type | `NodeTypeInterface $type` | no | `administer surface examples content types` | yes | default read of `update` (`surface_examples_node_type`) |
 
 - `create` reaches form `/admin/structure/types/surface-add (surface_examples_node_type.create)`, http `POST /surface-api/node.type`, tool `surface:node.type:create`, openapi `node.type:create:write`, react `/surface-react/node.type/create`.
-- `update` reaches form `/admin/structure/types/manage/{type}/surface-edit (surface_examples_node_type.update)`, http `PATCH /surface-api/node.type/{type}`, tool `surface:node.type:update`, read tool `surface:node.type:update:read`, openapi `node.type:update:write`, react `/surface-react/node.type/update`.
+- `update` reaches form `/admin/structure/types/manage/{type}/surface-edit (surface_examples_node_type.update)`, http `PATCH /surface-api/node.type/{type}`, tool `surface:node.type:update`, openapi `node.type:update:write`, react `/surface-react/node.type/update`.
+- `read` reaches http `GET /surface-api/node.type/{type}`, tool `surface:node.type:read`, openapi `node.type:read:read`.
 
 - Altered by `Drupal\surface_examples_extras\Alter\NodeTypeAlter` (`surface_examples_extras`), in every operation.
 
@@ -550,11 +584,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\RegistrationStep1Storage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration (step 1) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep1Resource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure registration (step 1) | nothing | no | `administer site configuration` | yes | `#[Operation] on RegistrationStep1Resource` (`surface_examples`) |
+| `read` | Current values: Configure registration (step 1) | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/1 (surface_examples.step1)`, http `PATCH /surface-api/registration.step1`, tool `surface:registration.step1:configure`, read tool `surface:registration.step1:configure:read`, openapi `registration.step1:configure:write`, react `/surface-react/registration.step1/configure`.
+- `configure` reaches form `/surface-examples/1 (surface_examples.step1)`, http `PATCH /surface-api/registration.step1`, tool `surface:registration.step1:configure`, openapi `registration.step1:configure:write`, react `/surface-react/registration.step1/configure`.
+- `read` reaches http `GET /surface-api/registration.step1`, tool `surface:registration.step1:read`, openapi `registration.step1:read:read`.
 
 ## registration.step2
 
@@ -565,11 +601,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\RegistrationStep2Storage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration (step 2) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep2Resource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure registration (step 2) | nothing | no | `administer site configuration` | yes | `#[Operation] on RegistrationStep2Resource` (`surface_examples`) |
+| `read` | Current values: Configure registration (step 2) | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/2 (surface_examples.step2)`, http `PATCH /surface-api/registration.step2`, tool `surface:registration.step2:configure`, read tool `surface:registration.step2:configure:read`, openapi `registration.step2:configure:write`, react `/surface-react/registration.step2/configure`.
+- `configure` reaches form `/surface-examples/2 (surface_examples.step2)`, http `PATCH /surface-api/registration.step2`, tool `surface:registration.step2:configure`, openapi `registration.step2:configure:write`, react `/surface-react/registration.step2/configure`.
+- `read` reaches http `GET /surface-api/registration.step2`, tool `surface:registration.step2:read`, openapi `registration.step2:read:read`.
 
 ## registration.step3
 
@@ -580,11 +618,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples\Storage\RegistrationStep3Storage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure registration (step 3) | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on RegistrationStep3Resource` (`surface_examples`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure registration (step 3) | nothing | no | `administer site configuration` | yes | `#[Operation] on RegistrationStep3Resource` (`surface_examples`) |
+| `read` | Current values: Configure registration (step 3) | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
 
-- `configure` reaches form `/surface-examples/3 (surface_examples.step3)`, http `PATCH /surface-api/registration.step3`, tool `surface:registration.step3:configure`, read tool `surface:registration.step3:configure:read`, openapi `registration.step3:configure:write`, react `/surface-react/registration.step3/configure`.
+- `configure` reaches form `/surface-examples/3 (surface_examples.step3)`, http `PATCH /surface-api/registration.step3`, tool `surface:registration.step3:configure`, openapi `registration.step3:configure:write`, react `/surface-react/registration.step3/configure`.
+- `read` reaches http `GET /surface-api/registration.step3`, tool `surface:registration.step3:read`, openapi `registration.step3:read:read`.
 
 - Altered by `Drupal\surface_examples_compliance\Alter\RegistrationComplianceAlter` (`surface_examples_compliance`), in every operation; it refines `room` (watching `venue`) at runtime.
 
@@ -623,11 +663,13 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: `Drupal\surface_examples_performance\Storage\PerformanceStorage`
 - Access: the operation's permission alone
 
-| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `configure` | Configure performance | nothing | no | `administer site configuration` | yes | yes | `#[Operation] on PerformanceResource` (`surface_examples_performance`) |
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure performance | nothing | no | `administer site configuration` | yes | `#[Operation] on PerformanceResource` (`surface_examples_performance`) |
+| `read` | Current values: Configure performance | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples_performance`) |
 
-- `configure` reaches form `/admin/config/development/surface-performance (surface_examples_performance.configure)`, http `PATCH /surface-api/system.performance`, tool `surface:system.performance:configure`, read tool `surface:system.performance:configure:read`, openapi `system.performance:configure:write`, react `/surface-react/system.performance/configure`.
+- `configure` reaches form `/admin/config/development/surface-performance (surface_examples_performance.configure)`, http `PATCH /surface-api/system.performance`, tool `surface:system.performance:configure`, openapi `system.performance:configure:write`, react `/surface-react/system.performance/configure`.
+- `read` reaches http `GET /surface-api/system.performance`, tool `surface:system.performance:read`, openapi `system.performance:read:read`.
 
 ## Derivers
 
