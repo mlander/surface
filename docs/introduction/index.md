@@ -1,13 +1,11 @@
 # Introduction
 
-This series introduces Surface API one idea at a time, for a Drupal
-developer who has not installed it. Each page defines one word in plain
-language, shows it in a picture and a short snippet, and uses only words
-an earlier page defined, or links forward to the page that defines one. Nothing needs to be installed to read it. After
-the last page you can name each idea and say what it is for; the build
-pages then show how to write one. The series teaches the pattern; the
-classes behind it are the module's own, and not all of them are settled
-yet.
+Surface API, one idea per page. The pages build on each other: each
+introduces one term and uses the terms of the pages before it, so they
+read in order. Nothing has to be installed to follow them. The build
+pages that come after show how to write what the introduction
+describes. The series teaches the pattern; the classes behind it are
+the module's own, and not all of them are settled yet.
 
 1. [What Surface API does](01-what-it-does.md): describe once what a
    thing accepts, and the form, a Tool API tool, the command line, the
