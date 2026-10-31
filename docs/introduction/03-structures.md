@@ -81,11 +81,11 @@ than one plugin shares the settings.
 The module describes three kinds of thing. The third, a
 [shape](04-shapes.md), is one value used under many names.
 
-| | Has [identity](08-identity.md)? | Has [storage](10-storage.md)? | Has [operations](09-operations.md)? | Held by |
-| --- | --- | --- | --- | --- |
-| Resource | yes | yes | yes | nothing: it is asked for on its own |
-| Structure | no | no | no | a resource, or another structure, under one of its values |
-| [Shape](04-shapes.md) | no | no | no | a resource or a structure, under each of its values that uses it |
+| | Has [identity](08-identity.md)? | Has [storage](10-storage.md)? | Has [operations](09-operations.md)? | Held by | [Another module](13-other-modules.md) may change it? |
+| --- | --- | --- | --- | --- | --- |
+| Resource | yes | yes | yes | nothing: it is asked for on its own | yes: it may add values under its own name and tighten what the values allow, never loosen it |
+| Structure | no | no | no | a resource, or another structure, under one of its values | yes, the same way |
+| [Shape](04-shapes.md) | no | no | no | a resource or a structure, under each of its values that uses it | yes: it may tighten the one value, which then holds everywhere the shape is used; it adds nothing |
 
 Next: [Shapes](04-shapes.md)
 
