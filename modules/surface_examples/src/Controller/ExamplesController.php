@@ -458,7 +458,7 @@ final class ExamplesController extends ControllerBase {
         '#language' => 'bash',
       ],
       'drush' => [
-        '#markup' => '<p>' . $this->t('The same tool, the same three calls, from Drush, after the read tool beside it, <code>@read</code>, which answers with what is stored and writes nothing:', ['@read' => ExampleCalls::READ_TOOL]) . '</p>',
+        '#markup' => '<p>' . $this->t('The same tool, the same three calls, from Drush, after its read, <code>@read</code>, which answers with what is stored and writes nothing:', ['@read' => ExampleCalls::READ_TOOL]) . '</p>',
       ],
       'commands' => [
         '#type' => 'surface_code',
@@ -688,7 +688,7 @@ final class ExamplesController extends ControllerBase {
       ],
       5 => [
         'title' => $series[5]['title'],
-        'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses, with a read tool beside it, @read, which answers with what is stored. Drush describes them with tool:info and calls them with tool:run.', [
+        'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses, and its read, @read, which answers with what is stored. Drush describes them with tool:info and calls them with tool:run.', [
           '@tool' => ExampleCalls::TOOL,
           '@read' => ExampleCalls::READ_TOOL,
         ]),

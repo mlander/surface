@@ -155,6 +155,7 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
     self::SKIPPED_NO_STORAGE,
     self::SKIPPED_SUBJECT,
     self::SKIPPED_READ,
+    self::SKIPPED_READS_ONE,
   ];
 
   /**
@@ -163,9 +164,9 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
   public const SKIPPED_SUBJECT = 'every door: the operation needs a subject the site here does not have (one an earlier call writes, and the doors here write nothing)';
 
   /**
-   * Skipped: a call to a read tool, which takes no document.
+   * Skipped: a call to the read of one thing, which takes no document.
    */
-  public const SKIPPED_READ = 'every door: a call to the read tool takes no document';
+  public const SKIPPED_READ = 'every door: a call to the read of one thing takes no document';
 
   /**
    * {@inheritdoc}
@@ -343,10 +344,11 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
     $enabled = array_keys($this->container->get('module_handler')->getModuleList());
     foreach (ConceptCalls::of($definition->id, $enabled) as $name => $call) {
       $called = $call['operation'] ?? 'configure';
-      if (str_ends_with($called, ':read') && $called === $operation->id . ':read') {
-        $skipped[self::SKIPPED_READ] = ($skipped[self::SKIPPED_READ] ?? 0) + 1;
-      }
       if ($called !== $operation->id) {
+        continue;
+      }
+      if ($operation->readsOne()) {
+        $skipped[self::SKIPPED_READ] = ($skipped[self::SKIPPED_READ] ?? 0) + 1;
         continue;
       }
       $parameters = $call['parameters'] ?? [];

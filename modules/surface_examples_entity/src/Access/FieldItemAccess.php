@@ -21,7 +21,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * The entity's access control handler is asked about the field twice,
  * with the field's items: may this account edit it (open), and if not,
  * may it view it (locked: shown and fixed), and if not, the field is not
- * there at all (omitted). The items are the entity's own when the
+ * there at all (omitted). A read, which changes nothing, asks only view:
+ * a field the account may view is there (open), any other is not
+ * (omitted). The items are the entity's own when the
  * context knows its id, and a throwaway entity of the bundle's when it
  * is being created, as core's own form makes one: fieldAccess() takes
  * items, and a field has none without an entity. What both answers read
@@ -86,6 +88,11 @@ final class FieldItemAccess implements OperationAccessInterface, ContainerInject
     }
     $items = $entity->get($field_name);
     $handler = $this->entityTypeManager->getAccessControlHandler($entity->getEntityTypeId());
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    if ($context->id === ContentEntityAccess::READ) {
+      $view = $handler->fieldAccess('view', $items->getFieldDefinition(), $account, $items, TRUE);
+      return static::read($view->isAllowed() ? AccessAnswer::open() : AccessAnswer::omitted(sprintf('The %s field may not be seen.', $field_name)), $view);
+    }
     $edit = $handler->fieldAccess('edit', $items->getFieldDefinition(), $account, $items, TRUE);
     if ($edit->isAllowed()) {
       return static::read(AccessAnswer::open(), $edit);

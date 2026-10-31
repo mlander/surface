@@ -1180,6 +1180,12 @@ final class Resources implements ResourcesInterface {
    */
   public function operation(string $resource, string $operation, array $arguments = []): OperationContext {
     $found = $this->registry->getOperation($resource, $operation);
+    // The read the build adds is asked in the context of the update it
+    // reads, so its access and its keys are the update's.
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    if ($found->reads !== NULL) {
+      return $this->operation($resource, $found->reads, $arguments);
+    }
     $resolved = $this->operationArguments->resolve($found, $arguments);
     // One on the class is its attribute's facts and nothing else.
     // Decision: see docs/decisions.md#an-operation-on-the-class.

@@ -263,10 +263,11 @@ operation's parameters into inputs and builds the resource in a context
 read off the signature for `values`; `ResourceOperationTool` refines
 `values` to the real context once the parameters arrive, asks
 `Resources::access()` decisively, and submits through the pipeline to
-the composed storage, stopping after prepare for a dry run. Beside each
-that changes a thing that exists (`ResourceCatalog::reads()`) the same
-deriver writes a read tool, `ResourceOperationReadTool`, which takes the
-parameters, asks the same access, and answers with what its storage
+the composed storage, stopping after prepare for a dry run. The read of
+one thing, the `read` an owner declares or the one the build adds
+beside the default update (`OperationDefinition::defaultRead()`), is a
+tool of the same deriver's, `ResourceOperationReadTool`, which takes the
+parameters, asks the read's access, and answers with what its storage
 loads, less every secret. Nothing in any of these classes names a
 resource or a key.
 

@@ -1210,7 +1210,7 @@ route, `surface.api`, answers every path below;
 | `PATCH /surface-api/{resource}` | A singleton's default update. A collection has none. |
 | `POST /surface-api/{resource}` | The default create, on the collection of a resource with identity. |
 | `GET` and `POST /surface-api/{resource}/{parent}` | A create that names the parent it adds to, its envelope and a run of it: `POST /surface-api/field.instance/node/article` adds a field to the article bundle. |
-| `GET /surface-api/{resource}/{id}` | One thing's envelope, its default update's (or default read's). |
+| `GET /surface-api/{resource}/{id}` | One thing's envelope: its read's. The read the build adds is served as the update it reads, so its envelope and schema are the update's; a read the owner declares serves its own, and the update's envelope is then its custom method's. |
 | `PATCH /surface-api/{resource}/{id}` | One thing's default update. |
 | `DELETE /surface-api/{resource}/{id}` | One thing's default delete: removes it, with no body. |
 | `GET .../schema` | The full schema of the operation `GET` serves at that path, `application/schema+json`. |
@@ -1250,15 +1250,20 @@ singleton; or else the only operation of that kind at the path; two of
 a kind with neither named so leaves the kind with no default
 (why: [decision](decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals)).
 An id `add`, `edit`, `remove` or `get` is refused at discovery, naming
-the standard id. A read is a
-default only where no update is, and the collection of a resource with
+the standard id. Where an update is, the default read is `read`, the
+read of one thing, which every resource with a default update has: the
+one its owner declares, or the one the build adds
+(why: [decision](decisions.md#a-read-is-an-operation-of-the-resource)).
+The collection of a resource with
 identity has no default update: `PATCH` there would change every thing,
 which no operation means, so an update over the collection, example
 15's reorder, is a custom method, as is an update at a path shorter
 than the deepest one the resource's operations are addressed at. A path
 an update is served at names a thing, so it has no default create. `GET`
-serves the default update,
-else the default read, else the default create; on the collection of a
+serves the default read, else the default update, else the default
+create; the read the build adds is served as the update it reads, so
+its envelope, its schema, its `ETag` and its `Link` are the update's, as
+they were before the read was an operation. On the collection of a
 resource with identity, a default read is its listing, which `GET` runs.
 `PATCH` is the default update; `POST` is the default create; `DELETE` is
 the default delete. Every other operation is a custom method,
@@ -1360,8 +1365,8 @@ custom method's own keys have none.
 
 ### The read
 
-**`GET /surface-api/{resource}[/{id}]`** answers the envelope for the
-values the operation form would open with:
+**`GET /surface-api/{resource}[/{id}]`** answers the read's envelope,
+for the values the operation form would open with:
 [the document](#the-document), `resource`, `operation`, `label`,
 `schema`, `values`, `stale`, `outputs` when declared, and `notes`. Its
 `$id` is the path it was read at, absolute, the operation's other
@@ -1799,7 +1804,14 @@ so a site grants them to the roles it chooses. The document is open.
   default delete is `delete` on the thing's path item,
   `/surface-api/block.placement/{id}` with `get`, `patch` and `delete`,
   with no request body and no `ETag` in its answer; its envelope is its
-  custom method's, `/surface-api/block.placement/{id}:delete`, `get`. A
+  custom method's, `/surface-api/block.placement/{id}:delete`, `get`.
+  `get` on a thing's path, and on a singleton's, is the read's,
+  `<resource>:read:read`, its schema `<resource>:read:schema`: the read
+  the build adds is described from the update it reads, sharing its
+  component, and the update is described by its run alone; a read an
+  owner declares is described from its own build, and its update's
+  envelope is its custom method's, `.../{id}:update`. The read has no
+  run: it takes no values. A
   listing is `get` on the collection's path item, `/surface-api/event.venue`,
   its values query parameters, each with its schema, and its answer the
   outputs' component; its envelope is its custom method's,

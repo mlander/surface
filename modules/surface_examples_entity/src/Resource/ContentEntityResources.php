@@ -29,14 +29,15 @@ use Drupal\surface_examples_entity\Variants\BundleFieldStructures;
  *
  * `entity.content:<entity type>.<bundle>`, `entity.content:node.page`: a
  * content entity's create and update form, said as a resource. Its
- * identity is the entity type, the bundle and the entity's id; its two
+ * identity is the entity type, the bundle and the entity's id; its three
  * operations are `create`, which knows the entity type and the bundle (and
- * that there is no id yet), and `update`, which takes the entity as `id`.
- * Its keys are one child per field the bundle's default form display
- * shows, in the display's order, each the field's item structure
+ * that there is no id yet), and `update` and `read`, which take the entity
+ * as `id`. Its keys are one child per field the bundle's default form
+ * display shows, in the display's order, each the field's item structure
  * (FieldItemStructures), invoked through the item's operation of the same
  * name, so each field answers for itself whether this account may change
- * it, only see it, or not see it at all. Fields a resource cannot carry
+ * it, only see it, or not see it at all; for a read, whether it may see
+ * it. Fields a resource cannot carry
  * yet are left out, each with the reason, in the resource's notes.
  *
  * `entity.content:<entity type>`, `entity.content:node`: the same forms
@@ -54,7 +55,11 @@ use Drupal\surface_examples_entity\Variants\BundleFieldStructures;
  *
  * The storage reads and writes the entity (ContentEntityStorage), and the
  * access class is the entity's: create access on add, update access on
- * edit.
+ * edit, view access on a read. Both resources declare `read` rather than
+ * take the one the build adds, which is asked as `update` is: an account
+ * that may view a node and not edit it reads it here.
+ *
+ * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
  *
  * Decision: see docs/decisions.md#derived-definitions-at-discovery.
  * Decision: see
@@ -134,6 +139,17 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
                 '@entity_type' => $entity_type->getLabel(),
               ]),
             ),
+            new DerivedOperation(
+              'read',
+              $this->t('View @bundle', ['@bundle' => $bundle_label]),
+              new ResourceCallable(self::class, 'read', [...$bound, $this->derivation->idType($entity_type_id)]),
+              ['id' => 'entity:' . $entity_type_id],
+              readOnly: TRUE,
+              description: $this->t('Reads an existing @bundle item (@entity_type), named by its id: each field the account may view.', [
+                '@bundle' => $bundle_label,
+                '@entity_type' => $entity_type->getLabel(),
+              ]),
+            ),
           ],
           storage: ContentEntityStorage::class,
           access: ContentEntityAccess::class,
@@ -203,6 +219,17 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
           new ResourceCallable(self::class, 'updateAny', [$entity_type_id, $this->derivation->idType($entity_type_id)]),
           ['id' => 'entity:' . $entity_type_id],
           description: $this->t('Changes an existing @entity_type, named by its id; its @bundle_label stays as it is.', [
+            '@entity_type' => $label,
+            '@bundle_label' => $bundle_label,
+          ]),
+        ),
+        new DerivedOperation(
+          'read',
+          $this->t('View @entity_type', ['@entity_type' => $label]),
+          new ResourceCallable(self::class, 'readAny', [$entity_type_id, $this->derivation->idType($entity_type_id)]),
+          ['id' => 'entity:' . $entity_type_id],
+          readOnly: TRUE,
+          description: $this->t("Reads an existing @entity_type, named by its id: its @bundle_label, and each of that @bundle_label's fields the account may view.", [
             '@entity_type' => $label,
             '@bundle_label' => $bundle_label,
           ]),
@@ -378,10 +405,63 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    *   When what it was handed is no content entity.
    */
   public static function update(array $arguments, string $entity_type_id, string $bundle, string $id_type = 'string'): OperationContext {
+    return static::existing('update', $arguments, $entity_type_id, $bundle, $id_type);
+  }
+
+  /**
+   * An entity of the bundle that exists, to read.
+   *
+   * @param array{id: mixed} $arguments
+   *   The entity, loaded from its id when given one.
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $bundle
+   *   The bundle.
+   * @param string $id_type
+   *   The Surface API type of the entity's id, 'integer' or 'string'.
+   *
+   * @return \Drupal\surface\Resource\OperationContext
+   *   A context knowing which entity, which its access class asks view
+   *   access for.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   When the entity is of another type or bundle.
+   * @throws \InvalidArgumentException
+   *   When what it was handed is no content entity.
+   */
+  public static function read(array $arguments, string $entity_type_id, string $bundle, string $id_type = 'string'): OperationContext {
+    return static::existing('read', $arguments, $entity_type_id, $bundle, $id_type);
+  }
+
+  /**
+   * The context of an operation on an entity of the bundle that exists.
+   *
+   * @param string $operation
+   *   The operation id, `update` or `read`.
+   * @param array{id: mixed} $arguments
+   *   The entity, loaded from its id when given one.
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $bundle
+   *   The bundle.
+   * @param string $id_type
+   *   The Surface API type of the entity's id, 'integer' or 'string'.
+   *
+   * @return \Drupal\surface\Resource\OperationContext
+   *   A context knowing which entity.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   When the entity is of another type or bundle: it is no thing of this
+   *   resource, so a URL naming it names nothing here.
+   * @throws \InvalidArgumentException
+   *   When what it was handed is no content entity.
+   */
+  protected static function existing(string $operation, array $arguments, string $entity_type_id, string $bundle, string $id_type): OperationContext {
     $entity = $arguments['id'];
     if (!$entity instanceof ContentEntityInterface || $entity->getEntityTypeId() !== $entity_type_id || $entity->bundle() !== $bundle) {
       $message = sprintf(
-        'The update operation of entity.content:%s.%s takes a %s of the %s bundle.',
+        'The %s operation of entity.content:%s.%s takes a %s of the %s bundle.',
+        $operation,
         $entity_type_id,
         $bundle,
         $entity_type_id,
@@ -389,7 +469,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
       );
       throw $entity instanceof ContentEntityInterface ? new NamesNothingException($message, 'id') : new \InvalidArgumentException($message);
     }
-    return new OperationContext('update', known: [
+    return new OperationContext($operation, known: [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
       'id' => $id_type === 'integer' ? (int) $entity->id() : (string) $entity->id(),
@@ -443,12 +523,65 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    *   When what it was handed is no content entity.
    */
   public function updateAny(array $arguments, string $entity_type_id, string $id_type = 'string'): OperationContext {
+    return $this->existingAny('update', $arguments, $entity_type_id, $id_type);
+  }
+
+  /**
+   * An entity of the entity type that exists, to read, its bundle its own.
+   *
+   * The bundle is fixed to the entity's, as on `update`, and chooses the
+   * fields answered under `fields`.
+   *
+   * @param array{id: mixed} $arguments
+   *   The entity, loaded from its id when given one.
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $id_type
+   *   The Surface API type of the entity's id, 'integer' or 'string'.
+   *
+   * @return \Drupal\surface\Resource\OperationContext
+   *   A context knowing which entity and which bundle.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   When the entity is of another type, or of a bundle with no form
+   *   display.
+   * @throws \InvalidArgumentException
+   *   When what it was handed is no content entity.
+   */
+  public function readAny(array $arguments, string $entity_type_id, string $id_type = 'string'): OperationContext {
+    return $this->existingAny('read', $arguments, $entity_type_id, $id_type);
+  }
+
+  /**
+   * The context of an operation on an entity of the entity type that exists.
+   *
+   * @param string $operation
+   *   The operation id, `update` or `read`.
+   * @param array{id: mixed} $arguments
+   *   The entity, loaded from its id when given one.
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $id_type
+   *   The Surface API type of the entity's id, 'integer' or 'string'.
+   *
+   * @return \Drupal\surface\Resource\OperationContext
+   *   A context knowing which entity and which bundle, the bundle held to
+   *   the entity's.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   When the entity is of another type, or of a bundle with no form
+   *   display, which has no fields here: it is no thing of this resource,
+   *   so a URL naming it names nothing here.
+   * @throws \InvalidArgumentException
+   *   When what it was handed is no content entity.
+   */
+  protected function existingAny(string $operation, array $arguments, string $entity_type_id, string $id_type): OperationContext {
     $entity = $arguments['id'];
     if (!$entity instanceof ContentEntityInterface || $entity->getEntityTypeId() !== $entity_type_id || $this->derivation->formDisplay($entity_type_id, $entity->bundle()) === NULL) {
-      $message = sprintf('The update operation of entity.content:%s takes a %s of a bundle with a form display.', $entity_type_id, $entity_type_id);
+      $message = sprintf('The %s operation of entity.content:%s takes a %s of a bundle with a form display.', $operation, $entity_type_id, $entity_type_id);
       throw $entity instanceof ContentEntityInterface ? new NamesNothingException($message, 'id') : new \InvalidArgumentException($message);
     }
-    return (new OperationContext('update', known: [
+    return (new OperationContext($operation, known: [
       'entity_type' => $entity_type_id,
       'id' => $id_type === 'integer' ? (int) $entity->id() : (string) $entity->id(),
       'bundle' => $entity->bundle(),

@@ -60,6 +60,13 @@ final class OperationDefinition {
   public const CONFIGURE = 'configure';
 
   /**
+   * The id of the read of one thing, which the build adds where none is.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+   */
+  public const READ_ID = 'read';
+
+  /**
    * Ids refused at discovery, each with the standard id that replaces it.
    *
    * Drupal's words for the kinds, which belong in the label, where
@@ -121,6 +128,10 @@ final class OperationDefinition {
    * @param \Drupal\surface\ResourceBuild\Gate[] $gates
    *   The access it borrows from other things, asked after its
    *   permission for the thing a call is about.
+   * @param string|null $reads
+   *   For the read the build adds (defaultRead()), the id of the update it
+   *   reads, whose context it is asked in; NULL for every operation an
+   *   owner declares.
    *
    * @throws \LogicException
    *   When the id is a retired one (RETIRED_IDS), or the facts contradict
@@ -146,6 +157,7 @@ final class OperationDefinition {
     public readonly bool $deletes = FALSE,
     public readonly ?string $structure = NULL,
     public readonly array $gates = [],
+    public readonly ?string $reads = NULL,
   ) {
     // Decision: see
     // docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals.
@@ -189,6 +201,87 @@ final class OperationDefinition {
         $destructive ? 'may destroy what is there' : 'is not idempotent',
       ));
     }
+  }
+
+  /**
+   * Makes the read the build adds beside a resource's default update.
+   *
+   * Where a resource that can be asked on its own has an update and
+   * declares no `read`, the build adds this one (ResourceRegistry): the
+   * update's parameters, permission and gates, read only, its label the
+   * update's after "Current values:". It is asked in the update's own
+   * context (contextId(), ResourcesInterface::operation()), so its access,
+   * its alters and the operations its children are invoked through are
+   * the update's: an account reads exactly what it may change, and the
+   * keys answered are the keys the update takes. An owner that declares
+   * `read` itself replaces it, and may then answer access for reading.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+   *
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $update
+   *   The resource's default update.
+   *
+   * @return static
+   *   The read.
+   */
+  public static function defaultRead(OperationDefinition $update): static {
+    $label = $update->label instanceof \Stringable ? $update->label : (string) $update->label;
+    return new static(
+      id: self::READ_ID,
+      label: t('Current values: @label', ['@label' => $label]),
+      resource: $update->resource,
+      class: $update->class,
+      method: $update->method,
+      permission: $update->permission,
+      module: $update->module,
+      parameters: $update->parameters,
+      context: $update->context,
+      readOnly: TRUE,
+      description: t('Reads what is stored for @label, and writes nothing.', ['@label' => $label]),
+      gates: $update->gates,
+      reads: $update->id,
+    );
+  }
+
+  /**
+   * Answers whether the operation is the read the build adds.
+   *
+   * @return bool
+   *   TRUE for defaultRead()'s, which stands for the update it reads.
+   */
+  public function isDefaultRead(): bool {
+    return $this->reads !== NULL;
+  }
+
+  /**
+   * Gets the id of the context the operation is asked in.
+   *
+   * Its own, but for the read the build adds, which is asked in the
+   * context of the update it reads.
+   *
+   * @return string
+   *   The context's id.
+   */
+  public function contextId(): string {
+    return $this->reads ?? $this->id;
+  }
+
+  /**
+   * Answers whether the operation reads one thing: what is stored for it.
+   *
+   * A read only operation under the standard id `read` that takes the
+   * resource's own keys, no structure's: it takes only its parameters and
+   * answers the stored values, less every secret and every key the
+   * account may not see. Any other read only operation (a listing, a
+   * check) takes values and answers its outputs.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+   *
+   * @return bool
+   *   TRUE for the read of one thing.
+   */
+  public function readsOne(): bool {
+    return $this->readOnly && $this->id === self::READ_ID && $this->structure === NULL;
   }
 
   /**
@@ -416,6 +509,9 @@ final class OperationDefinition {
    *   Class::method() and the module.
    */
   public function describe(): string {
+    if ($this->reads !== NULL) {
+      return sprintf('the read the build adds for the "%s" operation of %s, in %s', $this->reads, $this->resource, $this->module);
+    }
     return $this->isBare()
       ? sprintf('#[Operation] on %s in %s', $this->class, $this->module)
       : sprintf('%s::%s() in %s', $this->class, $this->method, $this->module);
@@ -425,9 +521,13 @@ final class OperationDefinition {
    * Names what provides the operation, for a catalog.
    *
    * @return string
-   *   `Class::method()`, or `#[Operation] on Class` for one on the class.
+   *   `Class::method()`, `#[Operation] on Class` for one on the class, or
+   *   `default read of <update>` for the read the build adds.
    */
   public function provider(): string {
+    if ($this->reads !== NULL) {
+      return 'default read of ' . $this->reads;
+    }
     return $this->isBare() ? '#[Operation] on ' . $this->class : $this->class . '::' . $this->method . '()';
   }
 

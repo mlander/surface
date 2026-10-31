@@ -9,7 +9,6 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver;
-use Drupal\surface\Plugin\tool\Tool\ResourceOperationReadTool;
 use Drupal\surface\Plugin\tool\Tool\ResourceOperationSchemaTool;
 use Drupal\surface_tool_test\Resource\VaultResource;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -26,11 +25,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * of call rules is its kind's. A create's tool requires the keys the
  * resource requires; an update's requires none, at any depth, says on
  * each key the resource requires that a value already stored stands, and
- * has a read tool; a read only operation's requires none either, since a
- * key left out is checked at its current value, and has no read tool
- * beside it; a read tool takes only the operation's parameters. No two
- * tools share a title. Over the examples, the first module, the field
- * tools and the tool test module.
+ * its resource has a read; a read only operation's requires none either,
+ * since a key left out is checked at its current value, and has no read
+ * beside it; the read of one thing, `read`, takes only its parameters and
+ * no values. No two tools share a title. Over the examples, the first
+ * module, the field tools and the tool test module.
  *
  * @see docs/decisions.md#required-is-the-resources-and-an-update-tool-requires-nothing-at-its-door
  * @see docs/decisions.md#an-operation-states-how-it-behaves
@@ -94,7 +93,7 @@ class OperationKindsTest extends SurfaceKernelTestBase {
     $prefix = OperationInputs::TOOL . ':';
     $kinds = [];
     foreach ($manager->getDefinitions() as $id => $definition) {
-      if (!str_starts_with($id, $prefix) || str_ends_with($id, ResourceOperationReadTool::SUFFIX) || str_ends_with($id, ResourceOperationSchemaTool::SUFFIX)) {
+      if (!str_starts_with($id, $prefix) || str_ends_with($id, ResourceOperationSchemaTool::SUFFIX)) {
         continue;
       }
       $derivative = substr($id, strlen($prefix));
@@ -104,6 +103,21 @@ class OperationKindsTest extends SurfaceKernelTestBase {
       $kind = $operation_inputs->kind($resource, $operation);
       $kinds[$id] = $kind;
       $this->assertSame($kind, $operation->facts()['kind'], $id . ': the tool and the documents name one kind.');
+      $read = $prefix . $resource->id . ':' . OperationDefinition::READ_ID;
+      if ($operation->readsOne()) {
+        // The read of one thing: the build's, beside the default update,
+        // titled by it, its parameters its only inputs.
+        $update = $manager->getDefinition($prefix . $resource->id . ':' . $operation->reads);
+        $this->assertSame('Current values: ' . $update->getLabel(), (string) $definition->getLabel(), $id);
+        $this->assertSame(
+          array_map(static fn ($parameter): string => $parameter->name, $operation->parameters),
+          array_keys($definition->getInputDefinitions()),
+          $id . ': a read takes only the parameters.',
+        );
+        $taken = [...array_keys($definition->getInputDefinitions()), OperationInputs::VALUES, OperationInputs::DRY_RUN];
+        $this->assertSame(array_keys($update->getInputDefinitions()), $taken, $id . ': the update\'s parameters.');
+        continue;
+      }
       $description = (string) $definition->getDescription();
       // The vault says none, and is described by its label.
       $this->assertSame($operation->description === NULL, $id === 'surface:tool_test.vault:configure', $id . ': every shipped operation says what it does.');
@@ -117,7 +131,6 @@ class OperationKindsTest extends SurfaceKernelTestBase {
       if ($kind === OperationDefinition::DELETE) {
         // A delete takes no values: the parameters name what it removes.
         $this->assertArrayNotHasKey(OperationInputs::VALUES, $definition->getInputDefinitions(), $id);
-        $this->assertFalse($manager->hasDefinition($id . ResourceOperationReadTool::SUFFIX), $id . ': nothing is left to read after a delete.');
         continue;
       }
       $values = $definition->getInputDefinition(OperationInputs::VALUES);
@@ -129,12 +142,11 @@ class OperationKindsTest extends SurfaceKernelTestBase {
           $requires[] = $name;
         }
       }
-      $read = $manager->hasDefinition($id . ResourceOperationReadTool::SUFFIX);
+      $this->assertFalse($manager->hasDefinition($id . ':' . OperationDefinition::READ_ID), $id . ': no read is derived beside an operation.');
 
       if ($kind === OperationDefinition::CREATE) {
         $this->assertSame($requires, $this->required($values, FALSE), $id . ': a create lists the keys the resource requires.');
         $this->assertStringNotContainsString(self::NOTE, $this->descriptions($values), $id);
-        $this->assertFalse($read, $id . ': nothing exists to read before a create.');
         continue;
       }
       $this->assertSame([], $this->required($values), $id . ': nothing is required at the door.');
@@ -144,54 +156,68 @@ class OperationKindsTest extends SurfaceKernelTestBase {
         $this->assertStringEndsWith(self::NOTE, (string) $values->getPropertyDefinition($name)?->getDescription(), $id . ': ' . $name);
       }
       if ($kind === OperationDefinition::UPDATE) {
-        $this->assertTrue($read, $id . ': an update has a read tool beside it.');
-        $this->assertSame('Current values: ' . $definition->getLabel(), (string) $manager->getDefinition($id . ResourceOperationReadTool::SUFFIX)->getLabel(), $id);
-        $this->assertSame(
-          array_map(static fn ($parameter): string => $parameter->name, $operation->parameters),
-          array_keys($manager->getDefinition($id . ResourceOperationReadTool::SUFFIX)->getInputDefinitions()),
-          $id . ': a read tool takes only the parameters.',
-        );
+        $this->assertTrue($manager->hasDefinition($read), $id . ': its resource has a read.');
         continue;
       }
       $this->assertSame(OperationDefinition::READ, $kind);
-      $this->assertFalse($read, $id . ': a read only operation has no read tool beside it.');
     }
 
     ksort($kinds);
     $this->assertSame([
       'surface:event.bulletin:configure' => 'update',
+      'surface:event.bulletin:read' => 'read',
       'surface:event.desk:configure' => 'update',
+      'surface:event.desk:read' => 'read',
       'surface:event.doors:configure' => 'update',
+      'surface:event.doors:read' => 'read',
       'surface:event.mailer:configure' => 'update',
+      'surface:event.mailer:read' => 'read',
       'surface:event.press:configure' => 'update',
+      'surface:event.press:read' => 'read',
       'surface:event.program:check' => 'read',
       'surface:event.program:configure' => 'update',
+      'surface:event.program:read' => 'read',
       'surface:event.sales:configure' => 'update',
+      'surface:event.sales:read' => 'read',
       'surface:event.spotlight:configure' => 'update',
+      'surface:event.spotlight:read' => 'read',
       'surface:event.venue:create' => 'create',
       'surface:event.venue:delete' => 'delete',
       'surface:event.venue:list' => 'read',
+      'surface:event.venue:read' => 'read',
       'surface:event.venue:reorder' => 'update',
       'surface:event.venue:update' => 'update',
       'surface:event.webhook:configure' => 'update',
+      'surface:event.webhook:read' => 'read',
       'surface:field.instance:create' => 'create',
+      'surface:field.instance:read' => 'read',
       'surface:field.instance:reuse' => 'create',
       'surface:field.instance:update' => 'update',
+      'surface:field.storage:read' => 'read',
       'surface:field.storage:update' => 'update',
       'surface:first.newsletter:configure' => 'update',
+      'surface:first.newsletter:read' => 'read',
       'surface:first.store:configure' => 'update',
+      'surface:first.store:read' => 'read',
       'surface:registration.step1:configure' => 'update',
+      'surface:registration.step1:read' => 'read',
       'surface:registration.step2:configure' => 'update',
+      'surface:registration.step2:read' => 'read',
       'surface:registration.step3:configure' => 'update',
+      'surface:registration.step3:read' => 'read',
       'surface:tool_test.cabinet:count' => 'read',
+      'surface:tool_test.cabinet:read' => 'read',
       'surface:tool_test.cabinet:update' => 'update',
       'surface:tool_test.logbook:append' => 'update',
       'surface:tool_test.logbook:clear' => 'update',
       'surface:tool_test.logbook:configure' => 'update',
       'surface:tool_test.logbook:inspect' => 'read',
+      'surface:tool_test.logbook:read' => 'read',
       'surface:tool_test.logbook:start' => 'create',
       'surface:tool_test.specimen:configure' => 'update',
+      'surface:tool_test.specimen:read' => 'read',
       'surface:tool_test.vault:configure' => 'update',
+      'surface:tool_test.vault:read' => 'read',
     ], $kinds);
   }
 
@@ -200,8 +226,8 @@ class OperationKindsTest extends SurfaceKernelTestBase {
    *
    * A client lists tools by title. The examples' three registration steps
    * say which step they are; where operations of several resources still
-   * share a label, each tool adds its resource, and the read tool is
-   * "Current values:" and the write tool's title.
+   * share a label, each tool adds its resource, and the read the build
+   * adds is "Current values:" and its update's title.
    */
   public function testNoTwoToolsShareTitles(): void {
     $titles = [];
@@ -212,7 +238,7 @@ class OperationKindsTest extends SurfaceKernelTestBase {
     }
     $this->assertSame(array_unique($titles), $titles);
     $this->assertSame('Configure registration (step 3)', $titles['surface:registration.step3:configure']);
-    $this->assertSame('Current values: Configure registration (step 3)', $titles['surface:registration.step3:configure:read']);
+    $this->assertSame('Current values: Configure registration (step 3)', $titles['surface:registration.step3:read']);
 
     $deriver = ResourceOperationToolDeriver::create($this->container, OperationInputs::TOOL);
     $shared = new \ReflectionMethod($deriver, 'sharedLabels');

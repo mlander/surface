@@ -307,7 +307,7 @@ With the `tool` module installed, the same resource is a tool:
 drush pm:install tool
 drush tool:info surface:first.newsletter:configure
 drush tool:run surface:first.newsletter:configure --uid=1 --input='{"values":{"sender_name":"Weekly news","sender_email":"news@example.com","frequency":"monthly"}}'
-drush tool:run surface:first.newsletter:configure:read --uid=1
+drush tool:run surface:first.newsletter:read --uid=1
 ```
 
 `tool:info` lists the same four keys, bounded as the class says. The
@@ -341,8 +341,9 @@ class requires may be left out too once a value for it is stored, and
 the stored value stands. Where nothing is stored for it, on an
 operation that creates or for a thing that has no value yet, it cannot
 be left out: the resource refuses the call in the key's own words,
-"Sender name is required.", and nothing is written. The read tool
-beside the write tool answers with what is stored now:
+"Sender name is required.", and nothing is written. The resource's
+read, an operation the build adds beside `configure`, answers with what
+is stored now:
 
 ```
 Success: Configure the newsletter: the stored values were read, and nothing was written.

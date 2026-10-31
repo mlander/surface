@@ -428,7 +428,9 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
    */
   public function testOperations(): void {
     $operations = $this->container->get('surface.resource_registry')->getOperations(RecipeResource::class);
-    $this->assertSame(['create', 'update', 'mislabeled'], array_keys($operations));
+    // The read the build adds comes last, beside the default update.
+    $this->assertSame(['create', 'update', 'mislabeled', 'read'], array_keys($operations));
+    $this->assertSame('update', $operations['read']->reads);
     $this->assertSame('surface_resource_test', $operations['mislabeled']->module);
 
     $this->expectException(\LogicException::class);

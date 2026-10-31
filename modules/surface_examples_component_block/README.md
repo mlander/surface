@@ -120,7 +120,7 @@ component or out of their bounds, and a component a slot does not
 expect, naming the ones it does:
 
 ```bash
-drush tool:run surface:block.placement:update:read --uid=1 --input='{"id":"surface_examples_spotlight"}'
+drush tool:run surface:block.placement:read --uid=1 --input='{"id":"surface_examples_spotlight"}'
 ```
 
 This module needs no resource of its own for it, and does not depend on

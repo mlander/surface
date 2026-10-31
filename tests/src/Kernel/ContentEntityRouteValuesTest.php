@@ -165,8 +165,8 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
       $resource = $registry->getDefinition('entity.content:node.' . $bundle);
       $definition = $registry->getOperation($resource->name(), $operation);
       return [
-        $forms->doors($resource, $definition, TRUE, FALSE)[SiteCatalog::FORM] ?? '',
-        $forms->links($resource, $definition, TRUE, FALSE)[SiteCatalog::FORM] ?? NULL,
+        $forms->doors($resource, $definition, TRUE)[SiteCatalog::FORM] ?? '',
+        $forms->links($resource, $definition, TRUE)[SiteCatalog::FORM] ?? NULL,
       ];
     };
     foreach (['page', 'kitchen'] as $bundle) {

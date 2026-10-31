@@ -56,20 +56,28 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
   /**
    * Tests that deriving every tool builds each operation once.
    *
-   * One build per write tool's operation, shared by its inputs, its read
-   * tool and its outputs; and one more for the outputs of each operation
-   * that needs nothing and creates, built in the bare context: the two
-   * bundles' `create` and the node type's. Before the derivation memo it
-   * was about 1.6 per tool, read tools included.
+   * One build per operation, shared by its tool's inputs and outputs; the
+   * read the build adds shares its update's, being asked in the update's
+   * context, and a read an owner declares (the content entity
+   * resources') builds its own. And one more for the outputs of each
+   * operation that needs nothing and creates, built in the bare context:
+   * the two bundles' `create` and the entity type's. Before the derivation
+   * memo it was about 1.6 per tool, read tools included.
    */
   public function testDerivingEveryToolBuildsEachOperationOnce(): void {
     $this->resources()->forgetBuilds();
     $before = $this->resources()->buildCounts()['built'];
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
     $built = $this->resources()->buildCounts()['built'] - $before;
-    $writes = array_filter(array_keys($definitions), static fn (string $id): bool => str_starts_with($id, 'surface:') && !str_ends_with($id, ':read') && !str_ends_with($id, ':schema'));
-    $this->assertCount(10, $writes);
-    $this->assertLessThanOrEqual(count($writes) + 3, $built);
+    $registry = $this->container->get('surface.resource_registry');
+    $operations = array_filter(array_keys($definitions), static fn (string $id): bool => str_starts_with($id, 'surface:') && !str_ends_with($id, ':schema'));
+    $own = array_filter($operations, static function (string $id) use ($registry): bool {
+      $separator = (int) strrpos($id, ':');
+      return !$registry->getOperation(substr($id, strlen('surface:'), $separator - strlen('surface:')), substr($id, $separator + 1))->isDefaultRead();
+    });
+    $this->assertCount(15, $operations);
+    $this->assertCount(13, $own, 'Ten writes and the three reads the content entity resources declare.');
+    $this->assertLessThanOrEqual(count($own) + 3, $built);
   }
 
   /**

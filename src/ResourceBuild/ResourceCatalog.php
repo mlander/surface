@@ -11,7 +11,7 @@ namespace Drupal\surface\ResourceBuild;
  * kind, identity keys, storage and access class, the plugins whose
  * configuration it is, its operations with what each needs, whether it
  * creates, the permission it asks for, whether it can be asked on its
- * own and whether what it changes can be read on its own, the alters
+ * own and, for the read the build adds, the update it reads, the alters
  * that apply to it, and the variants at its keys. Nothing here builds
  * or asks anything; everything is read from what discovery found, which
  * is the point of the attributes being static, whether an operation
@@ -37,7 +37,7 @@ final class ResourceCatalog {
   /**
    * Describes every discovered resource and structure.
    *
-   * @return array<string, array{id: string, label: string|null, description: string|null, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool, kind: string, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>}>
+   * @return array<string, array{id: string, label: string|null, description: string|null, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool, kind: string, permission: string|null, unresolvable: string[], standalone: bool, default: string|null}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>}>
    *   The entries, keyed and sorted by id. `label` and `description`
    *   are what it is called and is for (ResourceDefinition::label() and
    *   description()), NULL where it says none. `kind` is resource or
@@ -48,8 +48,9 @@ final class ResourceCatalog {
    *   An operation's `creates` is its attribute's, read without building
    *   anything; `unresolvable` lists its permission's placeholders no
    *   parameter can supply; `standalone` says whether it can be asked on
-   *   its own, as a route or a tool; `reads` whether what it changes can
-   *   be read on its own, as a read tool. Operations are a list in
+   *   its own, as a route or a tool; `default` names, for the read the
+   *   build adds, the update it reads (NULL for every operation an owner
+   *   declares). Operations are a list in
    *   discovery order, so two providers of one id are both listed, as
    *   they are both refused when it is built. `variants` are the declared
    *   ones, each value's #[Variant] class keyed by the variants' key;
@@ -87,7 +88,7 @@ final class ResourceCatalog {
           'permission' => $operation->permission,
           'unresolvable' => $operation->unresolvablePlaceholders(),
           'standalone' => static::standalone($definition, $operation, $plugins),
-          'reads' => $this->reads($definition, $operation, $plugins),
+          'default' => $operation->reads,
         ], $definition->operations),
         'alters' => array_map(static fn (AlterDefinition $alter): array => [
           'class' => $alter->class,
@@ -163,30 +164,6 @@ final class ResourceCatalog {
    */
   public static function standalone(ResourceDefinition $resource, OperationDefinition $operation, array $plugins): bool {
     return $resource->storage !== NULL && $plugins === [] && $operation->unresolvablePlaceholders() === [];
-  }
-
-  /**
-   * Answers whether what an operation changes can be read on its own.
-   *
-   * The rule a generated read tool follows: the operation can be asked
-   * on its own, and it changes a thing that exists, which is to say it
-   * neither creates nor is read only, both read off its attribute. A read
-   * only operation changes nothing, so nothing beside it is read.
-   *
-   * Decision: see docs/decisions.md#which-operations-read.
-   *
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
-   *   The resource or structure.
-   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
-   *   The operation.
-   * @param list<string> $plugins
-   *   The plugins whose configuration it is.
-   *
-   * @return bool
-   *   TRUE when what it changes can be read on its own.
-   */
-  public function reads(ResourceDefinition $resource, OperationDefinition $operation, array $plugins): bool {
-    return static::standalone($resource, $operation, $plugins) && $operation->kind() === OperationDefinition::UPDATE;
   }
 
 }

@@ -136,7 +136,6 @@ class WithoutToolModuleTest extends SurfaceKernelTestBase {
     }
     $this->assertArrayHasKey(SiteCatalog::FORM, $doors);
     $this->assertArrayNotHasKey(SiteCatalog::TOOL, $doors);
-    $this->assertArrayNotHasKey(SiteCatalog::READ_TOOL, $doors);
     $this->assertArrayNotHasKey(SiteCatalog::SCHEMA_TOOL, $doors);
     $this->assertNoToolClassLoaded();
   }

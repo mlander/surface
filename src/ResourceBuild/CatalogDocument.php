@@ -70,18 +70,17 @@ final class CatalogDocument {
         $document .= '- Used by: ' . self::codes($resource['plugins']) . "; configured through the plugin's host, never on its own.\n";
       }
       if ($resource['operations'] !== []) {
-        $document .= "\n| Operation | Label | Needs | Creates | Permission | On its own | Read on its own | Provided by |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n";
+        $document .= "\n| Operation | Label | Needs | Creates | Permission | On its own | Provided by |\n| --- | --- | --- | --- | --- | --- | --- |\n";
         foreach ($resource['operations'] as $operation) {
           $document .= sprintf(
-            "| `%s` | %s | %s | %s | %s | %s | %s | `%s` (`%s`) |\n",
+            "| `%s` | %s | %s | %s | %s | %s | %s (`%s`) |\n",
             $operation['id'],
             self::cell($operation['label']),
             $operation['parameters'] === [] ? 'nothing' : self::codes($operation['parameters']),
             $operation['creates'] ? 'yes' : 'no',
             $operation['permission'] === NULL ? 'none' : '`' . $operation['permission'] . '`',
             self::standalone($resource, $operation),
-            self::reads($operation),
-            str_starts_with($operation['provider'], '#[Operation] on ') ? '#[Operation] on ' . self::short($operation['provider']) : self::short($operation['provider']),
+            self::provider($operation),
             $operation['module'],
           );
         }
@@ -157,7 +156,8 @@ final class CatalogDocument {
    *
    * @return list<array{resource: string, kind: string, operation: string, operation_id: string|null, permission: string, needs: string, doors: array<string, string>|null, read: int|null}>
    *   Each row: the resource or structure, its kind, the operation and its
-   *   kind, the operation's id, its permission, its parameters; the doors
+   *   kind (and, for the read the build adds, the update it reads), the
+   *   operation's id, its permission, its parameters; the doors
    *   it reaches by name, NULL on a row with no operation; and how many
    *   structures are read there, on a row of those, NULL on any other.
    */
@@ -177,7 +177,7 @@ final class CatalogDocument {
         $rows[] = [
           'resource' => $entry['id'],
           'kind' => $entry['kind'],
-          'operation' => $operation['id'] . ' (' . $operation['kind'] . ')',
+          'operation' => $operation['id'] . ' (' . $operation['kind'] . (($operation['default'] ?? NULL) === NULL ? '' : ', default read of ' . $operation['default']) . ')',
           'operation_id' => $operation['id'],
           'permission' => $operation['permission'] ?? 'none',
           'needs' => $operation['parameters'] === [] ? 'nothing' : implode(', ', $operation['parameters']),
@@ -449,8 +449,10 @@ Such an operation reaches the doors the installed modules open: a form
 route a module declares, the HTTP path and the OpenAPI operation (the
 base module), the tool `surface:<id>:<operation>` (the base module,
 with `tool` installed) and the React page (`surface_examples_react`).
-One that changes a thing that exists, neither creating nor read only, is
-"read on its own" too, a read tool, `surface:<id>:<operation>:read`.
+Every resource with a default update that can be asked on its own can
+be read: by a `read` its owner declares, or by the one the build adds,
+provided by "default read of" the update it reads, asked as that update
+is (`docs/decisions.md#a-read-is-an-operation-of-the-resource`).
 A structure a plugin uses is configured through the plugin's host. Every
 operation is built for no account, and what did not build, with every
 route written wrong for the operation it serves, is listed last, under
@@ -481,21 +483,20 @@ MARKDOWN;
   }
 
   /**
-   * Says whether what an operation changes can be read on its own, and why not.
+   * Says what provides an operation.
    *
    * @param array $operation
    *   The operation, as the catalog describes it.
    *
    * @return string
-   *   "yes", or "no" and the first reason.
+   *   The method or the class as code, or, for the read the build adds,
+   *   the update it reads.
    */
-  private static function reads(array $operation): string {
+  private static function provider(array $operation): string {
     return match (TRUE) {
-      $operation['reads'] => 'yes',
-      !$operation['standalone'] => 'no: not on its own',
-      $operation['creates'] => 'no: it creates',
-      ($operation['kind'] ?? NULL) === OperationDefinition::DELETE => 'no: it deletes',
-      default => 'no: it changes nothing',
+      ($operation['default'] ?? NULL) !== NULL => 'default read of `' . $operation['default'] . '`',
+      str_starts_with($operation['provider'], '#[Operation] on ') => '`#[Operation] on ' . self::short($operation['provider']) . '`',
+      default => '`' . self::short($operation['provider']) . '`',
     };
   }
 

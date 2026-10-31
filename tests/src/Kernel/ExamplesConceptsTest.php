@@ -398,7 +398,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $tools = $this->container->get('plugin.manager.tool');
     $this->assertSame(ToolOperation::Write, $tools->getDefinition('surface:event.program:configure')->getOperation());
     $this->assertSame(ToolOperation::Read, $tools->getDefinition('surface:event.program:check')->getOperation());
-    $this->assertTrue($tools->hasDefinition('surface:event.program:configure:read'));
+    $this->assertTrue($tools->hasDefinition('surface:event.program:read'));
     $this->assertFalse($tools->hasDefinition('surface:event.program:check:read'), 'Nothing to read before a call that changes nothing.');
 
     // The check's form accepts and writes nothing.
@@ -599,8 +599,17 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
       'surface:event.program:check',
       'read',
       'readOnlyHint true, destructiveHint false, idempotentHint true',
-      'false',
     ], $panel['facts']['#rows'][1]);
+    // The read the build adds beside configure, a row of its own.
+    $this->assertSame([
+      'read',
+      'read',
+      'false',
+      'true',
+      'surface:event.program:read',
+      'read',
+      'readOnlyHint true, destructiveHint false, idempotentHint true',
+    ], $panel['facts']['#rows'][2]);
     // Example 12's component, its schema beside the structure it became.
     $panel = $this->formAt('surface_examples.step12')[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $read = json_decode((string) $panel['read']['content']['#code'], TRUE);
@@ -681,7 +690,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
       ['surface:block.placement:create', 'Place a block', 'write', 'values, dry_run'],
       ['surface:block.placement:create:schema', 'Schema for these values: Place a block', 'read', 'values'],
       ['surface:block.placement:update', 'Edit a placed block', 'write', 'id, values, dry_run'],
-      ['surface:block.placement:update:read', 'Current values: Edit a placed block', 'read', 'id'],
+      ['surface:block.placement:read', 'Current values: Edit a placed block', 'read', 'id'],
       [
         'surface:block.placement:update:schema',
         'Schema for these values: Edit a placed block',
@@ -788,9 +797,8 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
       'surface:event.venue:create',
       'surface:event.venue:list',
       'surface:event.venue:reorder',
-      'surface:event.venue:reorder:read',
       'surface:event.venue:update',
-      'surface:event.venue:update:read',
+      'surface:event.venue:read',
       'surface:event.venue:delete',
     ], array_column($page['served']['tools']['#rows'], 0));
     $answer = static fn (array $page, string $call): string => (string) $page['calls']['event.venue:' . $call]['answer']['#code'];

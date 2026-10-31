@@ -97,6 +97,14 @@ trait DoorAgreementTrait {
   public const SKIPPED_NO_STORAGE = 'every door: it names no storage, so only its host or its parent asks it';
 
   /**
+   * Skipped: the read of one thing, which takes no document to agree on.
+   *
+   * What it answers is held alike at every door by the projection tests
+   * (SecurityProjectionTest, ReadToolTest, ContentEntityReadTest).
+   */
+  public const SKIPPED_READS_ONE = 'every door: the read of one thing takes no document';
+
+  /**
    * Skipped: a document setting a secret, which the form never draws.
    */
   public const SKIPPED_FORM_SECRET = 'the form: it never draws a secret, so a document that sets one is typed into it, not drawn';
@@ -188,6 +196,9 @@ trait DoorAgreementTrait {
     $id = $definition->id . ':' . $operation->id;
     if ($definition->storage === NULL) {
       return ['compared' => 0, 'skipped' => [static::SKIPPED_NO_STORAGE => count($rows)]];
+    }
+    if ($operation->readsOne()) {
+      return ['compared' => 0, 'skipped' => [static::SKIPPED_READS_ONE => count($rows)]];
     }
     $standalone = ResourceCatalog::standalone($definition, $operation, $this->container->get('surface.resource_plugins')->usedBy($definition->name()));
     $tool = 'surface:' . $definition->id . ':' . $operation->id;

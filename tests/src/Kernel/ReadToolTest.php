@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
+use Drupal\Core\Routing\RouteMatch;
+use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface_examples\ExampleCalls;
+use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_tool_test\Storage\VaultStorage;
 use Drupal\node\Entity\NodeType;
@@ -20,15 +23,19 @@ use Drupal\tool\TypedData\MapInputDefinition;
 use Drupal\tool\TypedData\MapOutputDefinition;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\Routing\Route;
 
 /**
- * Tests the read tool derived beside each write tool.
+ * Tests the read of one thing, an operation of the resource.
  *
- * Every operation that can be asked on its own and changes a thing that
- * exists has one, `surface:<resource>:<operation>:read`: its inputs
- * the operation's parameters, its one output `values`, what the storage
- * loads, in the shape the write tool takes, less every secret. Its access
- * is the write tool's.
+ * Every resource that can be asked on its own and has a default update
+ * has one, `surface:<resource>:read`: the one its owner declares, or the
+ * one the build adds beside the default update. Its inputs are the
+ * operation's parameters, its one output `values`, what the storage
+ * loads, in the shape the update takes, less every secret. The read the
+ * build adds asks the update's access.
+ *
+ * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -42,32 +49,29 @@ class ReadToolTest extends SurfaceKernelTestBase {
   protected const COMPLIANCE = 'surface_examples_compliance';
 
   /**
-   * The read tools these modules derive, sorted.
+   * The read tools these modules derive, sorted, each by its update's tool.
    */
   protected const READ_TOOLS = [
-    'surface:event.bulletin:configure:read',
-    'surface:event.desk:configure:read',
-    'surface:event.doors:configure:read',
-    'surface:event.mailer:configure:read',
-    'surface:event.press:configure:read',
-    'surface:event.program:configure:read',
-    'surface:event.sales:configure:read',
-    'surface:event.spotlight:configure:read',
-    'surface:event.venue:reorder:read',
-    'surface:event.venue:update:read',
-    'surface:event.webhook:configure:read',
-    'surface:field.instance:update:read',
-    'surface:field.storage:update:read',
-    'surface:node.type:update:read',
-    'surface:registration.step1:configure:read',
-    'surface:registration.step2:configure:read',
-    'surface:registration.step3:configure:read',
-    'surface:tool_test.cabinet:update:read',
-    'surface:tool_test.logbook:append:read',
-    'surface:tool_test.logbook:clear:read',
-    'surface:tool_test.logbook:configure:read',
-    'surface:tool_test.specimen:configure:read',
-    'surface:tool_test.vault:configure:read',
+    'surface:event.bulletin:read' => 'surface:event.bulletin:configure',
+    'surface:event.desk:read' => 'surface:event.desk:configure',
+    'surface:event.doors:read' => 'surface:event.doors:configure',
+    'surface:event.mailer:read' => 'surface:event.mailer:configure',
+    'surface:event.press:read' => 'surface:event.press:configure',
+    'surface:event.program:read' => 'surface:event.program:configure',
+    'surface:event.sales:read' => 'surface:event.sales:configure',
+    'surface:event.spotlight:read' => 'surface:event.spotlight:configure',
+    'surface:event.venue:read' => 'surface:event.venue:update',
+    'surface:event.webhook:read' => 'surface:event.webhook:configure',
+    'surface:field.instance:read' => 'surface:field.instance:update',
+    'surface:field.storage:read' => 'surface:field.storage:update',
+    'surface:node.type:read' => 'surface:node.type:update',
+    'surface:registration.step1:read' => 'surface:registration.step1:configure',
+    'surface:registration.step2:read' => 'surface:registration.step2:configure',
+    'surface:registration.step3:read' => 'surface:registration.step3:configure',
+    'surface:tool_test.cabinet:read' => 'surface:tool_test.cabinet:update',
+    'surface:tool_test.logbook:read' => 'surface:tool_test.logbook:configure',
+    'surface:tool_test.specimen:read' => 'surface:tool_test.specimen:configure',
+    'surface:tool_test.vault:read' => 'surface:tool_test.vault:configure',
   ];
 
   /**
@@ -177,36 +181,64 @@ class ReadToolTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests which read tools exist: one per operation that changes a thing.
+   * Tests which reads exist: one per resource with a default update.
+   *
+   * Each is an operation of its resource, `read`, which the build added
+   * beside the default update, read only, provided by that update. One
+   * update beside the default (the venues' reorder, the logbook's append)
+   * has no read of its own: the resource's read is the default update's.
+   * A resource whose only operations create has none.
    */
-  public function testOneReadToolPerOperationThatChangesWhatExists(): void {
+  public function testOneReadPerResourceThatCanBeChanged(): void {
+    $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
     $ids = array_values(array_filter(
-      array_keys($this->container->get('plugin.manager.tool')->getDefinitions()),
+      array_keys($definitions),
       static fn (string $id): bool => str_starts_with($id, 'surface:') && str_ends_with($id, ':read'),
     ));
     sort($ids);
-    $this->assertSame(self::READ_TOOLS, $ids);
-    // An operation that creates has a write tool and no read: the content
-    // type's add needs nothing and says so; the field's add leaves its
-    // name to the caller, and its reuse is an add on another bundle.
-    $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
-    foreach (['node.type:create', 'field.instance:create', 'field.instance:reuse'] as $operation) {
-      $this->assertArrayHasKey('surface:' . $operation, $definitions);
-      $this->assertArrayNotHasKey('surface:' . $operation . ':read', $definitions);
+    $this->assertSame(array_keys(self::READ_TOOLS), $ids);
+    $registry = $this->container->get('surface.resource_registry');
+    foreach (self::READ_TOOLS as $id => $update) {
+      [, $resource] = explode(':', $id, 2);
+      $resource = substr($resource, 0, -strlen(':read'));
+      $read = $registry->getOperation($resource, 'read');
+      $this->assertTrue($read->readsOne(), $id);
+      $this->assertSame(substr($update, strrpos($update, ':') + 1), $read->reads, $id . ': the build added it beside the default update.');
+      $this->assertSame('default read of ' . $read->reads, $read->provider(), $id);
+      $this->assertArrayHasKey($update, $definitions);
     }
+    $beside = [
+      'event.venue:reorder',
+      'tool_test.logbook:append',
+      'tool_test.logbook:clear',
+      'node.type:create',
+      'field.instance:create',
+    ];
+    foreach ($beside as $operation) {
+      $this->assertArrayHasKey('surface:' . $operation, $definitions);
+      $this->assertArrayNotHasKey('surface:' . $operation . ':read', $definitions, $operation . ': no read is derived beside an operation.');
+    }
+
+    // A resource whose only operation creates: nothing exists to read.
+    $type = $registry->getDefinition('node.type');
+    $creates = array_filter($type->operations, static fn ($operation): bool => $operation->creates);
+    $this->assertNotSame([], $creates);
+    $default = new \ReflectionMethod($registry, 'defaultRead');
+    $this->assertNull($default->invoke($registry, $type, array_values($creates)));
+    $this->assertNotNull($default->invoke($registry, $type, array_values(array_filter($type->operations, static fn ($operation): bool => $operation->id !== 'read'))));
   }
 
   /**
    * Tests what a read tool's definition says before anyone calls it.
    *
-   * A read operation, not destructive; the write tool's parameters as its
+   * A read operation, not destructive; the update's parameters as its
    * inputs, exactly, and nothing else; one output, a map whose properties
-   * are the write tool's values, with every secret left out.
+   * are the update's values, with every secret left out.
    */
   public function testDefinitionIsTheParametersAndTheValues(): void {
-    foreach (self::READ_TOOLS as $id) {
+    foreach (self::READ_TOOLS as $id => $update) {
       $read = $this->definition($id);
-      $write = $this->definition(substr($id, 0, -strlen(':read')));
+      $write = $this->definition($update);
       $this->assertSame(ToolOperation::Read, $read->getOperation(), $id);
       $this->assertFalse($read->isDestructive(), $id);
       $this->assertSame([], $read->getInputDefinitionRefiners(), $id);
@@ -230,13 +262,13 @@ class ReadToolTest extends SurfaceKernelTestBase {
       $this->assertInstanceOf(MapInputDefinition::class, $written, $id);
       // A secret at the top is left out of the read.
       $secrets = match ($id) {
-        'surface:tool_test.vault:configure:read' => ['token'],
-        'surface:event.webhook:configure:read' => ['api_key'],
+        'surface:tool_test.vault:read' => ['token'],
+        'surface:event.webhook:read' => ['api_key'],
         default => [],
       };
       // A computed key is in the read and not in the write: nobody types it.
       $computed = match ($id) {
-        'surface:event.venue:update:read' => ['slug'],
+        'surface:event.venue:read' => ['slug'],
         default => [],
       };
       $expected = array_values(array_diff(self::properties($written), $secrets));
@@ -252,10 +284,10 @@ class ReadToolTest extends SurfaceKernelTestBase {
 
     // The keys less the identity the operation knows: the content type's
     // machine name, and everything that says which field it is.
-    $this->assertSame(['type'], array_keys($this->definition('surface:node.type:update:read')->getInputDefinitions(TRUE)));
-    $this->assertNotContains('type', self::properties($this->readValues('surface:node.type:update:read')));
-    $this->assertSame(['entity_type', 'bundle', 'field_name'], array_keys($this->definition('surface:field.instance:update:read')->getInputDefinitions(TRUE)));
-    $field = self::properties($this->readValues('surface:field.instance:update:read'));
+    $this->assertSame(['type'], array_keys($this->definition('surface:node.type:read')->getInputDefinitions(TRUE)));
+    $this->assertNotContains('type', self::properties($this->readValues('surface:node.type:read')));
+    $this->assertSame(['entity_type', 'bundle', 'field_name'], array_keys($this->definition('surface:field.instance:read')->getInputDefinitions(TRUE)));
+    $field = self::properties($this->readValues('surface:field.instance:read'));
     $this->assertSame([], array_intersect(['entity_type', 'bundle', 'field_name', 'field_type'], $field));
     $this->assertContains('settings', $field);
     $this->assertContains('storage', $field);
@@ -344,7 +376,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
     ])->save();
     NodeType::create(['type' => 'page', 'name' => 'Basic page'])->save();
 
-    $read = $this->runTool('surface:node.type:update:read', ['type' => 'article']);
+    $read = $this->runTool('surface:node.type:read', ['type' => 'article']);
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame('Edit a content type: the stored values were read, and nothing was written.', $read['message']);
     $this->assertArrayNotHasKey('type', $read['values']);
@@ -352,7 +384,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
     $this->assertSame('News and such.', $read['values']['description']);
     $this->assertSame(NodePreviewMode::Required->value, $read['values']['preview_mode']);
 
-    $read = $this->runTool('surface:node.type:update:read', ['type' => 'page']);
+    $read = $this->runTool('surface:node.type:read', ['type' => 'page']);
     $this->assertSame('Basic page', $read['values']['name']);
   }
 
@@ -364,7 +396,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
    * agent reads as final; a wrong id is input to correct.
    */
   public function testUnknownParameterFailsAsTheWriteToolDoes(): void {
-    $read = $this->runTool('surface:node.type:update:read', ['type' => 'nowhere']);
+    $read = $this->runTool('surface:node.type:read', ['type' => 'nowhere']);
     $write = $this->runTool('surface:node.type:update', [
       'type' => 'nowhere',
       OperationInputs::VALUES => [
@@ -385,12 +417,14 @@ class ReadToolTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests access: who may not change it may not read it either.
+   * Tests access: the read the build adds asks what its update asks.
+   *
+   * Who may not change it may not read it either.
    */
-  public function testAccessIsTheWriteTools(): void {
+  public function testAccessOfTheDefaultReadIsTheUpdates(): void {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
     $this->setUpCurrentUser([], ['access content']);
-    foreach ([ExampleCalls::READ_TOOL => [], 'surface:node.type:update:read' => ['type' => 'article']] as $id => $inputs) {
+    foreach ([ExampleCalls::READ_TOOL => [], 'surface:node.type:read' => ['type' => 'article']] as $id => $inputs) {
       $read = $this->runTool($id, $inputs);
       $this->assertFalse($read['tool']->access(), $id);
       $this->assertFalse($read['success'], $id);
@@ -401,14 +435,34 @@ class ReadToolTest extends SurfaceKernelTestBase {
     // The content type's operation asks for the example's permission beside
     // core's, so core's alone is not enough, here as for a write.
     $this->setUpCurrentUser([], ['administer content types']);
-    $this->assertFalse($this->runTool('surface:node.type:update:read', ['type' => 'article'])['tool']->access());
+    $this->assertFalse($this->runTool('surface:node.type:read', ['type' => 'article'])['tool']->access());
     $this->setUpCurrentUser([], ['administer content types', 'administer surface examples content types']);
-    $read = $this->runTool('surface:node.type:update:read', ['type' => 'article']);
+    $read = $this->runTool('surface:node.type:read', ['type' => 'article']);
     $this->assertTrue($read['tool']->access());
     $this->assertTrue($read['success'], $read['message']);
 
     $this->setUpCurrentUser([], ['administer site configuration']);
     $this->assertTrue($this->runTool(ExampleCalls::READ_TOOL)['tool']->access());
+  }
+
+  /**
+   * Tests a form route to the read the build adds is refused.
+   *
+   * That read is asked in its update's context, so a form for it would
+   * be the update's form, and would write; the update's route serves it.
+   */
+  public function testNoFormServesTheDefaultRead(): void {
+    $route = new Route('/registration/read', [
+      OperationRoute::RESOURCE => 'registration.step3',
+      OperationRoute::OPERATION => 'read',
+    ]);
+    try {
+      OperationRoute::fromRouteMatch(new RouteMatch('example.read', $route), $this->container->get('surface.resource_registry'), $this->container->get('surface.operation_arguments'), $this->container->get('surface.resources'));
+      $this->fail('A form route to the default read was served.');
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertSame('The example.read route serves the "read" operation of ' . RegistrationStep3Resource::class . ', the read the build adds beside "configure", which is asked as that update is: a form for it would write. Serve the "configure" operation, or declare "read" on the resource.', $e->getMessage());
+    }
   }
 
   /**
@@ -436,7 +490,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
     $this->assertSame('hunter2', $stored['backup']['password']);
     $this->assertSame('mirror-two', $stored['mirrors'][1]['password']);
 
-    $read = $this->runTool('surface:tool_test.vault:configure:read');
+    $read = $this->runTool('surface:tool_test.vault:read');
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame([
       'endpoint' => 'https://vault.example.com',
@@ -448,7 +502,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
     $this->assertStringNotContainsString('hunter2', (string) json_encode($read['values']));
 
     // Nor is it described: the output says what is returned.
-    $values = $this->definition('surface:tool_test.vault:configure:read')->getOutputDefinition(OperationInputs::VALUES);
+    $values = $this->definition('surface:tool_test.vault:read')->getOutputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapOutputDefinition::class, $values);
     $this->assertSame(['endpoint', 'backup', 'mirrors'], self::properties($values));
     $backup = $values->getPropertyDefinitions()['backup'];

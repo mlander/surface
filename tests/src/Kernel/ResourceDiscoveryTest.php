@@ -118,7 +118,7 @@ class ResourceDiscoveryTest extends SurfaceKernelTestBase {
 
     // Its operations stand on its own class.
     $operations = $this->registry()->getOperations(RecipeResource::class);
-    $this->assertSame(['create', 'update', 'mislabeled'], array_keys($operations));
+    $this->assertSame(['create', 'update', 'mislabeled', 'read'], array_keys($operations));
     $this->assertSame('cook in %kitchen', $operations['create']->permission);
     $this->assertSame('Add a recipe', (string) $operations['create']->label);
 

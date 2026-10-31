@@ -502,7 +502,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     $this->assertFalse($properties['spare']->isRequired());
     $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['max' => 6]], self::declared($properties['spare']));
 
-    $read = $manager->createInstance('surface:resource_test.depot:configure:read');
+    $read = $manager->createInstance('surface:resource_test.depot:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::DEPOT, $read->getResult()->getContextValues()[OperationInputs::VALUES] ?? NULL);

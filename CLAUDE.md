@@ -81,6 +81,19 @@ the record of the rework that brought the module to the pattern.
   update on a singleton), its label Drupal's word ("Add a venue"); an
   id `add`, `edit`, `remove` or `get` is refused at discovery
   (`docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals`).
+  The read of one thing is `read`, read only, taking no structure
+  (`OperationDefinition::readsOne()`): its parameters in, the stored
+  values out. Where a resource with storage has a default update that
+  can be asked on its own and declares no `read`, the build adds one
+  (`OperationDefinition::defaultRead()`, `ResourceRegistry::defaultRead()`),
+  labeled "Current values:" and the update's label, its `reads` the
+  update's id: it takes the update's parameters, permission and gates
+  and is asked in the update's context (`contextId()`;
+  `ResourcesInterface::operation()` builds the update's), so nothing
+  loosens; the catalog lists it as "default read of" the update. An
+  owner that declares `read` replaces it and answers access for reading
+  (the content entity example asks core's view access)
+  (`docs/decisions.md#a-read-is-an-operation-of-the-resource`).
   One about the things together names the structure whose keys it
   takes in place of the resource's, `structure:` (a listing's page, a
   reorder's list; `docs/resources.md#an-operation-that-takes-keys-of-its-own`).
@@ -394,11 +407,11 @@ With the `tool` module installed, the module derives one tool per
 operation that can be asked on its own, `surface:<id>:<operation>`
 (the Tool API door, `docs/tools.md`): its resource names storage, no
 plugin uses it, and every `%key` in its permission can be supplied by
-a parameter (`ResourceCatalog::standalone()`). Beside each such
-operation that changes a thing that exists it derives a read tool,
-`surface:<id>:<operation>:read`, taking the parameters and
+a parameter (`ResourceCatalog::standalone()`). The read of one thing is the tool
+`surface:<id>:read`, of its own class, taking the parameters and
 answering with the stored values less secrets
-(`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Where an
+(`ResourceOperationReadTool`); no tool is derived beside an operation
+but the narrowing one. Where an
 operation's listing leaves a key's entries out, it derives a narrowing
 tool too, `surface:<id>:<operation>:schema`, answering what
 `POST .../schema` answers for the values sent, and the key's description
@@ -415,7 +428,8 @@ governs the two schema documents otherwise
 the operation's permission to the Tool API, unless it has a `%key`
 (`ResourceOperationToolDeriver::declaredPermission()`). A tool's title
 is the operation's label (with its resource added where labels are
-shared; the read tool's is "Current values:" and that), and its
+shared; the read the build adds is labeled "Current values:" and its
+update's label), and its
 description the operation's description and one line of call rules
 for its kind (`OperationInputs::description()`). The field
 tools are `surface:field.instance:create` / `:reuse` / `:update`; the
@@ -550,7 +564,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1818, Assertions: 41468, Errors: 0, Failures: 0, Skipped: 3. Classes: 254 of 254, 8 at a time, browser classes 4.
+phpunit: Tests: 1823, Assertions: 42368, Errors: 0, Failures: 0, Skipped: 3. Classes: 255 of 255, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -570,8 +584,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1703, Assertions: 37177, Skipped: 3, Deprecations: 130. Classes:
-204, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1715, Assertions: 38347, Skipped: 3, Deprecations: 130. Classes:
+206, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -656,8 +670,10 @@ variants, and is what `tool:info` prints). The base module's HTTP door
 (`src/Http/`, route `surface.api`) serves it with the widget hints on
 an API where the path is the resource and the method the operation
 (contract 3's paths, `ServedPaths`, both documents in contract 4's
-keywords): `GET /surface-api/{resource}[/{id}]` the
-envelope, its `ETag` the stored values' fingerprint; `GET .../schema` the
+keywords): `GET /surface-api/{resource}[/{id}]` the read's
+envelope, its `ETag` the stored values' fingerprint (the read the build
+adds served as its update, `ServedOperations::resolve()`, so the
+envelope is the update's); `GET .../schema` the
 full schema itself; `POST .../schema` the envelope narrowed for values
 in progress (the AJAX rebuild's equivalent, emitted from the form
 builder's `refinementOverlay()`, so an orphan is held unanswered and

@@ -216,7 +216,7 @@ class DefaultsUnderStoredMapTest extends SurfaceKernelTestBase {
     $tool->execute();
     $this->assertTrue($tool->getResult()->isSuccess(), (string) $tool->getResult()->getMessage());
     $this->assertSame(self::HELD, array_intersect_key($tool->getResult()->getContextValues()[OperationInputs::VALUES], self::HELD));
-    $read = $tools->createInstance('surface:' . self::RESOURCE . ':configure:read');
+    $read = $tools->createInstance('surface:' . self::RESOURCE . ':read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::HELD, $read->getResult()->getContextValues()[OperationInputs::VALUES]);

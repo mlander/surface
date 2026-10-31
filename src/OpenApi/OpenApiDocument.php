@@ -48,10 +48,13 @@ use Symfony\Component\HttpFoundation\Request;
  * - **One path item per resource path.** A singleton or a collection is
  *   `/surface-api/{resource}`, one thing `/surface-api/{resource}/{id}`,
  *   its identity as path parameters; the methods on it are the
- *   operations its defaults are (ServedPaths): `GET` the envelope,
- *   `PATCH` the default update, `POST` the default create. Each has a
- *   `/schema` path item, `GET` the full schema and `POST` the schema for
- *   values sent. Any other operation is a custom method,
+ *   operations its defaults are (ServedPaths): `GET` the read's
+ *   envelope, `PATCH` the default update, `POST` the default create.
+ *   Each has a `/schema` path item, `GET` the full schema and `POST` the
+ *   schema for values sent. The read of one thing is described by its
+ *   `GET` alone, since it takes no values; the read the build adds as
+ *   the update it reads, whose envelope and schema it serves, and that
+ *   update by its run. Any other operation is a custom method,
  *   `.../{x}:{operation}`, a path item of its own.
  * - **Built for no account**, as the tool definitions are
  *   (ResourcesInterface::buildDeclared()), and as the anonymous account,
@@ -281,7 +284,9 @@ final class OpenApiDocument {
           continue;
         }
         foreach ($operation_paths as $path => $item) {
-          $paths[$path] = ($paths[$path] ?? []) + $item;
+          // The read is described after the update it stands beside, and
+          // its GET leads the path item, as the update's did.
+          $paths[$path] = $operation->readsOne() ? $item + ($paths[$path] ?? []) : ($paths[$path] ?? []) + $item;
         }
         $described[$definition->id . ':' . $operation->id] = $entry;
         $tags[$definition->id] ??= $this->tag($definition);
@@ -336,7 +341,7 @@ final class OpenApiDocument {
   public function neutral(ResourceDefinition $definition, OperationDefinition $operation): SurfaceInterface {
     $context = $operation->parameters === []
       ? $this->resources->operation($definition->name(), $operation->id)
-      : new OperationContext($operation->id);
+      : new OperationContext($operation->contextId());
     return $this->resources->buildDeclared($definition->name(), $context);
   }
 
@@ -356,10 +361,17 @@ final class OpenApiDocument {
    *   The path items it adds to, and what the operation became.
    */
   protected function operation(ResourceDefinition $definition, OperationDefinition $operation, SchemaComponents $components, CacheableMetadata $cacheability): array {
-    $built = $this->neutral($definition, $operation);
-    $full = $this->emitter->emitFull($built, $definition->id, $operation->id, $operation->label, operation: $operation->facts());
+    // The read the build adds serves its update's envelope and schema, so
+    // it is described from that update, and shares its component.
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    $source = $operation->reads === NULL ? $operation : $this->registry->getOperation($definition->name(), $operation->reads);
+    $built = $this->neutral($definition, $source);
+    $full = $this->emitter->emitFull($built, $definition->id, $source->id, $source->label, operation: $source->facts());
     $cacheability->addCacheableDependency($built)->addCacheableDependency($full);
-    $schema = $components->add($full->document['schema'], $definition->id . '.' . $operation->id);
+    $component = $definition->id . '.' . $source->id;
+    $schema = $source !== $operation && array_key_exists(SchemaComponents::name($component), $components->all())
+      ? SchemaComponents::name($component)
+      : $components->add($full->document['schema'], $component);
     $outputs = is_array($full->document['outputs'] ?? NULL)
       ? $components->add($full->document['outputs'], $definition->id . '.' . $operation->id . '.outputs')
       : NULL;
@@ -367,8 +379,8 @@ final class OpenApiDocument {
     // A key a create leaves out takes its default; any other's keeps what
     // is stored, a read's too: it is checked at its current value.
     $request = $kind === OperationDefinition::CREATE ? $schema : $components->patch($schema);
-    $label = (string) $operation->label;
-    $description = $operation->description === NULL ? '' : (string) $operation->description;
+    $label = (string) $source->label;
+    $description = $source->description === NULL ? '' : (string) $source->description;
     $permission = $operation->permission === NULL || $operation->permission === '' ? NULL : $operation->permission;
     $common = [
       'tags' => [$definition->id],
@@ -557,6 +569,16 @@ final class OpenApiDocument {
       [$readNamed, TRUE, $schemaItem],
       [$named, FALSE, $run],
     ];
+    // The read of one thing takes no values, so it has no run; the update
+    // the build's read stands for leaves that read its envelope and schema.
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    $standsFor = !$readNamed && $this->paths->readsThingAt($definition, $operation) && !$operation->readsOne();
+    if ($operation->readsOne()) {
+      unset($items[2]);
+    }
+    elseif ($standsFor) {
+      $items = [[$named, FALSE, $run]];
+    }
     // A listing: GET on the collection runs it, its query the values, and
     // answers its outputs; its envelope is its custom method's.
     // Decision: see
@@ -572,7 +594,7 @@ final class OpenApiDocument {
     // Decision: see
     // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
     $references = static::references($full->document['schema']);
-    if (!$readNamed && $references !== []) {
+    if (!$readNamed && !$standsFor && $references !== []) {
       [$path, $names, $url] = $this->paths->lookupTemplate($definition, $operation);
       $cacheability->addCacheableDependency($url);
       $lookup = $this->lookup($definition, $common, $references, $denied);

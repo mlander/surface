@@ -56,8 +56,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * An operation that needs nothing is described in its real context. One
  * that changes a thing that exists lists no defaults: a key left out keeps
- * its current value, which its read tool returns, and the definitions are
- * cached, so a stored value listed here would go stale unseen.
+ * its current value, which the resource's read returns, and the
+ * definitions are cached, so a stored value listed here would go stale
+ * unseen.
  *
  * The definitions are cached for every account, so they are no account's:
  * each resource is built for no account (every access answer set aside
@@ -87,18 +88,21 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * operation's description followed by one line of call rules for its
  * kind (OperationInputs::description()). No two tools share a title:
  * where operations of several resources share a label, each tool adds
- * its resource (title()); the read tool's is "Current values:" and the
- * write tool's.
+ * its resource (title()); the read the build adds is labeled "Current
+ * values:" and its update's label.
  *
  * Each write tool says how its operation behaves (behaves()): the Read
  * kind for a read only operation, the Write kind for every other, and
  * whether it may destroy what is there.
  *
- * An operation that changes a thing that exists has a read tool beside
- * its write tool, `<resource id>:<operation id>:read`, of the class
- * ResourceOperationReadTool: its parameters as inputs, the stored values
- * as its output. Which operations those are is the catalog's to say
- * (ResourceCatalog::reads()), as which can be asked at all is.
+ * The read of one thing, `<resource id>:read`, is a tool of the class
+ * ResourceOperationReadTool (OperationDefinition::readsOne()): its
+ * parameters as inputs, the stored values as its output. It is an
+ * operation of the resource like any other, the one an owner declares or
+ * the one the build adds beside the default update, so nothing here
+ * decides which resources can be read.
+ *
+ * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
  *
  * @see \Drupal\surface\Tool\OperationInputs
  * @see \Drupal\surface\Plugin\tool\Tool\ResourceOperationTool
@@ -120,8 +124,6 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    *   Which plugins name which structure with #[UsesStructure].
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
-   * @param \Drupal\surface\ResourceBuild\ResourceCatalog $catalog
-   *   Which operations change a thing that exists, and so can be read.
    * @param \Drupal\surface\Tool\ToolDefinitionsInvalidator|null $invalidator
    *   What clears the definitions when what they were read from changes;
    *   NULL remembers nothing.
@@ -138,7 +140,6 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
     protected readonly LoggerInterface $logger,
     protected readonly ResourcePlugins $plugins,
     TranslationInterface $string_translation,
-    protected readonly ResourceCatalog $catalog,
     protected readonly ?ToolDefinitionsInvalidator $invalidator = NULL,
     protected readonly ?AccountSwitcherInterface $accountSwitcher = NULL,
     protected readonly ?CacheBackendInterface $cache = NULL,
@@ -177,7 +178,6 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
       $container->get('logger.channel.surface'),
       $container->get('surface.resource_plugins'),
       $container->get('string_translation'),
-      $container->get('surface.resource_catalog'),
       $container->get('surface.tool_definitions_invalidator'),
       $container->get('account_switcher'),
       $container->get('cache.discovery'),
@@ -351,7 +351,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
   }
 
   /**
-   * Derives one resource's tools: a write tool per operation, and a read tool.
+   * Derives one resource's tools: one per operation, and its narrowing tools.
    *
    * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
    *   The base definition.
@@ -381,6 +381,10 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
           continue;
         }
         $id = $resource->id . ':' . $operation->id;
+        if ($operation->readsOne()) {
+          $this->read($base_plugin_definition, $resource, $operation, $shared);
+          continue;
+        }
         try {
           $title = $this->title($resource, $operation, $shared);
           $definition = $this->definition(
@@ -404,9 +408,6 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
           continue;
         }
         $this->derivatives[$id] = $definition;
-        if ($this->catalog->reads($resource, $operation, $plugins)) {
-          $this->read($base_plugin_definition, $resource, $operation, $title);
-        }
         $this->narrowing($base_plugin_definition, $resource, $operation, $title);
       }
       return [$this->derivatives, $this->skipped];
@@ -417,23 +418,29 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
   }
 
   /**
-   * Derives the read tool beside an operation's write tool.
+   * Derives the tool of the read of one thing.
+   *
+   * Its inputs are the operation's parameters and nothing else, and its
+   * one output the stored values. It has no narrowing tool: it takes no
+   * values to narrow by.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
    *
    * @param \Drupal\tool\Tool\ToolDefinition $base_plugin_definition
-   *   The write tool's base definition.
+   *   The base definition.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
    * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
-   *   An operation that changes a thing that exists.
-   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $title
-   *   The write tool's title, which the read tool's names.
+   *   The read (OperationDefinition::readsOne()).
+   * @param array<string, true> $shared
+   *   The labels several tools would carry (sharedLabels()).
    */
-  protected function read(ToolDefinition $base_plugin_definition, ResourceDefinition $resource, OperationDefinition $operation, TranslatableMarkup $title): void {
-    $id = $resource->id . ':' . $operation->id . ResourceOperationReadTool::SUFFIX;
+  protected function read(ToolDefinition $base_plugin_definition, ResourceDefinition $resource, OperationDefinition $operation, array $shared): void {
+    $id = $resource->id . ':' . $operation->id;
     try {
       $definition = $this->definition(
         $base_plugin_definition,
-        $this->t('Current values: @label', ['@label' => $title]),
+        $this->title($resource, $operation, $shared),
         $this->operationInputs->readDescription($resource, $operation),
         $this->operationInputs->parameters($resource, $operation),
         $this->operationInputs->readOutputs($resource, $operation),

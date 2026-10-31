@@ -26,14 +26,12 @@ interface CatalogDoorLinksInterface extends CatalogDoorsInterface {
    *   One of its operations.
    * @param bool $standalone
    *   Whether it can be asked on its own (ResourceCatalog::standalone()).
-   * @param bool $reads
-   *   Whether what it changes can be read on its own.
    *
    * @return array<string, \Drupal\Core\Url>
    *   By the door's name (one of SiteCatalog::DOORS), each door with a
    *   URL; a door whose path holds a parameter nothing fills is left out,
    *   since no one URL is it.
    */
-  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array;
+  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array;
 
 }
