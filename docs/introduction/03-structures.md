@@ -50,6 +50,10 @@ final class TeaserBlockStructure implements StructureInterface {
 
 `block.my_teaser` is the structure's id, a machine name you choose;
 `block.` and the plugin id keep it beside the plugin it belongs to.
+`#[Structure]` takes an optional `label:` and `description:` as
+`#[Resource]` does; a structure that one plugin holds takes the
+plugin's own label and description, so this one says neither and is
+called "Teaser", the block's admin label.
 
 The block plugin names the structure and extends the module's
 `TypedBlockBase` instead of `BlockBase`:

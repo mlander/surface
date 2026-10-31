@@ -28,54 +28,56 @@ operation is built for no account, and what did not build, with every
 route written wrong for the operation it serves, is listed last, under
 Refused. `docs/resources.md` says how each part works.
 
-| Resource or structure | Class | Identity | Operations |
-| --- | --- | --- | --- |
-| [`block.placement`](#blockplacement) | `BlockPlacementResource` | `id` | `create`, `update`, `delete` |
-| [`block.placement.condition`](#blockplacementcondition) | `VisibilityConditionStructure` | none | none |
-| [`block.surface_component`](#blocksurface_component) | `ComponentBlockStructure` | none | none |
-| [`block.surface_examples_plugins`](#blocksurface_examples_plugins) | `ExampleBlockStructure` | none | none |
-| [`block.surface_examples_plugins.presentation.grid`](#blocksurface_examples_pluginspresentationgrid) | `GridPresentationStructure` | none | none |
-| [`block.surface_examples_plugins.presentation.list`](#blocksurface_examples_pluginspresentationlist) | `ListPresentationStructure` | none | none |
-| [`event.bulletin`](#eventbulletin) | `BulletinResource` | none | `configure` |
-| [`event.desk`](#eventdesk) | `InfoDeskResource` | none | `configure` |
-| [`event.doors`](#eventdoors) | `DoorsResource` | none | `configure` |
-| [`event.fees`](#eventfees) | `FeesStructure` | none | none |
-| [`event.mailer`](#eventmailer) | `MailerResource` | none | `configure` |
-| [`event.mailer.credential.managed`](#eventmailercredentialmanaged) | `ManagedCredentialStructure` | none | none |
-| [`event.mailer.credential.pasted`](#eventmailercredentialpasted) | `PastedCredentialStructure` | none | none |
-| [`event.person`](#eventperson) | `PersonStructure` | none | none |
-| [`event.press`](#eventpress) | `PressResource` | none | `configure` |
-| [`event.program`](#eventprogram) | `ProgramResource` | none | `configure`, `check` |
-| [`event.review`](#eventreview) | `ReviewStructure` | none | none |
-| [`event.sales`](#eventsales) | `TicketSalesResource` | none | `configure` |
-| [`event.spotlight`](#eventspotlight) | `SpotlightResource` | none | `configure` |
-| [`event.ticket_limit`](#eventticket_limit) | `TicketLimitStructure` | none | none |
-| [`event.venue`](#eventvenue) | `VenueResource` | `id` | `create`, `list`, `reorder`, `update`, `delete` |
-| [`event.venue.listing`](#eventvenuelisting) | `VenueListingStructure` | none | none |
-| [`event.venue.order`](#eventvenueorder) | `VenueOrderStructure` | none | none |
-| [`event.venue.reorder`](#eventvenuereorder) | `VenueReorderStructure` | none | none |
-| [`event.venue.room`](#eventvenueroom) | `VenueRoomStructure` | none | none |
-| [`event.webhook`](#eventwebhook) | `WebhookResource` | none | `configure` |
-| [`field.instance`](#fieldinstance) | `FieldInstanceResource` | `entity_type`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update` |
-| [`field.settings.address`](#fieldsettingsaddress) | `AddressFieldSettingsResource` | none | none |
-| [`field.storage`](#fieldstorage) | `FieldStorageResource` | `entity_type`, `field_name`, `field_type` | `create`, `update` |
-| [`field_formatter:surface_examples_plugins_string`](#field_formattersurface_examples_plugins_string) | `ExampleFormatter` | none | none |
-| [`first.newsletter`](#firstnewsletter) | `NewsletterResource` | none | `configure` |
-| [`first.store`](#firststore) | `StoreResource` | none | `configure` |
-| [`node.type`](#nodetype) | `NodeTypeResource` | `type` | `create`, `update` |
-| [`registration.compliance`](#registrationcompliance) | `ComplianceStructure` | none | none |
-| [`registration.contact`](#registrationcontact) | `ContactStructure` | none | none |
-| [`registration.step1`](#registrationstep1) | `RegistrationStep1Resource` | none | `configure` |
-| [`registration.step2`](#registrationstep2) | `RegistrationStep2Resource` | none | `configure` |
-| [`registration.step3`](#registrationstep3) | `RegistrationStep3Resource` | none | `configure` |
-| [`registration.step3.ticket.free`](#registrationstep3ticketfree) | `FreeTicketStructure` | none | none |
-| [`registration.step3.ticket.paid`](#registrationstep3ticketpaid) | `PaidTicketStructure` | none | none |
-| [`system.performance`](#systemperformance) | `PerformanceResource` | none | `configure` |
+| Resource or structure | Label | Class | Identity | Operations |
+| --- | --- | --- | --- | --- |
+| [`block.placement`](#blockplacement) | Placed block | `BlockPlacementResource` | `id` | `create`, `update`, `delete` |
+| [`block.placement.condition`](#blockplacementcondition) |  | `VisibilityConditionStructure` | none | none |
+| [`block.surface_component`](#blocksurface_component) | Component | `ComponentBlockStructure` | none | none |
+| [`block.surface_examples_plugins`](#blocksurface_examples_plugins) | Surface API example | `ExampleBlockStructure` | none | none |
+| [`block.surface_examples_plugins.presentation.grid`](#blocksurface_examples_pluginspresentationgrid) | Grid presentation | `GridPresentationStructure` | none | none |
+| [`block.surface_examples_plugins.presentation.list`](#blocksurface_examples_pluginspresentationlist) | List presentation | `ListPresentationStructure` | none | none |
+| [`event.bulletin`](#eventbulletin) |  | `BulletinResource` | none | `configure` |
+| [`event.desk`](#eventdesk) |  | `InfoDeskResource` | none | `configure` |
+| [`event.doors`](#eventdoors) |  | `DoorsResource` | none | `configure` |
+| [`event.fees`](#eventfees) |  | `FeesStructure` | none | none |
+| [`event.mailer`](#eventmailer) |  | `MailerResource` | none | `configure` |
+| [`event.mailer.credential.managed`](#eventmailercredentialmanaged) | Managed credential | `ManagedCredentialStructure` | none | none |
+| [`event.mailer.credential.pasted`](#eventmailercredentialpasted) | Pasted credential | `PastedCredentialStructure` | none | none |
+| [`event.person`](#eventperson) |  | `PersonStructure` | none | none |
+| [`event.press`](#eventpress) |  | `PressResource` | none | `configure` |
+| [`event.program`](#eventprogram) |  | `ProgramResource` | none | `configure`, `check` |
+| [`event.review`](#eventreview) |  | `ReviewStructure` | none | none |
+| [`event.sales`](#eventsales) |  | `TicketSalesResource` | none | `configure` |
+| [`event.spotlight`](#eventspotlight) |  | `SpotlightResource` | none | `configure` |
+| [`event.ticket_limit`](#eventticket_limit) |  | `TicketLimitStructure` | none | none |
+| [`event.venue`](#eventvenue) |  | `VenueResource` | `id` | `create`, `list`, `reorder`, `update`, `delete` |
+| [`event.venue.listing`](#eventvenuelisting) |  | `VenueListingStructure` | none | none |
+| [`event.venue.order`](#eventvenueorder) |  | `VenueOrderStructure` | none | none |
+| [`event.venue.reorder`](#eventvenuereorder) |  | `VenueReorderStructure` | none | none |
+| [`event.venue.room`](#eventvenueroom) |  | `VenueRoomStructure` | none | none |
+| [`event.webhook`](#eventwebhook) |  | `WebhookResource` | none | `configure` |
+| [`field.instance`](#fieldinstance) |  | `FieldInstanceResource` | `entity_type`, `bundle`, `field_name`, `field_type` | `create`, `reuse`, `update` |
+| [`field.settings.address`](#fieldsettingsaddress) | Address | `AddressFieldSettingsResource` | none | none |
+| [`field.storage`](#fieldstorage) |  | `FieldStorageResource` | `entity_type`, `field_name`, `field_type` | `create`, `update` |
+| [`field_formatter:surface_examples_plugins_string`](#field_formattersurface_examples_plugins_string) | Surface API example formatter | `ExampleFormatter` | none | none |
+| [`first.newsletter`](#firstnewsletter) | Newsletter settings | `NewsletterResource` | none | `configure` |
+| [`first.store`](#firststore) | Store location | `StoreResource` | none | `configure` |
+| [`node.type`](#nodetype) | Content type | `NodeTypeResource` | `type` | `create`, `update` |
+| [`registration.compliance`](#registrationcompliance) |  | `ComplianceStructure` | none | none |
+| [`registration.contact`](#registrationcontact) |  | `ContactStructure` | none | none |
+| [`registration.step1`](#registrationstep1) |  | `RegistrationStep1Resource` | none | `configure` |
+| [`registration.step2`](#registrationstep2) |  | `RegistrationStep2Resource` | none | `configure` |
+| [`registration.step3`](#registrationstep3) |  | `RegistrationStep3Resource` | none | `configure` |
+| [`registration.step3.ticket.free`](#registrationstep3ticketfree) | Free ticket | `FreeTicketStructure` | none | none |
+| [`registration.step3.ticket.paid`](#registrationstep3ticketpaid) | Paid ticket | `PaidTicketStructure` | none | none |
+| [`system.performance`](#systemperformance) | Performance settings | `PerformanceResource` | none | `configure` |
 
 ## block.placement
 
 `Drupal\surface_examples_block\Resource\BlockPlacementResource`, in `surface_examples_block`.
 
+- Label: Placed block
+- Description: A block placed in a region of a theme under a machine name: its label, the settings its plugin takes, its weight, its status and when it shows.
 - Kind: resource
 - Identity: `id`
 - Storage: `Drupal\surface_examples_block\Storage\BlockPlacementStorage`
@@ -104,6 +106,7 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_component_block\Structure\ComponentBlockStructure`, in `surface_examples_component_block`.
 
+- Label: Component
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
@@ -114,6 +117,7 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_plugins\Structure\ExampleBlockStructure`, in `surface_examples_plugins`.
 
+- Label: Surface API example
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
@@ -128,6 +132,8 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_plugins\Structure\GridPresentationStructure`, in `surface_examples_plugins`.
 
+- Label: Grid presentation
+- Description: What the example block needs to render a grid: how many columns, and whether summaries show.
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
@@ -137,6 +143,8 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_plugins\Structure\ListPresentationStructure`, in `surface_examples_plugins`.
 
+- Label: List presentation
+- Description: What the example block needs to render a list: whether summaries show.
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
@@ -217,6 +225,8 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples\Structure\ManagedCredentialStructure`, in `surface_examples`.
 
+- Label: Managed credential
+- Description: The mailer credential as the name of a key the site manages, whose value is read where it is used.
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
@@ -226,6 +236,8 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples\Structure\PastedCredentialStructure`, in `surface_examples`.
 
+- Label: Pasted credential
+- Description: The mailer credential pasted in, kept as a secret and never read back.
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
@@ -421,6 +433,8 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_address\Resource\AddressFieldSettingsResource`, in `surface_examples_address`.
 
+- Label: Address
+- Description: An entity field containing a postal address
 - Kind: resource
 - Identity: none
 - Storage: `Drupal\surface_examples_address\Storage\AddressFieldSettingsStorage`
@@ -447,6 +461,7 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_plugins\Plugin\Field\FieldFormatter\ExampleFormatter`, in `surface_examples_plugins`.
 
+- Label: Surface API example formatter
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
@@ -459,6 +474,7 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_first\Resource\NewsletterResource`, in `surface_examples_first`.
 
+- Label: Newsletter settings
 - Kind: resource
 - Identity: none
 - Storage: `Drupal\surface_examples_first\Storage\NewsletterStorage`
@@ -474,6 +490,7 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_first\Resource\StoreResource`, in `surface_examples_first`.
 
+- Label: Store location
 - Kind: resource
 - Identity: none
 - Storage: `Drupal\surface_examples_first\Storage\StoreStorage`
@@ -489,6 +506,8 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_node_type\Resource\NodeTypeResource`, in `surface_examples_node_type`.
 
+- Label: Content type
+- Description: A content type: its name, machine name, description and help text, the label of its title field, and the defaults its new content starts from.
 - Kind: resource
 - Identity: `type`
 - Storage: `Drupal\surface_examples_node_type\Storage\NodeTypeStorage`
@@ -575,6 +594,8 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples\Structure\FreeTicketStructure`, in `surface_examples`.
 
+- Label: Free ticket
+- Description: The ticket when registration costs nothing: a note shown beside the register button.
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
@@ -584,6 +605,8 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples\Structure\PaidTicketStructure`, in `surface_examples`.
 
+- Label: Paid ticket
+- Description: The ticket when registration costs money: its price and currency.
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it
@@ -593,6 +616,8 @@ Refused. `docs/resources.md` says how each part works.
 
 `Drupal\surface_examples_performance\Resource\PerformanceResource`, in `surface_examples_performance`.
 
+- Label: Performance settings
+- Description: How long browsers and proxies may cache a page, and whether CSS and JavaScript files are aggregated, as core keeps them in system.performance.
 - Kind: resource
 - Identity: none
 - Storage: `Drupal\surface_examples_performance\Storage\PerformanceStorage`

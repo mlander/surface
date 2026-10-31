@@ -40,7 +40,10 @@ final class NewsletterStorage extends ConfigObjectStorage {
 ```
 
 ```php
-#[Resource('first.newsletter', storage: NewsletterStorage::class)]
+#[Resource('first.newsletter',
+  label: new TranslatableMarkup('Newsletter settings'),
+  storage: NewsletterStorage::class,
+)]
 ```
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).

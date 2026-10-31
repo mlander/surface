@@ -24,10 +24,18 @@ the record of the rework that brought the module to the pattern.
   registration settings first, a content type, then a basic page,
   `entity.content:node.page`, the same shape applied to content). One
   with no identity keys, such as a settings object, is a singleton
-  resource. `#[Resource(id, identity:, storage:, access:)]`.
+  resource. `#[Resource(id, identity:, storage:, access:, label:,
+  description:)]`.
 - **Structure**: a group of keys with no identity or storage of its
   own, held by a parent (attached or as a variant) or a plugin's host.
-  `#[Structure(id, access:)]`.
+  `#[Structure(id, access:, label:, description:)]`. The label and
+  description, both optional, say what either is called and is for:
+  `ResourceDefinition::label()` and `description()`, else the one
+  hosting plugin's (`ResourcePlugins::hostNames()`); they title and
+  describe its def in both documents (a def with no label is titled by
+  its key), offer a variant whose `#[Variant]` gives no label, print in
+  the catalog, and read back from a def's `title` and `description`
+  (`docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for`).
 - **Shape**: a named type (Smithy's word), of three kinds: resources,
   structures, and named scalar shapes. The third is `#[Shape(id)]` on a
   class in `src/Shape/` whose static `define()` returns one scalar
@@ -538,7 +546,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1805, Assertions: 41159, Errors: 0, Failures: 0, Skipped: 3. Classes: 252 of 252, 8 at a time, browser classes 4.
+phpunit: Tests: 1811, Assertions: 41197, Errors: 0, Failures: 0, Skipped: 3. Classes: 253 of 253, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -558,8 +566,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1697, Assertions: 37139, Skipped: 3, Deprecations: 130. Classes:
-203, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1703, Assertions: 37177, Skipped: 3, Deprecations: 130. Classes:
+204, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the

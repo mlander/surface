@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Structure;
 
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
@@ -15,7 +16,10 @@ use Drupal\surface\Resource\StructureInterface;
  * The source every site has. The key is never read back: the form draws
  * an empty box, and every answer leaves it out.
  */
-#[Structure('event.mailer.credential.pasted')]
+#[Structure('event.mailer.credential.pasted',
+  label: new TranslatableMarkup('Pasted credential'),
+  description: new TranslatableMarkup('The mailer credential pasted in, kept as a secret and never read back.'),
+)]
 final class PastedCredentialStructure implements StructureInterface {
 
   /**

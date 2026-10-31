@@ -17,8 +17,10 @@ on its own: a content type, a placed block, a module's settings.
 
 Precisely: a thing with identity and storage that operations read and
 write; the form, the tool and the schema are derived from it. Declared
-as a class carrying `#[Resource(id, identity:, storage:, access:)]`. A
-resource with no identity keys is a singleton. It may live in a config
+as a class carrying `#[Resource(id, identity:, storage:, access:)]`,
+and optionally `label:` and `description:`, what it is called and what
+it is for, beside the id. A resource with no identity keys is a
+singleton. It may live in a config
 object, a config entity, State, a plugin's settings or a content entity;
 only its storage knows which. Never instantiated: no constructor, no
 service. The class implements `Resource\ResourceInterface`, in
@@ -39,7 +41,9 @@ ever held by something else: attached to a parent, one of the variants
 at a key, or configuring a plugin, whose host supplies the operation,
 its permission and the storage. It has no permission of its own; it may
 answer access for its keys. Declared as a class carrying
-`#[Structure(id, access:)]`, implementing `Resource\StructureInterface`;
+`#[Structure(id, access:)]`, and optionally `label:` and `description:`,
+its def's title and description (with none, it takes those of the one
+plugin that holds it), implementing `Resource\StructureInterface`;
 or a plugin that is its own structure, `#[UsesStructure]` with no
 argument. The six ways one is made of others are side by side in
 [Which way to compose](resources.md#which-way-to-compose).

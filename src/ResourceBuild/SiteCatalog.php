@@ -195,6 +195,8 @@ final class SiteCatalog {
     foreach ($this->registry->getReadDefinitions() as $name => $definition) {
       $catalog[$name] = [
         'id' => $definition->id,
+        'label' => ResourceCatalog::text($definition->label()),
+        'description' => ResourceCatalog::text($definition->description()),
         'class' => NULL,
         'deriver' => NULL,
         'read' => $name,

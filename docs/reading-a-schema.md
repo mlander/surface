@@ -154,6 +154,16 @@ The documents are wider there than the pipeline, as they are wherever
 a rule is checked on the server alone, and never stricter
 (why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)).
 
+A def's `title` and `description` are kept as well, as what the
+structure read from it is called and is for: its label and its
+description, which the emitter writes on its def again, and which the
+catalog prints beside its id. A `title` that is the def's own key is
+what the emitter writes for a structure with no label, so it reads back
+as no label. The `title` of the root and of an object at a key is the
+operation's or the key's, and the structure takes neither
+(`SchemaReader::names()`;
+why: [decision](decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)).
+
 ## What is noted
 
 Reading answers notes, by the JSON pointer of what each is about: a

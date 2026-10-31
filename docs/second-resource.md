@@ -103,7 +103,10 @@ use Drupal\surface_examples_first\Storage\StoreStorage;
 /**
  * The store location: a region is one of the chosen country's.
  */
-#[Resource('first.store', storage: StoreStorage::class)]
+#[Resource('first.store',
+  label: new TranslatableMarkup('Store location'),
+  storage: StoreStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the store location'),
   description: new TranslatableMarkup('Sets the store location: its country, and a region of that country.'),

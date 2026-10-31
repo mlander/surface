@@ -1760,7 +1760,7 @@
                         "additionalProperties": false
                     },
                     "block.surface_component": {
-                        "title": "block.surface_component",
+                        "title": "Component",
                         "type": "object",
                         "properties": {
                             "component": {

@@ -92,6 +92,7 @@ class CatalogPageTest extends BrowserTestBase {
     $assert->addressEquals(self::PAGE . '/first.newsletter');
     $this->drupalGet(self::PAGE . '/first.store');
     $assert->statusCodeEquals(200);
+    $assert->elementTextContains('css', '#surface-catalog-facts', 'Label: Store location');
     $keys = array_map(fn (NodeElement $row): string => $this->cells($row)[0], $this->getSession()->getPage()->findAll('css', '#surface-catalog-keys tbody tr'));
     $this->assertSame(['country', 'region'], $keys);
     $assert->elementTextContains('css', '#surface-catalog-keys', 'regionOfCountry');

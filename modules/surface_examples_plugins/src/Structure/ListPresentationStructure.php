@@ -19,7 +19,10 @@ use Drupal\surface\Resource\StructureInterface;
  *
  * @see \Drupal\surface_examples_plugins\Structure\ExampleBlockStructure
  */
-#[Structure('block.surface_examples_plugins.presentation.list')]
+#[Structure('block.surface_examples_plugins.presentation.list',
+  label: new TranslatableMarkup('List presentation'),
+  description: new TranslatableMarkup('What the example block needs to render a list: whether summaries show.'),
+)]
 #[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
 final class ListPresentationStructure implements StructureInterface {
 

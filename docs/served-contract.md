@@ -538,9 +538,13 @@ key declared with it refers to.
    child, `enumerated`, `refine`, `group`, `after`, the `by` and
    `variants` of a key with variants, the `rules` it states, the `ports`
    it reads). An alter of the child applies in the def, since alters
-   apply by class. Its `title` is its id (`registration.contact`), the
-   same in every language, for a type generator to name it by; the label
-   is the parent's to give, beside the reference. Each document
+   apply by class. Its `title` is what the structure is called, its
+   label (`Paid ticket`), and its `description` what the structure is
+   for, where it says; a structure with no label, its own or the one
+   plugin's that holds it, is titled by its id (`registration.contact`).
+   The key is the id either way, the same in every language. The key's
+   own label is the parent's to give, beside the reference
+   ([decision](decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)). Each document
    writes its own defs, the schema for these answers with its
    `refined`, `stale` and `emptyOption` as they read for no values, the
    full schema without them; otherwise they are the same.
@@ -612,7 +616,9 @@ its def, so every reference is bare:
 ],
 "$defs": {
   "registration.step3.ticket.free": {...},
-  "registration.step3.ticket.paid": {"title": "registration.step3.ticket.paid", "type": "object",
+  "registration.step3.ticket.paid": {"title": "Paid ticket",
+                                     "description": "The ticket when registration costs money: its price and currency.",
+                                     "type": "object",
                                      "properties": {"price": {...}, "currency": {...}},
                                      "additionalProperties": false, "required": ["price", "currency"]},
   "registration.contact": {"title": "registration.contact", "type": "object",
@@ -729,10 +735,12 @@ hints):
    "then": {"properties": {"ticket": {"title": "Ticket", "$ref": "#/$defs/registration.step3.ticket.paid"}}}}
 ],
 "$defs": {
-  "registration.step3.ticket.free": {"title": "registration.step3.ticket.free", "type": "object",
+  "registration.step3.ticket.free": {"title": "Free ticket", "description": "The ticket when registration costs nothing: a note shown beside the register button.",
+    "type": "object",
     "properties": {"note": {"title": "Note", "type": ["string", "null"], ...}},
     "additionalProperties": false},
-  "registration.step3.ticket.paid": {"title": "registration.step3.ticket.paid", "type": "object",
+  "registration.step3.ticket.paid": {"title": "Paid ticket", "description": "The ticket when registration costs money: its price and currency.",
+    "type": "object",
     "properties": {
       "price": {"title": "Price", "type": "number", "minimum": 0.01, ...},
       "currency": {"title": "Currency", "type": "string", "default": "EUR",
@@ -903,7 +911,8 @@ A key declared with a [shape](declaring-a-resource.md#named-shapes) is
 written as a reference to it. Each shape is one def in both documents,
 under its id, as its alters left it, described as an optional key is:
 its type allows `null`, since whether a key may hold nothing is the
-key's, its `title` is its id, as every def's is, and its `x-surface`
+key's, its `title` is the shape's label (its id where it has none),
+and its `x-surface`
 carries only what the shape checks, the message of its pattern and
 what only the server checks. Each key that
 uses it is `$ref` first, then its title, then only what it says
@@ -923,7 +932,7 @@ and the shape beside it under `$defs`:
 
 ```json
 "event.license": {
-  "title": "event.license",
+  "title": "Event license",
   "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
   "type": ["string", "null"],
   "pattern": "^\\d{4}$",

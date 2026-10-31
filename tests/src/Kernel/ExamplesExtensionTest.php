@@ -152,7 +152,8 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
         ],
         "$defs": {
             "event.mailer.credential.pasted": {
-                "title": "event.mailer.credential.pasted",
+                "title": "Pasted credential",
+                "description": "The mailer credential pasted in, kept as a secret and never read back.",
                 "type": "object",
                 "properties": {
                     "api_key": {
@@ -293,7 +294,8 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
         ],
         "$defs": {
             "event.mailer.credential.pasted": {
-                "title": "event.mailer.credential.pasted",
+                "title": "Pasted credential",
+                "description": "The mailer credential pasted in, kept as a secret and never read back.",
                 "type": "object",
                 "properties": {
                     "api_key": {
@@ -306,7 +308,8 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
                 "additionalProperties": false
             },
             "event.mailer.credential.managed": {
-                "title": "event.mailer.credential.managed",
+                "title": "Managed credential",
+                "description": "The mailer credential as the name of a key the site manages, whose value is read where it is used.",
                 "type": "object",
                 "properties": {
                     "key_id": {

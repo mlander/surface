@@ -33,6 +33,17 @@ final class Subschemas {
   protected array $defs = [];
 
   /**
+   * What each def's structure is called and is for, by key.
+   *
+   * Kept beside the defs rather than in them, so a site compares with its
+   * def by what the def declares, and laid on each def only when the
+   * document is given its `$defs` (named()).
+   *
+   * @var array<string, array{title?: string, description?: string}>
+   */
+  protected array $names = [];
+
+  /**
    * The children whose def is being written now.
    *
    * @var \SplObjectStorage<\Drupal\surface\SurfaceInterface, string>
@@ -117,12 +128,17 @@ final class Subschemas {
    *   Its declaration, as its own frame describes it for no values.
    * @param \Drupal\surface\SurfaceInterface $child
    *   The child it was written from.
+   * @param string|\Stringable|null $label
+   *   What the child's structure is called, its def's `title`; NULL titles
+   *   the def by its key.
+   * @param string|\Stringable|null $description
+   *   What it is for, its def's `description`, or NULL.
    *
    * @return string
    *   The key it is filed under: the id, unless the id holds a different
    *   declaration already.
    */
-  public function add(string $id, array $def, SurfaceInterface $child): string {
+  public function add(string $id, array $def, SurfaceInterface $child, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL): string {
     $this->writing->detach($child);
     $key = $id;
     for ($n = 2; isset($this->defs[$key]) && !self::same($this->defs[$key], $def); $n++) {
@@ -130,6 +146,16 @@ final class Subschemas {
     }
     $this->defs[$key] ??= $def;
     $this->keys[$child] = $key;
+    if (!isset($this->names[$key])) {
+      $names = [];
+      if ($label !== NULL && (string) $label !== '') {
+        $names['title'] = PlainText::of($label);
+      }
+      if ($description !== NULL && (string) $description !== '') {
+        $names['description'] = PlainText::of($description);
+      }
+      $this->names[$key] = $names;
+    }
     return $key;
   }
 
@@ -186,6 +212,27 @@ final class Subschemas {
    */
   public function all(): array {
     return $this->defs;
+  }
+
+  /**
+   * Gets every def as the document states it: titled and described.
+   *
+   * Each def that its structure names leads with that structure's label
+   * as its `title` and its description as its `description`; DocumentHead
+   * titles any other by its key.
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   *
+   * @return array<string, array>
+   *   The defs, by key.
+   */
+  public function named(): array {
+    $defs = [];
+    foreach ($this->defs as $key => $def) {
+      $defs[$key] = ($this->names[$key] ?? []) + $def;
+    }
+    return $defs;
   }
 
   /**

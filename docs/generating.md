@@ -34,8 +34,8 @@ In the order asked, each default in brackets:
 1. **Module machine name**: any module in the code base, installed or
    not. Its info file is left as it is.
 2. **Resource id** [`<module>.settings`]: dotted lowercase words.
-3. **Label** [the id's last word]: the route's title and the schema
-   entry's label.
+3. **Label** [the id's last word]: the resource's own `label:`, the
+   route's title and the schema entry's label.
 4. **Class name, before Resource and Storage** [the id's last word].
 5. **Operation**: `configure`, for a settings object. A resource with
    identity (`create`, `update` and `delete`, and its identity key) is

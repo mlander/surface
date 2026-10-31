@@ -1214,7 +1214,7 @@ final class ContractEmitter {
         [$first, $rest] = array_pad(explode('.', $through, 2), 2, '');
         $reads[(string) $port] = ($attachment->reads[$first] ?? $first) . '.' . $rest;
       }
-      $site = new Attachment($child->child, $child->source, $child->id, $reads, $child->wired);
+      $site = $child->withReads($reads, $child->wired);
       [$stated, $marked] = $this->site($declared, $static, $entry, $site, (string) $id, $values, $emission);
       array_push($branches, ...$stated);
       $markers += $marked;
@@ -1458,7 +1458,7 @@ final class ContractEmitter {
       unset($def['additionalProperties'], $def['unevaluatedProperties']);
     }
     $def = $this->documentHead->versioned($child, $def, FALSE);
-    return $subschemas->add($id, $def, $child);
+    return $subschemas->add($id, $def, $child, $attachment->label, $attachment->description);
   }
 
   /**
@@ -1650,7 +1650,7 @@ final class ContractEmitter {
    *   `$defs`, or nothing.
    */
   protected function definitions(Subschemas $subschemas): array {
-    $defs = $subschemas->all();
+    $defs = $subschemas->named();
     return $defs === [] ? [] : ['$defs' => $defs];
   }
 

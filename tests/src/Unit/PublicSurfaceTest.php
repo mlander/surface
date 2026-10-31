@@ -34,6 +34,11 @@ use PHPUnit\Framework\Attributes\Group;
  * so a long list costs a request the entries it reads
  * (docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request):
  * 21 interfaces.
+ * Grown on 2026-10-31 by four arguments, `label:` and `description:` on
+ * #[Resource] and #[Structure], what a resource or structure is called
+ * and is for, beside its id
+ * (docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for):
+ * 35 arguments.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -55,7 +60,7 @@ class PublicSurfaceTest extends UnitTestCase {
    */
   protected const PINNED = [
     'attributes' => 9,
-    'attribute arguments' => 31,
+    'attribute arguments' => 35,
     'blueprint methods' => 16,
     'interfaces' => 21,
   ];

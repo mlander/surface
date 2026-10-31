@@ -130,6 +130,7 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     $this->assertSame(0, $status, $json);
     $entry = json_decode($json, TRUE, 512, JSON_THROW_ON_ERROR);
     $this->assertSame('configure', $entry['built']);
+    $this->assertSame(['Store location', NULL], [$entry['label'], $entry['description']], 'Its label, and no description.');
     $this->assertSame(['class' => NULL, 'alters' => [], 'kind' => 'none'], $entry['answers']);
     $keys = array_column($entry['keys'], NULL, 'key');
     $this->assertSame(['country', 'region'], array_keys($keys));
@@ -143,13 +144,21 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     // A table, with the keys and the doors.
     [$status, $display] = $this->catalog(['--resource' => 'first.store']);
     $this->assertSame(0, $status);
-    foreach (['Keys read in', 'regionOfCountry', 'PATCH /surface-api/first.store', 'LabeledChoice'] as $said) {
+    $said_all = [
+      'Label',
+      'Store location',
+      'Keys read in',
+      'regionOfCountry',
+      'PATCH /surface-api/first.store',
+      'LabeledChoice',
+    ];
+    foreach ($said_all as $said) {
       $this->assertStringContainsString($said, $display);
     }
     $this->assertMatchesRegularExpression('#Its page in the catalog: http\S*/admin/config/development/surfaces/first\.store\s*$#', $display);
     [$status, $markdown] = $this->catalog(['--resource' => 'first.store', '--format' => 'markdown']);
     $this->assertSame(0, $status);
-    $this->assertStringStartsWith("# first.store\n", $markdown);
+    $this->assertStringStartsWith("# first.store\n\n- Label: Store location\n- Kind: resource\n", $markdown);
     $this->assertStringContainsString('| `region` | string, required | `"CA-ON"` |', $markdown);
 
     // Children, variants and items by their dotted path.

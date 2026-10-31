@@ -44,7 +44,10 @@ The rule of thumb: nest for a thing of its own, mix in for shared
 members that are part of this thing, and read a port for a value the
 container holds. Use variants when a key chooses the keys, and a
 collection when groups repeat. Use keys from the site when the site,
-not the code, decides how many there are.
+not the code, decides how many there are. Whichever way, the key takes
+the label the parent gives it, and the child's def in the schema the
+label the child gives itself, `#[Structure(label:)]`
+([What it is called](declaring-a-resource.md#what-it-is-called)).
 
 ## Where things live
 
@@ -274,6 +277,8 @@ The content type resource is the worked example:
 
 ```php
 #[Resource('node.type',
+  label: new TranslatableMarkup('Content type'),
+  description: new TranslatableMarkup('A content type: its name, machine name, description and help text, the label of its title field, and the defaults its new content starts from.'),
   identity: ['type'],
   storage: NodeTypeStorage::class,
   access: NodeTypeAccess::class,
@@ -310,7 +315,10 @@ A settings object's one `configure` is the attribute alone too, as on
 [the first resource](first-resource.md):
 
 ```php
-#[Resource('first.newsletter', storage: NewsletterStorage::class)]
+#[Resource('first.newsletter',
+  label: new TranslatableMarkup('Newsletter settings'),
+  storage: NewsletterStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the newsletter'),
   description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),
@@ -1598,7 +1606,12 @@ never names them: every class marked
 `#[Variant(of: Parent::class, at: 'key', for: '...', label: ...)]` is the
 variant for that value, and the sibling's allowed values become exactly
 the values the variants are for, each offered by the variant's `label:`
-(a `LabeledChoice`; a variant with no label is offered as its value).
+(a `LabeledChoice`), else by the label the structure itself carries,
+`#[Structure(label:)]` or its plugin's; a variant with neither is
+offered as its value. The `#[Variant]` label is the choice's word
+("Paid"), the structure's what the structure is called ("Paid ticket"),
+which also titles its def
+([What it is called](declaring-a-resource.md#what-it-is-called)).
 A new variant brings itself, its value and its label, and the parent
 never changes.
 
@@ -1635,10 +1648,16 @@ $inputs->attachVariants('presentation_settings', by: 'presentation')
   ->setDescription(t('What the chosen presentation needs.'));
 
 // ListPresentationStructure and GridPresentationStructure, beside it
-#[Structure('block.surface_examples_plugins.presentation.list')]
+#[Structure('block.surface_examples_plugins.presentation.list',
+  label: new TranslatableMarkup('List presentation'),
+  description: new TranslatableMarkup('What the example block needs to render a list: whether summaries show.'),
+)]
 #[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
 
-#[Structure('block.surface_examples_plugins.presentation.grid')]
+#[Structure('block.surface_examples_plugins.presentation.grid',
+  label: new TranslatableMarkup('Grid presentation'),
+  description: new TranslatableMarkup('What the example block needs to render a grid: how many columns, and whether summaries show.'),
+)]
 #[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 
 // FieldInstanceResource, in surface_examples_field

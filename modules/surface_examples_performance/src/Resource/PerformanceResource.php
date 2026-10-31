@@ -25,7 +25,11 @@ use Drupal\surface_examples_performance\Storage\PerformanceStorage;
  * only that the maximum age is an integer, and the resource offers a list
  * of integers, which it allows.
  */
-#[Resource('system.performance', storage: PerformanceStorage::class)]
+#[Resource('system.performance',
+  label: new TranslatableMarkup('Performance settings'),
+  description: new TranslatableMarkup('How long browsers and proxies may cache a page, and whether CSS and JavaScript files are aggregated, as core keeps them in system.performance.'),
+  storage: PerformanceStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure performance'),
   description: new TranslatableMarkup('Sets how long browsers and proxies may cache a page and whether CSS and JavaScript files are aggregated.'),

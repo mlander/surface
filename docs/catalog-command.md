@@ -10,13 +10,18 @@ found and which doors it reaches. [Resources](introduction/02-resources.md),
 
 `drush surface:catalog` prints the live
 map of a site: every resource and structure discovery finds, from any
-module, derived and read-back ones included; per operation its id, kind,
+module, derived and read-back ones included, with what each is called
+and is for where it says (its `label:` and `description:`, or the
+plugin's that holds it); per operation its id, kind,
 label, permission, parameters and the doors it reaches; and every
 refusal discovery or a build raised, and every route written wrong for
 the operation it serves, with its message and the file it points at.
 [The catalog](catalog.md) is this command's markdown for the modules in
-this repository, and [the catalog page](#the-catalog-page) shows the
-same on the site, each door linked.
+this repository, a label beside each id in its table and a `Label` and
+a `Description` line in each entry that has them, and
+[the catalog page](#the-catalog-page) shows the same on the site, each
+door linked. The table of operations is one row per operation, as
+before.
 
 ```
 drush surface:catalog                         # a table, one row per operation
@@ -66,7 +71,8 @@ API reference (`/surface-api/redoc#operation/<operationId>`); a tool id
 is shown as text. A second table, Refused, lists every message and the
 file it points at. Each resource or structure links to its own page,
 `/admin/config/development/surfaces/<id>`, which shows what `--resource`
-does: its facts, its operations and doors, and every key. The listing is
+does: its facts (its label and description first, where it has them),
+its operations and doors, and every key. The listing is
 built for no account, and the page says so: the documents a request
 answers (the schema for an account, its tool listing) differ by account.
 The command's table prints the page's URL last; `CatalogPageTest` holds
@@ -86,7 +92,8 @@ lists every one, and `--resource=<name>` shows one in full.
 
 ## One in full
 
-`--resource=<id>` builds the resource in its first operation that needs
+`--resource=<id>` names the resource by its label and description,
+where it has them, then builds it in its first operation that needs
 nothing (a structure with no operation as a host builds it) and lists
 every key as the build seals it, a child's, a variant's and a
 collection item's under their dotted path (`rooms.*.seats`): its type,

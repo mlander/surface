@@ -44,12 +44,13 @@ final class CatalogDocument {
     $groups = self::readGroups($catalog);
     $catalog = array_filter($catalog, static fn (array $resource): bool => $resource['read'] === NULL);
     $document = self::intro();
-    $document .= "| Resource or structure | Class | Identity | Operations |\n| --- | --- | --- | --- |\n";
+    $document .= "| Resource or structure | Label | Class | Identity | Operations |\n| --- | --- | --- | --- | --- |\n";
     foreach ($catalog as $resource) {
       $document .= sprintf(
-        "| [`%s`](#%s) | `%s` | %s | %s |\n",
+        "| [`%s`](#%s) | %s | `%s` | %s | %s |\n",
         $resource['id'],
         self::anchor($resource['id']),
+        self::cell($resource['label'] ?? ''),
         $resource['class'] === NULL ? 'derived' : self::short($resource['class']),
         self::codes($resource['identity']),
         self::codes(array_column($resource['operations'], 'id')),
@@ -60,6 +61,7 @@ final class CatalogDocument {
       $document .= $resource['class'] === NULL
         ? 'Derived under `' . $resource['deriver'] . '`, in `' . $resource['module'] . "`.\n\n"
         : '`' . $resource['class'] . '`, in `' . $resource['module'] . "`.\n\n";
+      $document .= self::names($resource);
       $document .= '- Kind: ' . $resource['kind'] . "\n";
       $document .= '- Identity: ' . self::codes($resource['identity']) . "\n";
       $document .= '- Storage: ' . ($resource['storage'] === NULL ? 'none; its host or its parent stores it' : '`' . $resource['storage'] . '`') . "\n";
@@ -228,6 +230,30 @@ final class CatalogDocument {
       'operations' => array_sum(array_map(static fn (array $entry): int => count($entry['operations']), $declared)),
       'read' => count($catalog) - count($declared),
     ];
+  }
+
+  /**
+   * Says what a resource or structure is called and is for, where it says.
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   *
+   * @param array $resource
+   *   Its entry, as SiteCatalog::describe() or resource() gives it.
+   *
+   * @return string
+   *   A list item for each of its label and its description it has, or
+   *   nothing.
+   */
+  public static function names(array $resource): string {
+    $names = '';
+    if (($resource['label'] ?? NULL) !== NULL) {
+      $names .= '- Label: ' . self::cell($resource['label']) . "\n";
+    }
+    if (($resource['description'] ?? NULL) !== NULL) {
+      $names .= '- Description: ' . self::cell($resource['description']) . "\n";
+    }
+    return $names;
   }
 
   /**
