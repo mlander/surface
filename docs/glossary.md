@@ -363,7 +363,9 @@ key and every rule, after the owner, other modules, the site, the page
 and access have each had their say.
 
 Precisely: what the build step seals from a resource or structure in a
-context: an immutable group of data definitions, plus the map of which
+context: an immutable group of core data definitions
+(`DataDefinitionInterface`, held in a `DefinitionMap` that refuses
+writes; [Built on typed data](on-typed-data.md)), plus the map of which
 definitions depend on which others and the refiners that narrow them.
 Once sealed it is only read. It has two halves: what a host
 **accepts**, and what its execution **emits**, declared in the same
@@ -402,7 +404,9 @@ Precisely: the build step, `surface.resources`
 (`ResourceBuild\ResourcesInterface`), turns a resource or structure
 class and a context into a sealed `SurfaceInterface`. The blueprint
 is filled once at build, then sealed; the context is applied once by
-the build step.
+the build step. It exists because core holds no group of data
+definitions that several parties write in order and that is then fixed
+([Built on typed data](on-typed-data.md)).
 
 Introduced in [Sealed](introduction/16-sealed.md). Reference:
 [The build step](how-it-fits.md#the-build-step).
@@ -415,8 +419,11 @@ The blueprint is the object a class writes its keys into.
 
 Precisely: what a resource or structure declares its keys into, handed
 to `defineInputs()` and `defineOutputs()` as a `BlueprintInterface`; an
-alter gets the add-only `BlueprintAdditionsInterface`. Filled once at
-build, then sealed.
+alter gets the add-only `BlueprintAdditionsInterface`. Each key it holds
+is a core data definition: `add()` gets a `DataDefinition` from core's
+typed data manager and returns it
+([Built on typed data](on-typed-data.md)). Filled once at build, then
+sealed.
 
 Not in the introduction. Reference:
 [The class](declaring-a-resource.md#the-class).

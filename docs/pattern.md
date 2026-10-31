@@ -640,3 +640,8 @@ concept. The naming of sources and resolvers is undecided.
 | `#[Resource(storage:, access:)]` | the provider triple: `getSurface()`, `surfaceAccess()`, `getSurfaceStorage()` |
 | `defineOutputs()`, never refined | `setOutputDefinition()` plus output refiners |
 | `#[UsesStructure]` on the plugin, naming a structure or being one | `declareSurface()` on the plugin class itself |
+
+The rework kept the module's builder and changed what an author writes
+to reach it ([Questions the pattern settled](#questions-the-pattern-settled),
+item 6). [Built on typed data](on-typed-data.md) says why a builder
+sits on top of core's typed data at all.

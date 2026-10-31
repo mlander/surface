@@ -52,6 +52,11 @@ section below says what else is kept.
 
 ## The build step
 
+A build exists because core holds each data definition on its own:
+nothing in core puts the parties that write into one group of them in
+order, or fixes the group once they have written
+([Built on typed data](on-typed-data.md)).
+
 `ResourcesInterface::build(string $resource, OperationContext $context):
 SurfaceInterface`, in `Resources::buildResource()`, which calls its
 phases in order: `Declaring` for steps 1 to 4, `Attaching` and `Binding`

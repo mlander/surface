@@ -4,7 +4,10 @@ A structure is a group of values with no [identity](08-identity.md), no
 [storage](10-storage.md) and no [operation](09-operations.md) of its
 own. Nothing tells one apart from another, nothing saves it by itself,
 and nobody asks to change it by itself. It is only ever held by
-something else, and that holder is the resource.
+something else, and that holder is the resource. It has no permission
+of its own either: the permission to ask for what holds it decides who
+may ask, and an access class named with `access:` on `#[Structure]`
+answers only for the structure's own values ([Access](15-access.md)).
 
 ![On the left, the teaser block's settings, a structure with headline and limit, with no id, nowhere saved by itself and nothing to ask for; on the right, the placed block, block.placement, a resource with an id, saved as block.block.teaser_front, and create, update and delete, holding the settings under settings](images/03-structures.svg)
 
@@ -85,11 +88,11 @@ than one plugin shares the settings.
 The module describes three kinds of thing. The third, a
 [shape](04-shapes.md), is one value used under many names.
 
-| | Has [identity](08-identity.md)? | Has [storage](10-storage.md)? | Has [operations](09-operations.md)? | Held by | [Another module](13-other-modules.md) may change it? |
-| --- | --- | --- | --- | --- | --- |
-| Resource | yes | yes | yes | nothing: it is asked for on its own | yes: it may add values under its own name and tighten what the values allow, never loosen it |
-| Structure | no | no | no | a resource, or another structure, under one of its values | yes, the same way |
-| [Shape](04-shapes.md) | no | no | no | a resource or a structure, under each of its values that uses it | yes: it may tighten the one value, which then holds everywhere the shape is used; it adds nothing |
+| | Has [identity](08-identity.md)? | Has [storage](10-storage.md)? | Has [operations](09-operations.md)? | Held by | [Another module](13-other-modules.md) may change it? | [Permission and access](15-access.md)? |
+| --- | --- | --- | --- | --- | --- | --- |
+| Resource | yes | yes | yes | nothing: it is asked for on its own | yes: it may add values under its own name and tighten what the values allow, never loosen it | each way of asking for it names a permission; its [access](15-access.md) answer may lock its values for an account, or refuse the whole request |
+| Structure | no | no | no | a resource, or another structure, under one of its values | yes, the same way | no permission of its own: the permission to ask for what holds it decides who may ask; it may answer [access](15-access.md) for its own values, and only for them |
+| [Shape](04-shapes.md) | no | no | no | a resource or a structure, under each of its values that uses it | yes: it may tighten the one value, which then holds everywhere the shape is used; it adds nothing | none of its own: it takes the [access](15-access.md) of whatever holds it |
 
 Next: [Shapes](04-shapes.md)
 

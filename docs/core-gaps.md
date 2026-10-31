@@ -146,9 +146,9 @@ constraints into schema keywords", drafted, unfiled.
 
 ### 1.3 A setter contract
 
-**The gap.** `DataDefinitionInterface` declares getters only. The
-setters (`setRequired()`, `setDescription()`, `addConstraint()` and the
-rest) exist on `DataDefinition`, `ListDataDefinition`,
+**The gap.** `DataDefinitionInterface` declares getters and one setter,
+`addConstraint()`. The other setters (`setRequired()`,
+`setDescription()` and the rest) exist on `DataDefinition`, `ListDataDefinition`,
 `MapDataDefinition`, `FieldDefinition` and `BaseFieldDefinition` with no
 shared contract, so code handed a definition to tighten has to name a
 class.
