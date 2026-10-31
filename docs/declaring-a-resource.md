@@ -77,6 +77,7 @@ part of a resource or structure has one home:
 | What may refuse once the operation's permission allows | `access:` on either attribute, an `OperationAccessInterface` in `src/Access/` |
 | Its parts | `attach()` and `attachVariants()` in `defineInputs()`, and `#[Variant]` on each variant |
 | Which version of its stored values it describes | `version:` on either attribute, 1 until a breaking change is made after values are stored ([Evolving a resource](evolution.md#the-version)) |
+| What it is called, and what it is for | `label:` and `description:` on either attribute, both optional ([What it is called](#what-it-is-called)) |
 
 `FieldInstanceResource` in `surface_examples_field` uses every row but the
 version, which nothing raises yet, and outputs, which the example formatter
@@ -123,6 +124,47 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   classes, access classes and alters are autowired services and may hold
   services; an alter's refiners are static methods too, unless they
   declare `runtime: TRUE`, the one kind an instance method may be.
+
+### What it is called
+
+The id is for code: the tool id, the HTTP path, the key under `$defs`.
+`label:` says what the resource or structure is called and
+`description:` what it is for, each written as
+`new TranslatableMarkup(...)`, for a person or an agent who would
+otherwise have only the id:
+
+```php
+#[Structure('registration.step3.ticket.paid',
+  label: new TranslatableMarkup('Paid ticket'),
+  description: new TranslatableMarkup('The ticket when registration costs money: its price and currency.'),
+)]
+#[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid', label: new TranslatableMarkup('Paid'))]
+final class PaidTicketStructure implements StructureInterface {
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+Both are optional. Where they are said:
+
+- **The served contract.** The def of a structure or resource is titled
+  by its label and described by its description; one with no label is
+  titled by its id. The key under `$defs` is the id either way.
+- **The catalog.** `drush surface:catalog`, its page and
+  [the catalog](catalog.md) print both beside the id.
+- **Variants.** A deciding key offers each value by its `#[Variant]`'s
+  `label:`, the choice's word, else by the structure's label. The paid
+  ticket is offered as "Paid" and its def is titled "Paid ticket"; a
+  `#[Variant]` label that would only repeat the structure's is left
+  out.
+- **The contract panel** names a part by its label, its id after it.
+
+Two labels are not the same thing. The label `attach()` or
+`attachVariants()` gives the key, `->setLabel(t('Ticket'))`, is the
+key's: the form element's title, the property's `title` beside the
+`$ref`. The structure's own label is what the structure is wherever it
+is held, the def's `title`. A structure that one plugin holds takes the
+plugin's label and description unless it says its own
+([On a plugin](#on-a-plugin)).
 
 ### Named shapes
 
@@ -372,6 +414,19 @@ What a host supplies, and why the structure does not:
 `#[UsesStructure]` is copied into the plugin definition, so the catalog
 lists which plugins use a structure without instantiating one, and
 whatever a plugin uses is never generated as a tool of its own.
+
+A structure a plugin holds says nothing the plugin already says: with
+no `label:` of its own, it is called what the plugin definition calls
+the plugin, a block's `admin_label` and any other plugin's `label`, and,
+with no `description:` either, it takes the definition's `description`
+where it has one. `ExampleBlockStructure` is "Surface API example" in
+the catalog and as a def, read from `ExampleBlock`'s attribute, and the
+formatter that is its own structure is "Surface API example
+formatter". Only where one plugin alone holds the structure: two
+plugins sharing one would each call it something else, so it is named
+by its id. Resolved at discovery, from the plugin definitions
+(`ResourcePlugins::hostNames()`); nothing is copied into the structure
+class.
 
 ## Operations and identity
 

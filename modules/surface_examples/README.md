@@ -719,7 +719,10 @@ third ticket is offered as soon as its class exists. The two tickets:
 <!-- code: src/Structure/FreeTicketStructure.php -->
 
 ```php
-#[Structure('registration.step3.ticket.free')]
+#[Structure('registration.step3.ticket.free',
+  label: new TranslatableMarkup('Free ticket'),
+  description: new TranslatableMarkup('The ticket when registration costs nothing: a note shown beside the register button.'),
+)]
 #[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'free', label: new TranslatableMarkup('Free'))]
 final class FreeTicketStructure implements StructureInterface {
 
@@ -737,7 +740,10 @@ final class FreeTicketStructure implements StructureInterface {
 <!-- code: src/Structure/PaidTicketStructure.php -->
 
 ```php
-#[Structure('registration.step3.ticket.paid')]
+#[Structure('registration.step3.ticket.paid',
+  label: new TranslatableMarkup('Paid ticket'),
+  description: new TranslatableMarkup('The ticket when registration costs money: its price and currency.'),
+)]
 #[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid', label: new TranslatableMarkup('Paid'))]
 final class PaidTicketStructure implements StructureInterface {
 
@@ -793,8 +799,8 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Resource/RegistrationStep3Resource.php`](src/Resource/RegistrationStep3Resource.php) | the resource: six keys, the ticket's variants chosen by the pricing, and the contact attached | 43 |
-| [`modules/surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 8 |
-| [`modules/surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 12 |
+| [`modules/surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 11 |
+| [`modules/surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 15 |
 | [`modules/surface_examples/src/Structure/ContactStructure.php`](src/Structure/ContactStructure.php) | the contact: a structure of two keys, attached | 8 |
 | [`modules/surface_examples/src/Storage/RegistrationStep3Storage.php`](src/Storage/RegistrationStep3Storage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step3` | the route | 8 |
@@ -3095,7 +3101,10 @@ final class CredentialSources implements ClosedSiteListInterface, ContainerInjec
 <!-- code: src/Structure/PastedCredentialStructure.php -->
 
 ```php
-#[Structure('event.mailer.credential.pasted')]
+#[Structure('event.mailer.credential.pasted',
+  label: new TranslatableMarkup('Pasted credential'),
+  description: new TranslatableMarkup('The mailer credential pasted in, kept as a secret and never read back.'),
+)]
 final class PastedCredentialStructure implements StructureInterface {
 
   /**
@@ -3114,7 +3123,10 @@ final class PastedCredentialStructure implements StructureInterface {
 <!-- code: src/Structure/ManagedCredentialStructure.php -->
 
 ```php
-#[Structure('event.mailer.credential.managed')]
+#[Structure('event.mailer.credential.managed',
+  label: new TranslatableMarkup('Managed credential'),
+  description: new TranslatableMarkup('The mailer credential as the name of a key the site manages, whose value is read where it is used.'),
+)]
 final class ManagedCredentialStructure implements StructureInterface {
 
   /**
@@ -3538,8 +3550,8 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 18 |
 | [`modules/surface_examples/src/Variants/CredentialSources.php`](src/Variants/CredentialSources.php) | the provider: the pasted source always, the managed source while the keys module is on, both named for storage | 28 |
-| [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 9 |
-| [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 9 |
+| [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 12 |
+| [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 12 |
 | [`modules/surface_examples/src/Storage/MailerStorage.php`](src/Storage/MailerStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step14` | the mailer's route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.mailer` | the mailer's config schema, generated from the class | 18 |

@@ -96,7 +96,7 @@ class ShapesTest extends SurfaceKernelTestBase {
    * The stock code's def, as both documents write it.
    */
   protected const DEF = [
-    'title' => 'resource_test.sku',
+    'title' => 'Stock code',
     'description' => 'Two capitals and digits, as printed on the shelf.',
     'type' => ['string', 'null'],
     'pattern' => '^[A-Z]{2}\d+$',

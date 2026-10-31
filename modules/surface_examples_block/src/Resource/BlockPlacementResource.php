@@ -34,6 +34,8 @@ use Drupal\surface_examples_block\Variants\BlockPluginStructures;
  * asks "administer blocks", the block layout's permission.
  */
 #[Resource('block.placement',
+  label: new TranslatableMarkup('Placed block'),
+  description: new TranslatableMarkup('A block placed in a region of a theme under a machine name: its label, the settings its plugin takes, its weight, its status and when it shows.'),
   identity: ['id'],
   storage: BlockPlacementStorage::class,
 )]

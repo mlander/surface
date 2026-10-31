@@ -159,7 +159,10 @@ use Drupal\surface_examples_first\Storage\NewsletterStorage;
 /**
  * The newsletter settings: a form, a tool and a schema, from this class.
  */
-#[Resource('first.newsletter', storage: NewsletterStorage::class)]
+#[Resource('first.newsletter',
+  label: new TranslatableMarkup('Newsletter settings'),
+  storage: NewsletterStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the newsletter'),
   description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),
@@ -202,11 +205,13 @@ final class NewsletterResource implements ResourceInterface {
 
 Read it top to bottom:
 
-- **`#[Resource('first.newsletter', storage: ...)]`** names the resource
-  and its storage. The id is the resource's own machine name and needs
-  no module prefix; the config object is `surface_examples_first.newsletter`
-  because Drupal requires a module's config object names to start with
-  the module's name. The class goes in `src/Resource/`, where it is
+- **`#[Resource('first.newsletter', label: ..., storage: ...)]`** names
+  the resource, says what it is called, and names its storage. The id is
+  the resource's own machine name and needs no module prefix; the
+  config object is `surface_examples_first.newsletter` because Drupal
+  requires a module's config object names to start with the module's
+  name. The label is what the catalog and other lists print beside the
+  id. The class goes in `src/Resource/`, where it is
   found; nothing is registered by hand.
 - **`#[Operation('configure', ...)]`** is the one way it is asked for,
   on the class beside `#[Resource]`. There is only one newsletter, so

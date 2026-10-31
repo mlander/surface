@@ -255,10 +255,13 @@ The table's row says it; `PublicSurfaceTest` does not count a
 context's methods, so its pins are unchanged.
 
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
-grows only with that test updated beside a reason: 9 attributes, 31
+grows only with that test updated beside a reason: 9 attributes, 35
 attribute arguments (33 before; 30 until 2026-10-25, when
 `#[Operation(gate:)]` was added, [A gate is borrowed, never
-copied](#a-gate-is-borrowed-never-copied)), 16 blueprint methods (17
+copied](#a-gate-is-borrowed-never-copied); 31 until 2026-10-31, when
+`label:` and `description:` were added to `#[Resource]` and
+`#[Structure]`, [A resource and a structure may say what they are
+called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)), 16 blueprint methods (17
 before; 15 until 2026-10-27, when `resolve()` was added, [A key may
 stand for another at use](#a-key-may-stand-for-another-at-use)), 21
 interfaces (23 before; 20 until 2026-10-28, when
@@ -596,6 +599,9 @@ reviews). `#[Variant(..., label:)]` says what a person is offered the
 value as, and a deciding key that declares no list of its own gains a
 `LabeledChoice` of the variants' values and labels (a plain `Choice`
 when none gives a label; a variant with none is offered as its value).
+*Amended 2026-10-31:* a variant whose `#[Variant]` gives no label is
+offered by its structure's own label, where it has one
+([A resource and a structure may say what they are called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)).
 The shipped deciding keys drop the lists that restated their variants'
 values, and example 3's pricing is offered as Free and Paid, not `free`
 and `paid`, in the form and both documents.
@@ -871,6 +877,67 @@ mention is the constant: `add(self::VENUE, ...)`,
 `ResourceGeneratorTest::testKeysAreNamedOnceAsConstants()`,
 `NewsletterResource`, `StoreResource`, `RegistrationStep1Resource`,
 `RegistrationStep2Resource`)
+
+### A resource and a structure may say what they are called and what they are for
+
+Decided 2026-10-31. `#[Resource]` and `#[Structure]` take an optional
+`label:` and `description:`, typed as `#[Operation]`'s are and written
+as `new TranslatableMarkup(...)`: the label what the thing is called,
+the description what it is for. Discovery keeps both on the definition,
+whose `label()` and `description()` answer them, else the words of the
+one plugin that holds it, else NULL, and a caller names it by its id
+([What it is called](declaring-a-resource.md#what-it-is-called)).
+
+- **Why.** The id is for code: a tool id, a path, a key under `$defs`.
+  Four readers need a name and a purpose instead: a select offering
+  structures as variants, the catalog, a served contract's `$defs`, and
+  an agent reading those `$defs` with no other text to go on. Each of
+  them printed the id before, `registration.step3.ticket.paid`.
+- **Where it is said.** A def's `title` is its structure's label, or its
+  shape's label, and its `description` the structure's description; a
+  def with neither is titled by its key, as before, and the key stays
+  the id. The catalog prints both beside the id. A deciding key offers
+  a variant's value by its `#[Variant]` label, else by the structure's
+  label. The contract panel names a part by its label, its id after it.
+  The schema reader reads a def's `title` and `description` back into
+  the structure's label and description, so a document still reads back
+  to itself (`SchemaReader::names()`).
+- **A plugin's structure takes the plugin's words.** With no label of its
+  own, a structure one plugin holds is called what the plugin definition
+  calls the plugin (a block's `admin_label`, any other's `label`), and,
+  with no description either, takes its `description`. Read at discovery
+  from the plugin definitions (`ResourcePlugins::hostNames()`), so
+  nothing is said twice and nothing is copied into the structure class.
+  Only where one plugin alone holds it: two would call it two things.
+- **Two labels, two things.** The label `attach()` gives the key is the
+  key's, beside the `$ref`; the structure's label is what the structure
+  is wherever it is held. The `#[Variant]` label is the choice's word and
+  stands over the structure's: the paid ticket is offered as "Paid" and
+  titled "Paid ticket".
+- **Rejected: a label on every `#[Variant]`**, the only place a
+  structure could be named before. It names a structure only where it is
+  a variant, says nothing in the catalog or at an attached child's def,
+  and a structure chosen at two keys would say its name twice.
+- **Rejected: ids as titles, the status quo**
+  ([Contract 2](#contract-2), "`title` on every def, its id"). Stable
+  and language-free, but a reader learns nothing from it that the key
+  does not say, and a type generator that wants a stable name reads
+  the key, which does not change.
+- **What followed for served contracts.** Every def whose structure or
+  shape has a label changed its `title` from the id to the label, and
+  gained a `description` where the structure has one; the contract diff
+  reads neither as breaking. The baselines and the documents pinned in
+  fixtures were regenerated once, and only those titles and
+  descriptions moved. The OpenAPI document's tag for a labeled resource
+  gains its `x-displayName`, and a tool title that adds its resource
+  (where two operations share a label) adds the label.
+
+(`Resource\Attribute\Resource`, `Resource\Attribute\Structure`,
+`ResourceDefinition::label()`, `ResourceDefinition::description()`,
+`ResourcePlugins::hostNames()`, `Subschemas::named()`,
+`DocumentHead::top()`, `Attaching::variantLabels()`,
+`SchemaReader::names()`, `CatalogDocument::names()`,
+`ResourceLabelsTest`)
 
 ## Context
 
@@ -7893,6 +7960,10 @@ moves once. The changes, each with why ([the table](served-contract.md#contract-
   and language-free (json-schema-tooling 2.5). A shape's def titled
   itself by the shape's label before; the label is each key's, beside
   the reference. An inline reading lays no def's title over a site.
+  *Amended 2026-10-31:* a def is titled by its structure's or shape's
+  label where it has one, and by its id only where it has none; the key
+  is the id either way
+  ([A resource and a structure may say what they are called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)).
 - **The union of a key's variants** (json-schema-tooling 2.4). The key's
   property is `anyOf` of a reference to each variant's def, and null
   where it may be cleared, with no `type` beside it (the union says it,
@@ -8349,7 +8420,8 @@ path items of their own.
   `$ref` or in `x-surface.variants`, pointed at its component. Nothing
   else in a schema changes. Two operations share a component when they
   describe the def the same way; one that differs keeps its own, its
-  name suffixed and its `title` still the def id. Put back together,
+  name suffixed and its `title` still the def's (its structure's label,
+  else its id, *amended 2026-10-31*). Put back together,
   the components are the full schema byte for byte, which a test holds
   for every operation.
 - **An update takes a patch.** A key an update leaves out keeps what is

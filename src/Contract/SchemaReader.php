@@ -371,6 +371,43 @@ final class SchemaReader {
   }
 
   /**
+   * Reads what a def says the structure it is is called and is for.
+   *
+   * Its `title`, unless that is its own key, which is what the emitter
+   * titles a def whose structure has no label; and its `description`.
+   * The structure read from the def takes them as its label and its
+   * description, so a document emits them again where it read them.
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   *
+   * @param array $root
+   *   The document, as prepared().
+   * @param string $pointer
+   *   The JSON pointer of the structure's object in it.
+   * @param string $id
+   *   The structure's id: for a def, its key.
+   *
+   * @return array{0: string|null, 1: string|null}
+   *   The label and the description; both NULL for an object that is not
+   *   a def, whose title is its key's or its operation's.
+   */
+  public static function names(array $root, string $pointer, string $id): array {
+    if (!preg_match('#^/\$defs/[^/]+$#', $pointer) || !is_array($root['$defs'] ?? NULL)) {
+      return [NULL, NULL];
+    }
+    try {
+      $def = static::at($root, $pointer);
+    }
+    catch (\InvalidArgumentException) {
+      return [NULL, NULL];
+    }
+    $title = is_string($def['title'] ?? NULL) && $def['title'] !== '' && $def['title'] !== $id ? $def['title'] : NULL;
+    $description = is_string($def['description'] ?? NULL) && $def['description'] !== '' ? $def['description'] : NULL;
+    return [$title, $description];
+  }
+
+  /**
    * Registers a document as a structure, to be built by the name answered.
    *
    * @param array $document

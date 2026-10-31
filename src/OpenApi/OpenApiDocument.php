@@ -1219,8 +1219,8 @@ final class OpenApiDocument {
    *   The tag: its id as the name, its label and description.
    */
   protected function tag(ResourceDefinition $definition): array {
-    $label = $definition->label === NULL ? '' : (string) $definition->label;
-    $description = $definition->description === NULL ? '' : (string) $definition->description;
+    $label = (string) $definition->label();
+    $description = (string) $definition->description();
     $tag = [
       'name' => $definition->id,
       'description' => $description !== '' ? $description : ($label !== '' ? $label : (string) $this->t('The operations of the @resource resource.', ['@resource' => $definition->id])),

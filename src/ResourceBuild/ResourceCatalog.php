@@ -37,8 +37,10 @@ final class ResourceCatalog {
   /**
    * Describes every discovered resource and structure.
    *
-   * @return array<string, array{id: string, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool, kind: string, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>}>
-   *   The entries, keyed and sorted by id. `kind` is resource or
+   * @return array<string, array{id: string, label: string|null, description: string|null, class: class-string|null, deriver: string|null, module: string, kind: string, identity: string[], storage: class-string|null, access: class-string|null, plugins: list<string>, operations: list<array{id: string, label: string, provider: string, module: string, parameters: string[], creates: bool, kind: string, permission: string|null, unresolvable: string[], standalone: bool, reads: bool}>, alters: list<array{class: class-string, module: string, operations: string[], refines: list<array{key: string, watches: string[]}>}>, variants: array<string, array<string, class-string>>}>
+   *   The entries, keyed and sorted by id. `label` and `description`
+   *   are what it is called and is for (ResourceDefinition::label() and
+   *   description()), NULL where it says none. `kind` is resource or
    *   structure. `class` is NULL for a derived one, whose `deriver` is
    *   the base id it was derived under (NULL for every other). `plugins`
    *   lists the plugins whose configuration it is, as
@@ -64,6 +66,8 @@ final class ResourceCatalog {
       $plugins = $definition->isDerived() ? [] : $this->plugins->usedBy((string) $definition->class);
       $catalog[$definition->id] = [
         'id' => $definition->id,
+        'label' => static::text($definition->label()),
+        'description' => static::text($definition->description()),
         'class' => $definition->class,
         'deriver' => $definition->base,
         'module' => $definition->module,
@@ -101,6 +105,19 @@ final class ResourceCatalog {
     }
     ksort($catalog);
     return $catalog;
+  }
+
+  /**
+   * Writes a label or a description as the catalog prints it.
+   *
+   * @param string|\Stringable|null $text
+   *   The label or the description.
+   *
+   * @return string|null
+   *   It as a string, or NULL for none.
+   */
+  public static function text(string|\Stringable|null $text): ?string {
+    return $text === NULL || (string) $text === '' ? NULL : (string) $text;
   }
 
   /**

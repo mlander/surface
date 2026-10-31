@@ -279,6 +279,7 @@ final class ResourceGenerator extends BaseGenerator {
       'uses' => $uses,
       'summary' => static::wrappedAll($summary),
       'id_literal' => PhpLiteral::string($id),
+      'label_literal' => PhpLiteral::string($label),
       'storage_class' => $class . 'Storage',
       'resource_class' => $class . 'Resource',
       'operation_label_literal' => PhpLiteral::string($operation_label),

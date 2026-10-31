@@ -141,6 +141,8 @@ final class CatalogController extends ControllerBase {
       'facts' => [
         '#theme' => 'item_list',
         '#items' => [
+          ...(($entry['label'] ?? NULL) === NULL ? [] : [$this->t('Label: @label', ['@label' => $entry['label']])]),
+          ...(($entry['description'] ?? NULL) === NULL ? [] : [$this->t('Description: @description', ['@description' => $entry['description']])]),
           $this->t('Kind: @kind', ['@kind' => $entry['kind']]),
           $this->t('Declared by: @class (@module)', [
             '@class' => $entry['class'] ?? 'derived under ' . $entry['deriver'],

@@ -14,7 +14,10 @@ use Drupal\surface_examples_first\Storage\NewsletterStorage;
 /**
  * The newsletter settings: a form, a tool and a schema, from this class.
  */
-#[Resource('first.newsletter', storage: NewsletterStorage::class)]
+#[Resource('first.newsletter',
+  label: new TranslatableMarkup('Newsletter settings'),
+  storage: NewsletterStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the newsletter'),
   description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),

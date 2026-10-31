@@ -14,7 +14,10 @@ use {{ use }};
  *{{ line ? ' ' ~ line : '' }}
 {% endfor %}
  */
-#[Resource({{ r.id_literal }}, storage: {{ r.storage_class }}::class)]
+#[Resource({{ r.id_literal }},
+  label: new TranslatableMarkup({{ r.label_literal }}),
+  storage: {{ r.storage_class }}::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup({{ r.operation_label_literal }}),
   description: new TranslatableMarkup({{ r.operation_description_literal }}),

@@ -22,11 +22,17 @@ These are the two attributes in full, the settings' from
 `MySettingsResource` and the content type's from `NodeTypeResource`:
 
 ```php
-#[Resource('my_module.settings', storage: MySettingsStorage::class)]
+#[Resource('my_module.settings',
+  label: new TranslatableMarkup('My module settings'),
+  description: new TranslatableMarkup('What my module lists and how: its title, how many items a page shows, whether the author is shown, where notices go and the layout.'),
+  storage: MySettingsStorage::class,
+)]
 ```
 
 ```php
 #[Resource('node.type',
+  label: new TranslatableMarkup('Content type'),
+  description: new TranslatableMarkup('A content type: its name, machine name, description and help text, the label of its title field, and the defaults its new content starts from.'),
   identity: ['type'],
   storage: NodeTypeStorage::class,
   access: NodeTypeAccess::class,
@@ -34,9 +40,11 @@ These are the two attributes in full, the settings' from
 ```
 
 The settings name no `identity`, so they are a singleton. The content
-type names `type`. The other arguments name the class that saves the
-values and the class that decides who may change them, which later
-pages show ([Storage](10-storage.md), [Access](15-access.md)).
+type names `type`. `label:` and `description:` say what each is called
+and is for, as [Resources](02-resources.md) said. The other arguments
+name the class that saves the values and the class that decides who
+may change them, which later pages show ([Storage](10-storage.md),
+[Access](15-access.md)).
 
 `type` is still a key, declared in `defineInputs()` with a type, a label
 and its rules. The attribute only says it is the key that tells content

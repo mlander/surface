@@ -150,7 +150,7 @@
                         }
                     },
                     "event.phone": {
-                        "title": "event.phone",
+                        "title": "Phone",
                         "description": "Digits, with spaces if you like, and a leading + for a country code.",
                         "type": [
                             "string",

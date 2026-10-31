@@ -23,7 +23,8 @@ use Drupal\Core\TypedData\MapDataDefinition;
  * The source is the class the child was built from, when it was built
  * from one, so whatever reads the parent can say which structure (or
  * resource) sits at the key and route its values to that class's own
- * storage; the id is that class's #[Structure] or #[Resource] id, so
+ * storage; the id is that class's #[Structure] or #[Resource] id, and
+ * the label and description what it says it is called and is for, so
  * whatever reads only data surfaces, as the contract emitter does, can
  * name the child without the registry.
  *
@@ -74,6 +75,12 @@ final class Attachment {
    * @param array<string, mixed>|null $ports
    *   What each wired port holds as the container admitted it, once a
    *   refinement of the container has read it; NULL until then.
+   * @param string|\Stringable|null $label
+   *   What that resource or structure is called
+   *   (ResourceDefinition::label()), or NULL: the title of its def.
+   * @param string|\Stringable|null $description
+   *   What it is for (ResourceDefinition::description()), or NULL: its
+   *   def's description.
    */
   public function __construct(
     SurfaceInterface|SettlesChildInterface $child,
@@ -82,6 +89,8 @@ final class Attachment {
     public readonly array $reads = [],
     public readonly array $wired = [],
     public readonly ?array $ports = NULL,
+    public readonly string|\Stringable|null $label = NULL,
+    public readonly string|\Stringable|null $description = NULL,
   ) {
     $this->holds = $child;
   }
@@ -175,7 +184,7 @@ final class Attachment {
    *   The attachment.
    */
   public function withReads(array $reads, array $wired = []): static {
-    return new static($this->holds, $this->source, $this->id, $reads, $wired);
+    return new static($this->holds, $this->source, $this->id, $reads, $wired, label: $this->label, description: $this->description);
   }
 
   /**
@@ -197,7 +206,7 @@ final class Attachment {
     foreach ($this->reads as $port => $path) {
       $ports[(string) $port] = NestedArray::getValue($values, explode('.', $path));
     }
-    return new static($this->holds, $this->source, $this->id, $this->reads, $this->wired, $ports);
+    return new static($this->holds, $this->source, $this->id, $this->reads, $this->wired, $ports, $this->label, $this->description);
   }
 
   /**

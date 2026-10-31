@@ -159,6 +159,8 @@ final class Attaching {
           new VariantToSettle($deferred, $definition->name(), $deferred->shared($child_context), $locked === NULL ? NULL : (string) $locked, $read),
           $definition->name(),
           $definition->id,
+          label: $definition->label(),
+          description: $definition->description(),
         ),
         $access,
         $child_context,
@@ -172,6 +174,8 @@ final class Attaching {
           : $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $locked, siteDefaults: $siteDefaults),
         $definition->name(),
         $definition->id,
+        label: $definition->label(),
+        description: $definition->description(),
       ),
       $access,
       $child_context,
@@ -649,7 +653,7 @@ final class Attaching {
         }
         $present[] = $key;
       }
-      $builder->addMixin(new Mixin(new Attachment($built, $structure->name(), $structure->id), $present, $reads));
+      $builder->addMixin(new Mixin(new Attachment($built, $structure->name(), $structure->id, label: $structure->label(), description: $structure->description()), $present, $reads));
       array_push($mixed['bind'], ...$this->mixinBindings($structure, $blueprint, $reads, $present));
     }
     return $mixed;
@@ -1365,7 +1369,7 @@ final class Attaching {
       }
       $declared = [...array_map('strval', array_keys($variants)), ...$withheld];
       static::assertListNarrowsVariants($builder, $definition, $key, $by, $declared);
-      $builder->attachVariants($key, $by, $variants, $variantKeys[$key]['labels'] + static::variantLabels($children));
+      $builder->attachVariants($key, $by, $variants, $variantKeys[$key]['labels'] + $this->variantLabels($children));
       if ($runtime_variant) {
         $builder->markRuntimeAccess($key);
       }
@@ -1516,23 +1520,28 @@ final class Attaching {
   }
 
   /**
-   * Gets what each variant calls its value, from its #[Variant].
+   * Gets what each variant calls its value.
+   *
+   * Its #[Variant]'s label, the choice's word, else what the structure
+   * itself is called (ResourceDefinition::label()), so a structure that
+   * names itself is not named again on each #[Variant].
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
    *
    * @param array<string, string> $children
-   *   The variant classes, by the value each is for.
+   *   The variants, by the value each is for: a class, or the name a
+   *   derived one is built by.
    *
    * @return array<string, string|\Stringable>
-   *   The labels the variants give, by value; a variant giving none is
-   *   left out.
+   *   The labels, by value; a variant that says none either way is left
+   *   out.
    */
-  protected static function variantLabels(array $children): array {
+  protected function variantLabels(array $children): array {
     $labels = [];
     foreach ($children as $value => $child) {
-      if (!class_exists($child)) {
-        continue;
-      }
-      $attribute = (new \ReflectionClass($child))->getAttributes(Variant::class)[0] ?? NULL;
-      $label = $attribute?->newInstance()->label;
+      $attribute = class_exists($child) ? ((new \ReflectionClass($child))->getAttributes(Variant::class)[0] ?? NULL) : NULL;
+      $label = $attribute?->newInstance()->label ?? ($this->registry->hasDefinition($child) ? $this->registry->getDefinition($child)->label() : NULL);
       if ($label !== NULL) {
         $labels[(string) $value] = $label;
       }

@@ -50,7 +50,11 @@ value, and gives each its own label and default. This is
 do on [Resources](02-resources.md):
 
 ```php
-#[Resource('my_module.colors', storage: MyColorsStorage::class)]
+#[Resource('my_module.colors',
+  label: new TranslatableMarkup('My module colors'),
+  description: new TranslatableMarkup('The link and background colors my module draws with.'),
+  storage: MyColorsStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure my module colors'),
   permission: 'administer my_module',
@@ -85,11 +89,11 @@ pointer, the label and the default):
 "background_color": {"$ref": "#/$defs/my_module.hex_color", "title": "Background color", "default": "#FFFFFF"}
 ```
 
-The shape itself is written once:
+The shape itself is written once, titled by its label:
 
 ```json
 "my_module.hex_color": {
-  "title": "my_module.hex_color",
+  "title": "Color",
   "description": "A # and six hexadecimal digits, such as #0969DA.",
   "type": ["string", "null"],
   "pattern": "^#[0-9A-Fa-f]{6}$",

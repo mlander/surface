@@ -23,7 +23,11 @@ goes, in three steps:
 Your module's settings name their storage class on `#[Resource]`:
 
 ```php
-#[Resource('my_module.settings', storage: MySettingsStorage::class)]
+#[Resource('my_module.settings',
+  label: new TranslatableMarkup('My module settings'),
+  description: new TranslatableMarkup('What my module lists and how: its title, how many items a page shows, whether the author is shown, where notices go and the layout.'),
+  storage: MySettingsStorage::class,
+)]
 ```
 
 The class extends the module's `ConfigObjectStorage` and names the

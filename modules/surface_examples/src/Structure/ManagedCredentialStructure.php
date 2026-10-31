@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples\Structure;
 
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
@@ -15,7 +16,10 @@ use Drupal\surface\Resource\StructureInterface;
  * names the keys it lists: what is stored is the key's name, never its
  * value.
  */
-#[Structure('event.mailer.credential.managed')]
+#[Structure('event.mailer.credential.managed',
+  label: new TranslatableMarkup('Managed credential'),
+  description: new TranslatableMarkup('The mailer credential as the name of a key the site manages, whose value is read where it is used.'),
+)]
 final class ManagedCredentialStructure implements StructureInterface {
 
   /**

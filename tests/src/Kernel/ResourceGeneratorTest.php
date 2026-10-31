@@ -176,7 +176,7 @@ PHP, $this->written('src/Resource/NewsletterResource.php'), 'The interview names
       ->setRequired(TRUE);
   }
 PHP, $resource, 'Required in a fully validatable object, its default the value the site holds; _core and langcode are the storage\'s.');
-    $this->assertStringContainsString("#[Resource('node.settings', storage: NodeSettingsStorage::class)]", $resource);
+    $this->assertStringContainsString("#[Resource('node.settings',\n  label: new TranslatableMarkup('Node settings'),\n  storage: NodeSettingsStorage::class,\n)]", $resource, 'The label the interview offers, from the config schema\'s.');
     $this->assertStringContainsString('Written by drush generate surface:resource from the config schema of', $resource);
     $this->assertStringContainsString("public const CONFIG = 'node.settings';", $this->written('src/Storage/NodeSettingsStorage.php', $out));
     $this->assertFileDoesNotExist($out . '/config/schema/surface_examples_first.schema.yml', 'node.settings is node\'s: its schema describes it.');

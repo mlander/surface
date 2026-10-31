@@ -24,7 +24,11 @@ Here are the settings of a module of your own, `my_module`, described
 once. This is its resource class, `MySettingsResource`, in full:
 
 ```php
-#[Resource('my_module.settings', storage: MySettingsStorage::class)]
+#[Resource('my_module.settings',
+  label: new TranslatableMarkup('My module settings'),
+  description: new TranslatableMarkup('What my module lists and how: its title, how many items a page shows, whether the author is shown, where notices go and the layout.'),
+  storage: MySettingsStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure my module'),
   permission: 'administer my_module',

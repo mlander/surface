@@ -635,19 +635,51 @@ final class ResourceRegistry {
    */
   public function defineRead(string $id, string $module, ResourceCallable $inputs, string $hash): string {
     $name = 'schema:' . $id . ':' . $hash;
-    $this->read[$name] ??= new ResourceDefinition(
-      class: NULL,
-      id: $id,
-      module: $module,
-      identity: [],
-      storage: NULL,
-      access: NULL,
-      refiners: [],
-      inputs: $inputs,
-      kind: ResourceDefinition::STRUCTURE,
-      readAs: $name,
-    );
+    if (!isset($this->read[$name])) {
+      [$label, $description] = self::readNames($inputs, $id);
+      $this->read[$name] = new ResourceDefinition(
+        class: NULL,
+        id: $id,
+        module: $module,
+        identity: [],
+        storage: NULL,
+        access: NULL,
+        refiners: [],
+        inputs: $inputs,
+        label: $label,
+        description: $description,
+        kind: ResourceDefinition::STRUCTURE,
+        readAs: $name,
+      );
+    }
     return $name;
+  }
+
+  /**
+   * Reads what a structure read from a schema is called and is for.
+   *
+   * A def's `title` and `description`, as the emitter writes a
+   * structure's label and description there (SchemaReader::names()), so
+   * a document reads back to itself. Only for a def: the object at a key,
+   * or a document's root, is titled by the key or the operation.
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   *
+   * @param \Drupal\surface\Resource\ResourceCallable $inputs
+   *   What fills its blueprint.
+   * @param string $id
+   *   Its id in the document.
+   *
+   * @return array{0: string|null, 1: string|null}
+   *   The label and the description, each NULL where the def says none.
+   */
+  protected static function readNames(ResourceCallable $inputs, string $id): array {
+    [$root, $pointer] = $inputs->arguments + [NULL, NULL];
+    if ($inputs->class !== SchemaReader::class || $inputs->method !== 'fill' || !is_array($root) || !is_string($pointer)) {
+      return [NULL, NULL];
+    }
+    return SchemaReader::names($root, $pointer, $id);
   }
 
   /**
@@ -703,6 +735,8 @@ final class ResourceRegistry {
       if (isset($this->read[$name]) || !isset($export['documents'][$hash])) {
         continue;
       }
+      $inputs = new ResourceCallable(SchemaReader::class, 'fill', [$export['documents'][$hash], $pointer, $hash]);
+      [$label, $description] = self::readNames($inputs, $id);
       $this->read[$name] = new ResourceDefinition(
         class: NULL,
         id: $id,
@@ -711,7 +745,9 @@ final class ResourceRegistry {
         storage: NULL,
         access: NULL,
         refiners: [],
-        inputs: new ResourceCallable(SchemaReader::class, 'fill', [$export['documents'][$hash], $pointer, $hash]),
+        inputs: $inputs,
+        label: $label,
+        description: $description,
         kind: ResourceDefinition::STRUCTURE,
         readAs: $name,
       );
@@ -1071,6 +1107,11 @@ final class ResourceRegistry {
       }
       $ids[$id] = $class;
       self::assertAccessClass($class, $attribute?->access);
+      // What the one plugin hosting it calls itself, which its label and
+      // description fall back to.
+      // Decision: see
+      // docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+      $host = $this->plugins?->hostNames($class) ?? ['label' => NULL, 'description' => NULL];
       $resources[$class] = new ResourceDefinition(
         class: $class,
         id: $id,
@@ -1079,8 +1120,12 @@ final class ResourceRegistry {
         storage: $attribute instanceof Resource ? $attribute->storage : NULL,
         access: $attribute?->access,
         refiners: self::refinersOf($reflection),
+        label: $attribute?->label,
+        description: $attribute?->description,
         kind: $kind,
         version: self::versionOf($class, $attribute->version ?? 1),
+        hostLabel: $host['label'],
+        hostDescription: $host['description'],
       );
       if ($attribute instanceof Resource && $attribute->storage === NULL && $attribute->identity === [] && $plugin_id === NULL && ($this->plugins?->usedBy($class) ?? []) === []) {
         // Decision: see docs/decisions.md#a-resource-has-storage-or-a-host.

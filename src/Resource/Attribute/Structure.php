@@ -36,11 +36,26 @@ final class Structure {
    *   change was made since values were first stored, and refused above 1
    *   until stored-value migrations are built.
    *   Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
+   * @param string|\Stringable|null $label
+   *   What the structure is called, for people: written as
+   *   `new TranslatableMarkup(...)`. The title of its def in a served
+   *   contract, and what a deciding key offers its value as where its
+   *   #[Variant] gives no label. NULL, the default, takes the admin label
+   *   of the one plugin that hosts it, or leaves the id to name it.
+   * @param string|\Stringable|null $description
+   *   What the structure is for, in a sentence or two, for a reader or an
+   *   agent who has only the id otherwise: its def's description. NULL
+   *   takes the hosting plugin's description where the structure gives
+   *   no label either, or says nothing.
+   *   Decision: see
+   *   docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
    */
   public function __construct(
     public readonly string $id,
     public readonly ?string $access = NULL,
     public readonly int $version = 1,
+    public readonly string|\Stringable|null $label = NULL,
+    public readonly string|\Stringable|null $description = NULL,
   ) {}
 
 }

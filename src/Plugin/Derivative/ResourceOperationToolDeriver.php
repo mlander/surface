@@ -541,8 +541,8 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
    * The definition is cached for every language, so a translatable label
    * is handed over as itself, never rendered in the language that
    * discovered the tool. Where several tools would carry one label, each
-   * adds the resource it is an operation of: its label, or its id for a
-   * class, which has none.
+   * adds the resource it is an operation of: its label, or its id where
+   * it has none.
    *
    * Decision: see docs/decisions.md#a-static-tool-definition-is-no-accounts.
    *
@@ -559,7 +559,7 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
   protected function title(ResourceDefinition $resource, OperationDefinition $operation, array $shared): TranslatableMarkup {
     $label = OperationInputs::operationLabel($operation);
     if (isset($shared[(string) $operation->label])) {
-      return $this->t('@label (@resource)', ['@label' => $label, '@resource' => $resource->label ?? $resource->id]);
+      return $this->t('@label (@resource)', ['@label' => $label, '@resource' => $resource->label() ?? $resource->id]);
     }
     return $label instanceof TranslatableMarkup ? $label : $this->t('@label', ['@label' => $label]);
   }

@@ -79,9 +79,13 @@ final class ResourceDefinition {
    * @param class-string|null $deriver
    *   For a derived resource, the deriver that made it.
    * @param string|\Stringable|null $label
-   *   For a derived resource, what it is.
+   *   What it is called: its attribute's `label`, a derived one's
+   *   deriver's, or for a structure read from a schema document its def's
+   *   `title`; NULL when it says none.
    * @param string|\Stringable|null $description
-   *   For a derived resource, what it covers and leaves out.
+   *   What it is for: its attribute's `description`, what a derived one
+   *   covers and leaves out, or a read def's `description`; NULL when it
+   *   says none.
    * @param array<string, string|\Stringable> $notes
    *   For a derived resource, what its derivation could not carry, keyed
    *   by what it is about.
@@ -98,6 +102,12 @@ final class ResourceDefinition {
    *   For a structure read from a schema document, the name it is asked
    *   for by, which is not its id: the id is the document's, and may be a
    *   discovered structure's too (ResourceRegistry::defineRead()).
+   * @param string|\Stringable|null $hostLabel
+   *   What the one plugin that hosts it calls itself, its definition's
+   *   admin label (a block's `admin_label`, any other's `label`), or NULL
+   *   when no plugin or more than one hosts it.
+   * @param string|\Stringable|null $hostDescription
+   *   That plugin's definition's `description`, or NULL.
    */
   public function __construct(
     public readonly ?string $class,
@@ -121,7 +131,39 @@ final class ResourceDefinition {
     public readonly string $kind = self::RESOURCE,
     public readonly int $version = 1,
     public readonly ?string $readAs = NULL,
+    public readonly string|\Stringable|null $hostLabel = NULL,
+    public readonly string|\Stringable|null $hostDescription = NULL,
   ) {}
+
+  /**
+   * Gets what it is called, for people.
+   *
+   * Its own label, else the label of the one plugin that hosts it, so a
+   * plugin's structure says nothing the plugin already says.
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   *
+   * @return string|\Stringable|null
+   *   The label, or NULL: a caller then names it by its id.
+   */
+  public function label(): string|\Stringable|null {
+    return $this->label ?? $this->hostLabel;
+  }
+
+  /**
+   * Gets what it is for, for a reader or an agent who has only the id.
+   *
+   * Its own description, else, where it gives no label either, the
+   * description of the one plugin that hosts it: the plugin's words stand
+   * for it only as a pair, never beside a label of its own.
+   *
+   * @return string|\Stringable|null
+   *   The description, or NULL.
+   */
+  public function description(): string|\Stringable|null {
+    return $this->description ?? ($this->label === NULL ? $this->hostDescription : NULL);
+  }
 
   /**
    * Answers whether this is a resource rather than a structure.
@@ -325,6 +367,8 @@ final class ResourceDefinition {
       kind: $this->kind,
       version: $this->version,
       readAs: $this->readAs,
+      hostLabel: $this->hostLabel,
+      hostDescription: $this->hostDescription,
     );
   }
 

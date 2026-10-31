@@ -200,6 +200,22 @@ class ResourceCatalogTest extends SurfaceKernelTestBase {
     $this->assertSame(['settings' => ['address' => AddressFieldSettingsResource::class]], $field['variants']);
     $this->assertSame(FieldInstanceResource::class, $field['class']);
     $this->assertSame([], $field['plugins']);
+
+    // What each is called and is for: declared, the plugin's that holds
+    // it, or nothing.
+    // Decision: see
+    // docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+    $this->assertSame('Content type', $node_type['label']);
+    $this->assertStringStartsWith('A content type: its name', (string) $node_type['description']);
+    $block = $catalog['block.surface_examples_plugins'];
+    $this->assertSame('Surface API example', $block['label'], 'The block\'s admin label.');
+    $this->assertNull($block['description'], 'A block definition has no description.');
+    $this->assertNull($catalog['registration.contact']['label']);
+    $this->assertNull($catalog['registration.contact']['description']);
+    $markdown = $this->container->get('surface.site_catalog')->markdown();
+    $this->assertStringContainsString(") | Content type | `NodeTypeResource` |", $markdown);
+    $this->assertStringContainsString("## node.type\n\n`" . NodeTypeResource::class . "`, in `surface_examples_node_type`.\n\n- Label: Content type\n- Description: A content type: its name", $markdown);
+    $this->assertStringContainsString(") |  | `ContactStructure` |", $markdown, 'No label: an empty cell.');
   }
 
   /**
