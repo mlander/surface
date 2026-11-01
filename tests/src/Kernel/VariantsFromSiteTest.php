@@ -226,7 +226,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     $this->assertSame(['columns', 'gap'], array_keys($panels->getPropertyDefinitions()));
     $this->assertContains(PosterLayouts::TAG, $this->container->get('state')->get('surface.tool_listed_cache_tags'));
 
-    $read = $manager->createInstance('surface:resource_test.poster:configure:read');
+    $read = $manager->createInstance('surface:resource_test.poster:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::POSTER, $read->getResult()->getContextValues()[OperationInputs::VALUES] ?? NULL);

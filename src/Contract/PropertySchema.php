@@ -333,7 +333,7 @@ final class PropertySchema {
       if ($required !== []) {
         $schema['required'] = $required;
       }
-      $extension = $this->extension('fieldset', $depends, $refined || $this->anyRefined($schema));
+      $extension = $this->extension($this->asked($definition) ?? 'fieldset', $depends, $refined || $this->anyRefined($schema));
       if (DefinitionMetadata::isGrouping($definition)) {
         // Only groups the fieldsets inside it, as on the form: no title
         // and no description to draw, and `group` says to draw none.
@@ -367,6 +367,9 @@ final class PropertySchema {
       $claimed = $this->widgets?->claimed($definition);
       $widget = match (TRUE) {
         $claimed !== NULL => SurfaceWidgetManager::wordOf($claimed),
+        // A reference that asks for the autocomplete by its word is drawn
+        // with it, listed or not (SurfaceWidgetManager::getWidgetFor()).
+        AutocompleteWidget::draws($definition) && $definition->getSetting('widget') === 'autocomplete' => 'autocomplete',
         $fixed => 'fixed',
         $listed => $radios ? 'radios' : 'select',
         // A bare reference's id is drawn once its entity type is chosen:
@@ -608,6 +611,27 @@ final class PropertySchema {
   }
 
   /**
+   * Gets the widget a map asks to be drawn with, by its word.
+   *
+   * A map's `widget` setting, which an owner sets on the key or a
+   * structure asks for with #[Structure(widget:)]: a hint, as every
+   * widget word is.
+   *
+   * Decision: see
+   * docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The map.
+   *
+   * @return string|null
+   *   The word, or NULL for none.
+   */
+  public function asked(DataDefinitionInterface $definition): ?string {
+    $asked = $definition->getSetting('widget');
+    return is_string($asked) && $asked !== '' ? $asked : NULL;
+  }
+
+  /**
    * Says what a key that refers to an entity refers to.
    *
    * `{entityType, bundles?}` for a key that names one entity type, as
@@ -659,31 +683,31 @@ final class PropertySchema {
   /**
    * Names the JSON type, and format, a data type is.
    *
+   * The row of the type table (LeafTypes); a map or a list has none here,
+   * since what it holds says its type.
+   *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    *
    * @return array
-   *   `type`, and `format` where the data type has one or the key is
-   *   drawn as a date; empty for a type JSON Schema says nothing about,
-   *   such as `any`.
+   *   `type`, and `format` where the row has one or the key is drawn as a
+   *   date; empty for a map, a list, and the `any` the module makes.
+   *
+   * @throws \LogicException
+   *   For a value of a type no row is for, which the blueprint refuses.
    */
   protected function type(DataDefinitionInterface $definition): array {
-    return match ($definition->getDataType()) {
-      // A date input posts the RFC 3339 full-date, `YYYY-MM-DD`, so a key
-      // drawn as one is that format. A time input posts `HH:MM`, which
-      // RFC 3339's time refuses (it needs seconds and an offset), so a
-      // time states no format.
-      'string' => DateWidget::draws($definition) ? ['type' => 'string', 'format' => 'date'] : ['type' => 'string'],
-      // Drupal's validator admits a non-ASCII local part, which `email`
-      // (RFC 5321) refuses and `idn-email` (RFC 6531) admits.
-      'email' => ['type' => 'string', 'format' => 'idn-email'],
-      'uri' => ['type' => 'string', 'format' => 'uri'],
-      'datetime_iso8601' => ['type' => 'string', 'format' => 'date-time'],
-      'integer', 'timestamp' => ['type' => 'integer'],
-      'float' => ['type' => 'number'],
-      'boolean' => ['type' => 'boolean'],
-      default => [],
-    };
+    if (!LeafTypes::isLeaf($definition)) {
+      return [];
+    }
+    // A date input posts the RFC 3339 full-date, `YYYY-MM-DD`, so a key
+    // drawn as one is that format. A time input posts `HH:MM`, which
+    // RFC 3339's time refuses (it needs seconds and an offset), so a time
+    // states no format.
+    if ($definition->getDataType() === 'string' && DateWidget::draws($definition)) {
+      return ['type' => 'string', 'format' => 'date'];
+    }
+    return LeafTypes::spelling($definition);
   }
 
   /**

@@ -250,7 +250,7 @@ still refuses invalid values when they are validated.
 | `entity_bundle_exists` | `EntityBundleExists` | bundle info for the constraint's `entityTypeId` | bundle labels | tag `entity_bundles` |
 | `language_exists` | `LanguageExists` | the language manager; locked languages only when `allowLocked` is set | language names | tag `config:configurable_language_list` |
 | `country` | `Country` (the address module's) | `address.country_repository`, narrowed to the constraint's `availableCountries` when it names any | localized country names | tag `countries`, context `languages:language_interface` |
-| `surface_reference` | `SurfaceValidReference` | core's selection handler for its `entityTypeId` and `bundles`, for the account asking, while there are at most `surface.settings:reference_list_limit` ([below](#a-key-that-refers-to-an-entity)) | the entities' labels, sorted | the type's list tags, `References::CONTEXTS` for it, the settings' tag |
+| `surface_reference` | `SurfaceValidReference` | core's selection handler for its `entityTypeId` and `bundles`, or the `handler` and `handlerSettings` a reference field names, for the account asking, while there are at most `surface.settings:reference_list_limit` ([below](#a-key-that-refers-to-an-entity)) | the entities' labels, sorted | the type's list tags, `References::CONTEXTS` for it, the settings' tag |
 | `surface_referenceable_type` | `SurfaceReferenceableType` | the entity types of its `interface` and its `targets` of which the account may reference one, `exact` | entity type labels | tag `entity_types`, each type's list tags and contexts |
 
 "Permanent" means the default `CacheableMetadata`: no tags, no contexts,
@@ -295,8 +295,8 @@ declaration order, so on the accepted list that is the comparison
 When the allowed values are "every one of a kind that this site has",
 say which kind: `PluginExists`, `EntityBundleExists`, `LanguageExists`
 or the address module's `Country`, each read by a [stock
-resolver](#the-stock-resolvers), or the type string `entity:<type>` for
-an entity's id ([below](#a-key-that-refers-to-an-entity)). There is no
+resolver](#the-stock-resolvers), or `refer()` for an entity's id
+([below](#a-key-that-refers-to-an-entity)). There is no
 code per resource: the constraint names the kind, the resolver lists
 it for the site, and both documents state the list as a `oneOf` while it
 is short. Past its budget a reference is looked up and a list of
@@ -350,7 +350,7 @@ rooms as a `oneOf` and name nothing under `checkedOnServer`.
 **Example 2, before and after.** Its venue was a string with a
 constraint of its own, a `Choice` subclass, a validator that read the
 enabled venues and a resolver that listed them. It is now
-`add('venue', 'entity:event_venue', t('Venue'))`, step 2 with no code:
+`refer('venue', 'event_venue', t('Venue'))`, step 2 with no code:
 its candidates are core's selection handler's, and both documents mark
 it `x-surface.reference`. The room keeps what no stock constraint
 says, a room of one of the site's venues: one constraint with its
@@ -360,29 +360,32 @@ venue chosen
 
 ## A key that refers to an entity
 
-A key that refers to an entity is declared by the data type string of
-what it refers to, and holds the entity's id
-(why: [decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
+A key that refers to an entity is declared with `refer()`, naming the
+entity type it refers to, and holds the entity's id
+(why: [decision](decisions.md#a-reference-is-declared-as-a-reference),
+[decision](decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up)):
 
 ```php
 
-$inputs->add('venue', 'entity:event_venue', t('Venue'));    // a venue's machine name
+$inputs->refer('venue', 'event_venue', t('Venue'));    // a venue's machine name
 
-$inputs->add('contact', 'entity:user', t('Contact'));       // a user's id
-$inputs->add('page', 'entity:node:article', t('Announcement'));
+$inputs->refer('contact', 'user', t('Contact'));       // a user's id
+$inputs->refer('page', 'node', t('Announcement'), bundles: ['article']);
 
-$inputs->add('thing', 'entity', t('Featured beside'))
+$inputs->refer('thing', NULL, t('Featured beside'))
   ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
 ```
 
-- **`entity:<type>` and `entity:<type>:<bundle>`** build one key: the
-  id, typed as the entity type keeps it (an integer where a content
-  entity type's id field is one, a string for a config entity), with
-  `SurfaceValidReference` naming the entity type and the bundle.
-  An entity type the site does not have is refused when the resource
-  is built; a bundle it does not have yet is no refusal, and the key
-  offers nothing until it has.
-- **The bare `entity`** is two keys attached at the key, `entity_type`
+- **`refer($key, '<entity type>')`**, with the bundles it may name if
+  any, builds one key: the id, typed as the entity type keeps it (an
+  integer where a content entity type's id field is one, a string for a
+  config entity), with `SurfaceValidReference` naming the entity type
+  and the bundles. An entity type the site does not have is refused
+  when the resource is built; a bundle it does not have yet is no
+  refusal, and the key offers nothing until it has. `add($key,
+  'entity:node')` is refused, naming `refer()`: an entity is no type a
+  key holds; its id is.
+- **`refer($key, NULL)`** is two keys attached at the key, `entity_type`
   and `id`. `entity_type` lists the entity types the account may
   reference one of, by `SurfaceReferenceableType`, which the
   author writes on the key and the build moves onto it: `interface`
@@ -390,10 +393,22 @@ $inputs->add('thing', 'entity', t('Featured beside'))
   each entity type allowed with its bundles (`['node' => ['article'],
   'user' => []]`). Internal entity types are never offered. `id` is a
   string, and a static refiner narrows it to the entity type chosen with
-  the same `SurfaceValidReference`, so the three spellings are one
+  the same `SurfaceValidReference`, so both kinds are one
   mechanism, and the full schema states the id once per entity type, as
   a conditional. The id does not apply while no entity type is chosen,
   and is required once one is. Stored as `{entity_type, id}`.
+- **One per thing the site has**, `addEach('pages', NULL, from:
+  Slots::class, to: 'node', bundles: ['page'])`: a map of keys from the
+  site whose every entry is the id `refer()` declares, said in
+  `refer()`'s words with no type of its own; `addEach($key,
+  'entity:node', ...)` is refused, as `add()` refuses it.
+- **A reference field's `target_id`.** The content entity example
+  builds a reference field's target id as the key `refer()` declares,
+  naming the field's selection handler and its settings
+  (`References::definition()`, `handler:` and `handlerSettings:`), so
+  the key's candidates, its lookup and its check are the field's
+  handler's, as the field configures it
+  ([entities](entities.md#holes), item 10).
 - **In config, a content entity by its uuid.** A config storage
   (`ConfigObjectStorage`, `ConfigEntityStorage`) stores a reference to a
   content entity as its uuid, since a content entity's id differs

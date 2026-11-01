@@ -82,7 +82,6 @@ class SchemaRoundTripTest extends SurfaceKernelTestBase {
     'resource_test.crate:configure' => 'coded',
     'resource_test.cupboard:configure' => 'coded',
     'resource_test.depot:configure' => 'coded otherwise',
-    'resource_test.dynamic_child:configure' => 'coded otherwise',
     'resource_test.entry:configure' => 'coded',
     'resource_test.gallery.finish.oil:configure' => 'access',
     'resource_test.gallery:configure' => 'access',

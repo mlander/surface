@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
 /**
  * Checks that a value names an entity type a bare reference key may name.
  *
- * What the `entity_type` of a key declared `add($key, 'entity', ...)`
+ * What the `entity_type` of a key declared `refer($key, NULL, ...)`
  * allows, and what its author narrows it by: written on the key, it is
  * moved onto the entity type when the key's two parts are built. An
  * entity type is allowed when it is not internal, implements the

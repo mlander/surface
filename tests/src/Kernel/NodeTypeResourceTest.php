@@ -157,8 +157,9 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     $this->assertSame(NodeTypeStorage::class, $definition->storage);
     $this->assertSame(NodeTypeAccess::class, $definition->access);
     $operations = $this->container->get('surface.resource_registry')->getOperations(NodeTypeResource::class);
-    $this->assertSame(['create', 'update'], array_keys($operations));
+    $this->assertSame(['create', 'update', 'read'], array_keys($operations));
     $this->assertSame(NodeTypeResource::PERMISSION, $operations['update']->permission);
+    $this->assertSame(NodeTypeResource::PERMISSION, $operations['read']->permission, 'The read the build adds asks what the update asks.');
     $this->assertSame([NodeTypeAlter::class], array_map(static fn ($alter): string => $alter->class, $definition->alters));
   }
 

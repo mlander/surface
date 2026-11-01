@@ -126,7 +126,7 @@ class ReferenceStoredByUuidTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $context = $resources->operation(SponsorshipResource::class, 'configure');
     $built = $resources->build(SponsorshipResource::class, $context);
-    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:event.sponsorship:configure:read');
+    $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:event.sponsorship:read');
     $tool->execute();
     return [
       'storage' => $resources->storage(SponsorshipResource::class, $context, $built)->load($built),

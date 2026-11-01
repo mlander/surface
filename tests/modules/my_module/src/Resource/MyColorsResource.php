@@ -19,7 +19,11 @@ use Drupal\my_module\Storage\MyColorsStorage;
  * are HexColor's, so both take the same pattern and message, and the
  * served contract writes the shape once, as a def they refer to.
  */
-#[Resource('my_module.colors', storage: MyColorsStorage::class)]
+#[Resource('my_module.colors',
+  label: new TranslatableMarkup('My module colors'),
+  description: new TranslatableMarkup('The link and background colors my module draws with.'),
+  storage: MyColorsStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure my module colors'),
   permission: 'administer my_module',

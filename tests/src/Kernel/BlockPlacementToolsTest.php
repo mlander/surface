@@ -124,7 +124,7 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
         FALSE,
         ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN],
       ],
-      'update:read' => ['Current values: Edit a placed block', ToolOperation::Read, FALSE, ['id']],
+      'read' => ['Current values: Edit a placed block', ToolOperation::Read, FALSE, ['id']],
       'delete' => ['Remove a placed block', ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN]],
     ];
     foreach ($expected as $operation => [$label, $kind, $destructive, $inputs]) {
@@ -231,7 +231,7 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
     $build = $block->getPlugin()->build();
     $html = (string) $this->container->get('renderer')->renderInIsolation($build);
     $this->assertStringContainsString('<h3>Talks start at seven</h3>', $html);
-    $read = $this->call('update:read', ['id' => 'tonight']);
+    $read = $this->call('read', ['id' => 'tonight']);
     $this->assertSame($placed['values']['settings']['slots'], $read['values']['settings']['slots']);
 
     // A hero where the hero's actions expect a call to action: refused,
@@ -300,7 +300,7 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
    */
   public function testEditAndRead(): void {
     $this->call('create', ['values' => self::HERO]);
-    $read = $this->call('update:read', ['id' => 'doors_hero']);
+    $read = $this->call('read', ['id' => 'doors_hero']);
     $keys = [
       'label',
       'label_display',
@@ -343,7 +343,7 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
       'plugin' => 'system_branding_block',
       'settings' => ['label' => 'Branding'],
     ])->save();
-    $this->assertSame(['use_site_logo' => TRUE, 'use_site_name' => TRUE, 'use_site_slogan' => TRUE], $this->call('update:read', ['id' => 'branding'])['values']['settings']);
+    $this->assertSame(['use_site_logo' => TRUE, 'use_site_name' => TRUE, 'use_site_slogan' => TRUE], $this->call('read', ['id' => 'branding'])['values']['settings']);
     $quiet = ['settings' => ['use_site_slogan' => FALSE], 'label_display' => FALSE];
     $this->assertTrue($this->call('update', ['id' => 'branding', 'values' => $quiet])['committed']);
     $settings = Block::load('branding')->get('settings');

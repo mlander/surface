@@ -1,0 +1,8 @@
+name: 'Surface API string id test'
+type: module
+description: 'A content entity type whose id is a string the caller names, which no storage assigns: the content entity resources take it on create.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface_examples_entity

@@ -103,9 +103,15 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  *   it stores it.
  * - What it emits, in static defineOutputs(), on
  *   \Drupal\surface\Resource\DefinesOutputsInterface. Never refined.
+ * - What it is called and what it is for, label and description on the
+ *   attribute, both optional: the title and description of its def in a
+ *   served contract and what the catalog prints beside the id. A
+ *   structure one plugin holds takes the plugin's when it says none.
  *
  * @code
  * #[Resource('example.thing',
+ *   label: new TranslatableMarkup('Thing'),
+ *   description: new TranslatableMarkup('A thing the site keeps, named by its machine name.'),
  *   identity: ['id'],
  *   storage: ExampleStorage::class,
  *   access: ExampleAccess::class,
@@ -160,7 +166,8 @@ function hook_surface_options_resolver_info_alter(array &$definitions): void {
  * owner labels with the core setters. Variants are always open: every
  * structure carrying \Drupal\surface\Resource\Attribute\Variant for
  * the key is one, and the deciding key's allowed values become exactly
- * those. attachVariants($key, by: $sibling, from: Provider::class) adds the
+ * those, each offered by its #[Variant] label, else by the structure's own
+ * label. attachVariants($key, by: $sibling, from: Provider::class) adds the
  * variants a provider lists from the site, a
  * \Drupal\surface\Resource\SiteListInterface, for the values no
  * variant class declares.

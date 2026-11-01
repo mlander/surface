@@ -36,11 +36,37 @@ final class Structure {
    *   change was made since values were first stored, and refused above 1
    *   until stored-value migrations are built.
    *   Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
+   * @param string|\Stringable|null $label
+   *   What the structure is called, for people: written as
+   *   `new TranslatableMarkup(...)`. The title of its def in a served
+   *   contract, and what a deciding key offers its value as where its
+   *   #[Variant] gives no label. NULL, the default, takes the admin label
+   *   of the one plugin that hosts it, or leaves the id to name it.
+   * @param string|\Stringable|null $description
+   *   What the structure is for, in a sentence or two, for a reader or an
+   *   agent who has only the id otherwise: its def's description. NULL
+   *   takes the hosting plugin's description where the structure gives
+   *   no label either, or says nothing.
+   *   Decision: see
+   *   docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   * @param string|null $widget
+   *   The widget that draws it as a whole wherever it is attached, by the
+   *   one word a key's `widget` setting asks for one with; NULL, the
+   *   default, for the fieldset its keys are drawn in. A widget that
+   *   cannot draw a map is refused when the parent is built. A widget
+   *   draws; it never decides what is accepted, which stays the
+   *   structure's keys'. An owner's own `widget` setting on the key it
+   *   attaches it at wins.
+   *   Decision: see
+   *   docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
    */
   public function __construct(
     public readonly string $id,
     public readonly ?string $access = NULL,
     public readonly int $version = 1,
+    public readonly string|\Stringable|null $label = NULL,
+    public readonly string|\Stringable|null $description = NULL,
+    public readonly ?string $widget = NULL,
   ) {}
 
 }

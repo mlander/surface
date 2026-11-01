@@ -17,8 +17,10 @@ on its own: a content type, a placed block, a module's settings.
 
 Precisely: a thing with identity and storage that operations read and
 write; the form, the tool and the schema are derived from it. Declared
-as a class carrying `#[Resource(id, identity:, storage:, access:)]`. A
-resource with no identity keys is a singleton. It may live in a config
+as a class carrying `#[Resource(id, identity:, storage:, access:)]`,
+and optionally `label:` and `description:`, what it is called and what
+it is for, beside the id. A resource with no identity keys is a
+singleton. It may live in a config
 object, a config entity, State, a plugin's settings or a content entity;
 only its storage knows which. Never instantiated: no constructor, no
 service. The class implements `Resource\ResourceInterface`, in
@@ -39,7 +41,9 @@ ever held by something else: attached to a parent, one of the variants
 at a key, or configuring a plugin, whose host supplies the operation,
 its permission and the storage. It has no permission of its own; it may
 answer access for its keys. Declared as a class carrying
-`#[Structure(id, access:)]`, implementing `Resource\StructureInterface`;
+`#[Structure(id, access:)]`, and optionally `label:` and `description:`,
+its def's title and description (with none, it takes those of the one
+plugin that holds it), implementing `Resource\StructureInterface`;
 or a plugin that is its own structure, `#[UsesStructure]` with no
 argument. The six ways one is made of others are side by side in
 [Which way to compose](resources.md#which-way-to-compose).
@@ -194,7 +198,10 @@ per operation that can be asked on its own. Who may submit is the
 operation's permission and then the resource's access class, and the
 pipeline consults that answer before it reads or writes anything, so a
 form, a tool and the agent or Drush command calling it resolve one gate
-rather than several.
+rather than several. A resource that can be changed has a `read` too,
+read only: the one its owner declares, or the one the build adds beside
+the default update, asked as that update is
+([decision](decisions.md#a-read-is-an-operation-of-the-resource)).
 
 Introduced in [Operations](introduction/09-operations.md). Reference:
 [Operations: create, update, and the rest](resources.md#operations-create-update-and-the-rest).
@@ -359,7 +366,9 @@ key and every rule, after the owner, other modules, the site, the page
 and access have each had their say.
 
 Precisely: what the build step seals from a resource or structure in a
-context: an immutable group of data definitions, plus the map of which
+context: an immutable group of core data definitions
+(`DataDefinitionInterface`, held in a `DefinitionMap` that refuses
+writes; [Built on typed data](on-typed-data.md)), plus the map of which
 definitions depend on which others and the refiners that narrow them.
 Once sealed it is only read. It has two halves: what a host
 **accepts**, and what its execution **emits**, declared in the same
@@ -398,7 +407,9 @@ Precisely: the build step, `surface.resources`
 (`ResourceBuild\ResourcesInterface`), turns a resource or structure
 class and a context into a sealed `SurfaceInterface`. The blueprint
 is filled once at build, then sealed; the context is applied once by
-the build step.
+the build step. It exists because core holds no group of data
+definitions that several parties write in order and that is then fixed
+([Built on typed data](on-typed-data.md)).
 
 Introduced in [Sealed](introduction/16-sealed.md). Reference:
 [The build step](how-it-fits.md#the-build-step).
@@ -411,8 +422,11 @@ The blueprint is the object a class writes its keys into.
 
 Precisely: what a resource or structure declares its keys into, handed
 to `defineInputs()` and `defineOutputs()` as a `BlueprintInterface`; an
-alter gets the add-only `BlueprintAdditionsInterface`. Filled once at
-build, then sealed.
+alter gets the add-only `BlueprintAdditionsInterface`. Each key it holds
+is a core data definition: `add()` gets a `DataDefinition` from core's
+typed data manager and returns it
+([Built on typed data](on-typed-data.md)). Filled once at build, then
+sealed.
 
 Not in the introduction. Reference:
 [The class](declaring-a-resource.md#the-class).

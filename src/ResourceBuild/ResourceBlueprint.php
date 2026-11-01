@@ -11,20 +11,23 @@ use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\surface\Computed;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Port;
 use Drupal\surface\Reference\EntityReferenceStructure;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\BoundSiteListInterface;
 use Drupal\surface\Resource\DefinesInputsInterface;
 use Drupal\surface\Resource\Compute;
 use Drupal\surface\Resource\ComputesValueInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
+use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\Resource\SiteListInterface;
+use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\Contract\SchemaReader;
 
 /**
@@ -63,6 +66,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected array $variantsFrom = [];
 
   /**
+   * The arguments each provider of variants from the site is bound to.
+   *
+   * @var array<string, list<string|int>>
+   */
+  protected array $variantsArguments = [];
+
+  /**
    * The variants a schema read into this blueprint states, by key.
    *
    * Each value's structure, by the name it was registered under, and the
@@ -75,7 +85,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * The maps of keys from the site declared through this blueprint, by key.
    *
-   * @var array<string, array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
+   * @var array<string, array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>, to: string|null, bundles: string[]}>
    */
   protected array $fromSite = [];
 
@@ -101,7 +111,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected array $origins = [];
 
   /**
-   * The keys declared as a bare `entity`, each with the map at the key.
+   * The keys declared as a reference to any entity type, each with its map.
    *
    * Its two parts are registered once its author is done narrowing it,
    * when the build step first asks for the children (attachments()).
@@ -109,6 +119,21 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @var array<string, \Drupal\Core\TypedData\MapDataDefinition>
    */
   protected array $entities = [];
+
+  /**
+   * The map a declaration run again reaches, and who its callable fills.
+   *
+   * In a declaration run again for a map's structure: its key, and the
+   * structure's blueprint, which that key's callable is handed.
+   *
+   * @var array{0: string, 1: \Drupal\surface\ResourceBuild\ResourceBlueprint}|null
+   */
+  protected ?array $capture = NULL;
+
+  /**
+   * Whether the declaration run again reached the map's key.
+   */
+  protected bool $captured = FALSE;
 
   /**
    * Constructs a blueprint.
@@ -339,8 +364,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    *
-   * A key declared as a bare `entity` holds its two parts, registered for
-   * what its author narrowed it by.
+   * A key declared as a reference to any entity type holds its two parts,
+   * registered for what its author narrowed it by.
    */
   public function attachments(): array {
     foreach ($this->entities as $key => $shell) {
@@ -364,20 +389,117 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    */
   protected function addEntity(string $key, string|\Stringable $label, mixed $default): DataDefinition {
     if ($default !== NULL) {
-      throw new \LogicException(sprintf('add("%s", "entity") was given a default: a reference to an entity of any type is two keys, its entity type and its id, which start from nothing.', $key));
+      throw new \LogicException(sprintf('refer("%s", NULL) was given a default: a reference to an entity of any type is two keys, its entity type and its id, which start from nothing.', $key));
     }
     if ($this->registry === NULL || $this->references === NULL || $this->outputs) {
-      throw new \LogicException(sprintf('add("%s", "entity") declares a reference to an entity of any type where nothing can attach its two parts: a resource or a structure declares it among its inputs.', $key));
+      throw new \LogicException(sprintf('refer("%s", NULL) declares a reference to an entity of any type where nothing can attach its two parts: a resource or a structure declares it among its inputs.', $key));
     }
     // Held for its two parts, registered once its author is done with it
     // (attachments()).
     $this->assertHoldsNoChild('attaches a reference to an entity of any type', $key);
-    $shell = $this->reserveChild('add', $key);
+    $shell = $this->reserveChild('refer', $key);
     $this->attachments[$key] = EntityReferenceStructure::class;
     $this->wirings[$key] = [];
     $shell->setLabel($label);
     $this->entities[$key] = $shell;
     return $shell;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A map whose keys need a frame of their own (a child, a rule, a
+   * resolve, a port) is a structure with no id, registered for this key
+   * and attached at it (ResourceRegistry::defineMap()); its inputs run this
+   * declaration again and hand the callable the structure's blueprint
+   * (replay()), which holds it to the keys it declared the first time,
+   * before it asked for the frame. Every other map is the plain map the
+   * callable declared.
+   *
+   * Decision: see docs/decisions.md#an-anonymous-map.
+   */
+  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition {
+    if ($this->capture !== NULL) {
+      $shell = $this->reserveChild('addMap', $key);
+      $shell->setLabel($label);
+      if ($key === $this->capture[0]) {
+        $this->captured = TRUE;
+        $define($this->capture[1]);
+      }
+      return $shell;
+    }
+    try {
+      return parent::addMap($key, $label, $define);
+    }
+    catch (NeedsFrame $frame) {
+      assert($this->registry !== NULL && $this->owner !== NULL);
+      $shell = $this->reserveChild('addMap', $key);
+      $shell->setLabel($label);
+      $owner = $this->registry->getDefinition($this->owner);
+      // What the callable declared before it asked for the frame, which it
+      // declares first again each time the structure is filled.
+      $declared = $frame->path === $key ? $frame->declared : [];
+      $this->attachments[$key] = $this->registry->defineMap($owner->id . '.' . $key, $owner->module, $this->owner, $key, $declared);
+      $this->wirings[$key] = [];
+      return $shell;
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function unframed(): ?string {
+    return match (TRUE) {
+      $this->outputs => 'outputs hold no attached structures yet.',
+      $this->into !== NULL => 'a structure mixed in holds keys and maps, not children, for now.',
+      $this->registry === NULL || $this->owner === NULL => 'this blueprint has no registry and no owner to attach one by.',
+      default => NULL,
+    };
+  }
+
+  /**
+   * Declares a map's keys: its owner's declaration, run again to the map.
+   *
+   * The owner declares into a blueprint of its own, which declares
+   * nothing anywhere that is kept; its addMap() at the key hands the
+   * callable this blueprint instead of a map's.
+   *
+   * @param string $owner
+   *   The owner, by the name the registry knows it by.
+   * @param string $key
+   *   The key it declares the map at.
+   * @param string[] $declared
+   *   The keys its callable declared the first time it ran, before it
+   *   asked for a frame: the same keys come first each time.
+   *
+   * @throws \LogicException
+   *   When the declaration declares no map at the key this time, or the
+   *   callable declares other keys than it did the first time.
+   *
+   * @internal
+   *   For MapBlueprint::fill() alone.
+   */
+  public function replay(string $owner, string $key, array $declared = []): void {
+    assert($this->registry !== NULL);
+    $capture = (new static(new SurfaceBuilder(), $this->typedDataManager, FALSE, $this->registry, $owner))
+      ->useShapes($this->shapes)
+      ->useReferences($this->references);
+    $capture->capture = [$key, $this];
+    $this->registry->declareInputs($this->registry->getDefinition($owner), $capture);
+    if (!$capture->captured) {
+      throw new \LogicException(sprintf('%s declared a map at "%s" with addMap() once, and not when its declaration ran again: a declaration declares the same each time it runs.', $this->name($owner), $key));
+    }
+    // Decision: see docs/decisions.md#an-anonymous-map.
+    $again = array_slice($this->keys(), 0, count($declared));
+    if ($again !== $declared) {
+      throw new \LogicException(sprintf(
+        '%s declared %s in the map at "%s" with addMap() the first time its callable ran, and %s when its declaration ran again to fill the map\'s structure. The callable runs more than once, so it has no side effect and declares the same keys each time.',
+        $this->name($owner),
+        $declared === [] ? 'no key' : implode(', ', $declared),
+        $key,
+        $again === [] ? 'no key' : implode(', ', $again),
+      ));
+    }
   }
 
   /**
@@ -391,18 +513,41 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, ?string $from = NULL): MapDataDefinition {
+  public function attachVariants(string $key, string $by, ?string $from = NULL, array $arguments = []): MapDataDefinition {
     $this->assertHoldsNoChild('attaches variants', $key);
     if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
       throw new \LogicException(sprintf('attachVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema or structure, with list().', $key, $from, SiteListInterface::class));
+    }
+    if ($arguments !== []) {
+      // Decision: see
+      // docs/decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type.
+      if ($from === NULL || !is_subclass_of($from, BoundSiteListInterface::class)) {
+        throw new \LogicException(sprintf('attachVariants("%s") hands arguments to %s, which does not implement %s: only a provider that lists for what its owner binds takes them, with listFor().', $key, $from ?? 'no provider', BoundSiteListInterface::class));
+      }
+      if (is_subclass_of($from, EntrySchemasInterface::class)) {
+        throw new \LogicException(sprintf('attachVariants("%s") hands arguments to %s, which answers an entry\'s schema when it is read: that is asked by value alone, so such a provider takes no arguments.', $key, $from));
+      }
     }
     $shell = $this->reserveChild('attachVariants', $key);
     $this->variants[$key] = $by;
     if ($from !== NULL) {
       $this->variantsFrom[$key] = $from;
+      if ($arguments !== []) {
+        $this->variantsArguments[$key] = $arguments;
+      }
       DefinitionMetadata::setVariantsFrom($shell, $from);
     }
     return $shell;
+  }
+
+  /**
+   * Gets the arguments each provider of variants from the site is bound to.
+   *
+   * @return array<string, list<string|int>>
+   *   The arguments of each key whose provider was handed some.
+   */
+  public function variantsArguments(): array {
+    return $this->variantsArguments;
   }
 
   /**
@@ -644,14 +789,27 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function addEach(string $key, string $type, string $from, mixed $default = NULL): MapDataDefinition {
+  public function addEach(string $key, ?string $type, string $from, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
     $this->assertHoldsNoChild('declares keys from the site', $key);
-    if (str_contains($type, '\\') && !Shapes::isShape($type)) {
+    if ($to !== NULL || $bundles !== []) {
+      if ($type !== NULL || $to === NULL) {
+        throw new \LogicException($type !== NULL
+          ? sprintf('addEach("%s") names a type, %s, and an entity type each entry refers to, %s: an entry that refers to an entity takes its type from the entity type\'s id, addEach(\'%s\', NULL, from: ..., to: \'%s\').', $key, $type, (string) $to, $key, (string) $to)
+          : sprintf('addEach("%s") names bundles and no entity type: each entry refers to an entity of the type to: names, addEach(\'%s\', NULL, from: ..., to: \'<entity type>\', bundles: [...]).', $key, $key));
+      }
+    }
+    elseif ($type === NULL) {
+      throw new \LogicException(sprintf('addEach("%s") names no type: each entry is a value of a type, addEach(\'%s\', \'boolean\', from: ...), or an id of an entity, addEach(\'%s\', NULL, from: ..., to: \'<entity type>\').', $key, $key, $key));
+    }
+    elseif (LeafTypes::refersToEntity($type)) {
+      throw new \LogicException(sprintf('addEach("%s", "%s") declares each entry with an entity type string, which JSON Schema has no type for: an entry that refers to an entity says so as refer() does, addEach(\'%s\', NULL, from: ..., to: \'<entity type>\', bundles: [...]).', $key, $type, $key));
+    }
+    if ($type !== NULL && str_contains($type, '\\') && !Shapes::isShape($type)) {
       throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)
         ? sprintf('addEach("%s") was handed %s, a resource or structure: an entry that is a group of keys is a child, attachEach(\'%s\', ...).', $key, $type, $key)
         : sprintf('addEach("%s") was handed %s, which is no typed data type and no shape: each entry is declared as add() declares a key.', $key, $type));
     }
-    return $this->reserveEach('addEach', $key, $type, $from, $default, FALSE);
+    return $this->reserveEach('addEach', $key, (string) $type, $from, $default, FALSE, to: $to, bundles: $bundles);
   }
 
   /**
@@ -682,6 +840,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   TRUE when each entry is a child.
    * @param array<string, string> $reads
    *   For a child, each port mapped to the sibling map it reads per entry.
+   * @param string|null $to
+   *   For an entry that refers to an entity, its entity type.
+   * @param string[] $bundles
+   *   The bundles such an entry may name; none for every bundle.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key.
@@ -689,7 +851,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @throws \LogicException
    *   When the provider is none.
    */
-  protected function reserveEach(string $verb, string $key, string $each, string $from, mixed $default, bool $child, array $reads = []): MapDataDefinition {
+  protected function reserveEach(string $verb, string $key, string $each, string $from, mixed $default, bool $child, array $reads = [], ?string $to = NULL, array $bundles = []): MapDataDefinition {
     if (!is_subclass_of($from, SiteListInterface::class)) {
       throw new \LogicException(sprintf('%s("%s") names %s as where its keys come from, which does not implement %s: a provider lists the site\'s things with list().', $verb, $key, $from, SiteListInterface::class));
     }
@@ -700,6 +862,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       'default' => $default,
       'child' => $child,
       'reads' => $reads,
+      'to' => $to,
+      'bundles' => $bundles,
     ];
     return $shell;
   }
@@ -707,10 +871,11 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the maps of keys from the site declared through this blueprint.
    *
-   * @return array<string, array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
+   * @return array<string, array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>, to: string|null, bundles: string[]}>
    *   What each entry is, the provider, the default for every entry,
-   *   whether each entry is a child, and the sibling map each of its ports
-   *   reads per entry, by key, in declaration order.
+   *   whether each entry is a child, the sibling map each of its ports
+   *   reads per entry, and for an entry that refers to an entity its
+   *   entity type and bundles, by key, in declaration order.
    */
   public function fromSite(): array {
     return $this->fromSite;
@@ -840,10 +1005,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         throw $refuse(sprintf('is computed from "%s", which is no key declared before it in this blueprint.', $source));
       }
     }
+    // A map is refused by add(): no row of the type table is one.
     $definition = $this->add($key, $type, $label);
-    if ($definition instanceof ComplexDataDefinitionInterface) {
-      throw $refuse('is a map: a computed key holds one value.');
-    }
     DefinitionMetadata::setComputed($definition, new Computed($from, $using, $when));
     return $definition;
   }

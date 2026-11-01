@@ -59,7 +59,10 @@ say what the key allows: the next page's idea.
 
 `add()` returns core's own `DataDefinition`, so anything more about the
 key is core's API: `setDescription()` for the text under the field, and
-the methods the next page uses for what a key allows.
+the methods the next page uses for what a key allows. The module keeps
+core's definition as the key and adds only what core's definition has
+no place for, such as the default, which it writes onto that same
+object ([Built on typed data](../on-typed-data.md)).
 
 `defineInputs()` is static and runs with no values, so it cannot read
 what another key holds. A key whose allowed values depend on another

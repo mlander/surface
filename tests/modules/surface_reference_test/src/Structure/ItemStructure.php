@@ -18,7 +18,7 @@ final class ItemStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('node', 'entity:node', 'Node')->setRequired(TRUE);
+    $inputs->refer('node', 'node', 'Node')->setRequired(TRUE);
   }
 
 }

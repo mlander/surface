@@ -3,7 +3,8 @@
 # Neither route names a form class of this module's own. The generic
 # form builds both from the resource class and the operation; the route's
 # parameters are the operation method's, by name, so the update route's
-# {type} is upcast to the node type that NodeTypeResource::update() takes.
+# {type} is the machine name NodeTypeResource::update() takes, which the
+# node type storage loads.
 #
 # One requirement, and it is the operation's, which a route naming a
 # resource and an operation has without saying it: its permission, this
@@ -34,7 +35,3 @@ surface_examples_node_type.update:
     _surface_resource: 'Drupal\surface_examples_node_type\Resource\NodeTypeResource'
     _surface_operation: 'update'
     _surface_cosmetics: 'surface_examples_node_type.form_cosmetics'
-  options:
-    parameters:
-      type:
-        type: 'entity:node_type'

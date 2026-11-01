@@ -18,9 +18,9 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * The narrowing contract: a refiner may tighten constraints, supply a
  * concrete option list, or sharpen a description, but the refined
  * definition must accept only values the one it was handed already
- * accepted. Changing the data type is refused (except from 'any', the
- * declared escape hatch for definitions whose type itself depends on
- * sibling values, and to a derivative of the type), as is turning
+ * accepted. Changing the data type is refused (except from the variants'
+ * placeholder, an `any` that becomes the variant its deciding key chose,
+ * and to a derivative of the type), as is turning
  * required off, removing a constraint, or replacing one whose options
  * cannot be compared. The contract is
  * enforced by Surface::refine() on every link, not trusted.

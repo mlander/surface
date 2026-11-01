@@ -189,6 +189,26 @@ surface_examples.desk:
       type: boolean
       label: 'Listed in the printed program'
       nullable: true
+    location:
+      type: mapping
+      label: 'Where the desk stands'
+      mapping:
+        lat:
+          type: float
+          label: 'Latitude'
+          nullable: true
+          constraints:
+            Range:
+              min: -90
+              max: 90
+        lng:
+          type: float
+          label: 'Longitude'
+          nullable: true
+          constraints:
+            Range:
+              min: -180
+              max: 180
     lead:
       type: mapping
       label: 'Desk lead'

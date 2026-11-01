@@ -13,7 +13,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 /**
  * The two parts a bare `entity` key is: an entity type, then an id of it.
  *
- * `add('thing', 'entity', t('Thing'))` attaches this at the key, built
+ * `refer('thing', NULL, t('Thing'))` attaches this at the key, built
  * once per key with what its author narrowed the key by: the
  * SurfaceReferenceableType constraint written on the key, moved onto
  * `entity_type` (filter()). The id is a string, since entity types keep

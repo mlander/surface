@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\ResourceBuild;
 
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
@@ -17,6 +18,7 @@ use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Resource\SiteList;
 use Drupal\surface\Resource\SiteListInterface;
+use Drupal\surface\Resource\BoundSiteListInterface;
 use Drupal\surface\Resource\ClosedSiteListInterface;
 use Drupal\surface\Resource\EntrySchemasInterface;
 use Drupal\surface\Contract\SchemaReader;
@@ -159,6 +161,8 @@ final class Attaching {
           new VariantToSettle($deferred, $definition->name(), $deferred->shared($child_context), $locked === NULL ? NULL : (string) $locked, $read),
           $definition->name(),
           $definition->id,
+          label: $definition->label(),
+          description: $definition->description(),
         ),
         $access,
         $child_context,
@@ -172,6 +176,8 @@ final class Attaching {
           : $this->buildResource($definition->name(), $child_context, [...$ancestry, $frame], $locked, siteDefaults: $siteDefaults),
         $definition->name(),
         $definition->id,
+        label: $definition->label(),
+        description: $definition->description(),
       ),
       $access,
       $child_context,
@@ -251,6 +257,15 @@ final class Attaching {
         continue;
       }
       $attachment = $attachment->withReads($reads, static::wiredKeys($builder, $reads));
+      // The widget the structure asks to be drawn with, unless its owner
+      // asked for one at the key.
+      // Decision: see
+      // docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
+      $asked = $this->registry->getDefinition((string) $child)->widget;
+      $shell = $builder->getDefinition((string) $key);
+      if ($asked !== NULL && $shell instanceof DataDefinition && $shell->getSetting('widget') === NULL) {
+        $shell->setSetting('widget', $asked);
+      }
       $builder->attach($key, $attachment);
       $this->wirePorts($builder, $key . '.', $attachment, FALSE, $definition->id);
       if ($access !== NULL && $access->isLocked()) {
@@ -299,7 +314,7 @@ final class Attaching {
    *   frame and ancestry its children are built under.
    * @param string $key
    *   The key the map sits at.
-   * @param array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>} $each
+   * @param array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>, to: string|null, bundles: string[]} $each
    *   What the blueprint recorded for it.
    * @param array<string, array> $maps
    *   Every map of keys from the site the owner declared, by key, as the
@@ -328,7 +343,7 @@ final class Attaching {
     // schema is written from.
     $shell = $builder->getDefinition($key);
     if ($shell !== NULL) {
-      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->add($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
+      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->addEntry($key, $each['each'], $shell->getLabel() ?? $key, $each['default'], $each['to'], $each['bundles']));
     }
     $entries = $keys->entries();
     $map = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
@@ -385,7 +400,7 @@ final class Attaching {
     else {
       $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references());
       foreach ($entries as $id => $entry) {
-        $blueprint->add((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default']);
+        $blueprint->addEntry((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default'], $each['to'], $each['bundles']);
         if ($entry['locked']) {
           $map->hold((string) $id);
         }
@@ -557,12 +572,18 @@ final class Attaching {
    *
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
+   * @param list<string|int> $arguments
+   *   What its owner bound it to, for a BoundSiteListInterface; none for
+   *   its list().
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed.
    */
-  protected function siteList(string $from): SiteList {
+  protected function siteList(string $from, array $arguments = []): SiteList {
     $provider = $this->declaring->instance($from, SiteListInterface::class);
+    if ($arguments !== [] && $provider instanceof BoundSiteListInterface) {
+      return PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'listFor', static fn (): SiteList => $provider->listFor($arguments));
+    }
     return PipelineGuard::onBehalf(PipelineGuard::PROVIDER, $from, 'list', static fn (): SiteList => $provider->list());
   }
 
@@ -649,7 +670,7 @@ final class Attaching {
         }
         $present[] = $key;
       }
-      $builder->addMixin(new Mixin(new Attachment($built, $structure->name(), $structure->id), $present, $reads));
+      $builder->addMixin(new Mixin(new Attachment($built, $structure->name(), $structure->id, label: $structure->label(), description: $structure->description()), $present, $reads));
       array_push($mixed['bind'], ...$this->mixinBindings($structure, $blueprint, $reads, $present));
     }
     return $mixed;
@@ -1267,7 +1288,7 @@ final class Attaching {
       }
       $from = $inputs->variantsFrom()[$key] ?? NULL;
       if ($from !== NULL) {
-        $list = $this->variantsFrom($definition, (string) $key, $from);
+        $list = $this->variantsFrom($definition, (string) $key, $from, $inputs->variantsArguments()[$key] ?? []);
         $builder->addCacheableDependency($list);
         // A provider that answers an entry's schema when it is read: the
         // entry is registered by name, its schema read when it is built.
@@ -1365,7 +1386,7 @@ final class Attaching {
       }
       $declared = [...array_map('strval', array_keys($variants)), ...$withheld];
       static::assertListNarrowsVariants($builder, $definition, $key, $by, $declared);
-      $builder->attachVariants($key, $by, $variants, $variantKeys[$key]['labels'] + static::variantLabels($children));
+      $builder->attachVariants($key, $by, $variants, $variantKeys[$key]['labels'] + $this->variantLabels($children));
       if ($runtime_variant) {
         $builder->markRuntimeAccess($key);
       }
@@ -1422,6 +1443,8 @@ final class Attaching {
    *   The key the variants sit at, for the messages.
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
+   * @param list<string|int> $arguments
+   *   What the owner bound the provider to, if anything.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed, each entry of a closed provider naming the structure
@@ -1434,8 +1457,8 @@ final class Attaching {
    *   one of a closed provider names one, or a value its structures() do
    *   not name.
    */
-  protected function variantsFrom(ResourceDefinition $definition, string $key, string $from): SiteList {
-    $list = $this->siteList($from);
+  protected function variantsFrom(ResourceDefinition $definition, string $key, string $from, array $arguments = []): SiteList {
+    $list = $this->siteList($from, $arguments);
     if ($list->getCacheMaxAge() === 0) {
       throw new \LogicException(sprintf('%s lists the variants at "%s" on %s with max-age 0. Variants from the site must be cacheable, since the form, both schema documents and the tool listing are kept with them: declare the cache tags of what it reads instead.', $from, $key, $definition->id));
     }
@@ -1516,23 +1539,28 @@ final class Attaching {
   }
 
   /**
-   * Gets what each variant calls its value, from its #[Variant].
+   * Gets what each variant calls its value.
+   *
+   * Its #[Variant]'s label, the choice's word, else what the structure
+   * itself is called (ResourceDefinition::label()), so a structure that
+   * names itself is not named again on each #[Variant].
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
    *
    * @param array<string, string> $children
-   *   The variant classes, by the value each is for.
+   *   The variants, by the value each is for: a class, or the name a
+   *   derived one is built by.
    *
    * @return array<string, string|\Stringable>
-   *   The labels the variants give, by value; a variant giving none is
-   *   left out.
+   *   The labels, by value; a variant that says none either way is left
+   *   out.
    */
-  protected static function variantLabels(array $children): array {
+  protected function variantLabels(array $children): array {
     $labels = [];
     foreach ($children as $value => $child) {
-      if (!class_exists($child)) {
-        continue;
-      }
-      $attribute = (new \ReflectionClass($child))->getAttributes(Variant::class)[0] ?? NULL;
-      $label = $attribute?->newInstance()->label;
+      $attribute = class_exists($child) ? ((new \ReflectionClass($child))->getAttributes(Variant::class)[0] ?? NULL) : NULL;
+      $label = $attribute?->newInstance()->label ?? ($this->registry->hasDefinition($child) ? $this->registry->getDefinition($child)->label() : NULL);
       if ($label !== NULL) {
         $labels[(string) $value] = $label;
       }

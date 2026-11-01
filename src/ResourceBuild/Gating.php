@@ -738,7 +738,12 @@ final class Gating {
     }
     $places = [];
     foreach ($found->gates as $gate) {
-      [$type] = $this->gates()->subjectOf($gate);
+      [$type] = $this->gates()->subjectOf($gate, $this->refersTo(...));
+      if ($type === Gates::ANY_ENTITY_TYPE && !$pair) {
+        // An operation that takes an entity's id, of whichever type: the
+        // one an identity key refers to, else one an item's key does.
+        $type = array_key_first($top) ?? array_key_first($items) ?? $type;
+      }
       $place = ['gate' => $gate, 'type' => $type, 'top' => NULL, 'list' => NULL, 'item' => NULL];
       if ($type === NULL) {
         $places[] = $place;
@@ -753,7 +758,7 @@ final class Gating {
         continue;
       }
       throw new \LogicException(sprintf(
-        'The gate "%s" on the "%s" operation of %s asks about %s %s, and nothing the operation is handed names one: no identity key refers to one, and no item of a collection has a key that does. Declare the key that names it as a reference, such as $inputs->add(\'%s\', \'entity:%s\', ...).',
+        'The gate "%s" on the "%s" operation of %s asks about %s %s, and nothing the operation is handed names one: no identity key refers to one, and no item of a collection has a key that does. Declare the key that names it as a reference, such as $inputs->refer(\'%s\', \'%s\', ...).',
         $gate->spelled,
         $operation,
         $definition->id,
@@ -764,6 +769,29 @@ final class Gating {
       ));
     }
     return $this->gatePlaces[$memo] = $places;
+  }
+
+  /**
+   * Names the entity type a key of a resource refers to, if it refers to one.
+   *
+   * Read from what the resource declares, nothing built: what an operation
+   * gate's operation is handed as the id of the thing it is asked about.
+   *
+   * @param string $resource
+   *   The resource's name.
+   * @param string $key
+   *   The key.
+   *
+   * @return string|null
+   *   The entity type the key's reference constraint names, or NULL for a
+   *   key that refers to no one entity type, or none at all.
+   */
+  protected function refersTo(string $resource, string $key): ?string {
+    $builder = new SurfaceBuilder();
+    $definition = $this->registry->getDefinition($resource);
+    $this->declaring->fillBlueprints($definition, $this->declaring->blueprint($builder, $definition));
+    $declared = $builder->getDefinition($key);
+    return $declared === NULL ? NULL : (References::target($declared)['entityType'] ?? NULL);
   }
 
   /**
@@ -783,8 +811,9 @@ final class Gating {
       return [TRUE, NULL];
     }
     if ($place['top'] === '') {
-      $named = ($context->known['entity_type'] ?? NULL) === $place['type'] && isset($context->known['id']);
-      return [$named, $named ? $this->gates()->load((string) $place['type'], $context->known['id']) : NULL];
+      $type = $place['type'] === Gates::ANY_ENTITY_TYPE ? ($context->known['entity_type'] ?? NULL) : $place['type'];
+      $named = is_string($type) && ($context->known['entity_type'] ?? NULL) === $type && isset($context->known['id']);
+      return [$named, $named ? $this->gates()->load($type, $context->known['id']) : NULL];
     }
     $id = $context->known[(string) $place['top']] ?? NULL;
     return [$id !== NULL, $id === NULL ? NULL : $this->gates()->load((string) $place['type'], $id)];

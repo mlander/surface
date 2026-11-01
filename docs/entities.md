@@ -1,8 +1,9 @@
 # Content entities
 
 This page covers content entities, such as nodes: how the module
-derives a resource for each bundle's create and update form, with one
-structure per field. Use it when you want an entity's form, tool or API
+derives a resource for each bundle's create and update form, and one
+for every bundle of an entity type at once, with one structure per
+field. Use it when you want an entity's form, tool or API
 from the module instead of from a class you write.
 [Storage](introduction/10-storage.md) and
 [Access](introduction/15-access.md) introduce a content entity as
@@ -22,6 +23,8 @@ the derivation is not enough.
 | Deriver | Derives | One per |
 | --- | --- | --- |
 | `Resource\ContentEntityResources` | `entity.content:<entity type>.<bundle>`, `entity.content:node.page` | bundle of a content entity type with a bundle key and a stored default form display |
+| `Resource\ContentEntityResources` | `entity.content:<entity type>`, `entity.content:node` | content entity type with at least one such bundle |
+| `Resource\ContentEntityResources` | `entity.content:<entity type>.<bundle>.fields`, `entity.content:node.page.fields`, a structure | such bundle: its fields, the variant the entity type's resource holds for it |
 | `Resource\FieldItemStructures` | `field.item:<entity type>.<bundle>.<field>`, `field.item:node.page.body` | field that bundle's resource carries |
 
 Both are read at discovery, and each derivative is cached as an entry
@@ -50,23 +53,48 @@ leaves out and why, read from the registry.
 | What | From |
 | --- | --- |
 | The content entity resource's keys | the identity (`entity_type`, `bundle`, `id`), then one child per component of the bundle's default form display, in its weight order |
-| Its operations | `create`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty); `update`, taking the entity as `id`, typed `entity:<entity type>` |
-| Its access | the entity's: create access for the bundle on create, update access for the entity on update |
+| Its operations | `create`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty), or for an entity type whose ids the caller names, taking `id` as a required key ([below](#which-entity-types-take-an-id-on-create)); `update` and `read`, each taking the identity key `id`, whose value the storage loads the entity by (an id that names nothing, or an entity of another bundle, is a not found at `id`); `read` is read only |
+| Its access | the entity's: create access for the bundle on create, update access for the entity on update, view access on a read |
 | Its storage | `ContentEntityStorage`, below |
 | Its outputs | `id`, the entity's id once saved |
 | A field item structure's keys | the item's property definitions the field type stores and a caller sets, typed as the coercion table carries them (the table below) |
 | Each key's label | the field's, when the item has one key; the property's, when it has several |
 | Each key's description | the field's, when the item has one key |
+| The widget | the form display component's, read for the main property: `options_buttons` asks a key with a list of values for radios; `entity_reference_autocomplete` asks a reference key for the autocomplete, its `match_operator` and `match_limit` handed to core's autocomplete route; `string_textarea` and `text_textarea` draw the string as a textarea; `string_textfield`, `email_default`, `number`, `boolean_checkbox` and `options_select` draw what the stock rule draws, so no word is set; each component's `size`, `rows` and `placeholder` travel where a widget or the arrangement reads them; any other component type asks for nothing, and what is accepted stays the field's (`FieldItemDerivation::WIDGETS`) |
 | Required | on the main property, when the field is required |
 | Default | the field's literal default (`getDefaultValueLiteral()`), cast to the key's type |
-| Constraints | `Length`, `Range`, `Regex` and `Choice` from the property definitions and from the field type's own `getConstraints()` (its `ComplexData` per property); the rest are checked when its storage validates the entity |
+| Constraints | `Length`, `Range`, `Regex` and `Choice` from the property definitions and from the field type's own `getConstraints()` (its `ComplexData` per property), and on a reference field's `target_id` the reference key's `SurfaceValidReference`, answered by the field's own handler; the rest are checked when its storage validates the entity |
 | What settings narrow | a list field's allowed values (`LabeledChoice`), a text field's formats (`LabeledChoice`, then a runtime refiner), a reference's targets (a constraint and its options resolver), a date's form (`Regex`) |
-| Its operations | `create` and `update`, which the parent invokes to match its own; each knows the entity type, the bundle and the field, and `update` the entity's id |
-| Its access | field access, as the child's access: open, locked or omitted |
+| Its operations | `create`, `update` and `read`, which the parent invokes to match its own; each knows the entity type, the bundle and the field, and `update` and `read` the entity's id |
+| Its access | field access, as the child's access: open, locked or omitted; on a read, open or omitted, by view access |
+| The entity type resource's keys | the identity (`entity_type`, `id`), `bundle`, and `fields`: variants `bundle` chooses, one per bundle with a form display, each that bundle's `.fields` structure, which attaches the same field children the bundle's resource holds at its root |
+| Its operations | `create`, knowing the entity type and that there is no id, `bundle` held to the bundles the account may create (`SurfaceCreatableBundle`); `update` and `read`, taking the identity key `id`, the entity loaded by the storage, `bundle` fixed to the entity's, the fields under `fields` |
+| Its access | on create, open to an account that may create at least one bundle, the chosen bundle's create access asked at `bundle` once a value is sent; on update, the entity's update access; on a read, its view access |
+| Its storage | `ContentEntityStorage`, the bundle read from the values on create and from the entity on update, the fields under `fields` |
 
 The parent labels each child's key with the field's label and
 description, so the form draws a fieldset per field and the contract
 names it as the field.
+
+The entity type's resource holds the fields under `fields`, not at its
+root, since variants attach at a key
+(why: [decision](decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)):
+
+```json
+{"bundle": "page", "fields": {"title": {"value": "Hello"}, "field_description": {"value": "A page."}}}
+```
+
+where the bundle's resource takes `{"title": {"value": "Hello"}, ...}`,
+and a refusal's path is `fields.title.value`. The variants come from
+the site (`Variants\BundleFieldStructures`), so while an entity type
+has at most `surface.settings:site_list_limit` bundles both documents
+state each bundle's fields as a conditional on `bundle`; past it the
+full schema names the bundles and marks `fields` deferred, and the
+fields of one bundle come from `GET .../schema?choose=/fields=<bundle>`
+or the narrowing tool, `surface:entity.content:node:create:schema`
+([Variants from the site](resources.md#variants-from-the-site)).
+`ContentEntityTypeResourceTest` holds each bundle's variant equal to
+that bundle's resource.
 
 ## Covered field types
 
@@ -161,6 +189,33 @@ to ask, and every field is listed marked.
 The parent's own access is the entity's create or update access, so
 the resource never lets anyone write what core's form would not.
 
+## Reading with view access
+
+Both resources declare `read`, read only, taking the entity as `id`,
+rather than take the one the build adds beside `update`, which would
+ask update access and the edit answers above
+(why: [decision](decisions.md#a-read-is-an-operation-of-the-resource)).
+`ContentEntityAccess` answers a context whose id is `read` with the
+entity's `view` access, as core's own page does, and each field's item
+is invoked through its own `read`, which `FieldItemAccess` answers with
+`fieldAccess('view')` alone:
+
+| View | The child, on a read |
+| --- | --- |
+| allowed | open: read, whether the account may edit it or not |
+| not allowed | omitted: not answered, at any door |
+
+So an account that may view a page and not edit it reads it through
+the tool, `surface:entity.content:node.page:read`, and through `GET
+/surface-api/entity.content:node.page/{id}`, and is refused `update`; a
+field it may view and not edit is open in the read and locked in the
+update. Neither read declares a permission, as the update declares
+none: core's view access is asked once the entity is loaded. On the
+entity type's resource, `read` fixes `bundle` to the entity's as
+`update` does, and answers the bundle's fields under `fields`, the same
+fields the bundle's read answers (`ContentEntityReadTest`,
+`ContentEntityTypeResourceTest`).
+
 ## The storage
 
 `ContentEntityStorage`, in `surface_examples_entity` rather than beside the
@@ -168,6 +223,11 @@ engine's storage classes, because what it reads and writes is the field
 item derivation's keys, which the engine does not own
 (why: [decision](decisions.md#the-content-entity-storage)).
 
+- **The entity an id names** is the storage's to load: an operation is
+  handed the identity key `id`, and its context asks the storage for the
+  entity (`ContentEntityStorage::entity()`), which refuses an id that
+  names nothing with a not found at `id`
+  ([decision](decisions.md#a-parameter-names-a-key)).
 - **Load** reads the entity the context names: its identity, and each
   carried field's first item, property by property, cast to the key's
   type. An empty field is absent, so it starts from its default.
@@ -201,18 +261,40 @@ item derivation's keys, which the engine does not own
 
 A dry run stops after prepare; a PHP caller reads the prepared values
 on the result (the identity, whether a revision would be made, and each
-field's item), and a door answers the accepted values as the read tool
+field's item), and a door answers the accepted values as the read
 would, a field whose view access is denied left out
 (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+
+## Which entity types take an id on create
+
+Whether `create` takes `id` is read per entity type from its id key's
+base field definition (`FieldItemDerivation::callerNamesId()`):
+
+- **Computed**: an integer id, which core's SQL storage makes serial and
+  assigns on save, or an id field with a default of its own. The create
+  knows there is no id yet, and its `id` output answers the one storage
+  gave. Every content entity type core and the common contributed
+  modules ship is one: node, media, user, term, block content, file.
+- **Named by the caller**: any other id, a string with no default. The
+  create takes `id` as a required key, its length the id field's, and
+  the entity is created under it; an id an entity already has is
+  refused at `id`, code `taken`, so the create is idempotent, a second
+  identical call refused for the id the first took. `update` and `read`
+  take the id as for any entity type.
+
+Why the field and not the entity type: an integer is what makes the
+storage assign the id, and a string id may have a default the entity
+holds once created; the field definition says both
+(why: [decision](decisions.md#an-entity-types-id-is-computed-or-named-by-the-caller)).
 
 ## The doors
 
 - **The form**: `/surface-entity/node/page/add` and
   `/surface-entity/node/{id}/edit`, the generic operation form with the
-  contract panel. The update route upcasts `{id}` to the node, so an id
-  no node has is core's 404, which the converter answers before access
-  is asked, to any account. A node of another bundle loads, and the
-  page's update operation refuses it as a value that names nothing here.
+  contract panel. The update route hands the operation `{id}` as the
+  path carries it, and the resource's storage loads the node
+  (`ContentEntityStorage::entity()`): an id no node has, and a node of
+  another bundle, are values that name nothing here.
   A derived content entity operation declares no permission, since
   entity access decides per entity once the node is loaded, so no
   account is let in before the value is read, and every door refuses
@@ -234,9 +316,30 @@ would, a field whose view access is denied left out
   `/{node_type}/{id}/edit`, since a node's bundle is known only once the
   node is loaded, and refuses a node of another bundle as above.
 - **The tools**: `surface:entity.content:node.page:create`, `:update`
-  and `:update:read`, derived like every other operation's. The field item
+  and `:read`, derived like every other operation's. The field item
   structures have no storage, so they are no tools. Every bundle with a form
-  display has its three.
+  display has its three. Every entity type with such a bundle has five:
+  `surface:entity.content:node:create`, `:update`, `:read`, and a
+  narrowing tool beside each write, `:create:schema` and
+  `:update:schema`, since its fields are variants the site lists.
+- **HTTP**: `GET /surface-api/entity.content:node.page/{id}` serves the
+  read, its envelope and its schema at `.../{id}/schema`; the update's
+  envelope is its custom method's, `GET .../{id}:update`, and `PATCH
+  .../{id}` runs it as before.
+- **Both kinds**: a site has `surface:entity.content:node:create` and
+  `surface:entity.content:node.page:create`, `POST
+  /surface-api/entity.content:node` and `POST
+  /surface-api/entity.content:node.page`, and the same for the edit,
+  `PATCH /surface-api/entity.content:node/{id}`. Call the bundle's
+  resource when the bundle is known ahead and a contract stated
+  outright matters: a client generated from the OpenAPI document, a
+  form. Call the entity type's when the bundle is chosen at call time or
+  the tool list must stay short: choose the bundle, ask the schema with
+  it, then create. Nothing here declares which; the MCP server's tool
+  configuration and an agent's own selection choose
+  (why: [decision](decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)). The
+  entity type's resource has no form route here; a route that names it
+  gets the bundle select, whose change redraws the fields.
 - **The React app**: `/surface-react/entity.content:node.page/create` and
   `/surface-react/entity.content:node.page/update?id=<nid>`. The derived id
   holds a colon, which a route parameter takes as it is.
@@ -305,18 +408,27 @@ done about it.
 9. **A decimal is a float here.** Typed data has no decimal type; a
    value with more digits than a float holds loses them before the
    entity's precision check sees it.
-10. **Which targets a reference may hold depends on the account.** The
-    selection handler checks access, so the list is live: a constraint,
-    `SurfaceReferenceable`, points at it, and its options resolver
-    lists the targets for the account asking while there are at most
-    `surface.settings:reference_list_limit` (50 as shipped, the
-    limit a reference key a resource declares lists up to,
-    [Options](options.md#a-key-that-refers-to-an-entity)), carrying what
-    the selection read:
-    `user.permissions`, and `user.node_grants:view` for a node or a
-    comment, `user` for a target type core does not list
+10. **A reference field's `target_id` is a reference key.** It is the
+    key `refer()` declares for the field's target type, its bundles the
+    ones the field's handler settings name, answered by the field's own
+    selection handler with the field's settings
+    (`References::definition()` with `handler:` and `handlerSettings:`),
+    so it lists, looks up and accepts what core's widget offers and the
+    field's `ValidReference` accepts, for the account asking. Which
+    targets that is depends on the account, so the list is live: listed
+    while there are at most `surface.settings:reference_list_limit` (50
+    as shipped, [Options](options.md#a-key-that-refers-to-an-entity)),
+    carrying what the selection read: `user.permissions`, and
+    `user.node_grants:view` for a node or a comment, `user` for a target
+    type core does not list
     (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects));
-    past that the key is free and the validator asks the handler.
+    past that the key takes an id, the lookup (`GET .../{x}:lookup`)
+    finds one and the constraint's validator asks the handler. Both
+    documents mark it `x-surface.reference`. A form display that draws
+    the field with `entity_reference_autocomplete` asks for the
+    autocomplete widget, its `match_operator` and `match_limit` handed
+    to core's autocomplete route
+    (why: [decision](decisions.md#a-reference-field-is-a-reference-key)).
 11. **Which text formats an account may use** is a fact about the
     account, so it is a runtime refiner, never run ahead of time; the
     full schema lists the field's formats and marks the key `live`.
@@ -376,5 +488,8 @@ alter by base id, an override by field type), `ContentEntityStorageTest`
 (create, update with a revision, an entity violation on its key, a dry run,
 the derived tools, the React door's `created`, the contracts) and
 `ContentEntityResourceFormTest` (the two routes and the landing page in
-a browser). No field refines another, so there is no browser test of a
+a browser) and `ContentEntityTypeResourceTest` (the entity type's
+resource narrowed by each bundle equal to that bundle's, the bundles an
+account may create, a bundle refused at its key, the edit's fixed
+bundle, the deferred fields past the limit, the tools and the paths). No field refines another, so there is no browser test of a
 refinement.

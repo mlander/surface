@@ -199,6 +199,28 @@ final class ContractPanel implements SurfaceFormPanelInterface {
   }
 
   /**
+   * Names a resource or structure by what it is called, then its id.
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   *
+   * @param string $source
+   *   Its name, as an attachment holds it.
+   *
+   * @return string
+   *   Its label with its id in parentheses, or its id where it has no
+   *   label.
+   */
+  protected function named(string $source): string {
+    $definition = $this->registry->getDefinition($source);
+    $label = $definition->label();
+    if ($label === NULL || (string) $label === '') {
+      return $definition->id;
+    }
+    return (string) $this->t('@label (@id)', ['@label' => $label, '@id' => $definition->id]);
+  }
+
+  /**
    * Adds the rows for one key of a data surface, and its children's.
    *
    * @param array $rows
@@ -221,7 +243,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       $chosen = $entry->variants->chosen($values[$entry->variants->by] ?? $refined->getDefault($entry->variants->by));
       $variants = [];
       foreach ($entry->variants->variants as $value => $variant) {
-        $variants[] = $value . ' → ' . ($variant->source === NULL ? $this->t('derived') : $this->registry->getDefinition($variant->source)->id);
+        $variants[] = $value . ' → ' . ($variant->source === NULL ? $this->t('derived') : $this->named($variant->source));
       }
       $rows[] = $this->row($path, $this->t('variants'), $definition, $refined->getDefault($entry->name), $this->t('A part chosen by @by: @variants', [
         '@by' => $entry->variants->by,
@@ -242,7 +264,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       $source = $entry->list->item->source;
       $count = $definition->getConstraints()['Count'] ?? NULL;
       $rows[] = $this->row($path, $this->t('collection'), $definition, NULL, $this->t('A list of @child@count', [
-        '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->registry->getDefinition($source)->id,
+        '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->named($source),
         '@count' => is_array($count) ? ', ' . $this->bounds('Count', $count) : '',
       ]), $depends, $this->status($declared, $definition, $entry->locked, $entry->isRefinedAtRuntime()));
       $declared_item = $declared instanceof ListDataDefinitionInterface ? $declared->getItemDefinition() : NULL;
@@ -252,7 +274,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
     if ($entry->attachment !== NULL && $definition instanceof ComplexDataDefinitionInterface) {
       $source = $entry->attachment->source;
       $rows[] = $this->row($path, $this->t('part'), $definition, NULL, $this->t('A fixed part: @child', [
-        '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->registry->getDefinition($source)->id,
+        '@child' => $source === NULL ? $this->t('a sealed data surface') : $this->named($source),
       ]), $depends, $this->t('as declared'));
       $this->propertyRows($rows, $path, $definition, $declared instanceof ComplexDataDefinitionInterface ? $declared->getPropertyDefinitions() : [], []);
       return;

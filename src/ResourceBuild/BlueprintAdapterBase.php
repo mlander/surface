@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\Rule;
@@ -138,60 +139,112 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    *
-   * The type may be a shape's class: the key then starts from the shape
-   * as its alters left it, and may only narrow it. It may be a data type
-   * core's config schema names and typed data does not, `machine_name`:
-   * the key is then the string underneath, with the type's constraints,
-   * and may only narrow them.
+   * The type is a row of the type table (LeafTypes). It may be a shape's
+   * class: the key then starts from the shape as its alters left it, and
+   * may only narrow it. It may be a data type core's config schema names
+   * and typed data does not, `machine_name`: the key is then the string
+   * underneath, with the type's constraints, and may only narrow them.
+   * Either resolves to a row; any other type is refused here, naming the
+   * method for what it was meant as.
    * Decision: see docs/decisions.md#a-shape-is-a-named-definition.
+   * Decision: see
+   * docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader.
    */
   public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
-    if (References::spells($type)) {
-      // Decision: see
-      // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
-      if ($type !== 'entity') {
-        return $this->addReference($key, $type, $label, $default);
-      }
-      return $this->addEntity($key, $label, $default) ?? throw new \LogicException(sprintf('add("%s", "entity") declares a reference to an entity of any type, which is two keys, its entity type and its id, attached at the key; only a resource or a structure attaches it. An alter declares one entity type, "entity:<type>".', $key));
-    }
+    $verb = sprintf('add("%s", "%s")', $key, $type);
     if (str_contains($type, '\\')) {
       $definition = $this->fromShape($key, $type);
+      LeafTypes::assertHeld($verb, $definition);
       $definition->setLabel($label);
       $this->addDefinition($key, $definition, $default);
       $this->shaped[$key] = $definition;
       return $definition;
     }
-    $named = $this->shapes?->configType($type, $this->typedDataManager);
+    $named = LeafTypes::has($type) ? NULL : $this->shapes?->configType($type, $this->typedDataManager);
     if ($named !== NULL) {
       // A config schema data type, `machine_name`: a string with the
       // type's constraints as its own, which the key may only narrow.
       // Decision: see
       // docs/decisions.md#a-machine-name-is-a-computed-identity.
+      LeafTypes::assertHeld($verb, $named);
       $named->setLabel($label);
       $this->addDefinition($key, $named, $default);
       $this->shaped[$key] = $named;
       return $named;
     }
-    $definition = $this->typedDataManager->createDataDefinition($type);
-    if (!$definition instanceof DataDefinition) {
-      throw new \InvalidArgumentException(sprintf(
-        'The "%s" type makes a %s, which add() cannot return: use addDefinition() for it.',
+    if (!LeafTypes::has($type)) {
+      throw new \LogicException(sprintf(
+        '%s declares a key of the %s type, which JSON Schema has no type for. add() takes one of %s, a shape\'s class or a config schema type of one of them; %s',
+        $verb,
         $type,
-        get_class($definition),
+        implode(', ', array_keys(LeafTypes::ROWS)),
+        LeafTypes::meant($type),
       ));
     }
+    $definition = $this->typedDataManager->createDataDefinition($type);
+    assert($definition instanceof DataDefinition);
     $definition->setLabel($label);
     $this->addDefinition($key, $definition, $default);
     return $definition;
   }
 
   /**
-   * Adds a key that holds one entity's id, of a type the string names.
+   * {@inheritdoc}
+   *
+   * Decision: see docs/decisions.md#a-reference-is-declared-as-a-reference.
+   */
+  public function refer(string $key, ?string $to, string|\Stringable $label, array $bundles = [], mixed $default = NULL): DataDefinition {
+    if ($to !== NULL) {
+      return $this->addReference($key, $to, $bundles, $label, $default);
+    }
+    if ($bundles !== []) {
+      throw new \LogicException(sprintf('refer("%s", NULL) names bundles: a reference to an entity of any type names no bundles, and its entity types are filtered by the SurfaceReferenceableType constraint on the key.', $key));
+    }
+    // Decision: see
+    // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
+    return $this->addEntity($key, $label, $default) ?? throw new \LogicException(sprintf('refer("%s", NULL) declares a reference to an entity of any type, which is two keys, its entity type and its id, attached at the key; only a resource or a structure attaches it. An alter refers to one entity type, refer(\'%s\', \'<entity type>\', ...).', $key, $key));
+  }
+
+  /**
+   * Declares one entry of a map of keys from the site.
+   *
+   * As add() declares a key, unless addEach() named the entity type each
+   * entry refers to, which is declared as refer() declares one.
+   *
+   * @param string $key
+   *   The entry's key.
+   * @param string $type
+   *   The type addEach() was handed; ignored for a reference.
+   * @param string|\Stringable $label
+   *   The entry's label.
+   * @param mixed $default
+   *   What it starts from.
+   * @param string|null $to
+   *   The entity type an entry refers to, or NULL for an entry of a type.
+   * @param string[] $bundles
+   *   The bundles it may name; none for every bundle.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The entry's definition.
+   *
+   * @internal
+   *   For the build step alone.
+   */
+  public function addEntry(string $key, string $type, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): DataDefinition {
+    return $to === NULL
+      ? $this->add($key, $type, $label, $default)
+      : $this->addReference($key, $to, $bundles, $label, $default);
+  }
+
+  /**
+   * Adds a key that holds one entity's id.
    *
    * @param string $key
    *   The key.
-   * @param string $type
-   *   The data type string, `entity:<type>` or `entity:<type>:<bundle>`.
+   * @param string $to
+   *   The entity type it refers to.
+   * @param string[] $bundles
+   *   The bundles it may name; none for every bundle.
    * @param string|\Stringable $label
    *   The label.
    * @param mixed $default
@@ -199,17 +252,17 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * @return \Drupal\Core\TypedData\DataDefinition
    *   The key's definition: the id, typed as the entity type's id key,
-   *   with the constraint naming the type and the bundle.
+   *   with the constraint naming the type and the bundles.
    *
    * @throws \LogicException
-   *   When the blueprint cannot build one, or the string names nothing the
+   *   When the blueprint cannot build one, or the entity type is none the
    *   site has.
    */
-  protected function addReference(string $key, string $type, string|\Stringable $label, mixed $default): DataDefinition {
+  protected function addReference(string $key, string $to, array $bundles, string|\Stringable $label, mixed $default): DataDefinition {
     if ($this->references === NULL) {
-      throw new \LogicException(sprintf('add("%s", "%s") declares a reference key where nothing builds one: a reference is declared by a resource, a structure or an alter.', $key, $type));
+      throw new \LogicException(sprintf('refer("%s", "%s") declares a reference key where nothing builds one: a reference is declared by a resource, a structure or an alter.', $key, $to));
     }
-    $definition = $this->references->definition($key, $type);
+    $definition = $this->references->definition($key, $to, $bundles);
     $definition->setLabel($label);
     $this->addDefinition($key, $definition, $default);
     return $definition;
@@ -219,7 +272,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * Adds a key that refers to an entity of any type, where one may.
    *
    * Only a resource's or a structure's own blueprint attaches the two
-   * parts a bare `entity` key is, so this one adds none.
+   * parts a choice of entity type and id is, so this one adds none.
    *
    * @param string $key
    *   The key.
@@ -250,6 +303,9 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       $item = $shaped = $this->fromShape($key, $item, 'addList');
     }
     elseif (is_string($item)) {
+      if (!LeafTypes::has($item)) {
+        throw new \LogicException(sprintf('addList("%s", "%s") declares items of the %s type, which JSON Schema has no type for. Each item is one of %s, or a shape\'s class; %s', $key, $item, $item, implode(', ', array_keys(LeafTypes::ROWS)), LeafTypes::meant($item)));
+      }
       $item = $this->typedDataManager->createDataDefinition($item);
     }
     $list = (new ListDataDefinition(['type' => 'list'], $item))->setLabel($label);
@@ -260,6 +316,65 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       $this->shaped[$key . '.*'] = $shaped;
     }
     return $list;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The map is built whole before it is declared, so every key inside is
+   * held to the type table with it; what its keys start from is its
+   * default.
+   *
+   * Decision: see docs/decisions.md#an-anonymous-map.
+   */
+  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition {
+    $map = MapDataDefinition::create();
+    $map->setLabel($label);
+    $inner = $this->mapBlueprint($map, $key)
+      ->useShapes($this->shapes)
+      ->useReferences($this->references);
+    $define($inner);
+    $this->addDefinition($key, $map, $inner->defaults() === [] ? NULL : $inner->defaults());
+    return $map;
+  }
+
+  /**
+   * Builds the blueprint a map's callable is handed first.
+   *
+   * @param \Drupal\Core\TypedData\MapDataDefinition $map
+   *   The map.
+   * @param string $key
+   *   Its key.
+   *
+   * @return \Drupal\surface\ResourceBuild\MapBlueprint
+   *   The blueprint, which says why no structure can stand for the map
+   *   where none can.
+   */
+  protected function mapBlueprint(MapDataDefinition $map, string $key): MapBlueprint {
+    return new MapBlueprint($map, $this->pathOf($key), $this, $this->builder, $this->typedDataManager, $this->outputs, $this->unframed());
+  }
+
+  /**
+   * Says why a map declared here cannot be attached as a structure.
+   *
+   * @return string|null
+   *   The reason, or NULL where it can.
+   */
+  protected function unframed(): ?string {
+    return 'only a resource\'s or a structure\'s own inputs attach one: an alter attaches a structure at its own mount alone.';
+  }
+
+  /**
+   * Names a key of this blueprint for a message about a map inside it.
+   *
+   * @param string $key
+   *   The key.
+   *
+   * @return string
+   *   Its path from the frame the blueprint fills.
+   */
+  protected function pathOf(string $key): string {
+    return $key;
   }
 
   /**
@@ -320,6 +435,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * {@inheritdoc}
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
+    // Every value inside is held to the type table, as add() holds one.
+    // Decision: see
+    // docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader.
+    LeafTypes::assertHeld(sprintf('addDefinition("%s")', $key), $definition);
     $this->assertNoPort($key);
     if (in_array($key, $this->declared(), TRUE) || $this->isDeclared($key)) {
       throw new \LogicException(sprintf(

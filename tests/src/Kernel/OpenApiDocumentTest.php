@@ -203,6 +203,10 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
     foreach ($description->operations as $id => $entry) {
       $name = $registry->getDefinition($entry['resource'])->name();
       $operation = $registry->getOperation($name, $entry['operation']);
+      // The read the build adds is described as the update it reads.
+      if ($operation->reads !== NULL) {
+        $operation = $registry->getOperation($name, $operation->reads);
+      }
       // Built for no account, and knowing nothing of a subject.
       $built = $this->container->get('surface.openapi_document')->neutral($registry->getDefinition($name), $operation);
       $full = json_decode((string) json_encode($emitter->emitFull($built, $entry['resource'], $operation->id, $operation->label, operation: $operation->facts())->document, JSON_THROW_ON_ERROR), TRUE);
@@ -345,7 +349,8 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
         $this->assertSame('tool_test.logbook:' . $id . ':narrow', $paths[$path . '/schema']['post']['operationId']);
       }
     }
-    $this->assertSame('tool_test.logbook:configure:read', $paths[$base]['get']['operationId'], 'GET is the default update\'s envelope.');
+    $this->assertSame('tool_test.logbook:read:read', $paths[$base]['get']['operationId'], 'GET is the read, the one the build adds, serving its update\'s envelope.');
+    $this->assertSame('read', $paths[$base]['get']['x-surface-kind']);
     $this->assertArrayNotHasKey('x-surface-idempotent', $paths[$base]['get'], 'The facts are on the run.');
     $this->assertSame('Start a logbook', $paths[$base]['post']['summary']);
     $this->assertStringStartsWith('Starts a logbook.', $paths[$base]['post']['description']);

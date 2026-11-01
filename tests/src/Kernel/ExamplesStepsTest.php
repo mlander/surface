@@ -351,6 +351,10 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $this->assertSame(['capacity', 'integer', 'Capacity', 'no', '50', 'from 1 to 400', 'room', 'narrowed'], $rows['capacity']);
     $this->assertSame('as declared', $rows['title'][7]);
     $this->assertSame('the free variant', $rows['ticket'][7]);
+    // Each variant by what it is called, its id after it; the contact,
+    // which has no label, by its id.
+    $this->assertSame('A part chosen by pricing: free → Free ticket (registration.step3.ticket.free), paid → Paid ticket (registration.step3.ticket.paid)', $rows['ticket'][5]);
+    $this->assertSame('A fixed part: registration.contact', $rows['contact'][5]);
     $this->assertSame('an email address', $rows['contact.email'][5]);
 
     $answers = ['venue' => 'harbour', 'room' => 'harbour_deck', 'pricing' => 'paid'];

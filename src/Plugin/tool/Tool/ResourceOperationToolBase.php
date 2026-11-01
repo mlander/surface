@@ -25,14 +25,14 @@ use Drupal\tool\Tool\ToolBase;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
- * What the write and the read tool for one operation share.
+ * What the tools for one operation share.
  *
- * Both are derived from one operation of one resource and read which from
- * their derivative id, `<resource id>:<operation id>` and, for a read,
- * ResourceOperationReadTool::SUFFIX after it. Both build the operation's
- * context from the parameters the same way, and both answer access the
- * same way: the operation's permission, then the resource's access class,
- * for that context.
+ * Each is derived from one operation of one resource and reads which from
+ * its derivative id, `<resource id>:<operation id>`, and for the narrowing
+ * tool ResourceOperationSchemaTool::SUFFIX after it. Each builds the
+ * operation's context from the parameters the same way, and answers
+ * access the same way: the operation's permission, then the resource's
+ * access class, for that context.
  *
  * @see \Drupal\surface\Plugin\tool\Tool\ResourceOperationTool
  * @see \Drupal\surface\Plugin\tool\Tool\ResourceOperationReadTool
@@ -246,7 +246,7 @@ abstract class ResourceOperationToolBase extends ToolBase {
     }
     $sent = [];
     foreach ($operation->parameters as $parameter) {
-      if (!$parameter->takesObject() && is_scalar($values[$parameter->name] ?? NULL)) {
+      if (is_scalar($values[$parameter->name] ?? NULL)) {
         $sent[$parameter->name] = $values[$parameter->name];
       }
     }

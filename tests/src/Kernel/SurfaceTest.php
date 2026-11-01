@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Surface;
 use Drupal\surface\DefinitionMap;
@@ -93,21 +94,27 @@ class SurfaceTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests that 'any' may refine to a concrete type.
+   * Tests the variants' placeholder, and no other `any`, may become any type.
    */
-  public function testAnyEscapeHatch(): void {
-    $surface = new Surface(
+  public function testOnlyThePlaceholderBecomesAnything(): void {
+    $surface = static fn (DataDefinitionInterface $value): Surface => new Surface(
       DefinitionMap::fromArrays(
         definitions: [
           'kind' => DataDefinition::create('string'),
-          'value' => DataDefinition::create('any'),
+          'value' => $value,
         ],
         refiners: ['value' => [SurfaceInterface::OWNER => [new AnyToIntegerRefiner()]]],
         refinements: ['value' => ['kind']],
       ),
     );
-    $refined = $surface->refine(['kind' => 'count']);
+    $placeholder = DataDefinition::create('any');
+    DefinitionMetadata::setVariantsBy($placeholder, 'kind');
+    $refined = $surface($placeholder)->refine(['kind' => 'count']);
     $this->assertSame('integer', $refined->getDefinition('value')->getDataType());
+
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('the data type changed from any to integer');
+    $surface(DataDefinition::create('any'))->refine(['kind' => 'count']);
   }
 
   /**

@@ -53,11 +53,6 @@ final class SiteCatalog {
   public const TOOL = 'tool';
 
   /**
-   * The read tool derived beside it.
-   */
-  public const READ_TOOL = 'read tool';
-
-  /**
    * The narrowing tool derived beside it, where its listing states a key open.
    */
   public const SCHEMA_TOOL = 'schema tool';
@@ -79,7 +74,6 @@ final class SiteCatalog {
     self::FORM,
     self::HTTP,
     self::TOOL,
-    self::READ_TOOL,
     self::SCHEMA_TOOL,
     self::OPENAPI,
     self::REACT,
@@ -186,7 +180,7 @@ final class SiteCatalog {
       $definition = $this->registry->getDefinition((string) ($entry['class'] ?? $id));
       $catalog[$id]['read'] = NULL;
       foreach ($entry['operations'] as $delta => $operation) {
-        $catalog[$id]['operations'][$delta]['doors'] = $this->doorsOf($definition, $definition->operations[$delta], $operation['standalone'], $operation['reads']);
+        $catalog[$id]['operations'][$delta]['doors'] = $this->doorsOf($definition, $definition->operations[$delta], $operation['standalone']);
       }
     }
     // What a schema document supplies is registered when a build reads
@@ -195,6 +189,8 @@ final class SiteCatalog {
     foreach ($this->registry->getReadDefinitions() as $name => $definition) {
       $catalog[$name] = [
         'id' => $definition->id,
+        'label' => ResourceCatalog::text($definition->label()),
+        'description' => ResourceCatalog::text($definition->description()),
         'class' => NULL,
         'deriver' => NULL,
         'read' => $name,
@@ -494,7 +490,7 @@ final class SiteCatalog {
           continue;
         }
         try {
-          $linked += $doors->links($definition, $definition->operations[$delta], $described['standalone'], $described['reads']);
+          $linked += $doors->links($definition, $definition->operations[$delta], $described['standalone']);
         }
         catch (\Throwable) {
           // A door with no URL here is shown as text.
@@ -523,17 +519,15 @@ final class SiteCatalog {
    *   The operation.
    * @param bool $standalone
    *   Whether it can be asked on its own.
-   * @param bool $reads
-   *   Whether what it changes can be read on its own.
    *
    * @return array<string, string>
    *   What each door is, by name, in DOORS order.
    */
-  protected function doorsOf(ResourceDefinition $definition, OperationDefinition $operation, bool $standalone, bool $reads): array {
+  protected function doorsOf(ResourceDefinition $definition, OperationDefinition $operation, bool $standalone): array {
     $named = [];
     foreach ($this->doors as $doors) {
       try {
-        $named += $doors->doors($definition, $operation, $standalone, $reads);
+        $named += $doors->doors($definition, $operation, $standalone);
       }
       catch (\Throwable) {
         // A door that cannot be named for it is not reached; the
@@ -556,7 +550,7 @@ final class SiteCatalog {
    *   its subject unknown.
    */
   protected function context(string $name, OperationDefinition $operation): OperationContext {
-    return $operation->needsNothing() ? $this->resources->operation($name, $operation->id) : new OperationContext($operation->id);
+    return $operation->needsNothing() ? $this->resources->operation($name, $operation->id) : new OperationContext($operation->contextId());
   }
 
   /**

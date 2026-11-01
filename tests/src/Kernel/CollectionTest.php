@@ -61,9 +61,9 @@ class CollectionTest extends SurfaceKernelTestBase {
   protected const TOOL = 'surface:resource_test.cellar:update';
 
   /**
-   * The read tool beside it.
+   * The resource's read.
    */
-  protected const READ_TOOL = 'surface:resource_test.cellar:update:read';
+  protected const READ_TOOL = 'surface:resource_test.cellar:read';
 
   /**
    * What the cellar holds before each test.

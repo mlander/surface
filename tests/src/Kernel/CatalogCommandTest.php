@@ -71,7 +71,7 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     [$status, $display] = $this->catalog();
     $this->assertSame(0, $status, $display);
     $line = static fn (string $resource): string => (string) preg_replace('/\s+/', ' ', implode("\n", preg_grep('/^\s*' . preg_quote($resource, '/') . '\s/', explode("\n", $display)) ?: []));
-    $this->assertSame(' first.newsletter resource configure (update) administer surface_examples_first nothing form, http, tool, read tool, openapi, react ', $line('first.newsletter'));
+    $this->assertSame(' first.newsletter resource configure (update) administer surface_examples_first nothing form, http, tool, openapi, react first.newsletter resource read (read, default read of configure) administer surface_examples_first nothing http, tool, openapi ', $line('first.newsletter'));
     // A structure no operation asks for on its own.
     $this->assertStringContainsString(' resource_test.digest.daily structure none ', $line('resource_test.digest.daily'));
     $this->assertMatchesRegularExpression('/\d+ resources and \d+ structures, \d+ operations, \d+ structures read from a schema; [1-9]\d* refused \(drush surface:catalog --refused lists them\)\./', (string) preg_replace('/\s+/', ' ', $display));
@@ -93,10 +93,17 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
       SiteCatalog::FORM => '/admin/config/services/surface-store (surface_examples_first.store)',
       SiteCatalog::HTTP => 'PATCH /surface-api/first.store',
       SiteCatalog::TOOL => 'surface:first.store:configure',
-      SiteCatalog::READ_TOOL => 'surface:first.store:configure:read',
       SiteCatalog::OPENAPI => 'first.store:configure:write',
       SiteCatalog::REACT => '/surface-react/first.store/configure',
     ], $configure['doors']);
+    // The read is an operation of its own, its doors its own.
+    $read = $decoded['resources']['first.store']['operations'][1];
+    $this->assertSame(['read', 'configure'], [$read['id'], $read['default']]);
+    $this->assertSame([
+      SiteCatalog::HTTP => 'GET /surface-api/first.store',
+      SiteCatalog::TOOL => 'surface:first.store:read',
+      SiteCatalog::OPENAPI => 'first.store:read:read',
+    ], $read['doors']);
     $this->assertNotSame([], $decoded['refused']);
     // A structure read from a schema, a variant the poster's provider
     // lists, by the name it is built by.
@@ -130,6 +137,7 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     $this->assertSame(0, $status, $json);
     $entry = json_decode($json, TRUE, 512, JSON_THROW_ON_ERROR);
     $this->assertSame('configure', $entry['built']);
+    $this->assertSame(['Store location', NULL], [$entry['label'], $entry['description']], 'Its label, and no description.');
     $this->assertSame(['class' => NULL, 'alters' => [], 'kind' => 'none'], $entry['answers']);
     $keys = array_column($entry['keys'], NULL, 'key');
     $this->assertSame(['country', 'region'], array_keys($keys));
@@ -143,13 +151,21 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     // A table, with the keys and the doors.
     [$status, $display] = $this->catalog(['--resource' => 'first.store']);
     $this->assertSame(0, $status);
-    foreach (['Keys read in', 'regionOfCountry', 'PATCH /surface-api/first.store', 'LabeledChoice'] as $said) {
+    $said_all = [
+      'Label',
+      'Store location',
+      'Keys read in',
+      'regionOfCountry',
+      'PATCH /surface-api/first.store',
+      'LabeledChoice',
+    ];
+    foreach ($said_all as $said) {
       $this->assertStringContainsString($said, $display);
     }
     $this->assertMatchesRegularExpression('#Its page in the catalog: http\S*/admin/config/development/surfaces/first\.store\s*$#', $display);
     [$status, $markdown] = $this->catalog(['--resource' => 'first.store', '--format' => 'markdown']);
     $this->assertSame(0, $status);
-    $this->assertStringStartsWith("# first.store\n", $markdown);
+    $this->assertStringStartsWith("# first.store\n\n- Label: Store location\n- Kind: resource\n", $markdown);
     $this->assertStringContainsString('| `region` | string, required | `"CA-ON"` |', $markdown);
 
     // Children, variants and items by their dotted path.

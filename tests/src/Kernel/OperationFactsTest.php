@@ -10,6 +10,7 @@ use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface_resource_test\OutsideDiscovery\ContradictingCreatesStructure;
+use Drupal\surface_resource_test\OutsideDiscovery\ObjectParameterStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\MisnamedContextStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\RetiredIdStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\StampedStructure;
@@ -138,7 +139,7 @@ class OperationFactsTest extends SurfaceKernelTestBase {
   public function testAnOperationOnTheClassHasNoMethod(): void {
     $resources = $this->container->get('surface.resources');
     $registry = $this->container->get('surface.resource_registry');
-    $this->assertSame(array_keys(self::LOGBOOK), array_keys($registry->getOperations(LogbookResource::class)), 'In the order the class declares them.');
+    $this->assertSame([...array_keys(self::LOGBOOK), 'read'], array_keys($registry->getOperations(LogbookResource::class)), 'In the order the class declares them, then the read the build adds.');
     foreach (self::LOGBOOK as $id => [$creates]) {
       $operation = $registry->getOperation(LogbookResource::class, $id);
       $this->assertTrue($operation->isBare(), $id);
@@ -203,6 +204,24 @@ class OperationFactsTest extends SurfaceKernelTestBase {
       catch (\LogicException $e) {
         $this->assertStringStartsWith($message, $e->getMessage(), $class);
       }
+    }
+  }
+
+  /**
+   * Tests an operation method's object parameter is refused at discovery.
+   *
+   * An operation is handed values: a door that loaded the object would
+   * read storage beside the resource's own.
+   *
+   * @see docs/decisions.md#an-operation-is-handed-values-never-objects
+   */
+  public function testObjectParameterIsRefusedAtDiscovery(): void {
+    try {
+      $this->registryOf(ObjectParameterStructure::class)->getDefinitions();
+      $this->fail('An operation taking an entity was not refused at discovery.');
+    }
+    catch (\LogicException $e) {
+      $this->assertSame(ObjectParameterStructure::class . '::fill() takes Drupal\Core\Entity\EntityInterface $jar, an object. An operation is handed values, never objects: type it as the key\'s scalar, string $jar, and load the thing it names through the resource\'s storage, which refuses a value that names nothing.', $e->getMessage());
     }
   }
 
@@ -303,15 +322,25 @@ class OperationFactsTest extends SurfaceKernelTestBase {
       $this->assertSame($kind, $definition->getOperation(), $id);
       $this->assertSame($mcp, $annotations($definition), $id . ': read only, destructive, idempotent, as MCP reads them.');
     }
-    // A read tool is read only by what it is; nothing beside an operation
-    // that creates or one that changes nothing is read.
-    foreach (['configure', 'append', 'clear'] as $id) {
-      $read = $definitions['surface:tool_test.logbook:' . $id . ':read'];
-      $this->assertInstanceOf(ToolDefinition::class, $read);
-      $this->assertSame([TRUE, FALSE, TRUE], $annotations($read), $id . ':read');
+    // The read of one thing is an operation of the resource, read only,
+    // the one the build added beside the default update; no read is
+    // derived beside any operation, a read only one (a listing, a check)
+    // among them.
+    $read = $definitions['surface:tool_test.logbook:read'];
+    $this->assertInstanceOf(ToolDefinition::class, $read);
+    $this->assertSame(ToolOperation::Read, $read->getOperation());
+    $this->assertSame([TRUE, FALSE, TRUE], $annotations($read), 'read');
+    $logbook = $this->container->get('surface.resource_registry')->getOperation('tool_test.logbook', 'read');
+    $this->assertSame('Current values: Configure the logbook', (string) $logbook->label);
+    $this->assertSame(OperationDefinition::READ, $logbook->kind());
+    $this->assertTrue($logbook->readOnly);
+    $this->assertFalse($logbook->creates);
+    $this->assertFalse($logbook->destructive);
+    $this->assertTrue($logbook->idempotent());
+    foreach (['configure', 'start', 'append', 'clear', 'inspect'] as $id) {
+      $this->assertArrayNotHasKey('surface:tool_test.logbook:' . $id . ':read', $definitions, $id);
     }
-    $this->assertArrayNotHasKey('surface:tool_test.logbook:start:read', $definitions);
-    $this->assertArrayNotHasKey('surface:tool_test.logbook:inspect:read', $definitions);
+    $this->assertArrayNotHasKey('surface:event.venue:list:read', $definitions, 'No read beside a listing.');
 
     // The examples state nothing, and their tools are what they were.
     $example = $definitions['surface:registration.step3:configure'];

@@ -333,13 +333,14 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
   /**
    * Tests that a fresh definition keeps the metadata it never carried.
    *
-   * A refiner that answers with a new definition — the normal way to
-   * give the 'any' escape hatch a concrete type — would otherwise drop
+   * A refiner that answers with a new definition (the variants'
+   * placeholder becoming what its deciding key chose) would otherwise drop
    * the declared default and the examples, and the rendered form and the
    * accepted value would then disagree about what the key starts from.
    */
   public function testMetadataSurvivesFreshDefinitions(): void {
     $value = DataDefinition::create('any')->setLabel('Value');
+    DefinitionMetadata::setVariantsBy($value, 'kind');
     DefinitionMetadata::setDefaultValue($value, 7);
     DefinitionMetadata::setExamples($value, [1, 2]);
     $builder = new SurfaceBuilder(

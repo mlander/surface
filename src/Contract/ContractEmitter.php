@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Contract;
 
+use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
@@ -637,6 +638,34 @@ final class ContractEmitter {
           $enumerated = $this->conditionals->enumerate($declared, $static, $entry, $values, $properties[$name], $emission, TRUE);
         }
       }
+      elseif ($entry->attachment !== NULL && ResourceRegistry::isMap($entry->attachment->source)) {
+        // An anonymous map whose keys needed a frame: a structure with no
+        // id, written inline where it sits, as a plain map is, with no def.
+        // Decision: see docs/decisions.md#an-anonymous-map.
+        $attachment = $entry->attachment;
+        $child = $declaring ? $attachment->child : ($current->attachment ?? $attachment)->bound($values);
+        $held = $values[$name] ?? NULL;
+        $inside = $declaring || $full || $blank ? $this->known($child) : array_replace($child->getDefaultValues(), is_array($held) ? $held : []);
+        $around = $this->enter($name);
+        try {
+          [$instance, $shown[$name]] = $this->frame($child, $inside, $emission->withPrefix($prefix . $name . '.')->withOwner($attachment->id ?? $owner . '.' . $name)->withFrozen($locked));
+        }
+        finally {
+          $this->site = $around;
+        }
+        if ($declaring) {
+          $shown[$name] = new \stdClass();
+        }
+        $instance['type'] = $this->propertySchema->nullable('object', $current->definition);
+        $properties[$name] = $this->propertySchema->describe($current->definition) + $instance;
+        if ($locked) {
+          $properties[$name]['readOnly'] = TRUE;
+        }
+        $properties[$name][self::EXTENSION] = ($instance[self::EXTENSION] ?? []) + $this->propertySchema->extension($this->propertySchema->asked($current->definition) ?? 'fieldset', $depends, $this->propertySchema->anyRefined($instance));
+        if ($ahead_of_time) {
+          $enumerated = $this->conditionals->enumerate($declared, $static, $entry, $values, $properties[$name], $emission, TRUE);
+        }
+      }
       elseif ($entry->attachment !== NULL) {
         $attachment = $entry->attachment;
         $fallback = $owner . '.' . $name;
@@ -667,7 +696,7 @@ final class ContractEmitter {
         if ($locked) {
           $properties[$name]['readOnly'] = TRUE;
         }
-        $properties[$name][self::EXTENSION] = $this->propertySchema->extension('fieldset', $depends, $this->propertySchema->anyRefined($instance));
+        $properties[$name][self::EXTENSION] = $this->propertySchema->extension($this->propertySchema->asked($current->definition) ?? 'fieldset', $depends, $this->propertySchema->anyRefined($instance));
         if ($ahead_of_time) {
           // A parent's refiner of an attached key says only whether it
           // applies.
@@ -1214,7 +1243,7 @@ final class ContractEmitter {
         [$first, $rest] = array_pad(explode('.', $through, 2), 2, '');
         $reads[(string) $port] = ($attachment->reads[$first] ?? $first) . '.' . $rest;
       }
-      $site = new Attachment($child->child, $child->source, $child->id, $reads, $child->wired);
+      $site = $child->withReads($reads, $child->wired);
       [$stated, $marked] = $this->site($declared, $static, $entry, $site, (string) $id, $values, $emission);
       array_push($branches, ...$stated);
       $markers += $marked;
@@ -1458,7 +1487,7 @@ final class ContractEmitter {
       unset($def['additionalProperties'], $def['unevaluatedProperties']);
     }
     $def = $this->documentHead->versioned($child, $def, FALSE);
-    return $subschemas->add($id, $def, $child);
+    return $subschemas->add($id, $def, $child, $attachment->label, $attachment->description);
   }
 
   /**
@@ -1650,7 +1679,7 @@ final class ContractEmitter {
    *   `$defs`, or nothing.
    */
   protected function definitions(Subschemas $subschemas): array {
-    $defs = $subschemas->all();
+    $defs = $subschemas->named();
     return $defs === [] ? [] : ['$defs' => $defs];
   }
 

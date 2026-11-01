@@ -290,13 +290,14 @@ set when the field is added. A declared variant always wins.
 
 Underneath, the key is an `any` placeholder that the framework narrows
 to the chosen variant's map once the deciding key has a value: an
-ordinary refinement under the rule that `any` may become anything
-narrower, not a new mechanism.
+ordinary refinement under the rule that the placeholder may become
+anything narrower, not a new mechanism.
 
-**The escape hatch.** A child whose keys cannot be listed at all is
-the one case for a `#[RefinesInput]` method on an `any` key returning
-the narrower definition itself, a map included. No verb is needed;
-the test module's `DynamicChildStructure` is the example.
+**No escape hatch.** A key whose shape depends on another key's value
+is variants. `add()` refuses `any`, and only the variants' placeholder
+may become another type, so no refiner turns a key into a map
+([Variants, not slots](decisions.md#variants-not-slots), amended
+2026-11-01).
 
 **The wall.** A child never reads its parent's values, and a parent
 never refines or watches a key inside its child. When a child needs
@@ -640,3 +641,8 @@ concept. The naming of sources and resolvers is undecided.
 | `#[Resource(storage:, access:)]` | the provider triple: `getSurface()`, `surfaceAccess()`, `getSurfaceStorage()` |
 | `defineOutputs()`, never refined | `setOutputDefinition()` plus output refiners |
 | `#[UsesStructure]` on the plugin, naming a structure or being one | `declareSurface()` on the plugin class itself |
+
+The rework kept the module's builder and changed what an author writes
+to reach it ([Questions the pattern settled](#questions-the-pattern-settled),
+item 6). [Built on typed data](on-typed-data.md) says why a builder
+sits on top of core's typed data at all.

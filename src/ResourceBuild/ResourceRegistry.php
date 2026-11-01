@@ -25,6 +25,8 @@ use Drupal\surface\Resource\DerivedOperation;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Reference\EntityReferenceStructure;
 use Drupal\surface\Resource\ResourceCallable;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\DefinesInputsInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\OperationAccessInterface;
@@ -85,6 +87,11 @@ final class ResourceRegistry {
    * The cache id prefix in the discovery bin.
    */
   protected const CACHE_PREFIX = 'surface:resources:';
+
+  /**
+   * What the name of an anonymous map's structure starts with.
+   */
+  public const MAP = 'map:';
 
   /**
    * The attribute arguments removed on 2026-10-24, with what replaced each.
@@ -635,19 +642,51 @@ final class ResourceRegistry {
    */
   public function defineRead(string $id, string $module, ResourceCallable $inputs, string $hash): string {
     $name = 'schema:' . $id . ':' . $hash;
-    $this->read[$name] ??= new ResourceDefinition(
-      class: NULL,
-      id: $id,
-      module: $module,
-      identity: [],
-      storage: NULL,
-      access: NULL,
-      refiners: [],
-      inputs: $inputs,
-      kind: ResourceDefinition::STRUCTURE,
-      readAs: $name,
-    );
+    if (!isset($this->read[$name])) {
+      [$label, $description] = self::readNames($inputs, $id);
+      $this->read[$name] = new ResourceDefinition(
+        class: NULL,
+        id: $id,
+        module: $module,
+        identity: [],
+        storage: NULL,
+        access: NULL,
+        refiners: [],
+        inputs: $inputs,
+        label: $label,
+        description: $description,
+        kind: ResourceDefinition::STRUCTURE,
+        readAs: $name,
+      );
+    }
     return $name;
+  }
+
+  /**
+   * Reads what a structure read from a schema is called and is for.
+   *
+   * A def's `title` and `description`, as the emitter writes a
+   * structure's label and description there (SchemaReader::names()), so
+   * a document reads back to itself. Only for a def: the object at a key,
+   * or a document's root, is titled by the key or the operation.
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   *
+   * @param \Drupal\surface\Resource\ResourceCallable $inputs
+   *   What fills its blueprint.
+   * @param string $id
+   *   Its id in the document.
+   *
+   * @return array{0: string|null, 1: string|null}
+   *   The label and the description, each NULL where the def says none.
+   */
+  protected static function readNames(ResourceCallable $inputs, string $id): array {
+    [$root, $pointer] = $inputs->arguments + [NULL, NULL];
+    if ($inputs->class !== SchemaReader::class || $inputs->method !== 'fill' || !is_array($root) || !is_string($pointer)) {
+      return [NULL, NULL];
+    }
+    return SchemaReader::names($root, $pointer, $id);
   }
 
   /**
@@ -703,6 +742,8 @@ final class ResourceRegistry {
       if (isset($this->read[$name]) || !isset($export['documents'][$hash])) {
         continue;
       }
+      $inputs = new ResourceCallable(SchemaReader::class, 'fill', [$export['documents'][$hash], $pointer, $hash]);
+      [$label, $description] = self::readNames($inputs, $id);
       $this->read[$name] = new ResourceDefinition(
         class: NULL,
         id: $id,
@@ -711,7 +752,9 @@ final class ResourceRegistry {
         storage: NULL,
         access: NULL,
         refiners: [],
-        inputs: new ResourceCallable(SchemaReader::class, 'fill', [$export['documents'][$hash], $pointer, $hash]),
+        inputs: $inputs,
+        label: $label,
+        description: $description,
         kind: ResourceDefinition::STRUCTURE,
         readAs: $name,
       );
@@ -780,6 +823,95 @@ final class ResourceRegistry {
       readAs: $name,
     );
     return $name;
+  }
+
+  /**
+   * Registers an anonymous map whose keys need a frame: a structure, no id.
+   *
+   * Like a structure read from a schema, listed by nothing and built by
+   * name: its inputs MapBlueprint::fill(), which runs its owner's
+   * declaration again to the map's key. Its id is its owner's and the
+   * key, for messages; no alter names it, since an alter names a class.
+   *
+   * Decision: see docs/decisions.md#an-anonymous-map.
+   *
+   * @param string $id
+   *   Its id: the owner's, then the key.
+   * @param string $module
+   *   The owner's module.
+   * @param string $owner
+   *   The owner, by the name it is built by.
+   * @param string $key
+   *   The key the owner declares it at.
+   * @param string[] $declared
+   *   The keys the map's callable declared before it asked for the frame,
+   *   which each fill holds it to.
+   *
+   * @return string
+   *   The name it is attached and built by.
+   */
+  public function defineMap(string $id, string $module, string $owner, string $key, array $declared = []): string {
+    $name = self::MAP . $owner . ':' . $key;
+    $this->read[$name] ??= new ResourceDefinition(
+      class: NULL,
+      id: $id,
+      module: $module,
+      identity: [],
+      storage: NULL,
+      access: NULL,
+      refiners: [],
+      inputs: new ResourceCallable(MapBlueprint::class, 'fill', [$owner, $key, $declared]),
+      kind: ResourceDefinition::STRUCTURE,
+      readAs: $name,
+    );
+    return $name;
+  }
+
+  /**
+   * Answers whether a name is an anonymous map's (defineMap()).
+   *
+   * @param string|null $name
+   *   A name a child is built by.
+   *
+   * @return bool
+   *   TRUE for an anonymous map's, which both documents write inline.
+   */
+  public static function isMap(?string $name): bool {
+    return $name !== NULL && str_starts_with($name, self::MAP);
+  }
+
+  /**
+   * Fills a blueprint with what a resource or structure declares.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure.
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
+   *   The blueprint.
+   *
+   * @internal
+   *   For an anonymous map's structure, which runs its owner's
+   *   declaration again (ResourceBlueprint::replay()).
+   */
+  public function declareInputs(ResourceDefinition $definition, BlueprintInterface $inputs): void {
+    if (!$definition->isDerived()) {
+      $class = $definition->class;
+      assert(is_subclass_of($class, DefinesInputsInterface::class));
+      $class::defineInputs($inputs);
+      return;
+    }
+    $callable = $definition->inputs;
+    if ($callable === NULL) {
+      return;
+    }
+    if ($this->classResolver !== NULL) {
+      $callable->call($this->classResolver, $inputs);
+      return;
+    }
+    $method = new \ReflectionMethod($callable->class, $callable->method);
+    if (!$method->isStatic()) {
+      throw new \LogicException(sprintf('%s declares through %s, which this registry, built with no class resolver, cannot call.', $definition->id, $callable->describe()));
+    }
+    $method->invokeArgs(NULL, [$inputs, ...$callable->arguments]);
   }
 
   /**
@@ -1071,6 +1203,11 @@ final class ResourceRegistry {
       }
       $ids[$id] = $class;
       self::assertAccessClass($class, $attribute?->access);
+      // What the one plugin hosting it calls itself, which its label and
+      // description fall back to.
+      // Decision: see
+      // docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+      $host = $this->plugins?->hostNames($class) ?? ['label' => NULL, 'description' => NULL];
       $resources[$class] = new ResourceDefinition(
         class: $class,
         id: $id,
@@ -1079,8 +1216,13 @@ final class ResourceRegistry {
         storage: $attribute instanceof Resource ? $attribute->storage : NULL,
         access: $attribute?->access,
         refiners: self::refinersOf($reflection),
+        label: $attribute?->label,
+        description: $attribute?->description,
         kind: $kind,
         version: self::versionOf($class, $attribute->version ?? 1),
+        hostLabel: $host['label'],
+        hostDescription: $host['description'],
+        widget: $attribute instanceof Structure ? $attribute->widget : NULL,
       );
       if ($attribute instanceof Resource && $attribute->storage === NULL && $attribute->identity === [] && $plugin_id === NULL && ($this->plugins?->usedBy($class) ?? []) === []) {
         // Decision: see docs/decisions.md#a-resource-has-storage-or-a-host.
@@ -1206,6 +1348,15 @@ final class ResourceRegistry {
       }
     }
 
+    // Every resource that can be changed can be read: where it declares
+    // no read of its own, the build adds one beside its default update.
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    foreach ($resources as $class => $definition) {
+      $read = $this->defaultRead($definition, $operations[$class] ?? []);
+      if ($read !== NULL) {
+        $operations[$class][] = $read;
+      }
+    }
     foreach ($resources as $class => $definition) {
       $resources[$class] = $definition->with($operations[$class] ?? [], $alters[$class] ?? [], $variants[$class] ?? []);
     }
@@ -1214,6 +1365,51 @@ final class ResourceRegistry {
       $shapes[$class] = $shape->withAlters($shape_alters[$class] ?? []);
     }
     return ['resources' => $resources, 'shapes' => $shapes];
+  }
+
+  /**
+   * Makes the read the build adds to a resource, where it adds one.
+   *
+   * A resource with storage, no plugin's configuration, that declares no
+   * operation with the id `read` and has a default update that can be
+   * asked on its own (ResourceCatalog::standalone()): the update whose id
+   * is its kind's standard one (`update`, or `configure` on a singleton),
+   * else its only update. On a resource with identity the update has to
+   * name the thing by its parameters: an update over the collection, a
+   * reorder, changes no one thing to read.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition[] $operations
+   *   The operations it declares, in discovery order.
+   *
+   * @return \Drupal\surface\ResourceBuild\OperationDefinition|null
+   *   The read, or NULL where none is added.
+   */
+  protected function defaultRead(ResourceDefinition $definition, array $operations): ?OperationDefinition {
+    if (!$definition->isResource() || $definition->storage === NULL) {
+      return NULL;
+    }
+    $plugins = $definition->isDerived() ? [] : ($this->plugins?->usedBy((string) $definition->class) ?? []);
+    $singleton = $definition->identity === [];
+    $updates = [];
+    foreach ($operations as $operation) {
+      if ($operation->id === OperationDefinition::READ_ID) {
+        return NULL;
+      }
+      if ($operation->kind() === OperationDefinition::UPDATE && ($singleton || $operation->parameters !== []) && ResourceCatalog::standalone($definition, $operation, $plugins)) {
+        $updates[] = $operation;
+      }
+    }
+    $named = array_values(array_filter($updates, static fn (OperationDefinition $operation): bool => in_array($operation->id, OperationDefinition::defaultIds(OperationDefinition::UPDATE, $singleton), TRUE)));
+    $update = match (TRUE) {
+      count($named) === 1 => $named[0],
+      $named === [] && count($updates) === 1 => $updates[0],
+      default => NULL,
+    };
+    return $update === NULL ? NULL : OperationDefinition::defaultRead($update);
   }
 
   /**
@@ -1572,10 +1768,10 @@ final class ResourceRegistry {
               method: $operation->context->method,
               permission: $operation->permission,
               module: $module,
+              // Decision: see docs/decisions.md#a-parameter-names-a-key.
               parameters: array_map(
-                OperationParameter::fromDeclaration(...),
+                static fn (int|string $position): OperationParameter => OperationParameter::fromDeclaration($position, $operation->parameters[$position], sprintf('The "%s" operation of %s', $operation->id, $id)),
                 array_keys($operation->parameters),
-                array_values($operation->parameters),
               ),
               context: $operation->context,
               destructive: $operation->destructive,

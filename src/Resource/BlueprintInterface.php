@@ -33,9 +33,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * narrower. A sibling the context locks chooses the variant from the
    * start.
    *
-   * A child that cannot be enumerated statically is the one case for a
-   * #[RefinesInput] method on an `any` key returning the narrower
-   * definition itself; no verb is needed for it.
+   * A key whose shape depends on another key's value is variants: there
+   * is no `any` key a refiner turns into a map, since add() refuses `any`
+   * and only the placeholder may become what it stands for.
    *
    * Variants from the site: `from:` names a provider implementing
    * SiteListInterface, asked at every build as for keys from the site,
@@ -44,11 +44,14 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * every #[Variant] at the key; a declared variant wins for a value both
    * name. Each entry's label is what $by offers its value as; an entry
    * that says a start or a lock is refused, since a variant reads
-   * neither.
+   * neither. A provider that lists for several owners (the bundles of
+   * whichever entity type) is handed the arguments that say which list,
+   * `arguments:`, and implements BoundSiteListInterface.
    *
    * @code
    * $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
    *   ->setLabel(t('Props'));
+   * $inputs->attachVariants('fields', by: 'bundle', from: BundleFields::class, arguments: ['node']);
    * @endcode
    *
    * @param string $key
@@ -58,6 +61,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param string|null $from
    *   The provider of variants from the site, by class, or NULL for the
    *   #[Variant] classes alone.
+   * @param list<string|int> $arguments
+   *   What the provider lists for (BoundSiteListInterface::listFor()), or
+   *   none for its list().
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to label and describe with the
@@ -65,11 +71,13 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @throws \LogicException
    *   When the key is already declared, for outputs, which do not attach
-   *   yet, or when the provider implements no SiteListInterface.
+   *   yet, when the provider implements no SiteListInterface, or when it
+   *   is handed arguments and implements no BoundSiteListInterface, or
+   *   answers an entry's schema when it is read (EntrySchemasInterface).
    *
    * @see docs/resources.md#variants-from-the-site
    */
-  public function attachVariants(string $key, string $by, ?string $from = NULL): MapDataDefinition;
+  public function attachVariants(string $key, string $by, ?string $from = NULL, array $arguments = []): MapDataDefinition;
 
   /**
    * A map with one value per thing the site has: keys from the site.
@@ -80,7 +88,10 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * one: of $type, labeled with the entry's label, starting from the
    * entry's default or else $default, held to what is stored when the
    * entry is locked; an entry that names a schema or a structure is
-   * refused, since a key per thing reads neither. The provider is asked
+   * refused, since a key per thing reads neither. An entry that refers to
+   * an entity is declared in refer()'s words, with no type of its own:
+   * `to:` its entity type and `bundles:` the bundles it may name, each
+   * entry then the id refer() declares. The provider is asked
    * when the resource is built,
    * never by the resource; what it read is the built resource's
    * cacheability, so the form, both schema documents and the tool listing
@@ -89,6 +100,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @code
    * $inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, default: FALSE)
    *   ->setLabel(t('Protected forms'));
+   * $inputs->addEach('pages', NULL, from: Slots::class, to: 'node', bundles: ['page'])
+   *   ->setLabel(t('Pages'));
    * @endcode
    *
    * The map is the owner's key: a rule of the owner's may say it does not
@@ -96,24 +109,33 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @param string $key
    *   The key the map sits at.
-   * @param string $type
-   *   What each entry is: a typed data type, or a shape's class.
+   * @param string|null $type
+   *   What each entry is: a type of the type table, or a shape's class;
+   *   NULL for an entry that refers to an entity, whose type is its
+   *   entity type's id.
    * @param string $from
    *   The provider's class, implementing SiteListInterface.
    * @param mixed $default
    *   What every entry starts from unless it says otherwise; NULL for
    *   nothing.
+   * @param string|null $to
+   *   The entity type each entry refers to, as refer() names it; NULL for
+   *   an entry of a type.
+   * @param string[] $bundles
+   *   The bundles such an entry may name; none for every bundle.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to label and describe.
    *
    * @throws \LogicException
-   *   When the key is taken, for outputs, inside a structure mixed in, or
-   *   when the provider implements no SiteListInterface.
+   *   When the key is taken, for outputs, inside a structure mixed in,
+   *   when the provider implements no SiteListInterface, for a type and an
+   *   entity type both or neither, and for an entity type string,
+   *   `entity:<type>`, which is no type of the table.
    *
    * @see docs/resources.md#keys-that-come-from-the-site
    */
-  public function addEach(string $key, string $type, string $from, mixed $default = NULL): MapDataDefinition;
+  public function addEach(string $key, ?string $type, string $from, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition;
 
   /**
    * A map with one child per thing the site has: keys from the site.

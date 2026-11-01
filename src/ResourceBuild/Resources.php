@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\surface\ResourceBuild;
 
+use Drupal\surface\Widget\SurfaceWidgetManager;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Cache\Cache;
 use Drupal\Core\Cache\CacheBackendInterface;
@@ -1004,7 +1008,55 @@ final class Resources implements ResourcesInterface {
     if ($locked !== NULL) {
       $builder->lockWhole($locked);
     }
-    return $builder->seal();
+    $sealed = $builder->seal();
+    $this->assertWidgetsDraw($sealed, $definition);
+    return $sealed;
+  }
+
+  /**
+   * Refuses a widget a key asks for that does not draw it, at the build.
+   *
+   * The widget manager refuses one when the form is drawn; the same
+   * check is asked here of every definition whose `widget` setting asks
+   * for one, at any depth, so a word no widget answers to, or one that
+   * cannot draw the key (a map's fieldset for one value), is a build
+   * refusal at every door, never a form that fails to draw.
+   *
+   * Decision: see
+   * docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
+   *
+   * @param \Drupal\surface\SurfaceInterface $sealed
+   *   The data surface just sealed; each child was checked when it was.
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure, for the message.
+   *
+   * @throws \LogicException
+   *   For a widget asked for that does not draw its key.
+   */
+  protected function assertWidgetsDraw(SurfaceInterface $sealed, ResourceDefinition $definition): void {
+    $manager = NULL;
+    $walk = function (DataDefinitionInterface $key, string $path) use (&$walk, &$manager, $definition): void {
+      if (is_string($key->getSetting('widget'))) {
+        $manager ??= $this->classResolver->getInstanceFromDefinition(SurfaceWidgetManager::class);
+        try {
+          $manager->getWidgetFor($key);
+        }
+        catch (\InvalidArgumentException $e) {
+          throw new \LogicException(sprintf('%s asks for the "%s" widget at "%s", which no widget answers to or which does not draw it: %s', $definition->id, $key->getSetting('widget'), $path, $e->getMessage()), 0, $e);
+        }
+      }
+      if ($key instanceof ListDataDefinitionInterface) {
+        $walk($key->getItemDefinition(), $path . '.*');
+      }
+      elseif ($key instanceof ComplexDataDefinitionInterface) {
+        foreach ($key->getPropertyDefinitions() as $name => $property) {
+          $walk($property, $path . '.' . $name);
+        }
+      }
+    };
+    foreach ($sealed->getDefinitions()->entries() as $name => $entry) {
+      $walk($entry->definition, (string) $name);
+    }
   }
 
   /**
@@ -1180,6 +1232,12 @@ final class Resources implements ResourcesInterface {
    */
   public function operation(string $resource, string $operation, array $arguments = []): OperationContext {
     $found = $this->registry->getOperation($resource, $operation);
+    // The read the build adds is asked in the context of the update it
+    // reads, so its access and its keys are the update's.
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    if ($found->reads !== NULL) {
+      return $this->operation($resource, $found->reads, $arguments);
+    }
     $resolved = $this->operationArguments->resolve($found, $arguments);
     // One on the class is its attribute's facts and nothing else.
     // Decision: see docs/decisions.md#an-operation-on-the-class.

@@ -40,6 +40,13 @@ final class ResourcePlugins {
   protected ?array $own = NULL;
 
   /**
+   * What the plugin calls itself, for each structure one plugin alone names.
+   *
+   * @var array<class-string, array{label: string|\Stringable|null, description: string|\Stringable|null}>|null
+   */
+  protected ?array $names = NULL;
+
+  /**
    * The hosts whose definitions are being read now, keyed by host type.
    *
    * @var array<string, true>
@@ -88,6 +95,29 @@ final class ResourcePlugins {
   }
 
   /**
+   * Gets what the plugin that hosts a structure calls itself.
+   *
+   * Read from its plugin definition: a block's `admin_label`, any other
+   * plugin's `label`, and its `description` where it has one, so the
+   * structure need not say again what the plugin says. Only where one
+   * plugin alone names the structure: two plugins sharing one would each
+   * call it something else.
+   *
+   * Decision: see
+   * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   *
+   * @param string $resource
+   *   The structure class, or any other.
+   *
+   * @return array{label: string|\Stringable|null, description: string|\Stringable|null}
+   *   The plugin's label and description; both NULL when no plugin, or
+   *   more than one, names the class.
+   */
+  public function hostNames(string $resource): array {
+    return $this->read()['names'][$resource] ?? ['label' => NULL, 'description' => NULL];
+  }
+
+  /**
    * Answers whether every host's definitions have been read whole.
    *
    * FALSE only while they are being read: a host's definitions may be
@@ -114,13 +144,14 @@ final class ResourcePlugins {
    * its discovery again and never end. What is kept is assigned only
    * once every host was read whole, so no call sees a half state.
    *
-   * @return array{used: array<class-string, list<string>>, own: array<class-string, array{module: string, id: string}>}
-   *   The plugins naming each structure, and the plugins that are their
-   *   own structure.
+   * @return array{used: array<class-string, list<string>>, own: array<class-string, array{module: string, id: string}>, names: array<class-string, array{label: string|\Stringable|null, description: string|\Stringable|null}>}
+   *   The plugins naming each structure, the plugins that are their own
+   *   structure, and what the plugin calls itself where one alone names a
+   *   structure.
    */
   protected function read(): array {
     if ($this->used !== NULL) {
-      return ['used' => $this->used, 'own' => $this->own ?? []];
+      return ['used' => $this->used, 'own' => $this->own ?? [], 'names' => $this->names ?? []];
     }
     if ($this->reading !== []) {
       return $this->collect();
@@ -128,18 +159,20 @@ final class ResourcePlugins {
     $read = $this->collect();
     $this->used = $read['used'];
     $this->own = $read['own'];
+    $this->names = $read['names'];
     return $read;
   }
 
   /**
    * Collects what every host not being read now says.
    *
-   * @return array{used: array<class-string, list<string>>, own: array<class-string, array{module: string, id: string}>}
+   * @return array{used: array<class-string, list<string>>, own: array<class-string, array{module: string, id: string}>, names: array<class-string, array{label: string|\Stringable|null, description: string|\Stringable|null}>}
    *   As read() answers.
    */
   protected function collect(): array {
     $used = [];
     $own = [];
+    $names = [];
     foreach ($this->managers as $host => $manager) {
       if (isset($this->reading[$host])) {
         continue;
@@ -157,6 +190,10 @@ final class ResourcePlugins {
           continue;
         }
         $used[$surface][] = $host . ':' . $id;
+        $names[$surface] = [
+          'label' => self::text($definition[$host === 'block' ? 'admin_label' : 'label'] ?? NULL),
+          'description' => self::text($definition['description'] ?? NULL),
+        ];
         // Decision: see docs/decisions.md#a-plugin-that-is-its-own-structure.
         if ($surface === ($definition['class'] ?? NULL)) {
           $own[$surface][] = [
@@ -176,7 +213,24 @@ final class ResourcePlugins {
       usort($plugins, static fn (array $a, array $b): int => strcmp($a['id'], $b['id']));
       $first[$class] = $plugins[0];
     }
-    return ['used' => $used, 'own' => $first];
+    // Decision: see
+    // docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+    $names = array_filter($names, static fn (string $class): bool => count($used[$class]) === 1, ARRAY_FILTER_USE_KEY);
+    return ['used' => $used, 'own' => $first, 'names' => $names];
+  }
+
+  /**
+   * Keeps a plugin definition's label or description when it is text.
+   *
+   * @param mixed $value
+   *   What the definition holds there.
+   *
+   * @return string|\Stringable|null
+   *   The text, or NULL for anything else (a field type's description may
+   *   be a list of lines) and for none.
+   */
+  private static function text(mixed $value): string|\Stringable|null {
+    return (is_string($value) && $value !== '') || $value instanceof \Stringable ? $value : NULL;
   }
 
 }

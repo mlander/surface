@@ -277,7 +277,8 @@ abstract class ResourceTestBase extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $doors = 0;
     foreach ($this->asked($resource) as [$context, $operation]) {
-      if ($operation === NULL || !ResourceCatalog::standalone($definition, $operation, $this->container->get('surface.resource_plugins')->usedBy($definition->name())) || $operation->kind() === OperationDefinition::DELETE) {
+      // A delete and the read of one thing take no document.
+      if ($operation === NULL || !ResourceCatalog::standalone($definition, $operation, $this->container->get('surface.resource_plugins')->usedBy($definition->name())) || $operation->kind() === OperationDefinition::DELETE || $operation->readsOne()) {
         continue;
       }
       $rows = [];

@@ -99,10 +99,13 @@ class OperationToolsTest extends SurfaceKernelTestBase {
     sort($ids);
     $this->assertSame([
       'surface:field.instance:create',
+      'surface:field.instance:read',
       'surface:field.instance:reuse',
       'surface:field.instance:update',
+      'surface:field.storage:read',
       'surface:field.storage:update',
       'surface:node.type:create',
+      'surface:node.type:read',
       'surface:node.type:update',
     ], $ids);
     // The address settings name storage and have no operation of their

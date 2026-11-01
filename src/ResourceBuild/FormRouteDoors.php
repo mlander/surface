@@ -50,7 +50,7 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
   /**
    * {@inheritdoc}
    */
-  public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array {
+  public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     $found = $this->lines($resource, $operation, FALSE);
     return $found === [] ? [] : [SiteCatalog::FORM => implode(', ', $found)];
   }
@@ -58,7 +58,7 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
   /**
    * {@inheritdoc}
    */
-  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array {
+  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     $link = $this->linked($resource, $operation, FALSE);
     return $link === NULL ? [] : [SiteCatalog::FORM => $link];
   }

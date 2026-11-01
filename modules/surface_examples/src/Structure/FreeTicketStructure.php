@@ -17,7 +17,10 @@ use Drupal\surface_examples\Resource\RegistrationStep3Resource;
  * Example 3's ticket variant for `free`. No storage: example 3 stores it
  * under its ticket key.
  */
-#[Structure('registration.step3.ticket.free')]
+#[Structure('registration.step3.ticket.free',
+  label: new TranslatableMarkup('Free ticket'),
+  description: new TranslatableMarkup('The ticket when registration costs nothing: a note shown beside the register button.'),
+)]
 #[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'free', label: new TranslatableMarkup('Free'))]
 final class FreeTicketStructure implements StructureInterface {
 

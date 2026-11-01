@@ -351,13 +351,13 @@ class DoesNotApplyTest extends SurfaceKernelTestBase {
     $this->assertFalse($tool->getResult()->isSuccess());
     $this->assertStringContainsString('/send_day: Send day does not apply when Frequency is monthly (Monthly).', (string) $tool->getResult()->getMessage());
 
-    $read = $tools->createInstance('surface:resource_test.bulletin:configure:read');
+    $read = $tools->createInstance('surface:resource_test.bulletin:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess());
     $this->assertSame(['frequency' => 'monthly'], $read->getResult()->getContextValues()[OperationInputs::VALUES], 'What does not apply is not read back.');
 
     $this->config(self::CONFIG)->set('frequency', 'weekly')->save();
-    $read = $tools->createInstance('surface:resource_test.bulletin:configure:read');
+    $read = $tools->createInstance('surface:resource_test.bulletin:read');
     $read->execute();
     $this->assertSame(['frequency' => 'weekly', 'send_day' => 'friday'], $read->getResult()->getContextValues()[OperationInputs::VALUES]);
   }

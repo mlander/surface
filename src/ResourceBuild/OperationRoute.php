@@ -13,10 +13,11 @@ use Symfony\Component\Routing\Route;
  * A route served by one operation of one resource, read off the route.
  *
  * The route names the resource class and the operation; its parameters
- * are mapped onto the operation method's parameters by name, so an
- * upcast entity parameter arrives as the entity and a plain one as its
- * value. The same reading serves the route's access check and the form
- * the route builds, so the two cannot disagree about where they are.
+ * are mapped onto the operation's parameters by name, each handed its raw
+ * value, and the operation loads what a value names through its
+ * resource's storage. The same reading serves the route's access check
+ * and the form the route builds, so the two cannot disagree about where
+ * they are.
  *
  * @code
  * example.edit:
@@ -25,10 +26,6 @@ use Symfony\Component\Routing\Route;
  *     _form: 'Drupal\surface\Form\SurfaceOperationForm'
  *     _surface_resource: 'Drupal\example\Resource\ExampleResource'
  *     _surface_operation: 'update'
- *   options:
- *     parameters:
- *       example:
- *         type: 'entity:example'
  * @endcode
  *
  * A route parameter is a variable of the path, or a default whose name
@@ -224,8 +221,8 @@ final class OperationRoute {
    *
    * Each raw, as the path carries it, or a plain default's value, which a
    * link's route match holds among its parameters alone: what a door that
-   * names the operation by its parameters is given, never an upcast
-   * entity.
+   * names the operation by its parameters is given, never an entity a
+   * converter loaded.
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The route match.
@@ -619,6 +616,7 @@ final class OperationRoute {
     $variables = $route->compile()->getVariables();
     static::assertPlainDefaultsRead($route, $name, $operation, $variables);
     static::assertDeleteTakesNoValues($route, $name, $operation);
+    static::assertNotTheDefaultRead($name, $operation);
     $given = $arguments->fromRoute($operation, $route_match);
     // What the page is about is a value of its path, never a default.
     // Decision: see
@@ -813,6 +811,37 @@ final class OperationRoute {
       $classes[$container] = $known;
     }
     return $known[$id];
+  }
+
+  /**
+   * Refuses a route to the read the build adds.
+   *
+   * That read is asked in the context of the update it reads, so a form
+   * for it would be the update's form under another name, and its submit
+   * would write. The update's own route serves the form.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+   *
+   * @param string $name
+   *   The route's name, for the refusal.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
+   *   The operation it serves.
+   *
+   * @throws \InvalidArgumentException
+   *   When the operation is the read the build adds.
+   */
+  protected static function assertNotTheDefaultRead(string $name, OperationDefinition $operation): void {
+    if ($operation->reads !== NULL) {
+      throw new \InvalidArgumentException(sprintf(
+        'The %s route serves the "%s" operation of %s, the read the build adds beside "%s", which is asked as that update is: a form for it would write. Serve the "%s" operation, or declare "%s" on the resource.',
+        $name,
+        $operation->id,
+        $operation->resource,
+        $operation->reads,
+        $operation->reads,
+        $operation->id,
+      ));
+    }
   }
 
   /**

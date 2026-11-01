@@ -17,7 +17,6 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_node_type\Access\NodeTypeAccess;
 use Drupal\surface_examples_node_type\Storage\NodeTypeStorage;
 use Drupal\node\NodePreviewMode;
-use Drupal\node\NodeTypeInterface;
 
 /**
  * A content type: what core's content type form asks for, as a resource.
@@ -44,6 +43,8 @@ use Drupal\node\NodeTypeInterface;
  * node type's third party settings, so the storage writes them there.
  */
 #[Resource('node.type',
+  label: new TranslatableMarkup('Content type'),
+  description: new TranslatableMarkup('A content type: its name, machine name, description and help text, the label of its title field, and the defaults its new content starts from.'),
   identity: ['type'],
   storage: NodeTypeStorage::class,
   access: NodeTypeAccess::class,
@@ -67,14 +68,18 @@ final class NodeTypeResource implements ResourceInterface {
 
   /**
    * Edits a content type. Its machine name is known, so it is locked.
+   *
+   * Handed the machine name; the node type storage loads the content
+   * type, and refuses a name none has.
    */
   #[Operation('update',
     label: new TranslatableMarkup('Edit a content type'),
     description: new TranslatableMarkup('Changes a content type, named by its machine name, which stays as it is.'),
     permission: self::PERMISSION,
   )]
-  public static function update(NodeTypeInterface $type): OperationContext {
-    return new OperationContext(known: ['type' => $type->id()]);
+  public static function update(string $type): OperationContext {
+    $node_type = \Drupal::classResolver(NodeTypeStorage::class)->named($type, 'The "update" operation of node.type');
+    return new OperationContext(known: ['type' => (string) $node_type->id()]);
   }
 
   /**

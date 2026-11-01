@@ -3,8 +3,8 @@
 With the [Tool](https://www.drupal.org/project/tool) module installed,
 the module derives tools from resources: one per operation of every
 resource that can be asked on its own, `surface:<resource>:<operation>`,
-a read tool beside each that changes a thing that exists,
-`surface:<resource>:<operation>:read`, and a narrowing tool,
+among them the read of each resource that can be changed,
+`surface:<resource>:read`, and a narrowing tool,
 `surface:<resource>:<operation>:schema`, beside each whose listing
 leaves out a list the site decides. The module does not depend on the
 tool module: its tool plugins are found only by the tool module's plugin
@@ -14,7 +14,7 @@ tool module is installed (`SurfaceServiceProvider`). Enabling it:
 
 `docs/resources.md` says what a tool takes and how it is titled
 ([Tools](resources.md#tools)); this page says what a tool answers, the
-read and narrowing tools, who may run them, and what the Tool API cannot
+read operation and the narrowing tool, who may run them, and what the Tool API cannot
 say. The examples below use the field tools of the
 `surface_examples_field` example, which describes core's field instance
 and field storage settings as resources
@@ -29,17 +29,17 @@ and field storage settings as resources
   type example adds `surface:node.type:create` and `:update`, and
   `surface_examples_entity` one `create` and one `update` per content entity
   bundle with a form display, `surface:entity.content:node.page:create`. The inputs
-  are the operation's parameters (an entity parameter as its id; a
-  scalar one named for a resource key described as that key), the
+  are the operation's parameters (each a value; one named for a
+  resource key described as that key), the
   resource's keys the operation does not know as `values`, and
   `dry_run`; see [Tools](resources.md#tools). Two rules leave an operation
   out: `field.storage`'s `create` asks `administer %entity_type fields`
   and no parameter supplies the entity type, so it could never be
   allowed and is only ever a field's; and a structure a plugin names
   with `#[UsesStructure]` is configured through the plugin's host. Only
-  a resource that names its storage is a tool. Beside the
-  update tools is a read tool, `Plugin\tool\Tool\ResourceOperationReadTool`
-  (below).
+  a resource that names its storage is a tool. The read of one thing is
+  a tool of its own class, `Plugin\tool\Tool\ResourceOperationReadTool`
+  ([below](#the-read-operation)).
 - `Tool\InputDefinitions`: converts core data definitions into the
   Tool API's input definitions: type, label, description, required,
   default value and constraints, with maps and lists becoming the Tool
@@ -108,7 +108,7 @@ handed the input schema to retry with
 (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 A read only operation's tool takes no `dry_run` and answers the same
 keys, `committed` and `changed` false and `changes` empty: it writes
-nothing. The read tool answers a read, `values` alone, and its
+nothing. The read of one thing answers `values` alone, and its
 refusals in the shape.
 
 `values` is always sent, an object and never null: `{}` on an update
@@ -131,8 +131,8 @@ drush pm:install tool surface_examples_field
 drush tool:list
 ```
 
-`drush surface:catalog` names, per operation, the tool and the read tool
-it reaches, read off the Tool API's own definitions, beside its other
+`drush surface:catalog` names, per operation, the tool and the narrowing
+tool it reaches, read off the Tool API's own definitions, beside its other
 doors ([The site's catalog](catalog-command.md)).
 
 `drush tool:info surface:field.instance:reuse` prints the input
@@ -176,38 +176,54 @@ contract 3 the tool and HTTP agree: one call per operation, with a dry
 run as a flag (`dry_run` here, `?dryRun=true` there), and every path
 in a result a JSON Pointer.
 
-## The read tool
+## The read operation
 
 A caller that wants to change a thing usually wants to see it first,
 and a listing is not a read: a write tool for a thing that exists lists
-no defaults. So every operation
-that can be asked on its own and changes a thing that exists has a read
-tool beside its write tool, derived by the same deriver under the same
-base plugin id:
+no defaults. So every resource that can be changed can be read, by an
+operation of its own, `read`, whose tool is `surface:<resource>:read`
+(why: [decision](decisions.md#a-read-is-an-operation-of-the-resource)):
 
-| Read tool | Inputs |
+| Read | Inputs |
 | --- | --- |
-| `surface:node.type:update:read` | `type` |
-| `surface:field.instance:update:read` | `entity_type`, `bundle`, `field_name` |
-| `surface:field.storage:update:read` | `entity_type`, `field_name` |
-| `surface:registration.step1:configure:read`, `step2`, `step3` | nothing |
-| `surface:entity.content:<entity type>.<bundle>:update:read`, with `surface_examples_entity` | `id` |
+| `surface:node.type:read` | `type` |
+| `surface:field.instance:read` | `entity_type`, `bundle`, `field_name` |
+| `surface:field.storage:read` | `entity_type`, `field_name` |
+| `surface:registration.step1:read`, `step2`, `step3` | nothing |
+| `surface:entity.content:<entity type>.<bundle>:read` and `surface:entity.content:<entity type>:read`, with `surface_examples_entity` | `id` |
 
-- **Which operations.** One that needs nothing and whose context does
-  not create, and one that needs a subject and whose parameters name one
-  thing whole: a single entity, or a scalar per identity key, a key
-  they leave out following from the rest, as a field's type does.
-  `node.type:create`, `field.instance:create` and `field.instance:reuse`
-  create, and have none. `ResourceCatalog::reads()` decides, and the
-  catalog lists it ("Read on its own"); a context that turns out to
-  create is refused when the read runs.
-- **Inputs.** The operation's parameters, exactly as the write tool
-  declares them, and nothing else: no `values`, no `dry_run`.
+- **What it is.** An operation of the resource, read only, under the
+  standard id `read`, that takes no structure's keys
+  (`OperationDefinition::readsOne()`). The catalog lists it beside the
+  resource's other operations.
+- **Added where the owner declares none.** Where a resource with storage
+  has a default update that can be asked on its own (`update`, or
+  `configure` on a singleton, else its only update) and declares no
+  `read`, the build adds one, labeled "Current values:" and the
+  update's label, provided by "default read of" that update in the
+  catalog (`OperationDefinition::defaultRead()`). It takes the update's
+  parameters, permission and gates, and is asked in the update's own
+  context, so the keys it answers and the access it asks are the
+  update's. `node.type:create`, `field.instance:create` and
+  `field.instance:reuse` create, and a resource with only those would
+  have no read. A resource has one read: an update beside the default,
+  such as the venues' `reorder`, has none of its own.
+- **Declared by an owner to set view access.** An owner that declares
+  `read`, `#[Operation('read', readOnly: TRUE)]` on a method that takes
+  what names the thing, replaces the default and answers access for
+  reading through its access class, which sees the context's id `read`.
+  The content entity example declares one on both its resources: its
+  access class asks core's `view` access for the entity, and each
+  field's asks `view` field access, so a field the account may not see
+  is left out and one it may see and not edit is read
+  ([docs/entities.md](entities.md)).
+- **Inputs.** The operation's parameters, and nothing else: no `values`,
+  no `dry_run`. It has no narrowing tool: it takes no values to narrow.
 - **Output.** `values`: what the resource's composed storage loads, in
-  the shape the write tool's `values` input takes (the resource's keys
+  the shape the update's `values` input takes (the resource's keys
   less the identity keys the operation knows, keys other modules mount
   under `third_party_settings` included, attached structures and variants
-  as nested maps). Its definition is the write tool's `values` map said as an
+  as nested maps). Its definition is that `values` map said as an
   output, `InputDefinitions::outputFromInput()`: the same data
   types, labels, descriptions and nesting, so `tools/list` over MCP shows
   the same keys as the input schema, with no constraint and no property
@@ -227,16 +243,18 @@ base plugin id:
   that does not apply. The write tool's `values`, on a dry run and on a
   write, go through the same, so neither door says more than the other
   (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
-- **Access.** The write tool's, deliberately, for now: the operation's
-  permission, then the resource's access class, for the context the
-  parameters build. A caller who may not change a thing may not read it
-  either. A parameter that names nothing fails as it does for the write
-  tool.
+  `GET /surface-api/{resource}[/{id}]` serves the same read
+  ([docs/served-contract.md](served-contract.md)).
+- **Access.** The operation's: its permission, then the resource's
+  access class, for the context the parameters build. For the read the
+  build adds, that is the update's, so a caller who may not change a
+  thing may not read it either. A parameter that names nothing fails as
+  it does for the write tool.
 
 ```bash
-drush tool:info surface:registration.step3:configure:read
-drush tool:run surface:registration.step3:configure:read --uid=1
-drush tool:run surface:node.type:update:read --uid=1 --input=type=page
+drush tool:info surface:registration.step3:read
+drush tool:run surface:registration.step3:read --uid=1
+drush tool:run surface:node.type:read --uid=1 --input=type=page
 ```
 
 `tool:info` lists the `values` output without its properties; Drush
@@ -338,14 +356,15 @@ The routes of `surface_examples` and `surface_examples_entity` name it.
 | `Kernel\ResourceCatalogTest` | The catalog read from the static layer, and `docs/catalog.md` against what `drush surface:catalog --format=markdown` writes, where each key with derived variants is listed and each operation's tool. |
 | `Kernel\ExamplesStepsTest` | The contract panel: its rows as the answers narrow them, the contract's variant conditionals, and the tool's schema below them. |
 | `Kernel\ExamplesToolTest` | `surface:registration.step3:configure`: the example calls, its definition (no key required and each the resource requires saying so, no default at any depth, the operation's description and the update's call rules as its description, and the same after a write), and a partial update that leaves a required key out, kept where it is stored and refused by the pipeline where it is not. |
-| `Kernel\OperationKindsTest` | Every shipped operation's kind, on the examples, the first module and the tool test modules: each tool's description is the operation's description and its kind's call rules, with no literal quotes; a create lists the resource's required keys, an update lists none and says why, a read only operation lists none, and a read tool takes only the parameters and is titled "Current values:" and the write tool's title; no two tools share a title, and where labels are shared each adds its resource. |
-| `Kernel\ReadToolTest` | The read tools: one per operation that changes a thing that exists and none for one that creates, a read operation taking exactly the parameters, an output map of the write tool's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the write tool's, and a secret never returned. |
-| `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, `creates` read off the attribute and stamped on the context, idempotence derived from it, an operation on the class with no method, a method's context taking the attribute's id and `creates` and its docblock summary as its description, a context naming another id or creating against its attribute refused at discovery, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, no read tool beside a read only operation, and `x-surface.operation` and the description at the top of both documents. |
+| `Kernel\OperationKindsTest` | Every shipped operation's kind, on the examples, the first module and the tool test modules: each tool's description is the operation's description and its kind's call rules, with no literal quotes; a create lists the resource's required keys, an update lists none and says why, a read only operation lists none, and the read of one thing takes only the parameters and, as the build adds it, is titled "Current values:" and its update's title; no two tools share a title, and where labels are shared each adds its resource. |
+| `Kernel\ReadToolTest` | The reads: one per resource with a default update, the one the build adds, and none for a resource whose only operations create, none beside any operation; each a read operation taking exactly the update's parameters, an output map of the update's keys, step 3's stored values with the compliance module's mounted keys before and after a write, the content type read by its type, an unknown parameter failing as for the write tool, access as the update's, and a secret never returned. |
+| `Kernel\ContentEntityReadTest` | The content entity example's own read: declared on both resources, read only, taking the entity; an account that may view a page and not edit it reads it through the tool and `GET` and is refused the update; a field it may view and not edit open in the read and locked in the update; one it may not view in neither; an account that may not view the page refused. |
+| `Kernel\OperationFactsTest` | How an operation behaves: the attribute's defaults, `creates` read off the attribute and stamped on the context, idempotence derived from it, an operation on the class with no method, a method's context taking the attribute's id and `creates` and its docblock summary as its description, a context naming another id or creating against its attribute refused at discovery, contradicting facts refused, the Tool API's kind and destructive flag as the MCP bridge reads them, the read the build adds a read only operation of the resource and no read beside any operation, a listing's among them, and `x-surface.operation` and the description at the top of both documents. |
 | `Kernel\ToolFeedbackTest` | What the listing and a refusal say: each key another narrows naming what it depends on, once, through a port at its site; every refusal form (a list, a list another key narrows, a long list capped, a bound, a pattern, a key that does not apply); `values` held to its shape before the tool runs; and an agent's retry loop on example 3 fixing each key from its refusal in one try, through the runner MCP and ECA call. |
 | `Kernel\ToolResultShapeTest` | What a tool answers: exactly the result shape's keys, refused or not, at the write tool, a read only one and the HTTP door (a refusal there as problem details), the same refusal by paths at the tool and by labels at React, with one JSON Pointer and code; the failure category; one violation per line, each the entry's path and message; `values` required and never null, `{}` changing nothing. |
 | `Kernel\ResultCodesTest` | Every refusal path's code, by path: the module's own, a constraint's, a refusal of the whole call with an empty path, a note and a stale reference. |
 | `Kernel\SecurityProjectionTest` | Every door projecting what the read projects: a dry run and an HTTP dry run answering no key access left out and no `prepared`, no door echoing a secret, a collection item keeping its position's secret or refused when positions moved, a note saying nothing of a secret, the React and tool doors asking the permission first and naming no id, a child permission nothing can name refused, and the cached definitions no account's. |
-| `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, read tools included, installing a module deriving its tools, and each tool declaring its operation's permission unless it has a placeholder. |
+| `Kernel\DerivedToolDefinitionsTest` | Tool Explorer showing every derived tool, the reads included, installing a module deriving its tools, and each tool declaring its operation's permission unless it has a placeholder. |
 | `Kernel\WithoutToolModuleTest` | The module without the tool module: the container builds, a resource builds and its form serves, the catalog lists no tool door, the contract panel shows the contract with no tool definition, and no class under `Plugin\tool` is loaded. |
 
 ## Who may run them
@@ -361,11 +380,11 @@ operation that says it is read only, and destructive when its operation
 says so (`ResourceOperationToolDeriver::behaves()`); the MCP bridge
 reads both as the tool's annotations. None of the field example's
 operations says either, so each of its write tools is a `Write` that
-destroys nothing, and the access answer has to be the real one, and a
-read tool asks the same question. A delete, such as
+destroys nothing, and the access answer has to be the real one, and the
+read the build adds asks the same question. A delete, such as
 `surface:block.placement:delete` from `surface_examples_block`, is a
 destructive `Write` whose inputs are its parameters and `dry_run`, with
-no `values` and no read tool beside it. A field tool's access is the operation's permission, `administer %entity_type
+no `values`. A field tool's access is the operation's permission, `administer %entity_type
 fields`, named from the identity the operation's context knows (the
 entity type every field tool is given), then `FieldInstanceAccess`,
 which refuses a locked
@@ -402,8 +421,8 @@ parameters, is the only check
 with the schema route's refusal: a permission as written is the
 operation's first static access answer, decided by the account alone,
 and one with a placeholder waits for the subject
-(`OperationDefinition::staticPermission()`). The read tool declares the
-same one.
+(`OperationDefinition::staticPermission()`). The read the build adds
+declares its update's.
 
 ### What the listing says about access
 
@@ -434,7 +453,7 @@ normalizes an instance's inputs see the caller's own listing:
 - when that answer is the resource's own, at the top, it marks every
   key, and the tool's description ends with "Every key may be found
   locked or left out once the thing is known." instead, with no key
-  repeating it (example 10's `configure` and its read tool, under the
+  repeating it (example 10's `configure` and its `read`, under the
   workflow module). A key whose mark is its own, as example 10's fees
   are, keeps its note. Whether to say it is asked as the anonymous
   account, as the tool is derived, so an answer at the top that is

@@ -33,7 +33,7 @@ final class HttpDoors implements CatalogDoorLinksInterface {
   /**
    * {@inheritdoc}
    */
-  public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array {
+  public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     if (!$standalone) {
       return [];
     }
@@ -48,7 +48,7 @@ final class HttpDoors implements CatalogDoorLinksInterface {
   /**
    * {@inheritdoc}
    */
-  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array {
+  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     if (!$standalone) {
       return [];
     }

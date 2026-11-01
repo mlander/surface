@@ -34,6 +34,8 @@ use Drupal\surface_examples_block\Variants\BlockPluginStructures;
  * asks "administer blocks", the block layout's permission.
  */
 #[Resource('block.placement',
+  label: new TranslatableMarkup('Placed block'),
+  description: new TranslatableMarkup('A block placed in a region of a theme under a machine name: its label, the settings its plugin takes, its weight, its status and when it shows.'),
   identity: ['id'],
   storage: BlockPlacementStorage::class,
 )]
@@ -55,16 +57,19 @@ final class BlockPlacementResource implements ResourceInterface {
    * Edits a placed block, named by its machine name, in its own theme.
    *
    * Moving a block to another theme is not offered: the theme is held to
-   * the one it is in.
+   * the one it is in, which the placement storage reads off the block it
+   * loads by the machine name.
    */
   #[Operation('update',
     label: new TranslatableMarkup('Edit a placed block'),
     description: new TranslatableMarkup('Changes a placed block, named by its machine name: its label, region, weight, status, plugin settings and visibility. Its theme stays as it is.'),
     permission: self::PERMISSION,
   )]
-  public static function update(BlockInterface $id): OperationContext {
-    return (new OperationContext(known: ['id' => (string) $id->id()]))
-      ->withConstraint('theme', 'Choice', ['choices' => [$id->getTheme()]]);
+  public static function update(string $id): OperationContext {
+    $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "update" operation of block.placement');
+    assert($block instanceof BlockInterface);
+    return (new OperationContext(known: ['id' => (string) $block->id()]))
+      ->withConstraint('theme', 'Choice', ['choices' => [$block->getTheme()]]);
   }
 
   /**
@@ -77,8 +82,9 @@ final class BlockPlacementResource implements ResourceInterface {
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function delete(BlockInterface $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function delete(string $id): OperationContext {
+    $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "delete" operation of block.placement');
+    return new OperationContext(known: ['id' => (string) $block->id()]);
   }
 
   /**

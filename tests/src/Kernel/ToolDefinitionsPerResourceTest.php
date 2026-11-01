@@ -95,7 +95,12 @@ class ToolDefinitionsPerResourceTest extends SurfaceKernelTestBase {
     $field = FieldConfig::loadByName('node', 'page', 'field_description');
     assert($field !== NULL);
     $field->set('label', 'Summary')->save();
-    $this->assertSame(['entity.content:node.page' => $cold['entity.content:node.page']], $this->listInNewRequest());
+    // The node type's resource holds every bundle's fields, so its tools
+    // are derived again too; the kitchen's are kept.
+    $this->assertSame([
+      'entity.content:node' => $cold['entity.content:node'],
+      'entity.content:node.page' => $cold['entity.content:node.page'],
+    ], $this->listInNewRequest());
     $listing = $this->container->get('plugin.manager.tool')->getDefinition('surface:entity.content:node.page:create');
     $this->assertArrayHasKey('field_description', $listing->getInputDefinition('values')->getPropertyDefinitions());
 
@@ -147,7 +152,7 @@ class ToolDefinitionsPerResourceTest extends SurfaceKernelTestBase {
       ['release', ResourceOperationToolDeriver::LOCK],
     ], $this->lock->asked, 'After the wait this request read what the other wrote, and derived nothing.');
     $this->assertArrayHasKey('surface:entity.content:node.page:update', $tools->getDefinitions());
-    $this->assertArrayHasKey('surface:entity.content:node.kitchen:update:read', $tools->getDefinitions());
+    $this->assertArrayHasKey('surface:entity.content:node.kitchen:read', $tools->getDefinitions());
   }
 
 }

@@ -47,7 +47,7 @@ final class ValidReferenceConstraintValidator extends ConstraintValidator implem
       return;
     }
     $valid = (is_int($value) || is_string($value))
-      && $this->references->validates($constraint->entityTypeId, $constraint->bundles, $value);
+      && $this->references->validates($constraint->entityTypeId, $constraint->bundles, $value, $constraint->handler, $constraint->handlerSettings);
     if (!$valid) {
       $this->context->addViolation($constraint->message, [
         '%type' => $constraint->entityTypeId,

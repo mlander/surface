@@ -93,7 +93,7 @@ class VenueResourceTest extends SurfaceKernelTestBase {
    * Calls a venue tool and says what it answered.
    *
    * @param string $operation
-   *   The operation, or `reorder:read`.
+   *   The operation.
    * @param array $inputs
    *   Its inputs, by name.
    *
@@ -176,8 +176,9 @@ class VenueResourceTest extends SurfaceKernelTestBase {
     $this->assertTrue($edit->isLocked('id'), 'Edit knows the venue.');
 
     $registry = $this->container->get('surface.resource_registry');
-    $this->assertSame(['create', 'read', 'update', 'update', 'delete'], array_map(static fn ($operation): string => $operation->kind(), array_values($registry->getOperations(VenueResource::class))));
-    $this->assertSame(['create', 'list', 'reorder', 'update', 'delete'], array_keys($registry->getOperations(VenueResource::class)));
+    $this->assertSame(['create', 'read', 'update', 'update', 'delete', 'read'], array_map(static fn ($operation): string => $operation->kind(), array_values($registry->getOperations(VenueResource::class))));
+    $this->assertSame(['create', 'list', 'reorder', 'update', 'delete', 'read'], array_keys($registry->getOperations(VenueResource::class)));
+    $this->assertSame('update', $registry->getOperation(VenueResource::class, 'read')->reads, 'The read stands beside the default update, not the reorder.');
   }
 
   /**
@@ -277,9 +278,8 @@ class VenueResourceTest extends SurfaceKernelTestBase {
       'create' => [ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
       'list' => [ToolOperation::Read, FALSE, [OperationInputs::VALUES]],
       'reorder' => [ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
-      'reorder:read' => [ToolOperation::Read, FALSE, []],
       'update' => [ToolOperation::Write, FALSE, ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN]],
-      'update:read' => [ToolOperation::Read, FALSE, ['id']],
+      'read' => [ToolOperation::Read, FALSE, ['id']],
       'delete' => [ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN]],
     ];
     foreach ($expected as $operation => [$kind, $destructive, $inputs]) {
@@ -289,6 +289,7 @@ class VenueResourceTest extends SurfaceKernelTestBase {
       $this->assertSame($inputs, array_keys($definition->getInputDefinitions()), $operation);
     }
     $this->assertFalse($tools->hasDefinition(self::TOOL . 'list:read'), 'A read has no read tool beside it.');
+    $this->assertFalse($tools->hasDefinition(self::TOOL . 'reorder:read'), 'Nor has an update beside the default: the venues have one read, the default update\'s.');
     $this->assertSame(['items', 'total'], array_slice(array_keys($tools->getDefinition(self::TOOL . 'list')->getOutputDefinitions()), -2), 'The listing answers its outputs after the one result shape.');
 
     $page = $this->call('list', ['values' => ['offset' => 1, 'limit' => 1]]);
@@ -319,8 +320,10 @@ class VenueResourceTest extends SurfaceKernelTestBase {
    * Tests the reorder: written in one commit, refused as a whole.
    */
   public function testTheReorderWritesInOneCommitOrNotAtAll(): void {
-    $read = $this->call('reorder:read', []);
-    $this->assertSame(self::SHIPPED_ORDER, $read['values']);
+    // The listing answers the order, each venue with its weight.
+    $listed = $this->call('list', ['values' => []]);
+    $order = array_map(static fn (array $item): array => array_intersect_key($item, ['id' => TRUE, 'weight' => TRUE]), $listed['items']);
+    $this->assertSame(self::SHIPPED_ORDER['venues'], $order);
 
     $first = ['id' => 'harbour', 'weight' => -1];
     $rehearsed = $this->call('reorder', ['values' => ['venues' => [$first]], 'dry_run' => TRUE]);
@@ -396,12 +399,12 @@ class VenueResourceTest extends SurfaceKernelTestBase {
     $listed = static fn (string $id): array => $serializer->normalizeInputSchema($tools->createInstance(self::TOOL . $id))['properties'][OperationInputs::VALUES]['properties'] ?? [];
     $this->assertArrayNotHasKey('slug', $listed('create'), 'Nobody types it: the write leaves it out.');
     $this->assertArrayNotHasKey('slug', $listed('update'));
-    $this->assertArrayHasKey('slug', $serializer->normalizeOutputSchema($tools->createInstance(self::TOOL . 'update:read'))['properties'][OperationInputs::VALUES]['properties'], 'The read answers it.');
+    $this->assertArrayHasKey('slug', $serializer->normalizeOutputSchema($tools->createInstance(self::TOOL . 'read'))['properties'][OperationInputs::VALUES]['properties'], 'The read answers it.');
 
     $added = $this->call('create', ['values' => self::TOWN_HALL]);
     $this->assertTrue($added['success'], $added['message']);
     $this->assertSame('town-hall', EventVenue::load('town_hall')->slug());
-    $read = $this->call('update:read', ['id' => 'town_hall']);
+    $read = $this->call('read', ['id' => 'town_hall']);
     $this->assertSame('town-hall', $read[OperationInputs::VALUES]['slug']);
 
     $renamed = $this->call('update', ['id' => 'town_hall', 'values' => ['label' => 'Town Hall and Annex']]);

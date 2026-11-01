@@ -13,7 +13,6 @@ use Drupal\surface\Resource\Compute;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples\Access\VenueAccess;
-use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\Slugify;
 use Drupal\surface_examples\Storage\VenueStorage;
 use Drupal\surface_examples\Structure\VenueListingStructure;
@@ -70,14 +69,18 @@ final class VenueResource implements ResourceInterface {
 
   /**
    * Edits a venue, named by its machine name, which stays as it is.
+   *
+   * Handed the machine name; the venue storage loads the venue, and
+   * refuses a name no venue has.
    */
   #[Operation('update',
     label: new TranslatableMarkup('Edit a venue'),
     description: new TranslatableMarkup('Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.'),
     permission: self::ADMINISTER,
   )]
-  public static function update(EventVenue $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function update(string $id): OperationContext {
+    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "update" operation of event.venue');
+    return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 
   /**
@@ -90,8 +93,9 @@ final class VenueResource implements ResourceInterface {
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function delete(EventVenue $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function delete(string $id): OperationContext {
+    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "delete" operation of event.venue');
+    return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 
   /**

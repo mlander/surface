@@ -52,6 +52,11 @@ section below says what else is kept.
 
 ## The build step
 
+A build exists because core holds each data definition on its own:
+nothing in core puts the parties that write into one group of them in
+order, or fixes the group once they have written
+([Built on typed data](on-typed-data.md)).
+
 `ResourcesInterface::build(string $resource, OperationContext $context):
 SurfaceInterface`, in `Resources::buildResource()`, which calls its
 phases in order: `Declaring` for steps 1 to 4, `Attaching` and `Binding`
@@ -258,10 +263,11 @@ operation's parameters into inputs and builds the resource in a context
 read off the signature for `values`; `ResourceOperationTool` refines
 `values` to the real context once the parameters arrive, asks
 `Resources::access()` decisively, and submits through the pipeline to
-the composed storage, stopping after prepare for a dry run. Beside each
-that changes a thing that exists (`ResourceCatalog::reads()`) the same
-deriver writes a read tool, `ResourceOperationReadTool`, which takes the
-parameters, asks the same access, and answers with what its storage
+the composed storage, stopping after prepare for a dry run. The read of
+one thing, the `read` an owner declares or the one the build adds
+beside the default update (`OperationDefinition::defaultRead()`), is a
+tool of the same deriver's, `ResourceOperationReadTool`, which takes the
+parameters, asks the read's access, and answers with what its storage
 loads, less every secret. Nothing in any of these classes names a
 resource or a key.
 

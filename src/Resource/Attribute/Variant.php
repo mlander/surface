@@ -15,7 +15,8 @@ namespace Drupal\surface\Resource\Attribute;
  * Discovery collects it, and the build step adds this structure to the
  * variants at the key it names, for the value it names. A deciding key
  * that declares no list of its own is offered the variants' values, each
- * by its variant's label; a list it declares narrows them.
+ * by its variant's label, else by the structure's; a list it declares
+ * narrows them.
  *
  * Decision: see docs/decisions.md#variants-not-slots.
  *
@@ -37,9 +38,11 @@ final class Variant {
    *   The value of the deciding key this structure is the variant for.
    * @param string|\Stringable|null $label
    *   What a person is offered the value as, written as
-   *   `new TranslatableMarkup(...)`; NULL offers the value itself. A
-   *   deciding key that declares no list of its own is offered its
-   *   variants' values by these labels.
+   *   `new TranslatableMarkup(...)`: the choice's word, which stands over
+   *   the structure's own label. NULL offers the structure's label, or
+   *   the value itself where the structure has none. A deciding key that
+   *   declares no list of its own is offered its variants' values by
+   *   these labels.
    */
   public function __construct(
     public readonly string $of,

@@ -17,7 +17,10 @@ use Drupal\surface_examples\Resource\RegistrationStep3Resource;
  * Example 3's ticket variant for `paid`. No storage: example 3 stores it
  * under its ticket key.
  */
-#[Structure('registration.step3.ticket.paid')]
+#[Structure('registration.step3.ticket.paid',
+  label: new TranslatableMarkup('Paid ticket'),
+  description: new TranslatableMarkup('The ticket when registration costs money: its price and currency.'),
+)]
 #[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid', label: new TranslatableMarkup('Paid'))]
 final class PaidTicketStructure implements StructureInterface {
 

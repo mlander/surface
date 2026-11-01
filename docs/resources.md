@@ -44,7 +44,10 @@ The rule of thumb: nest for a thing of its own, mix in for shared
 members that are part of this thing, and read a port for a value the
 container holds. Use variants when a key chooses the keys, and a
 collection when groups repeat. Use keys from the site when the site,
-not the code, decides how many there are.
+not the code, decides how many there are. Whichever way, the key takes
+the label the parent gives it, and the child's def in the schema the
+label the child gives itself, `#[Structure(label:)]`
+([What it is called](declaring-a-resource.md#what-it-is-called)).
 
 ## Where things live
 
@@ -210,7 +213,14 @@ already known, and that is a **context**, an `OperationContext`:
 - **On a static method**, the exception: a method only when the context
   needs more, parameters (what the operation needs is its own
   signature: a route or a tool supplies them by name), identity it
-  knows, a constraint, defaults or a child. The method returns an
+  knows, a constraint, defaults or a child. Each parameter is a value,
+  typed with a scalar and named for the key it holds (`string $id`,
+  `string $type`): a parameter typed with a class or an interface is
+  refused at discovery, and the operation loads what a value names
+  through its resource's storage, `ConfigEntityStorage::named()` for a
+  config entity, which refuses a value that names nothing
+  (why: [decision](decisions.md#an-operation-is-handed-values-never-objects)).
+  The method returns an
   `OperationContext` and may leave the id and `creates` out; the
   attribute's are stamped on it, and a context that names another id,
   or says otherwise about creating, is refused: at discovery when the
@@ -274,6 +284,8 @@ The content type resource is the worked example:
 
 ```php
 #[Resource('node.type',
+  label: new TranslatableMarkup('Content type'),
+  description: new TranslatableMarkup('A content type: its name, machine name, description and help text, the label of its title field, and the defaults its new content starts from.'),
   identity: ['type'],
   storage: NodeTypeStorage::class,
   access: NodeTypeAccess::class,
@@ -292,8 +304,9 @@ final class NodeTypeResource implements ResourceInterface {
     description: new TranslatableMarkup('Changes a content type, named by its machine name, which stays as it is.'),
     permission: self::PERMISSION,
   )]
-  public static function update(NodeTypeInterface $type): OperationContext {
-    return new OperationContext(known: ['type' => $type->id()]);
+  public static function update(string $type): OperationContext {
+    $node_type = \Drupal::classResolver(NodeTypeStorage::class)->named($type, 'The "update" operation of node.type');
+    return new OperationContext(known: ['type' => (string) $node_type->id()]);
   }
 
   // defineInputs(): name, type, description, title_label, ...
@@ -302,7 +315,12 @@ final class NodeTypeResource implements ResourceInterface {
 ```
 
 The update is a method because its context needs more: it knows the
-machine name. The create needs nothing more, so it is the attribute
+machine name. It is handed the machine name, a value, and loads the
+content type through the resource's storage, whose `named()` refuses a
+name no content type has as naming nothing; an operation is never handed
+an object, so a storage standing in front of another answers for what a
+value names ([decision](decisions.md#an-operation-is-handed-values-never-objects)).
+The create needs nothing more, so it is the attribute
 alone on the class: the build holds the machine name it creates under
 to one no content type has, with the stock `SurfaceUnique`
 ([A title and a machine name](recipes.md#a-title-and-a-machine-name)).
@@ -310,7 +328,10 @@ A settings object's one `configure` is the attribute alone too, as on
 [the first resource](first-resource.md):
 
 ```php
-#[Resource('first.newsletter', storage: NewsletterStorage::class)]
+#[Resource('first.newsletter',
+  label: new TranslatableMarkup('Newsletter settings'),
+  storage: NewsletterStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the newsletter'),
   description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),
@@ -332,12 +353,25 @@ the field has data, with `withConstraint()`, and knows the storage's
 identity, the entity type, the field name and the field type, which
 locks its settings to that type's.
 
+A resource that can be changed can also be read, by an operation of its
+own, `read`. Neither class above declares one: the build adds it beside
+the default update, `update` here and `configure` on the newsletter,
+taking that update's parameters and permission and asked as that update
+is, so it answers the keys the update takes to an account that may
+change them. The catalog lists it as "default read of `update`", the
+way `configure` is a singleton's default update. A resource that should
+be readable by an account that may not change it declares `read` itself,
+read only, and its access class answers for it, as the content entity
+example does with view access
+([The read operation](tools.md#the-read-operation),
+[decision](decisions.md#a-read-is-an-operation-of-the-resource)).
+
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ```php
 $resources = \Drupal::service('surface.resources');
-// By parameter name or position; an entity parameter takes the entity
-// or its id, loaded by the entity type whose class satisfies the type.
+// By parameter name or position, each a value: the operation loads what
+// it names through the resource's storage.
 $context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $surface = $resources->build(NodeTypeResource::class, $context);
 $access = $resources->access(NodeTypeResource::class, $context);
@@ -393,8 +427,11 @@ structure's inputs are what it takes and its outputs what it answers
   the collection: its storage loads every venue's id and weight, and
   its `prepare()` refuses an id that names no venue (`not_found`) or is
   named twice (`taken`), by its place in the list, and rehearses the rest;
-  `commit()` saves them. Its read tool answers the current order, and on
-  HTTP it is a custom method, `PATCH /surface-api/event.venue:reorder`.
+  `commit()` saves them. The listing answers the current order, each
+  venue with its weight; the resource's one read is its default update's
+  (why: [decision](decisions.md#a-read-is-an-operation-of-the-resource)).
+  On HTTP the reorder is a custom method,
+  `PATCH /surface-api/event.venue:reorder`.
 - **Refused** on an operation that creates or deletes, which is about
   the thing's own keys.
 
@@ -403,8 +440,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 ### Routes from operations
 
 A route names a resource class (or a resource's id) and an operation,
-and its parameters are the operation method's, by name; an upcast entity
-parameter arrives as the entity. A route default whose name has no
+and its parameters are the operation's, by name, each handed its raw
+value as the path carries it; a converter a route names for one is not
+read. A route default whose name has no
 leading underscore is a route parameter too, as core counts it, so
 `to: 'friends'` pins the operation's `$to` on that page, and one that
 nothing the route serves reads is refused. `SurfaceOperationForm`
@@ -422,10 +460,6 @@ surface_examples_node_type.update:
     _surface_resource: 'Drupal\surface_examples_node_type\Resource\NodeTypeResource'
     _surface_operation: 'update'
     _surface_cosmetics: 'surface_examples_node_type.form_cosmetics'
-  options:
-    parameters:
-      type:
-        type: 'entity:node_type'
 ```
 
 A locked identity key renders as a disabled element holding the value
@@ -637,9 +671,11 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `entity.content:node.page:update`. The answer is that operation's
   whole answer for the thing, as when it is asked on its own: its
   permission, its own gates, its access class and every alter that
-  answers access for it, combined with `andIf()`. The thing is handed
-  to that operation as its one required entity parameter; an operation
-  that needs nothing is asked with nothing.
+  answers access for it, combined with `andIf()`. The thing's id is
+  handed to that operation as its first required parameter, which names
+  a key of its resource that refers to the gate's entity type, or as
+  the id a derived operation's `id` parameter takes; an operation that
+  needs nothing is asked with nothing.
 - **Core's access on an entity or a field**: `entity:node:update` asks
   the entity type's access control handler, `access()`, and
   `field:node.title:edit` its `fieldAccess()` for that field's items,
@@ -651,9 +687,11 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 What the gate is asked about:
 
 - **The thing the context knows.** An identity key declared as a
-  reference to the gate's entity type (`$inputs->add('node',
-  'entity:node')`), or the `entity_type` and `id` a content entity
-  resource knows. The gate is asked after the operation's permission and
+  reference to the gate's entity type (`$inputs->refer('node',
+  'node', ...)`), or the `entity_type` and `id` a content entity
+  resource knows. A gate naming a content entity resource's operation,
+  whose parameter is the identity key `id`, is asked about that entity
+  and hands the operation its id. The gate is asked after the operation's permission and
   before its access class, at every door that asks
   `ResourcesInterface::access()`: a refusal is a 403 on a route and an
   access refusal from a tool.
@@ -871,8 +909,9 @@ own is a tool, `surface:<resource id>:<operation id>`, derived by
   riverside_main (Main hall) or riverside_east (East room)."
 - **Title and description** are the operation's. The title is its
   label; where operations of several resources share one, each tool
-  adds its resource, and the read tool's is "Current values:" and the
-  write tool's. The description is the operation's description, or its
+  adds its resource; the read the build adds is labeled "Current
+  values:" and its update's label, so its title is that and the
+  update's resource where the update's is shared. The description is the operation's description, or its
   label where it says none, then one line of call rules for its kind,
   with no literal quotes, which an MCP bridge would escape:
   - create: "Create: a key left out takes its default, and every key
@@ -911,19 +950,15 @@ two (`ResourceCatalog::standalone()`):
 A resource or operation that cannot be described is left out and
 logged.
 
-Beside the write tool of an operation that changes a thing that exists
-is a read tool, `surface:<resource id>:<operation id>:read`
-(`ResourceOperationReadTool`, derived by the same deriver): a
-`ToolOperation::Read` whose inputs are the operation's parameters,
-exactly as the write tool declares them, and whose one output, `values`,
-is what the composed storage loads, in the shape the write tool's
-`values` takes, less the identity keys the operation knows and less
-every secret, at any depth. Its access is the write tool's. Which
-operations those are is `ResourceCatalog::reads()`: the updates, read
-off the attribute, an operation that neither creates nor is read only.
-So `node.type:update`, `field.instance:update` and `field.storage:update`
-read, and `node.type:create`, `field.instance:create` and
-`field.instance:reuse` do not.
+The read of one thing, `read`, is a tool of its own class,
+`surface:<resource id>:read` (`ResourceOperationReadTool`, derived by
+the same deriver): a `ToolOperation::Read` whose inputs are the
+operation's parameters, and whose one output, `values`, is what the
+composed storage loads, in the shape the update's `values` takes, less
+the identity keys the operation knows and less every secret, at any
+depth ([The read operation](tools.md#the-read-operation)). So
+`node.type`, `field.instance` and `field.storage` each have a read, and
+no operation has one beside it.
 
 ## Catalog
 
@@ -1536,7 +1571,14 @@ is refused.
 `attach()` and `attachVariants()` return the map definition at the key, a
 core `MapDataDefinition`, the way `add()` returns its definition, so
 the owner labels and describes its own child's key with the core
-setters. `describe()` rewords a key for an alter that does not own it,
+setters. A structure may ask for the widget that draws it as a whole,
+`#[Structure('event.pair', widget: 'my_pair')]`, by the word a key's
+`widget` setting uses; it is set on the key wherever the structure is
+attached, unless the owner set one there, and a widget that cannot draw
+a map is refused when the parent is built
+([Generated forms](forms.md#a-widget-a-structure-asks-for)). A map only
+the owner holds, with no class, is `addMap()`
+([An anonymous map](declaring-a-resource.md#an-anonymous-map)). `describe()` rewords a key for an alter that does not own it,
 and arranges a key for its owner or an alter; an owner rewording its
 own key with it says in two statements what one says.
 
@@ -1598,7 +1640,12 @@ never names them: every class marked
 `#[Variant(of: Parent::class, at: 'key', for: '...', label: ...)]` is the
 variant for that value, and the sibling's allowed values become exactly
 the values the variants are for, each offered by the variant's `label:`
-(a `LabeledChoice`; a variant with no label is offered as its value).
+(a `LabeledChoice`), else by the label the structure itself carries,
+`#[Structure(label:)]` or its plugin's; a variant with neither is
+offered as its value. The `#[Variant]` label is the choice's word
+("Paid"), the structure's what the structure is called ("Paid ticket"),
+which also titles its def
+([What it is called](declaring-a-resource.md#what-it-is-called)).
 A new variant brings itself, its value and its label, and the parent
 never changes.
 
@@ -1635,10 +1682,16 @@ $inputs->attachVariants('presentation_settings', by: 'presentation')
   ->setDescription(t('What the chosen presentation needs.'));
 
 // ListPresentationStructure and GridPresentationStructure, beside it
-#[Structure('block.surface_examples_plugins.presentation.list')]
+#[Structure('block.surface_examples_plugins.presentation.list',
+  label: new TranslatableMarkup('List presentation'),
+  description: new TranslatableMarkup('What the example block needs to render a list: whether summaries show.'),
+)]
 #[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'list', label: new TranslatableMarkup('List'))]
 
-#[Structure('block.surface_examples_plugins.presentation.grid')]
+#[Structure('block.surface_examples_plugins.presentation.grid',
+  label: new TranslatableMarkup('Grid presentation'),
+  description: new TranslatableMarkup('What the example block needs to render a grid: how many columns, and whether summaries show.'),
+)]
 #[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 
 // FieldInstanceResource, in surface_examples_field
@@ -1663,8 +1716,8 @@ Until the deciding key holds a value, the key is advertised as an `any`
 placeholder marked as variants (`DefinitionMetadata::variantsBy()`); once
 it does, or from the start when the context locks the deciding key, it is
 exactly the chosen variant's map. That is an ordinary refinement under
-the rule that `any` may become anything narrower, not a mechanism of its
-own. The deciding key gains a list of the variants' values, labeled as
+the rule that the placeholder may become anything narrower, not a
+mechanism of its own. The deciding key gains a list of the variants' values, labeled as
 they say, or keeps its own, narrowed to the variants offered (one an
 access class withholds is not), and becomes a refinement
 dependency of the key the variants sit at, so the form rebuilds on it
@@ -1915,9 +1968,8 @@ first of these that applies:
 
 The child's operation method is called with the arguments it declares,
 read by name from the identity the parent handed it and then from the
-parent's known identity (an entity parameter takes the entity or its
-id, as on a route). The context it returns then knows that identity
-too; on a clash **the child's own known keys win**. `creates` is the
+parent's known identity (each a value, as on a route). The context it
+returns then knows that identity too; on a clash **the child's own known keys win**. `creates` is the
 child's context's, as for a resource asked on its own. An operation the
 parent named that needs an argument nothing supplies is refused at
 build, with the `withChild()` call that would hand it; one found by the
@@ -2015,6 +2067,13 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `<owner>.<key>.<value>` (`event.spotlight.props.surface_examples:card`),
   built by the build step as a class is: its keys, their constraints,
   its maps, children, variants and rules, what its schema says.
+- **Bound to its owner.** A provider that lists for several owners
+  implements `BoundSiteListInterface`, whose `listFor($arguments)` the
+  build asks with what the owner bound, `attachVariants('fields', by:
+  'bundle', from: BundleFieldStructures::class, arguments: ['node'])`:
+  one provider lists every entity type's bundles, each owner its own
+  (why: [decision](decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)).
+  An entry may name a derived structure by its id.
 - **Beside the classes.** Every `#[Variant]` at the key is a variant as
   before, and wins for a value both name; the deciding key offers each
   value under the provider's label, unless it declares a list of its
@@ -2139,11 +2198,13 @@ building it, to know which keys are secret (why:
 
 ### A child that cannot be listed
 
-Variants cover a child chosen from a set of values someone can name. A
-child whose keys cannot be enumerated at all is the one case for a
-`#[RefinesInput]` method on an `any` key that returns the narrower
-definition itself, a map included. No verb is needed for it: `any` may
-become anything narrower, and the method is an ordinary refiner.
+Variants cover a child chosen from a set of values someone can name, a
+provider's included ([Variants from the site](#variants-from-the-site)):
+a key whose shape depends on another key's value is variants. There is
+no `any` key a refiner turns into a map: `add()` refuses `any`, and only
+the variants' placeholder may become another type
+([Variants, not slots](decisions.md#variants-not-slots), amended
+2026-11-01).
 
 ### Collections
 
@@ -2237,9 +2298,13 @@ final class ProtectedForms implements SiteListInterface {
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 - **The spelling.** `addEach($key, $type, from:, default:)` declares one
-  value per thing, each as `add()` declares a key: a typed data type or a
-  shape, labeled with the thing's label, starting from the thing's
-  default or else `default:`. `attachEach($key, Structure::class, from:)`
+  value per thing, each as `add()` declares a key: a type of the type
+  table or a shape, labeled with the thing's label, starting from the
+  thing's default or else `default:`. An entry that refers to an entity
+  is declared in `refer()`'s words and has no type of its own,
+  `addEach('pages', NULL, from: Slots::class, to: 'node', bundles:
+  ['page'])`: each entry is the id `refer()` declares, and `entity:node`
+  as the type is refused, as `add()` refuses it. `attachEach($key, Structure::class, from:)`
   holds the structure at every thing, as `attach()` holds one. Both
   return the map at the key, for the owner to label and describe.
 - **The provider** implements `SiteListInterface`, the one interface
@@ -2400,7 +2465,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
           identity: ['entity_type', 'bundle', 'id'],
           operations: [
             new DerivedOperation('create', $this->t('Add @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'create', $bound)),
-            new DerivedOperation('update', $this->t('Edit @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'update', $bound), ['id' => 'entity:' . $entity_type_id]),
+            new DerivedOperation('update', $this->t('Edit @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'update', $bound), ['id']),
           ],
           storage: ContentEntityStorage::class,
           access: ContentEntityAccess::class,
@@ -2438,9 +2503,15 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   closure is not. A static method is called on the class, an instance
   method on the class resolver's instance, so a deriver's own methods
   may read site state. Its operations are `DerivedOperation` values (id,
-  label, permission, default, parameters named and typed,
-  `entity:<entity type>` for an entity), each built by a
-  `ResourceCallable` handed the resolved arguments by name. Its refiners
+  label, permission, default, and parameters, each the name of a key the
+  resource declares, `['id']`), each built by a `ResourceCallable` handed
+  the resolved arguments by name. A parameter takes its key's
+  definition and no type of its own: the operation receives the key's
+  value, and loading what it names is the storage's (the content entity
+  storage loads the entity by its id, and an id that names nothing is a
+  not found at `id`). A parameter typed `name => type`, `entity:<type>`
+  among them, is refused at discovery
+  (why: [decision](decisions.md#a-parameter-names-a-key)). Its refiners
   are the static `#[RefinesInput]` methods of the classes it names,
   static or runtime as each declares. Its storage and access class are
   built by the class resolver: a service, a class implementing

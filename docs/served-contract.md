@@ -433,9 +433,10 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key that may be cleared adds an untitled `{const: null}` (not one its storage always holds), and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
+| an anonymous map, `addMap()` | inline, as a map's: `type: object`, its properties, `additionalProperties: false`, and no def; a structure it holds a reference to that structure's def ([An anonymous map](declaring-a-resource.md#an-anonymous-map)) |
 | a key with variants | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, no `type` beside it; each variant stated exactly by a conditional on the parent ([below](#variants-are-conditionals)) |
-| a key that refers to an entity, `entity:<type>[:<bundle>]` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `surface.settings:reference_list_limit`, and `SurfaceValidReference` under `checkedOnServer`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
-| a key of any entity type, `entity` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string marked `reference: {by: "entity_type"}`, `enumerated`, its candidates per entity type one conditional on the def |
+| a key that refers to an entity, `refer($key, '<entity type>')` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `surface.settings:reference_list_limit`, and `SurfaceValidReference` under `checkedOnServer`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
+| a key of any entity type, `refer($key, NULL)` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string marked `reference: {by: "entity_type"}`, `enumerated`, its candidates per entity type one conditional on the def |
 | a deciding key that holds a value and whose variants offer one value, or a key its operation's context fixes to one (fixing makes it hold a value) | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter), [a route that fixes a key](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)) |
 | a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
 | a list | `type: array`, `items`, never null: an empty item is dropped before anything reads the list (why: [decision](decisions.md#an-item-is-never-null)) |
@@ -538,9 +539,13 @@ key declared with it refers to.
    child, `enumerated`, `refine`, `group`, `after`, the `by` and
    `variants` of a key with variants, the `rules` it states, the `ports`
    it reads). An alter of the child applies in the def, since alters
-   apply by class. Its `title` is its id (`registration.contact`), the
-   same in every language, for a type generator to name it by; the label
-   is the parent's to give, beside the reference. Each document
+   apply by class. Its `title` is what the structure is called, its
+   label (`Paid ticket`), and its `description` what the structure is
+   for, where it says; a structure with no label, its own or the one
+   plugin's that holds it, is titled by its id (`registration.contact`).
+   The key is the id either way, the same in every language. The key's
+   own label is the parent's to give, beside the reference
+   ([decision](decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)). Each document
    writes its own defs, the schema for these answers with its
    `refined`, `stale` and `emptyOption` as they read for no values, the
    full schema without them; otherwise they are the same.
@@ -612,7 +617,9 @@ its def, so every reference is bare:
 ],
 "$defs": {
   "registration.step3.ticket.free": {...},
-  "registration.step3.ticket.paid": {"title": "registration.step3.ticket.paid", "type": "object",
+  "registration.step3.ticket.paid": {"title": "Paid ticket",
+                                     "description": "The ticket when registration costs money: its price and currency.",
+                                     "type": "object",
                                      "properties": {"price": {...}, "currency": {...}},
                                      "additionalProperties": false, "required": ["price", "currency"]},
   "registration.contact": {"title": "registration.contact", "type": "object",
@@ -729,10 +736,12 @@ hints):
    "then": {"properties": {"ticket": {"title": "Ticket", "$ref": "#/$defs/registration.step3.ticket.paid"}}}}
 ],
 "$defs": {
-  "registration.step3.ticket.free": {"title": "registration.step3.ticket.free", "type": "object",
+  "registration.step3.ticket.free": {"title": "Free ticket", "description": "The ticket when registration costs nothing: a note shown beside the register button.",
+    "type": "object",
     "properties": {"note": {"title": "Note", "type": ["string", "null"], ...}},
     "additionalProperties": false},
-  "registration.step3.ticket.paid": {"title": "registration.step3.ticket.paid", "type": "object",
+  "registration.step3.ticket.paid": {"title": "Paid ticket", "description": "The ticket when registration costs money: its price and currency.",
+    "type": "object",
     "properties": {
       "price": {"title": "Price", "type": "number", "minimum": 0.01, ...},
       "currency": {"title": "Currency", "type": "string", "default": "EUR",
@@ -903,7 +912,8 @@ A key declared with a [shape](declaring-a-resource.md#named-shapes) is
 written as a reference to it. Each shape is one def in both documents,
 under its id, as its alters left it, described as an optional key is:
 its type allows `null`, since whether a key may hold nothing is the
-key's, its `title` is its id, as every def's is, and its `x-surface`
+key's, its `title` is the shape's label (its id where it has none),
+and its `x-surface`
 carries only what the shape checks, the message of its pattern and
 what only the server checks. Each key that
 uses it is `$ref` first, then its title, then only what it says
@@ -923,7 +933,7 @@ and the shape beside it under `$defs`:
 
 ```json
 "event.license": {
-  "title": "event.license",
+  "title": "Event license",
   "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
   "type": ["string", "null"],
   "pattern": "^\\d{4}$",
@@ -1178,7 +1188,7 @@ the hint's words: `radios`, `checkboxes`, `select`, `time`.
 | `timestamp`, `timespan`, `decimal` | `number`, `#step` 1 (any for a decimal) | `null` | the stock field for the key's JSON type (`stockWidget()`) |
 | `datetime_iso8601` | core's `datetime` element, a date and a time input in the site's time zone, read back as the ISO 8601 string | `null` | the stock field for the key's JSON type (`stockWidget()`) |
 | `duration_iso8601` | `textfield` | `null` | the stock field for the key's JSON type (`stockWidget()`) |
-| `binary`, `language`, `language_reference`, `entity_reference`, and a list of them | an `item`: "This is not drawn on this form; what it holds is kept.", posting nothing | `null` | the stock field for the key's JSON type (`stockWidget()`) |
+| `language`, `language_reference`, `entity_reference`, and a list of them, which no blueprint declares (only a definition handed to the engine by hand) | an `item`: "This is not drawn on this form; what it holds is kept.", posting nothing | `null` | the stock field for the key's JSON type (`stockWidget()`) |
 | an `any` key read from a schema typed as several scalar types (string, integer, number, boolean), the `scalars` widget | `textfield`, read as the first stated type the text spells: integer, number, `true` or `false`, then string | `null` | the stock field for the key's JSON type (`stockWidget()`) |
 | what no other widget draws: an `any` key with no variants whose types include an object or a list, or state none; a list of lists or of `any` | `textarea` of JSON, the `json` widget | `null` | the stock field for the key's JSON type (`stockWidget()`) |
 
@@ -1201,7 +1211,7 @@ route, `surface.api`, answers every path below;
 | `PATCH /surface-api/{resource}` | A singleton's default update. A collection has none. |
 | `POST /surface-api/{resource}` | The default create, on the collection of a resource with identity. |
 | `GET` and `POST /surface-api/{resource}/{parent}` | A create that names the parent it adds to, its envelope and a run of it: `POST /surface-api/field.instance/node/article` adds a field to the article bundle. |
-| `GET /surface-api/{resource}/{id}` | One thing's envelope, its default update's (or default read's). |
+| `GET /surface-api/{resource}/{id}` | One thing's envelope: its read's. The read the build adds is served as the update it reads, so its envelope and schema are the update's; a read the owner declares serves its own, and the update's envelope is then its custom method's. |
 | `PATCH /surface-api/{resource}/{id}` | One thing's default update. |
 | `DELETE /surface-api/{resource}/{id}` | One thing's default delete: removes it, with no body. |
 | `GET .../schema` | The full schema of the operation `GET` serves at that path, `application/schema+json`. |
@@ -1241,15 +1251,20 @@ singleton; or else the only operation of that kind at the path; two of
 a kind with neither named so leaves the kind with no default
 (why: [decision](decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals)).
 An id `add`, `edit`, `remove` or `get` is refused at discovery, naming
-the standard id. A read is a
-default only where no update is, and the collection of a resource with
+the standard id. Where an update is, the default read is `read`, the
+read of one thing, which every resource with a default update has: the
+one its owner declares, or the one the build adds
+(why: [decision](decisions.md#a-read-is-an-operation-of-the-resource)).
+The collection of a resource with
 identity has no default update: `PATCH` there would change every thing,
 which no operation means, so an update over the collection, example
 15's reorder, is a custom method, as is an update at a path shorter
 than the deepest one the resource's operations are addressed at. A path
 an update is served at names a thing, so it has no default create. `GET`
-serves the default update,
-else the default read, else the default create; on the collection of a
+serves the default read, else the default update, else the default
+create; the read the build adds is served as the update it reads, so
+its envelope, its schema, its `ETag` and its `Link` are the update's, as
+they were before the read was an operation. On the collection of a
 resource with identity, a default read is its listing, which `GET` runs.
 `PATCH` is the default update; `POST` is the default create; `DELETE` is
 the default delete. Every other operation is a custom method,
@@ -1351,8 +1366,8 @@ custom method's own keys have none.
 
 ### The read
 
-**`GET /surface-api/{resource}[/{id}]`** answers the envelope for the
-values the operation form would open with:
+**`GET /surface-api/{resource}[/{id}]`** answers the read's envelope,
+for the values the operation form would open with:
 [the document](#the-document), `resource`, `operation`, `label`,
 `schema`, `values`, `stale`, `outputs` when declared, and `notes`. Its
 `$id` is the path it was read at, absolute, the operation's other
@@ -1702,11 +1717,11 @@ order and picks the first that does not create and whose every required
 parameter is supplied, by name, from the outputs storage read back,
 then from the identity keys the write accepted, then from the identity
 the creating operation already knew. The answer is checked, not
-assumed: the operation is built from those parameters (an entity
-parameter loads what its id names), its context must not create, and
-every identity key it knows must equal what was written. The content
-type's `update(NodeTypeInterface $type)` is answered by the `type` the
-write accepted, and its read is the `Location`. A field added at
+assumed: the operation is built from those parameters (its storage
+loads what each names), its context must not create, and every identity
+key it knows must equal what was written. The content type's
+`update(string $type)` is answered by the `type` the write accepted,
+and its read is the `Location`. A field added at
 `field.instance:create` lives at its `update(string $entity_type, string
 $bundle, string $field_name)`, answered by the identity the write
 accepted: `Location: /surface-api/field.instance/node/article/field_x`.
@@ -1790,7 +1805,14 @@ so a site grants them to the roles it chooses. The document is open.
   default delete is `delete` on the thing's path item,
   `/surface-api/block.placement/{id}` with `get`, `patch` and `delete`,
   with no request body and no `ETag` in its answer; its envelope is its
-  custom method's, `/surface-api/block.placement/{id}:delete`, `get`. A
+  custom method's, `/surface-api/block.placement/{id}:delete`, `get`.
+  `get` on a thing's path, and on a singleton's, is the read's,
+  `<resource>:read:read`, its schema `<resource>:read:schema`: the read
+  the build adds is described from the update it reads, sharing its
+  component, and the update is described by its run alone; a read an
+  owner declares is described from its own build, and its update's
+  envelope is its custom method's, `.../{id}:update`. The read has no
+  run: it takes no values. A
   listing is `get` on the collection's path item, `/surface-api/event.venue`,
   its values query parameters, each with its schema, and its answer the
   outputs' component; its envelope is its custom method's,

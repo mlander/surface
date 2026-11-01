@@ -66,7 +66,9 @@ final class ContractBaselines {
    * A derived one is left out: its keys are the site's, not the code's.
    * An operation that cannot be built without a subject is left out too:
    * its full schema is the one a tool's static definition describes, and
-   * nothing here names a subject.
+   * nothing here names a subject. So is the read the build adds: it is
+   * served as the update it reads, whose full schema is already here.
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
    *
    * @param string[] $modules
    *   The modules.
@@ -88,7 +90,7 @@ final class ContractBaselines {
         $documents[] = $this->emitter->emitFull($this->resources->buildStatic($name, new OperationContext(self::ALONE)), $definition->id)->document;
       }
       foreach ($operations as $operation) {
-        if (!$operation->needsNothing()) {
+        if (!$operation->needsNothing() || $operation->isDefaultRead()) {
           continue;
         }
         $context = $this->resources->operation($name, $operation->id);

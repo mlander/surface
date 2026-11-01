@@ -45,7 +45,7 @@
                 ],
                 "$defs": {
                     "event.license": {
-                        "title": "event.license",
+                        "title": "Event license",
                         "description": "The four digits after EV- on the license, such as 2048. Required to host more than 100 people.",
                         "type": [
                             "string",

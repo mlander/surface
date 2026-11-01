@@ -200,7 +200,7 @@ final class ExamplesController extends ControllerBase {
       }
       if ($number === 16) {
         $steps['references'] = [
-          '#markup' => '<h2>' . $this->t('References') . '</h2><p>' . $this->t("Example 16 is a key that refers to an entity: declared by the data type string of what it refers to, its candidates the selection handler's for the account, listed while there are few and looked up past that.") . '</p>',
+          '#markup' => '<h2>' . $this->t('References') . '</h2><p>' . $this->t("Example 16 is a key that refers to an entity: declared with refer() and the entity type it refers to, its candidates the selection handler's for the account, listed while there are few and looked up past that.") . '</p>',
         ];
       }
       if ($number === 15) {
@@ -458,7 +458,7 @@ final class ExamplesController extends ControllerBase {
         '#language' => 'bash',
       ],
       'drush' => [
-        '#markup' => '<p>' . $this->t('The same tool, the same three calls, from Drush, after the read tool beside it, <code>@read</code>, which answers with what is stored and writes nothing:', ['@read' => ExampleCalls::READ_TOOL]) . '</p>',
+        '#markup' => '<p>' . $this->t('The same tool, the same three calls, from Drush, after its read, <code>@read</code>, which answers with what is stored and writes nothing:', ['@read' => ExampleCalls::READ_TOOL]) . '</p>',
       ],
       'commands' => [
         '#type' => 'surface_code',
@@ -688,7 +688,7 @@ final class ExamplesController extends ControllerBase {
       ],
       5 => [
         'title' => $series[5]['title'],
-        'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses, with a read tool beside it, @read, which answers with what is stored. Drush describes them with tool:info and calls them with tool:run.', [
+        'sentence' => $this->t('Example 3 is already a tool, @tool, which takes what the form takes and refuses what it refuses, and its read, @read, which answers with what is stored. Drush describes them with tool:info and calls them with tool:run.', [
           '@tool' => ExampleCalls::TOOL,
           '@read' => ExampleCalls::READ_TOOL,
         ]),
@@ -788,7 +788,7 @@ final class ExamplesController extends ControllerBase {
       ],
       16 => [
         'title' => $series[16]['title'],
-        'sentence' => $this->t("A key that refers to an entity, declared by the data type string of what it refers to and holding its id: a venue, a user, an article, or an entity of any type, filtered by what kind of entity type it is and by bundle. While the site has at most @limit candidates the key lists them; past that it is looked up, on the form with core's entity autocomplete and over HTTP with the resource's lookup. It lives in @module, which needs node.", [
+        'sentence' => $this->t("A key that refers to an entity, declared with refer() and the entity type it refers to, and holding its id: a venue, a user, an article, or an entity of any type, filtered by what kind of entity type it is and by bundle. While the site has at most @limit candidates the key lists them; past that it is looked up, on the form with core's entity autocomplete and over HTTP with the resource's lookup. It lives in @module, which needs node.", [
           '@limit' => $this->references->limit(),
           '@module' => self::REFERENCES,
         ]),

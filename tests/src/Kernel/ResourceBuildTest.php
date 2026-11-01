@@ -36,7 +36,6 @@ use Drupal\surface_resource_test\Alter\InstanceRefinerAlter;
 use Drupal\surface_resource_test\Alter\StrictMountWatcherAlter;
 use Drupal\surface_resource_test\Structure\Broken\WatchesUndeclaredStructure;
 use Drupal\surface_resource_test\Structure\Broken\WideningRefinerStructure;
-use Drupal\surface_resource_test\Structure\DynamicChildStructure;
 use Drupal\surface_resource_test\Structure\MountWatcherStructure;
 use Drupal\surface_resource_test\Resource\RecipeResource;
 use Drupal\surface_resource_test\Storage\RecipeStorage;
@@ -117,22 +116,23 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the escape hatch: an `any` key a refiner narrows to a map.
+   * Tests that add() refuses `any`: a shape depending on a key is variants.
    *
-   * The dynamic-child case needs no verb: a #[RefinesInput] method on an
-   * `any` key returns the narrower definition itself, held to the same
-   * narrowing rule, and the pipeline judges values against it.
+   * The escape hatch, an `any` key a #[RefinesInput] method returned a map
+   * for, is gone; its case is variants (the crate and its fruit variant
+   * in surface_resource_test), and only the variants' placeholder may
+   * still become what it stands for.
    */
-  public function testAnyKeyRefinesToMap(): void {
-    $surface = $this->resources()->build(DynamicChildStructure::class, new OperationContext('configure'));
-    $this->assertSame('any', $surface->getDefinition('detail')->getDataType());
-
-    $refined = $surface->refine(['kind' => 'box'])->getDefinition('detail');
-    $this->assertInstanceOf(MapDataDefinition::class, $refined);
-    $this->assertSame(['width'], array_keys($refined->getPropertyDefinitions()));
-
-    $this->assertSame([], $this->pipeline()->validate($surface, ['kind' => 'box', 'detail' => ['width' => 3]])->keys());
-    $this->assertContains('detail', $this->pipeline()->validate($surface, ['kind' => 'box', 'detail' => ['length' => 3]])->keys());
+  public function testAnyKeyIsRefused(): void {
+    $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
+    try {
+      $blueprint->add('detail', 'any', 'Detail');
+      $this->fail('An any key is refused.');
+    }
+    catch (\LogicException $e) {
+      $this->assertStringContainsString('add("detail", "any") declares a key of the any type, which JSON Schema has no type for', $e->getMessage());
+      $this->assertStringContainsString('a value whose shape depends on another key is variants, attachVariants()', $e->getMessage());
+    }
   }
 
   /**
@@ -428,7 +428,9 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
    */
   public function testOperations(): void {
     $operations = $this->container->get('surface.resource_registry')->getOperations(RecipeResource::class);
-    $this->assertSame(['create', 'update', 'mislabeled'], array_keys($operations));
+    // The read the build adds comes last, beside the default update.
+    $this->assertSame(['create', 'update', 'mislabeled', 'read'], array_keys($operations));
+    $this->assertSame('update', $operations['read']->reads);
     $this->assertSame('surface_resource_test', $operations['mislabeled']->module);
 
     $this->expectException(\LogicException::class);

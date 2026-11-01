@@ -82,16 +82,22 @@ class CatalogPageTest extends BrowserTestBase {
       'form' => $base . 'admin/config/services/surface-newsletter',
       'http' => $this->getAbsoluteUrl('/surface-api/first.newsletter'),
       'tool' => 'text: surface:first.newsletter:configure',
-      'read tool' => 'text: surface:first.newsletter:configure:read',
       'openapi' => $base . 'surface-api/redoc#operation/first.newsletter:configure:write',
       'react' => $base . 'surface-react/first.newsletter/configure',
     ], $doors);
+    // Its read, the one the build adds, is a row of its own.
+    $rows = array_values(array_filter(
+      array_map(fn (NodeElement $row): array => array_slice($this->cells($row), 0, 3), $this->getSession()->getPage()->findAll('css', '#surface-catalog tbody tr')),
+      static fn (array $cells): bool => $cells[0] === 'first.newsletter',
+    ));
+    $this->assertSame(['first.newsletter', 'resource', 'read (read, default read of configure)'], $rows[1] ?? NULL);
 
     // One resource in full: the store's keys.
     $newsletter->findLink('first.newsletter')->click();
     $assert->addressEquals(self::PAGE . '/first.newsletter');
     $this->drupalGet(self::PAGE . '/first.store');
     $assert->statusCodeEquals(200);
+    $assert->elementTextContains('css', '#surface-catalog-facts', 'Label: Store location');
     $keys = array_map(fn (NodeElement $row): string => $this->cells($row)[0], $this->getSession()->getPage()->findAll('css', '#surface-catalog-keys tbody tr'));
     $this->assertSame(['country', 'region'], $keys);
     $assert->elementTextContains('css', '#surface-catalog-keys', 'regionOfCountry');

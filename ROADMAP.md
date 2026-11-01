@@ -1359,10 +1359,12 @@ renames sit in A because they are cheapest before new code exists.
     .../{x}:lookup`, which the tool listing names, the React app calls
     and the OpenAPI document describes; `x-surface.reference` on every
     reference key. Open: a uuid representation; a multi-value reference,
-    a list of references; the entity side's two shapes, a reference
-    field's `target_id` item beside a reference key, with no marker; a
+    a list of references; a
     lookup tool for an agent with no HTTP; a custom method's own lookup;
-    a stored id the account may no longer reference.
+    a stored id the account may no longer reference. (The entity side's
+    two shapes are one since 2026-11-01: a reference field's `target_id`
+    is a reference key answered by the field's own handler,
+    `docs/decisions.md#a-reference-field-is-a-reference-key`.)
 
 21. **A key computed from others.** DONE 2026-10-23
     (`docs/decisions.md#a-computed-key-is-a-pure-function-of-its-sources`).

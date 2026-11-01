@@ -179,7 +179,9 @@ interface ResourcesInterface {
    *   The operation method's arguments, positional or by parameter name.
    *
    * @return \Drupal\surface\Resource\OperationContext
-   *   The context, whose id is the operation id.
+   *   The context, whose id is the operation id; for the read the build
+   *   adds, the context of the update it reads
+   *   (OperationDefinition::defaultRead()).
    *
    * @throws \InvalidArgumentException
    *   When it has no such operation.

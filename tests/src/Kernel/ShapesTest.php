@@ -96,7 +96,7 @@ class ShapesTest extends SurfaceKernelTestBase {
    * The stock code's def, as both documents write it.
    */
   protected const DEF = [
-    'title' => 'resource_test.sku',
+    'title' => 'Stock code',
     'description' => 'Two capitals and digits, as printed on the shelf.',
     'type' => ['string', 'null'],
     'pattern' => '^[A-Z]{2}\d+$',
@@ -502,7 +502,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     $this->assertFalse($properties['spare']->isRequired());
     $this->assertSame(['Regex' => self::PATTERN, 'Length' => ['max' => 6]], self::declared($properties['spare']));
 
-    $read = $manager->createInstance('surface:resource_test.depot:configure:read');
+    $read = $manager->createInstance('surface:resource_test.depot:read');
     $read->execute();
     $this->assertTrue($read->getResult()->isSuccess(), (string) $read->getResult()->getMessage());
     $this->assertSame(self::DEPOT, $read->getResult()->getContextValues()[OperationInputs::VALUES] ?? NULL);

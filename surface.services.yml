@@ -6,6 +6,8 @@ services:
   plugin.manager.surface_widget:
     class: Drupal\surface\Widget\SurfaceWidgetManager
     parent: default_plugin_manager
+  # By class, for the build's check of the widgets keys ask for.
+  Drupal\surface\Widget\SurfaceWidgetManager: '@plugin.manager.surface_widget'
   plugin.manager.surface_options_resolver:
     class: Drupal\surface\Options\SurfaceOptionsResolverManager
     parent: default_plugin_manager
@@ -77,10 +79,9 @@ services:
     class: Drupal\surface\Refinement\WatchedValueCheck
     arguments: ['@typed_data_manager']
   # An operation's arguments from a route's parameters or a tool's inputs,
-  # by name; an entity's id becomes the entity a parameter is typed with.
+  # by name: values, which the operation's storage loads what they name by.
   surface.operation_arguments:
     class: Drupal\surface\ResourceBuild\OperationArguments
-    arguments: ['@entity_type.manager']
   # The two answers every door serving an operation gives alike: the
   # operation's permission from the two ids, and a URL that names nothing.
   surface.operation_gate:
