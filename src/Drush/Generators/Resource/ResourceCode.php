@@ -398,6 +398,11 @@ final class ResourceCode {
       $nested = $default ?? $this->mapDefault($definition);
       return sprintf('$inputs->addDefinition(%s, %s%s)', $this->ref($name), $map, $nested === NULL ? '' : ', default: ' . PhpLiteral::write($nested, self::INDENT));
     }
+    $target = References::target($definition);
+    if ($target !== NULL) {
+      $bundles = $target['bundles'] === [] ? '' : ', bundles: ' . PhpLiteral::write(array_values($target['bundles']), self::INDENT);
+      return sprintf('$inputs->refer(%s, %s, %s%s%s)', $this->ref($name), PhpLiteral::string($target['entityType']), PhpLiteral::translated($label), $bundles, $default_argument);
+    }
     return sprintf('$inputs->add(%s, %s, %s%s)', $this->ref($name), PhpLiteral::string($this->type($definition)), PhpLiteral::translated($label), $default_argument);
   }
 
@@ -779,16 +784,12 @@ final class ResourceCode {
    * Gives the data type a key is declared with.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
+   *   The definition: no reference, which declaration() writes as refer().
    *
    * @return string
-   *   Its type, or `entity:<type>[:<bundle>]` for a reference.
+   *   Its type.
    */
   protected function type(DataDefinitionInterface $definition): string {
-    $target = References::target($definition);
-    if ($target !== NULL) {
-      return 'entity:' . $target['entityType'] . (count($target['bundles']) === 1 ? ':' . $target['bundles'][0] : '');
-    }
     return $definition->getDataType();
   }
 

@@ -20,6 +20,8 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\ComplexDataConstraint;
+use Drupal\surface\Resource\Arrangement;
+use Drupal\surface\DefinitionMetadata;
 
 /**
  * What a resource can carry of a bundle's fields, read from typed data.
@@ -92,6 +94,37 @@ final class FieldItemDerivation {
     'Range' => ['min', 'max'],
     'Regex' => ['pattern', 'message'],
     'Choice' => ['choices'],
+  ];
+
+  /**
+   * The widget each form display component asks for, by component type.
+   *
+   * Read for a field's main property: the presentation settings the
+   * widget the stock rule picks reads (`multiline`, and each component's
+   * `size` and `rows`), and the word of a widget the stock rule does not
+   * pick, `radios`, asked only of a key with a list of values. Where the
+   * component draws what the stock rule draws (`string_textfield` the
+   * string widget, `number`, `boolean_checkbox` the checkbox,
+   * `options_select` the select) no word is set: the stock rule already
+   * picks it, and a word would refuse the select a context draws for a key
+   * it fixes. A component type not here asks for nothing. What is accepted
+   * is the field's definition, never the component's: no setting here
+   * changes it.
+   *
+   * Decision: see
+   * docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
+   */
+  public const WIDGETS = [
+    'string_textfield' => [],
+    'email_default' => [],
+    'string_textarea' => ['multiline' => TRUE],
+    'text_textfield' => [],
+    'text_textarea' => ['multiline' => TRUE],
+    'text_textarea_with_summary' => ['multiline' => TRUE],
+    'number' => [],
+    'boolean_checkbox' => [],
+    'options_select' => [],
+    'options_buttons' => ['widget' => 'radios', 'listed' => TRUE],
   ];
 
   /**
@@ -328,6 +361,9 @@ final class FieldItemDerivation {
         }
       }
       $this->narrow($field, $bundle, $name, $definition);
+      if ($name === $main) {
+        $this->askWidget($field, $bundle, $definition);
+      }
       $described[$name] = ['definition' => $definition, 'default' => $this->defaultOf($field, $name, $type, $literal)];
     }
     return $described;
@@ -504,6 +540,44 @@ final class FieldItemDerivation {
         'bundle' => $bundle,
         'fieldName' => $field->getName(),
       ]);
+    }
+  }
+
+  /**
+   * Asks for the widget the form display's component draws the field with.
+   *
+   * Its type, by WIDGETS, and its `size`, `rows` and `placeholder`, which
+   * the widget and the arrangement read; every other component setting
+   * is the core widget's own and is left behind.
+   *
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field
+   *   The field.
+   * @param string $bundle
+   *   The bundle whose form display draws it.
+   * @param \Drupal\Core\TypedData\DataDefinition $definition
+   *   Its main property's key.
+   */
+  protected function askWidget(FieldDefinitionInterface $field, string $bundle, DataDefinition $definition): void {
+    $component = $this->formDisplay($field->getTargetEntityTypeId(), $bundle)?->getComponent($field->getName());
+    $asked = self::WIDGETS[$component['type'] ?? ''] ?? NULL;
+    if ($asked === NULL || (($asked['listed'] ?? FALSE) && !isset($definition->getConstraints()['LabeledChoice']))) {
+      return;
+    }
+    if (isset($asked['widget'])) {
+      $definition->setSetting('widget', $asked['widget']);
+    }
+    if ($asked['multiline'] ?? FALSE) {
+      $definition->setSetting('multiline', TRUE);
+    }
+    $settings = is_array($component['settings'] ?? NULL) ? $component['settings'] : [];
+    foreach (['size', 'rows'] as $setting) {
+      if (is_numeric($settings[$setting] ?? NULL) && (int) $settings[$setting] > 0) {
+        $definition->setSetting($setting, (int) $settings[$setting]);
+      }
+    }
+    $placeholder = $settings['placeholder'] ?? NULL;
+    if (is_string($placeholder) && $placeholder !== '') {
+      DefinitionMetadata::setArrangement($definition, new Arrangement(placeholder: $placeholder));
     }
   }
 

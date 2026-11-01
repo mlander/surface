@@ -99,7 +99,7 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
                 'update',
                 $this->t('Change @field', ['@field' => $field->getLabel()]),
                 new ResourceCallable(self::class, 'update', $bound),
-                ['id' => 'string'],
+                ['id'],
                 description: $this->t('Changes the @field field of a @bundle item, named by its id.', [
                   '@field' => $field->getLabel(),
                   '@bundle' => $bundle,
@@ -109,7 +109,7 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
                 'read',
                 $this->t('View @field', ['@field' => $field->getLabel()]),
                 new ResourceCallable(self::class, 'read', $bound),
-                ['id' => 'string'],
+                ['id'],
                 readOnly: TRUE,
                 description: $this->t('Reads the @field field of a @bundle item, named by its id.', [
                   '@field' => $field->getLabel(),

@@ -1,5 +1,8 @@
 phone: '+1 555 0199'
 in_program: false
+location:
+  lat: 43.6532
+  lng: -79.3832
 lead:
   name: 'Alex Kim'
   email: ''

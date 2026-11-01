@@ -220,7 +220,7 @@ final class Series {
           self::MODULE . 'src/Structure/ReviewStructure.php' => t('the review: two keys and a rule, mixed into the press page'),
           self::MODULE . 'src/Resource/PressResource.php' => t('the press page: one key, the person attached, the review mixed in'),
           self::MODULE . 'src/Storage/PressStorage.php' => t('its storage: names the config object'),
-          self::MODULE . 'src/Resource/InfoDeskResource.php' => t('the information desk: the phone, the person attached, and a collection of up to four'),
+          self::MODULE . 'src/Resource/InfoDeskResource.php' => t('the information desk: the phone, where it stands as an anonymous map, the person attached, and a collection of up to four'),
           self::MODULE . 'src/Storage/InfoDeskStorage.php' => t('its storage: names the config object'),
           self::ROUTES . 'surface_examples.step8' => t("the press page's route"),
           self::ROUTES . 'surface_examples.step8_desk' => t("the information desk's route"),
@@ -398,7 +398,7 @@ final class Series {
         'routes' => ['surface_examples.step16'],
         'files' => [
           self::REFERENCES . 'surface_examples_references.info.yml' => t('the module: a second one, which needs node for the article the announcement is'),
-          self::REFERENCES . 'src/Resource/SponsorshipResource.php' => t('the resource: three keys declared by the data type string of what they refer to, and three of any entity type, each filtered'),
+          self::REFERENCES . 'src/Resource/SponsorshipResource.php' => t('the resource: three keys declared with refer() and the entity type they refer to, and three of any entity type, each filtered'),
           self::REFERENCES . 'src/Storage/SponsorshipStorage.php' => t('the storage: names the config object'),
           self::REFERENCES . 'surface_examples_references.routing.yml#surface_examples.step16' => t("the route: the generic operation form, with the examples' panels"),
           self::REFERENCES . 'surface_examples_references.permissions.yml' => t('its permission, to set the sponsorship'),

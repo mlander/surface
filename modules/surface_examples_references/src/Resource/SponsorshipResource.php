@@ -18,7 +18,7 @@ use Drupal\surface_examples_references\Storage\SponsorshipStorage;
  *
  * A sponsor of the event has a stand at a venue, a contact among the
  * site's users and an announcement among its articles; each key is
- * declared by the data type string of what it refers to, and every door
+ * declared with refer() and the entity type it refers to, and every door
  * sends and answers the id; the config object stores a content entity by
  * its uuid. The last three name an entity of any type: its entity type,
  * then its id, filtered by what kind of entity type it is and by bundle.
@@ -35,29 +35,29 @@ final class SponsorshipResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('venue', 'entity:event_venue', t('Venue'), default: 'riverside')
+    $inputs->refer('venue', 'event_venue', t('Venue'), default: 'riverside')
       ->setDescription(t("Where the sponsor's stand is."))
       ->setRequired(TRUE);
 
-    $inputs->add('contact', 'entity:user', t('Contact'))
+    $inputs->refer('contact', 'user', t('Contact'))
       ->setDescription(t('Who answers for the sponsor.'));
 
-    $inputs->add('page', 'entity:node:article', t('Announcement'))
+    $inputs->refer('page', 'node', t('Announcement'), bundles: ['article'])
       ->setDescription(t('The article that announces the sponsor.'));
 
     // Of any type: an entity type, then an id of it.
-    $inputs->add('thing', 'entity', t('Featured beside'))
+    $inputs->refer('thing', NULL, t('Featured beside'))
       ->setDescription(t('Any content the sponsor is featured beside.'))
       ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
 
-    $inputs->add('setting', 'entity', t('Linked to'))
+    $inputs->refer('setting', NULL, t('Linked to'))
       ->setDescription(t('A venue or a role the sponsorship is linked to.'))
       ->addConstraint('SurfaceReferenceableType', [
         'interface' => ConfigEntityInterface::class,
         'targets' => ['event_venue' => [], 'user_role' => [], 'node' => []],
       ]);
 
-    $inputs->add('credit', 'entity', t('Credited on'))
+    $inputs->refer('credit', NULL, t('Credited on'))
       ->setDescription(t('An article or a user the sponsor is credited on.'))
       ->addConstraint('SurfaceReferenceableType', [
         'targets' => ['node' => ['article'], 'user' => []],

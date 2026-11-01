@@ -28,9 +28,10 @@ use Drupal\surface\SurfaceInterface;
 /**
  * What a key that refers to an entity is, and which entities it may name.
  *
- * One place for the three spellings of a reference key, `entity:<type>`,
- * `entity:<type>:<bundle>` and the bare `entity`: the definition each
- * builds, the candidates, the lookup and the check. The candidates are
+ * One place for the two kinds of reference key, declared with refer():
+ * an id of one entity type, its bundles named or not, and a choice of
+ * entity type and id: the definition each builds, the candidates, the
+ * lookup and the check. The candidates are
  * core's entity reference selection handler's, `default:<type>` with the
  * key's bundles as its `target_bundles` and the label as its `sort`, for
  * the account asking, so what a key lists, what the lookup answers and
@@ -238,59 +239,81 @@ final class References {
   }
 
   /**
-   * Answers whether a data type string spells a reference key.
+   * Answers whether a type string spells a reference per thing the site has.
+   *
+   * The one place a reference keeps a type string: addEach() declares
+   * each entry with a type, `entity:<type>[:<bundle>]` an id of that type,
+   * which the entry is declared as refer() declares one. A key of its own
+   * is refer().
    *
    * @param string $type
-   *   What add() was handed.
+   *   What addEach() was handed.
    *
    * @return bool
-   *   TRUE for `entity` and `entity:<type>[:<bundle>]`.
+   *   TRUE for `entity:<type>[:<bundle>]`.
    */
   public static function spells(string $type): bool {
-    return $type === 'entity' || str_starts_with($type, 'entity:');
+    return str_starts_with($type, 'entity:');
   }
 
   /**
-   * Builds the key a data type string names: one entity's id.
+   * Builds the key refer() declares: one entity's id.
    *
-   * `entity:<type>` is an id of that type and `entity:<type>:<bundle>` an
-   * id of that type and bundle, typed as the entity type's id key holds
-   * it, an integer or a string, and carrying the constraint that names
-   * the type and the bundle, which the options resolver reads as the
-   * candidates and its validator holds a value to.
+   * An id of the entity type, of one of the bundles when it names any,
+   * typed as the entity type's id key holds it, an integer or a string,
+   * and carrying the constraint that names the type and the bundles,
+   * which the options resolver reads as the candidates and its validator
+   * holds a value to.
    *
    * @param string $key
    *   The key, for the messages.
-   * @param string $type
-   *   The data type string.
+   * @param string $entity_type_id
+   *   The entity type it refers to.
+   * @param string[] $bundles
+   *   The bundles it may name; none for every bundle.
    *
    * @return \Drupal\Core\TypedData\DataDefinition
    *   The key's definition.
    *
    * @throws \LogicException
-   *   When the string names an entity type typed data does not know, or no
-   *   entity type at all.
+   *   When it names no entity type, or one typed data does not know, or a
+   *   bundle that is no non-empty string.
    */
-  public function definition(string $key, string $type): DataDefinition {
-    $parts = explode(':', $type);
-    if (count($parts) < 2 || count($parts) > 3 || $parts[1] === '' || ($parts[2] ?? NULL) === '') {
-      throw new \LogicException(sprintf('add("%s", "%s") names no entity type: a reference key is "entity:<entity type>" or "entity:<entity type>:<bundle>", or "entity" for a choice of entity type and id.', $key, $type));
+  public function definition(string $key, string $entity_type_id, array $bundles = []): DataDefinition {
+    if ($entity_type_id === '' || str_contains($entity_type_id, ':') || array_filter($bundles, static fn (string $bundle): bool => $bundle === '' || str_contains($bundle, ':')) !== []) {
+      throw new \LogicException(sprintf('refer("%s", "%s") names no entity type: a reference key names an entity type, refer(\'%s\', \'node\', ...), and the bundles it may name, if any, bundles: [\'article\'].', $key, $entity_type_id, $key));
     }
     // Typed data derives `entity:<type>` for every entity type. A bundle
     // is site state, which may not be there yet: the key then offers
     // nothing until it is.
-    if (!isset($this->fromCode[$parts[1]]) && $this->typedDataManager->getDefinition('entity:' . $parts[1], FALSE) === NULL) {
-      throw new \LogicException(sprintf('add("%s", "%s") names an entity type this site does not have: typed data has no "entity:%s" data type.', $key, $type, $parts[1]));
+    if (!isset($this->fromCode[$entity_type_id]) && $this->typedDataManager->getDefinition('entity:' . $entity_type_id, FALSE) === NULL) {
+      throw new \LogicException(sprintf('refer("%s", "%s") names an entity type this site does not have: typed data has no "entity:%s" data type.', $key, $entity_type_id, $entity_type_id));
     }
-    $definition = DataDefinition::create($this->idType($parts[1]));
+    $definition = DataDefinition::create($this->idType($entity_type_id));
     $definition->addConstraint(self::CONSTRAINT, array_filter([
-      'entityTypeId' => $parts[1],
-      'bundles' => isset($parts[2]) ? [$parts[2]] : [],
+      'entityTypeId' => $entity_type_id,
+      'bundles' => array_values($bundles),
     ]));
-    if ($this->isContent($parts[1])) {
+    if ($this->isContent($entity_type_id)) {
       $definition->setSetting(self::CONTENT, TRUE);
     }
     return $definition;
+  }
+
+  /**
+   * Reads the entity type and bundles a type string addEach() took names.
+   *
+   * @param string $type
+   *   The type string: `entity:<type>` or `entity:<type>:<bundle>`.
+   *
+   * @return array{0: string, 1: string[]}
+   *   The entity type, and the bundle when it names one.
+   */
+  public static function spelled(string $type): array {
+    $parts = explode(':', $type);
+    // What follows the bundle is kept with it, for refer() to refuse.
+    $bundles = count($parts) > 2 ? [implode(':', array_slice($parts, 2))] : [];
+    return [$parts[1] ?? '', $bundles];
   }
 
   /**

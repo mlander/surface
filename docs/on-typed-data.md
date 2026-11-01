@@ -65,6 +65,18 @@ and returns it, so the rest is core's own setters:
 public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition;
 ```
 
+The types a key may hold are a fixed table, `Contract\LeafTypes`, one
+row per type with the JSON Schema `type` and `format` it is written
+with: eight of core's typed data types, `string`, `email`, `uri`,
+`datetime_iso8601`, `integer`, `timestamp`, `float` and `boolean`. The
+blueprint refuses any other type, at any depth of a definition it is
+handed; the emitter writes each row; the schema reader reads a JSON type
+and format back into its row. Typed data accepts types a JSON Schema
+document cannot state (`binary`, `language`, `any`), and a key of one
+would be written with no `type`, vaguer than what the runtime holds it
+to; one table read by all three keeps the contract exactly as wide as
+the runtime ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
+
 What core's definition has no method for, `DefinitionMetadata` writes
 onto the same object under an array key, and each of its methods calls
 core's own method instead once core has one (`src/DefinitionMetadata.php`):

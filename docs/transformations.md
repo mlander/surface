@@ -127,11 +127,11 @@ Example 16 declares two of its keys this way:
 <!-- excerpt: modules/surface_examples_references/src/Resource/SponsorshipResource.php -->
 
 ```php
-$inputs->add('page', 'entity:node:article', t('Announcement'))
+$inputs->refer('page', 'node', t('Announcement'), bundles: ['article'])
   ->setDescription(t('The article that announces the sponsor.'));
 
 // Of any type: an entity type, then an id of it.
-$inputs->add('thing', 'entity', t('Featured beside'))
+$inputs->refer('thing', NULL, t('Featured beside'))
   ->setDescription(t('Any content the sponsor is featured beside.'))
   ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
 ```

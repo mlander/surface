@@ -57,6 +57,16 @@ final class StringWidget extends SurfaceWidgetBase {
     if ($element['#type'] !== 'textarea') {
       $element = $this->lengthHint($element, $definition);
     }
+    // How big the input is drawn: presentation alone, which a form
+    // display's component hands over (FieldItemDerivation).
+    $size = $definition->getSetting('size');
+    if ($element['#type'] !== 'textarea' && is_int($size) && $size > 0) {
+      $element['#size'] = $size;
+    }
+    $rows = $definition->getSetting('rows');
+    if ($element['#type'] === 'textarea' && is_int($rows) && $rows > 0) {
+      $element['#rows'] = $rows;
+    }
     // No placeholder from the examples: an empty field showing a value
     // reads as filled. A placeholder is declared, in the key's
     // arrangement, and the form builder draws it.

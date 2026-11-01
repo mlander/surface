@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface\ResourceBuild;
 
-use Drupal\Core\Entity\EntityInterface;
-
 /**
  * One parameter of an #[Operation] method, as discovery read it.
  *
@@ -33,10 +31,10 @@ final class OperationParameter {
    *   Whether the parameter may be left out.
    * @param bool $nullable
    *   Whether NULL is a value it takes.
-   * @param string|null $entityType
-   *   The entity type it takes, when that is said rather than read off
-   *   the type: a derived operation's entity parameter, whose type is
-   *   any entity, names its entity type.
+   * @param bool $namesKey
+   *   Whether it is a derived operation's parameter, which names a key of
+   *   its resource and takes that key's value: its definition is the
+   *   key's, and it carries no type of its own.
    */
   public function __construct(
     public readonly string $name,
@@ -44,25 +42,35 @@ final class OperationParameter {
     public readonly bool $builtin,
     public readonly bool $optional,
     public readonly bool $nullable,
-    public readonly ?string $entityType = NULL,
+    public readonly bool $namesKey = FALSE,
   ) {}
 
   /**
-   * Reads one parameter a derived operation declares.
+   * Reads one parameter a derived operation declares: a key's name.
    *
-   * @param string $name
-   *   The parameter name.
-   * @param string $type
-   *   A builtin type, or `entity:<entity type id>`.
+   * @param int|string $position
+   *   Where the declaration has it: a list's position.
+   * @param mixed $name
+   *   The name of a key the resource declares, `id`.
+   * @param string $operation
+   *   The operation and its resource, for the message.
    *
    * @return self
-   *   The parameter, required and not nullable.
+   *   The parameter, required and not nullable, typed by its key.
+   *
+   * @throws \LogicException
+   *   For a name typed as `name => type`, `entity:<type>` among them, or
+   *   anything that is no key's name.
    */
-  public static function fromDeclaration(string $name, string $type): self {
-    if (str_starts_with($type, 'entity:')) {
-      return new self($name, EntityInterface::class, FALSE, FALSE, FALSE, substr($type, 7));
+  public static function fromDeclaration(int|string $position, mixed $name, string $operation): self {
+    if (!is_int($position) || !is_string($name) || preg_match('/^[a-z_][a-z0-9_]*$/', $name) !== 1) {
+      throw new \LogicException(sprintf(
+        '%s declares the parameter %s. A parameter names a key the resource declares, parameters: [\'id\'], and its definition is that key\'s: it carries no type, and an entity is no parameter. The operation receives the value, and the storage loads what it names.',
+        $operation,
+        is_string($position) ? sprintf('"%s" => %s', $position, json_encode($name)) : json_encode($name),
+      ));
     }
-    return new self($name, $type, TRUE, FALSE, FALSE);
+    return new self($name, NULL, TRUE, FALSE, FALSE, namesKey: TRUE);
   }
 
   /**
@@ -102,11 +110,11 @@ final class OperationParameter {
    *
    * @return string
    *   For example "NodeTypeInterface $type", "string $bundle", or for a
-   *   derived operation's entity parameter "entity:node $id".
+   *   derived operation's parameter, which names a key, "key $id".
    */
   public function describe(): string {
-    if ($this->entityType !== NULL) {
-      return 'entity:' . $this->entityType . ' $' . $this->name;
+    if ($this->namesKey) {
+      return 'key $' . $this->name;
     }
     $type = $this->type === NULL ? '' : (($this->nullable && $this->type !== 'mixed' ? '?' : '') . self::shortName($this->type) . ' ');
     return $type . '$' . $this->name;

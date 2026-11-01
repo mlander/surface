@@ -79,7 +79,7 @@ final class ResourceGenerator extends BaseGenerator {
     'email' => 'email',
     'uri' => 'uri',
     KeyAnswers::CHOICES => 'a list of choices',
-    'reference' => 'a reference, entity:<type>',
+    KeyAnswers::REFERENCE => 'a reference to an entity, by its id',
   ];
 
   /**
@@ -477,12 +477,10 @@ final class ResourceGenerator extends BaseGenerator {
         break;
       }
       $type = $this->choose('Type', self::TYPES, 'string');
-      if ($type === 'reference') {
-        $type = 'entity:' . $this->ask($ir, 'Entity type it refers to', 'node');
-      }
       $answer = [
         'key' => $key,
         'type' => $type,
+        'refers_to' => $type === KeyAnswers::REFERENCE ? $this->ask($ir, 'Entity type it refers to', 'node') : NULL,
         'label' => $this->ask($ir, 'Label', Utils::machine2human($key)),
         'description' => $this->ask($ir, 'Description, under the field (empty for none)', NULL) ?? '',
         'required' => $ir->confirm('Required?', FALSE),

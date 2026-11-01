@@ -10,6 +10,7 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Surface;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Narrowing;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -125,11 +126,13 @@ class NarrowingInsideMapsTest extends UnitTestCase {
    */
   public function testPlaceholderResolvesToAnyMap(): void {
     $placeholder = DataDefinition::create('any');
+    DefinitionMetadata::setVariantsBy($placeholder, 'kind');
     Narrowing::assertNarrows('settings', 'the variants', $placeholder, static::map());
     $this->addToAssertionCount(1);
 
     // But a required placeholder stays required in what it resolves to.
     $required = DataDefinition::create('any')->setRequired(TRUE);
+    DefinitionMetadata::setVariantsBy($required, 'kind');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('the required flag was turned off');
     Narrowing::assertNarrows('settings', 'the variants', $required, static::map());

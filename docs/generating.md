@@ -52,8 +52,8 @@ In the order asked, each default in brackets:
    module does not declare it yet.
 9. **Route path** [`/admin/config/<module>/<class name>`].
 10. **Each key**, until an empty name: its type (string, integer,
-    boolean, email, uri, a list of choices, or a reference,
-    `entity:<type>`), label, description, whether it is required, its
+    boolean, email, uri, a list of choices, or a reference to an
+    entity type, written as `refer()`), label, description, whether it is required, its
     maximum length (a string) or its bounds (an integer), its choices,
     its default, and the value it is installed with.
 

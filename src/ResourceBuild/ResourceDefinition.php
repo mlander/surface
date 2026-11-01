@@ -108,6 +108,9 @@ final class ResourceDefinition {
    *   when no plugin or more than one hosts it.
    * @param string|\Stringable|null $hostDescription
    *   That plugin's definition's `description`, or NULL.
+   * @param string|null $widget
+   *   For a structure, the widget its #[Structure] asks to be drawn with
+   *   as a whole, or NULL.
    */
   public function __construct(
     public readonly ?string $class,
@@ -133,6 +136,7 @@ final class ResourceDefinition {
     public readonly ?string $readAs = NULL,
     public readonly string|\Stringable|null $hostLabel = NULL,
     public readonly string|\Stringable|null $hostDescription = NULL,
+    public readonly ?string $widget = NULL,
   ) {}
 
   /**
@@ -369,6 +373,7 @@ final class ResourceDefinition {
       readAs: $this->readAs,
       hostLabel: $this->hostLabel,
       hostDescription: $this->hostDescription,
+      widget: $this->widget,
     );
   }
 

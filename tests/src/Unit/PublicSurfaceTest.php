@@ -60,8 +60,8 @@ class PublicSurfaceTest extends UnitTestCase {
    */
   protected const PINNED = [
     'attributes' => 9,
-    'attribute arguments' => 35,
-    'blueprint methods' => 16,
+    'attribute arguments' => 36,
+    'blueprint methods' => 18,
     'interfaces' => 22,
   ];
 

@@ -28,7 +28,10 @@ the record of the rework that brought the module to the pattern.
   description:)]`.
 - **Structure**: a group of keys with no identity or storage of its
   own, held by a parent (attached or as a variant) or a plugin's host.
-  `#[Structure(id, access:, label:, description:)]`. The label and
+  `#[Structure(id, access:, label:, description:, widget:)]`, `widget:`
+  the word of the widget that draws it as a whole wherever it is
+  attached, checked at the build like every key's `widget` setting
+  (`docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates`). The label and
   description, both optional, say what either is called and is for:
   `ResourceDefinition::label()` and `description()`, else the one
   hosting plugin's (`ResourcePlugins::hostNames()`); they title and
@@ -106,7 +109,20 @@ the record of the rework that brought the module to the pattern.
 - **Blueprint**: what a resource or structure declares its members
   into, handed to `defineInputs()` and `defineOutputs()`
   (`BlueprintInterface`); an alter gets the add-only
-  `BlueprintAdditionsInterface`.
+  `BlueprintAdditionsInterface`. A key holds one value of a type in the
+  one table the blueprint, the emitter and the reader read
+  (`Contract\LeafTypes`: `string`, `email`, `uri`, `datetime_iso8601`,
+  `integer`, `timestamp`, `float`, `boolean`, or a shape or config
+  schema type of one); any other type is refused at the blueprint, at
+  any depth, naming the method meant
+  (`docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader`).
+- **Anonymous map**: `addMap($key, $label, fn (BlueprintInterface $map)
+  => ...)`, an object only its owner holds, written inline with no def;
+  plain keys make a map definition, a callable that attaches, mixes in,
+  narrows or resolves makes a structure with no id
+  (`ResourceRegistry::defineMap()`, whose inputs run the owner's
+  declaration again to the key), still written inline; an alter's and
+  an output's hold plain keys alone (`docs/decisions.md#an-anonymous-map`).
 - **Storage**: where a resource's values live: `load()`, `prepare()`,
   `commit()` on a `ResourceStorageInterface`.
 - **Layout**: how a storage lays accepted values out where that differs
@@ -203,11 +219,14 @@ the record of the rework that brought the module to the pattern.
   ['selling' => 'on_sale'])` wires each entry's port to the entry of the
   same id in a sibling map from the same provider
   (`docs/resources.md#keys-that-come-from-the-site`).
-- **Reference key**: a key that refers to an entity, declared by the
-  data type string of what it refers to, `add('page', 'entity:node:article',
-  ...)`, `'entity:user'`, or the bare `'entity'` (two parts attached at
-  the key, `entity_type` and `id`, filtered by `SurfaceReferenceableType`
-  written on the key); every door sends and answers the id, and a config
+- **Reference key**: a key that refers to an entity, declared with
+  `refer()`: `refer('page', 'node', t(...), bundles: ['article'])`,
+  `refer('contact', 'user', ...)`, or `refer('thing', NULL, ...)` for any
+  entity type (two parts attached at the key, `entity_type` and `id`,
+  filtered by `SurfaceReferenceableType` written on the key);
+  `add($key, 'entity:…')` is refused naming it, and only `addEach()`
+  keeps the type string per entry
+  (`docs/decisions.md#a-reference-is-declared-as-a-reference`); every door sends and answers the id, and a config
   storage stores a content entity's uuid (`ReferenceStorageLayout`, which
   the engine applies; `References::STORED_AS` keeps the id) and a config
   entity's id, a config entity depending on what its keys refer to
@@ -463,9 +482,9 @@ A child may be a resource with storage of its own, an attached resource
 (the field's storage, `FieldStorageResource`). A provider named by
 `attachVariants(from:)` lists variants for the values no variant class
 declares (`surface_examples_field` lists a field type's settings, and its
-storage settings, from its config schema). A child
-whose keys cannot be listed at all is a `#[RefinesInput]` method on an
-`any` key returning a map. A structure reads a value of its container
+storage settings, from its config schema). A key
+whose shape depends on another key's value is variants: `add()` refuses
+`any`, and only the variants' placeholder may become another type. A structure reads a value of its container
 through a port it declares, `reads()`, which `attach(..., reads:)` wires
 to a key of the container's; what depends on a port is stated at the
 site, on the container's `allOf`, never in the structure's def
@@ -488,7 +507,9 @@ carrying `#[DerivesResources(base:)]` and implementing
 `ResourceDeriverInterface` returns `DerivedResource` values at
 discovery, each `<base>:<derivative>` with no class
 (`ResourceDefinition::$class` NULL; every caller asks by `name()`), its
-inputs and operations `ResourceCallable`s, cached under the tags of what
+inputs and operations `ResourceCallable`s, each operation's parameters
+the names of keys it declares, `['id']`, handed their values and loaded
+by nothing but the storage (`docs/decisions.md#a-parameter-names-a-key`), cached under the tags of what
 it was read from. Its kind follows from what it names: one that names
 storage or identity keys is a resource, any other a structure.
 `surface_examples_entity` derives a resource per content entity bundle
@@ -564,7 +585,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1823, Assertions: 42368, Errors: 0, Failures: 0, Skipped: 3. Classes: 255 of 255, 8 at a time, browser classes 4.
+phpunit: Tests: 1839, Assertions: 42801, Errors: 0, Failures: 0, Skipped: 3. Classes: 259 of 259, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -584,8 +605,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1715, Assertions: 38347, Skipped: 3, Deprecations: 130. Classes:
-206, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1731, Assertions: 38780, Skipped: 3, Deprecations: 130. Classes:
+210, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the

@@ -13,14 +13,20 @@ use Drupal\Core\Routing\RouteMatchInterface;
  *
  * An operation's needs are its own signature. A route supplies them as
  * parameters of the same name, a tool as inputs of the same name, and
- * both arrive at the same method with the same values: a value for a
- * scalar parameter, and for a parameter typed with an entity class or
- * interface, the entity: handed over as it is when a route already
- * upcast it, loaded by its id when it arrives as one.
+ * both arrive at the same method with the same values.
  *
- * Which entity type a parameter takes is read off its type the way the
- * Tool API reads a typed method's: the one entity type whose class
- * satisfies it; a derived operation's parameter names it instead.
+ * A derived operation's parameter names a key of its resource, and the
+ * operation receives the key's value: the raw value of a route's
+ * parameter, the id of an entity a caller hands over. Nothing is loaded
+ * for it here; loading is the storage's, which the operation asks.
+ *
+ * Decision: see docs/decisions.md#a-parameter-names-a-key.
+ *
+ * An #[Operation] method's parameter typed with an entity class or
+ * interface takes the entity: handed over as it is when a route already
+ * upcast it, loaded by its id when it arrives as one. Which entity type
+ * it takes is read off its type the way the Tool API reads a typed
+ * method's: the one entity type whose class satisfies it.
  */
 final class OperationArguments {
 
@@ -56,9 +62,6 @@ final class OperationArguments {
     if (!$parameter->takesObject()) {
       return NULL;
     }
-    if ($parameter->entityType !== NULL) {
-      return $parameter->entityType;
-    }
     $class = (string) $parameter->type;
     if (!array_key_exists($class, $this->entityTypes)) {
       $matches = [];
@@ -80,8 +83,9 @@ final class OperationArguments {
    * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param array $arguments
-   *   The arguments, by parameter name or by position. An entity
-   *   parameter takes the entity, or its id.
+   *   The arguments, by parameter name or by position. A parameter that
+   *   names a key takes its value, or the entity it names; an entity
+   *   parameter of a method takes the entity, or its id.
    *
    * @return array
    *   The arguments, by parameter name, ready for the method.
@@ -131,7 +135,11 @@ final class OperationArguments {
   public function fromRoute(OperationDefinition $operation, RouteMatchInterface $route_match): array {
     $arguments = [];
     foreach ($operation->parameters as $parameter) {
-      $value = $route_match->getParameter($parameter->name) ?? $route_match->getRawParameter($parameter->name);
+      // A parameter that names a key takes the value the path carries,
+      // whatever a converter upcast it to.
+      $value = $parameter->namesKey
+        ? $route_match->getRawParameter($parameter->name) ?? $route_match->getParameter($parameter->name)
+        : $route_match->getParameter($parameter->name) ?? $route_match->getRawParameter($parameter->name);
       if ($value !== NULL) {
         $arguments[$parameter->name] = $value;
       }
@@ -156,6 +164,10 @@ final class OperationArguments {
    *   When an id names no entity, naming the parameter.
    */
   protected function resolveOne(OperationDefinition $operation, OperationParameter $parameter, mixed $value): mixed {
+    if ($parameter->namesKey) {
+      // The key's value: an entity handed over is named by its id.
+      return $value instanceof EntityInterface ? $value->id() : $value;
+    }
     $entity_type_id = $this->entityTypeOf($parameter);
     if ($entity_type_id === NULL || !(is_string($value) || is_int($value))) {
       return $value;

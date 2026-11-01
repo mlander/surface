@@ -125,6 +125,56 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   services; an alter's refiners are static methods too, unless they
   declare `runtime: TRUE`, the one kind an instance method may be.
 
+### The types a key takes
+
+A key holds one value of a type the contract states a JSON Schema type
+for. `add()` takes one of eight, or a shape or a config schema type that
+is one of them:
+
+| Type | JSON Schema |
+| --- | --- |
+| `string` | `type: string`; `format: date` where the key asks for the date widget |
+| `email` | `type: string`, `format: idn-email` |
+| `uri` | `type: string`, `format: uri` |
+| `datetime_iso8601` | `type: string`, `format: date-time` |
+| `integer`, `timestamp` | `type: integer` |
+| `float` | `type: number` |
+| `boolean` | `type: boolean` |
+
+A shape's class is the scalar its `define()` returns; a config schema
+type such as `machine_name`, `label`, `path`, `color_hex` or `langcode`
+is the string underneath with the type's constraints. Any other type is
+refused when the blueprint is filled, naming the method for what was
+meant: `attach()` for a group of keys (or `addMap()` for keys only this
+one holds), `addList()` for a list, `refer()` for an entity's id,
+`addDefinition()` for a typed data definition built by hand. A
+definition handed to `addDefinition()` is held to the same table at
+every depth: each property of a map, each list's item. So the contract
+states a type for every value the runtime accepts, and is never vaguer
+than it ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
+
+One table, `Contract\LeafTypes`, holds the rows: the blueprint refuses
+by it, the emitter writes each row, and the schema reader reads a JSON
+type and format back into the row's type. How each type is drawn and
+coerced is keyed by the type where it is done: each widget's
+`isApplicable()` and `Pipeline\Coercion`.
+
+A key that refers to an entity is `refer()`
+([Options](options.md#a-key-that-refers-to-an-entity)):
+
+```php
+$inputs->refer('venue', 'event_venue', t('Venue'), default: 'riverside');
+$inputs->refer('page', 'node', t('Announcement'), bundles: ['article']);
+$inputs->refer('thing', NULL, t('Featured beside'));
+```
+
+`refer(string $key, ?string $to, string|\Stringable $label, array
+$bundles = [], mixed $default = NULL)`: the id of an entity of the type
+`$to` names, of one of the bundles where it names any; with `$to` NULL,
+an entity of any type, two keys attached at the key, which only a
+resource's or a structure's own blueprint declares
+([decision](decisions.md#a-reference-is-declared-as-a-reference)).
+
 ### What it is called
 
 The id is for code: the tool id, the HTTP path, the key under `$defs`.
@@ -257,8 +307,7 @@ is decided by runtime dependence, not by structure: `PluginExists`,
 whose values are resolved from a plugin manager, is still written down
 as a literal constraint, and so is `EntityBundleExists`, handed the
 entity type by a refiner. A refiner points; the resolver fetches. Look
-for a stock constraint or a reference type string (`entity:<type>`)
-first; only when none names the list does a module add one with its
+for a stock constraint or a reference key (`refer()`) first; only when none names the list does a module add one with its
 resolver, as the example does with `SurfaceExamplesBundleField`; see
 [Which constraint to write](options.md#which-constraint-to-write).
 
@@ -468,6 +517,13 @@ from the field. A parameter named for an identity key is a path segment,
 in identity order; any other is in the query string
 ([decision](decisions.md#a-parameter-is-identity-the-caller-knows)).
 
+A derived resource's operation names its parameters, `['id']`: each
+the name of a key the resource declares, which takes that key's
+definition and no type of its own. The operation receives the key's
+value; the storage loads what it names
+([Derived resources](resources.md#derived-resources),
+[decision](decisions.md#a-parameter-names-a-key)).
+
 ## Names
 
 Four naming rules, so that a reader who has only a grep finds the rest
@@ -593,6 +649,46 @@ $inputs->addDefinition('field_overrides', $overrides, default: []);
 `AddressFieldSettingsResource` is the worked example. A map whose
 properties are another class's keys is a child instead: `attach()` or
 `attachVariants()`.
+
+### An anonymous map
+
+A map whose keys only this resource holds is `addMap()`: a key, a
+label, and a callable handed a blueprint for the map's keys. Example 8's
+desk says where it stands:
+
+<!-- excerpt: modules/surface_examples/src/Resource/InfoDeskResource.php -->
+
+```php
+$inputs->addMap('location', t('Where the desk stands'), static function (BlueprintInterface $location): void {
+  $location->add('lat', 'float', t('Latitude'), default: 43.6532)
+    ->addConstraint('Range', ['min' => -90, 'max' => 90]);
+  $location->add('lng', 'float', t('Longitude'), default: -79.3832)
+    ->addConstraint('Range', ['min' => -180, 'max' => 180]);
+});
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+Each document writes it inline, `type: object` with its properties, and
+no def; the form draws it as a fieldset, the tool takes it as a map in
+`values`, and storage holds it under its key. What its keys start from
+is the map's default.
+
+Every blueprint method works inside the callable: `add()`, `addList()`,
+`refer()`, a nested `addMap()`, `describe()`, and `attach()`,
+`attachList()`, `attachVariants()`, `mixIn()`, `narrow()` and
+`resolve()`. A map whose keys need a frame of their own (a child, a
+rule, a resolve) is a structure with no id, attached at the key and
+still written inline, the structures it holds as references to their
+defs. The callable runs at once, and again when that structure is
+built, so it is a pure function, as `defineInputs()` is.
+
+The cost of no id: no alter addresses the map itself, nothing else
+uses it, and its access is its owner's. Anything two resources share,
+or anything an alter should reach, is a structure, `attach()`ed. An
+alter's map, and an output, hold plain keys alone: an alter attaches a
+structure at its own mount, and outputs hold no attached structures
+([decision](decisions.md#an-anonymous-map)).
 
 A list of values is `addList()`, as a single value is `add()`: a key,
 an item, a label and a default, the item a type name, a shape's class or

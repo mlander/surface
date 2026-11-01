@@ -1196,8 +1196,8 @@ final class Surface implements SurfaceInterface {
    * Carries the metadata a refiner cannot be expected to copy.
    *
    * A refiner that mutates the definition it was handed keeps both by
-   * definition. One that builds a fresh definition — the normal way to
-   * replace a type behind the 'any' escape hatch — would otherwise drop
+   * definition. One that builds a fresh definition (the variants'
+   * placeholder becoming the chosen variant's map) would otherwise drop
    * the declared default and the examples, and the rendered form and the
    * accepted value would then disagree about what the key starts from.
    *

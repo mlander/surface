@@ -126,8 +126,8 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertSame(['create', 'update', 'read'], array_keys($operations));
     $this->assertTrue($operations['read']->readsOne());
     $this->assertSame([], $operations['create']->parameters);
-    $this->assertSame(['entity:node $id'], array_map(static fn ($parameter): string => $parameter->describe(), $operations['update']->parameters));
-    $this->assertSame('node', $this->container->get('surface.operation_arguments')->entityTypeOf($operations['update']->parameters[0]));
+    $this->assertSame(['key $id'], array_map(static fn ($parameter): string => $parameter->describe(), $operations['update']->parameters));
+    $this->assertNull($this->container->get('surface.operation_arguments')->entityTypeOf($operations['update']->parameters[0]), 'The identity key\'s value, which nothing but the storage loads.');
 
     // The create operation knows the bundle, and that there is no id yet.
     $context = $this->resources()->operation('entity.content:node.page', 'create');

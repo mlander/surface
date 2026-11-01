@@ -355,8 +355,9 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    *
    * Every link is held to the narrowing contract
    * against what it was handed, so nothing can hand back a value it was
-   * not given. The 'any' data type is the declared escape hatch: it may
-   * refine to a concrete type. A refiner that declares cacheability, by
+   * not given. The variants' placeholder, an `any` marked with its
+   * deciding key, may become the variant that key chose; no other `any`
+   * may become anything. A refiner that declares cacheability, by
    * implementing CacheableDependencyInterface, has it merged into the
    * refined data surface when it runs.
    *

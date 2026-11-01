@@ -32,18 +32,23 @@ interface BlueprintAdditionsInterface {
    * Returns the core definition, so the rest (required, constraints,
    * description) is plain core API.
    *
-   * The type may be a shape's class, `add('license', License::class,
-   * t('Event license'))`: the key then starts from the shape as its
-   * alters left it, and what it adds (required, a default, a constraint,
-   * a description) may only narrow the shape, which its owner's build
-   * checks.
+   * The type is one the contract states a JSON Schema type for:
+   * `string`, `email`, `uri`, `datetime_iso8601`, `integer`, `timestamp`,
+   * `float` or `boolean`. It may be a shape's class, `add('license',
+   * License::class, t('Event license'))`: the key then starts from the
+   * shape as its alters left it, and what it adds (required, a default, a
+   * constraint, a description) may only narrow the shape, which its
+   * owner's build checks. It may be a config schema type of one value,
+   * `machine_name`, which is the string underneath with the type's
+   * constraints. Any other type is refused: a group of keys is attach()
+   * or addMap(), a list addList(), an id of an entity refer().
    *
    * @param string $key
    *   The key.
    * @param string $type
-   *   The typed data type, as core's typed data manager names it, or the
-   *   class of a shape.
-   *   See docs/declaring-a-resource.md#named-shapes.
+   *   One of the eight types, a shape's class, or a config schema type
+   *   of one of them.
+   *   See docs/declaring-a-resource.md#the-types-a-key-takes.
    * @param string|\Stringable $label
    *   The label.
    * @param mixed $default
@@ -55,11 +60,96 @@ interface BlueprintAdditionsInterface {
    *   The definition, already part of the blueprint.
    *
    * @throws \LogicException
-   *   For a class that is no shape, a shape that declares what only a key
-   *   may (a default, required) or a map or list, and, for an alter of a
-   *   shape, always: a shape has no keys to add to.
+   *   For a type JSON Schema has no type for, a class that is no shape, a
+   *   shape that declares what only a key may (a default, required) or a
+   *   map or list, and, for an alter of a shape, always: a shape has no
+   *   keys to add to.
    */
   public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition;
+
+  /**
+   * Adds a key that refers to an entity: its id.
+   *
+   * The key holds one id of the entity type, of one of the bundles when
+   * it names any, typed as the entity type's id key is (an integer for a
+   * node, a string for a user role); its candidates are core's selection
+   * handler's for the account, listed while there are few and looked up
+   * past that, and every door sends and answers the id.
+   *
+   * With no entity type, `refer('thing', NULL, ...)`, the key is a choice
+   * of entity type and id, two keys attached at the key, `entity_type`
+   * and `id`, the entity types filtered by a SurfaceReferenceableType
+   * constraint on the key; only a resource's or a structure's own
+   * blueprint declares one.
+   *
+   * @code
+   * $inputs->refer('venue', 'event_venue', t('Venue'), default: 'riverside');
+   * $inputs->refer('page', 'node', t('Announcement'), bundles: ['article']);
+   * $inputs->refer('thing', NULL, t('Featured beside'))
+   *   ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+   * @endcode
+   *
+   * @param string $key
+   *   The key.
+   * @param string|null $to
+   *   The entity type it refers to, or NULL for any.
+   * @param string|\Stringable $label
+   *   The label.
+   * @param string[] $bundles
+   *   The bundles it may name; none for every bundle.
+   * @param mixed $default
+   *   The id it starts from; NULL declares none.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The key's definition, already part of the blueprint: the id, or the
+   *   map its two parts are attached at.
+   *
+   * @throws \LogicException
+   *   For an entity type the site does not have; with no entity type, for
+   *   bundles, a default, outputs, or an alter's blueprint.
+   *
+   * @see docs/options.md#a-key-that-refers-to-an-entity
+   * @see docs/decisions.md#a-reference-is-declared-as-a-reference
+   */
+  public function refer(string $key, ?string $to, string|\Stringable $label, array $bundles = [], mixed $default = NULL): DataDefinition;
+
+  /**
+   * Adds a map of keys held here alone: an anonymous object.
+   *
+   * The callable is handed a blueprint whose keys are the map's, declared
+   * with add(), addList(), refer() to one entity type and addMap(), and
+   * worded and arranged with describe(); what they start from is the
+   * map's default. Both documents write the map inline, `type: object`
+   * with its properties, and no def. The cost: no alter can address it,
+   * nothing else uses it, and its access is its owner's; anything two
+   * resources share, or that has a rule, a child or access of its own, is
+   * a structure, attach()ed.
+   *
+   * @code
+   * $inputs->addMap('coordinates', t('Coordinates'), function (BlueprintInterface $map): void {
+   *   $map->add('lat', 'float', t('Latitude'));
+   *   $map->add('lng', 'float', t('Longitude'));
+   * });
+   * @endcode
+   *
+   * @param string $key
+   *   The key.
+   * @param string|\Stringable $label
+   *   The map's label.
+   * @param callable(\Drupal\surface\Resource\BlueprintInterface): void $define
+   *   Declares the map's keys, called once, at once.
+   *
+   * @return \Drupal\Core\TypedData\MapDataDefinition
+   *   The map, already part of the blueprint.
+   *
+   * @throws \LogicException
+   *   When the key is already declared, or the callable attaches, mixes
+   *   in, narrows, resolves, computes or reads a port.
+   *
+   * @see docs/declaring-a-resource.md#an-anonymous-map
+   * @see docs/decisions.md#an-anonymous-map
+   */
+  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition;
 
   /**
    * Adds a list of values: name, item, label.
@@ -82,10 +172,10 @@ interface BlueprintAdditionsInterface {
    * @param string $key
    *   The key.
    * @param string|\Drupal\Core\TypedData\DataDefinitionInterface $item
-   *   What every item is: a typed data type, as core's typed data manager
-   *   names it, the class of a shape (each item then starts from the
-   *   shape as its alters left it), or the item's definition, for an item
-   *   with constraints of its own (a LabeledChoice for a multi-select).
+   *   What every item is: one of the types add() takes, the class of a
+   *   shape (each item then starts from the shape as its alters left it),
+   *   or the item's definition, for an item with constraints of its own
+   *   (a LabeledChoice for a multi-select).
    * @param string|\Stringable $label
    *   The list's label.
    * @param mixed $default
@@ -104,9 +194,10 @@ interface BlueprintAdditionsInterface {
   /**
    * Adds a key, the long form.
    *
-   * For a definition add() and addList() do not build: a map, say. Like
-   * every declaring verb, it returns what it declared, for the owner to
-   * go on labeling with the core setters.
+   * For a definition add() and addList() do not build: a map, say. Every
+   * value inside is held to the types add() takes. Like every declaring
+   * verb, it returns what it declared, for the owner to go on labeling
+   * with the core setters.
    *
    * @param string $key
    *   The key.
@@ -121,6 +212,10 @@ interface BlueprintAdditionsInterface {
    * @template T of \Drupal\Core\TypedData\DataDefinitionInterface
    * @phpstan-param T $definition
    * @phpstan-return T
+   *
+   * @throws \LogicException
+   *   When the key is declared already, or a value inside is of a type
+   *   add() refuses.
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface;
 

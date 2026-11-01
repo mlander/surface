@@ -11,6 +11,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\ResourceBuild\NeedsFrame;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceCallable;
@@ -233,16 +234,6 @@ final class SchemaReader {
    * The keywords an entry of a `oneOf` list of values may say.
    */
   protected const CHOICE = ['const', 'title', 'description'];
-
-  /**
-   * The `format` each data type is written with, by format.
-   */
-  protected const FORMATS = [
-    'idn-email' => 'email',
-    'email' => 'email',
-    'uri' => 'uri',
-    'date-time' => 'datetime_iso8601',
-  ];
 
   /**
    * The Regex each date or time `format` is checked by, RFC 3339's.
@@ -1592,6 +1583,19 @@ final class SchemaReader {
         $inputs->addDefinition($name, $this->finished($map, $property, $required, in_array('null', $types, TRUE)));
         return;
       }
+      if (array_diff(array_keys($property), [...self::MAP, ContractEmitter::EXTENSION]) === [] && ($property['additionalProperties'] ?? NULL) === FALSE) {
+        // An object written as a map, holding what a plain map does not
+        // (a structure, a rule): an anonymous map, written inline again.
+        // Decision: see docs/decisions.md#an-anonymous-map.
+        $shell = $inputs->addMap($name, is_string($property['title'] ?? NULL) ? $property['title'] : $name, function (BlueprintInterface $map) use ($name, $property, $pointer, $root): void {
+          if (!$map instanceof ResourceBlueprint) {
+            throw new NeedsFrame($name);
+          }
+          $this->frame($property, $pointer, $map, $root);
+        });
+        $this->describeShell($shell, $property, $name, $required, $pointer);
+        return;
+      }
       $shell = $inputs->attach($name, $this->structureAt($inputs, $inputs->ownerId() . '.' . $name, $root, $pointer));
       $this->describeShell($shell, $property, $name, $required, $pointer);
       return;
@@ -2041,16 +2045,14 @@ final class SchemaReader {
     if (count($not_null) !== 1 || in_array($not_null[0], ['object', 'array', 'null'], TRUE)) {
       return [$this->foreignValue($property, $pointer, $root), $default];
     }
-    $type = match ($not_null[0]) {
-      'integer' => 'integer',
-      'number' => 'float',
-      'boolean' => 'boolean',
-      default => 'string',
-    };
+    // The type table read backwards: the emitter's rows, one class.
+    // Decision: see
+    // docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader.
+    $type = LeafTypes::read($not_null[0]) ?? 'string';
     $format = is_string($property['format'] ?? NULL) ? $property['format'] : NULL;
     if ($type === 'string' && $format !== NULL) {
-      if (isset(self::FORMATS[$format])) {
-        $type = self::FORMATS[$format];
+      if (LeafTypes::readsFormat($format)) {
+        $type = (string) LeafTypes::read('string', $format);
         if ($format === 'email') {
           $this->note(static::below($pointer, 'format'), 'Read as an email address, which Drupal holds to RFC 6531: written back as idn-email.');
         }
@@ -2098,6 +2100,7 @@ final class SchemaReader {
    */
   protected function foreignValue(array $property, string $pointer, array $root): DataDefinition {
     $definition = DataDefinition::create('any');
+    DefinitionMetadata::setHeldWhole($definition);
     $kept = static::plain(array_diff_key($property, array_flip(self::WHOLE)));
     if ($kept !== []) {
       $definition->addConstraint('JsonSchema', ['schema' => $this->withDefs($kept, $root)]);
