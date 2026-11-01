@@ -758,7 +758,7 @@ final class Gating {
         continue;
       }
       throw new \LogicException(sprintf(
-        'The gate "%s" on the "%s" operation of %s asks about %s %s, and nothing the operation is handed names one: no identity key refers to one, and no item of a collection has a key that does. Declare the key that names it as a reference, such as $inputs->refer(\'%s\', \'%s\', ...).',
+        'The gate "%s" on the "%s" operation of %s asks about %s %s, and nothing the operation is handed names one: no identity key refers to one, and no item of a collection has a key that does. Declare the key that names it as a reference, such as $inputs->add(\'%s\', <its id\'s type>, ...)->addConstraint(\'SurfaceValidReference\', [\'entityTypeId\' => \'%s\']).',
         $gate->spelled,
         $operation,
         $definition->id,

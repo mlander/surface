@@ -23,7 +23,6 @@ use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\DerivedOperation;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Reference\EntityReferenceStructure;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesInputsInterface;
@@ -693,7 +692,7 @@ final class ResourceRegistry {
    * Writes down structures read from a schema so a later request has them.
    *
    * A build the build cache answers names, at its keys, structures read
-   * from a schema document or made for a reference key, which a request
+   * from a schema document or for an anonymous map, which a request
    * registers only by building their owner: the cache stores them with
    * the build (exportRead()) and registers them again when it answers it
    * (rememberRead()), so every door can build and name them as if this
@@ -767,7 +766,7 @@ final class ResourceRegistry {
   }
 
   /**
-   * Gets a structure read from a schema, or made for a reference key.
+   * Gets a structure read from a schema, or made for an anonymous map.
    *
    * @param string $name
    *   The name it is built by.
@@ -780,49 +779,6 @@ final class ResourceRegistry {
    */
   public function readDefinition(string $name): ?ResourceDefinition {
     return $this->read[$name] ?? NULL;
-  }
-
-  /**
-   * Registers the two parts of a bare `entity` key, for one key's filter.
-   *
-   * Like a structure read from a schema, listed by nothing and built by
-   * name: its inputs EntityReferenceStructure::fill() with the filter, its
-   * refiner EntityReferenceStructure::id().
-   *
-   * Decision: see
-   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
-   *
-   * @param string $id
-   *   Its id: the owner's, then the key.
-   * @param string $module
-   *   The owner's module.
-   * @param array{interface: string|null, targets: array<string, string[]>, required: bool, byId?: true} $filter
-   *   What the key's author narrowed it by, as
-   *   EntityReferenceStructure::filter() reads it.
-   *
-   * @return string
-   *   The name it is attached and built by.
-   */
-  public function defineReference(string $id, string $module, array $filter): string {
-    $name = 'reference:' . $id . ':' . hash('xxh128', serialize($filter));
-    $this->read[$name] ??= new ResourceDefinition(
-      class: NULL,
-      id: $id,
-      module: $module,
-      identity: [],
-      storage: NULL,
-      access: NULL,
-      refiners: self::refinersOf(new \ReflectionClass(EntityReferenceStructure::class)),
-      inputs: new ResourceCallable(EntityReferenceStructure::class, 'fill', [
-        $filter['interface'],
-        $filter['targets'],
-        $filter['required'],
-        $filter['byId'] ?? FALSE,
-      ]),
-      kind: ResourceDefinition::STRUCTURE,
-      readAs: $name,
-    );
-    return $name;
   }
 
   /**

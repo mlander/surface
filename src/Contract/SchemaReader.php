@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Contract;
 
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
@@ -1580,7 +1582,7 @@ final class SchemaReader {
     if ($not_null === ['object'] && (is_array($property['properties'] ?? NULL) && $property['properties'] !== [])) {
       if ($this->isPlainMap($property)) {
         $map = $this->map($property, $pointer, $root);
-        $inputs->addDefinition($name, $this->finished($map, $property, $required, in_array('null', $types, TRUE)));
+        static::declareRead($inputs, $name, $this->finished($map, $property, $required, in_array('null', $types, TRUE)));
         return;
       }
       if (array_diff(array_keys($property), [...self::MAP, ContractEmitter::EXTENSION]) === [] && ($property['additionalProperties'] ?? NULL) === FALSE) {
@@ -1610,9 +1612,56 @@ final class SchemaReader {
       // Locked at what it holds: the value is what it starts from.
       $default = $property['const'];
     }
-    $inputs->addDefinition($name, $this->finished($definition, $property, $required, in_array('null', $types, TRUE)), $default);
+    static::declareRead($inputs, $name, $this->finished($definition, $property, $required, in_array('null', $types, TRUE)), $default);
     if ($locked) {
       $inputs->lockRead($name);
+    }
+  }
+
+  /**
+   * Declares a key read from a schema with the method its kind is.
+   *
+   * One value with addDefinition(), a list with addList() and a map with
+   * addMap(), each of its keys declared the same way inside, so a read is
+   * declared as an author declares it. What the read says of the list or
+   * the map itself (its label, constraints, settings and what the module
+   * writes beside them) is laid on what the method declared.
+   *
+   * Decision: see docs/decisions.md#a-blueprint-takes-no-complex-data-types.
+   *
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
+   *   The blueprint.
+   * @param string $name
+   *   The key.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $read
+   *   What was read.
+   * @param mixed $default
+   *   What it starts from; NULL for nothing.
+   */
+  protected static function declareRead(BlueprintInterface $inputs, string $name, DataDefinitionInterface $read, mixed $default = NULL): void {
+    if ($read instanceof ListDataDefinitionInterface) {
+      $declared = $inputs->addList($name, $read->getItemDefinition(), $read->getLabel() ?? $name, $default);
+    }
+    elseif ($read instanceof ComplexDataDefinitionInterface) {
+      $declared = $inputs->addMap($name, $read->getLabel() ?? $name, static function (BlueprintInterface $map) use ($read): void {
+        foreach ($read->getPropertyDefinitions() as $key => $property) {
+          static::declareRead($map, (string) $key, $property, DefinitionMetadata::hasDefaultValue($property) ? DefinitionMetadata::getDefaultValue($property) : NULL);
+        }
+      });
+    }
+    else {
+      $inputs->addDefinition($name, $read, $default);
+      return;
+    }
+    assert($read instanceof DataDefinition);
+    $said = $read->toArray();
+    foreach ($said as $keyword => $value) {
+      if ($keyword !== 'type') {
+        $declared[$keyword] = $value;
+      }
+    }
+    if (!isset($said['label'])) {
+      unset($declared['label']);
     }
   }
 

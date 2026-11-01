@@ -89,9 +89,10 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * entry's default or else $default, held to what is stored when the
    * entry is locked; an entry that names a schema or a structure is
    * refused, since a key per thing reads neither. An entry that refers to
-   * an entity is declared in refer()'s words, with no type of its own:
-   * `to:` its entity type and `bundles:` the bundles it may name, each
-   * entry then the id refer() declares. The provider is asked
+   * an entity names no type of its own: `to:` its entity type and
+   * `bundles:` the bundles it may name, each entry then the id typed as
+   * the entity type keeps it, with the SurfaceValidReference constraint
+   * naming the type and the bundles. The provider is asked
    * when the resource is built,
    * never by the resource; what it read is the built resource's
    * cacheability, so the form, both schema documents and the tool listing
@@ -119,8 +120,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   What every entry starts from unless it says otherwise; NULL for
    *   nothing.
    * @param string|null $to
-   *   The entity type each entry refers to, as refer() names it; NULL for
-   *   an entry of a type.
+   *   The entity type each entry refers to; NULL for an entry of a type.
    * @param string[] $bundles
    *   The bundles such an entry may name; none for every bundle.
    *

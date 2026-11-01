@@ -9,9 +9,7 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Entry;
@@ -25,8 +23,9 @@ use Drupal\surface\Refinement\Rule;
  *
  * The resource generator builds what it is about to write (the answers of
  * its interview, or a schema read by the schema reader) and this writes
- * the built keys as the calls an author would make: add() for a value,
- * addList() for a list of values, addDefinition() of a map, attach() and
+ * the built keys as the calls an author would make: add() for a value (a
+ * reference among them, its constraint written), addList() for a list of
+ * values, addMap() for a map, attach() and
  * attachList() of a structure written as a class of its own, and
  * narrow()->when() for each declared rule, each key's label, description,
  * required and constraints chained as core's setters. What it cannot write
@@ -351,9 +350,7 @@ final class ResourceCode {
     else {
       $default = $surface->getDefault($name);
       $head = $this->declaration($name, $definition, $label, $default);
-      $map = $definition instanceof ComplexDataDefinitionInterface && !$definition instanceof ListDataDefinitionInterface;
       $calls = [
-        ...($map ? ['->setLabel(' . PhpLiteral::translated($label) . ')'] : []),
         ...$this->described($definition),
         ...$this->constraintCalls($definition, $this->named($name), $comments),
       ];
@@ -393,15 +390,7 @@ final class ResourceCode {
       return sprintf('$inputs->addList(%s, %s, %s%s)', $this->ref($name), $this->item($definition->getItemDefinition(), self::INDENT + 2), PhpLiteral::translated($label), $default_argument);
     }
     if ($definition instanceof ComplexDataDefinitionInterface) {
-      $this->uses[MapDataDefinition::class] = TRUE;
-      $map = $this->map($definition, self::INDENT + 2);
-      $nested = $default ?? $this->mapDefault($definition);
-      return sprintf('$inputs->addDefinition(%s, %s%s)', $this->ref($name), $map, $nested === NULL ? '' : ', default: ' . PhpLiteral::write($nested, self::INDENT));
-    }
-    $target = References::target($definition);
-    if ($target !== NULL) {
-      $bundles = $target['bundles'] === [] ? '' : ', bundles: ' . PhpLiteral::write(array_values($target['bundles']), self::INDENT);
-      return sprintf('$inputs->refer(%s, %s, %s%s%s)', $this->ref($name), PhpLiteral::string($target['entityType']), PhpLiteral::translated($label), $bundles, $default_argument);
+      return $this->map('$inputs', $this->ref($name), $definition, $label, is_array($default) ? $default : [], self::INDENT);
     }
     return sprintf('$inputs->add(%s, %s, %s%s)', $this->ref($name), PhpLiteral::string($this->type($definition)), PhpLiteral::translated($label), $default_argument);
   }
@@ -433,65 +422,49 @@ final class ResourceCode {
   }
 
   /**
-   * Writes a map's definition, each property its own.
+   * Writes a map as addMap(), each property declared in its callable.
    *
+   * @param string $receiver
+   *   The blueprint the map is declared on: `$inputs`, or `$map` inside a
+   *   map.
+   * @param string $key
+   *   The key, as the call names it.
    * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $map
    *   The map.
+   * @param string $label
+   *   Its label.
+   * @param array $default
+   *   What the map starts from, by property, over what each property says.
    * @param int $indent
-   *   The indentation of its chained calls.
+   *   The indentation of the statement the call opens.
    *
    * @return string
-   *   The expression.
+   *   The call, its callable's statements on lines of their own.
    */
-  protected function map(ComplexDataDefinitionInterface $map, int $indent): string {
-    $calls = [];
+  protected function map(string $receiver, string $key, ComplexDataDefinitionInterface $map, string $label, array $default, int $indent): string {
+    $inner = $indent + 2;
+    $lines = '';
     foreach ($map->getPropertyDefinitions() as $name => $property) {
       $name = (string) $name;
-      [$label] = $this->label($property, $name);
-      $own = ['->setLabel(' . PhpLiteral::translated($label) . ')', ...$this->described($property)];
+      [$property_label] = $this->label($property, $name);
+      $starts = $default[$name] ?? (DefinitionMetadata::hasDefaultValue($property) ? DefinitionMetadata::getDefaultValue($property) : NULL);
+      $argument = $starts === NULL ? '' : ', default: ' . PhpLiteral::write($starts, $inner);
+      $comments = [];
       if ($property instanceof ComplexDataDefinitionInterface && !$property instanceof ListDataDefinitionInterface) {
-        $inner = $this->map($property, $indent + 2) . static::calls($own, $indent + 2);
+        $head = $this->map('$map', PhpLiteral::string($name), $property, $property_label, is_array($starts) ? $starts : [], $inner);
+        $calls = $this->described($property);
       }
       elseif ($property instanceof ListDataDefinitionInterface) {
-        $item = PhpLiteral::string($this->type($property->getItemDefinition()));
-        $inner = 'ListDataDefinition::create(' . $item . ')' . static::calls($own, $indent + 2);
-        $this->uses[ListDataDefinition::class] = TRUE;
+        $head = sprintf('$map->addList(%s, %s, %s%s)', PhpLiteral::string($name), $this->item($property->getItemDefinition(), $inner + 2), PhpLiteral::translated($property_label), $argument);
+        $calls = [...$this->described($property), ...$this->constraintCalls($property, '', $comments, $inner + 2)];
       }
       else {
-        $this->uses[DataDefinition::class] = TRUE;
-        $comments = [];
-        $constraints = $this->constraintCalls($property, '', $comments, $indent + 2);
-        $own = [...$own, ...$constraints];
-        $inner = 'DataDefinition::create(' . PhpLiteral::string($this->type($property)) . ')' . static::calls($own, $indent + 2);
+        $head = sprintf('$map->add(%s, %s, %s%s)', PhpLiteral::string($name), PhpLiteral::string($this->type($property)), PhpLiteral::translated($property_label), $argument);
+        $calls = [...$this->described($property), ...$this->constraintCalls($property, '', $comments, $inner + 2)];
       }
-      $calls[] = '->setPropertyDefinition(' . PhpLiteral::string($name) . ', ' . $inner . ')';
+      $lines .= "\n" . str_repeat(' ', $inner) . $head . static::calls($calls, $inner + 2) . ';';
     }
-    return 'MapDataDefinition::create()' . static::calls($calls, $indent);
-  }
-
-  /**
-   * Gives what a map's properties start from, together.
-   *
-   * @param \Drupal\Core\TypedData\ComplexDataDefinitionInterface $map
-   *   The map.
-   *
-   * @return array|null
-   *   Each property's default, by name; NULL when none has one.
-   */
-  protected function mapDefault(ComplexDataDefinitionInterface $map): ?array {
-    $defaults = [];
-    foreach ($map->getPropertyDefinitions() as $name => $property) {
-      if ($property instanceof ComplexDataDefinitionInterface && !$property instanceof ListDataDefinitionInterface) {
-        $inner = $this->mapDefault($property);
-        if ($inner !== NULL) {
-          $defaults[(string) $name] = $inner;
-        }
-      }
-      elseif (DefinitionMetadata::hasDefaultValue($property)) {
-        $defaults[(string) $name] = DefinitionMetadata::getDefaultValue($property);
-      }
-    }
-    return $defaults === [] ? NULL : $defaults;
+    return sprintf('%s->addMap(%s, %s, function (BlueprintInterface $map): void {', $receiver, $key, PhpLiteral::translated($label)) . $lines . "\n" . str_repeat(' ', $indent) . '})';
   }
 
   /**
@@ -566,8 +539,7 @@ final class ResourceCode {
   /**
    * Writes a definition's constraints and settings.
    *
-   * A JsonSchema constraint is written as a comment naming its keywords,
-   * a reference's constraint is its type (declaration()).
+   * A JsonSchema constraint is written as a comment naming its keywords.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
@@ -585,9 +557,6 @@ final class ResourceCode {
     $calls = [];
     foreach ($this->constraintsOf($definition) as $constraint => $options) {
       $constraint = (string) $constraint;
-      if ($constraint === References::CONSTRAINT) {
-        continue;
-      }
       if ($constraint === 'JsonSchema') {
         $schema = is_array($options['schema'] ?? NULL) ? $options['schema'] : [];
         $comments[] = sprintf('From the schema, not written here: %s on %s, which no constraint here states; the reader keeps it as a JsonSchema constraint. Write a constraint for it.', static::keywords($schema), $at === '' ? 'each item' : $at);
@@ -603,7 +572,10 @@ final class ResourceCode {
       $calls[] = sprintf('->addConstraint(%s, %s)', PhpLiteral::string($constraint), PhpLiteral::write(is_array($options) ? $options : [], $indent, $translate));
     }
     $settings = $definition instanceof DataDefinition ? ($definition->toArray()['settings'] ?? []) : [];
-    foreach (is_array($settings) ? $settings : [] as $setting => $value) {
+    $settings = is_array($settings) ? $settings : [];
+    // The build writes the content mark on a reference key itself.
+    unset($settings[References::CONTENT]);
+    foreach ($settings as $setting => $value) {
       $calls[] = sprintf('->setSetting(%s, %s)', PhpLiteral::string((string) $setting), PhpLiteral::write($value, $indent));
     }
     return $calls;
@@ -784,7 +756,7 @@ final class ResourceCode {
    * Gives the data type a key is declared with.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition: no reference, which declaration() writes as refer().
+   *   The definition.
    *
    * @return string
    *   Its type.

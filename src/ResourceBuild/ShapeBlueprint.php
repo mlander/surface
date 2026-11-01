@@ -72,13 +72,6 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function refer(string $key, ?string $to, string|\Stringable $label, array $bundles = [], mixed $default = NULL): DataDefinition {
-    throw $this->refused(sprintf('refer("%s")', $key));
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition {
     throw $this->refused(sprintf('addMap("%s")', $key));
   }

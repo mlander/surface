@@ -50,7 +50,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
 
     $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
 
-    $inputs->refer(self::VENUE, 'event_venue', t('Venue'))
+    $inputs->add(self::VENUE, 'string', t('Venue'))
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
       ->setRequired(TRUE);
 
     $inputs->add(self::ROOM, 'string', t('Room'))

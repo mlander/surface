@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_reference_test\Resource;
 
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\Attribute\Operation;
@@ -14,6 +13,7 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_reference_test\Keys\ReferenceSlots;
 use Drupal\surface_reference_test\Storage\ReferenceSettingsStorage;
 use Drupal\surface_reference_test\Structure\AuthorStructure;
+use Drupal\surface_reference_test\Structure\ContentEntityStructure;
 use Drupal\surface_reference_test\Structure\ItemStructure;
 
 /**
@@ -35,15 +35,18 @@ final class ReferenceSettingsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->refer('page', 'node', 'Page');
-    $inputs->refer('kept', 'node', 'Kept by id')
+    $inputs->add('page', 'integer', 'Page')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node']);
+    $inputs->add('kept', 'integer', 'Kept by id')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node'])
       ->setSetting(References::STORED_AS, References::BY_ID);
-    $inputs->refer('role', 'user_role', 'Role');
-    $inputs->refer('thing', NULL, 'Thing')
-      ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
-    $inputs->refer('kept_thing', NULL, 'Thing kept by id')
-      ->setSetting(References::STORED_AS, References::BY_ID)
-      ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+    $inputs->add('role', 'string', 'Role')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user_role']);
+    $inputs->attach('thing', ContentEntityStructure::class)
+      ->setLabel('Thing');
+    $inputs->attach('kept_thing', ContentEntityStructure::class)
+      ->setLabel('Thing kept by id')
+      ->setSetting(References::STORED_AS, References::BY_ID);
     $inputs->attach('nested', AuthorStructure::class)
       ->setLabel('Nested');
     $inputs->attachList('items', ItemStructure::class, max: 5)

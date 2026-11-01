@@ -112,7 +112,7 @@ final class Gates implements ContainerInjectionInterface {
       $entity_type = $refersTo($definition->name(), $parameter->name);
       if ($entity_type === NULL) {
         throw new \LogicException(sprintf(
-          'The gate "%s" names an operation that needs %s, which names no key of %s that refers to an entity: a gate hands the operation it names the id of the thing a call is about, a key declared with refer().',
+          'The gate "%s" names an operation that needs %s, which names no key of %s that refers to an entity: a gate hands the operation it names the id of the thing a call is about, a key with the SurfaceValidReference constraint naming its entity type.',
           $gate->spelled,
           $parameter->describe(),
           $definition->id,

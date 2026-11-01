@@ -11,14 +11,17 @@ drush pm:install surface_examples_references
 
 ## What it shows
 
-`Resource\SponsorshipResource` declares each key with `refer()` and the
-entity type it refers to: `event_venue`, `user`, `node` with the
-bundle `article`, and three of any entity type, `refer($key, NULL)`,
-each two parts, an entity type and an id, filtered by what kind of entity type it is and by
-bundle. Every door sends and answers the id, as its entity type keeps
+`Resource\SponsorshipResource` declares each key as the id's type with
+the `SurfaceValidReference` constraint naming the entity type it refers
+to: `event_venue`, `user`, `node` with the bundle `article`; and three
+of any entity type, each a structure attached at the key
+(`Structure\ThingStructure`, `SettingStructure`, `CreditStructure`, all
+extending `AnyEntityStructure`): an entity type and an id, filtered by
+what kind of entity type it is and by bundle, in the structure's own
+declaration. Every door sends and answers the id, as its entity type keeps
 it. The config object stores a content entity by its uuid, so it means
 the same entity on a site it is deployed to: the contact, the
-announcement, and the content a bare key holds; the venue and a role
+announcement, and the content a reference of any type holds; the venue and a role
 stay their ids, their machine names
 ([A reference is stored by uuid](../../docs/storage.md#a-reference-is-stored-by-uuid)).
 

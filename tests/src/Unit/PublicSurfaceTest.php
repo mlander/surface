@@ -39,6 +39,9 @@ use PHPUnit\Framework\Attributes\Group;
  * and is for, beside its id
  * (docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for):
  * 35 arguments.
+ * Cut on 2026-11-01 by one blueprint method, `refer()`: a reference is a
+ * key of the id's type with the constraint every reader already reads
+ * (docs/decisions.md#a-reference-is-a-constraint-on-a-value): 17 methods.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -61,7 +64,7 @@ class PublicSurfaceTest extends UnitTestCase {
   protected const PINNED = [
     'attributes' => 9,
     'attribute arguments' => 36,
-    'blueprint methods' => 18,
+    'blueprint methods' => 17,
     'interfaces' => 22,
   ];
 

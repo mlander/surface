@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Drush\Generators\Resource;
 
+use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\BlueprintInterface;
 
 /**
@@ -17,7 +18,8 @@ use Drupal\surface\Resource\BlueprintInterface;
  *
  * - `key`, `type` (a typed data type, `choices` for a string from a
  *   list, or `reference` for an id of the entity type `refers_to`
- *   names), `label`, `description` (empty for none), `required`;
+ *   names, of the type `id_type` says it keeps its id as), `label`,
+ *   `description` (empty for none), `required`;
  * - `default`, already of the key's type, NULL for none;
  * - `max_length` for a string, `min` and `max` for an integer, each NULL
  *   for none;
@@ -34,7 +36,9 @@ final class KeyAnswers {
   public const CHOICES = 'choices';
 
   /**
-   * The answer for a key that refers to an entity, declared with refer().
+   * The answer for a key that refers to an entity.
+   *
+   * Declared as the id's type, with the constraint naming the entity type.
    */
   public const REFERENCE = 'reference';
 
@@ -51,10 +55,15 @@ final class KeyAnswers {
    */
   public static function fill(BlueprintInterface $inputs, array $keys): void {
     foreach ($keys as $key) {
-      $type = $key['type'] === self::CHOICES ? 'string' : (string) $key['type'];
-      $definition = $type === self::REFERENCE
-        ? $inputs->refer((string) $key['key'], (string) $key['refers_to'], (string) $key['label'], default: $key['default'] ?? NULL)
-        : $inputs->add((string) $key['key'], $type, (string) $key['label'], default: $key['default'] ?? NULL);
+      $type = match ((string) $key['type']) {
+        self::CHOICES => 'string',
+        self::REFERENCE => (string) $key['id_type'],
+        default => (string) $key['type'],
+      };
+      $definition = $inputs->add((string) $key['key'], $type, (string) $key['label'], default: $key['default'] ?? NULL);
+      if ($key['type'] === self::REFERENCE) {
+        $definition->addConstraint(References::CONSTRAINT, ['entityTypeId' => (string) $key['refers_to']]);
+      }
       if (($key['description'] ?? '') !== '') {
         $definition->setDescription((string) $key['description']);
       }

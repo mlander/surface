@@ -27,7 +27,9 @@ final class GatedNoteResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->refer('node', 'node', 'Node')->setRequired(TRUE);
+    $inputs->add('node', 'integer', 'Node')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node'])
+      ->setRequired(TRUE);
     $inputs->add('note', 'string', 'Note');
   }
 

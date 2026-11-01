@@ -4,24 +4,26 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples_references\Resource;
 
-use Drupal\Core\Config\Entity\ConfigEntityInterface;
-use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_examples_references\Storage\SponsorshipStorage;
+use Drupal\surface_examples_references\Structure\CreditStructure;
+use Drupal\surface_examples_references\Structure\SettingStructure;
+use Drupal\surface_examples_references\Structure\ThingStructure;
 
 /**
  * Example 16: a key that refers to an entity, three ways.
  *
  * A sponsor of the event has a stand at a venue, a contact among the
- * site's users and an announcement among its articles; each key is
- * declared with refer() and the entity type it refers to, and every door
- * sends and answers the id; the config object stores a content entity by
- * its uuid. The last three name an entity of any type: its entity type,
- * then its id, filtered by what kind of entity type it is and by bundle.
+ * site's users and an announcement among its articles; each key is the
+ * id's type with the SurfaceValidReference constraint naming the entity
+ * type it refers to, and every door sends and answers the id; the config
+ * object stores a content entity by its uuid. The last three name an
+ * entity of any type: a structure of its entity type, then its id,
+ * filtered by what kind of entity type it is and by bundle.
  */
 #[Resource('event.sponsorship', storage: SponsorshipStorage::class)]
 #[Operation('configure',
@@ -35,33 +37,32 @@ final class SponsorshipResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->refer('venue', 'event_venue', t('Venue'), default: 'riverside')
+    // A venue keeps its id as a string, a user and a node as an integer.
+    $inputs->add('venue', 'string', t('Venue'), default: 'riverside')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
       ->setDescription(t("Where the sponsor's stand is."))
       ->setRequired(TRUE);
 
-    $inputs->refer('contact', 'user', t('Contact'))
+    $inputs->add('contact', 'integer', t('Contact'))
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user'])
       ->setDescription(t('Who answers for the sponsor.'));
 
-    $inputs->refer('page', 'node', t('Announcement'), bundles: ['article'])
+    $inputs->add('page', 'integer', t('Announcement'))
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])
       ->setDescription(t('The article that announces the sponsor.'));
 
     // Of any type: an entity type, then an id of it.
-    $inputs->refer('thing', NULL, t('Featured beside'))
-      ->setDescription(t('Any content the sponsor is featured beside.'))
-      ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+    $inputs->attach('thing', ThingStructure::class)
+      ->setLabel(t('Featured beside'))
+      ->setDescription(t('Any content the sponsor is featured beside.'));
 
-    $inputs->refer('setting', NULL, t('Linked to'))
-      ->setDescription(t('A venue or a role the sponsorship is linked to.'))
-      ->addConstraint('SurfaceReferenceableType', [
-        'interface' => ConfigEntityInterface::class,
-        'targets' => ['event_venue' => [], 'user_role' => [], 'node' => []],
-      ]);
+    $inputs->attach('setting', SettingStructure::class)
+      ->setLabel(t('Linked to'))
+      ->setDescription(t('A venue or a role the sponsorship is linked to.'));
 
-    $inputs->refer('credit', NULL, t('Credited on'))
-      ->setDescription(t('An article or a user the sponsor is credited on.'))
-      ->addConstraint('SurfaceReferenceableType', [
-        'targets' => ['node' => ['article'], 'user' => []],
-      ]);
+    $inputs->attach('credit', CreditStructure::class)
+      ->setLabel(t('Credited on'))
+      ->setDescription(t('An article or a user the sponsor is credited on.'));
   }
 
 }

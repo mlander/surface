@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Drush\Generators;
 
+use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Extension\ModuleExtensionList;
 use Drupal\surface\Drush\Generators\Resource\BuiltSource;
@@ -14,6 +15,7 @@ use Drupal\surface\Drush\Generators\Resource\ResourceSources;
 use Drupal\surface\Drush\Generators\Resource\RewriteResolver;
 use Drupal\surface\Drush\Generators\Resource\SchemaEntryResolver;
 use Drupal\surface\Drush\Generators\Resource\YamlEntryResolver;
+use Drupal\surface\Reference\References;
 use Drupal\surface\Storage\ConfigSchemaGenerator;
 use DrupalCodeGenerator\Asset\AssetCollection;
 use DrupalCodeGenerator\Attribute\Generator;
@@ -105,6 +107,9 @@ final class ResourceGenerator extends BaseGenerator {
    *   Drush's own input, which carries the two source options when the
    *   generator runs through `drush generate` (whose own input names only
    *   the generator's answers); NULL elsewhere.
+   * @param \Drupal\surface\Reference\References|null $references
+   *   What says the type an entity type keeps its id as, for a key of the
+   *   interview that refers to one; NULL where no key does.
    */
   public function __construct(
     protected readonly ResourceSources $sources,
@@ -112,6 +117,7 @@ final class ResourceGenerator extends BaseGenerator {
     protected readonly ModuleExtensionList $moduleList,
     protected readonly string $root,
     protected readonly ?InputInterface $drushInput = NULL,
+    protected readonly ?References $references = NULL,
   ) {
     parent::__construct();
   }
@@ -141,6 +147,7 @@ final class ResourceGenerator extends BaseGenerator {
       $modules,
       DRUPAL_ROOT,
       $container->has('input') ? $container->get('input') : NULL,
+      $container->get('surface.references'),
     );
   }
 
@@ -480,7 +487,7 @@ final class ResourceGenerator extends BaseGenerator {
       $answer = [
         'key' => $key,
         'type' => $type,
-        'refers_to' => $type === KeyAnswers::REFERENCE ? $this->ask($ir, 'Entity type it refers to', 'node') : NULL,
+        'refers_to' => $type === KeyAnswers::REFERENCE ? $this->ask($ir, 'Entity type it refers to', 'node', $this->idTypeOf(...)) : NULL,
         'label' => $this->ask($ir, 'Label', Utils::machine2human($key)),
         'description' => $this->ask($ir, 'Description, under the field (empty for none)', NULL) ?? '',
         'required' => $ir->confirm('Required?', FALSE),
@@ -490,6 +497,9 @@ final class ResourceGenerator extends BaseGenerator {
         'choices' => [],
         'default' => NULL,
       ];
+      // The id is typed as the entity type keeps it, which the build holds
+      // the key to.
+      $answer['id_type'] = $answer['refers_to'] === NULL ? NULL : $this->idTypeOf($answer['refers_to'], TRUE);
       $integer = static function (mixed $value): ?int {
         if ($value === NULL || $value === '') {
           return NULL;
@@ -527,6 +537,34 @@ final class ResourceGenerator extends BaseGenerator {
   }
 
   /**
+   * Reads the entity type a reference key refers to, or its id's type.
+   *
+   * @param mixed $value
+   *   The answer: an entity type's id.
+   * @param bool $type
+   *   TRUE for the type its id is kept as, FALSE for the entity type.
+   *
+   * @return string
+   *   The entity type, or `integer` or `string`.
+   *
+   * @throws \UnexpectedValueException
+   *   For an entity type the site does not have.
+   */
+  protected function idTypeOf(mixed $value, bool $type = FALSE): string {
+    $value = is_string($value) ? trim($value) : '';
+    if ($this->references === NULL) {
+      throw new \UnexpectedValueException('This generator was built with no reference service, so it cannot say what an id of an entity type is.');
+    }
+    try {
+      $id_type = $this->references->idType($value);
+    }
+    catch (PluginNotFoundException) {
+      throw new \UnexpectedValueException(sprintf('This site has no entity type "%s".', $value));
+    }
+    return $type ? $id_type : $value;
+  }
+
+  /**
    * Gives what reads an answer as a value of a key's type.
    *
    * @param array<string, mixed> $answer
@@ -543,7 +581,7 @@ final class ResourceGenerator extends BaseGenerator {
       }
       $value = (string) $value;
       return match (TRUE) {
-        $answer['type'] === 'integer' => is_numeric($value) && (string) (int) $value === $value ? (int) $value : throw new \UnexpectedValueException('A whole number, or nothing.'),
+        $answer['type'] === 'integer' || ($answer['id_type'] ?? NULL) === 'integer' => is_numeric($value) && (string) (int) $value === $value ? (int) $value : throw new \UnexpectedValueException('A whole number, or nothing.'),
         $answer['type'] === 'boolean' => match (strtolower($value)) {
           'yes', 'true', '1' => TRUE,
           'no', 'false', '0' => FALSE,
