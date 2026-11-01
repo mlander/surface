@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_reference_test\Resource;
 
-use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -35,8 +34,9 @@ final class ReferencingEntityResource implements ResourceInterface {
     label: new TranslatableMarkup('Edit a referencing entity'),
     permission: 'administer site configuration',
   )]
-  public static function update(ConfigEntityInterface $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function update(string $id): OperationContext {
+    $entity = \Drupal::classResolver(ReferencingEntityStorage::class)->named($id, 'The "update" operation of reference_test.entity');
+    return new OperationContext(known: ['id' => (string) $entity->id()]);
   }
 
   /**

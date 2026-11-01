@@ -1,6 +1,7 @@
 # Each route is one operation of the placement resource, served by the
 # generic operation form, whose route parameters are the operation's: the
-# update and delete routes' {id} is upcast to the block the operations take.
+# update and delete routes' {id} is the machine name the operations take,
+# which the placement storage loads.
 #
 # One requirement, the operation's: its permission, "administer blocks",
 # the block layout's own. The form, the tool and the API read the same
@@ -26,10 +27,6 @@ surface_examples_block.update:
     _surface_resource: 'Drupal\surface_examples_block\Resource\BlockPlacementResource'
     _surface_operation: 'update'
     _surface_cosmetics: 'surface_examples_block.form_cosmetics'
-  options:
-    parameters:
-      id:
-        type: 'entity:block'
 
 surface_examples_block.delete:
   path: '/admin/structure/block/surface/{id}/delete'
@@ -39,7 +36,3 @@ surface_examples_block.delete:
     _surface_resource: 'Drupal\surface_examples_block\Resource\BlockPlacementResource'
     _surface_operation: 'delete'
     _surface_cosmetics: 'surface_examples_block.form_cosmetics'
-  options:
-    parameters:
-      id:
-        type: 'entity:block'

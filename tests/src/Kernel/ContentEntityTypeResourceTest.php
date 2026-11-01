@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Component\Render\PlainTextOutput;
+use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\surface\Contract\Choices;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
+use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\SurfaceInterface;
@@ -36,7 +38,9 @@ use Symfony\Component\HttpFoundation\Request;
  * refused bundle is refused at `bundle`; the edit holds the bundle to the
  * entity's; past the site list limit the variants are deferred and the
  * schema call with a bundle states its fields; and the tools and HTTP
- * paths stand beside the bundle's own.
+ * paths stand beside the bundle's own. An entity type with a string id,
+ * given a form display, is derived beside node: its id is the caller's to
+ * name on create, and taken once.
  *
  * Decision: see
  * docs/decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type.
@@ -58,7 +62,16 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = self::ENTITY_MODULES;
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_string_id_test'];
+
+  /**
+   * An entity type whose id is a string, which nothing assigns.
+   *
+   * Core's `entity_test_string_id` is one too, but core's test module
+   * answers every field's access from State, which a static access
+   * answer may not read, so a test module of this module's declares one.
+   */
+  protected const NAMED = 'surface_string_id';
 
   /**
    * An account that may do anything.
@@ -76,6 +89,14 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
   protected function setUp(): void {
     parent::setUp();
     $this->installEntityFixture();
+    $this->installEntitySchema(self::NAMED);
+    // A form display, so the deriver derives its resources.
+    EntityFormDisplay::create([
+      'targetEntityType' => self::NAMED,
+      'bundle' => self::NAMED,
+      'mode' => 'default',
+      'status' => TRUE,
+    ])->setComponent('name', ['type' => 'string_textfield', 'weight' => 0])->save();
     // User 1, so neither account below is.
     $this->setUpCurrentUser(admin: TRUE);
     $this->admin = $this->createUser([], NULL, TRUE);
@@ -113,7 +134,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
    */
   public function testEachBundleNarrowsTheEntityTypeToItsOwnResource(): void {
     $bundles = $this->bundles();
-    $this->assertSame(['node' => ['kitchen', 'page']], $bundles, 'The test site derives two bundles; article has no form display.');
+    $this->assertSame(['node' => ['kitchen', 'page'], self::NAMED => [self::NAMED]], $bundles, 'The test site derives two node bundles, article having no form display, and the string id\'s one.');
     $emitter = $this->container->get('surface.contract_emitter');
     $compared = 0;
     foreach ([$this->admin, $this->editor] as $account) {
@@ -137,7 +158,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
           $whole_built = $this->resources()->build($type, $this->resources()->operation($type, 'create'));
           $values = array_replace($whole_built->getDefaultValues(), ['bundle' => $bundle]);
           $whole = $emitter->emit($whole_built, $values, $type, 'create')->document['schema'];
-          if ($account === $this->editor && $bundle === 'kitchen') {
+          if ($account === $this->editor && in_array($bundle, ['kitchen', self::NAMED], TRUE)) {
             // A bundle the editor may not create is not offered, and its
             // variant is not chosen by a value the key refuses.
             $this->assertNotContains('kitchen', array_column($whole['properties']['bundle']['oneOf'] ?? [], 'const'));
@@ -148,7 +169,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
         }
       }
     }
-    $this->assertSame(15, $compared);
+    $this->assertSame(22, $compared);
 
     // And for one that exists, its stored values.
     $this->setCurrentUser($this->admin);
@@ -318,6 +339,80 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
     $node = $this->newest();
     $this->assertSame(['page', 'By the tool'], [$node->bundle(), $node->label()]);
     $this->assertSame((int) $node->id(), $result->getContextValues()['id']);
+  }
+
+  /**
+   * Tests an entity type whose ids are strings takes the id on create.
+   *
+   * Read per entity type from its id field: a string with no default is
+   * the caller's to name. The create requires it at every door, a second
+   * create under the same id is refused at `id`, and the update and the
+   * read are asked by it. Node, a serial integer, is computed as before.
+   */
+  public function testCallerNamedIdIsTakenOnCreate(): void {
+    $derivation = $this->container->get('surface_examples_entity.field_item_derivation');
+    $this->assertTrue($derivation->callerNamesId(self::NAMED));
+    $this->assertFalse($derivation->callerNamesId('node'));
+    $this->setCurrentUser($this->admin);
+    $tools = $this->container->get('plugin.manager.tool');
+    $own = ContentEntityResources::BASE . ':' . self::NAMED . '.' . self::NAMED;
+    $whole = ContentEntityResources::BASE . ':' . self::NAMED;
+    foreach ([$own, $whole] as $resource) {
+      $operations = $this->container->get('surface.resource_registry')->getOperations($resource);
+      $this->assertTrue($operations['create']->idempotent(), $resource . ': a create whose caller names the thing is idempotent.');
+      $this->assertFalse($this->container->get('surface.resource_registry')->getOperations('entity.content:node.page')['create']->idempotent(), 'A node create is not.');
+      $context = $this->resources()->operation($resource, 'create');
+      $this->assertArrayNotHasKey('id', $context->known, $resource . ': the create does not know the id.');
+      $built = $this->resources()->buildStatic($resource, $context);
+      $schema = $this->container->get('surface.contract_emitter')->emitFull($built, $resource, 'create')->document['schema'];
+      $this->assertContains('id', $schema['required'], $resource);
+      $this->assertSame('string', array_values(array_diff((array) $schema['properties']['id']['type'], ['null']))[0]);
+
+      // The create tool requires the id, and writes under it.
+      $create = $tools->getDefinition('surface:' . $resource . ':create');
+      $values = $create->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions();
+      $this->assertTrue($values['id']->isRequired(), $resource . ': the create tool requires the id.');
+    }
+
+    [$surface, $storage] = $this->operation($own, 'create');
+    $this->assertArrayHasKey('id', $this->submit($surface, $storage, ['name' => ['value' => 'Nameless']], TRUE), 'No id, no create.');
+    $this->assertSame([], $this->submit($surface, $storage, ['id' => 'first', 'name' => ['value' => 'First']]));
+    $entity = $this->container->get('entity_type.manager')->getStorage(self::NAMED)->loadUnchanged('first');
+    $this->assertSame('First', $entity?->label());
+
+    // A second create under the same id names something, and is refused.
+    $again = [
+      $own => ['id' => 'first', 'name' => ['value' => 'Again']],
+      $whole => [
+        'id' => 'first',
+        'bundle' => self::NAMED,
+        ContentEntityResources::FIELDS => ['name' => ['value' => 'Again']],
+      ],
+    ];
+    foreach ($again as $resource => $values) {
+      [$surface, $storage] = $this->operation($resource, 'create');
+      $refused = iterator_to_array($this->pipeline()->submit($surface, $values, $storage)->violations, FALSE);
+      $this->assertCount(1, $refused, $resource);
+      $this->assertSame(['id', 'taken'], [$refused[0]->key, $refused[0]->code], $resource);
+      $this->assertStringContainsString('with the id first already exists', PlainTextOutput::renderFromHtml((string) $refused[0]->message));
+    }
+    $this->assertSame('First', $this->container->get('entity_type.manager')->getStorage(self::NAMED)->loadUnchanged('first')?->label());
+
+    // Read and update by that id, at both resources.
+    [$surface, $storage] = $this->operation($own, 'update', ['id' => 'first']);
+    $this->assertSame([], $this->submit($surface, $storage, ['name' => ['value' => 'Edited']]));
+    $read = $tools->createInstance('surface:' . $whole . ':read');
+    $read->setInputValue('id', 'first');
+    $read->execute();
+    $this->assertTrue($read->getResult()->isSuccess(), PlainTextOutput::renderFromHtml((string) $read->getResult()->getMessage()));
+    $answered = $read->getResult()->getContextValues()[OperationInputs::VALUES];
+    $this->assertSame(self::NAMED, $answered['bundle']);
+    $this->assertSame('Edited', $answered[ContentEntityResources::FIELDS]['name']['value']);
+    [$surface, $storage] = $this->operation($whole, 'update', ['id' => 'first']);
+    $this->assertSame([], $this->submit($surface, $storage, [ContentEntityResources::FIELDS => ['name' => ['value' => 'Again edited']]]));
+    $this->assertSame('Again edited', $this->container->get('entity_type.manager')->getStorage(self::NAMED)->loadUnchanged('first')?->label());
+    $this->expectException(NamesNothingException::class);
+    $this->resources()->operation($own, 'update', ['id' => 'nowhere']);
   }
 
   /**

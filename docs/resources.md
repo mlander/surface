@@ -213,7 +213,14 @@ already known, and that is a **context**, an `OperationContext`:
 - **On a static method**, the exception: a method only when the context
   needs more, parameters (what the operation needs is its own
   signature: a route or a tool supplies them by name), identity it
-  knows, a constraint, defaults or a child. The method returns an
+  knows, a constraint, defaults or a child. Each parameter is a value,
+  typed with a scalar and named for the key it holds (`string $id`,
+  `string $type`): a parameter typed with a class or an interface is
+  refused at discovery, and the operation loads what a value names
+  through its resource's storage, `ConfigEntityStorage::named()` for a
+  config entity, which refuses a value that names nothing
+  (why: [decision](decisions.md#an-operation-is-handed-values-never-objects)).
+  The method returns an
   `OperationContext` and may leave the id and `creates` out; the
   attribute's are stamped on it, and a context that names another id,
   or says otherwise about creating, is refused: at discovery when the
@@ -297,8 +304,9 @@ final class NodeTypeResource implements ResourceInterface {
     description: new TranslatableMarkup('Changes a content type, named by its machine name, which stays as it is.'),
     permission: self::PERMISSION,
   )]
-  public static function update(NodeTypeInterface $type): OperationContext {
-    return new OperationContext(known: ['type' => $type->id()]);
+  public static function update(string $type): OperationContext {
+    $node_type = \Drupal::classResolver(NodeTypeStorage::class)->named($type, 'The "update" operation of node.type');
+    return new OperationContext(known: ['type' => (string) $node_type->id()]);
   }
 
   // defineInputs(): name, type, description, title_label, ...
@@ -307,7 +315,12 @@ final class NodeTypeResource implements ResourceInterface {
 ```
 
 The update is a method because its context needs more: it knows the
-machine name. The create needs nothing more, so it is the attribute
+machine name. It is handed the machine name, a value, and loads the
+content type through the resource's storage, whose `named()` refuses a
+name no content type has as naming nothing; an operation is never handed
+an object, so a storage standing in front of another answers for what a
+value names ([decision](decisions.md#an-operation-is-handed-values-never-objects)).
+The create needs nothing more, so it is the attribute
 alone on the class: the build holds the machine name it creates under
 to one no content type has, with the stock `SurfaceUnique`
 ([A title and a machine name](recipes.md#a-title-and-a-machine-name)).
@@ -357,8 +370,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 ```php
 $resources = \Drupal::service('surface.resources');
-// By parameter name or position; an entity parameter takes the entity
-// or its id, loaded by the entity type whose class satisfies the type.
+// By parameter name or position, each a value: the operation loads what
+// it names through the resource's storage.
 $context = $resources->operation(NodeTypeResource::class, 'update', ['type' => 'article']);
 $surface = $resources->build(NodeTypeResource::class, $context);
 $access = $resources->access(NodeTypeResource::class, $context);
@@ -427,8 +440,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 ### Routes from operations
 
 A route names a resource class (or a resource's id) and an operation,
-and its parameters are the operation method's, by name; an upcast entity
-parameter arrives as the entity. A route default whose name has no
+and its parameters are the operation's, by name, each handed its raw
+value as the path carries it; a converter a route names for one is not
+read. A route default whose name has no
 leading underscore is a route parameter too, as core counts it, so
 `to: 'friends'` pins the operation's `$to` on that page, and one that
 nothing the route serves reads is refused. `SurfaceOperationForm`
@@ -446,10 +460,6 @@ surface_examples_node_type.update:
     _surface_resource: 'Drupal\surface_examples_node_type\Resource\NodeTypeResource'
     _surface_operation: 'update'
     _surface_cosmetics: 'surface_examples_node_type.form_cosmetics'
-  options:
-    parameters:
-      type:
-        type: 'entity:node_type'
 ```
 
 A locked identity key renders as a disabled element holding the value
@@ -661,10 +671,11 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `entity.content:node.page:update`. The answer is that operation's
   whole answer for the thing, as when it is asked on its own: its
   permission, its own gates, its access class and every alter that
-  answers access for it, combined with `andIf()`. The thing is handed
-  to that operation as its one required entity parameter, or as the id
-  a derived operation's `id` parameter takes; an operation
-  that needs nothing is asked with nothing.
+  answers access for it, combined with `andIf()`. The thing's id is
+  handed to that operation as its first required parameter, which names
+  a key of its resource that refers to the gate's entity type, or as
+  the id a derived operation's `id` parameter takes; an operation that
+  needs nothing is asked with nothing.
 - **Core's access on an entity or a field**: `entity:node:update` asks
   the entity type's access control handler, `access()`, and
   `field:node.title:edit` its `fieldAccess()` for that field's items,
@@ -1957,9 +1968,8 @@ first of these that applies:
 
 The child's operation method is called with the arguments it declares,
 read by name from the identity the parent handed it and then from the
-parent's known identity (an entity parameter takes the entity or its
-id, as on a route). The context it returns then knows that identity
-too; on a clash **the child's own known keys win**. `creates` is the
+parent's known identity (each a value, as on a route). The context it
+returns then knows that identity too; on a clash **the child's own known keys win**. `creates` is the
 child's context's, as for a resource asked on its own. An operation the
 parent named that needs an argument nothing supplies is refused at
 build, with the `withChild()` call that would hand it; one found by the
@@ -2288,9 +2298,13 @@ final class ProtectedForms implements SiteListInterface {
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 - **The spelling.** `addEach($key, $type, from:, default:)` declares one
-  value per thing, each as `add()` declares a key: a typed data type or a
-  shape, labeled with the thing's label, starting from the thing's
-  default or else `default:`. `attachEach($key, Structure::class, from:)`
+  value per thing, each as `add()` declares a key: a type of the type
+  table or a shape, labeled with the thing's label, starting from the
+  thing's default or else `default:`. An entry that refers to an entity
+  is declared in `refer()`'s words and has no type of its own,
+  `addEach('pages', NULL, from: Slots::class, to: 'node', bundles:
+  ['page'])`: each entry is the id `refer()` declares, and `entity:node`
+  as the type is refused, as `add()` refuses it. `attachEach($key, Structure::class, from:)`
   holds the structure at every thing, as `attach()` holds one. Both
   return the map at the key, for the owner to label and describe.
 - **The provider** implements `SiteListInterface`, the one interface

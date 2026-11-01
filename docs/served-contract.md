@@ -1717,11 +1717,11 @@ order and picks the first that does not create and whose every required
 parameter is supplied, by name, from the outputs storage read back,
 then from the identity keys the write accepted, then from the identity
 the creating operation already knew. The answer is checked, not
-assumed: the operation is built from those parameters (an entity
-parameter loads what its id names), its context must not create, and
-every identity key it knows must equal what was written. The content
-type's `update(NodeTypeInterface $type)` is answered by the `type` the
-write accepted, and its read is the `Location`. A field added at
+assumed: the operation is built from those parameters (its storage
+loads what each names), its context must not create, and every identity
+key it knows must equal what was written. The content type's
+`update(string $type)` is answered by the `type` the write accepted,
+and its read is the `Location`. A field added at
 `field.instance:create` lives at its `update(string $entity_type, string
 $bundle, string $field_name)`, answered by the identity the write
 accepted: `Location: /surface-api/field.instance/node/article/field_x`.

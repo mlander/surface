@@ -63,7 +63,16 @@ the record of the rework that brought the module to the pattern.
   `OperationContext` when it needs more, the attribute's id and
   `creates` stamped on it and a context saying otherwise refused
   (`docs/decisions.md#an-operation-on-the-class`); only ever on its
-  resource's or structure's own class. Its context adds `known`
+  resource's or structure's own class. Its parameters are values, never
+  objects: a method's is typed with a scalar named for a key of its
+  resource (`string $id`), a class type refused at discovery
+  (`OperationParameter::fromReflection()`), and the operation loads its
+  subject through its resource's storage (`ConfigEntityStorage::named()`,
+  `ContentEntityStorage::entity()`), which refuses a value that names
+  nothing; `OperationArguments` loads nothing, and no surface route
+  converts a parameter an operation takes, every door handing the raw
+  value (`docs/decisions.md#an-operation-is-handed-values-never-objects`).
+  Its context adds `known`
   identity, `withConstraint()` (a Choice of one value with `surface_fixed`
   fixes the key),
   `withDefaults()` (what keys start from, only on a context that
@@ -121,7 +130,8 @@ the record of the rework that brought the module to the pattern.
   plain keys make a map definition, a callable that attaches, mixes in,
   narrows or resolves makes a structure with no id
   (`ResourceRegistry::defineMap()`, whose inputs run the owner's
-  declaration again to the key), still written inline; an alter's and
+  declaration again to the key, so the callable may run more than once
+  and is held to the keys it declared first), still written inline; an alter's and
   an output's hold plain keys alone (`docs/decisions.md#an-anonymous-map`).
 - **Storage**: where a resource's values live: `load()`, `prepare()`,
   `commit()` on a `ResourceStorageInterface`.
@@ -209,7 +219,9 @@ the record of the rework that brought the module to the pattern.
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
   key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
-  a type or shape per thing) or `attachEach('rows', Row::class, from:
+  a type or shape per thing; a reference per thing in `refer()`'s words,
+  `addEach('pages', NULL, from: Provider::class, to: 'node', bundles:
+  [...])`) or `attachEach('rows', Row::class, from:
   ...)` (a structure per thing); the provider is a service implementing
   `SiteListInterface`, whose `list()` answers a `SiteList` (id, label,
   optional start and lock, and the cacheability of what it read; an id
@@ -224,8 +236,8 @@ the record of the rework that brought the module to the pattern.
   `refer('contact', 'user', ...)`, or `refer('thing', NULL, ...)` for any
   entity type (two parts attached at the key, `entity_type` and `id`,
   filtered by `SurfaceReferenceableType` written on the key);
-  `add($key, 'entity:…')` is refused naming it, and only `addEach()`
-  keeps the type string per entry
+  `add($key, 'entity:…')` and `addEach($key, 'entity:…', ...)` are
+  refused naming it
   (`docs/decisions.md#a-reference-is-declared-as-a-reference`); every door sends and answers the id, and a config
   storage stores a content entity's uuid (`ReferenceStorageLayout`, which
   the engine applies; `References::STORED_AS` keeps the id) and a config
@@ -237,6 +249,11 @@ the record of the rework that brought the module to the pattern.
   .../{x}:lookup` over HTTP; `x-surface.reference` marks it in both
   documents (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
   `docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
+  A content entity's reference field's `target_id` is one, answered by
+  the field's own selection handler and settings
+  (`References::definition(handler:, handlerSettings:)`), drawn with the
+  autocomplete where its form display uses core's
+  (`docs/decisions.md#a-reference-field-is-a-reference-key`).
 - **Computed key**: a key of a resource whose value nobody types,
   `$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using:
   Slugify::class, when: Compute::ON_CREATE)`; the class implements
@@ -516,7 +533,11 @@ storage or identity keys is a resource, any other a structure.
 (`entity.content:*`) and a structure per field (`field.item:*`), with
 field access as each field child's access, and a resource per entity
 type, `entity.content:node`, whose `bundle` chooses the bundle's fields
-as variants under `fields` (`docs/entities.md`). A
+as variants under `fields` (`docs/entities.md`); whether `create` takes
+`id` is read from the id field (a serial integer, or a default, is
+computed; a string with no default is the caller's to name, required,
+and refused at `id` when taken;
+`docs/decisions.md#an-entity-types-id-is-computed-or-named-by-the-caller`). A
 child is built by the same build step in its own frame and sealed into
 the parent's entry as an `Attachment`, or among its `Variants`; the
 pipeline, refinement, the form and the tool bridge recurse through those
@@ -585,7 +606,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1839, Assertions: 42801, Errors: 0, Failures: 0, Skipped: 3. Classes: 259 of 259, 8 at a time, browser classes 4.
+phpunit: Tests: 1843, Assertions: 42935, Errors: 0, Failures: 0, Skipped: 3. Classes: 259 of 259, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -605,7 +626,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1731, Assertions: 38780, Skipped: 3, Deprecations: 130. Classes:
+`Tests: 1735, Assertions: 38914, Skipped: 3, Deprecations: 130. Classes:
 210, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 

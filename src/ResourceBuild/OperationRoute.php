@@ -13,10 +13,11 @@ use Symfony\Component\Routing\Route;
  * A route served by one operation of one resource, read off the route.
  *
  * The route names the resource class and the operation; its parameters
- * are mapped onto the operation method's parameters by name, so an
- * upcast entity parameter arrives as the entity and a plain one as its
- * value. The same reading serves the route's access check and the form
- * the route builds, so the two cannot disagree about where they are.
+ * are mapped onto the operation's parameters by name, each handed its raw
+ * value, and the operation loads what a value names through its
+ * resource's storage. The same reading serves the route's access check
+ * and the form the route builds, so the two cannot disagree about where
+ * they are.
  *
  * @code
  * example.edit:
@@ -25,10 +26,6 @@ use Symfony\Component\Routing\Route;
  *     _form: 'Drupal\surface\Form\SurfaceOperationForm'
  *     _surface_resource: 'Drupal\example\Resource\ExampleResource'
  *     _surface_operation: 'update'
- *   options:
- *     parameters:
- *       example:
- *         type: 'entity:example'
  * @endcode
  *
  * A route parameter is a variable of the path, or a default whose name
@@ -224,8 +221,8 @@ final class OperationRoute {
    *
    * Each raw, as the path carries it, or a plain default's value, which a
    * link's route match holds among its parameters alone: what a door that
-   * names the operation by its parameters is given, never an upcast
-   * entity.
+   * names the operation by its parameters is given, never an entity a
+   * converter loaded.
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The route match.

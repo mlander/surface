@@ -473,7 +473,7 @@ class RouteAccessTest extends SurfaceKernelTestBase {
       $this->assertSame($state, static::answer($this->formAccess($account))[0]);
     }
     // Let through, each answers that the page is not found, saying why.
-    $why = 'The "update" operation needs a node_type as $type, and there is none with the id "ghost".';
+    $why = 'The "update" operation of node.type takes the id of a content type, and there is none with the id "ghost".';
     try {
       $this->surfaceForm();
       $this->fail('The form was built.');

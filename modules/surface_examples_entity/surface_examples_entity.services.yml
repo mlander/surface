@@ -4,7 +4,7 @@ services:
   # derivers and by the content entity storage.
   surface_examples_entity.field_item_derivation:
     class: Drupal\surface_examples_entity\FieldItemDerivation
-    arguments: ['@entity_type.manager', '@entity_field.manager', '@entity_type.bundle.info', '@typed_data_manager', '@string_translation']
+    arguments: ['@entity_type.manager', '@entity_field.manager', '@entity_type.bundle.info', '@typed_data_manager', '@string_translation', '@surface.references']
   Drupal\surface_examples_entity\FieldItemDerivation: '@surface_examples_entity.field_item_derivation'
 
   # The variants an entity type's resource holds at `fields`, one per

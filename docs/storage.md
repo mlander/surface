@@ -409,10 +409,10 @@ shows all of it
 
 #### A reference is stored by uuid
 
-A key that refers to a content entity (`entity:user`,
-`entity:node:article`) holds its id at every door, and a config storage,
-`ConfigObjectStorage` or `ConfigEntityStorage`, stores the entity's
-uuid. A content entity's id differs between sites, so config holding it
+A key that refers to a content entity (`refer('contact', 'user', ...)`,
+`refer('page', 'node', ..., bundles: ['article'])`) holds its id at every
+door, and a config storage, `ConfigObjectStorage` or
+`ConfigEntityStorage`, stores the entity's uuid. A content entity's id differs between sites, so config holding it
 would name another entity, or none, once deployed; the uuid is the same
 on both. A config entity's id is its machine name, the same on every
 site, so a reference to one is stored as its id. Example 16's:
@@ -555,6 +555,13 @@ set through a setter the entity offers, the spelling core's config
 actions use. The key mapped to the entity type's id key is its identity:
 `load()` reads the entity the context knows by it, and nothing for a
 context that creates.
+
+- **`named($id, $operation)`** loads the entity an operation's id names,
+  for the operation's context to read, and refuses an id that names
+  nothing at the identity key (a not found at every door). An operation
+  is handed the id, never the entity, so what it names is this
+  storage's to load
+  (why: [decision](decisions.md#an-operation-is-handed-values-never-objects)).
 
 - **`prepare()`** builds the entity it would save, unsaved: a copy of the
   stored one made from its exported array (a clone shares the plugin

@@ -53,17 +53,17 @@ leaves out and why, read from the registry.
 | What | From |
 | --- | --- |
 | The content entity resource's keys | the identity (`entity_type`, `bundle`, `id`), then one child per component of the bundle's default form display, in its weight order |
-| Its operations | `create`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty); `update` and `read`, each taking the identity key `id`, whose value the storage loads the entity by (an id that names nothing, or an entity of another bundle, is a not found at `id`); `read` is read only |
+| Its operations | `create`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty), or for an entity type whose ids the caller names, taking `id` as a required key ([below](#which-entity-types-take-an-id-on-create)); `update` and `read`, each taking the identity key `id`, whose value the storage loads the entity by (an id that names nothing, or an entity of another bundle, is a not found at `id`); `read` is read only |
 | Its access | the entity's: create access for the bundle on create, update access for the entity on update, view access on a read |
 | Its storage | `ContentEntityStorage`, below |
 | Its outputs | `id`, the entity's id once saved |
 | A field item structure's keys | the item's property definitions the field type stores and a caller sets, typed as the coercion table carries them (the table below) |
 | Each key's label | the field's, when the item has one key; the property's, when it has several |
 | Each key's description | the field's, when the item has one key |
-| The widget | the form display component's, read for the main property: `options_buttons` asks a key with a list of values for radios; `string_textarea` and `text_textarea` draw the string as a textarea; `string_textfield`, `email_default`, `number`, `boolean_checkbox` and `options_select` draw what the stock rule draws, so no word is set; each component's `size`, `rows` and `placeholder` travel where a widget or the arrangement reads them; any other component type asks for nothing, and what is accepted stays the field's (`FieldItemDerivation::WIDGETS`) |
+| The widget | the form display component's, read for the main property: `options_buttons` asks a key with a list of values for radios; `entity_reference_autocomplete` asks a reference key for the autocomplete, its `match_operator` and `match_limit` handed to core's autocomplete route; `string_textarea` and `text_textarea` draw the string as a textarea; `string_textfield`, `email_default`, `number`, `boolean_checkbox` and `options_select` draw what the stock rule draws, so no word is set; each component's `size`, `rows` and `placeholder` travel where a widget or the arrangement reads them; any other component type asks for nothing, and what is accepted stays the field's (`FieldItemDerivation::WIDGETS`) |
 | Required | on the main property, when the field is required |
 | Default | the field's literal default (`getDefaultValueLiteral()`), cast to the key's type |
-| Constraints | `Length`, `Range`, `Regex` and `Choice` from the property definitions and from the field type's own `getConstraints()` (its `ComplexData` per property); the rest are checked when its storage validates the entity |
+| Constraints | `Length`, `Range`, `Regex` and `Choice` from the property definitions and from the field type's own `getConstraints()` (its `ComplexData` per property), and on a reference field's `target_id` the reference key's `SurfaceValidReference`, answered by the field's own handler; the rest are checked when its storage validates the entity |
 | What settings narrow | a list field's allowed values (`LabeledChoice`), a text field's formats (`LabeledChoice`, then a runtime refiner), a reference's targets (a constraint and its options resolver), a date's form (`Regex`) |
 | Its operations | `create`, `update` and `read`, which the parent invokes to match its own; each knows the entity type, the bundle and the field, and `update` and `read` the entity's id |
 | Its access | field access, as the child's access: open, locked or omitted; on a read, open or omitted, by view access |
@@ -265,14 +265,36 @@ field's item), and a door answers the accepted values as the read
 would, a field whose view access is denied left out
 (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
 
+## Which entity types take an id on create
+
+Whether `create` takes `id` is read per entity type from its id key's
+base field definition (`FieldItemDerivation::callerNamesId()`):
+
+- **Computed**: an integer id, which core's SQL storage makes serial and
+  assigns on save, or an id field with a default of its own. The create
+  knows there is no id yet, and its `id` output answers the one storage
+  gave. Every content entity type core and the common contributed
+  modules ship is one: node, media, user, term, block content, file.
+- **Named by the caller**: any other id, a string with no default. The
+  create takes `id` as a required key, its length the id field's, and
+  the entity is created under it; an id an entity already has is
+  refused at `id`, code `taken`, so the create is idempotent, a second
+  identical call refused for the id the first took. `update` and `read`
+  take the id as for any entity type.
+
+Why the field and not the entity type: an integer is what makes the
+storage assign the id, and a string id may have a default the entity
+holds once created; the field definition says both
+(why: [decision](decisions.md#an-entity-types-id-is-computed-or-named-by-the-caller)).
+
 ## The doors
 
 - **The form**: `/surface-entity/node/page/add` and
   `/surface-entity/node/{id}/edit`, the generic operation form with the
-  contract panel. The update route upcasts `{id}` to the node, so an id
-  no node has is core's 404, which the converter answers before access
-  is asked, to any account. A node of another bundle loads, and the
-  page's update operation refuses it as a value that names nothing here.
+  contract panel. The update route hands the operation `{id}` as the
+  path carries it, and the resource's storage loads the node
+  (`ContentEntityStorage::entity()`): an id no node has, and a node of
+  another bundle, are values that name nothing here.
   A derived content entity operation declares no permission, since
   entity access decides per entity once the node is loaded, so no
   account is let in before the value is read, and every door refuses
@@ -386,18 +408,27 @@ done about it.
 9. **A decimal is a float here.** Typed data has no decimal type; a
    value with more digits than a float holds loses them before the
    entity's precision check sees it.
-10. **Which targets a reference may hold depends on the account.** The
-    selection handler checks access, so the list is live: a constraint,
-    `SurfaceReferenceable`, points at it, and its options resolver
-    lists the targets for the account asking while there are at most
-    `surface.settings:reference_list_limit` (50 as shipped, the
-    limit a reference key a resource declares lists up to,
-    [Options](options.md#a-key-that-refers-to-an-entity)), carrying what
-    the selection read:
-    `user.permissions`, and `user.node_grants:view` for a node or a
-    comment, `user` for a target type core does not list
+10. **A reference field's `target_id` is a reference key.** It is the
+    key `refer()` declares for the field's target type, its bundles the
+    ones the field's handler settings name, answered by the field's own
+    selection handler with the field's settings
+    (`References::definition()` with `handler:` and `handlerSettings:`),
+    so it lists, looks up and accepts what core's widget offers and the
+    field's `ValidReference` accepts, for the account asking. Which
+    targets that is depends on the account, so the list is live: listed
+    while there are at most `surface.settings:reference_list_limit` (50
+    as shipped, [Options](options.md#a-key-that-refers-to-an-entity)),
+    carrying what the selection read: `user.permissions`, and
+    `user.node_grants:view` for a node or a comment, `user` for a target
+    type core does not list
     (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects));
-    past that the key is free and the validator asks the handler.
+    past that the key takes an id, the lookup (`GET .../{x}:lookup`)
+    finds one and the constraint's validator asks the handler. Both
+    documents mark it `x-surface.reference`. A form display that draws
+    the field with `entity_reference_autocomplete` asks for the
+    autocomplete widget, its `match_operator` and `match_limit` handed
+    to core's autocomplete route
+    (why: [decision](decisions.md#a-reference-field-is-a-reference-key)).
 11. **Which text formats an account may use** is a fact about the
     account, so it is a runtime refiner, never run ahead of time; the
     full schema lists the field's formats and marks the key `live`.

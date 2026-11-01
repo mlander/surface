@@ -88,9 +88,9 @@ Refused. `docs/resources.md` says how each part works.
 | Operation | Label | Needs | Creates | Permission | On its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- |
 | `create` | Place a block | nothing | yes | `administer blocks` | yes | `#[Operation] on BlockPlacementResource` (`surface_examples_block`) |
-| `update` | Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | `BlockPlacementResource::update()` (`surface_examples_block`) |
-| `delete` | Remove a placed block | `BlockInterface $id` | no | `administer blocks` | yes | `BlockPlacementResource::delete()` (`surface_examples_block`) |
-| `read` | Current values: Edit a placed block | `BlockInterface $id` | no | `administer blocks` | yes | default read of `update` (`surface_examples_block`) |
+| `update` | Edit a placed block | `string $id` | no | `administer blocks` | yes | `BlockPlacementResource::update()` (`surface_examples_block`) |
+| `delete` | Remove a placed block | `string $id` | no | `administer blocks` | yes | `BlockPlacementResource::delete()` (`surface_examples_block`) |
+| `read` | Current values: Edit a placed block | `string $id` | no | `administer blocks` | yes | default read of `update` (`surface_examples_block`) |
 
 - `create` reaches form `/admin/structure/block/surface/add (surface_examples_block.create)`, http `POST /surface-api/block.placement`, tool `surface:block.placement:create`, schema tool `surface:block.placement:create:schema`, openapi `block.placement:create:write`, react `/surface-react/block.placement/create`.
 - `update` reaches form `/admin/structure/block/surface/{id} (surface_examples_block.update)`, http `PATCH /surface-api/block.placement/{id}`, tool `surface:block.placement:update`, schema tool `surface:block.placement:update:schema`, openapi `block.placement:update:write`, react `/surface-react/block.placement/update`.
@@ -368,9 +368,9 @@ Refused. `docs/resources.md` says how each part works.
 | `create` | Add a venue | nothing | yes | `administer event venues` | yes | `#[Operation] on VenueResource` (`surface_examples`) |
 | `list` | List the venues | nothing | no | `view event venues` | yes | `#[Operation] on VenueResource` (`surface_examples`) |
 | `reorder` | Reorder the venues | nothing | no | `administer event venues` | yes | `#[Operation] on VenueResource` (`surface_examples`) |
-| `update` | Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | `VenueResource::update()` (`surface_examples`) |
-| `delete` | Remove a venue | `EventVenue $id` | no | `administer event venues` | yes | `VenueResource::delete()` (`surface_examples`) |
-| `read` | Current values: Edit a venue | `EventVenue $id` | no | `administer event venues` | yes | default read of `update` (`surface_examples`) |
+| `update` | Edit a venue | `string $id` | no | `administer event venues` | yes | `VenueResource::update()` (`surface_examples`) |
+| `delete` | Remove a venue | `string $id` | no | `administer event venues` | yes | `VenueResource::delete()` (`surface_examples`) |
+| `read` | Current values: Edit a venue | `string $id` | no | `administer event venues` | yes | default read of `update` (`surface_examples`) |
 
 - `create` reaches form `/surface-examples/15/add (surface_examples.step15_create)`, http `POST /surface-api/event.venue`, tool `surface:event.venue:create`, openapi `event.venue:create:write`, react `/surface-react/event.venue/create`.
 - `list` reaches http `GET /surface-api/event.venue`, tool `surface:event.venue:list`, openapi `event.venue:list:list`, react `/surface-react/event.venue/list`.
@@ -548,8 +548,8 @@ Refused. `docs/resources.md` says how each part works.
 | Operation | Label | Needs | Creates | Permission | On its own | Provided by |
 | --- | --- | --- | --- | --- | --- | --- |
 | `create` | Add a content type | nothing | yes | `administer surface examples content types` | yes | `#[Operation] on NodeTypeResource` (`surface_examples_node_type`) |
-| `update` | Edit a content type | `NodeTypeInterface $type` | no | `administer surface examples content types` | yes | `NodeTypeResource::update()` (`surface_examples_node_type`) |
-| `read` | Current values: Edit a content type | `NodeTypeInterface $type` | no | `administer surface examples content types` | yes | default read of `update` (`surface_examples_node_type`) |
+| `update` | Edit a content type | `string $type` | no | `administer surface examples content types` | yes | `NodeTypeResource::update()` (`surface_examples_node_type`) |
+| `read` | Current values: Edit a content type | `string $type` | no | `administer surface examples content types` | yes | default read of `update` (`surface_examples_node_type`) |
 
 - `create` reaches form `/admin/structure/types/surface-add (surface_examples_node_type.create)`, http `POST /surface-api/node.type`, tool `surface:node.type:create`, openapi `node.type:create:write`, react `/surface-react/node.type/create`.
 - `update` reaches form `/admin/structure/types/manage/{type}/surface-edit (surface_examples_node_type.update)`, http `PATCH /surface-api/node.type/{type}`, tool `surface:node.type:update`, openapi `node.type:update:write`, react `/surface-react/node.type/update`.

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Plugin\SurfaceWidget\AutocompleteWidget;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Widget\SurfaceWidgetManager;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Resource\OperationContext;
@@ -127,7 +130,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertTrue($operations['read']->readsOne());
     $this->assertSame([], $operations['create']->parameters);
     $this->assertSame(['key $id'], array_map(static fn ($parameter): string => $parameter->describe(), $operations['update']->parameters));
-    $this->assertNull($this->container->get('surface.operation_arguments')->entityTypeOf($operations['update']->parameters[0]), 'The identity key\'s value, which nothing but the storage loads.');
+    $this->assertTrue($operations['update']->parameters[0]->namesKey, 'The identity key\'s value, which nothing but the storage loads.');
 
     // The create operation knows the bundle, and that there is no id yet.
     $context = $this->resources()->operation('entity.content:node.page', 'create');
@@ -211,9 +214,27 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     // Every enabled format, or the ones the field allows.
     $this->assertSame(['basic', 'plain_text', 'trusted'], $constraint('field_text', 'format', 'LabeledChoice')['choices']);
     $this->assertSame(['basic'], $constraint('field_text_long', 'format', 'LabeledChoice')['choices']);
-    // A reference's targets are its selection handler's, listed by the
+    // A reference field's target id is a reference key, answered by the
+    // field's own selection handler with its settings, listed by the
     // options resolver while there are few enough.
-    $this->assertSame(['entityTypeId' => 'node', 'bundle' => 'kitchen', 'fieldName' => 'field_term'], $constraint('field_term', 'target_id', 'SurfaceReferenceable'));
+    $reference = (array) $constraint('field_term', 'target_id', 'SurfaceValidReference');
+    $this->assertSame('taxonomy_term', $reference['entityTypeId']);
+    $this->assertSame(['tags'], $reference['bundles']);
+    $this->assertSame('default:taxonomy_term', $reference['handler']);
+    $this->assertSame(['tags' => 'tags'], $reference['handlerSettings']['target_bundles']);
+    $this->assertSame(['entityType' => 'taxonomy_term', 'bundles' => ['tags']], References::target(static::child($surface, 'field_term')->getDefinition('target_id')));
+    // A reference field core's autocomplete draws asks for it, listed or
+    // not, its matching handed on; the form and the hint agree.
+    $uid = static::child($this->add('page'), 'uid')->getDefinition('target_id');
+    $this->assertNotNull($this->options()->resolve($uid), 'Few enough users to list.');
+    $this->assertSame('autocomplete', $uid->getSetting('widget'));
+    $this->assertSame('CONTAINS', $uid->getSetting('match_operator'));
+    $this->assertSame(10, $uid->getSetting('match_limit'));
+    $this->assertInstanceOf(AutocompleteWidget::class, $this->container->get('class_resolver')->getInstanceFromDefinition(SurfaceWidgetManager::class)->getWidgetFor($uid));
+    $hinted = $this->container->get('surface.contract_emitter')->emitFull($this->add('page'), 'entity.content:node.page', 'create', widgets: TRUE)->document['schema'];
+    $target = $hinted['$defs']['field.item:node.page.uid']['properties']['target_id'];
+    $this->assertSame('autocomplete', $target['x-surface']['widget']);
+    $this->assertSame(['entityType' => 'user'], $target['x-surface']['reference']);
     $terms = $this->options()->resolve(static::child($surface, 'field_term')->getDefinition('target_id'));
     $this->assertNotNull($terms);
     $this->assertSame(['Larder', 'Pantry'], array_values(array_map('strval', $terms->options)));
@@ -246,7 +267,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     // What a field item's derivation could not carry, on the item.
     $uid = $this->registry()->getDefinition('field.item:node.page.uid');
     $this->assertStringContainsString('getDefaultEntityOwner', (string) $uid->notes['default_value']);
-    $this->assertArrayHasKey('target_id', $uid->notes);
+    $this->assertArrayNotHasKey('target_id', $uid->notes, 'A reference field\'s target id is a reference key, which says what it refers to itself.');
     $this->assertArrayHasKey('decimal', $this->registry()->getDefinition('field.item:node.kitchen.field_decimal')->notes);
     $this->assertStringContainsString('LinkType', (string) $this->registry()->getDefinition('field.item:node.kitchen.field_link')->notes['constraints']);
 

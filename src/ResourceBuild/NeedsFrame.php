@@ -23,8 +23,15 @@ final class NeedsFrame extends \LogicException {
    *
    * @param string $path
    *   The map's path in its owner.
+   * @param string[] $declared
+   *   The keys the callable declared before it asked for the frame, which
+   *   it declares again first when the owner's declaration runs again to
+   *   fill the structure.
    */
-  public function __construct(public readonly string $path) {
+  public function __construct(
+    public readonly string $path,
+    public readonly array $declared = [],
+  ) {
     parent::__construct(sprintf('The map "%s" needs a frame of its own: its owner attaches it as a structure with no id.', $path));
   }
 

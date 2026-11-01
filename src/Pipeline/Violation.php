@@ -239,8 +239,8 @@ final class Violation {
    * AllowedValues' `NO_SUCH_CHOICE_ERROR` `no_such_choice`, a Length's
    * `TOO_LONG_ERROR` `too_long`; the name stands one to one for Symfony's
    * code, which is a UUID. A constraint that sets no code is named for
-   * itself, in snake case: `ReferenceableConstraint` is
-   * `referenceable`.
+   * itself, in snake case: `ValidReferenceConstraint` is
+   * `valid_reference`.
    *
    * @param \Symfony\Component\Validator\ConstraintViolationInterface $violation
    *   The violation.

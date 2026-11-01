@@ -364,8 +364,6 @@ surface_route_test.edit_node:
     parameters:
       node_type:
         type: 'entity:node_type'
-      id:
-        type: 'entity:node'
 
 # Every bundle's add page titled by the operation's label, the derived
 # create's "Add <bundle>".
@@ -384,7 +382,7 @@ surface_route_test.add_node_labeled:
         type: 'entity:node_type'
 
 # A node's edit page titled by the operation's label, where `_title`
-# would print the raw id of the node its upcast placeholder loads.
+# would print the raw id of the node its path names.
 surface_route_test.edit_node_labeled:
   path: '/surface-test/node/{node_type}/{id}/edit-labeled'
   defaults:
@@ -398,8 +396,6 @@ surface_route_test.edit_node_labeled:
     parameters:
       node_type:
         type: 'entity:node_type'
-      id:
-        type: 'entity:node'
 
 # A basic page's edit page pinning, by a plain default, a node that does
 # not exist: the route written wrong.

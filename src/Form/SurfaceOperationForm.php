@@ -32,10 +32,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * The form class a resource does not have to write. The route names a
  * resource class and one of its operations, and its parameters are
- * mapped onto the operation method's parameters by name: an upcast
- * entity parameter arrives as the entity, a plain one as its value, so
- * `edit(NodeTypeInterface $type)` is served by a route with a `{type}`
- * parameter upcast to a node type. The operation builds the context; the
+ * mapped onto the operation method's parameters by name, each handed its
+ * raw value as the path carries it, so `update(string $type)` is served by
+ * a route with a `{type}` parameter, the machine name, which the
+ * operation loads through its resource's storage. The operation builds
+ * the context; the
  * resource is built in it, current values are loaded from its composed
  * storage, and the submission goes through the pipeline to that storage,
  * gated by the operation's permission and the resource's access class:
@@ -50,10 +51,6 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *     _surface_resource: 'Drupal\example\Resource\ExampleResource'
  *     _surface_operation: 'update'
  *     _surface_cosmetics: 'example.surface_form_cosmetics'
- *   options:
- *     parameters:
- *       example:
- *         type: 'entity:example'
  * @endcode
  *
  * A locked identity key renders as a disabled element holding the value
@@ -187,8 +184,8 @@ class SurfaceOperationForm extends FormBase {
    * Titles a page served by an operation with the operation's label.
    *
    * A route's title callback, for a page whose `_title` cannot say what it
-   * serves: one whose path holds an upcast placeholder, which `_title`
-   * prints as its raw id, and one route serving every bundle, whose
+   * serves: one whose path names a thing by its id, which `_title` would
+   * print as written, and one route serving every bundle, whose
    * derived create is labeled "Add <bundle>" already. The React page
    * served at a module's route is titled the same way
    * (OperationRoute::label()).
@@ -201,10 +198,8 @@ class SurfaceOperationForm extends FormBase {
    *     _title_callback: '\Drupal\surface\Form\SurfaceOperationForm::title'
    *     _surface_resource: 'entity.content:node.{node_type}'
    *     _surface_operation: 'create'
-   *   options:
-   *     parameters:
-   *       node_type:
-   *         type: 'entity:node_type'
+   *   requirements:
+   *     node_type: '[a-z0-9_]+'
    * @endcode
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match

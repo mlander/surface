@@ -10,6 +10,7 @@ use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface_examples\Resource\RegistrationStep3Resource;
 use Drupal\surface_resource_test\OutsideDiscovery\ContradictingCreatesStructure;
+use Drupal\surface_resource_test\OutsideDiscovery\ObjectParameterStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\MisnamedContextStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\RetiredIdStructure;
 use Drupal\surface_resource_test\OutsideDiscovery\StampedStructure;
@@ -203,6 +204,24 @@ class OperationFactsTest extends SurfaceKernelTestBase {
       catch (\LogicException $e) {
         $this->assertStringStartsWith($message, $e->getMessage(), $class);
       }
+    }
+  }
+
+  /**
+   * Tests an operation method's object parameter is refused at discovery.
+   *
+   * An operation is handed values: a door that loaded the object would
+   * read storage beside the resource's own.
+   *
+   * @see docs/decisions.md#an-operation-is-handed-values-never-objects
+   */
+  public function testObjectParameterIsRefusedAtDiscovery(): void {
+    try {
+      $this->registryOf(ObjectParameterStructure::class)->getDefinitions();
+      $this->fail('An operation taking an entity was not refused at discovery.');
+    }
+    catch (\LogicException $e) {
+      $this->assertSame(ObjectParameterStructure::class . '::fill() takes Drupal\Core\Entity\EntityInterface $jar, an object. An operation is handed values, never objects: type it as the key\'s scalar, string $jar, and load the thing it names through the resource\'s storage, which refuses a value that names nothing.', $e->getMessage());
     }
   }
 

@@ -1320,7 +1320,13 @@ context the operation built ([forms](forms.md#a-route-that-fixes-or-fills-keys))
   default, stays the route's 403 with its reason, whatever the URL
   carries: only the value is the visitor's. A value a converter loads
   nothing for is core's 404 to any account, before access is asked, as
-  before. The gate writes nothing to the log: core's breadcrumb asks
+  before. *Amended 2026-11-01:* no surface route converts a parameter an
+  operation takes, so such a value is the operation's storage's to
+  refuse, and answered as above: a 404 for an account the permission
+  lets in, and no reason to any other
+  ([An operation is handed values, never
+  objects](#an-operation-is-handed-values-never-objects)). The gate
+  writes nothing to the log: core's breadcrumb asks
   about every path above the one requested, so a URL anyone may type
   would write a line per request.
 - **A React page starts keys and fixes none.** *Changed 2026-10-29:*
@@ -1397,7 +1403,7 @@ code computes it at request time. The choices, and why:
   every bundle. `/node/{node}/edit` names a node whose bundle is known
   only once it is loaded, and nothing answers which derived resource an
   entity belongs to, so for now the bundle goes in the path; a deriver
-  method answering the derivative of an upcast entity, or routes a
+  method answering the derivative of the entity an id names, or routes a
   deriver declares (`pages:` on `DerivedResource`, compiled by a route
   provider and rebuilt when the list of bundles changes), would serve
   the edit route itself.
@@ -1518,7 +1524,9 @@ code computes it at request time. The choices, and why:
   bundle is refused to every account at every door, as is an id no node
   has wherever no converter answers it first, with no reason at the
   form's route and the one fixed refusal at the React page, the API and
-  the tool. Why: passing the permission step where none is declared
+  the tool. *Amended 2026-11-01:* the example's edit route converts `{id}`
+  no more, so an id no node has is refused there with no reason too, as
+  a node of another bundle is. Why: passing the permission step where none is declared
   would tell any account, anonymous included, what a value names.
   *Open:* whether derived operations should declare permissions, which
   would make the 404 reachable for them; that is a security change,
@@ -1565,7 +1573,12 @@ object. A guess between entity types would load the wrong thing.
 (`OperationArguments`) *Amended 2026-11-01:* this holds for an
 `#[Operation]` method's PHP type alone; a derived operation's parameter
 names a key and is handed its value, loaded by nothing but the storage
-([A parameter names a key](#a-parameter-names-a-key)).
+([A parameter names a key](#a-parameter-names-a-key)). *Superseded
+2026-11-01:* no parameter is typed as an entity. A method's parameter is
+a scalar, a class type refused at discovery, and nothing loads an entity
+for it; an entity a PHP caller hands over is named by its id
+([An operation is handed values, never
+objects](#an-operation-is-handed-values-never-objects)).
 
 ### A parameter is identity the caller knows
 
@@ -1586,7 +1599,10 @@ assemble.
   when it names nothing; `field.storage`'s update takes `$entity_type,
   $field_name`. A parameter named for a resource's one identity key and
   typed as the entity (`node.type`'s `type`, `block.placement`'s `id`)
-  is that key already, and stays.
+  is that key already, and stays. *Amended 2026-11-01:* it is typed as
+  the key's scalar now, `string $type`, and loads the entity through its
+  storage ([An operation is handed values, never
+  objects](#an-operation-is-handed-values-never-objects)).
 - **One name for the entity type, `entity_type`.** The field resources
   called it `entity_type_id`, the content entity resources
   `entity_type`. `entity_type` is the name core's field config stores
@@ -1696,10 +1712,70 @@ what it names is the storage's.
   (`NodeTypeInterface $type`, read by `fromReflection()`) still takes
   the loaded object, and a form route's `options.parameters.*.type:
   'entity:…'` still converts: the same shortcut, through the form door,
-  step 0 of the stage's design.
+  step 0 of the stage's design. *Done 2026-11-01:* both went
+  ([An operation is handed values, never
+  objects](#an-operation-is-handed-values-never-objects)).
 
 (`OperationParameter`, `OperationArguments`, `ContentEntityResources`,
 `ContentEntityStorage::entity()`, `ContentEntityReadTest`)
+
+### An operation is handed values, never objects
+
+Decided 2026-11-01. Every operation's parameter is a value. A method
+operation's is a scalar named for a key of its resource (`string $id`,
+`string $type`), the rule a derived operation's parameter follows since
+[A parameter names a key](#a-parameter-names-a-key); the operation loads
+its subject through its resource's storage.
+
+- **Why.** The stage stands in front of storage: a write staged under a
+  handle is read back through the storage that holds the stage. A door
+  that loaded an object before the operation ran (`EventVenue $id`
+  upcast by a route's converter, or loaded by `OperationArguments` from
+  a tool's id) read the permanent storage beside the resource's own,
+  and a local id in a stage could never become one.
+- **Now.** `OperationParameter::fromReflection()` refuses a parameter
+  typed with a class, an interface or `object` at discovery, naming the
+  fix: type it as the key's scalar and load the thing through the
+  resource's storage. `OperationArguments` passes values through and
+  loads nothing; an entity a PHP caller hands over is named by its id.
+  The venue, placed block, content type and the test modules'
+  operations take the id and ask their storage.
+- **The load by identity.** `ConfigEntityStorage::named($id,
+  $operation)` loads the config entity an id names and refuses one that
+  names nothing with a `NamesNothingException` at the identity key,
+  which every door answers as not found for an account the operation
+  lets in. It sits on the base because five of the six resources store
+  a config entity there and their identity is its id. It is on no
+  interface: what an identity names differs by storage (the content
+  entity storage serves every entity type and needs the type,
+  `ContentEntityStorage::entity()`; the gate test's note is named by
+  the node it is on, `GateNoteStorage::named()`), and a singleton names
+  nothing.
+- **Gates.** An operation gate hands the operation it names the id of
+  the thing the context knows, read off the key the operation's
+  parameter names, which refers to an entity (`Gates::subjectOf()`,
+  `Gating::refersTo()`).
+- **What went.** `OperationParameter::takesObject()` and every branch
+  that read it, at the tool door (the input "The id of the
+  @entity_type the operation is about."), the OpenAPI document, the
+  permission placeholders and the identity a tool knows;
+  `OperationArguments::entityTypeOf()` and its entity type manager; and
+  `options.parameters.*.type: 'entity:…'` on every route for a
+  parameter an operation takes. The form door reads the raw route value
+  (`OperationArguments::fromRoute()`). A converter a route keeps for
+  something else (core's `NodeController::addPageTitle()` reads the
+  loaded node type) is not read by the operation.
+- **What changed at the doors.** A tool's input and an OpenAPI path
+  parameter for these operations are the key's own definition: the
+  venue's `id` its machine name key, the content type's `type` its
+  machine name. A URL whose id names nothing is answered by the
+  operation's storage: not found for an account the operation's
+  permission lets in, refused with no reason to any other, where a
+  converter answered not found to every account before access was
+  asked.
+
+(`OperationParameter`, `OperationArguments`, `ConfigEntityStorage::named()`,
+`Gates`, `RouteAccessTest`, `GatesTest`, `VenueResourceTest`)
 
 ### A plain route default pins an operation parameter
 
@@ -2943,7 +3019,12 @@ class and an id where naming buys nothing.
   inline, a structure inside it a reference to that structure's def. Its
   inputs run the owner's declaration again to the map's key and hand
   the callable its blueprint (`MapBlueprint::fill()`), so the callable
-  is a pure function, as `defineInputs()` is. Nesting is not refused:
+  is a pure function, as `defineInputs()` is. *Amended 2026-11-01:* the
+  callable may run more than once, at once and at each fill, so it has
+  no side effect and declares the same keys each time; the build holds
+  each fill to the keys the first run declared before it asked for the
+  frame (`NeedsFrame::$declared`), and refuses a callable that declares
+  others, naming both. Nesting is not refused:
   an alter reaches a structure by its own id, never by the path it sits
   at, and an inline object may hold a `$ref`.
 - **The cost.** No alter addresses the map itself, nothing else uses
@@ -6544,6 +6625,43 @@ call is the second step. (`ContentEntityResources`,
 `CreatableBundleOptions`, `ContentEntityStorage::FIELDS_AT`,
 `ContentEntityTypeResourceTest`)
 
+### An entity type's id is computed or named by the caller
+
+Decided 2026-11-01. Whether a content entity resource's `create` takes
+`id` is read per entity type from its id key's base field definition
+(`FieldItemDerivation::callerNamesId()`): an integer id, which core's
+SQL storage makes serial and assigns on save
+(`SqlContentEntityStorageSchema::processIdentifierSchema()`), or an id
+field with a default of its own, a literal or a callback, is computed;
+any other, a string with no default, is named by the caller.
+
+- **Computed.** As before: the create's context knows there is no id,
+  so `id` is locked empty and emitted once the entity is saved; the
+  create is not idempotent. Every content entity type on the dev site is
+  one (node, media, user, term, block content, file, paragraph and the
+  rest).
+- **Named by the caller.** The create's context does not know the id:
+  `id` is a required key, the create tool requires it, and its length is
+  the id field's `max_length`. The new entity is created under it, and
+  an id an entity already has names something: refused at `id`, code
+  `taken`, "A <thing> with the id <id> already exists.", at prepare, so
+  a dry run refuses it too. The create is idempotent, as the attribute's
+  rule has it for a create whose caller names the thing: the same call
+  twice is refused for the id the first took. The update and the read
+  take that id, as for any entity type.
+- **Why not by the entity type alone.** Core's integer id is what makes
+  the storage assign it, and a module may give a string id a default
+  that the entity holds once created; the field definition says both,
+  the entity type neither.
+- **Tested on a string id of this module's own.** Core's
+  `entity_test_string_id` is the type to test, but its module answers
+  every field's access from State, which a static access answer may not
+  read (`PipelineGuard`), so `surface_string_id_test` declares one alike.
+
+(`FieldItemDerivation::callerNamesId()`, `ContentEntityResources::defineId()`,
+`ContentEntityResources::create()`, `ContentEntityStorage::prepare()`,
+`ContentEntityTypeResourceTest::testCallerNamedIdIsTakenOnCreate()`)
+
 ### Tool definitions after a field changes
 
 *Settled 2026-10-19, with [keys that come from the
@@ -7288,9 +7406,7 @@ Decided 2026-10-23, with example 16, the sponsorship
   client that does not read it reads an id of the key's type.
 
 *Open:* a multi-value reference, a list of
-references (`addList()` of an entity type); the entity side's two
-shapes, a reference field's `target_id` item (`SurfaceReferenceable`,
-no marker) beside a reference key; a lookup tool for an agent with no
+references (`addList()` of an entity type); a lookup tool for an agent with no
 HTTP; a custom method's own lookup; a stored id the account may no
 longer reference, which core's field validator keeps and this refuses.
 (`References`, `EntityReferenceStructure`, `ValidReferenceConstraint`,
@@ -7325,9 +7441,62 @@ resource's or a structure's own blueprint declares.
   string for a reference per thing the site has: `addEach()` takes one
   type string for every entry, and a reference there needs a
   parameter of its own (`References::spells()`, `BlueprintAdapterBase::addEntry()`).
+  *Done 2026-11-01:* `addEach($key, NULL, from: ..., to: '<entity
+  type>', bundles: [...])` declares each entry in `refer()`'s words, and
+  the type string `entity:…` is refused there as `add()` refuses it;
+  `References::spells()` and `spelled()` went. Why `NULL` for the type:
+  an entry that refers to an entity has no type of its own, its id
+  typed as the entity type keeps it, and the type stays the second
+  argument for every other entry.
 
 (`BlueprintAdditionsInterface::refer()`, `References::definition()`,
 `ReferenceKeysTest`)
+
+### A reference field is a reference key
+
+Decided 2026-11-01. A content entity's reference field's `target_id` is
+the key `refer()` declares for the field's target type, its bundles the
+ones the field's handler settings name, answered by the field's own
+selection handler with the field's settings: `References::definition()`
+with `handler:` and `handlerSettings:`, which the `SurfaceValidReference`
+constraint carries.
+
+- **Why.** A reference key and a reference field were two shapes for
+  one idea: the field's target id was a plain integer or string with a
+  `SurfaceReferenceable` constraint of the example's own, no marker, no
+  lookup and no autocomplete. One key now serves both, so the field's
+  target id is listed, looked up and checked as every reference key is.
+- **The field's handler is the key's resolver.** The options, the
+  lookup, the autocomplete route and the check each ask the handler the
+  field names (`default:node`, a view's) configured with the field's
+  `handler_settings`, as core's `getSelectionHandler()` configures it,
+  so the key lists nothing the handler would refuse. A key `refer()`
+  declares names no handler and is answered by the default one, as
+  before.
+- **The widget.** A form display component of
+  `entity_reference_autocomplete` asks for the autocomplete widget, its
+  `match_operator` and `match_limit` handed to core's autocomplete route;
+  they say how the lookup matches and how many it suggests, and what is
+  accepted stays the constraint's. A widget a definition asks for by its
+  word is now tried first, whatever its weight, so a listed reference
+  that asks for the autocomplete is drawn with it, as core's widget
+  draws it.
+- **What changed in the documents.** A reference field's `target_id`
+  carries `x-surface.reference` (`{entityType, bundles?}`), its
+  `checkedOnServer` names `SurfaceValidReference` ("Refers to an entity
+  the account may reference") where it named `SurfaceReferenceable`,
+  its refusal is core's "This entity (%type: %id) cannot be referenced."
+  with code `valid_reference`, past the limit the tool listing names its
+  lookup, `GET .../{x}:lookup?key=/<field>/target_id` answers for it,
+  and with widget hints a field drawn by core's autocomplete states
+  `x-surface.widget: autocomplete`. The item's notes lose the
+  `target_id` note. `SurfaceReferenceable`, its validator and its
+  resolver went.
+
+(`FieldItemDerivation::reference()`, `References::definition()`,
+`References::handlerOf()`, `AutocompleteWidget`,
+`SurfaceWidgetManager::getWidgetFor()`, `ContentEntityDerivationTest`,
+`ReferenceableCacheabilityTest`)
 
 ## Examples
 

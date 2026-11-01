@@ -30,9 +30,9 @@ use Drupal\surface\Storage\StoredSchemaInterface;
  * for: every door sends and answers the id, and only the config holds the
  * uuid.
  *
- * - A key that refers to one content entity type (`entity:user`,
- *   `entity:node:article`) is stored as the entity's uuid, its config
- *   schema type `uuid`.
+ * - A key that refers to one content entity type (refer() with a user,
+ *   or a node of the article bundle) is stored as the entity's uuid, its
+ *   config schema type `uuid`.
  * - A bare `entity` key is stored as `{entity_type, id}` whatever entity
  *   type it holds: `id` holds the uuid where `entity_type` names a
  *   content entity type and the id where it names a config entity type,

@@ -105,7 +105,7 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
    */
   protected function framed(string $call): \LogicException {
     if ($this->unframed === NULL) {
-      return new NeedsFrame($this->path);
+      return new NeedsFrame($this->path, $this->keys());
     }
     return new \LogicException(sprintf('%s inside the map "%s", declared with addMap(): a map whose keys need a frame of their own is a structure with no id, attached at the key, and %s', $call, $this->path, $this->unframed));
   }
@@ -141,7 +141,7 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, string $type, string $from, mixed $default = NULL): MapDataDefinition {
+  public function addEach(string $key, ?string $type, string $from, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
     throw $this->framed(sprintf('addEach("%s")', $key));
   }
 
@@ -270,7 +270,8 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
    * The structure a map with a frame of its own is has no class: its
    * inputs are its owner's declaration, run again, whose addMap() at the
    * key hands its callable this blueprint (ResourceBlueprint::replay()).
-   * A declaration is a pure function, so it declares the same again.
+   * A declaration is a pure function, so it declares the same again,
+   * which the keys it declared the first time are held to.
    *
    * @param \Drupal\surface\Resource\BlueprintInterface $inputs
    *   The structure's blueprint.
@@ -278,10 +279,13 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
    *   The owner, by the name the registry knows it by.
    * @param string $key
    *   The key the owner declares the map at.
+   * @param string[] $declared
+   *   The keys the callable declared the first time, before it asked for
+   *   the frame.
    */
-  public static function fill(BlueprintInterface $inputs, string $owner, string $key): void {
+  public static function fill(BlueprintInterface $inputs, string $owner, string $key, array $declared = []): void {
     assert($inputs instanceof ResourceBlueprint);
-    $inputs->replay($owner, $key);
+    $inputs->replay($owner, $key, $declared);
   }
 
 }

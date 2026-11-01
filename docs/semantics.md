@@ -602,7 +602,7 @@ constraint defines one, by the name its constraint gives it, lower case
 and without `_ERROR` (Symfony's code is a UUID, and
 `Constraint::getErrorName()` names it one to one); a constraint that
 sets no code is named for itself, in snake case
-(`ReferenceableConstraint` is `referenceable`). Every refusal the module
+(`ValidReferenceConstraint` is `valid_reference`). Every refusal the module
 makes itself has one of its own (`Pipeline\Violation`'s constants). A
 refusal of the whole call has an empty path.
 

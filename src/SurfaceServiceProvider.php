@@ -55,7 +55,6 @@ final class SurfaceServiceProvider implements ServiceProviderInterface {
     // answers with; the deriver writes it statically, the tool refines it.
     $container->register('surface.operation_inputs', OperationInputs::class)
       ->addArgument(new Reference('surface.resources'))
-      ->addArgument(new Reference('surface.operation_arguments'))
       ->addArgument(new Reference('surface.input_definitions'))
       ->addArgument(new Reference('string_translation'))
       ->addArgument(new Reference('surface.served_paths'));

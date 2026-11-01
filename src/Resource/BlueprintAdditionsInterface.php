@@ -125,6 +125,13 @@ interface BlueprintAdditionsInterface {
    * resources share, or that has a rule, a child or access of its own, is
    * a structure, attach()ed.
    *
+   * The callable may run more than once. When the map needs a frame (a
+   * child attached, variants, a mixin, a rule, a resolve, a port), the
+   * build runs the owner's declaration again to fill the map's structure,
+   * and the callable with it: so it has no side effect and declares the
+   * same keys each time, which the build holds it to, the keys it
+   * declared before it asked for the frame coming first again.
+   *
    * @code
    * $inputs->addMap('coordinates', t('Coordinates'), function (BlueprintInterface $map): void {
    *   $map->add('lat', 'float', t('Latitude'));
@@ -137,14 +144,17 @@ interface BlueprintAdditionsInterface {
    * @param string|\Stringable $label
    *   The map's label.
    * @param callable(\Drupal\surface\Resource\BlueprintInterface): void $define
-   *   Declares the map's keys, called once, at once.
+   *   Declares the map's keys, called at once, and again each time the
+   *   build fills a map that needs a frame.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map, already part of the blueprint.
    *
    * @throws \LogicException
-   *   When the key is already declared, or the callable attaches, mixes
-   *   in, narrows, resolves, computes or reads a port.
+   *   When the key is already declared; for an alter's keys or outputs,
+   *   when the callable attaches, mixes in, narrows, resolves, computes or
+   *   reads a port; and when the callable declares other keys when it runs
+   *   again.
    *
    * @see docs/declaring-a-resource.md#an-anonymous-map
    * @see docs/decisions.md#an-anonymous-map

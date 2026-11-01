@@ -480,9 +480,9 @@ final class OperationDefinition {
    * A `%key` placeholder is filled from the identity the operation's
    * context knows, and that context is built from the parameters, so a
    * placeholder can be filled only when a parameter could supply it: one
-   * named for it, or an entity, whose operation reads identity off it.
-   * An operation with one that none can is never allowed on its own; it
-   * is asked only as the child of a parent that hands it that identity.
+   * named for it. An operation with one that none can is never allowed on
+   * its own; it is asked only as the child of a parent that hands it that
+   * identity.
    *
    * @return string[]
    *   The placeholder keys, in the order the permission names them;
@@ -492,13 +492,7 @@ final class OperationDefinition {
     if ($this->permission === NULL || !preg_match_all('/%([A-Za-z0-9_]+)/', $this->permission, $matches)) {
       return [];
     }
-    $names = [];
-    foreach ($this->parameters as $parameter) {
-      if ($parameter->takesObject()) {
-        return [];
-      }
-      $names[] = $parameter->name;
-    }
+    $names = array_map(static fn (OperationParameter $parameter): string => $parameter->name, $this->parameters);
     return array_values(array_diff(array_unique($matches[1]), $names));
   }
 

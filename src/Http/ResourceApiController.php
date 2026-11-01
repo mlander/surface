@@ -293,7 +293,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
       throw new ProblemException(404, $detail);
     }
     $limit = $request->query->get('limit');
-    $items = $this->references->lookup($found['entityType'], $found['bundles'], (string) $request->query->get('q', ''), is_numeric($limit) ? (int) $limit : self::LOOKUP_LIMIT, $definition->getDataType());
+    [$handler, $settings] = References::handlerOf($definition);
+    $items = $this->references->lookup($found['entityType'], $found['bundles'], (string) $request->query->get('q', ''), is_numeric($limit) ? (int) $limit : self::LOOKUP_LIMIT, $definition->getDataType(), $handler, $settings);
     return $this->respond(['key' => $pointer] + $found + ['items' => $items]);
   }
 
