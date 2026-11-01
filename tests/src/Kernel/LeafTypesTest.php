@@ -20,8 +20,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * Every key's value is of a type the contract states a JSON Schema type
  * for: add() refuses any other, naming the method for what was meant,
- * addDefinition() holds every value inside a map or a list to it, and the
- * emitter and the reader write and read the same rows.
+ * addDefinition() takes one value of a row, addList() holds every value
+ * inside its item to it, and the emitter and the reader write and read the
+ * same rows.
  *
  * @see docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader
  */
@@ -105,22 +106,27 @@ class LeafTypesTest extends SurfaceKernelTestBase {
     $this->assertRefused(fn () => $blueprint->add('language', 'language', 'Language'), 'the language type');
     $this->assertRefused(fn () => $blueprint->add('settings', 'map', 'Settings'), 'a group of keys is attach(\'<key>\', <structure>::class), or addMap() for keys only this one holds.');
     $this->assertRefused(fn () => $blueprint->add('tags', 'list', 'Tags'), 'a list is addList().');
-    $this->assertRefused(fn () => $blueprint->add('page', 'entity:node', 'Page'), "an id of an entity is refer('<key>', '<entity type>', ...).");
+    $this->assertRefused(fn () => $blueprint->add('page', 'entity:node', 'Page'), "an id of an entity is add('<key>', 'integer' or 'string', ...), the type the entity type keeps its id as, with the SurfaceValidReference constraint naming the entity type");
     $this->assertRefused(fn () => $blueprint->add('detail', 'any', 'Detail'), 'a value whose shape depends on another key is variants, attachVariants().');
     $this->assertRefused(fn () => $blueprint->addList('logos', 'binary', 'Logos'), 'addList("logos", "binary") declares items of the binary type, which JSON Schema has no type for.');
   }
 
   /**
-   * Tests addDefinition() holds every value inside to the table.
+   * Tests addDefinition() takes one value, held to the table.
+   *
+   * A map or a list is refused naming the method that declares it; a list
+   * handed an item of its own is walked as a key is.
+   *
+   * @see docs/decisions.md#a-blueprint-takes-no-complex-data-types
    */
-  public function testDefinitionIsWalked(): void {
+  public function testDefinitionIsOneValue(): void {
     $blueprint = $this->blueprint();
     $map = MapDataDefinition::create()
-      ->setPropertyDefinition('name', DataDefinition::create('string'))
-      ->setPropertyDefinition('logo', DataDefinition::create('binary'));
-    $this->assertRefused(fn () => $blueprint->addDefinition('brand', $map), 'addDefinition("brand") declares "logo" of the binary type, which JSON Schema has no type for.');
-    $list = new ListDataDefinition(['type' => 'list'], MapDataDefinition::create()->setPropertyDefinition('spoken', DataDefinition::create('language')));
-    $this->assertRefused(fn () => $blueprint->addDefinition('people', $list), 'addDefinition("people") declares "*.spoken" of the language type');
+      ->setPropertyDefinition('name', DataDefinition::create('string'));
+    $this->assertRefused(fn () => $blueprint->addDefinition('brand', $map), 'addDefinition("brand") was handed a map: addDefinition() declares one value, of one of string, email, uri, datetime_iso8601, integer, timestamp, float, boolean; a group of keys is attach(\'<key>\', <structure>::class), or addMap() for keys only this one holds.');
+    $this->assertRefused(fn () => $blueprint->addDefinition('tags', new ListDataDefinition(['type' => 'list'], DataDefinition::create('string'))), 'addDefinition("tags") was handed a list: addDefinition() declares one value, of one of string, email, uri, datetime_iso8601, integer, timestamp, float, boolean; a list is addList().');
+    $this->assertRefused(fn () => $blueprint->addDefinition('logo', DataDefinition::create('binary')), 'addDefinition("logo") declares a value of the binary type, which JSON Schema has no type for.');
+    $this->assertRefused(fn () => $blueprint->addList('people', MapDataDefinition::create()->setPropertyDefinition('spoken', DataDefinition::create('language')), 'People'), 'addList("people") declares "*.spoken" of the language type');
     $this->assertRefused(fn () => $blueprint->addDefinition('detail', DataDefinition::create('any')), 'addDefinition("detail") declares a value of the any type');
 
     // The two `any` the module makes are held: the variants' placeholder,

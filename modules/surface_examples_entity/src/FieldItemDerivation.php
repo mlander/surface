@@ -41,8 +41,8 @@ use Drupal\surface\DefinitionMetadata;
  * What narrows is carried where a definition has the same word for it:
  * the Length, Range, Regex and Choice constraints the field type and the
  * property declare, a list field's allowed values, a text field's
- * formats. A reference field's `target_id` is a reference key, as
- * refer() declares one (References::definition()), answered by the
+ * formats. A reference field's `target_id` is a reference key, the id
+ * with its constraint (References::definition()), answered by the
  * field's own selection handler with the field's settings. What has no
  * equivalent in a definition stays with the entity and is checked when the
  * storage validates it, at prepare.
@@ -584,8 +584,8 @@ final class FieldItemDerivation {
   /**
    * Builds a reference field's target id: a reference key.
    *
-   * What refer() builds for the field's target type, its bundles the ones
-   * the field's handler settings name, answered by the field's own
+   * The id of the field's target type with its constraint, its bundles
+   * the ones the field's handler settings name, answered by the field's own
    * selection handler with the field's settings: what the key lists, what
    * the lookup finds and what it accepts are what core's widget offers and
    * the field's ValidReference accepts, for the account asking.

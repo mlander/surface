@@ -125,8 +125,16 @@ the record of the rework that brought the module to the pattern.
   schema type of one); any other type is refused at the blueprint, at
   any depth, naming the method meant
   (`docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader`).
+  An object is declared only by a method that is one JSON Schema
+  construct: `attach()` / `attachList()` (`$ref`), `addMap()` (inline
+  object), `mixIn()` (`allOf`), the variants (`if`/`then`), `addEach()`
+  / `attachEach()` (an object keyed by the site), `addList()` (array);
+  `addDefinition()` takes one value and refuses a map or a list
+  (`docs/decisions.md#a-blueprint-takes-no-complex-data-types`).
 - **Anonymous map**: `addMap($key, $label, fn (BlueprintInterface $map)
-  => ...)`, an object only its owner holds, written inline with no def;
+  => ...)`, an object only its owner holds, written inline with no def,
+  the one way to declare a map of plain keys (the schema reader and the
+  generator write it too);
   plain keys make a map definition, a callable that attaches, mixes in,
   narrows or resolves makes a structure with no id
   (`ResourceRegistry::defineMap()`, whose inputs run the owner's
@@ -219,8 +227,8 @@ the record of the rework that brought the module to the pattern.
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
   key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
-  a type or shape per thing; a reference per thing in `refer()`'s words,
-  `addEach('pages', NULL, from: Provider::class, to: 'node', bundles:
+  a type or shape per thing; a reference per thing naming its entity
+  type, `addEach('pages', NULL, from: Provider::class, to: 'node', bundles:
   [...])`) or `attachEach('rows', Row::class, from:
   ...)` (a structure per thing); the provider is a service implementing
   `SiteListInterface`, whose `list()` answers a `SiteList` (id, label,
@@ -231,14 +239,21 @@ the record of the rework that brought the module to the pattern.
   ['selling' => 'on_sale'])` wires each entry's port to the entry of the
   same id in a sibling map from the same provider
   (`docs/resources.md#keys-that-come-from-the-site`).
-- **Reference key**: a key that refers to an entity, declared with
-  `refer()`: `refer('page', 'node', t(...), bundles: ['article'])`,
-  `refer('contact', 'user', ...)`, or `refer('thing', NULL, ...)` for any
-  entity type (two parts attached at the key, `entity_type` and `id`,
-  filtered by `SurfaceReferenceableType` written on the key);
-  `add($key, 'entity:…')` and `addEach($key, 'entity:…', ...)` are
-  refused naming it
-  (`docs/decisions.md#a-reference-is-declared-as-a-reference`); every door sends and answers the id, and a config
+- **Reference key**: a key that refers to an entity, the id's type with
+  the constraint every reader reads: `add('page', 'integer', t(...))
+  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node',
+  'bundles' => ['article']])`, the type checked against the entity
+  type's id at build (`References::settle()`, from
+  `Declaring::settleReferences()`, which also marks a content entity's
+  key, `References::CONTENT`). A reference to any entity type is a
+  structure the example declares (`surface_examples_references`'
+  `AnyEntityStructure`, one subclass per filter naming its entity types
+  in `ENTITY_TYPES`): `entity_type` with `SurfaceReferenceableType`, `id`
+  a string with `References::TARGETS`, narrowed by the structure's
+  refiner; `attach()`ed, a config storage keeping its id where the
+  attached map says `References::STORED_AS`. `add($key, 'entity:…')` and
+  `addEach($key, 'entity:…', ...)` are refused naming the constraint
+  (`docs/decisions.md#a-reference-is-a-constraint-on-a-value`); every door sends and answers the id, and a config
   storage stores a content entity's uuid (`ReferenceStorageLayout`, which
   the engine applies; `References::STORED_AS` keeps the id) and a config
   entity's id, a config entity depending on what its keys refer to
@@ -251,7 +266,8 @@ the record of the rework that brought the module to the pattern.
   `docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
   A content entity's reference field's `target_id` is one, answered by
   the field's own selection handler and settings
-  (`References::definition(handler:, handlerSettings:)`), drawn with the
+  (`References::definition(handler:, handlerSettings:)`, the helper for
+  code that derives a reference key, and for `addEach(to:)`), drawn with the
   autocomplete where its form display uses core's
   (`docs/decisions.md#a-reference-field-is-a-reference-key`).
 - **Computed key**: a key of a resource whose value nobody types,
@@ -606,7 +622,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1843, Assertions: 42935, Errors: 0, Failures: 0, Skipped: 3. Classes: 259 of 259, 8 at a time, browser classes 4.
+phpunit: Tests: 1843, Assertions: 42994, Errors: 0, Failures: 0, Skipped: 3. Classes: 259 of 259, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -626,7 +642,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1735, Assertions: 38914, Skipped: 3, Deprecations: 130. Classes:
+`Tests: 1735, Assertions: 38973, Skipped: 3, Deprecations: 130. Classes:
 210, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 

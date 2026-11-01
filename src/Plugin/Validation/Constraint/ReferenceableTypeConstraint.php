@@ -10,11 +10,12 @@ use Symfony\Component\Validator\Attribute\HasNamedArguments;
 use Symfony\Component\Validator\Constraint as SymfonyConstraint;
 
 /**
- * Checks that a value names an entity type a bare reference key may name.
+ * Checks that a value names an entity type a reference may name.
  *
- * What the `entity_type` of a key declared `refer($key, NULL, ...)`
- * allows, and what its author narrows it by: written on the key, it is
- * moved onto the entity type when the key's two parts are built. An
+ * What the `entity_type` of a reference to any entity type allows: a
+ * structure of an `entity_type` and an `id` (References::TARGETS), whose
+ * declaration writes this constraint, and its options, on the entity
+ * type. An
  * entity type is allowed when it is not internal, implements the
  * interface when one is named, is among the targets when any are named,
  * and the account may reference at least one entity of it, of the

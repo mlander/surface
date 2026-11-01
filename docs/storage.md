@@ -409,8 +409,8 @@ shows all of it
 
 #### A reference is stored by uuid
 
-A key that refers to a content entity (`refer('contact', 'user', ...)`,
-`refer('page', 'node', ..., bundles: ['article'])`) holds its id at every
+A key that refers to a content entity (a user's id, `contact`, or an
+article's, `page`, each with `SurfaceValidReference`) holds its id at every
 door, and a config storage, `ConfigObjectStorage` or
 `ConfigEntityStorage`, stores the entity's uuid. A content entity's id differs between sites, so config holding it
 would name another entity, or none, once deployed; the uuid is the same

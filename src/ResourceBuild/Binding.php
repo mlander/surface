@@ -231,6 +231,7 @@ final class Binding {
       $additions = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, $within))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references());
       if ($instance instanceof AltersInputsInterface) {
         $instance->alterInputs($additions);
+        $this->declaring->settleReferences($structure->id, [sprintf('third_party_settings.%s.', $alter->module) => $additions]);
       }
       $contributing = $inside->forContributor($alter->module, $additions->extended());
       $this->bindRefiners($contributing, $instance, $alter->refiners);

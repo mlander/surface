@@ -1154,7 +1154,8 @@ operation's own constraint, or its access class's answer
 A seed may be a reference to a variable of the route's own path, so the
 URL says which value a key is fixed to or starts from. The inquiry's
 `department` is a key that refers to a term of the departments
-vocabulary (`refer('department', 'taxonomy_term', ..., bundles: ['departments'])`):
+vocabulary (`add('department', 'integer', ...)` with `SurfaceValidReference`,
+`['entityTypeId' => 'taxonomy_term', 'bundles' => ['departments']]`):
 
 ```yaml
 example.inquiry_department:

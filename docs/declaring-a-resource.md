@@ -107,8 +107,9 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   the one every door shows: the form element's title, the tool's
   property label, the schema's `title`; the description is the text
   under the element and the property's description.
-  `addList()` is the same for a list of values, and `addDefinition()`
-  the long form, for a map ([Maps and lists](#maps-and-lists)). The label is
+  `addList()` is the same for a list of values, `addMap()` for a map,
+  and `addDefinition()` the long form, for one value built by hand
+  ([Maps and lists](#maps-and-lists)). The label is
   `t('...')` with a literal string; see [Translatable
   strings](#translatable-strings). The type may be a shape's class, a
   value declared once for every key that asks for it ([Named
@@ -146,12 +147,13 @@ type such as `machine_name`, `label`, `path`, `color_hex` or `langcode`
 is the string underneath with the type's constraints. Any other type is
 refused when the blueprint is filled, naming the method for what was
 meant: `attach()` for a group of keys (or `addMap()` for keys only this
-one holds), `addList()` for a list, `refer()` for an entity's id,
-`addDefinition()` for a typed data definition built by hand. A
-definition handed to `addDefinition()` is held to the same table at
-every depth: each property of a map, each list's item. So the contract
-states a type for every value the runtime accepts, and is never vaguer
-than it ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
+one holds), `addList()` for a list, the id's type and a constraint for
+an entity's id, `addDefinition()` for one value built by hand.
+`addDefinition()` takes one value of a type in the table, and refuses a
+map or a list, naming `addMap()`, `attach()` or `addList()`; a list's
+item is held to the table at every depth. So the contract states a type
+for every value the runtime accepts, and is never vaguer than it
+([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
 
 One table, `Contract\LeafTypes`, holds the rows: the blueprint refuses
 by it, the emitter writes each row, and the schema reader reads a JSON
@@ -159,21 +161,41 @@ type and format back into the row's type. How each type is drawn and
 coerced is keyed by the type where it is done: each widget's
 `isApplicable()` and `Pipeline\Coercion`.
 
-A key that refers to an entity is `refer()`
+A key that refers to an entity is one of these, the id as its entity
+type keeps it, with the `SurfaceValidReference` constraint naming the
+entity type and the bundles it may be of
 ([Options](options.md#a-key-that-refers-to-an-entity)):
 
 ```php
-$inputs->refer('venue', 'event_venue', t('Venue'), default: 'riverside');
-$inputs->refer('page', 'node', t('Announcement'), bundles: ['article']);
-$inputs->refer('thing', NULL, t('Featured beside'));
+$inputs->add('venue', 'string', t('Venue'), default: 'riverside')
+  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue']);
+$inputs->add('page', 'integer', t('Announcement'))
+  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]);
 ```
 
-`refer(string $key, ?string $to, string|\Stringable $label, array
-$bundles = [], mixed $default = NULL)`: the id of an entity of the type
-`$to` names, of one of the bundles where it names any; with `$to` NULL,
-an entity of any type, two keys attached at the key, which only a
-resource's or a structure's own blueprint declares
-([decision](decisions.md#a-reference-is-declared-as-a-reference)).
+A config entity keeps its id as a string, a content entity whose id
+field is an integer as an integer. The build checks the type against
+the entity type's id and refuses another, naming the right one. A
+reference to an entity of any type is a structure of two keys, an
+entity type and an id, which example 16 declares and attaches
+([decision](decisions.md#a-reference-is-a-constraint-on-a-value)).
+
+### What declares an object
+
+A key holds one value. An object is declared only by a method that is
+one JSON Schema construct:
+
+| Method | JSON Schema |
+| --- | --- |
+| `attach()`, `attachList()` | a `$ref` to the structure's def; an array of them |
+| `addMap()` | an inline `type: object` with its properties |
+| `mixIn()` | `allOf` of the structure's def and the owner's properties |
+| `attachVariants()` | `allOf` of `if`/`then`, one per value of the deciding key |
+| `addEach()`, `attachEach()` | an object with one property per thing the site has |
+| `addList()` | `type: array` of one value's items |
+
+`addDefinition()` takes one value, never a map or a list
+([decision](decisions.md#a-blueprint-takes-no-complex-data-types)).
 
 ### What it is called
 
@@ -307,7 +329,7 @@ is decided by runtime dependence, not by structure: `PluginExists`,
 whose values are resolved from a plugin manager, is still written down
 as a literal constraint, and so is `EntityBundleExists`, handed the
 entity type by a refiner. A refiner points; the resolver fetches. Look
-for a stock constraint or a reference key (`refer()`) first; only when none names the list does a module add one with its
+for a stock constraint or a reference key (`SurfaceValidReference`) first; only when none names the list does a module add one with its
 resolver, as the example does with `SurfaceExamplesBundleField`; see
 [Which constraint to write](options.md#which-constraint-to-write).
 
@@ -632,19 +654,19 @@ method is static and calls `t()`.
 
 ## Maps and lists
 
-Core's `MapDataDefinition` takes only its own definition array in its
-constructor and gains its property definitions through a setter. Set
-them on the definition before handing it to the blueprint, with the core
-setter:
+A map is `addMap()`, a list `addList()`; `addDefinition()` takes one
+value and refuses either. Keys built by hand go into the map's callable
+one by one, each with `addDefinition()`:
 
 ```php
-$overrides = MapDataDefinition::create()
-  ->setLabel(t('Field overrides'));
-foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
-  $overrides->setPropertyDefinition($field_name, $definition);
-}
-$inputs->addDefinition('field_overrides', $overrides, default: []);
+$inputs->addMap('field_overrides', t('Field overrides'), static function (BlueprintInterface $overrides): void {
+  foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
+    $overrides->addDefinition($field_name, $definition);
+  }
+});
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 `AddressFieldSettingsResource` is the worked example. A map whose
 properties are another class's keys is a child instead: `attach()` or
@@ -675,7 +697,7 @@ no def; the form draws it as a fieldset, the tool takes it as a map in
 is the map's default.
 
 Every blueprint method works inside the callable: `add()`, `addList()`,
-`refer()`, a nested `addMap()`, `describe()`, and `attach()`,
+`addDefinition()`, a nested `addMap()`, `describe()`, and `attach()`,
 `attachList()`, `attachVariants()`, `mixIn()`, `narrow()` and
 `resolve()`. A map whose keys need a frame of their own (a child, a
 rule, a resolve) is a structure with no id, attached at the key and

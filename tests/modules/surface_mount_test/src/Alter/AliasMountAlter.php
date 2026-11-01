@@ -25,7 +25,8 @@ final class AliasMountAlter implements AltersInputsInterface, AltersStorageLayou
    * {@inheritdoc}
    */
   public function alterInputs(BlueprintAdditionsInterface $inputs): void {
-    $inputs->refer('reviewer', 'user', 'Reviewer');
+    $inputs->add('reviewer', 'integer', 'Reviewer')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user']);
 
     $inputs->add('delay', 'integer', 'Delay in minutes');
   }

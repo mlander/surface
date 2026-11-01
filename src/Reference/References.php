@@ -20,18 +20,21 @@ use Drupal\Core\Entity\EntityReferenceSelection\SelectionPluginManagerInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\FieldableEntityInterface;
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceInterface;
 
 /**
  * What a key that refers to an entity is, and which entities it may name.
  *
- * One place for the two kinds of reference key, declared with refer():
- * an id of one entity type, its bundles named or not, and a choice of
- * entity type and id: the definition each builds, the candidates, the
- * lookup and the check. The candidates are
+ * One place for the two kinds of reference: a key holding an id of one
+ * entity type, its bundles named or not, which the SurfaceValidReference
+ * constraint (CONSTRAINT) says, and a structure's choice of entity type
+ * and id (TARGETS): what the build checks and writes on a reference key
+ * (settle()), the candidates, the lookup and the check. The candidates are
  * core's entity reference selection handler's, `default:<type>` with the
  * key's bundles as its `target_bundles` and the label as its `sort`, for
  * the account asking, so what a key lists, what the lookup answers and
@@ -72,9 +75,25 @@ final class References {
   public const CONSTRAINT = 'SurfaceValidReference';
 
   /**
-   * The constraint the entity type of a bare `entity` key carries.
+   * The constraint the entity type of a reference to any entity type carries.
    */
   public const TYPE_CONSTRAINT = 'SurfaceReferenceableType';
+
+  /**
+   * The setting on an id whose entity type a sibling key names.
+   *
+   * A reference to an entity of any type is two keys of a structure, an
+   * `entity_type` carrying TYPE_CONSTRAINT and an `id` carrying this
+   * setting: the bundles each entity type allows, by entity type. Every
+   * reader of such an id reads it here: the marker on the wire
+   * (`x-surface.reference: {by: entity_type}`), the autocomplete, the
+   * tool listing's lookup sentence, the lookup and the storage layout. The
+   * structure's refiner narrows the id to the entity type chosen with
+   * CONSTRAINT, the bundles read from this setting.
+   *
+   * Decision: see docs/decisions.md#a-blueprint-takes-no-complex-data-types.
+   */
+  public const TARGETS = 'surface_reference_targets';
 
   /**
    * The most a lookup answers, whatever it is asked for.
@@ -95,8 +114,8 @@ final class References {
    * The setting with which an author keeps a content reference as an id.
    *
    * `->setSetting(References::STORED_AS, References::BY_ID)` on the key
-   * (on a bare `entity` key, on the key itself): a config storage then
-   * stores the id, as it stores a config entity's.
+   * (for a reference to any entity type, on the map attach() returns): a
+   * config storage then stores the id, as it stores a config entity's.
    */
   public const STORED_AS = 'reference_stored_as';
 
@@ -241,13 +260,16 @@ final class References {
   }
 
   /**
-   * Builds the key refer() declares: one entity's id.
+   * Builds a key that holds one entity's id, for code that derives one.
    *
-   * An id of the entity type, of one of the bundles when it names any,
-   * typed as the entity type's id key holds it, an integer or a string,
-   * and carrying the constraint that names the type and the bundles,
-   * which the options resolver reads as the candidates and its validator
-   * holds a value to.
+   * An author declares a reference as any key, add() with the id's type and
+   * the constraint; this is for code that builds the key from what it
+   * reads: an entry of addEach() that names the entity type it refers to,
+   * and a content entity's reference field (FieldItemDerivation). The id
+   * is typed as the entity type's id key holds it, an integer or a string,
+   * and carries the constraint that names the type and the bundles, which
+   * the options resolver reads as the candidates and its validator holds a
+   * value to.
    *
    * @param string $key
    *   The key, for the messages.
@@ -270,15 +292,7 @@ final class References {
    *   bundle that is no non-empty string.
    */
   public function definition(string $key, string $entity_type_id, array $bundles = [], string $handler = '', array $handlerSettings = []): DataDefinition {
-    if ($entity_type_id === '' || str_contains($entity_type_id, ':') || array_filter($bundles, static fn (string $bundle): bool => $bundle === '' || str_contains($bundle, ':')) !== []) {
-      throw new \LogicException(sprintf('refer("%s", "%s") names no entity type: a reference key names an entity type, refer(\'%s\', \'node\', ...), and the bundles it may name, if any, bundles: [\'article\'].', $key, $entity_type_id, $key));
-    }
-    // Typed data derives `entity:<type>` for every entity type. A bundle
-    // is site state, which may not be there yet: the key then offers
-    // nothing until it is.
-    if (!isset($this->fromCode[$entity_type_id]) && $this->typedDataManager->getDefinition('entity:' . $entity_type_id, FALSE) === NULL) {
-      throw new \LogicException(sprintf('refer("%s", "%s") names an entity type this site does not have: typed data has no "entity:%s" data type.', $key, $entity_type_id, $entity_type_id));
-    }
+    $this->assertTarget(sprintf('"%s"', $key), $entity_type_id, $bundles);
     $definition = DataDefinition::create($this->idType($entity_type_id));
     $definition->addConstraint(self::CONSTRAINT, array_filter([
       'entityTypeId' => $entity_type_id,
@@ -290,6 +304,95 @@ final class References {
       $definition->setSetting(self::CONTENT, TRUE);
     }
     return $definition;
+  }
+
+  /**
+   * Checks the reference keys a declaration holds, and marks the content.
+   *
+   * A reference key is a key of the id's type with CONSTRAINT, which its
+   * author adds after declaring it, so it is checked once the declaration
+   * is done: at any depth of a map or a list, the constraint names an
+   * entity type the site has, and the key is typed as that entity type's
+   * id key holds it. A key that refers to a content entity type is marked
+   * (CONTENT), which a config storage stores by uuid. An id whose entity
+   * type a sibling names (TARGETS) is left alone: it is a string for every
+   * entity type, narrowed when one is chosen.
+   *
+   * Decision: see docs/decisions.md#a-reference-is-a-constraint-on-a-value.
+   *
+   * @param string $who
+   *   Who declares it, for the message: `event.sponsorship`.
+   * @param string $key
+   *   The key's name in messages.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   *
+   * @throws \LogicException
+   *   For a constraint that names no entity type the site has, or a key of
+   *   another type than the entity type's id.
+   */
+  public function settle(string $who, string $key, DataDefinitionInterface $definition): void {
+    if ($definition instanceof ListDataDefinitionInterface) {
+      $this->settle($who, $key . '.*', $definition->getItemDefinition());
+      return;
+    }
+    if ($definition instanceof ComplexDataDefinitionInterface) {
+      foreach ($definition->getPropertyDefinitions() as $name => $property) {
+        $this->settle($who, $key . '.' . $name, $property);
+      }
+      return;
+    }
+    $options = $definition->getConstraints()[self::CONSTRAINT] ?? NULL;
+    if ($options === NULL || $definition->getSetting(self::TARGETS) !== NULL || !$definition instanceof DataDefinition) {
+      return;
+    }
+    $entity_type_id = is_string($options['entityTypeId'] ?? NULL) ? $options['entityTypeId'] : '';
+    $bundles = array_map('strval', (array) ($options['bundles'] ?? []));
+    $where = sprintf('%s declares "%s"', $who, $key);
+    $this->assertTarget($where, $entity_type_id, $bundles);
+    $type = $this->idType($entity_type_id);
+    if ($definition->getDataType() !== $type) {
+      throw new \LogicException(sprintf(
+        '%s as a reference to %s with the %s type, and an id of %s is %s %s: declare it add(\'%s\', \'%s\', ...).',
+        $where,
+        $entity_type_id,
+        $definition->getDataType(),
+        $entity_type_id,
+        $type === 'integer' ? 'an' : 'a',
+        $type,
+        $key,
+        $type,
+      ));
+    }
+    if ($this->isContent($entity_type_id)) {
+      $definition->setSetting(self::CONTENT, TRUE);
+    }
+  }
+
+  /**
+   * Refuses an entity type or bundles a reference key cannot name.
+   *
+   * @param string $where
+   *   The key, for the message.
+   * @param string $entity_type_id
+   *   The entity type.
+   * @param string[] $bundles
+   *   The bundles.
+   *
+   * @throws \LogicException
+   *   When it names no entity type, or one typed data does not know, or a
+   *   bundle that is no non-empty string.
+   */
+  protected function assertTarget(string $where, string $entity_type_id, array $bundles): void {
+    if ($entity_type_id === '' || str_contains($entity_type_id, ':') || array_filter($bundles, static fn (string $bundle): bool => $bundle === '' || str_contains($bundle, ':')) !== []) {
+      throw new \LogicException(sprintf('%s as a reference that names no entity type: the %s constraint names one, [\'entityTypeId\' => \'node\'], and the bundles it may be of, if any, [\'bundles\' => [\'article\']].', $where, self::CONSTRAINT));
+    }
+    // Typed data derives `entity:<type>` for every entity type. A bundle
+    // is site state, which may not be there yet: the key then offers
+    // nothing until it is.
+    if (!isset($this->fromCode[$entity_type_id]) && $this->typedDataManager->getDefinition('entity:' . $entity_type_id, FALSE) === NULL) {
+      throw new \LogicException(sprintf('%s as a reference to %s, an entity type this site does not have: typed data has no "entity:%s" data type.', $where, $entity_type_id, $entity_type_id));
+    }
   }
 
   /**
@@ -311,8 +414,8 @@ final class References {
    * Answers whether a config storage stores a key by its entity's uuid.
    *
    * A key that refers to one content entity type, unless its author kept
-   * the id (STORED_AS). A bare `entity` key decides per value, by the
-   * entity type it holds (ReferenceStorageLayout).
+   * the id (STORED_AS). A reference to any entity type decides per value,
+   * by the entity type it holds (ReferenceStorageLayout).
    *
    * Decision: see docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
    *
@@ -436,7 +539,7 @@ final class References {
    *
    * A key read from a reference field names the field's handler and its
    * settings, so it lists, looks up and accepts what the field does; a key
-   * refer() declares names none and is answered by the default handler
+   * an author declares names none and is answered by the default handler
    * for its bundles (handler()).
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -458,21 +561,23 @@ final class References {
    *
    * What the lookup asks: the key at the path, through attached children,
    * as the resource was built for the account, so a key its access left
-   * out is not found. A bare `entity` key, or its id, refers to the entity
-   * type it is handed, once its own entity type key allows it: the id is
-   * refined for it, as the form refines it when the entity type is chosen.
+   * out is not found. A reference to any entity type, or its id, refers to
+   * the entity type it is handed, once its own entity type key allows it:
+   * the id is refined for it, as the form refines it when the entity type
+   * is chosen.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource, built.
    * @param string[] $path
    *   The keys, from the top: `['venue']`, `['thing', 'id']`.
    * @param string|null $entity_type_id
-   *   For a bare `entity` key, the entity type to look an id up of.
+   *   For a reference to any entity type, the entity type to look an id up
+   *   of.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The key's definition, refined for the entity type handed to a bare
-   *   key, which target() reads; NULL when no key at the path refers to
-   *   one entity type.
+   *   The key's definition, refined for the entity type handed to a
+   *   reference to any entity type, which target() reads; NULL when no key
+   *   at the path refers to one entity type.
    */
   public function definitionAt(SurfaceInterface $surface, array $path, ?string $entity_type_id = NULL): ?DataDefinitionInterface {
     $name = array_shift($path);
@@ -482,7 +587,7 @@ final class References {
     }
     $child = $entry->attachment?->child;
     if ($child !== NULL && $path === [] && $child->getDefinitions()->has('id')) {
-      // The bare key itself names its id.
+      // A reference to any entity type names its id.
       $path = ['id'];
     }
     if ($path !== []) {
@@ -491,7 +596,7 @@ final class References {
     if (static::target($entry->definition) !== NULL) {
       return $entry->definition;
     }
-    if ($entry->definition->getSetting(EntityReferenceStructure::TARGETS) === NULL) {
+    if ($entry->definition->getSetting(self::TARGETS) === NULL) {
       return NULL;
     }
     $type = $surface->getDefinition('entity_type')?->getConstraints()[self::TYPE_CONSTRAINT] ?? NULL;
@@ -728,7 +833,7 @@ final class References {
   }
 
   /**
-   * Lists the entity types a bare `entity` key may name, for the account.
+   * Lists the entity types a reference to any entity type may name.
    *
    * Every entity type that is not internal, of the interface when one is
    * named, among the targets when any are named, and of which the account

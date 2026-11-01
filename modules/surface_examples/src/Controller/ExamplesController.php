@@ -200,7 +200,7 @@ final class ExamplesController extends ControllerBase {
       }
       if ($number === 16) {
         $steps['references'] = [
-          '#markup' => '<h2>' . $this->t('References') . '</h2><p>' . $this->t("Example 16 is a key that refers to an entity: declared with refer() and the entity type it refers to, its candidates the selection handler's for the account, listed while there are few and looked up past that.") . '</p>',
+          '#markup' => '<h2>' . $this->t('References') . '</h2><p>' . $this->t("Example 16 is a key that refers to an entity: the id with a constraint naming the entity type it refers to, its candidates the selection handler's for the account, listed while there are few and looked up past that.") . '</p>',
         ];
       }
       if ($number === 15) {
@@ -788,7 +788,7 @@ final class ExamplesController extends ControllerBase {
       ],
       16 => [
         'title' => $series[16]['title'],
-        'sentence' => $this->t("A key that refers to an entity, declared with refer() and the entity type it refers to, and holding its id: a venue, a user, an article, or an entity of any type, filtered by what kind of entity type it is and by bundle. While the site has at most @limit candidates the key lists them; past that it is looked up, on the form with core's entity autocomplete and over HTTP with the resource's lookup. It lives in @module, which needs node.", [
+        'sentence' => $this->t("A key that refers to an entity, the id with a constraint naming the entity type it refers to: a venue, a user, an article, or an entity of any type, filtered by what kind of entity type it is and by bundle. While the site has at most @limit candidates the key lists them; past that it is looked up, on the form with core's entity autocomplete and over HTTP with the resource's lookup. It lives in @module, which needs node.", [
           '@limit' => $this->references->limit(),
           '@module' => self::REFERENCES,
         ]),

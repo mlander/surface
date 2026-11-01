@@ -296,7 +296,7 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests addEach() declares a reference per thing in refer()'s words.
+   * Tests addEach() declares a reference per thing, naming its entity type.
    *
    * The type string `entity:<type>` is refused, as add() refuses it; an
    * entry that refers to an entity names its entity type with `to:` and
@@ -325,7 +325,8 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
     $declared = $blueprint->fromSite()['pages'];
     $this->assertSame(['node', ['page']], [$declared['to'], $declared['bundles']]);
 
-    // Built, each entry is the id refer() declares.
+    // Built, each entry is the id with the constraint, as any reference
+    // key is.
     $pages = $this->container->get('surface.resources')->build(ReferenceSettingsResource::class, new OperationContext('configure'))->getDefinitions()->entry('pages')?->attachment?->child;
     $this->assertNotNull($pages);
     foreach (['lead', 'aside'] as $entry) {
