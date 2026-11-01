@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\ResourceBuild;
 
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
@@ -256,6 +257,15 @@ final class Attaching {
         continue;
       }
       $attachment = $attachment->withReads($reads, static::wiredKeys($builder, $reads));
+      // The widget the structure asks to be drawn with, unless its owner
+      // asked for one at the key.
+      // Decision: see
+      // docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
+      $asked = $this->registry->getDefinition((string) $child)->widget;
+      $shell = $builder->getDefinition((string) $key);
+      if ($asked !== NULL && $shell instanceof DataDefinition && $shell->getSetting('widget') === NULL) {
+        $shell->setSetting('widget', $asked);
+      }
       $builder->attach($key, $attachment);
       $this->wirePorts($builder, $key . '.', $attachment, FALSE, $definition->id);
       if ($access !== NULL && $access->isLocked()) {
@@ -333,7 +343,7 @@ final class Attaching {
     // schema is written from.
     $shell = $builder->getDefinition($key);
     if ($shell !== NULL) {
-      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->add($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
+      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->addEntry($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
     }
     $entries = $keys->entries();
     $map = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
@@ -390,7 +400,7 @@ final class Attaching {
     else {
       $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references());
       foreach ($entries as $id => $entry) {
-        $blueprint->add((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default']);
+        $blueprint->addEntry((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default']);
         if ($entry['locked']) {
           $map->hold((string) $id);
         }

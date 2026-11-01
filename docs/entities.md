@@ -53,13 +53,14 @@ leaves out and why, read from the registry.
 | What | From |
 | --- | --- |
 | The content entity resource's keys | the identity (`entity_type`, `bundle`, `id`), then one child per component of the bundle's default form display, in its weight order |
-| Its operations | `create`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty); `update` and `read`, each taking the entity as `id`, typed `entity:<entity type>`; `read` is read only |
+| Its operations | `create`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty); `update` and `read`, each taking the identity key `id`, whose value the storage loads the entity by (an id that names nothing, or an entity of another bundle, is a not found at `id`); `read` is read only |
 | Its access | the entity's: create access for the bundle on create, update access for the entity on update, view access on a read |
 | Its storage | `ContentEntityStorage`, below |
 | Its outputs | `id`, the entity's id once saved |
 | A field item structure's keys | the item's property definitions the field type stores and a caller sets, typed as the coercion table carries them (the table below) |
 | Each key's label | the field's, when the item has one key; the property's, when it has several |
 | Each key's description | the field's, when the item has one key |
+| The widget | the form display component's, read for the main property: `options_buttons` asks a key with a list of values for radios; `string_textarea` and `text_textarea` draw the string as a textarea; `string_textfield`, `email_default`, `number`, `boolean_checkbox` and `options_select` draw what the stock rule draws, so no word is set; each component's `size`, `rows` and `placeholder` travel where a widget or the arrangement reads them; any other component type asks for nothing, and what is accepted stays the field's (`FieldItemDerivation::WIDGETS`) |
 | Required | on the main property, when the field is required |
 | Default | the field's literal default (`getDefaultValueLiteral()`), cast to the key's type |
 | Constraints | `Length`, `Range`, `Regex` and `Choice` from the property definitions and from the field type's own `getConstraints()` (its `ComplexData` per property); the rest are checked when its storage validates the entity |
@@ -67,7 +68,7 @@ leaves out and why, read from the registry.
 | Its operations | `create`, `update` and `read`, which the parent invokes to match its own; each knows the entity type, the bundle and the field, and `update` and `read` the entity's id |
 | Its access | field access, as the child's access: open, locked or omitted; on a read, open or omitted, by view access |
 | The entity type resource's keys | the identity (`entity_type`, `id`), `bundle`, and `fields`: variants `bundle` chooses, one per bundle with a form display, each that bundle's `.fields` structure, which attaches the same field children the bundle's resource holds at its root |
-| Its operations | `create`, knowing the entity type and that there is no id, `bundle` held to the bundles the account may create (`SurfaceCreatableBundle`); `update` and `read`, taking the entity as `id`, `bundle` fixed to the entity's, the fields under `fields` |
+| Its operations | `create`, knowing the entity type and that there is no id, `bundle` held to the bundles the account may create (`SurfaceCreatableBundle`); `update` and `read`, taking the identity key `id`, the entity loaded by the storage, `bundle` fixed to the entity's, the fields under `fields` |
 | Its access | on create, open to an account that may create at least one bundle, the chosen bundle's create access asked at `bundle` once a value is sent; on update, the entity's update access; on a read, its view access |
 | Its storage | `ContentEntityStorage`, the bundle read from the values on create and from the entity on update, the fields under `fields` |
 
@@ -222,6 +223,11 @@ engine's storage classes, because what it reads and writes is the field
 item derivation's keys, which the engine does not own
 (why: [decision](decisions.md#the-content-entity-storage)).
 
+- **The entity an id names** is the storage's to load: an operation is
+  handed the identity key `id`, and its context asks the storage for the
+  entity (`ContentEntityStorage::entity()`), which refuses an id that
+  names nothing with a not found at `id`
+  ([decision](decisions.md#a-parameter-names-a-key)).
 - **Load** reads the entity the context names: its identity, and each
   carried field's first item, property by property, cast to the key's
   type. An empty field is absent, so it starts from its default.

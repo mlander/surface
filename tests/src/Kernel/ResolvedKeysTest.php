@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\Resolve;
+use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
 use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
@@ -185,7 +186,7 @@ class ResolvedKeysTest extends SurfaceKernelTestBase {
     $inputs = $blueprint();
     $token = $inputs->add('token', 'string', 'Token');
     $inputs->add('vault_id', 'string', 'Vault entry');
-    $inputs->add('settings', 'map', 'Settings');
+    $inputs->addMap('settings', 'Settings', static function (BlueprintInterface $map): void {});
     $refused(fn () => $inputs->resolve('secret', ['vault_id'], VaultToken::class), 'resolve("secret") in this blueprint names a key nothing has declared');
     $refused(fn () => $inputs->resolve('token', ['vault'], VaultToken::class), 'is resolved from "vault", which is no key declared');
     $refused(fn () => $inputs->resolve('token', ['token'], VaultToken::class), 'is resolved from "token", which is the key itself');

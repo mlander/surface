@@ -13,12 +13,13 @@ use Drupal\surface\Widget\SurfaceWidgetBase;
 /**
  * A value no element types in: an item saying it is not drawn on this form.
  *
- * Bytes (`binary`), and core's data types whose value is an object rather
- * than a value a person types: a language, and a reference to typed data
- * (`language_reference`, `entity_reference`; a key that refers to an
- * entity is `entity:<type>`, drawn as a select or an autocomplete). The
- * item posts nothing, so the key keeps what it holds, and the tool, HTTP
- * and the React page set it. A list of them is not drawn either.
+ * Core's data types whose value is an object rather than a value a person
+ * types: a language, and a reference to typed data (`language_reference`,
+ * `entity_reference`; a key that refers to an entity is refer()'s id,
+ * drawn as a select or an autocomplete). No blueprint declares one (the
+ * type table refuses them), so only a definition handed to the engine by
+ * hand reaches it. The item posts nothing, so the key keeps what it holds.
+ * A list of them is not drawn either.
  *
  * Decision: see
  * docs/decisions.md#the-form-never-refuses-to-draw-a-declared-key.
@@ -33,7 +34,7 @@ final class NotDrawnWidget extends SurfaceWidgetBase {
   /**
    * The data types it draws.
    */
-  public const TYPES = ['binary', 'language', 'language_reference', 'entity_reference'];
+  public const TYPES = ['language', 'language_reference', 'entity_reference'];
 
   /**
    * {@inheritdoc}

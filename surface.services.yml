@@ -6,6 +6,8 @@ services:
   plugin.manager.surface_widget:
     class: Drupal\surface\Widget\SurfaceWidgetManager
     parent: default_plugin_manager
+  # By class, for the build's check of the widgets keys ask for.
+  Drupal\surface\Widget\SurfaceWidgetManager: '@plugin.manager.surface_widget'
   plugin.manager.surface_options_resolver:
     class: Drupal\surface\Options\SurfaceOptionsResolverManager
     parent: default_plugin_manager

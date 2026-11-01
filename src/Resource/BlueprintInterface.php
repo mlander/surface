@@ -33,9 +33,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * narrower. A sibling the context locks chooses the variant from the
    * start.
    *
-   * A child that cannot be enumerated statically is the one case for a
-   * #[RefinesInput] method on an `any` key returning the narrower
-   * definition itself; no verb is needed for it.
+   * A key whose shape depends on another key's value is variants: there
+   * is no `any` key a refiner turns into a map, since add() refuses `any`
+   * and only the placeholder may become what it stands for.
    *
    * Variants from the site: `from:` names a provider implementing
    * SiteListInterface, asked at every build as for keys from the site,

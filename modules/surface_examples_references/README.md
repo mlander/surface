@@ -11,10 +11,10 @@ drush pm:install surface_examples_references
 
 ## What it shows
 
-`Resource\SponsorshipResource` declares each key by the data type string
-of what it refers to: `entity:event_venue`, `entity:user`,
-`entity:node:article`, and three bare `entity` keys, each two parts, an
-entity type and an id, filtered by what kind of entity type it is and by
+`Resource\SponsorshipResource` declares each key with `refer()` and the
+entity type it refers to: `event_venue`, `user`, `node` with the
+bundle `article`, and three of any entity type, `refer($key, NULL)`,
+each two parts, an entity type and an id, filtered by what kind of entity type it is and by
 bundle. Every door sends and answers the id, as its entity type keeps
 it. The config object stores a content entity by its uuid, so it means
 the same entity on a site it is deployed to: the contact, the

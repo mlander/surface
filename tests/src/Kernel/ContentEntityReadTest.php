@@ -128,7 +128,7 @@ class ContentEntityReadTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests both resources declare their read, read only, taking the entity.
+   * Tests both resources declare their read, read only, taking the id.
    */
   public function testBothResourcesDeclareTheirRead(): void {
     $registry = $this->container->get('surface.resource_registry');
@@ -138,7 +138,7 @@ class ContentEntityReadTest extends SurfaceKernelTestBase {
       $this->assertFalse($read->isDefaultRead(), $resource . ': declared, not the one the build adds.');
       $this->assertNull($read->permission, $resource . ': core\'s view access is its access, as core\'s edit access is the update\'s.');
       $this->assertSame(['id'], array_map(static fn ($parameter): string => $parameter->name, $read->parameters), $resource);
-      $this->assertSame('node', $read->parameters[0]->entityType, $resource);
+      $this->assertTrue($read->parameters[0]->namesKey, $resource . ': the identity key, whose value the storage loads the entity by.');
     }
     // Each field item reads too, so a read reaches each field's own access.
     $this->assertTrue($registry->getOperation('field.item:node.page.title', 'read')->readOnly);

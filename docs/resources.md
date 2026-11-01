@@ -662,7 +662,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   whole answer for the thing, as when it is asked on its own: its
   permission, its own gates, its access class and every alter that
   answers access for it, combined with `andIf()`. The thing is handed
-  to that operation as its one required entity parameter; an operation
+  to that operation as its one required entity parameter, or as the id
+  a derived operation's `id` parameter takes; an operation
   that needs nothing is asked with nothing.
 - **Core's access on an entity or a field**: `entity:node:update` asks
   the entity type's access control handler, `access()`, and
@@ -675,9 +676,11 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 What the gate is asked about:
 
 - **The thing the context knows.** An identity key declared as a
-  reference to the gate's entity type (`$inputs->add('node',
-  'entity:node')`), or the `entity_type` and `id` a content entity
-  resource knows. The gate is asked after the operation's permission and
+  reference to the gate's entity type (`$inputs->refer('node',
+  'node', ...)`), or the `entity_type` and `id` a content entity
+  resource knows. A gate naming a content entity resource's operation,
+  whose parameter is the identity key `id`, is asked about that entity
+  and hands the operation its id. The gate is asked after the operation's permission and
   before its access class, at every door that asks
   `ResourcesInterface::access()`: a refusal is a 403 on a route and an
   access refusal from a tool.
@@ -1557,7 +1560,14 @@ is refused.
 `attach()` and `attachVariants()` return the map definition at the key, a
 core `MapDataDefinition`, the way `add()` returns its definition, so
 the owner labels and describes its own child's key with the core
-setters. `describe()` rewords a key for an alter that does not own it,
+setters. A structure may ask for the widget that draws it as a whole,
+`#[Structure('event.pair', widget: 'my_pair')]`, by the word a key's
+`widget` setting uses; it is set on the key wherever the structure is
+attached, unless the owner set one there, and a widget that cannot draw
+a map is refused when the parent is built
+([Generated forms](forms.md#a-widget-a-structure-asks-for)). A map only
+the owner holds, with no class, is `addMap()`
+([An anonymous map](declaring-a-resource.md#an-anonymous-map)). `describe()` rewords a key for an alter that does not own it,
 and arranges a key for its owner or an alter; an owner rewording its
 own key with it says in two statements what one says.
 
@@ -1695,8 +1705,8 @@ Until the deciding key holds a value, the key is advertised as an `any`
 placeholder marked as variants (`DefinitionMetadata::variantsBy()`); once
 it does, or from the start when the context locks the deciding key, it is
 exactly the chosen variant's map. That is an ordinary refinement under
-the rule that `any` may become anything narrower, not a mechanism of its
-own. The deciding key gains a list of the variants' values, labeled as
+the rule that the placeholder may become anything narrower, not a
+mechanism of its own. The deciding key gains a list of the variants' values, labeled as
 they say, or keeps its own, narrowed to the variants offered (one an
 access class withholds is not), and becomes a refinement
 dependency of the key the variants sit at, so the form rebuilds on it
@@ -2178,11 +2188,13 @@ building it, to know which keys are secret (why:
 
 ### A child that cannot be listed
 
-Variants cover a child chosen from a set of values someone can name. A
-child whose keys cannot be enumerated at all is the one case for a
-`#[RefinesInput]` method on an `any` key that returns the narrower
-definition itself, a map included. No verb is needed for it: `any` may
-become anything narrower, and the method is an ordinary refiner.
+Variants cover a child chosen from a set of values someone can name, a
+provider's included ([Variants from the site](#variants-from-the-site)):
+a key whose shape depends on another key's value is variants. There is
+no `any` key a refiner turns into a map: `add()` refuses `any`, and only
+the variants' placeholder may become another type
+([Variants, not slots](decisions.md#variants-not-slots), amended
+2026-11-01).
 
 ### Collections
 
@@ -2439,7 +2451,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
           identity: ['entity_type', 'bundle', 'id'],
           operations: [
             new DerivedOperation('create', $this->t('Add @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'create', $bound)),
-            new DerivedOperation('update', $this->t('Edit @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'update', $bound), ['id' => 'entity:' . $entity_type_id]),
+            new DerivedOperation('update', $this->t('Edit @bundle', ['@bundle' => $label]), new ResourceCallable(self::class, 'update', $bound), ['id']),
           ],
           storage: ContentEntityStorage::class,
           access: ContentEntityAccess::class,
@@ -2477,9 +2489,15 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   closure is not. A static method is called on the class, an instance
   method on the class resolver's instance, so a deriver's own methods
   may read site state. Its operations are `DerivedOperation` values (id,
-  label, permission, default, parameters named and typed,
-  `entity:<entity type>` for an entity), each built by a
-  `ResourceCallable` handed the resolved arguments by name. Its refiners
+  label, permission, default, and parameters, each the name of a key the
+  resource declares, `['id']`), each built by a `ResourceCallable` handed
+  the resolved arguments by name. A parameter takes its key's
+  definition and no type of its own: the operation receives the key's
+  value, and loading what it names is the storage's (the content entity
+  storage loads the entity by its id, and an id that names nothing is a
+  not found at `id`). A parameter typed `name => type`, `entity:<type>`
+  among them, is refused at discovery
+  (why: [decision](decisions.md#a-parameter-names-a-key)). Its refiners
   are the static `#[RefinesInput]` methods of the classes it names,
   static or runtime as each declares. Its storage and access class are
   built by the class resolver: a service, a class implementing

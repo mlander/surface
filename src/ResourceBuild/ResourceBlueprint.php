@@ -11,8 +11,8 @@ use Drupal\Component\Plugin\Exception\PluginNotFoundException;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\surface\Computed;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Port;
@@ -110,7 +110,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected array $origins = [];
 
   /**
-   * The keys declared as a bare `entity`, each with the map at the key.
+   * The keys declared as a reference to any entity type, each with its map.
    *
    * Its two parts are registered once its author is done narrowing it,
    * when the build step first asks for the children (attachments()).
@@ -118,6 +118,21 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @var array<string, \Drupal\Core\TypedData\MapDataDefinition>
    */
   protected array $entities = [];
+
+  /**
+   * The map a declaration run again reaches, and who its callable fills.
+   *
+   * In a declaration run again for a map's structure: its key, and the
+   * structure's blueprint, which that key's callable is handed.
+   *
+   * @var array{0: string, 1: \Drupal\surface\ResourceBuild\ResourceBlueprint}|null
+   */
+  protected ?array $capture = NULL;
+
+  /**
+   * Whether the declaration run again reached the map's key.
+   */
+  protected bool $captured = FALSE;
 
   /**
    * Constructs a blueprint.
@@ -348,8 +363,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    *
-   * A key declared as a bare `entity` holds its two parts, registered for
-   * what its author narrowed it by.
+   * A key declared as a reference to any entity type holds its two parts,
+   * registered for what its author narrowed it by.
    */
   public function attachments(): array {
     foreach ($this->entities as $key => $shell) {
@@ -373,20 +388,97 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    */
   protected function addEntity(string $key, string|\Stringable $label, mixed $default): DataDefinition {
     if ($default !== NULL) {
-      throw new \LogicException(sprintf('add("%s", "entity") was given a default: a reference to an entity of any type is two keys, its entity type and its id, which start from nothing.', $key));
+      throw new \LogicException(sprintf('refer("%s", NULL) was given a default: a reference to an entity of any type is two keys, its entity type and its id, which start from nothing.', $key));
     }
     if ($this->registry === NULL || $this->references === NULL || $this->outputs) {
-      throw new \LogicException(sprintf('add("%s", "entity") declares a reference to an entity of any type where nothing can attach its two parts: a resource or a structure declares it among its inputs.', $key));
+      throw new \LogicException(sprintf('refer("%s", NULL) declares a reference to an entity of any type where nothing can attach its two parts: a resource or a structure declares it among its inputs.', $key));
     }
     // Held for its two parts, registered once its author is done with it
     // (attachments()).
     $this->assertHoldsNoChild('attaches a reference to an entity of any type', $key);
-    $shell = $this->reserveChild('add', $key);
+    $shell = $this->reserveChild('refer', $key);
     $this->attachments[$key] = EntityReferenceStructure::class;
     $this->wirings[$key] = [];
     $shell->setLabel($label);
     $this->entities[$key] = $shell;
     return $shell;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A map whose keys need a frame of their own (a child, a rule, a
+   * resolve, a port) is a structure with no id, registered for this key
+   * and attached at it (ResourceRegistry::defineMap()); its inputs run this
+   * declaration again and hand the callable the structure's blueprint
+   * (replay()). Every other map is the plain map the callable declared.
+   *
+   * Decision: see docs/decisions.md#an-anonymous-map.
+   */
+  public function addMap(string $key, string|\Stringable $label, callable $define): MapDataDefinition {
+    if ($this->capture !== NULL) {
+      $shell = $this->reserveChild('addMap', $key);
+      $shell->setLabel($label);
+      if ($key === $this->capture[0]) {
+        $this->captured = TRUE;
+        $define($this->capture[1]);
+      }
+      return $shell;
+    }
+    try {
+      return parent::addMap($key, $label, $define);
+    }
+    catch (NeedsFrame) {
+      assert($this->registry !== NULL && $this->owner !== NULL);
+      $shell = $this->reserveChild('addMap', $key);
+      $shell->setLabel($label);
+      $owner = $this->registry->getDefinition($this->owner);
+      $this->attachments[$key] = $this->registry->defineMap($owner->id . '.' . $key, $owner->module, $this->owner, $key);
+      $this->wirings[$key] = [];
+      return $shell;
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function unframed(): ?string {
+    return match (TRUE) {
+      $this->outputs => 'outputs hold no attached structures yet.',
+      $this->into !== NULL => 'a structure mixed in holds keys and maps, not children, for now.',
+      $this->registry === NULL || $this->owner === NULL => 'this blueprint has no registry and no owner to attach one by.',
+      default => NULL,
+    };
+  }
+
+  /**
+   * Declares a map's keys: its owner's declaration, run again to the map.
+   *
+   * The owner declares into a blueprint of its own, which declares
+   * nothing anywhere that is kept; its addMap() at the key hands the
+   * callable this blueprint instead of a map's.
+   *
+   * @param string $owner
+   *   The owner, by the name the registry knows it by.
+   * @param string $key
+   *   The key it declares the map at.
+   *
+   * @throws \LogicException
+   *   When the declaration declares no map at the key this time.
+   *
+   * @internal
+   *   For MapBlueprint::fill() alone.
+   */
+  public function replay(string $owner, string $key): void {
+    assert($this->registry !== NULL);
+    $capture = (new static(new SurfaceBuilder(), $this->typedDataManager, FALSE, $this->registry, $owner))
+      ->useShapes($this->shapes)
+      ->useReferences($this->references);
+    $capture->capture = [$key, $this];
+    $this->registry->declareInputs($this->registry->getDefinition($owner), $capture);
+    if (!$capture->captured) {
+      throw new \LogicException(sprintf('%s declared a map at "%s" with addMap() once, and not when its declaration ran again: a declaration declares the same each time it runs.', $this->name($owner), $key));
+    }
   }
 
   /**
@@ -872,10 +964,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         throw $refuse(sprintf('is computed from "%s", which is no key declared before it in this blueprint.', $source));
       }
     }
+    // A map is refused by add(): no row of the type table is one.
     $definition = $this->add($key, $type, $label);
-    if ($definition instanceof ComplexDataDefinitionInterface) {
-      throw $refuse('is a map: a computed key holds one value.');
-    }
     DefinitionMetadata::setComputed($definition, new Computed($from, $using, $when));
     return $definition;
   }

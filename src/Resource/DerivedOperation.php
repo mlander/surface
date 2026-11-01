@@ -12,9 +12,10 @@ namespace Drupal\surface\Resource;
  * attribute on: an id, a label, a description, the static part of
  * access, whether it creates, how a call behaves, and the parameters a
  * route or a tool supplies. A class-based operation reads its parameters
- * off its signature; a derived one names them, since one method serves every
- * derivative and a parameter may be named after the derivative (a node
- * is `id`, typed `entity:node`).
+ * off its signature; a derived one names them, since one method serves
+ * every derivative: each the name of a key its resource declares, `id`,
+ * whose definition the parameter takes. The operation receives the value,
+ * and the storage loads what it names.
  *
  * The context is built by a ResourceCallable called with the resolved
  * arguments, keyed by parameter name, before its bound arguments:
@@ -34,10 +35,10 @@ final class DerivedOperation {
    *   For people and for tool descriptions.
    * @param \Drupal\surface\Resource\ResourceCallable $context
    *   What builds the OperationContext, handed the arguments by name.
-   * @param array<string, string> $parameters
-   *   The parameters, by name, each typed with a builtin ('string',
-   *   'int', 'float', 'bool') or `entity:<entity type id>`, which takes
-   *   the entity, or its id, loaded.
+   * @param list<string> $parameters
+   *   The parameters: each the name of a key the resource declares, an
+   *   identity key or one the operation needs to name its subject, which
+   *   a route or a tool supplies as that key's value.
    * @param string|null $permission
    *   The static part of access, with `%key` placeholders, as on
    *   #[Operation].

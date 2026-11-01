@@ -20,6 +20,7 @@ use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
+use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface_examples_entity\FieldItemDerivation;
 use Drupal\surface_examples_entity\Resource\FieldItemStructures;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -112,6 +113,41 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
     );
     $storage->setStringTranslation($container->get('string_translation'));
     return $storage;
+  }
+
+  /**
+   * Loads the entity an operation's id names, for its context to read.
+   *
+   * What an operation of a content entity resource is handed is the id,
+   * the identity key's value; the entity is this storage's to load.
+   *
+   * Decision: see docs/decisions.md#a-parameter-names-a-key.
+   *
+   * @param string $entity_type_id
+   *   The entity type.
+   * @param mixed $id
+   *   The id the operation was handed.
+   * @param string $operation
+   *   The operation and the resource, for the message.
+   *
+   * @return \Drupal\Core\Entity\ContentEntityInterface
+   *   The entity.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   At `id`, when the id names no entity of the type: a URL naming it
+   *   names nothing.
+   * @throws \InvalidArgumentException
+   *   When what it was handed is no id.
+   */
+  public function entity(string $entity_type_id, mixed $id, string $operation): ContentEntityInterface {
+    if (!is_int($id) && !is_string($id) || $id === '') {
+      throw new \InvalidArgumentException(sprintf('%s takes the id of a %s, and was handed %s.', $operation, $entity_type_id, get_debug_type($id)));
+    }
+    $entity = $this->entityTypeManager->getStorage($entity_type_id)->load($id);
+    if (!$entity instanceof ContentEntityInterface) {
+      throw new NamesNothingException(sprintf('%s takes the id of a %s, and there is none with the id "%s".', $operation, $entity_type_id, $id), 'id');
+    }
+    return $entity;
   }
 
   /**

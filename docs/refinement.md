@@ -490,7 +490,7 @@ than a refused refinement.
 | Adding a `Length`, `Range` or `Count` bound where there was none | narrower |
 | Changing or dropping a `Length` or `Count` `exactly` | **refused** |
 | Sharpening a label, description, default or example | neither, and allowed |
-| Refining `any` to a concrete type, a map included | narrower: the declared escape hatch |
+| Refining the variants' placeholder, an `any` marked with its deciding key, to the chosen variant's map | narrower |
 | Changing the data type to one of its derivatives (`entity` to `entity:node` to `entity:node:article`) | narrower |
 | Changing the data type any other way | **refused** |
 | Turning off the required flag | **refused** |
@@ -526,11 +526,10 @@ naming the key ([Collections](resources.md#collections)).
 
 Inside a map the table recurses, which is what holds an attached
 structure to it: the child narrows its own keys, and the map its parent
-advertises narrows with them. Refining `any` to a map is how the
-variants' placeholder resolves to the variant its deciding key chose (see
-[Attached structures](resources.md#children)), and how a
-`#[RefinesInput]` method on an `any` key describes a child that cannot
-be listed statically.
+advertises narrows with them. Refining the placeholder to a map is how
+variants resolve to the variant their deciding key chose (see
+[Attached structures](resources.md#children)); it is the only `any` that
+may become another type, and no key a blueprint declares is `any`.
 
 A refusal is a `\LogicException` naming the key, the contributor and
 what widened:

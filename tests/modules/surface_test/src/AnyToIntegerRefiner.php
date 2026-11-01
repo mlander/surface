@@ -9,10 +9,11 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\SurfaceRefinerInterface;
 
 /**
- * A refiner that gives an 'any' definition a concrete type.
+ * A refiner that gives an `any` definition a concrete type.
  *
- * The escape hatch the narrowing contract leaves open: 'any' advertises
- * nothing, so any type is narrower than it.
+ * What the narrowing contract allows the variants' placeholder alone: it
+ * advertises nothing of its own, so any type is narrower than it. Handed
+ * any other `any`, the engine refuses what it returns.
  */
 final class AnyToIntegerRefiner implements SurfaceRefinerInterface {
 

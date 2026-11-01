@@ -36,6 +36,14 @@ final class Gates implements ContainerInjectionInterface {
   use DependencySerializationTrait;
 
   /**
+   * The subject of an operation gate whose operation takes an entity's id.
+   *
+   * Asked about the entity the gating context knows, whichever entity
+   * type it names, by its `entity_type` and `id`.
+   */
+  public const ANY_ENTITY_TYPE = '*';
+
+  /**
    * Constructs Gates.
    *
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
@@ -60,9 +68,11 @@ final class Gates implements ContainerInjectionInterface {
    * Names the entity type a gate asks about.
    *
    * Core's gates name it. An operation gate asks about what its operation
-   * takes: the entity its one required entity parameter takes, or none
-   * when the operation needs nothing, which is then asked once with no
-   * subject.
+   * takes: the entity its one required entity parameter takes; for a
+   * derived operation's `id` on a resource that knows its entity type and
+   * id, the entity the context knows, of whichever type it names
+   * (self::ANY_ENTITY_TYPE); or none when the operation needs nothing,
+   * which is then asked once with no subject.
    *
    * @param \Drupal\surface\ResourceBuild\Gate $gate
    *   The gate.
@@ -83,7 +93,16 @@ final class Gates implements ContainerInjectionInterface {
       if ($parameter->optional) {
         continue;
       }
-      $entity_type = $parameter->entityType ?? $this->entityTypeOf((string) $parameter->type);
+      if ($parameter->namesKey) {
+        // A derived operation's id, of a resource that knows its entity
+        // type and id: asked about the entity the context knows, of
+        // whichever entity type it names, and handed its id.
+        $identity = $this->registry->getDefinition((string) $gate->resource)->identity;
+        if ($parameter->name === 'id' && in_array('entity_type', $identity, TRUE) && in_array('id', $identity, TRUE)) {
+          return [self::ANY_ENTITY_TYPE, $parameter->name];
+        }
+      }
+      $entity_type = $parameter->namesKey ? NULL : $this->entityTypeOf((string) $parameter->type);
       if ($entity_type === NULL) {
         throw new \LogicException(sprintf(
           'The gate "%s" names an operation that needs %s, which is no entity: a gate hands the operation it names the thing a call is about, and nothing else.',

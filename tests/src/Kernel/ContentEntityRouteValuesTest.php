@@ -211,7 +211,7 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
       [
         'entity.content:node.page',
         'update',
-        'The surface_route_test.edit_missing_page route\'s "id" default names nothing: The "update" operation needs a node as $id, and there is none with the id "999".',
+        'The surface_route_test.edit_missing_page route\'s "id" default names nothing: The update operation of entity.content:node.page takes the id of a node, and there is none with the id "999".',
       ],
     ], array_map(static fn (array $refusal): array => [$refusal['resource'], $refusal['operation'], $refusal['message']], $refused));
   }
@@ -276,7 +276,7 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     foreach ([
       'The update operation of entity.content:node.page takes a node of the page bundle.' => $kitchen,
-      'The "update" operation needs a node as $id, and there is none with the id "999".' => 999,
+      'The update operation of entity.content:node.page takes the id of a node, and there is none with the id "999".' => 999,
     ] as $message => $id) {
       try {
         $resources->operation('entity.content:node.page', 'update', ['id' => $id]);
@@ -304,7 +304,7 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
     }
     catch (\InvalidArgumentException $e) {
       $this->assertNotInstanceOf(NamesNothingException::class, $e);
-      $this->assertSame('The surface_route_test.edit_missing_page route\'s "id" default names nothing: The "update" operation needs a node as $id, and there is none with the id "999".', $e->getMessage());
+      $this->assertSame('The surface_route_test.edit_missing_page route\'s "id" default names nothing: The update operation of entity.content:node.page takes the id of a node, and there is none with the id "999".', $e->getMessage());
     }
   }
 

@@ -18,7 +18,7 @@ final class AuthorStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('author', 'entity:user', 'Author');
+    $inputs->refer('author', 'user', 'Author');
   }
 
 }

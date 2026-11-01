@@ -396,10 +396,11 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
   /**
    * Every data type core defines is drawn by a widget: none throws.
    *
-   * What add() declares a key with is a typed data type, and core defines
-   * them all (this module defines none); each, and a list of each, is
-   * drawn by some widget. A type a contributed or core module adds
-   * (`filter_format`, say) is not walked here: no widget names it.
+   * Core defines every typed data type (this module defines none); each,
+   * and a list of each, is drawn by some widget, but `binary`, which no
+   * key holds: the type table has no row for it, and no widget draws it.
+   * A type a contributed or core module adds (`filter_format`, say) is
+   * not walked here: no widget names it.
    */
   public function testEveryDataTypeOfCoreIsDrawn(): void {
     $manager = $this->container->get('plugin.manager.surface_widget');
@@ -407,7 +408,7 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $drawn = [];
     $lists = [];
     foreach ($typed->getDefinitions() as $type => $plugin) {
-      if (($plugin['provider'] ?? NULL) !== 'core') {
+      if (($plugin['provider'] ?? NULL) !== 'core' || $type === 'binary') {
         continue;
       }
       $definition = $typed->createDataDefinition($type);
@@ -416,7 +417,6 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     }
     $primitives = [
       'any' => 'json',
-      'binary' => 'not_drawn',
       'boolean' => 'checkbox',
       'datetime_iso8601' => 'datetime',
       'decimal' => 'number',
@@ -440,11 +440,10 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $this->assertSame($primitives, $read);
     // Every other one core defines (an entity, a field item) is a map.
     $this->assertSame([], array_diff(array_diff_key($drawn, $primitives), ['fieldset']));
-    $some = ['binary', 'boolean', 'integer', 'list', 'map', 'string', 'timestamp'];
+    $some = ['boolean', 'integer', 'list', 'map', 'string', 'timestamp'];
     $lists = array_intersect_key($lists, array_flip($some));
     ksort($lists);
     $this->assertSame([
-      'binary' => 'not_drawn',
       'boolean' => 'list',
       'integer' => 'list',
       'list' => 'json',
@@ -472,20 +471,6 @@ class StockWidgetsTest extends SurfaceKernelTestBase {
     $typed = ['date' => '2026-10-28', 'time' => '09:15:00'];
     $this->assertSame((new \DateTimeImmutable('2026-10-28 09:15:00'))->format('c'), $this->extracted($at, $element, $typed), 'What was typed, before core read it, in the site\'s time zone.');
     $this->assertNull($this->extracted($at, $element, ['date' => '', 'time' => '']), 'Nothing typed sent nothing.');
-  }
-
-  /**
-   * Bytes are not drawn: an item saying so, and what is stored is kept.
-   */
-  public function testBinaryIsNotDrawn(): void {
-    $bytes = DataDefinition::create('binary')->setLabel('Logo');
-    $surface = $this->one($bytes);
-    $element = $this->form($surface, ['key' => 'stored'])['key'];
-    $this->assertSame('item', $element['#type']);
-    $this->assertTrue($element[SurfaceFormBuilderInterface::PLACEHOLDER_KEY]);
-    $this->assertSame('This is not drawn on this form; what it holds is kept. Set it through the tool, over HTTP or on the React page.', $element['#markup']);
-    $container = $this->form($surface, ['key' => 'stored']);
-    $this->assertSame(['key' => 'stored'], $this->formBuilder()->extractSurfaceValues($surface, $container, new FormState(), ['key' => 'stored']));
   }
 
   /**

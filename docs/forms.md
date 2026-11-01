@@ -217,6 +217,40 @@ one form's: a borrowed element (the content type example puts the three
 groups its resource declares into core's vertical tabs, reaching each by
 `@group.<id>`), markup, the message and the redirect.
 
+## A widget a structure asks for
+
+A structure asks for the widget that draws it as a whole with
+`#[Structure(widget:)]`, the one word a key's `widget` setting uses
+(`setSetting('widget', 'radios')`): the build sets it on the key
+wherever the structure is attached, unless the owner set one there, and
+the hint `x-surface.widget` says it. A shape's `define()` sets the
+setting on its definition, which every key of the shape starts from. A
+widget draws and reads back; what is accepted is the keys' definitions,
+which the pipeline holds every door to. Three guards hold that:
+
+- **A widget word is checked when the resource is built.** Every key
+  whose `widget` setting asks for one, at any depth, is handed to the
+  widget manager's own check at the build: a word no widget answers to,
+  or a widget that does not draw the key (a checkbox for a map), is a
+  build refusal naming the key, never a form that fails to draw
+  (`Resources::assertWidgetsDraw()`, `WidgetAskTest`).
+- **A widget never validates.** A widget whose code gives an element an
+  `#element_validate` other than `[]` is refused when the widgets are
+  discovered (`SurfaceWidgetManager::assertNeverValidates()`): the stock
+  widgets set it empty, turning core's element checks off, so no form
+  refuses what another door accepts.
+- **A hint is all a widget changes.** For every example resource and
+  operation, both documents emitted with the widget hints, less every
+  hint, are byte for byte the documents emitted without them
+  (`WidgetHintsOnlyTest`).
+
+A content entity resource's keys ask for the widget their form
+display's component names ([Content entities](entities.md#what-is-derived-from-what)).
+
+A module's claim on a structure by its class, beside a claim on a
+shape, is not built: a structure asks for its widget itself
+([decision](decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates)).
+
 ## Other modules' keys
 
 The keys alters add are mounted under `third_party_settings`, one map

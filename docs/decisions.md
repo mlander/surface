@@ -255,15 +255,21 @@ The table's row says it; `PublicSurfaceTest` does not count a
 context's methods, so its pins are unchanged.
 
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
-grows only with that test updated beside a reason: 9 attributes, 35
-attribute arguments (33 before; 30 until 2026-10-25, when
+grows only with that test updated beside a reason: 9 attributes, 36
+attribute arguments (35 until 2026-11-01, when `widget:` was added to
+`#[Structure]`, [A structure may ask for its widget, and a widget never
+validates](#a-structure-may-ask-for-its-widget-and-a-widget-never-validates);
+33 before; 30 until 2026-10-25, when
 `#[Operation(gate:)]` was added, [A gate is borrowed, never
 copied](#a-gate-is-borrowed-never-copied); 31 until 2026-10-31, when
 `label:` and `description:` were added to `#[Resource]` and
 `#[Structure]`, [A resource and a structure may say what they are
-called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)), 16 blueprint methods (17
-before; 15 until 2026-10-27, when `resolve()` was added, [A key may
-stand for another at use](#a-key-may-stand-for-another-at-use)), 22
+called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)), 18 blueprint methods (16
+until 2026-11-01, when `refer()` and `addMap()` were added, [A
+reference is declared as a reference](#a-reference-is-declared-as-a-reference)
+and [An anonymous map](#an-anonymous-map); 17 before; 15 until
+2026-10-27, when `resolve()` was added, [A key may stand for another at
+use](#a-key-may-stand-for-another-at-use)), 22
 interfaces (23 before; 20 until 2026-10-28, when
 `EntrySchemasInterface` was added, a provider that answers an entry's
 schema when a door reads it, [The static build is cached, the rest is
@@ -566,6 +572,49 @@ shapes and who uses them. (`Resource\Attribute\Shape`,
 `DefinitionMetadata::shapeOf()`, `PropertySchema::named()`, `isPart()`
 in `app/src/contract.ts`)
 
+### One table of leaf types, read by the blueprint, the emitter and the reader
+
+Decided 2026-11-01, aligning the blueprint with JSON Schema: a key holds
+one value of a type the contract states a JSON Schema type for, and one
+class says which types those are and how each is written
+(`Contract\LeafTypes`).
+
+- **Eight rows.** `string`, `email` (`format: idn-email`), `uri`
+  (`format: uri`), `datetime_iso8601` (`format: date-time`), `integer`
+  and `timestamp` (`type: integer`), `float` (`type: number`) and
+  `boolean`. A shape and a config schema type of one value
+  (`machine_name`, `label`, `path`, `color_hex`, `langcode`) resolve to
+  a row; a reference resolves to the row of its entity type's id.
+- **Refused at the blueprint, at any depth.** `add()` refuses any other
+  type, naming the method for what was meant: `attach()` or `addMap()`
+  for a group of keys, `addList()` for a list, `refer()` for an id,
+  `addDefinition()` for a definition built by hand; `addDefinition()`
+  and `addList()` hold every value inside to the same rows. Why:
+  `PropertySchema::type()` ended in `default => []`, so a key of a type
+  it could not spell (`any`, `binary`, `duration_iso8601`, `language`)
+  was accepted and written with no `type`: the contract vaguer than the
+  runtime. That arm is a `\LogicException` now, which the blueprint makes
+  unreachable.
+- **One table, three readers.** The emitter writes each row, and
+  `SchemaReader` reads a JSON type and format back through the same
+  class, so the round trip rests on one table. How a type is drawn and
+  coerced stays keyed by type where it is done (each widget's
+  `isApplicable()`, `Pipeline\Coercion`), not repeated here.
+- **`any` is the module's, never an author's.** It stays held in the two
+  places the module makes it: the variants' placeholder, which the
+  emitter writes as conditionals, and a value a schema read holds whole
+  to its schema (`DefinitionMetadata::isHeldWhole()`).
+- **What the survey found.** Every type string in `src`, `modules` and
+  `tests`, and a build of 255 of the dev site's 271 operations: every
+  leaf was a row, but the variants' `any`, and three uses in tests,
+  decided by the maintainer: the escape hatch (`add($key, 'any')` with a
+  refiner returning a map) refused
+  ([Variants, not slots](#variants-not-slots)); `binary` dropped, with
+  no row and no widget; `add('settings', 'map')` written `addMap()`.
+
+(`LeafTypes`, `BlueprintAdapterBase::add()`, `PropertySchema::type()`,
+`SchemaReader`, `LeafTypesTest`)
+
 ### Variants, not slots
 
 A key whose structure a sibling key chooses was a **slot**, named for
@@ -635,6 +684,17 @@ and `paid`, in the form and both documents.
 
 (`Resource\Attribute\Variant::$label`, `SurfaceBuilder::attachVariants()`,
 `Attaching::assertListNarrowsVariants()`)
+
+*Amended 2026-11-01:* there is no escape hatch beside variants. A key
+declared `any` with a `#[RefinesInput]` method returning a whole
+definition was the one way a child that could not be listed got its
+shape; a shape that depends on another key is variants, a provider's
+when the site lists them ([Variants from the site](resources.md#variants-from-the-site)).
+`add()` refuses `any`, and the narrowing rule that `any` may become
+anything holds for the variants' placeholder alone (`Narrowing`).
+`DynamicChildStructure` is removed: the crate and its fruit variant
+cover the same behavior
+([One table of leaf types](#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
 
 ### A page stands without the decisions page
 
@@ -765,7 +825,8 @@ top ([Which constraint to write](options.md#which-constraint-to-write)):
   can check.
 - **A list the site decides second.** A constraint that names a kind,
   read by a resolver (`PluginExists`, `EntityBundleExists`,
-  `LanguageExists`, `Country`), or the type string `entity:<type>`. Why:
+  `LanguageExists`, `Country`), or a reference key, `refer()` (the type
+  string `entity:<type>` until 2026-11-01). Why:
   the class stays literal and holds no service, the resolver lists for
   the site, and the schema states the list as a `oneOf` while it is
   short, looked up or `deferred` past its budget, and a key a static
@@ -1501,7 +1562,10 @@ A route parameter or tool input for an operation parameter typed as an
 entity interface is loaded by the one entity type whose class satisfies
 that type; a type several entity types satisfy is taken only as an
 object. A guess between entity types would load the wrong thing.
-(`OperationArguments`)
+(`OperationArguments`) *Amended 2026-11-01:* this holds for an
+`#[Operation]` method's PHP type alone; a derived operation's parameter
+names a key and is handed its value, loaded by nothing but the storage
+([A parameter names a key](#a-parameter-names-a-key)).
 
 ### A parameter is identity the caller knows
 
@@ -1599,6 +1663,43 @@ parent's, never asked in the child, would drop them.
 `ResourceOperationToolBase::sentPermissionAccess()`,
 `ServedOperationAccessCheck::access()`, `FieldInstanceResourceTest`,
 `IdentityPathsTest`)
+
+### A parameter names a key
+
+Decided 2026-11-01. A derived operation's parameter is the name of a key
+its resource declares, `parameters: ['id']`: an identity key, or a key
+the operation needs to name its subject. Its definition is that key's;
+it carries no type. The operation receives the key's value, and loading
+what it names is the storage's.
+
+- **Why.** `['id' => 'entity:node']` made an object parameter typed
+  `EntityInterface`, and `OperationArguments` loaded the entity before
+  the operation ran, beside the resource's storage: a value no storage
+  answered for, which a stage in front of storage could never hand over
+  as a local id.
+- **Now.** `OperationParameter::fromDeclaration()` refuses `name =>
+  type` and `entity:` at discovery, naming the fix. `OperationArguments`
+  hands a key parameter its value (the raw value of a route's parameter,
+  the id of an entity a caller hands over) and loads nothing for it. The
+  content entity resources' `update`, `read`, `updateAny()` and
+  `readAny()` take the id and ask `ContentEntityStorage::entity()`,
+  which refuses an id that names nothing with a not found at `id`, as
+  the deriver refused an entity of another bundle.
+- **Gates.** A gate is asked about the thing the context knows, by
+  identity; an operation gate naming a content entity resource's
+  operation hands it the entity's id (`Gates::ANY_ENTITY_TYPE`).
+- **What changed at the doors.** The tool input `id` of the content
+  entity resources' `update` and `read` is the identity key's own
+  definition: an integer for a node, labeled "ID", where it was a
+  string described as the id of the entity the operation is about.
+- **What is left.** An `#[Operation]` method typed with a PHP class
+  (`NodeTypeInterface $type`, read by `fromReflection()`) still takes
+  the loaded object, and a form route's `options.parameters.*.type:
+  'entity:…'` still converts: the same shortcut, through the form door,
+  step 0 of the stage's design.
+
+(`OperationParameter`, `OperationArguments`, `ContentEntityResources`,
+`ContentEntityStorage::entity()`, `ContentEntityReadTest`)
 
 ### A plain route default pins an operation parameter
 
@@ -2823,6 +2924,41 @@ journal leaves the child's step out for it.
 `Attaching::mixIn()`, `Binding::bindMixin()`,
 `Attaching::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
+
+### An anonymous map
+
+Decided 2026-11-01. `addMap($key, $label, $define)` declares an object
+of keys only this resource holds, written inline in both documents,
+`type: object` with its properties, and no def. JSON Schema has an
+inline object; requiring a named structure for every object made a
+class and an id where naming buys nothing.
+
+- **Plain, or a structure with no id.** A map whose callable declares
+  plain values (`add()`, `addList()`, `refer()` to one entity type, a
+  nested `addMap()`, `describe()`) is a map definition at the key. One
+  whose callable asks for a frame of its own (`attach()`, `attachList()`,
+  `attachVariants()`, `mixIn()`, `narrow()`, `resolve()`) is a
+  structure with no id, registered for the key
+  (`ResourceRegistry::defineMap()`), attached there and still written
+  inline, a structure inside it a reference to that structure's def. Its
+  inputs run the owner's declaration again to the map's key and hand
+  the callable its blueprint (`MapBlueprint::fill()`), so the callable
+  is a pure function, as `defineInputs()` is. Nesting is not refused:
+  an alter reaches a structure by its own id, never by the path it sits
+  at, and an inline object may hold a `$ref`.
+- **The cost.** No alter addresses the map itself, nothing else uses
+  it, and its access is its owner's. Anything two resources share, or
+  that an alter should reach, is a structure.
+- **Where it holds plain keys alone.** An alter's map and an output's:
+  an alter attaches a structure at its own mount alone, and outputs
+  hold no attached structures; a structure mixed in holds no child. A
+  call that needs a frame there is refused naming why.
+- **Read back.** `SchemaReader` reads an inline object that holds a
+  structure as `addMap()`, so the document reads back to itself.
+
+(`BlueprintAdditionsInterface::addMap()`, `MapBlueprint`,
+`ResourceBlueprint::replay()`, `AnonymousMapTest`, example 8's
+`location`)
 
 ### An empty variant is an empty map
 
@@ -5544,6 +5680,55 @@ posts. The format stays an annotation
 Regex is still the rule. (`DateWidget::draws()`, `PropertySchema::type()`,
 `SchemaReader::value()`)
 
+### A structure may ask for its widget, and a widget never validates
+
+Decided 2026-11-01. `#[Structure(widget:)]` names the widget that draws
+the structure as a whole, by the one word a key's `widget` setting
+uses; the build sets it on the key wherever the structure is attached,
+unless the owner set one there. A shape's `define()` already sets the
+setting on its definition. A module's claim on a structure by its
+class, beside the claim on a shape, is not built: the structure asking
+covers the case, and a claim is a second place to look.
+
+- **A word is checked at the build.** Every key whose `widget` setting
+  asks for one is handed to the manager's own check when the resource is
+  built (`Resources::assertWidgetsDraw()`): a word no widget answers to,
+  or a widget that cannot draw the key, is a build refusal at every
+  door, not a form that fails to draw.
+- **A widget never validates.** Its code may not give an element an
+  `#element_validate` other than `[]`, read from the widget class and
+  its parents below `SurfaceWidgetBase` when the widgets are discovered
+  (`SurfaceWidgetManager::assertNeverValidates()`). What is accepted is
+  the definition's, which the pipeline holds every door to; a widget's
+  own validation would refuse on the form what the tool accepts. What
+  it reads is the class's own code: a helper of another class that adds
+  one is not read.
+- **A hint is all a widget changes.** For every example resource and
+  operation, both documents with the hints, less every hint (and the
+  hints `within` says of a pointer inside a property), are the documents
+  without them (`WidgetHintsOnlyTest`).
+- **The form display's widget.** A content entity resource's field
+  asks for the widget its form display's component names
+  (`FieldItemDerivation::WIDGETS`), with the `size`, `rows` and
+  `placeholder` a widget or the arrangement reads. Where the component
+  draws what the stock rule draws (`string_textfield`, `number`,
+  `boolean_checkbox`, `options_select`), no word is set: the stock rule
+  picks it already, and the word would refuse the select a route's fixed
+  value draws (the build check found it on the page's title);
+  `options_buttons` asks for radios, `string_textarea` and
+  `text_textarea` for the string drawn multiline. Left behind:
+  `entity_reference_autocomplete` (the item's `target_id` is no
+  reference key, so the autocomplete widget does not draw it),
+  `datetime_default` (asking for the date widget states `format: date`
+  in both documents, a contract change beyond a hint), every component
+  of a field not carried, and every other setting, which is core's
+  widget's own (`match_operator`, `match_limit`, `display_label`,
+  `include_locked`, `progress_indicator`, `preview_image_style`).
+
+(`Structure::$widget`, `Resources::assertWidgetsDraw()`,
+`SurfaceWidgetManager::assertNeverValidates()`, `WidgetAskTest`,
+`WidgetHintsOnlyTest`)
+
 ### The form never refuses to draw a declared key
 
 Decided 2026-10-27, from example 12 on the development site: of 312
@@ -5600,7 +5785,12 @@ and the contract disagree about what may be set.
   and `entity_reference`, whose value nobody types, as an item saying it
   is not drawn on this form, which posts nothing, so the key keeps what
   it holds (`NotDrawnWidget`). `StockWidgetsTest` walks every type core
-  defines.
+  defines. *Amended 2026-11-01:* a key holds a value of a type the
+  contract states a JSON Schema type for, so no blueprint declares any
+  of the four; `binary` is drawn by nothing and left out of the walk,
+  and the not-drawn item stays for the other three, which a definition
+  handed to the engine by hand may still be
+  ([One table of leaf types](#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
 - **What the JSON widget still draws**: an `any` key whose types include
   an object or a list, or that states none, and a list of lists or of
   `any`.
@@ -7011,7 +7201,12 @@ Decided 2026-10-23, with example 16, the sponsorship
   type and one of a bundle, so an author writes what core already calls
   it. Why not a verb of its own, `reference()`: the type string says the
   type and the bundle in the place a type is said, and `add()` returns
-  the definition the rest is written on, as for any key.
+  the definition the rest is written on, as for any key. *Amended
+  2026-11-01:* a reference is declared with `refer($key, '<entity
+  type>', ..., bundles: [...])` and `refer($key, NULL, ...)`, and
+  `add($key, 'entity:…')` is refused: the type string stood for an id
+  and a constraint, where a type stands for one value's type
+  ([A reference is declared as a reference](#a-reference-is-declared-as-a-reference)).
 - **The value is the id.** The key holds the entity's id as the entity
   type keeps it, an integer where a content entity type's id field is
   one and a string for a config entity, never the entity object: what is
@@ -7033,8 +7228,8 @@ Decided 2026-10-23, with example 16, the sponsorship
   type, then an id, attached at the key: `entity_type`, a choice of the
   entity types the account may reference one of, and `id`, a string,
   which a static refiner narrows to the entity type chosen with the
-  constraint `entity:<type>` builds. So one mechanism serves all three
-  spellings, and since the refiner is static the full schema states the
+  constraint `entity:<type>` builds (`refer()` since 2026-11-01). So one
+  mechanism serves all three spellings, and since the refiner is static the full schema states the
   id once per entity type as a conditional, which a client narrows from
   with no round trip. The parts are registered per key
   (`ResourceRegistry::defineReference()`), as a structure read from a
@@ -7105,6 +7300,34 @@ longer reference, which core's field validator keeps and this refuses.
 `ResourceApiController::lookup()`, `InputDefinitions::withLookups()`,
 `OpenApiDocument::lookup()`, `SponsorshipResource`, `ReferenceKeysTest`,
 `ReferenceKeysFormTest`)
+
+### A reference is declared as a reference
+
+Decided 2026-11-01. A key that refers to an entity is
+`refer($key, $to, $label, bundles: [...], default: ...)`: `$to` the entity
+type, the bundles the ones it may name; `refer($key, NULL, ...)` for an
+entity of any type, its two parts attached at the key, which only a
+resource's or a structure's own blueprint declares.
+
+- **Why a verb.** `entity:<type>` was a type string standing for an id
+  and a constraint, in the place one value's type goes: `add('page',
+  'entity:node:article')` declared an integer with `SurfaceValidReference`.
+  The type table holds no `entity`, so `add($key, 'entity:…')` is
+  refused naming `refer()`.
+- **Why `refer`.** The word the module already says, "a key that refers
+  to an entity"; `addReference()` is the adapter's protected name for
+  what `refer()` calls, and the interfaces had no word for it.
+- **What does not change.** The definition `refer()` builds is what
+  `References::definition()` built: the id typed as the entity type's id
+  key, the constraint, the content setting. The served contracts are
+  unchanged, which the baselines pin.
+- **What is left.** `addEach($key, 'entity:node', ...)` keeps the type
+  string for a reference per thing the site has: `addEach()` takes one
+  type string for every entry, and a reference there needs a
+  parameter of its own (`References::spells()`, `BlueprintAdapterBase::addEntry()`).
+
+(`BlueprintAdditionsInterface::refer()`, `References::definition()`,
+`ReferenceKeysTest`)
 
 ## Examples
 

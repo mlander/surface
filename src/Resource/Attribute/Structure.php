@@ -49,6 +49,16 @@ final class Structure {
    *   no label either, or says nothing.
    *   Decision: see
    *   docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+   * @param string|null $widget
+   *   The widget that draws it as a whole wherever it is attached, by the
+   *   one word a key's `widget` setting asks for one with; NULL, the
+   *   default, for the fieldset its keys are drawn in. A widget that
+   *   cannot draw a map is refused when the parent is built. A widget
+   *   draws; it never decides what is accepted, which stays the
+   *   structure's keys'. An owner's own `widget` setting on the key it
+   *   attaches it at wins.
+   *   Decision: see
+   *   docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
    */
   public function __construct(
     public readonly string $id,
@@ -56,6 +66,7 @@ final class Structure {
     public readonly int $version = 1,
     public readonly string|\Stringable|null $label = NULL,
     public readonly string|\Stringable|null $description = NULL,
+    public readonly ?string $widget = NULL,
   ) {}
 
 }

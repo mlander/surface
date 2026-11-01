@@ -25,6 +25,8 @@ use Drupal\surface\Resource\DerivedOperation;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Reference\EntityReferenceStructure;
 use Drupal\surface\Resource\ResourceCallable;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\DefinesInputsInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Resource\OperationAccessInterface;
@@ -85,6 +87,11 @@ final class ResourceRegistry {
    * The cache id prefix in the discovery bin.
    */
   protected const CACHE_PREFIX = 'surface:resources:';
+
+  /**
+   * What the name of an anonymous map's structure starts with.
+   */
+  public const MAP = 'map:';
 
   /**
    * The attribute arguments removed on 2026-10-24, with what replaced each.
@@ -819,6 +826,92 @@ final class ResourceRegistry {
   }
 
   /**
+   * Registers an anonymous map whose keys need a frame: a structure, no id.
+   *
+   * Like a structure read from a schema, listed by nothing and built by
+   * name: its inputs MapBlueprint::fill(), which runs its owner's
+   * declaration again to the map's key. Its id is its owner's and the
+   * key, for messages; no alter names it, since an alter names a class.
+   *
+   * Decision: see docs/decisions.md#an-anonymous-map.
+   *
+   * @param string $id
+   *   Its id: the owner's, then the key.
+   * @param string $module
+   *   The owner's module.
+   * @param string $owner
+   *   The owner, by the name it is built by.
+   * @param string $key
+   *   The key the owner declares it at.
+   *
+   * @return string
+   *   The name it is attached and built by.
+   */
+  public function defineMap(string $id, string $module, string $owner, string $key): string {
+    $name = self::MAP . $owner . ':' . $key;
+    $this->read[$name] ??= new ResourceDefinition(
+      class: NULL,
+      id: $id,
+      module: $module,
+      identity: [],
+      storage: NULL,
+      access: NULL,
+      refiners: [],
+      inputs: new ResourceCallable(MapBlueprint::class, 'fill', [$owner, $key]),
+      kind: ResourceDefinition::STRUCTURE,
+      readAs: $name,
+    );
+    return $name;
+  }
+
+  /**
+   * Answers whether a name is an anonymous map's (defineMap()).
+   *
+   * @param string|null $name
+   *   A name a child is built by.
+   *
+   * @return bool
+   *   TRUE for an anonymous map's, which both documents write inline.
+   */
+  public static function isMap(?string $name): bool {
+    return $name !== NULL && str_starts_with($name, self::MAP);
+  }
+
+  /**
+   * Fills a blueprint with what a resource or structure declares.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource or structure.
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
+   *   The blueprint.
+   *
+   * @internal
+   *   For an anonymous map's structure, which runs its owner's
+   *   declaration again (ResourceBlueprint::replay()).
+   */
+  public function declareInputs(ResourceDefinition $definition, BlueprintInterface $inputs): void {
+    if (!$definition->isDerived()) {
+      $class = $definition->class;
+      assert(is_subclass_of($class, DefinesInputsInterface::class));
+      $class::defineInputs($inputs);
+      return;
+    }
+    $callable = $definition->inputs;
+    if ($callable === NULL) {
+      return;
+    }
+    if ($this->classResolver !== NULL) {
+      $callable->call($this->classResolver, $inputs);
+      return;
+    }
+    $method = new \ReflectionMethod($callable->class, $callable->method);
+    if (!$method->isStatic()) {
+      throw new \LogicException(sprintf('%s declares through %s, which this registry, built with no class resolver, cannot call.', $definition->id, $callable->describe()));
+    }
+    $method->invokeArgs(NULL, [$inputs, ...$callable->arguments]);
+  }
+
+  /**
    * Gets every discovered shape.
    *
    * @return array<class-string, \Drupal\surface\ResourceBuild\ShapeDefinition>
@@ -1126,6 +1219,7 @@ final class ResourceRegistry {
         version: self::versionOf($class, $attribute->version ?? 1),
         hostLabel: $host['label'],
         hostDescription: $host['description'],
+        widget: $attribute instanceof Structure ? $attribute->widget : NULL,
       );
       if ($attribute instanceof Resource && $attribute->storage === NULL && $attribute->identity === [] && $plugin_id === NULL && ($this->plugins?->usedBy($class) ?? []) === []) {
         // Decision: see docs/decisions.md#a-resource-has-storage-or-a-host.
@@ -1671,10 +1765,10 @@ final class ResourceRegistry {
               method: $operation->context->method,
               permission: $operation->permission,
               module: $module,
+              // Decision: see docs/decisions.md#a-parameter-names-a-key.
               parameters: array_map(
-                OperationParameter::fromDeclaration(...),
+                static fn (int|string $position): OperationParameter => OperationParameter::fromDeclaration($position, $operation->parameters[$position], sprintf('The "%s" operation of %s', $operation->id, $id)),
                 array_keys($operation->parameters),
-                array_values($operation->parameters),
               ),
               context: $operation->context,
               destructive: $operation->destructive,

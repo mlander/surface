@@ -21,7 +21,7 @@ final class RetitleItemStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('node', 'entity:node', t('Node'))
+    $inputs->refer('node', 'node', t('Node'))
       ->setDescription(t('The node to retitle.'))
       ->setRequired(TRUE);
 
