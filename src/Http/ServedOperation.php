@@ -30,7 +30,7 @@ final class ServedOperation {
    *   The operation.
    * @param array $parameters
    *   The operation's parameters as the request gave them, by name: raw
-   *   ids and scalars, never an upcast entity.
+   *   ids and scalars, never an entity.
    * @param \Drupal\surface\Resource\OperationContext $context
    *   The context the operation built from them.
    * @param \Drupal\surface\SurfaceInterface $surface

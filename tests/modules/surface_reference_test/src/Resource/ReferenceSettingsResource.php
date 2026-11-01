@@ -49,7 +49,7 @@ final class ReferenceSettingsResource implements ResourceInterface {
     $inputs->attachList('items', ItemStructure::class, max: 5)
       ->setLabel('Items');
 
-    $inputs->addEach('pages', 'entity:node', from: ReferenceSlots::class)
+    $inputs->addEach('pages', NULL, from: ReferenceSlots::class, to: 'node')
       ->setLabel('Pages');
 
     $inputs->attachEach('authors', AuthorStructure::class, from: ReferenceSlots::class)

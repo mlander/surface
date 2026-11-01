@@ -5,8 +5,9 @@
 #
 # Each route is one operation of the derived resource, named by its id:
 # a derived resource has no class. The update route's {id} is the
-# operation's one parameter, the node, upcast; a node of another bundle
-# is refused by the operation, and so by the route's access.
+# operation's one parameter, the node's id as the path carries it, which
+# the resource's storage loads; a node of another bundle is refused by the
+# operation, and so by the route's access.
 
 surface_examples_entity.index:
   path: '/surface-entity'
@@ -35,7 +36,3 @@ surface_examples_entity.node_page_update:
     _surface_panel: 'surface.contract_panel'
   requirements:
     id: '\d+'
-  options:
-    parameters:
-      id:
-        type: 'entity:node'

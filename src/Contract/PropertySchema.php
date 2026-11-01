@@ -367,6 +367,9 @@ final class PropertySchema {
       $claimed = $this->widgets?->claimed($definition);
       $widget = match (TRUE) {
         $claimed !== NULL => SurfaceWidgetManager::wordOf($claimed),
+        // A reference that asks for the autocomplete by its word is drawn
+        // with it, listed or not (SurfaceWidgetManager::getWidgetFor()).
+        AutocompleteWidget::draws($definition) && $definition->getSetting('widget') === 'autocomplete' => 'autocomplete',
         $fixed => 'fixed',
         $listed => $radios ? 'radios' : 'select',
         // A bare reference's id is drawn once its entity type is chosen:

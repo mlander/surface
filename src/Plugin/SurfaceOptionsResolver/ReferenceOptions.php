@@ -19,8 +19,9 @@ use Symfony\Component\Validator\Constraint;
  * Lists what a reference key may name, when there are few enough.
  *
  * The selection handler for the key's entity type and bundles is asked,
- * for the account asking, so the list is what core's autocomplete would
- * offer that account. Up to the site's limit,
+ * or the one a reference field names, for the account asking, so the
+ * list is what core's autocomplete would offer that account. Up to the
+ * site's limit,
  * `surface.settings:reference_list_limit`, the candidates are the
  * key's options, labeled; past it this resolver does not apply, so the key
  * takes any id and the constraint's validator decides.
@@ -84,7 +85,7 @@ final class ReferenceOptions extends SurfaceOptionsResolverBase {
     return parent::applies($constraint)
       && $constraint instanceof ValidReferenceConstraint
       && $constraint->entityTypeId !== ''
-      && $this->references->listable($constraint->entityTypeId, $constraint->bundles);
+      && $this->references->listable($constraint->entityTypeId, $constraint->bundles, $constraint->handler, $constraint->handlerSettings);
   }
 
   /**
@@ -93,7 +94,7 @@ final class ReferenceOptions extends SurfaceOptionsResolverBase {
   public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet {
     assert($constraint instanceof ValidReferenceConstraint);
     return new OptionSet(
-      $this->references->candidates($constraint->entityTypeId, $constraint->bundles),
+      $this->references->candidates($constraint->entityTypeId, $constraint->bundles, handler: $constraint->handler, settings: $constraint->handlerSettings),
       [],
       $this->references->cacheability($constraint->entityTypeId),
     );

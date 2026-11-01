@@ -38,7 +38,9 @@ use Drupal\surface\SurfaceInterface;
  * what validation accepts are one answer: the handler's query carries the
  * entity type's access tag, a node's selection leaves unpublished nodes
  * out for an account without "bypass node access", and a user's leaves
- * blocked users out without "administer users".
+ * blocked users out without "administer users". A key read from a
+ * reference field is answered by the field's own handler, configured as
+ * the field configures it, so it offers and accepts what the field does.
  *
  * Up to the site's limit, `surface.settings:reference_list_limit`,
  * the candidates are the key's options; above it, the key takes an id and
@@ -239,24 +241,6 @@ final class References {
   }
 
   /**
-   * Answers whether a type string spells a reference per thing the site has.
-   *
-   * The one place a reference keeps a type string: addEach() declares
-   * each entry with a type, `entity:<type>[:<bundle>]` an id of that type,
-   * which the entry is declared as refer() declares one. A key of its own
-   * is refer().
-   *
-   * @param string $type
-   *   What addEach() was handed.
-   *
-   * @return bool
-   *   TRUE for `entity:<type>[:<bundle>]`.
-   */
-  public static function spells(string $type): bool {
-    return str_starts_with($type, 'entity:');
-  }
-
-  /**
    * Builds the key refer() declares: one entity's id.
    *
    * An id of the entity type, of one of the bundles when it names any,
@@ -271,6 +255,12 @@ final class References {
    *   The entity type it refers to.
    * @param string[] $bundles
    *   The bundles it may name; none for every bundle.
+   * @param string $handler
+   *   The selection handler whose answer the candidates are, as a
+   *   reference field names it (`default:node`, a view's); empty for the
+   *   default one, configured for the bundles (handler()).
+   * @param array $handlerSettings
+   *   That handler's settings, as the field holds them.
    *
    * @return \Drupal\Core\TypedData\DataDefinition
    *   The key's definition.
@@ -279,7 +269,7 @@ final class References {
    *   When it names no entity type, or one typed data does not know, or a
    *   bundle that is no non-empty string.
    */
-  public function definition(string $key, string $entity_type_id, array $bundles = []): DataDefinition {
+  public function definition(string $key, string $entity_type_id, array $bundles = [], string $handler = '', array $handlerSettings = []): DataDefinition {
     if ($entity_type_id === '' || str_contains($entity_type_id, ':') || array_filter($bundles, static fn (string $bundle): bool => $bundle === '' || str_contains($bundle, ':')) !== []) {
       throw new \LogicException(sprintf('refer("%s", "%s") names no entity type: a reference key names an entity type, refer(\'%s\', \'node\', ...), and the bundles it may name, if any, bundles: [\'article\'].', $key, $entity_type_id, $key));
     }
@@ -293,27 +283,13 @@ final class References {
     $definition->addConstraint(self::CONSTRAINT, array_filter([
       'entityTypeId' => $entity_type_id,
       'bundles' => array_values($bundles),
+      'handler' => $handler,
+      'handlerSettings' => $handler === '' ? [] : $handlerSettings,
     ]));
     if ($this->isContent($entity_type_id)) {
       $definition->setSetting(self::CONTENT, TRUE);
     }
     return $definition;
-  }
-
-  /**
-   * Reads the entity type and bundles a type string addEach() took names.
-   *
-   * @param string $type
-   *   The type string: `entity:<type>` or `entity:<type>:<bundle>`.
-   *
-   * @return array{0: string, 1: string[]}
-   *   The entity type, and the bundle when it names one.
-   */
-  public static function spelled(string $type): array {
-    $parts = explode(':', $type);
-    // What follows the bundle is kept with it, for refer() to refuse.
-    $bundles = count($parts) > 2 ? [implode(':', array_slice($parts, 2))] : [];
-    return [$parts[1] ?? '', $bundles];
   }
 
   /**
@@ -456,6 +432,28 @@ final class References {
   }
 
   /**
+   * Reads which selection handler a key's candidates are, if not the default.
+   *
+   * A key read from a reference field names the field's handler and its
+   * settings, so it lists, looks up and accepts what the field does; a key
+   * refer() declares names none and is answered by the default handler
+   * for its bundles (handler()).
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The key.
+   *
+   * @return array{0: string, 1: array}
+   *   The handler's plugin id, empty for the default one, and its
+   *   settings.
+   */
+  public static function handlerOf(DataDefinitionInterface $definition): array {
+    $options = $definition->getConstraints()[self::CONSTRAINT] ?? NULL;
+    $handler = is_array($options) && is_string($options['handler'] ?? NULL) ? $options['handler'] : '';
+    $settings = $handler !== '' && is_array($options['handlerSettings'] ?? NULL) ? $options['handlerSettings'] : [];
+    return [$handler, $settings];
+  }
+
+  /**
    * Finds what a key of a built resource refers to, by its path.
    *
    * What the lookup asks: the key at the path, through attached children,
@@ -515,13 +513,23 @@ final class References {
    *   The entity type.
    * @param string[] $bundles
    *   The bundles, or none for any.
+   * @param string $handler
+   *   A handler a reference field names, or empty for the default one.
+   * @param array $settings
+   *   That handler's settings, as the field holds them.
    *
    * @return \Drupal\Core\Entity\EntityReferenceSelection\SelectionInterface
-   *   The `default` handler for the type, configured for the bundles and
-   *   sorted by label, for the account asking.
+   *   The handler named, configured as the field configures it, as core's
+   *   SelectionPluginManager::getSelectionHandler() does; else the
+   *   `default` handler for the type, configured for the bundles and
+   *   sorted by label; for the account asking.
    */
-  public function handler(string $entity_type_id, array $bundles = []): SelectionInterface {
-    return $this->selection->getInstance(['target_type' => $entity_type_id] + $this->selectionSettings($entity_type_id, $bundles));
+  public function handler(string $entity_type_id, array $bundles = [], string $handler = '', array $settings = []): SelectionInterface {
+    $options = ['target_type' => $entity_type_id] + $this->selectionSettings($entity_type_id, $bundles, $handler, $settings);
+    if ($handler !== '') {
+      $options['handler'] = $handler;
+    }
+    return $this->selection->getInstance($options);
   }
 
   /**
@@ -534,12 +542,20 @@ final class References {
    *   The entity type.
    * @param string[] $bundles
    *   The bundles, or none for any.
+   * @param string $handler
+   *   A handler a reference field names, or empty for the default one.
+   * @param array $settings
+   *   That handler's settings, as the field holds them.
    *
-   * @return array{target_bundles: array<string, string>|null, sort: array{field: string, direction: string}}
-   *   The bundles as `target_bundles`, NULL for any, and the label as the
-   *   `sort`, where the entity type has one.
+   * @return array
+   *   For a handler a field names, its settings as the field holds them;
+   *   else the bundles as `target_bundles`, NULL for any, and the label as
+   *   the `sort`, where the entity type has one.
    */
-  public function selectionSettings(string $entity_type_id, array $bundles = []): array {
+  public function selectionSettings(string $entity_type_id, array $bundles = [], string $handler = '', array $settings = []): array {
+    if ($handler !== '') {
+      return $settings;
+    }
     $label = $this->entityTypeManager->getDefinition($entity_type_id)->getKey('label');
     return [
       'target_bundles' => $bundles === [] ? NULL : array_combine($bundles, $bundles),
@@ -557,12 +573,16 @@ final class References {
    *   The entity type.
    * @param string[] $bundles
    *   The bundles, or none for any.
+   * @param string $handler
+   *   A handler a reference field names, or empty for the default one.
+   * @param array $settings
+   *   That handler's settings.
    *
    * @return int
    *   How many there are.
    */
-  public function count(string $entity_type_id, array $bundles = []): int {
-    return $this->handler($entity_type_id, $bundles)->countReferenceableEntities();
+  public function count(string $entity_type_id, array $bundles = [], string $handler = '', array $settings = []): int {
+    return $this->handler($entity_type_id, $bundles, $handler, $settings)->countReferenceableEntities();
   }
 
   /**
@@ -572,12 +592,16 @@ final class References {
    *   The entity type.
    * @param string[] $bundles
    *   The bundles, or none for any.
+   * @param string $handler
+   *   A handler a reference field names, or empty for the default one.
+   * @param array $settings
+   *   That handler's settings.
    *
    * @return bool
    *   TRUE up to the limit.
    */
-  public function listable(string $entity_type_id, array $bundles = []): bool {
-    return $this->count($entity_type_id, $bundles) <= $this->limit();
+  public function listable(string $entity_type_id, array $bundles = [], string $handler = '', array $settings = []): bool {
+    return $this->count($entity_type_id, $bundles, $handler, $settings) <= $this->limit();
   }
 
   /**
@@ -591,13 +615,17 @@ final class References {
    *   Text the label contains, or NULL for every candidate.
    * @param int $limit
    *   The most to answer, 0 for all.
+   * @param string $handler
+   *   A handler a reference field names, or empty for the default one.
+   * @param array $settings
+   *   That handler's settings.
    *
    * @return array<int|string, string>
    *   Each candidate's label, plain text, by id, sorted by label.
    */
-  public function candidates(string $entity_type_id, array $bundles = [], ?string $match = NULL, int $limit = 0): array {
+  public function candidates(string $entity_type_id, array $bundles = [], ?string $match = NULL, int $limit = 0, string $handler = '', array $settings = []): array {
     $candidates = [];
-    foreach ($this->handler($entity_type_id, $bundles)->getReferenceableEntities($match, 'CONTAINS', $limit) as $labels) {
+    foreach ($this->handler($entity_type_id, $bundles, $handler, $settings)->getReferenceableEntities($match, 'CONTAINS', $limit) as $labels) {
       foreach ($labels as $id => $label) {
         $candidates[$id] = static::plain($label);
       }
@@ -626,15 +654,19 @@ final class References {
    * @param string|null $as
    *   The data type of the key the ids are for, 'integer' or 'string';
    *   NULL for the entity type's own (idType()).
+   * @param string $handler
+   *   A handler a reference field names, or empty for the default one.
+   * @param array $settings
+   *   That handler's settings.
    *
    * @return array<int, array{id: int|string, label: string}>
    *   The candidates found, sorted by label, each id in the key's type.
    */
-  public function lookup(string $entity_type_id, array $bundles, string $match, int $limit, ?string $as = NULL): array {
+  public function lookup(string $entity_type_id, array $bundles, string $match, int $limit, ?string $as = NULL, string $handler = '', array $settings = []): array {
     $limit = max(1, min(self::LOOKUP_MAX, $limit));
     $id_type = $as ?? $this->idType($entity_type_id);
     $found = [];
-    foreach ($this->candidates($entity_type_id, $bundles, $match === '' ? NULL : $match, $limit) as $id => $label) {
+    foreach ($this->candidates($entity_type_id, $bundles, $match === '' ? NULL : $match, $limit, $handler, $settings) as $id => $label) {
       $found[] = ['id' => $id_type === 'integer' ? (int) $id : (string) $id, 'label' => $label];
     }
     return $found;
@@ -649,12 +681,16 @@ final class References {
    *   The bundles, or none for any.
    * @param int|string $id
    *   The id.
+   * @param string $handler
+   *   A handler a reference field names, or empty for the default one.
+   * @param array $settings
+   *   That handler's settings.
    *
    * @return bool
    *   TRUE when the selection handler counts it among the candidates.
    */
-  public function validates(string $entity_type_id, array $bundles, int|string $id): bool {
-    return $this->handler($entity_type_id, $bundles)->validateReferenceableEntities([$id]) !== [];
+  public function validates(string $entity_type_id, array $bundles, int|string $id, string $handler = '', array $settings = []): bool {
+    return $this->handler($entity_type_id, $bundles, $handler, $settings)->validateReferenceableEntities([$id]) !== [];
   }
 
   /**

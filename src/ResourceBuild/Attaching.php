@@ -314,7 +314,7 @@ final class Attaching {
    *   frame and ancestry its children are built under.
    * @param string $key
    *   The key the map sits at.
-   * @param array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>} $each
+   * @param array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>, to: string|null, bundles: string[]} $each
    *   What the blueprint recorded for it.
    * @param array<string, array> $maps
    *   Every map of keys from the site the owner declared, by key, as the
@@ -343,7 +343,7 @@ final class Attaching {
     // schema is written from.
     $shell = $builder->getDefinition($key);
     if ($shell !== NULL) {
-      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->addEntry($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
+      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->addEntry($key, $each['each'], $shell->getLabel() ?? $key, $each['default'], $each['to'], $each['bundles']));
     }
     $entries = $keys->entries();
     $map = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
@@ -400,7 +400,7 @@ final class Attaching {
     else {
       $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references());
       foreach ($entries as $id => $entry) {
-        $blueprint->addEntry((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default']);
+        $blueprint->addEntry((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default'], $each['to'], $each['bundles']);
         if ($entry['locked']) {
           $map->hold((string) $id);
         }

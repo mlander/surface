@@ -11,7 +11,7 @@ A resource-driven alternative to core's content type add and edit form.
 
 One resource, `Resource\NodeTypeResource` (`node.type`), with two
 operations: `create`, on the class, knows nothing, so the machine name
-is open; `update(NodeTypeInterface $type)` knows the machine name, so it
+is open; `update(string $type)` knows the machine name, so it
 is locked: still advertised, narrowed to the one value it has. Create
 and update are not two resources: they are how much is known.
 

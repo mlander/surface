@@ -236,6 +236,22 @@ final class LeafTypes {
   }
 
   /**
+   * Answers whether a type string spells an entity, which is no type here.
+   *
+   * Typed data's `entity`, `entity:<type>` and `entity:<type>:<bundle>`:
+   * an id and a constraint, declared with refer(), or addEach()'s `to:`.
+   *
+   * @param string $type
+   *   The type string.
+   *
+   * @return bool
+   *   TRUE for an entity spelling.
+   */
+  public static function refersToEntity(string $type): bool {
+    return $type === 'entity' || str_starts_with($type, 'entity:');
+  }
+
+  /**
    * Names the method for what a type that is no row was meant as.
    *
    * @param string $type
@@ -246,7 +262,7 @@ final class LeafTypes {
    */
   public static function meant(string $type): string {
     return match (TRUE) {
-      $type === 'entity' || str_starts_with($type, 'entity:') => 'an id of an entity is refer(\'<key>\', \'<entity type>\', ...).',
+      static::refersToEntity($type) => 'an id of an entity is refer(\'<key>\', \'<entity type>\', ...).',
       $type === 'map' => 'a group of keys is attach(\'<key>\', <structure>::class), or addMap() for keys only this one holds.',
       $type === 'list' => 'a list is addList().',
       $type === self::ANY => 'a value whose shape depends on another key is variants, attachVariants().',

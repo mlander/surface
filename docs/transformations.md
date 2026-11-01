@@ -24,7 +24,7 @@ each layer changes one thing about it and nothing else:
 | --- | --- | --- | --- |
 | Coercion, at the door | A raw value into the declared type, before validation: `'7'` becomes `7` for an integer, `'yes'` becomes `TRUE` for a boolean. Only when the intended value is unambiguous; anything else is left for a constraint to refuse. | Nobody: one table, the Tool API's, mirrored in `Pipeline\Coercion` and run by `accept()` for every door. | [The coercion table](semantics.md#the-coercion-table) (why: [decision](decisions.md#one-coercion-table-the-tool-apis)) |
 | Storage layout | The accepted document into the shape storage keeps, and back: a deadline asked as an amount and a unit, stored as seconds. | The storage class, in its own `load()` and `prepare()`; a field type, by handing `FieldSettingsStorage` a `StorageLayoutInterface`; an alter, for its own mount, with `AltersStorageLayoutInterface::storageLayout()`. | [StorageLayoutInterface](storage.md#storagelayoutinterface) (why: [decision](decisions.md#blueprints-and-layouts)) |
-| Wire representation | How a value travels at one door: an operation's entity parameter as its id at the tool door, an update's body as a merge patch over HTTP. | The door: the tool door's `OperationInputs`, the HTTP door's API controller. | [The Tool API door](tools.md), [The write](served-contract.md#the-write) |
+| Wire representation | How a value travels at one door: an operation's parameter as the value of the key it names at the tool door, an update's body as a merge patch over HTTP. | The door: the tool door's `OperationInputs`, the HTTP door's API controller. | [The Tool API door](tools.md), [The write](served-contract.md#the-write) |
 
 The resource's keys, as declared, are the one document all three layers
 translate to and from. Coercion produces it from what a caller sent, a
@@ -198,8 +198,10 @@ final class AnnouncementLayout implements StorageLayoutInterface {
 The key's constraint, its candidates and its lookup still judge the id
 as asked, before the layout runs. A content entity's own reference
 field is asked for as its item, `{target_id}`, by the field's structure
-(`surface_examples_entity`), so today a reference key and a reference field
-are two shapes for one idea; ROADMAP item 20 lists that as open.
+(`surface_examples_entity`), and its `target_id` is a reference key,
+answered by the field's own selection handler, so a reference key and a
+reference field are one idea at every door
+([decision](decisions.md#a-reference-field-is-a-reference-key)).
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
@@ -215,38 +217,32 @@ output as a handle on the way out. An invoker without that capability
 cannot send an entity input at all, and is told to use a tool that
 takes an entity type and an id.
 
-The tool bridge declares no entity input. An operation's entity
-parameter is a string, the entity's id, for every connector:
+The tool bridge declares no entity input. An operation's parameter is a
+value, never an object, so a parameter named for a key of the resource
+is that key's own definition, the id typed as the key holds it, for
+every connector:
 
 <!-- excerpt: src/Tool/OperationInputs.php -->
 
 ```php
-if ($parameter->takesObject()) {
-  $entity_type_id = $this->operationArguments->entityTypeOf($parameter);
-  if ($entity_type_id === NULL) {
-    throw new \LogicException(sprintf('The "%s" operation of the %s resource takes %s, which no tool can send: it is no single entity type.', $operation->id, $resource->id, $parameter->describe()));
-  }
-  return new InputDefinition(
-    data_type: 'string',
-    label: $label,
-    description: $this->t('The id of the @entity_type the operation is about.', ['@entity_type' => $entity_type_id]),
-    required: !$parameter->optional,
-  );
+$key = $neutral?->getDefinitions()->entry($parameter->name);
+if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
+  $input = $this->inputDefinitions->fromDefinition($key->definition);
+  $input->setRequired(!$parameter->optional);
+  return $input;
 }
 ```
 
 The Tool API's handle transform applies only to entity-typed inputs, so
-it leaves this one as sent. The id is loaded at the boundary of the
-operation, the same way a route's raw parameter is:
+it leaves this one as sent. Nothing loads the id at the boundary: the
+operation is handed the value and loads what it names through its
+resource's storage, the same way a route's raw parameter is handed over.
+An entity a PHP caller hands over is named by its id:
 
 <!-- excerpt: src/ResourceBuild/OperationArguments.php -->
 
 ```php
-$entity_type_id = $this->entityTypeOf($parameter);
-if ($entity_type_id === NULL || !(is_string($value) || is_int($value))) {
-  return $value;
-}
-$entity = $this->entityTypeManager->getStorage($entity_type_id)->load($value);
+$resolved[$parameter->name] = $given[0] instanceof EntityInterface ? $given[0]->id() : $given[0];
 ```
 
 A reference key inside `values` is the id as well, so one representation

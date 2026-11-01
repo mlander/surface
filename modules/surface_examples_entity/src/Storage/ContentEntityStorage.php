@@ -46,6 +46,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * context that knows no id reads the entity it just created, which is how
  * the resource's `id` output answers with the new id.
  *
+ * Where the caller names an entity type's ids (a string id with no
+ * default), a create's context does not know the id: the caller sends it
+ * as a value, the new entity is created under it, and an id an entity
+ * already has is refused at `id`, code `taken`.
+ *
  * On edit, a resource that carries the revision log field makes a new
  * revision, with this account as its author; one that does not leaves
  * revisions to the entity type's own default.
@@ -218,10 +223,24 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
       }
       $items[$name] = $empty ? NULL : $item;
     }
+    // A create whose context does not know the id is one whose caller
+    // names it: an id an entity already has names something, and is
+    // refused at the key.
+    // Decision: see
+    // docs/decisions.md#an-entity-types-id-is-computed-or-named-by-the-caller.
+    $named = $context->creates && !array_key_exists('id', $context->known) && (is_string($values['id'] ?? NULL) || is_int($values['id'] ?? NULL)) ? $values['id'] : NULL;
+    if ($named !== NULL && $this->entityTypeManager->getStorage($entity_type_id)->load($named) !== NULL) {
+      $taken = new Violation('id', '', $this->t('A @thing with the id @id already exists.', [
+        '@thing' => $this->entityTypeManager->getDefinition($entity_type_id)->getSingularLabel(),
+        '@id' => $named,
+      ]), Violation::TAKEN);
+      throw new StorageViolationsException(new ViolationSet([$taken]));
+    }
     $prepared = [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
       'id' => $context->creates ? NULL : $id,
+      'named' => $named,
       'new_revision' => !$context->creates && isset($fields['revision_log']),
       'fields' => $items,
     ];
@@ -271,8 +290,14 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
   protected function apply(array $prepared, AccountInterface $account): ContentEntityInterface {
     $storage = $this->entityTypeManager->getStorage($prepared['entity_type']);
     if ($prepared['id'] === NULL) {
-      $bundle_key = (string) $this->entityTypeManager->getDefinition($prepared['entity_type'])->getKey('bundle');
-      $entity = $storage->create($bundle_key === '' ? [] : [$bundle_key => $prepared['bundle']]);
+      $entity_type = $this->entityTypeManager->getDefinition($prepared['entity_type']);
+      $bundle_key = (string) $entity_type->getKey('bundle');
+      $initial = $bundle_key === '' ? [] : [$bundle_key => $prepared['bundle']];
+      // The id a caller names, where storage gives none.
+      if (($prepared['named'] ?? NULL) !== NULL) {
+        $initial[(string) $entity_type->getKey('id')] = $prepared['named'];
+      }
+      $entity = $storage->create($initial);
       if ($entity instanceof EntityOwnerInterface) {
         // A value the resource carries for the owner is set below.
         $entity->setOwnerId((int) $account->id());

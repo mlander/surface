@@ -42,9 +42,11 @@ Inside the class, the permission they share and the two methods:
     description: new TranslatableMarkup('Changes a placed block, named by its machine name: its label, region, weight, status, plugin settings and visibility. Its theme stays as it is.'),
     permission: self::PERMISSION,
   )]
-  public static function update(BlockInterface $id): OperationContext {
-    return (new OperationContext(known: ['id' => (string) $id->id()]))
-      ->withConstraint('theme', 'Choice', ['choices' => [$id->getTheme()]]);
+  public static function update(string $id): OperationContext {
+    $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "update" operation of block.placement');
+    assert($block instanceof BlockInterface);
+    return (new OperationContext(known: ['id' => (string) $block->id()]))
+      ->withConstraint('theme', 'Choice', ['choices' => [$block->getTheme()]]);
   }
 
   #[Operation('delete',
@@ -54,8 +56,9 @@ Inside the class, the permission they share and the two methods:
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function delete(BlockInterface $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function delete(string $id): OperationContext {
+    $block = \Drupal::classResolver(BlockPlacementStorage::class)->named($id, 'The "delete" operation of block.placement');
+    return new OperationContext(known: ['id' => (string) $block->id()]);
   }
 ```
 
@@ -77,9 +80,11 @@ account to read what it may not change declares `read` itself, with
 
 The method's parameters are what the operation needs, and a route or a
 tool supplies them by name. The parameter `$id` is named after the
-identity key. The update route declares `{id}` as `entity:block` in
-its options, so Drupal's param converter upcasts it and the method
-receives the loaded block entity. The method returns an
+identity key, and it is a value, the machine name the route's `{id}`
+carries: an operation is never handed an object. The method loads the
+block by that machine name, and a machine name no block has is refused,
+so that URL is a page not found; [the next page](10-storage.md) says
+where the block is loaded from. The method returns an
 `OperationContext`: the object that says which operation is asked and
 what it already knows, here the `id`. `update()` also holds `theme` to
 the one the block is in, with `withConstraint()`, so an edit cannot
@@ -99,10 +104,6 @@ surface_examples_block.update:
     _surface_resource: 'Drupal\surface_examples_block\Resource\BlockPlacementResource'
     _surface_operation: 'update'
     _surface_cosmetics: 'surface_examples_block.form_cosmetics'
-  options:
-    parameters:
-      id:
-        type: 'entity:block'
 ```
 
 `_surface_cosmetics` names a service that adds what only this page

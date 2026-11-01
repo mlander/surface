@@ -29,8 +29,8 @@ and field storage settings as resources
   type example adds `surface:node.type:create` and `:update`, and
   `surface_examples_entity` one `create` and one `update` per content entity
   bundle with a form display, `surface:entity.content:node.page:create`. The inputs
-  are the operation's parameters (an entity parameter as its id; a
-  scalar one named for a resource key described as that key), the
+  are the operation's parameters (each a value; one named for a
+  resource key described as that key), the
   resource's keys the operation does not know as `values`, and
   `dry_run`; see [Tools](resources.md#tools). Two rules leave an operation
   out: `field.storage`'s `create` asks `administer %entity_type fields`

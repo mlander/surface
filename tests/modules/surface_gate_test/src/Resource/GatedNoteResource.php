@@ -11,7 +11,6 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_gate_test\Access\GateNoteAccess;
 use Drupal\surface_gate_test\Storage\GateNoteStorage;
-use Drupal\node\NodeInterface;
 
 /**
  * A note on one node, which borrows the node's own access.
@@ -36,8 +35,9 @@ final class GatedNoteResource implements ResourceInterface {
    * Writes the note on a node: core's update access borrowed.
    */
   #[Operation('update', label: 'Edit the note', permission: 'write gated notes', gate: 'entity:node:update')]
-  public static function update(NodeInterface $node): OperationContext {
-    return new OperationContext(known: ['node' => (int) $node->id()]);
+  public static function update(string $node): OperationContext {
+    $loaded = \Drupal::classResolver(GateNoteStorage::class)->named($node, 'The "update" operation of gate_test.note');
+    return new OperationContext(known: ['node' => (int) $loaded->id()]);
   }
 
   /**
@@ -48,8 +48,9 @@ final class GatedNoteResource implements ResourceInterface {
     permission: 'write gated notes',
     gate: ['entity:node:update', 'field:node.title:edit'],
   )]
-  public static function annotate(NodeInterface $node): OperationContext {
-    return new OperationContext(known: ['node' => (int) $node->id()]);
+  public static function annotate(string $node): OperationContext {
+    $loaded = \Drupal::classResolver(GateNoteStorage::class)->named($node, 'The "annotate" operation of gate_test.note');
+    return new OperationContext(known: ['node' => (int) $loaded->id()]);
   }
 
 }

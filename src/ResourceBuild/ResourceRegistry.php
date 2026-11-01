@@ -843,11 +843,14 @@ final class ResourceRegistry {
    *   The owner, by the name it is built by.
    * @param string $key
    *   The key the owner declares it at.
+   * @param string[] $declared
+   *   The keys the map's callable declared before it asked for the frame,
+   *   which each fill holds it to.
    *
    * @return string
    *   The name it is attached and built by.
    */
-  public function defineMap(string $id, string $module, string $owner, string $key): string {
+  public function defineMap(string $id, string $module, string $owner, string $key, array $declared = []): string {
     $name = self::MAP . $owner . ':' . $key;
     $this->read[$name] ??= new ResourceDefinition(
       class: NULL,
@@ -857,7 +860,7 @@ final class ResourceRegistry {
       storage: NULL,
       access: NULL,
       refiners: [],
-      inputs: new ResourceCallable(MapBlueprint::class, 'fill', [$owner, $key]),
+      inputs: new ResourceCallable(MapBlueprint::class, 'fill', [$owner, $key, $declared]),
       kind: ResourceDefinition::STRUCTURE,
       readAs: $name,
     );

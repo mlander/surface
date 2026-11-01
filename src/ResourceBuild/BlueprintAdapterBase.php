@@ -208,18 +208,21 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * Declares one entry of a map of keys from the site.
    *
-   * As add() declares a key, unless the type spells a reference per
-   * thing, `entity:<type>[:<bundle>]`, which is declared as refer()
-   * declares one: addEach() takes a type string for each entry.
+   * As add() declares a key, unless addEach() named the entity type each
+   * entry refers to, which is declared as refer() declares one.
    *
    * @param string $key
    *   The entry's key.
    * @param string $type
-   *   What addEach() was handed.
+   *   The type addEach() was handed; ignored for a reference.
    * @param string|\Stringable $label
    *   The entry's label.
    * @param mixed $default
    *   What it starts from.
+   * @param string|null $to
+   *   The entity type an entry refers to, or NULL for an entry of a type.
+   * @param string[] $bundles
+   *   The bundles it may name; none for every bundle.
    *
    * @return \Drupal\Core\TypedData\DataDefinition
    *   The entry's definition.
@@ -227,12 +230,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    * @internal
    *   For the build step alone.
    */
-  public function addEntry(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition {
-    if (!References::spells($type)) {
-      return $this->add($key, $type, $label, $default);
-    }
-    [$entity_type, $bundles] = References::spelled($type);
-    return $this->addReference($key, $entity_type, $bundles, $label, $default);
+  public function addEntry(string $key, string $type, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): DataDefinition {
+    return $to === NULL
+      ? $this->add($key, $type, $label, $default)
+      : $this->addReference($key, $to, $bundles, $label, $default);
   }
 
   /**

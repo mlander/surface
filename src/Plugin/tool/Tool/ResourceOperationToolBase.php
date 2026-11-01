@@ -246,7 +246,7 @@ abstract class ResourceOperationToolBase extends ToolBase {
     }
     $sent = [];
     foreach ($operation->parameters as $parameter) {
-      if (!$parameter->takesObject() && is_scalar($values[$parameter->name] ?? NULL)) {
+      if (is_scalar($values[$parameter->name] ?? NULL)) {
         $sent[$parameter->name] = $values[$parameter->name];
       }
     }

@@ -13,6 +13,7 @@ use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface_resource_test\OutsideDiscovery\ChangingMapStructure;
 use Drupal\surface_resource_test\Storage\StallStorage;
 use Drupal\surface_resource_test\Structure\Workshop\BenchStructure;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -222,6 +223,33 @@ class AnonymousMapTest extends SurfaceKernelTestBase {
       $map->add('label', 'string', 'Label', default: 'x');
     });
     $this->assertSame(['plain'], $alter->keys());
+  }
+
+  /**
+   * Tests a map's callable that declares other keys when it runs again.
+   *
+   * A map that needs a frame is filled by running its owner's declaration
+   * again, and the callable with it, so the keys it declared before it
+   * asked for the frame are held to come first again.
+   */
+  public function testCallableDeclaringOtherKeysAgainIsRefused(): void {
+    $module = 'surface_resource_test';
+    $classes = [ChangingMapStructure::class => $module, BenchStructure::class => $module];
+    $registry = new ResourceRegistry(['resources' => $classes], $this->container->get('cache.discovery'));
+    $typed = $this->container->get('typed_data_manager');
+    $owner = $registry->getDefinition(ChangingMapStructure::class)->name();
+    ChangingMapStructure::$runs = 0;
+    $outer = new ResourceBlueprint(new SurfaceBuilder(), $typed, FALSE, $registry, $owner);
+    $registry->declareInputs($registry->getDefinition($owner), $outer);
+    $map = $outer->attachments()['kit'];
+    $this->assertTrue(ResourceRegistry::isMap($map));
+    try {
+      $registry->declareInputs($registry->getDefinition($map), new ResourceBlueprint(new SurfaceBuilder(), $typed, FALSE, $registry, $map));
+      $this->fail('The map was filled with other keys.');
+    }
+    catch (\LogicException $e) {
+      $this->assertStringContainsString('declared tent in the map at "kit" with addMap() the first time its callable ran, and awning when its declaration ran again to fill the map\'s structure. The callable runs more than once, so it has no side effect and declares the same keys each time.', $e->getMessage());
+    }
   }
 
 }

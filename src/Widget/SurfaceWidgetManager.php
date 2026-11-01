@@ -156,7 +156,11 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
    * Gets the widget serving a definition.
    *
    * A widget that claims the definition is asked first, the highest
-   * priority first (claimed()). Otherwise every other widget, instantiated
+   * priority first (claimed()). A definition that asks for a widget by its
+   * word is served by that widget when it serves the definition at all,
+   * whatever its weight: the autocomplete a reference asks for, which the
+   * select would serve first while its candidates are listed. Otherwise
+   * every other widget, instantiated
    * in weight order (lower first), is asked whether it serves the
    * definition; the first that says yes wins, so specialized widgets
    * undercut the generic per-type ones. Instantiating before asking is
@@ -179,6 +183,13 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
       return $claimed;
     }
     $asked = $definition->getSetting('widget');
+    if (is_string($asked)) {
+      foreach ($this->widgets() as $widget) {
+        if ($widget instanceof SurfaceWidgetBase && in_array($asked, $widget->answersTo(), TRUE) && $widget->isApplicable($definition)) {
+          return $widget;
+        }
+      }
+    }
     foreach ($this->widgets() as $plugin_id => $widget) {
       if (isset($this->claimants()[$plugin_id]) && !in_array($asked, $widget instanceof SurfaceWidgetBase ? $widget->answersTo() : [$plugin_id], TRUE)) {
         continue;

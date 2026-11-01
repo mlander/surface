@@ -385,7 +385,7 @@ final class Series {
           self::INSTALL . 'surface_examples.event_venue.library.yml' => t('the Old Library, shipped'),
           self::INSTALL . 'surface_examples.event_venue.harbour.yml' => t('the Harbour Centre, shipped'),
           self::ROUTES . 'surface_examples.step15_create' => t('the add form: the generic operation form'),
-          self::ROUTES . 'surface_examples.step15_update' => t('the edit form, its {id} the venue'),
+          self::ROUTES . 'surface_examples.step15_update' => t("the edit form, its {id} the venue's machine name"),
           self::ROUTES . 'surface_examples.step15_delete' => t('the remove form: a confirmation, since a delete takes no values'),
           self::MODULE . 'src/Form/VenueFormCosmetics.php' => t('what the three forms say once they wrote, and the page they go back to'),
         ],

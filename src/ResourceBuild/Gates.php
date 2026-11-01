@@ -68,46 +68,54 @@ final class Gates implements ContainerInjectionInterface {
    * Names the entity type a gate asks about.
    *
    * Core's gates name it. An operation gate asks about what its operation
-   * takes: the entity its one required entity parameter takes; for a
-   * derived operation's `id` on a resource that knows its entity type and
-   * id, the entity the context knows, of whichever type it names
-   * (self::ANY_ENTITY_TYPE); or none when the operation needs nothing,
-   * which is then asked once with no subject.
+   * takes: its first required parameter, a value naming a key of its
+   * resource that refers to an entity, the entity type that key refers
+   * to; for a derived operation's `id` on a resource that knows its
+   * entity type and id, the entity the context knows, of whichever type
+   * it names (self::ANY_ENTITY_TYPE); or none when the operation needs
+   * nothing, which is then asked once with no subject.
    *
    * @param \Drupal\surface\ResourceBuild\Gate $gate
    *   The gate.
+   * @param callable(string, string): ?string|null $refersTo
+   *   Answers the entity type a key of a resource refers to, by the
+   *   resource's name and the key; NULL when only the parameter is asked
+   *   for.
    *
    * @return array{0: string|null, 1: string|null}
    *   The entity type id, and for an operation gate the parameter the
-   *   entity is handed as; NULL for each when the gate asks about nothing.
+   *   entity's id is handed as; NULL for each when the gate asks about
+   *   nothing.
    *
    * @throws \LogicException
-   *   When the gated operation needs something that is no entity.
+   *   When the gated operation needs a value that names no entity.
    */
-  public function subjectOf(Gate $gate): array {
+  public function subjectOf(Gate $gate, ?callable $refersTo = NULL): array {
     if ($gate->kind !== Gate::OPERATION) {
       return [(string) $gate->entityType, NULL];
     }
-    $operation = $this->registry->getOperation($this->registry->getDefinition((string) $gate->resource)->name(), $gate->operation);
+    $definition = $this->registry->getDefinition((string) $gate->resource);
+    $operation = $this->registry->getOperation($definition->name(), $gate->operation);
     foreach ($operation->parameters as $parameter) {
       if ($parameter->optional) {
         continue;
       }
-      if ($parameter->namesKey) {
-        // A derived operation's id, of a resource that knows its entity
-        // type and id: asked about the entity the context knows, of
-        // whichever entity type it names, and handed its id.
-        $identity = $this->registry->getDefinition((string) $gate->resource)->identity;
-        if ($parameter->name === 'id' && in_array('entity_type', $identity, TRUE) && in_array('id', $identity, TRUE)) {
-          return [self::ANY_ENTITY_TYPE, $parameter->name];
-        }
+      // A derived operation's id, of a resource that knows its entity type
+      // and id: asked about the entity the context knows, of whichever
+      // entity type it names, and handed its id.
+      if ($parameter->namesKey && $parameter->name === 'id' && in_array('entity_type', $definition->identity, TRUE) && in_array('id', $definition->identity, TRUE)) {
+        return [self::ANY_ENTITY_TYPE, $parameter->name];
       }
-      $entity_type = $parameter->namesKey ? NULL : $this->entityTypeOf((string) $parameter->type);
+      if ($refersTo === NULL) {
+        return [NULL, $parameter->name];
+      }
+      $entity_type = $refersTo($definition->name(), $parameter->name);
       if ($entity_type === NULL) {
         throw new \LogicException(sprintf(
-          'The gate "%s" names an operation that needs %s, which is no entity: a gate hands the operation it names the thing a call is about, and nothing else.',
+          'The gate "%s" names an operation that needs %s, which names no key of %s that refers to an entity: a gate hands the operation it names the id of the thing a call is about, a key declared with refer().',
           $gate->spelled,
           $parameter->describe(),
+          $definition->id,
         ));
       }
       return [$entity_type, $parameter->name];
@@ -152,7 +160,8 @@ final class Gates implements ContainerInjectionInterface {
     if ($gate->kind === Gate::OPERATION) {
       [, $parameter] = $this->subjectOf($gate);
       try {
-        $context = $resources->operation((string) $gate->resource, $gate->operation, $parameter === NULL || $subject === NULL ? [] : [$parameter => $subject]);
+        // The operation is handed the thing's id, which its storage loads.
+        $context = $resources->operation((string) $gate->resource, $gate->operation, $parameter === NULL || $subject === NULL ? [] : [$parameter => $subject->id()]);
       }
       catch (\InvalidArgumentException $e) {
         // The operation does not take this thing: a page's edit, handed
@@ -206,29 +215,6 @@ final class Gates implements ContainerInjectionInterface {
       return $reason;
     }
     return $reason === '' ? $refused . '.' : $refused . ': ' . $reason;
-  }
-
-  /**
-   * Finds the entity type whose entities are of a class or interface.
-   *
-   * @param string $type
-   *   The parameter's declared class or interface.
-   *
-   * @return string|null
-   *   The one entity type whose class is it or implements it, or NULL when
-   *   none is, or more than one.
-   */
-  protected function entityTypeOf(string $type): ?string {
-    if (!is_a($type, EntityInterface::class, TRUE)) {
-      return NULL;
-    }
-    $found = [];
-    foreach ($this->entityTypeManager->getDefinitions() as $id => $definition) {
-      if ($definition->entityClassImplements($type)) {
-        $found[] = (string) $id;
-      }
-    }
-    return count($found) === 1 ? $found[0] : NULL;
   }
 
 }

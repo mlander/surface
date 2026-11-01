@@ -16,7 +16,6 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SettledCacheability;
 use Drupal\surface\Pipeline\Outbound;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\ResourceBuild\OperationArguments;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\OperationParameter;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
@@ -54,11 +53,10 @@ use Drupal\tool\TypedData\OutputDefinition;
  *
  * The static definition has to be written before any caller has said
  * anything, so for an operation that needs a subject, which identity keys
- * it knows is read off its signature: a scalar parameter supplies the
- * identity key of its own name, and an entity parameter supplies the
- * identity of the thing it is, which is every identity key no scalar
- * parameter names. Once the parameters arrive, the tool refines `values`
- * to the resource built in the operation's real context, which is exact.
+ * it knows is read off its signature: a parameter supplies the identity
+ * key of its own name. Once the parameters arrive, the tool refines
+ * `values` to the resource built in the operation's real context, which
+ * is exact.
  * An operation that needs nothing is built in its real context from the
  * start.
  *
@@ -186,8 +184,6 @@ final class OperationInputs {
    *
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step.
-   * @param \Drupal\surface\ResourceBuild\OperationArguments $operationArguments
-   *   What names the entity type a parameter takes.
    * @param \Drupal\surface\Tool\InputDefinitions $inputDefinitions
    *   The converter from a data surface to the Tool API's definitions.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
@@ -198,7 +194,6 @@ final class OperationInputs {
    */
   public function __construct(
     protected readonly ResourcesInterface $resources,
-    protected readonly OperationArguments $operationArguments,
     protected readonly InputDefinitions $inputDefinitions,
     TranslationInterface $string_translation,
     protected readonly ServedPaths $servedPaths,
@@ -1169,24 +1164,9 @@ final class OperationInputs {
    *
    * @return \Drupal\tool\TypedData\InputDefinitionInterface
    *   The input.
-   *
-   * @throws \LogicException
-   *   When the parameter takes an object no single entity type is.
    */
   protected function parameterInput(OperationParameter $parameter, ResourceDefinition $resource, OperationDefinition $operation, ?SurfaceInterface $neutral = NULL): InputDefinitionInterface {
     $label = ucfirst(str_replace('_', ' ', $parameter->name));
-    if ($parameter->takesObject()) {
-      $entity_type_id = $this->operationArguments->entityTypeOf($parameter);
-      if ($entity_type_id === NULL) {
-        throw new \LogicException(sprintf('The "%s" operation of the %s resource takes %s, which no tool can send: it is no single entity type.', $operation->id, $resource->id, $parameter->describe()));
-      }
-      return new InputDefinition(
-        data_type: 'string',
-        label: $label,
-        description: $this->t('The id of the @entity_type the operation is about.', ['@entity_type' => $entity_type_id]),
-        required: !$parameter->optional,
-      );
-    }
     $key = $neutral?->getDefinitions()->entry($parameter->name);
     if ($key !== NULL && $key->attachment === NULL && $key->variants === NULL && $key->list === NULL) {
       $input = $this->inputDefinitions->fromDefinition($key->definition);
@@ -1210,7 +1190,6 @@ final class OperationInputs {
    * A parameter named for an identity key supplies that key. One whose
    * parameters name a whole thing supplies every key: an edit, and a
    * create that names what it makes (ResourceDefinition::namesWholeThing()).
-   * An entity parameter supplies every key no scalar names.
    *
    * Decision: see docs/decisions.md#identity-before-the-parameters.
    *
@@ -1227,16 +1206,12 @@ final class OperationInputs {
       return $resource->identity;
     }
     $named = [];
-    $subject = FALSE;
     foreach ($operation->parameters as $parameter) {
-      if ($parameter->takesObject()) {
-        $subject = TRUE;
-      }
-      elseif (in_array($parameter->name, $resource->identity, TRUE)) {
+      if (in_array($parameter->name, $resource->identity, TRUE)) {
         $named[] = $parameter->name;
       }
     }
-    return $subject ? $resource->identity : $named;
+    return $named;
   }
 
 }

@@ -813,9 +813,9 @@ final class OpenApiDocument {
    * Writes an operation's own parameters: in the path, then the query.
    *
    * A parameter named for one of the resource's identity keys is in the
-   * path (ServedPaths::template()); any other is in the query. One that
-   * takes a value and is named for a key the resource declares says what
-   * that key says, as its tool input does; any other says what it is.
+   * path (ServedPaths::template()); any other is in the query. One named
+   * for a key the resource declares says what that key says, as its tool
+   * input does; any other says what it is.
    *
    * Decision: see docs/decisions.md#a-parameter-is-identity-the-caller-knows.
    *
@@ -834,7 +834,7 @@ final class OpenApiDocument {
     $parameters = [];
     foreach ($operation->parameters as $parameter) {
       $path = in_array($parameter->name, $inPath, TRUE);
-      $key = $parameter->takesObject() ? NULL : $built->getDefinition($parameter->name);
+      $key = $built->getDefinition($parameter->name);
       $said = $key === NULL ? '' : (string) ($key->getDescription() ?? $key->getLabel() ?? '');
       $parameters[] = [
         'name' => $parameter->name,

@@ -738,7 +738,7 @@ final class Gating {
     }
     $places = [];
     foreach ($found->gates as $gate) {
-      [$type] = $this->gates()->subjectOf($gate);
+      [$type] = $this->gates()->subjectOf($gate, $this->refersTo(...));
       if ($type === Gates::ANY_ENTITY_TYPE && !$pair) {
         // An operation that takes an entity's id, of whichever type: the
         // one an identity key refers to, else one an item's key does.
@@ -769,6 +769,29 @@ final class Gating {
       ));
     }
     return $this->gatePlaces[$memo] = $places;
+  }
+
+  /**
+   * Names the entity type a key of a resource refers to, if it refers to one.
+   *
+   * Read from what the resource declares, nothing built: what an operation
+   * gate's operation is handed as the id of the thing it is asked about.
+   *
+   * @param string $resource
+   *   The resource's name.
+   * @param string $key
+   *   The key.
+   *
+   * @return string|null
+   *   The entity type the key's reference constraint names, or NULL for a
+   *   key that refers to no one entity type, or none at all.
+   */
+  protected function refersTo(string $resource, string $key): ?string {
+    $builder = new SurfaceBuilder();
+    $definition = $this->registry->getDefinition($resource);
+    $this->declaring->fillBlueprints($definition, $this->declaring->blueprint($builder, $definition));
+    $declared = $builder->getDefinition($key);
+    return $declared === NULL ? NULL : (References::target($declared)['entityType'] ?? NULL);
   }
 
   /**

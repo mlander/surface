@@ -22,6 +22,7 @@ use Drupal\surface\Resource\DeletableStorageInterface;
 use Drupal\surface\Resource\HeldToConfigSchemaInterface;
 use Drupal\surface\Resource\KnowsClearableKeysInterface;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\Core\Session\AccountInterface;
 
 /**
@@ -46,6 +47,8 @@ use Drupal\Core\Session\AccountInterface;
  * and visibility are. The key that maps to the entity type's id key is
  * the entity's identity, read from what the context knows.
  *
+ * - named() loads the entity an operation's id names, refusing an id
+ *   that names none: an operation is handed the id, never the entity.
  * - load() reads the entity the context names; nothing for one that
  *   creates, so a new thing starts from what the resource declares.
  * - prepare() builds the entity it would save, unsaved: a copy of the
@@ -238,6 +241,50 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
       return NULL;
     }
     return !empty($schema['mapping'][$property]['nullable']);
+  }
+
+  /**
+   * Loads the entity an operation's id names, for its context to read.
+   *
+   * What an operation of a resource stored here is handed is the id, the
+   * identity key's value; the entity is this storage's to load, so a
+   * storage that stands in front of this one answers for it too.
+   *
+   * @code
+   * #[Operation('update', label: new TranslatableMarkup('Edit a venue'))]
+   * public static function update(string $id): OperationContext {
+   *   $venue = \Drupal::classResolver(VenueStorage::class)
+   *     ->named($id, 'The "update" operation of event.venue');
+   *   return new OperationContext(known: ['id' => (string) $venue->id()]);
+   * }
+   * @endcode
+   *
+   * Decision: see
+   * docs/decisions.md#an-operation-is-handed-values-never-objects.
+   *
+   * @param mixed $id
+   *   The id the operation was handed.
+   * @param string $operation
+   *   The operation and the resource, for the message.
+   *
+   * @return \Drupal\Core\Config\Entity\ConfigEntityInterface
+   *   The entity.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   At the identity key, when the id names no entity of the type: a URL
+   *   naming it names nothing.
+   * @throws \InvalidArgumentException
+   *   When what it was handed is no id.
+   */
+  public function named(mixed $id, string $operation): ConfigEntityInterface {
+    if (!is_int($id) && !is_string($id) || $id === '') {
+      throw new \InvalidArgumentException(sprintf('%s takes the id of a %s, and was handed %s.', $operation, $this->singularLabel(), get_debug_type($id)));
+    }
+    $entity = $this->storage()->load((string) $id);
+    if (!$entity instanceof ConfigEntityInterface) {
+      throw new NamesNothingException(sprintf('%s takes the id of a %s, and there is none with the id "%s".', $operation, $this->singularLabel(), $id), $this->idKey());
+    }
+    return $entity;
   }
 
   /**

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Drupal\surface_storage_test\Resource;
 
-use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -35,8 +34,9 @@ final class ConfigTestResource implements ResourceInterface {
     label: new TranslatableMarkup('Edit a test entity'),
     permission: 'administer site configuration',
   )]
-  public static function update(ConfigEntityInterface $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function update(string $id): OperationContext {
+    $entity = \Drupal::classResolver(ConfigTestStorage::class)->named($id, 'The "update" operation of storage_test.config_test');
+    return new OperationContext(known: ['id' => (string) $entity->id()]);
   }
 
   /**
@@ -48,8 +48,9 @@ final class ConfigTestResource implements ResourceInterface {
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function delete(ConfigEntityInterface $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function delete(string $id): OperationContext {
+    $entity = \Drupal::classResolver(ConfigTestStorage::class)->named($id, 'The "delete" operation of storage_test.config_test');
+    return new OperationContext(known: ['id' => (string) $entity->id()]);
   }
 
   /**

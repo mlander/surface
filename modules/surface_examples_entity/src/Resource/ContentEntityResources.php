@@ -128,6 +128,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
     $derivatives = [];
     foreach ($this->derivation->bundles() as $entity_type_id => $bundles) {
       $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
+      $named = $this->derivation->callerNamesId($entity_type_id);
       $derivatives[$entity_type_id] = $this->entityType($entity_type_id, $by_type);
       foreach ($bundles as $bundle => $bundle_label) {
         $bound = [$entity_type_id, $bundle];
@@ -139,12 +140,20 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
             new DerivedOperation(
               'create',
               $this->t('Add @bundle', ['@bundle' => $bundle_label]),
-              new ResourceCallable(self::class, 'create', $bound),
+              new ResourceCallable(self::class, 'create', [...$bound, $named]),
               creates: TRUE,
-              description: $this->t('Creates a new @bundle item (@entity_type); the site gives it its id.', [
-                '@bundle' => $bundle_label,
-                '@entity_type' => $entity_type->getLabel(),
-              ]),
+              // A create whose caller names the thing is idempotent: the
+              // same call twice is refused for the id the first took.
+              idempotent: $named ? TRUE : NULL,
+              description: $named
+                ? $this->t('Creates a new @bundle item (@entity_type) under the id the caller names; an id already in use is refused.', [
+                  '@bundle' => $bundle_label,
+                  '@entity_type' => $entity_type->getLabel(),
+                ])
+                : $this->t('Creates a new @bundle item (@entity_type); the site gives it its id.', [
+                  '@bundle' => $bundle_label,
+                  '@entity_type' => $entity_type->getLabel(),
+                ]),
             ),
             new DerivedOperation(
               'update',
@@ -216,6 +225,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
     $entity_type = $this->entityTypeManager->getDefinition($entity_type_id);
     $label = $entity_type->getSingularLabel();
     $bundle_label = $entity_type->getBundleLabel() ?: $this->t('bundle');
+    $named = $this->derivation->callerNamesId($entity_type_id);
     return new DerivedResource(
       inputs: new ResourceCallable(self::class, 'defineEntityTypeInputs', [$entity_type_id]),
       identity: ['entity_type', 'id'],
@@ -223,12 +233,18 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
         new DerivedOperation(
           'create',
           $this->t('Add @entity_type', ['@entity_type' => $label]),
-          new ResourceCallable(self::class, 'createAny', [$entity_type_id]),
+          new ResourceCallable(self::class, 'createAny', [$entity_type_id, $named]),
           creates: TRUE,
-          description: $this->t("Creates a new @entity_type of the @bundle_label named by bundle, with that @bundle_label's fields; the site gives it its id.", [
-            '@entity_type' => $label,
-            '@bundle_label' => $bundle_label,
-          ]),
+          idempotent: $named ? TRUE : NULL,
+          description: $named
+            ? $this->t("Creates a new @entity_type of the @bundle_label named by bundle, with that @bundle_label's fields, under the id the caller names; an id already in use is refused.", [
+              '@entity_type' => $label,
+              '@bundle_label' => $bundle_label,
+            ])
+            : $this->t("Creates a new @entity_type of the @bundle_label named by bundle, with that @bundle_label's fields; the site gives it its id.", [
+              '@entity_type' => $label,
+              '@bundle_label' => $bundle_label,
+            ]),
         ),
         new DerivedOperation(
           'update',
@@ -294,10 +310,40 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
 
     $inputs->add('bundle', 'string', $entity_type->getBundleLabel() ?: $this->t('Bundle'))->setRequired(TRUE);
 
-    $inputs->add('id', $this->derivation->idType($entity_type_id), $this->t('ID'))
-      ->setDescription($this->t('Given by storage when the @entity_type is saved.', ['@entity_type' => $entity_type->getSingularLabel()]));
+    $this->defineId($inputs, $entity_type_id);
 
     $this->defineFields($inputs, $entity_type_id, $bundle, $overridden);
+  }
+
+  /**
+   * Declares the identity key `id`, computed or named by the caller.
+   *
+   * Typed as the entity type's id field. Where storage gives the id (a
+   * serial integer) it is said so, and a create knows there is none yet;
+   * where the caller names it, it is required, a create takes it, and its
+   * length is the id field's.
+   *
+   * Decision: see
+   * docs/decisions.md#an-entity-types-id-is-computed-or-named-by-the-caller.
+   *
+   * @param \Drupal\surface\Resource\BlueprintInterface $inputs
+   *   The blueprint to fill.
+   * @param string $entity_type_id
+   *   The entity type id.
+   */
+  protected function defineId(BlueprintInterface $inputs, string $entity_type_id): void {
+    $singular = $this->entityTypeManager->getDefinition($entity_type_id)->getSingularLabel();
+    $id = $inputs->add('id', $this->derivation->idType($entity_type_id), $this->t('ID'));
+    if (!$this->derivation->callerNamesId($entity_type_id)) {
+      $id->setDescription($this->t('Given by storage when the @entity_type is saved.', ['@entity_type' => $singular]));
+      return;
+    }
+    $id->setRequired(TRUE)
+      ->setDescription($this->t('Named by whoever creates the @entity_type, and kept as it is.', ['@entity_type' => $singular]));
+    $max = $this->derivation->idField($entity_type_id)?->getSetting('max_length');
+    if (is_int($max) && $max > 0) {
+      $id->addConstraint('Length', ['max' => $max]);
+    }
   }
 
   /**
@@ -349,8 +395,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
       ]))
       ->setRequired(TRUE);
 
-    $inputs->add('id', $this->derivation->idType($entity_type_id), $this->t('ID'))
-      ->setDescription($this->t('Given by storage when the @entity_type is saved.', ['@entity_type' => $entity_type->getSingularLabel()]));
+    $this->defineId($inputs, $entity_type_id);
 
     $inputs->attachVariants(self::FIELDS, by: 'bundle', from: BundleFieldStructures::class, arguments: [$entity_type_id])
       ->setLabel($this->t('Fields'))
@@ -381,23 +426,27 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
   /**
    * A new entity of the bundle: it knows which bundle, and has no id.
    *
+   * Where storage gives the id, the context knows there is none yet; where
+   * the caller names it, the id is the caller's to send.
+   *
    * @param array $arguments
    *   None.
    * @param string $entity_type_id
    *   The entity type id.
    * @param string $bundle
    *   The bundle.
+   * @param bool $named
+   *   Whether the caller names the id (FieldItemDerivation::callerNamesId()).
    *
    * @return \Drupal\surface\Resource\OperationContext
    *   A context that creates.
    */
-  public static function create(array $arguments, string $entity_type_id, string $bundle): OperationContext {
+  public static function create(array $arguments, string $entity_type_id, string $bundle, bool $named = FALSE): OperationContext {
+    // Storage gives the id; knowing there is none locks it empty.
     return new OperationContext('create', creates: TRUE, known: [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
-      // Storage gives the id; knowing there is none locks it empty.
-      'id' => NULL,
-    ]);
+    ] + ($named ? [] : ['id' => NULL]));
   }
 
   /**
@@ -498,17 +547,18 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    *   None.
    * @param string $entity_type_id
    *   The entity type id.
+   * @param bool $named
+   *   Whether the caller names the id (FieldItemDerivation::callerNamesId()).
    *
    * @return \Drupal\surface\Resource\OperationContext
    *   A context that creates.
    */
-  public static function createAny(array $arguments, string $entity_type_id): OperationContext {
+  public static function createAny(array $arguments, string $entity_type_id, bool $named = FALSE): OperationContext {
+    // Storage gives the id; knowing there is none locks it empty.
     return (new OperationContext('create', creates: TRUE, known: [
       'entity_type' => $entity_type_id,
-      // Storage gives the id; knowing there is none locks it empty.
-      'id' => NULL,
       ContentEntityStorage::FIELDS_AT => self::FIELDS,
-    ]))->withConstraint('bundle', 'SurfaceCreatableBundle', ['entityTypeId' => $entity_type_id]);
+    ] + ($named ? [] : ['id' => NULL])))->withConstraint('bundle', 'SurfaceCreatableBundle', ['entityTypeId' => $entity_type_id]);
   }
 
   /**

@@ -3754,14 +3754,18 @@ final class VenueResource implements ResourceInterface {
 
   /**
    * Edits a venue, named by its machine name, which stays as it is.
+   *
+   * Handed the machine name; the venue storage loads the venue, and
+   * refuses a name no venue has.
    */
   #[Operation('update',
     label: new TranslatableMarkup('Edit a venue'),
     description: new TranslatableMarkup('Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.'),
     permission: self::ADMINISTER,
   )]
-  public static function update(EventVenue $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function update(string $id): OperationContext {
+    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "update" operation of event.venue');
+    return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 
   /**
@@ -3774,8 +3778,9 @@ final class VenueResource implements ResourceInterface {
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function delete(EventVenue $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function delete(string $id): OperationContext {
+    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "delete" operation of event.venue');
+    return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 
   /**
@@ -4536,7 +4541,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 47 |
-| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 77 |
+| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 79 |
 | [`modules/surface_examples/src/Slugify.php`](src/Slugify.php) | the slug's deriver: a pure function of the name, run when a venue is added | 6 |
 | [`modules/surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 18 |
 | [`modules/surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
@@ -4549,8 +4554,8 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples/config/install/surface_examples.event_venue.library.yml`](config/install/surface_examples.event_venue.library.yml) | the Old Library, shipped | 18 |
 | [`modules/surface_examples/config/install/surface_examples.event_venue.harbour.yml`](config/install/surface_examples.event_venue.harbour.yml) | the Harbour Centre, shipped | 18 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_create` | the add form: the generic operation form | 8 |
-| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_update` | the edit form, its {id} the venue | 12 |
-| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_delete` | the remove form: a confirmation, since a delete takes no values | 12 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_update` | the edit form, its {id} the venue's machine name | 8 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_delete` | the remove form: a confirmation, since a delete takes no values | 8 |
 | [`modules/surface_examples/src/Form/VenueFormCosmetics.php`](src/Form/VenueFormCosmetics.php) | what the three forms say once they wrote, and the page they go back to | 20 |
 
 ## Example 16: references, three ways
@@ -4727,13 +4732,13 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_references/surface_examples_references.install`](../surface_examples_references/surface_examples_references.install) | deletes them when it is uninstalled | 3 |
 | [`modules/surface_examples_references/src/Sponsorship.php`](../surface_examples_references/src/Sponsorship.php) | the three nodes: an article, a draft article and a page, their ids kept in State | 40 |
 | [`modules/surface_examples_references/surface_examples_references.post_update.php`](../surface_examples_references/surface_examples_references.post_update.php) | stores as uuids the ids a site stored before the object stored uuids | 6 |
-| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 238 |
+| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 245 |
 | [`src/Reference/EntityReferenceStructure.php`](../../src/Reference/EntityReferenceStructure.php) | the two parts of a bare entity key, and the refiner that narrows its id to the entity type chosen; the main module's | 49 |
 | [`src/Reference/ReferenceStorageLayout.php`](../../src/Reference/ReferenceStorageLayout.php) | how a config storage keeps a reference to content: by uuid, read back as the id; the main module's | 373 |
-| [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 20 |
+| [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 22 |
 | [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |
 | [`src/Plugin/SurfaceOptionsResolver/ReferenceOptions.php`](../../src/Plugin/SurfaceOptionsResolver/ReferenceOptions.php) | the resolver that lists the candidates up to the limit; the main module's | 39 |
-| [`src/Plugin/SurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/SurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 59 |
+| [`src/Plugin/SurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/SurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 65 |
 
 ## Example 17: retitle in bulk, access borrowed
 
@@ -5048,7 +5053,7 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_retitle/src/Hook/RetitleHooks.php`](../surface_examples_retitle/src/Hook/RetitleHooks.php) | writes the three pages once the module is installed, and locks the third one's title while a State flag is set, as another module would through core's field access | 26 |
 | [`modules/surface_examples_retitle/surface_examples_retitle.install`](../surface_examples_retitle/surface_examples_retitle.install) | deletes them when it is uninstalled | 3 |
 | [`modules/surface_examples_retitle/src/Retitle.php`](../surface_examples_retitle/src/Retitle.php) | the three pages, their ids kept in State | 38 |
-| [`src/ResourceBuild/Gates.php`](../../src/ResourceBuild/Gates.php) | what answers a gate: core's access handler, or another resource's operation; the main module's | 94 |
+| [`src/ResourceBuild/Gates.php`](../../src/ResourceBuild/Gates.php) | what answers a gate: core's access handler, or another resource's operation; the main module's | 84 |
 | [`src/ResourceBuild/ItemGates.php`](../../src/ResourceBuild/ItemGates.php) | the gates asked once per item, before the storage sees it; the main module's | 35 |
 
 ## How this page is kept true

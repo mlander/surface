@@ -680,8 +680,12 @@ Every blueprint method works inside the callable: `add()`, `addList()`,
 `resolve()`. A map whose keys need a frame of their own (a child, a
 rule, a resolve) is a structure with no id, attached at the key and
 still written inline, the structures it holds as references to their
-defs. The callable runs at once, and again when that structure is
-built, so it is a pure function, as `defineInputs()` is.
+defs. The callable may run more than once: at once, and again each
+time that structure is built, when the build runs the owner's
+declaration again to fill it. So it has no side effect and declares the
+same keys each time, as `defineInputs()` does; the build refuses a
+callable that declares other keys the second time, comparing the keys it
+declared before it asked for the frame.
 
 The cost of no id: no alter addresses the map itself, nothing else
 uses it, and its access is its owner's. Anything two resources share,
