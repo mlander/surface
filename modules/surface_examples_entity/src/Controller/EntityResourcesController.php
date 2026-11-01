@@ -8,23 +8,26 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Link;
 use Drupal\Core\Url;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface_examples_entity\Resource\ContentEntityResources;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
  * The landing page: what was derived, and what was left out and why.
  *
  * Read from the registry, so it says what the site has now: every
- * content entity resource derived, each with the fields it carries, in
- * order, and each field its form display shows that it does not, with
- * the reason its deriver recorded. Below that, the basic pages written
- * most recently, each with a link to edit it through the resource.
+ * content entity resource derived for a bundle, each with the fields it
+ * carries, in order, and each field its form display shows that it does
+ * not, with the reason its deriver recorded; then the resources derived
+ * for an entity type, which choose the bundle by a key. Below that, the
+ * basic pages written most recently, each with a link to edit it through
+ * the resource.
  */
 final class EntityResourcesController extends ControllerBase {
 
   /**
    * The base id the content entity resources are derived under.
    */
-  public const BASE = 'entity.content';
+  public const BASE = ContentEntityResources::BASE;
 
   /**
    * The resource the routes of this module serve.
@@ -57,7 +60,7 @@ final class EntityResourcesController extends ControllerBase {
   public function index(): array {
     $build = [
       'intro' => [
-        '#markup' => '<p>' . $this->t('Each bundle with a form display is a resource, derived from its fields\' typed data: one part per field the form shows, in the same order, each asking field access whether you may change it, only see it, or not see it at all. A basic page can be <a href=":add">added</a> and edited through it here, and every resource below is also a tool (<code>surface:&lt;resource&gt;:create</code>, <code>:update</code>, <code>:update:read</code>).', [
+        '#markup' => '<p>' . $this->t('Each bundle with a form display is a resource, derived from its fields\' typed data: one part per field the form shows, in the same order, each asking field access whether you may change it, only see it, or not see it at all. A basic page can be <a href=":add">added</a> and edited through it here, and every resource below is also a tool (<code>surface:&lt;resource&gt;:create</code>, <code>:update</code>, <code>:read</code>); its read asks view access, so an account that may view a page and not edit it reads it.', [
           ':add' => Url::fromRoute('surface_examples_entity.node_page_create')->toString(),
         ]) . '</p>',
       ],
@@ -66,8 +69,15 @@ final class EntityResourcesController extends ControllerBase {
       'tags' => ['entity_field_info', 'config:entity_form_display_list', 'node_list'],
       'contexts' => ['user.permissions'],
     ];
+    $types = [];
     foreach ($this->registry->getDefinitions() as $definition) {
-      if ($definition->base !== self::BASE) {
+      if ($definition->base !== self::BASE || $definition->storage === NULL) {
+        // Not one of this deriver's, or a bundle's fields, which only an
+        // entity type's resource holds.
+        continue;
+      }
+      if (!in_array('bundle', $definition->identity, TRUE)) {
+        $types[] = ['#markup' => '<code>' . htmlspecialchars($definition->id) . '</code>: ' . htmlspecialchars((string) $definition->description)];
         continue;
       }
       $derived = [];
@@ -107,6 +117,12 @@ final class EntityResourcesController extends ControllerBase {
         ],
       ];
     }
+    $build['types'] = [
+      '#theme' => 'item_list',
+      '#title' => $this->t('One resource per entity type, the bundle chosen by a key'),
+      '#items' => $types,
+      '#empty' => $this->t('None.'),
+    ];
     $build['pages'] = [
       '#theme' => 'item_list',
       '#title' => $this->t('Basic pages, newest first'),

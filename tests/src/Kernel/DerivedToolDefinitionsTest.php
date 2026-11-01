@@ -144,8 +144,8 @@ class DerivedToolDefinitionsTest extends SurfaceKernelTestBase {
     $this->assertContains('surface:node.type:update', $ids);
     $this->assertContains('surface:registration.step3:configure', $ids);
     $this->assertContains('surface:field.instance:update', $ids);
-    $this->assertContains('surface:registration.step3:configure:read', $ids);
-    $this->assertContains('surface:field.instance:update:read', $ids);
+    $this->assertContains('surface:registration.step3:read', $ids);
+    $this->assertContains('surface:field.instance:read', $ids);
 
     $explorer = $this->explorer();
     foreach ($ids as $id) {
@@ -192,37 +192,36 @@ class DerivedToolDefinitionsTest extends SurfaceKernelTestBase {
     $after = $this->derivedIds();
     $this->assertSame([
       'surface:event.bulletin:configure',
-      'surface:event.bulletin:configure:read',
+      'surface:event.bulletin:read',
       'surface:event.desk:configure',
-      'surface:event.desk:configure:read',
+      'surface:event.desk:read',
       'surface:event.doors:configure',
-      'surface:event.doors:configure:read',
+      'surface:event.doors:read',
       'surface:event.mailer:configure',
-      'surface:event.mailer:configure:read',
+      'surface:event.mailer:read',
       'surface:event.press:configure',
-      'surface:event.press:configure:read',
+      'surface:event.press:read',
       'surface:event.program:check',
       'surface:event.program:configure',
-      'surface:event.program:configure:read',
+      'surface:event.program:read',
       'surface:event.sales:configure',
-      'surface:event.sales:configure:read',
+      'surface:event.sales:read',
       'surface:event.spotlight:configure',
-      'surface:event.spotlight:configure:read',
+      'surface:event.spotlight:read',
       'surface:event.venue:create',
       'surface:event.venue:delete',
       'surface:event.venue:list',
+      'surface:event.venue:read',
       'surface:event.venue:reorder',
-      'surface:event.venue:reorder:read',
       'surface:event.venue:update',
-      'surface:event.venue:update:read',
       'surface:event.webhook:configure',
-      'surface:event.webhook:configure:read',
+      'surface:event.webhook:read',
       'surface:registration.step1:configure',
-      'surface:registration.step1:configure:read',
+      'surface:registration.step1:read',
       'surface:registration.step2:configure',
-      'surface:registration.step2:configure:read',
+      'surface:registration.step2:read',
       'surface:registration.step3:configure',
-      'surface:registration.step3:configure:read',
+      'surface:registration.step3:read',
     ], array_values(array_diff($after, $before)));
     $this->assertSame([], array_diff($before, $after));
 
@@ -245,9 +244,9 @@ class DerivedToolDefinitionsTest extends SurfaceKernelTestBase {
     $definitions = $this->toolManager()->getDefinitions();
     $this->assertSame(NodeTypeResource::PERMISSION, $definitions['surface:node.type:create']->getPermission());
     $this->assertSame(NodeTypeResource::PERMISSION, $definitions['surface:node.type:update']->getPermission());
-    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['surface:node.type:update:read']->getPermission());
+    $this->assertSame(NodeTypeResource::PERMISSION, $definitions['surface:node.type:read']->getPermission());
     $this->assertNull($definitions['surface:field.instance:create']->getPermission());
-    $this->assertNull($definitions['surface:field.instance:update:read']->getPermission());
+    $this->assertNull($definitions['surface:field.instance:read']->getPermission());
 
     // The declared permission is asked first, before any input is read.
     $refused = ToolManager::checkPermission($definitions['surface:node.type:create'], new AnonymousUserSession());

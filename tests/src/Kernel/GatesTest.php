@@ -139,7 +139,7 @@ class GatesTest extends SurfaceKernelTestBase {
    */
   public function testGateNamingWhatTheSiteLacksIsRefusedAtDiscovery(): void {
     $refusals = [
-      MissingOperationGateStructure::class => 'The gate "gate_test.note:rename" on the "update" operation of gate_test.broken.missing_operation names the "rename" operation of gate_test.note, which it does not have; it has update, annotate.',
+      MissingOperationGateStructure::class => 'The gate "gate_test.note:rename" on the "update" operation of gate_test.broken.missing_operation names the "rename" operation of gate_test.note, which it does not have; it has update, annotate, read.',
       MissingResourceGateStructure::class => 'The gate "gate_test.nowhere:update" on the "update" operation of gate_test.broken.missing_resource names the resource gate_test.nowhere, which the site does not have.',
       MissingEntityTypeGateStructure::class => 'The gate "entity:spaceship:update" on the "update" operation of gate_test.broken.missing_entity_type names the entity type spaceship, which the site does not have.',
       FieldDeleteGateStructure::class => 'The gate "field:node.title:delete" on the "update" operation of ' . FieldDeleteGateStructure::class . ' asks field access for "delete"; core\'s field access takes view or edit.',

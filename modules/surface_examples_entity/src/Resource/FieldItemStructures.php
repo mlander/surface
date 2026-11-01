@@ -31,10 +31,11 @@ use Drupal\surface_examples_entity\Structure\Attribute\FieldItemStructure;
  * for a field type someone wrote one for, from the class marked
  * #[FieldItemStructure(type:)], whose static #[RefinesInput] methods refine
  * it. Either way the field's own facts stay derived: its label, and its
- * two operations, `create` and `update`, which the content entity resource
- * invokes it through by name. Each knows the entity type, the bundle
- * and the field, and `update` the entity's id, which is what its access
- * class asks field access with: open, locked, or omitted.
+ * three operations, `create`, `update` and `read`, which the content
+ * entity resource invokes it through by name. Each knows the entity type,
+ * the bundle and the field, and `update` and `read` the entity's id,
+ * which is what its access class asks field access with: open, locked,
+ * or omitted, and for a read open or omitted.
  *
  * Such a structure has no storage: its parent, the content entity
  * resource, stores it under the field's name. So it is never a tool on
@@ -98,8 +99,19 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
                 'update',
                 $this->t('Change @field', ['@field' => $field->getLabel()]),
                 new ResourceCallable(self::class, 'update', $bound),
-                ['id' => 'string'],
+                ['id'],
                 description: $this->t('Changes the @field field of a @bundle item, named by its id.', [
+                  '@field' => $field->getLabel(),
+                  '@bundle' => $bundle,
+                ]),
+              ),
+              new DerivedOperation(
+                'read',
+                $this->t('View @field', ['@field' => $field->getLabel()]),
+                new ResourceCallable(self::class, 'read', $bound),
+                ['id'],
+                readOnly: TRUE,
+                description: $this->t('Reads the @field field of a @bundle item, named by its id.', [
                   '@field' => $field->getLabel(),
                   '@bundle' => $bundle,
                 ]),
@@ -202,6 +214,31 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
    */
   public static function update(array $arguments, string $entity_type_id, string $bundle, string $field_name): OperationContext {
     return new OperationContext('update', known: [
+      'entity_type' => $entity_type_id,
+      'bundle' => $bundle,
+      'field_name' => $field_name,
+      'id' => $arguments['id'],
+    ]);
+  }
+
+  /**
+   * The item on an entity that exists, to read.
+   *
+   * @param array{id: int|string} $arguments
+   *   The entity's id, which the parent's read operation knows.
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $bundle
+   *   The bundle.
+   * @param string $field_name
+   *   The field.
+   *
+   * @return \Drupal\surface\Resource\OperationContext
+   *   A context knowing which field of which entity, which its access
+   *   class asks view access with.
+   */
+  public static function read(array $arguments, string $entity_type_id, string $bundle, string $field_name): OperationContext {
+    return new OperationContext('read', known: [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
       'field_name' => $field_name,

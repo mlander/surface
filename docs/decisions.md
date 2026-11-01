@@ -255,16 +255,28 @@ The table's row says it; `PublicSurfaceTest` does not count a
 context's methods, so its pins are unchanged.
 
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
-grows only with that test updated beside a reason: 9 attributes, 31
-attribute arguments (33 before; 30 until 2026-10-25, when
+grows only with that test updated beside a reason: 9 attributes, 36
+attribute arguments (35 until 2026-11-01, when `widget:` was added to
+`#[Structure]`, [A structure may ask for its widget, and a widget never
+validates](#a-structure-may-ask-for-its-widget-and-a-widget-never-validates);
+33 before; 30 until 2026-10-25, when
 `#[Operation(gate:)]` was added, [A gate is borrowed, never
-copied](#a-gate-is-borrowed-never-copied)), 16 blueprint methods (17
-before; 15 until 2026-10-27, when `resolve()` was added, [A key may
-stand for another at use](#a-key-may-stand-for-another-at-use)), 21
+copied](#a-gate-is-borrowed-never-copied); 31 until 2026-10-31, when
+`label:` and `description:` were added to `#[Resource]` and
+`#[Structure]`, [A resource and a structure may say what they are
+called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)), 18 blueprint methods (16
+until 2026-11-01, when `refer()` and `addMap()` were added, [A
+reference is declared as a reference](#a-reference-is-declared-as-a-reference)
+and [An anonymous map](#an-anonymous-map); 17 before; 15 until
+2026-10-27, when `resolve()` was added, [A key may stand for another at
+use](#a-key-may-stand-for-another-at-use)), 22
 interfaces (23 before; 20 until 2026-10-28, when
 `EntrySchemasInterface` was added, a provider that answers an entry's
 schema when a door reads it, [The static build is cached, the rest is
-per request](#the-static-build-is-cached-the-rest-is-per-request)). It
+per request](#the-static-build-is-cached-the-rest-is-per-request); 21
+until 2026-10-31, when `BoundSiteListInterface` was added, a provider
+that lists for what its owner binds, [Two entity resources from one
+deriver](#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)). It
 is the concept budget for the code, as
 [Your first resource](first-resource.md) is for the docs.
 
@@ -430,7 +442,10 @@ is "Configure the newsletter" or "Edit a content type", `delete` is
   type, the field and its storage, every content entity resource and
   field item, and the test modules'. Tool ids follow
   (`surface:event.venue:update`, `:update:read`, `:delete`); the
-  read tool's suffix stays `:read`. Route names follow the id
+  read tool's suffix stays `:read`. (*Amended 2026-10-31:* the read is
+  an operation of its own, `surface:event.venue:read`, [A read is an
+  operation of the resource](#a-read-is-an-operation-of-the-resource).)
+  Route names follow the id
   (`surface_examples_block.update`, `surface_examples.step15_delete`).
   A path keeps Drupal's own convention where it had one, `/add` and
   `/edit` (`/admin/structure/block/surface/add`,
@@ -557,6 +572,49 @@ shapes and who uses them. (`Resource\Attribute\Shape`,
 `DefinitionMetadata::shapeOf()`, `PropertySchema::named()`, `isPart()`
 in `app/src/contract.ts`)
 
+### One table of leaf types, read by the blueprint, the emitter and the reader
+
+Decided 2026-11-01, aligning the blueprint with JSON Schema: a key holds
+one value of a type the contract states a JSON Schema type for, and one
+class says which types those are and how each is written
+(`Contract\LeafTypes`).
+
+- **Eight rows.** `string`, `email` (`format: idn-email`), `uri`
+  (`format: uri`), `datetime_iso8601` (`format: date-time`), `integer`
+  and `timestamp` (`type: integer`), `float` (`type: number`) and
+  `boolean`. A shape and a config schema type of one value
+  (`machine_name`, `label`, `path`, `color_hex`, `langcode`) resolve to
+  a row; a reference resolves to the row of its entity type's id.
+- **Refused at the blueprint, at any depth.** `add()` refuses any other
+  type, naming the method for what was meant: `attach()` or `addMap()`
+  for a group of keys, `addList()` for a list, `refer()` for an id,
+  `addDefinition()` for a definition built by hand; `addDefinition()`
+  and `addList()` hold every value inside to the same rows. Why:
+  `PropertySchema::type()` ended in `default => []`, so a key of a type
+  it could not spell (`any`, `binary`, `duration_iso8601`, `language`)
+  was accepted and written with no `type`: the contract vaguer than the
+  runtime. That arm is a `\LogicException` now, which the blueprint makes
+  unreachable.
+- **One table, three readers.** The emitter writes each row, and
+  `SchemaReader` reads a JSON type and format back through the same
+  class, so the round trip rests on one table. How a type is drawn and
+  coerced stays keyed by type where it is done (each widget's
+  `isApplicable()`, `Pipeline\Coercion`), not repeated here.
+- **`any` is the module's, never an author's.** It stays held in the two
+  places the module makes it: the variants' placeholder, which the
+  emitter writes as conditionals, and a value a schema read holds whole
+  to its schema (`DefinitionMetadata::isHeldWhole()`).
+- **What the survey found.** Every type string in `src`, `modules` and
+  `tests`, and a build of 255 of the dev site's 271 operations: every
+  leaf was a row, but the variants' `any`, and three uses in tests,
+  decided by the maintainer: the escape hatch (`add($key, 'any')` with a
+  refiner returning a map) refused
+  ([Variants, not slots](#variants-not-slots)); `binary` dropped, with
+  no row and no widget; `add('settings', 'map')` written `addMap()`.
+
+(`LeafTypes`, `BlueprintAdapterBase::add()`, `PropertySchema::type()`,
+`SchemaReader`, `LeafTypesTest`)
+
 ### Variants, not slots
 
 A key whose structure a sibling key chooses was a **slot**, named for
@@ -596,6 +654,9 @@ reviews). `#[Variant(..., label:)]` says what a person is offered the
 value as, and a deciding key that declares no list of its own gains a
 `LabeledChoice` of the variants' values and labels (a plain `Choice`
 when none gives a label; a variant with none is offered as its value).
+*Amended 2026-10-31:* a variant whose `#[Variant]` gives no label is
+offered by its structure's own label, where it has one
+([A resource and a structure may say what they are called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)).
 The shipped deciding keys drop the lists that restated their variants'
 values, and example 3's pricing is offered as Free and Paid, not `free`
 and `paid`, in the form and both documents.
@@ -623,6 +684,17 @@ and `paid`, in the form and both documents.
 
 (`Resource\Attribute\Variant::$label`, `SurfaceBuilder::attachVariants()`,
 `Attaching::assertListNarrowsVariants()`)
+
+*Amended 2026-11-01:* there is no escape hatch beside variants. A key
+declared `any` with a `#[RefinesInput]` method returning a whole
+definition was the one way a child that could not be listed got its
+shape; a shape that depends on another key is variants, a provider's
+when the site lists them ([Variants from the site](resources.md#variants-from-the-site)).
+`add()` refuses `any`, and the narrowing rule that `any` may become
+anything holds for the variants' placeholder alone (`Narrowing`).
+`DynamicChildStructure` is removed: the crate and its fruit variant
+cover the same behavior
+([One table of leaf types](#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
 
 ### A page stands without the decisions page
 
@@ -753,7 +825,8 @@ top ([Which constraint to write](options.md#which-constraint-to-write)):
   can check.
 - **A list the site decides second.** A constraint that names a kind,
   read by a resolver (`PluginExists`, `EntityBundleExists`,
-  `LanguageExists`, `Country`), or the type string `entity:<type>`. Why:
+  `LanguageExists`, `Country`), or a reference key, `refer()` (the type
+  string `entity:<type>` until 2026-11-01). Why:
   the class stays literal and holds no service, the resolver lists for
   the site, and the schema states the list as a `oneOf` while it is
   short, looked up or `deferred` past its budget, and a key a static
@@ -871,6 +944,67 @@ mention is the constant: `add(self::VENUE, ...)`,
 `ResourceGeneratorTest::testKeysAreNamedOnceAsConstants()`,
 `NewsletterResource`, `StoreResource`, `RegistrationStep1Resource`,
 `RegistrationStep2Resource`)
+
+### A resource and a structure may say what they are called and what they are for
+
+Decided 2026-10-31. `#[Resource]` and `#[Structure]` take an optional
+`label:` and `description:`, typed as `#[Operation]`'s are and written
+as `new TranslatableMarkup(...)`: the label what the thing is called,
+the description what it is for. Discovery keeps both on the definition,
+whose `label()` and `description()` answer them, else the words of the
+one plugin that holds it, else NULL, and a caller names it by its id
+([What it is called](declaring-a-resource.md#what-it-is-called)).
+
+- **Why.** The id is for code: a tool id, a path, a key under `$defs`.
+  Four readers need a name and a purpose instead: a select offering
+  structures as variants, the catalog, a served contract's `$defs`, and
+  an agent reading those `$defs` with no other text to go on. Each of
+  them printed the id before, `registration.step3.ticket.paid`.
+- **Where it is said.** A def's `title` is its structure's label, or its
+  shape's label, and its `description` the structure's description; a
+  def with neither is titled by its key, as before, and the key stays
+  the id. The catalog prints both beside the id. A deciding key offers
+  a variant's value by its `#[Variant]` label, else by the structure's
+  label. The contract panel names a part by its label, its id after it.
+  The schema reader reads a def's `title` and `description` back into
+  the structure's label and description, so a document still reads back
+  to itself (`SchemaReader::names()`).
+- **A plugin's structure takes the plugin's words.** With no label of its
+  own, a structure one plugin holds is called what the plugin definition
+  calls the plugin (a block's `admin_label`, any other's `label`), and,
+  with no description either, takes its `description`. Read at discovery
+  from the plugin definitions (`ResourcePlugins::hostNames()`), so
+  nothing is said twice and nothing is copied into the structure class.
+  Only where one plugin alone holds it: two would call it two things.
+- **Two labels, two things.** The label `attach()` gives the key is the
+  key's, beside the `$ref`; the structure's label is what the structure
+  is wherever it is held. The `#[Variant]` label is the choice's word and
+  stands over the structure's: the paid ticket is offered as "Paid" and
+  titled "Paid ticket".
+- **Rejected: a label on every `#[Variant]`**, the only place a
+  structure could be named before. It names a structure only where it is
+  a variant, says nothing in the catalog or at an attached child's def,
+  and a structure chosen at two keys would say its name twice.
+- **Rejected: ids as titles, the status quo**
+  ([Contract 2](#contract-2), "`title` on every def, its id"). Stable
+  and language-free, but a reader learns nothing from it that the key
+  does not say, and a type generator that wants a stable name reads
+  the key, which does not change.
+- **What followed for served contracts.** Every def whose structure or
+  shape has a label changed its `title` from the id to the label, and
+  gained a `description` where the structure has one; the contract diff
+  reads neither as breaking. The baselines and the documents pinned in
+  fixtures were regenerated once, and only those titles and
+  descriptions moved. The OpenAPI document's tag for a labeled resource
+  gains its `x-displayName`, and a tool title that adds its resource
+  (where two operations share a label) adds the label.
+
+(`Resource\Attribute\Resource`, `Resource\Attribute\Structure`,
+`ResourceDefinition::label()`, `ResourceDefinition::description()`,
+`ResourcePlugins::hostNames()`, `Subschemas::named()`,
+`DocumentHead::top()`, `Attaching::variantLabels()`,
+`SchemaReader::names()`, `CatalogDocument::names()`,
+`ResourceLabelsTest`)
 
 ## Context
 
@@ -1186,7 +1320,13 @@ context the operation built ([forms](forms.md#a-route-that-fixes-or-fills-keys))
   default, stays the route's 403 with its reason, whatever the URL
   carries: only the value is the visitor's. A value a converter loads
   nothing for is core's 404 to any account, before access is asked, as
-  before. The gate writes nothing to the log: core's breadcrumb asks
+  before. *Amended 2026-11-01:* no surface route converts a parameter an
+  operation takes, so such a value is the operation's storage's to
+  refuse, and answered as above: a 404 for an account the permission
+  lets in, and no reason to any other
+  ([An operation is handed values, never
+  objects](#an-operation-is-handed-values-never-objects)). The gate
+  writes nothing to the log: core's breadcrumb asks
   about every path above the one requested, so a URL anyone may type
   would write a line per request.
 - **A React page starts keys and fixes none.** *Changed 2026-10-29:*
@@ -1263,7 +1403,7 @@ code computes it at request time. The choices, and why:
   every bundle. `/node/{node}/edit` names a node whose bundle is known
   only once it is loaded, and nothing answers which derived resource an
   entity belongs to, so for now the bundle goes in the path; a deriver
-  method answering the derivative of an upcast entity, or routes a
+  method answering the derivative of the entity an id names, or routes a
   deriver declares (`pages:` on `DerivedResource`, compiled by a route
   provider and rebuilt when the list of bundles changes), would serve
   the edit route itself.
@@ -1384,7 +1524,9 @@ code computes it at request time. The choices, and why:
   bundle is refused to every account at every door, as is an id no node
   has wherever no converter answers it first, with no reason at the
   form's route and the one fixed refusal at the React page, the API and
-  the tool. Why: passing the permission step where none is declared
+  the tool. *Amended 2026-11-01:* the example's edit route converts `{id}`
+  no more, so an id no node has is refused there with no reason too, as
+  a node of another bundle is. Why: passing the permission step where none is declared
   would tell any account, anonymous included, what a value names.
   *Open:* whether derived operations should declare permissions, which
   would make the 404 reachable for them; that is a security change,
@@ -1428,7 +1570,15 @@ A route parameter or tool input for an operation parameter typed as an
 entity interface is loaded by the one entity type whose class satisfies
 that type; a type several entity types satisfy is taken only as an
 object. A guess between entity types would load the wrong thing.
-(`OperationArguments`)
+(`OperationArguments`) *Amended 2026-11-01:* this holds for an
+`#[Operation]` method's PHP type alone; a derived operation's parameter
+names a key and is handed its value, loaded by nothing but the storage
+([A parameter names a key](#a-parameter-names-a-key)). *Superseded
+2026-11-01:* no parameter is typed as an entity. A method's parameter is
+a scalar, a class type refused at discovery, and nothing loads an entity
+for it; an entity a PHP caller hands over is named by its id
+([An operation is handed values, never
+objects](#an-operation-is-handed-values-never-objects)).
 
 ### A parameter is identity the caller knows
 
@@ -1449,7 +1599,10 @@ assemble.
   when it names nothing; `field.storage`'s update takes `$entity_type,
   $field_name`. A parameter named for a resource's one identity key and
   typed as the entity (`node.type`'s `type`, `block.placement`'s `id`)
-  is that key already, and stays.
+  is that key already, and stays. *Amended 2026-11-01:* it is typed as
+  the key's scalar now, `string $type`, and loads the entity through its
+  storage ([An operation is handed values, never
+  objects](#an-operation-is-handed-values-never-objects)).
 - **One name for the entity type, `entity_type`.** The field resources
   called it `entity_type_id`, the content entity resources
   `entity_type`. `entity_type` is the name core's field config stores
@@ -1526,6 +1679,103 @@ parent's, never asked in the child, would drop them.
 `ResourceOperationToolBase::sentPermissionAccess()`,
 `ServedOperationAccessCheck::access()`, `FieldInstanceResourceTest`,
 `IdentityPathsTest`)
+
+### A parameter names a key
+
+Decided 2026-11-01. A derived operation's parameter is the name of a key
+its resource declares, `parameters: ['id']`: an identity key, or a key
+the operation needs to name its subject. Its definition is that key's;
+it carries no type. The operation receives the key's value, and loading
+what it names is the storage's.
+
+- **Why.** `['id' => 'entity:node']` made an object parameter typed
+  `EntityInterface`, and `OperationArguments` loaded the entity before
+  the operation ran, beside the resource's storage: a value no storage
+  answered for, which a stage in front of storage could never hand over
+  as a local id.
+- **Now.** `OperationParameter::fromDeclaration()` refuses `name =>
+  type` and `entity:` at discovery, naming the fix. `OperationArguments`
+  hands a key parameter its value (the raw value of a route's parameter,
+  the id of an entity a caller hands over) and loads nothing for it. The
+  content entity resources' `update`, `read`, `updateAny()` and
+  `readAny()` take the id and ask `ContentEntityStorage::entity()`,
+  which refuses an id that names nothing with a not found at `id`, as
+  the deriver refused an entity of another bundle.
+- **Gates.** A gate is asked about the thing the context knows, by
+  identity; an operation gate naming a content entity resource's
+  operation hands it the entity's id (`Gates::ANY_ENTITY_TYPE`).
+- **What changed at the doors.** The tool input `id` of the content
+  entity resources' `update` and `read` is the identity key's own
+  definition: an integer for a node, labeled "ID", where it was a
+  string described as the id of the entity the operation is about.
+- **What is left.** An `#[Operation]` method typed with a PHP class
+  (`NodeTypeInterface $type`, read by `fromReflection()`) still takes
+  the loaded object, and a form route's `options.parameters.*.type:
+  'entity:…'` still converts: the same shortcut, through the form door,
+  step 0 of the stage's design. *Done 2026-11-01:* both went
+  ([An operation is handed values, never
+  objects](#an-operation-is-handed-values-never-objects)).
+
+(`OperationParameter`, `OperationArguments`, `ContentEntityResources`,
+`ContentEntityStorage::entity()`, `ContentEntityReadTest`)
+
+### An operation is handed values, never objects
+
+Decided 2026-11-01. Every operation's parameter is a value. A method
+operation's is a scalar named for a key of its resource (`string $id`,
+`string $type`), the rule a derived operation's parameter follows since
+[A parameter names a key](#a-parameter-names-a-key); the operation loads
+its subject through its resource's storage.
+
+- **Why.** The stage stands in front of storage: a write staged under a
+  handle is read back through the storage that holds the stage. A door
+  that loaded an object before the operation ran (`EventVenue $id`
+  upcast by a route's converter, or loaded by `OperationArguments` from
+  a tool's id) read the permanent storage beside the resource's own,
+  and a local id in a stage could never become one.
+- **Now.** `OperationParameter::fromReflection()` refuses a parameter
+  typed with a class, an interface or `object` at discovery, naming the
+  fix: type it as the key's scalar and load the thing through the
+  resource's storage. `OperationArguments` passes values through and
+  loads nothing; an entity a PHP caller hands over is named by its id.
+  The venue, placed block, content type and the test modules'
+  operations take the id and ask their storage.
+- **The load by identity.** `ConfigEntityStorage::named($id,
+  $operation)` loads the config entity an id names and refuses one that
+  names nothing with a `NamesNothingException` at the identity key,
+  which every door answers as not found for an account the operation
+  lets in. It sits on the base because five of the six resources store
+  a config entity there and their identity is its id. It is on no
+  interface: what an identity names differs by storage (the content
+  entity storage serves every entity type and needs the type,
+  `ContentEntityStorage::entity()`; the gate test's note is named by
+  the node it is on, `GateNoteStorage::named()`), and a singleton names
+  nothing.
+- **Gates.** An operation gate hands the operation it names the id of
+  the thing the context knows, read off the key the operation's
+  parameter names, which refers to an entity (`Gates::subjectOf()`,
+  `Gating::refersTo()`).
+- **What went.** `OperationParameter::takesObject()` and every branch
+  that read it, at the tool door (the input "The id of the
+  @entity_type the operation is about."), the OpenAPI document, the
+  permission placeholders and the identity a tool knows;
+  `OperationArguments::entityTypeOf()` and its entity type manager; and
+  `options.parameters.*.type: 'entity:…'` on every route for a
+  parameter an operation takes. The form door reads the raw route value
+  (`OperationArguments::fromRoute()`). A converter a route keeps for
+  something else (core's `NodeController::addPageTitle()` reads the
+  loaded node type) is not read by the operation.
+- **What changed at the doors.** A tool's input and an OpenAPI path
+  parameter for these operations are the key's own definition: the
+  venue's `id` its machine name key, the content type's `type` its
+  machine name. A URL whose id names nothing is answered by the
+  operation's storage: not found for an account the operation's
+  permission lets in, refused with no reason to any other, where a
+  converter answered not found to every account before access was
+  asked.
+
+(`OperationParameter`, `OperationArguments`, `ConfigEntityStorage::named()`,
+`Gates`, `RouteAccessTest`, `GatesTest`, `VenueResourceTest`)
 
 ### A plain route default pins an operation parameter
 
@@ -2750,6 +3000,46 @@ journal leaves the child's step out for it.
 `Attaching::mixIn()`, `Binding::bindMixin()`,
 `Attaching::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
+
+### An anonymous map
+
+Decided 2026-11-01. `addMap($key, $label, $define)` declares an object
+of keys only this resource holds, written inline in both documents,
+`type: object` with its properties, and no def. JSON Schema has an
+inline object; requiring a named structure for every object made a
+class and an id where naming buys nothing.
+
+- **Plain, or a structure with no id.** A map whose callable declares
+  plain values (`add()`, `addList()`, `refer()` to one entity type, a
+  nested `addMap()`, `describe()`) is a map definition at the key. One
+  whose callable asks for a frame of its own (`attach()`, `attachList()`,
+  `attachVariants()`, `mixIn()`, `narrow()`, `resolve()`) is a
+  structure with no id, registered for the key
+  (`ResourceRegistry::defineMap()`), attached there and still written
+  inline, a structure inside it a reference to that structure's def. Its
+  inputs run the owner's declaration again to the map's key and hand
+  the callable its blueprint (`MapBlueprint::fill()`), so the callable
+  is a pure function, as `defineInputs()` is. *Amended 2026-11-01:* the
+  callable may run more than once, at once and at each fill, so it has
+  no side effect and declares the same keys each time; the build holds
+  each fill to the keys the first run declared before it asked for the
+  frame (`NeedsFrame::$declared`), and refuses a callable that declares
+  others, naming both. Nesting is not refused:
+  an alter reaches a structure by its own id, never by the path it sits
+  at, and an inline object may hold a `$ref`.
+- **The cost.** No alter addresses the map itself, nothing else uses
+  it, and its access is its owner's. Anything two resources share, or
+  that an alter should reach, is a structure.
+- **Where it holds plain keys alone.** An alter's map and an output's:
+  an alter attaches a structure at its own mount alone, and outputs
+  hold no attached structures; a structure mixed in holds no child. A
+  call that needs a frame there is refused naming why.
+- **Read back.** `SchemaReader` reads an inline object that holds a
+  structure as `addMap()`, so the document reads back to itself.
+
+(`BlueprintAdditionsInterface::addMap()`, `MapBlueprint`,
+`ResourceBlueprint::replay()`, `AnonymousMapTest`, example 8's
+`location`)
 
 ### An empty variant is an empty map
 
@@ -4855,8 +5145,10 @@ that destroys, or that is not idempotent, is refused at discovery.
   title (`ResourceOperationToolDeriver::title()`,
   `OperationInputs::description()`).
 - **No read tool beside a read only operation.** It changes nothing, so
-  there is nothing to read before changing it
-  (`ResourceCatalog::reads()`).
+  there is nothing to read before changing it. (*Amended 2026-10-31:* no
+  operation has a read beside it; the read is the resource's own
+  operation, [A read is an operation of the
+  resource](#a-read-is-an-operation-of-the-resource).)
 
 A read only operation writes nothing at any door (decided 2026-10-19,
 closing the point this entry left open): the build marks the data
@@ -4971,6 +5263,79 @@ listing changed. (`OperationInputs::declaredValues()`,
 `InputDefinitions::withoutDefaults()`, `InputDefinitions::withStored()`,
 `OperationKindsTest`)
 
+### A read is an operation of the resource
+
+Every resource that can be changed can be read, by an operation of its
+own, `read` (decided 2026-10-31): read only, its inputs the parameters
+that name the thing, its answer the stored values in the shape the
+update's `values` takes, less the identity keys it knows, every secret
+and every key the account may not see. Where a resource with storage,
+no plugin's configuration, has a default update that can be asked on
+its own (the one whose id is `update`, or `configure` on a singleton,
+else its only update; on a resource with identity, one whose parameters
+name the thing) and declares no `read`, the build adds one
+(`OperationDefinition::defaultRead()`, `ResourceRegistry::defaultRead()`).
+It takes the update's parameters, permission and gates, its label is
+"Current values:" and the update's, and the catalog lists it as the
+resource's own operation, provided by "default read of" the update, as
+`configure` is the singleton's default update. It is asked in the
+update's own context (`OperationDefinition::contextId()`,
+`ResourcesInterface::operation()`), so its access, its alters and the
+operations its children are invoked through are the update's: an
+account reads exactly what it may change, and nothing loosens. An owner
+that declares `read` replaces it and answers access for reading: the
+content entity example asks core's view access for the entity and view
+field access for each field, so an account that may view a page and not
+edit it reads it ([Field access is child access](#field-access-is-child-access)).
+
+Every door serves it. The tool door derives `surface:<resource>:read`
+(`ResourceOperationReadTool`), its inputs the parameters and its one
+output `values`. HTTP `GET .../{id}` serves the read; the one the build
+adds is served as the update it reads (`ServedOperations::resolve()`),
+so its envelope, its schema and every existing `GET` are byte for byte
+what they were, while a read an owner declares serves its own envelope
+and schema, and its update's are at `.../{id}:update`. The OpenAPI
+document describes `GET` from the read and the update by its run. The
+form still opens with the update's stored values, through the update:
+it is the update's door.
+
+- **Why.** A read of one thing existed three times, once per door, with
+  no operation behind it: `GET` served the default update's envelope,
+  the form opened with the update's values, and the tool door derived
+  `:read` beside every update. Each borrowed the update's permission and
+  access, so an account that may view a thing and not change it could
+  read it through no door, and there was nowhere to say otherwise. As an
+  operation it is declared once, held to the same discovery checks as
+  every other, and a module that owns view access says it there.
+- **Why the default keeps the update's access.** The build cannot know
+  who may view a thing that only declares who may change it; asking the
+  update's access is what every door asked before, so adding the read
+  changes no answer.
+- **Rejected: keep deriving a read per door.** Three derivations of one
+  idea, each its own rule for which operations read, and still no place
+  for view access.
+- **Rejected: every owner declares its read.** Every resource would
+  restate what its update already says, and one that forgot would have
+  no read at all.
+- **What went with it.** The read derived beside every update that
+  changes a thing is gone, `<operation>:read` with it: a resource has one
+  read, its default update's, so an update beside the default (the
+  venues' reorder, the logbook's append and clear) has none of its own.
+  `ResourceCatalog::reads()` and the catalog's "Read on its own" column
+  are gone; the read is a row of its own.
+- **Outputs.** The read's answer is the update's `values` said as an
+  output (`InputDefinitions::outputFromInput()`), at the tool door, and
+  at HTTP the envelope's `values` under the schema the update takes; it
+  is not declared through `defineOutputs()`, which stays what a write
+  answers beside its values. *Open:* stating it once as the operation's
+  outputs, for every door to read.
+
+This closes the open point of [Reading asks what writing
+asks](#reading-asks-what-writing-asks).
+(`OperationDefinition::readsOne()`, `ResourceRegistry::defaultRead()`,
+`ResourceOperationToolDeriver::read()`, `ServedPaths::defaults()`,
+`ServedPaths::readsPlain()`, `ReadToolTest`, `ContentEntityReadTest`)
+
 ### Which operations read
 
 An operation that can be asked on its own has a read tool when it changes
@@ -4986,7 +5351,12 @@ context the way its id is, replaced the reading, closing the point this
 entry left open. The narrowing tool, `:schema`, is a read beside the
 write tool for another reason, a key the listing states open
 ([A budget for what the site decides](#a-budget-for-what-the-site-decides)).
-(`ResourceCatalog::reads()`)
+*Amended 2026-10-31:* no operation has a read beside it any more; the
+read is an operation of the resource, the one its owner declares or the
+one the build adds beside its default update, and `ResourceCatalog::reads()`
+is gone ([A read is an operation of the
+resource](#a-read-is-an-operation-of-the-resource)). The narrowing tool
+stays beside a write.
 
 ### A read promises shape, not membership
 
@@ -5085,6 +5455,12 @@ then the resource's access class, for the context its parameters build.
 A caller who may not change a thing may not read it through the tool
 either. *Open:* a read permission of its own.
 (`ResourceOperationToolBase::checkAccess()`)
+*Amended 2026-10-31:* a read is an operation, `read`, with access of its
+own: the one the build adds asks its update's, so this entry still holds
+for it, and an owner that declares `read` answers access for reading,
+as the content entity example does with core's view access. The open
+point is closed ([A read is an operation of the
+resource](#a-read-is-an-operation-of-the-resource)).
 
 ## Forms
 
@@ -5385,6 +5761,55 @@ posts. The format stays an annotation
 Regex is still the rule. (`DateWidget::draws()`, `PropertySchema::type()`,
 `SchemaReader::value()`)
 
+### A structure may ask for its widget, and a widget never validates
+
+Decided 2026-11-01. `#[Structure(widget:)]` names the widget that draws
+the structure as a whole, by the one word a key's `widget` setting
+uses; the build sets it on the key wherever the structure is attached,
+unless the owner set one there. A shape's `define()` already sets the
+setting on its definition. A module's claim on a structure by its
+class, beside the claim on a shape, is not built: the structure asking
+covers the case, and a claim is a second place to look.
+
+- **A word is checked at the build.** Every key whose `widget` setting
+  asks for one is handed to the manager's own check when the resource is
+  built (`Resources::assertWidgetsDraw()`): a word no widget answers to,
+  or a widget that cannot draw the key, is a build refusal at every
+  door, not a form that fails to draw.
+- **A widget never validates.** Its code may not give an element an
+  `#element_validate` other than `[]`, read from the widget class and
+  its parents below `SurfaceWidgetBase` when the widgets are discovered
+  (`SurfaceWidgetManager::assertNeverValidates()`). What is accepted is
+  the definition's, which the pipeline holds every door to; a widget's
+  own validation would refuse on the form what the tool accepts. What
+  it reads is the class's own code: a helper of another class that adds
+  one is not read.
+- **A hint is all a widget changes.** For every example resource and
+  operation, both documents with the hints, less every hint (and the
+  hints `within` says of a pointer inside a property), are the documents
+  without them (`WidgetHintsOnlyTest`).
+- **The form display's widget.** A content entity resource's field
+  asks for the widget its form display's component names
+  (`FieldItemDerivation::WIDGETS`), with the `size`, `rows` and
+  `placeholder` a widget or the arrangement reads. Where the component
+  draws what the stock rule draws (`string_textfield`, `number`,
+  `boolean_checkbox`, `options_select`), no word is set: the stock rule
+  picks it already, and the word would refuse the select a route's fixed
+  value draws (the build check found it on the page's title);
+  `options_buttons` asks for radios, `string_textarea` and
+  `text_textarea` for the string drawn multiline. Left behind:
+  `entity_reference_autocomplete` (the item's `target_id` is no
+  reference key, so the autocomplete widget does not draw it),
+  `datetime_default` (asking for the date widget states `format: date`
+  in both documents, a contract change beyond a hint), every component
+  of a field not carried, and every other setting, which is core's
+  widget's own (`match_operator`, `match_limit`, `display_label`,
+  `include_locked`, `progress_indicator`, `preview_image_style`).
+
+(`Structure::$widget`, `Resources::assertWidgetsDraw()`,
+`SurfaceWidgetManager::assertNeverValidates()`, `WidgetAskTest`,
+`WidgetHintsOnlyTest`)
+
 ### The form never refuses to draw a declared key
 
 Decided 2026-10-27, from example 12 on the development site: of 312
@@ -5441,7 +5866,12 @@ and the contract disagree about what may be set.
   and `entity_reference`, whose value nobody types, as an item saying it
   is not drawn on this form, which posts nothing, so the key keeps what
   it holds (`NotDrawnWidget`). `StockWidgetsTest` walks every type core
-  defines.
+  defines. *Amended 2026-11-01:* a key holds a value of a type the
+  contract states a JSON Schema type for, so no blueprint declares any
+  of the four; `binary` is drawn by nothing and left out of the walk,
+  and the not-drawn item stays for the other three, which a definition
+  handed to the engine by hand may still be
+  ([One table of leaf types](#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
 - **What the JSON widget still draws**: an `any` key whose types include
   an object or a list, or that states none, and a list of lists or of
   `any`.
@@ -6120,6 +6550,118 @@ the delta dropped, and one about the whole entity to `@entity`; it
 drops one about a field the resource does not carry, or one the account
 may not edit, as core's form does. (`ContentEntityStorage::prepare()`)
 
+### Two entity resources from one deriver: static per bundle, runtime per entity type
+
+Decided 2026-10-31, from that day's design conversation.
+`ContentEntityResources` derives, beside one
+`entity.content:<entity type>.<bundle>` per bundle with a form display,
+one `entity.content:<entity type>` per content entity type that has
+such a bundle: `bundle` is a key, and the fields are variants at
+`fields` that it chooses, one per bundle, each
+`entity.content:<entity type>.<bundle>.fields`, a structure the same
+deriver derives. That structure attaches the same field item structures
+the bundle's resource does, through the one method both call
+(`defineFields()`).
+
+- **Why both.** A resource per bundle states its fields outright: no
+  conditional, its refiners the fields' own, and a precise path per
+  bundle, `/surface-api/entity.content:node.page`. A resource per entity
+  type keeps the tool list short as bundles grow (five tools per entity
+  type, where each bundle adds three) and has the shape agents expect
+  from the services this module replaces: one create and one update per
+  entity type, the bundle an input.
+- **One deriver, proven equal.** Both are derived from the same field
+  definitions by the same method, so nothing is declared twice.
+  `ContentEntityTypeResourceTest` holds the entity type's resource,
+  narrowed by each bundle, equal byte for byte to that bundle's root
+  less its identity: the full schema and the schema for empty values,
+  of the add and the edit, for two accounts. A difference is a defect in
+  the deriver, never something to allow.
+- **Both at every door.** Each operation is standalone, so each has its
+  HTTP paths, its OpenAPI operations and its tools, and a form wherever
+  a route names it; no declaration chooses between them. Consumers
+  choose, where they already select tools: the MCP server's tool
+  configuration and an agent's own selection.
+- **The fields sit under a key.** Variants attach at a key: the pipeline
+  hands a variant the value at that key, storage composes along the
+  tree, and the emitter states each variant as a def at the key with a
+  conditional on the deciding key. Mixing the chosen variant's keys into
+  the root would teach each of the three a second placement. The
+  payload is `{bundle: 'article', fields: {title: ...}}`, and a refusal's
+  path `fields.title.value`.
+- **Variants from the site, bound to the entity type.** A provider lists
+  the variants (`BundleFieldStructures`), so past
+  `surface.settings:site_list_limit` the full schema names the bundles
+  and leaves their fields to the schema call that chooses one. One
+  provider serves every entity type, so it implements
+  `BoundSiteListInterface` and is named with the entity type as its
+  argument: `attachVariants('fields', by: 'bundle', from:
+  BundleFieldStructures::class, arguments: ['node'])`.
+- **The bundle: the account's to choose on add, the entity's on edit.**
+  `create` holds `bundle` to the bundles the account may create, a
+  constraint with an options resolver (`SurfaceCreatableBundle`) that
+  asks core's create access per bundle. A missing, unknown or refused
+  bundle is refused at `bundle` once a value is sent, and create access
+  is never asked for an empty bundle; the operation itself is open to an
+  account that may create at least one bundle. `update` knows the
+  bundle from the entity and fixes the key to it: stated `const`, any
+  other value refused.
+- **Rejected: one generic resource with a conditional per bundle**, and
+  no resource per bundle. The fields are better stated outright per
+  bundle, with a path each.
+- **Rejected: a family tool at the tool door, routing by bundle.** A
+  router that is no resource, and a policy that lives in one door.
+- **Rejected: a door declaration that hides the per-bundle tools by
+  default.** The maintainer prefers both available, with consumers
+  choosing. A declaration that closes a door for some of a deriver's
+  resources can come later, if a site needs it.
+
+*Open:* whether a deferred variant set is an honest contract for an
+agent that reads the full schema once and never calls back. The
+reference list past its budget poses the same question; the answer so
+far is yes: the deferred marker tells the reader to ask, and the schema
+call is the second step. (`ContentEntityResources`,
+`BundleFieldStructures`, `BoundSiteListInterface`,
+`CreatableBundleOptions`, `ContentEntityStorage::FIELDS_AT`,
+`ContentEntityTypeResourceTest`)
+
+### An entity type's id is computed or named by the caller
+
+Decided 2026-11-01. Whether a content entity resource's `create` takes
+`id` is read per entity type from its id key's base field definition
+(`FieldItemDerivation::callerNamesId()`): an integer id, which core's
+SQL storage makes serial and assigns on save
+(`SqlContentEntityStorageSchema::processIdentifierSchema()`), or an id
+field with a default of its own, a literal or a callback, is computed;
+any other, a string with no default, is named by the caller.
+
+- **Computed.** As before: the create's context knows there is no id,
+  so `id` is locked empty and emitted once the entity is saved; the
+  create is not idempotent. Every content entity type on the dev site is
+  one (node, media, user, term, block content, file, paragraph and the
+  rest).
+- **Named by the caller.** The create's context does not know the id:
+  `id` is a required key, the create tool requires it, and its length is
+  the id field's `max_length`. The new entity is created under it, and
+  an id an entity already has names something: refused at `id`, code
+  `taken`, "A <thing> with the id <id> already exists.", at prepare, so
+  a dry run refuses it too. The create is idempotent, as the attribute's
+  rule has it for a create whose caller names the thing: the same call
+  twice is refused for the id the first took. The update and the read
+  take that id, as for any entity type.
+- **Why not by the entity type alone.** Core's integer id is what makes
+  the storage assign it, and a module may give a string id a default
+  that the entity holds once created; the field definition says both,
+  the entity type neither.
+- **Tested on a string id of this module's own.** Core's
+  `entity_test_string_id` is the type to test, but its module answers
+  every field's access from State, which a static access answer may not
+  read (`PipelineGuard`), so `surface_string_id_test` declares one alike.
+
+(`FieldItemDerivation::callerNamesId()`, `ContentEntityResources::defineId()`,
+`ContentEntityResources::create()`, `ContentEntityStorage::prepare()`,
+`ContentEntityTypeResourceTest::testCallerNamedIdIsTakenOnCreate()`)
+
 ### Tool definitions after a field changes
 
 *Settled 2026-10-19, with [keys that come from the
@@ -6777,7 +7319,12 @@ Decided 2026-10-23, with example 16, the sponsorship
   type and one of a bundle, so an author writes what core already calls
   it. Why not a verb of its own, `reference()`: the type string says the
   type and the bundle in the place a type is said, and `add()` returns
-  the definition the rest is written on, as for any key.
+  the definition the rest is written on, as for any key. *Amended
+  2026-11-01:* a reference is declared with `refer($key, '<entity
+  type>', ..., bundles: [...])` and `refer($key, NULL, ...)`, and
+  `add($key, 'entity:…')` is refused: the type string stood for an id
+  and a constraint, where a type stands for one value's type
+  ([A reference is declared as a reference](#a-reference-is-declared-as-a-reference)).
 - **The value is the id.** The key holds the entity's id as the entity
   type keeps it, an integer where a content entity type's id field is
   one and a string for a config entity, never the entity object: what is
@@ -6799,8 +7346,8 @@ Decided 2026-10-23, with example 16, the sponsorship
   type, then an id, attached at the key: `entity_type`, a choice of the
   entity types the account may reference one of, and `id`, a string,
   which a static refiner narrows to the entity type chosen with the
-  constraint `entity:<type>` builds. So one mechanism serves all three
-  spellings, and since the refiner is static the full schema states the
+  constraint `entity:<type>` builds (`refer()` since 2026-11-01). So one
+  mechanism serves all three spellings, and since the refiner is static the full schema states the
   id once per entity type as a conditional, which a client narrows from
   with no round trip. The parts are registered per key
   (`ResourceRegistry::defineReference()`), as a structure read from a
@@ -6859,9 +7406,7 @@ Decided 2026-10-23, with example 16, the sponsorship
   client that does not read it reads an id of the key's type.
 
 *Open:* a multi-value reference, a list of
-references (`addList()` of an entity type); the entity side's two
-shapes, a reference field's `target_id` item (`SurfaceReferenceable`,
-no marker) beside a reference key; a lookup tool for an agent with no
+references (`addList()` of an entity type); a lookup tool for an agent with no
 HTTP; a custom method's own lookup; a stored id the account may no
 longer reference, which core's field validator keeps and this refuses.
 (`References`, `EntityReferenceStructure`, `ValidReferenceConstraint`,
@@ -6871,6 +7416,87 @@ longer reference, which core's field validator keeps and this refuses.
 `ResourceApiController::lookup()`, `InputDefinitions::withLookups()`,
 `OpenApiDocument::lookup()`, `SponsorshipResource`, `ReferenceKeysTest`,
 `ReferenceKeysFormTest`)
+
+### A reference is declared as a reference
+
+Decided 2026-11-01. A key that refers to an entity is
+`refer($key, $to, $label, bundles: [...], default: ...)`: `$to` the entity
+type, the bundles the ones it may name; `refer($key, NULL, ...)` for an
+entity of any type, its two parts attached at the key, which only a
+resource's or a structure's own blueprint declares.
+
+- **Why a verb.** `entity:<type>` was a type string standing for an id
+  and a constraint, in the place one value's type goes: `add('page',
+  'entity:node:article')` declared an integer with `SurfaceValidReference`.
+  The type table holds no `entity`, so `add($key, 'entity:…')` is
+  refused naming `refer()`.
+- **Why `refer`.** The word the module already says, "a key that refers
+  to an entity"; `addReference()` is the adapter's protected name for
+  what `refer()` calls, and the interfaces had no word for it.
+- **What does not change.** The definition `refer()` builds is what
+  `References::definition()` built: the id typed as the entity type's id
+  key, the constraint, the content setting. The served contracts are
+  unchanged, which the baselines pin.
+- **What is left.** `addEach($key, 'entity:node', ...)` keeps the type
+  string for a reference per thing the site has: `addEach()` takes one
+  type string for every entry, and a reference there needs a
+  parameter of its own (`References::spells()`, `BlueprintAdapterBase::addEntry()`).
+  *Done 2026-11-01:* `addEach($key, NULL, from: ..., to: '<entity
+  type>', bundles: [...])` declares each entry in `refer()`'s words, and
+  the type string `entity:…` is refused there as `add()` refuses it;
+  `References::spells()` and `spelled()` went. Why `NULL` for the type:
+  an entry that refers to an entity has no type of its own, its id
+  typed as the entity type keeps it, and the type stays the second
+  argument for every other entry.
+
+(`BlueprintAdditionsInterface::refer()`, `References::definition()`,
+`ReferenceKeysTest`)
+
+### A reference field is a reference key
+
+Decided 2026-11-01. A content entity's reference field's `target_id` is
+the key `refer()` declares for the field's target type, its bundles the
+ones the field's handler settings name, answered by the field's own
+selection handler with the field's settings: `References::definition()`
+with `handler:` and `handlerSettings:`, which the `SurfaceValidReference`
+constraint carries.
+
+- **Why.** A reference key and a reference field were two shapes for
+  one idea: the field's target id was a plain integer or string with a
+  `SurfaceReferenceable` constraint of the example's own, no marker, no
+  lookup and no autocomplete. One key now serves both, so the field's
+  target id is listed, looked up and checked as every reference key is.
+- **The field's handler is the key's resolver.** The options, the
+  lookup, the autocomplete route and the check each ask the handler the
+  field names (`default:node`, a view's) configured with the field's
+  `handler_settings`, as core's `getSelectionHandler()` configures it,
+  so the key lists nothing the handler would refuse. A key `refer()`
+  declares names no handler and is answered by the default one, as
+  before.
+- **The widget.** A form display component of
+  `entity_reference_autocomplete` asks for the autocomplete widget, its
+  `match_operator` and `match_limit` handed to core's autocomplete route;
+  they say how the lookup matches and how many it suggests, and what is
+  accepted stays the constraint's. A widget a definition asks for by its
+  word is now tried first, whatever its weight, so a listed reference
+  that asks for the autocomplete is drawn with it, as core's widget
+  draws it.
+- **What changed in the documents.** A reference field's `target_id`
+  carries `x-surface.reference` (`{entityType, bundles?}`), its
+  `checkedOnServer` names `SurfaceValidReference` ("Refers to an entity
+  the account may reference") where it named `SurfaceReferenceable`,
+  its refusal is core's "This entity (%type: %id) cannot be referenced."
+  with code `valid_reference`, past the limit the tool listing names its
+  lookup, `GET .../{x}:lookup?key=/<field>/target_id` answers for it,
+  and with widget hints a field drawn by core's autocomplete states
+  `x-surface.widget: autocomplete`. The item's notes lose the
+  `target_id` note. `SurfaceReferenceable`, its validator and its
+  resolver went.
+
+(`FieldItemDerivation::reference()`, `References::definition()`,
+`References::handlerOf()`, `AutocompleteWidget`,
+`SurfaceWidgetManager::getWidgetFor()`, `ContentEntityDerivationTest`,
+`ReferenceableCacheabilityTest`)
 
 ## Examples
 
@@ -7893,6 +8519,10 @@ moves once. The changes, each with why ([the table](served-contract.md#contract-
   and language-free (json-schema-tooling 2.5). A shape's def titled
   itself by the shape's label before; the label is each key's, beside
   the reference. An inline reading lays no def's title over a site.
+  *Amended 2026-10-31:* a def is titled by its structure's or shape's
+  label where it has one, and by its id only where it has none; the key
+  is the id either way
+  ([A resource and a structure may say what they are called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)).
 - **The union of a key's variants** (json-schema-tooling 2.4). The key's
   property is `anyOf` of a reference to each variant's def, and null
   where it may be cleared, with no `type` beside it (the union says it,
@@ -8349,7 +8979,8 @@ path items of their own.
   `$ref` or in `x-surface.variants`, pointed at its component. Nothing
   else in a schema changes. Two operations share a component when they
   describe the def the same way; one that differs keeps its own, its
-  name suffixed and its `title` still the def id. Put back together,
+  name suffixed and its `title` still the def's (its structure's label,
+  else its id, *amended 2026-10-31*). Put back together,
   the components are the full schema byte for byte, which a test holds
   for every operation.
 - **An update takes a patch.** A key an update leaves out keeps what is

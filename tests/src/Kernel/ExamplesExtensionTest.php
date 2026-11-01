@@ -152,7 +152,8 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
         ],
         "$defs": {
             "event.mailer.credential.pasted": {
-                "title": "event.mailer.credential.pasted",
+                "title": "Pasted credential",
+                "description": "The mailer credential pasted in, kept as a secret and never read back.",
                 "type": "object",
                 "properties": {
                     "api_key": {
@@ -293,7 +294,8 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
         ],
         "$defs": {
             "event.mailer.credential.pasted": {
-                "title": "event.mailer.credential.pasted",
+                "title": "Pasted credential",
+                "description": "The mailer credential pasted in, kept as a secret and never read back.",
                 "type": "object",
                 "properties": {
                     "api_key": {
@@ -306,7 +308,8 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
                 "additionalProperties": false
             },
             "event.mailer.credential.managed": {
-                "title": "event.mailer.credential.managed",
+                "title": "Managed credential",
+                "description": "The mailer credential as the name of a key the site manages, whose value is read where it is used.",
                 "type": "object",
                 "properties": {
                     "key_id": {
@@ -750,7 +753,7 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     $this->assertSame(['key_id' => 'mail_service'], $outputs[OperationInputs::VALUES]['credential'], 'The answer holds the managed key alone.');
     $this->assertSame(['key_id' => 'mail_service', 'api_key' => 'mk-kept-1'], $this->stored('surface_examples.mailer')['credential'], 'The pasted key is kept beside it.');
     $this->assertConfigHoldsToItsSchema('surface_examples.mailer');
-    [, $read] = $this->call('event.mailer:configure:read');
+    [, $read] = $this->call('event.mailer:read');
     $this->assertSame('managed', $read[OperationInputs::VALUES]['source']);
     $this->assertSame(['key_id' => 'mail_service'], (array) $read[OperationInputs::VALUES]['credential'], 'The read names the managed key, and leaves the pasted one out.');
     $this->assertStringNotContainsString('mk-kept-1', (string) json_encode($this->now('event.mailer')));
@@ -764,7 +767,7 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     $this->assertTrue($ok, 'Chosen back with nothing sent for it, the pasted key is the one kept.');
     $this->assertSame(['api_key' => 'mk-kept-1'], $this->stored('surface_examples.mailer')['credential'], 'The managed key, a plain value, goes; the pasted key is the source\'s again.');
     $this->assertConfigHoldsToItsSchema('surface_examples.mailer');
-    [, $read] = $this->call('event.mailer:configure:read');
+    [, $read] = $this->call('event.mailer:read');
     $this->assertSame([], (array) $read[OperationInputs::VALUES]['credential']);
   }
 
@@ -809,7 +812,7 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     [$ok] = $this->call('event.webhook:configure', ['api_key' => ''], TRUE);
     $this->assertTrue($ok, 'Nothing sent for it is still nothing.');
     $this->assertSame('wh-kept-1', $this->stored('surface_examples.webhook')['api_key'], 'What it holds is kept.');
-    [, $read] = $this->call('event.webhook:configure:read');
+    [, $read] = $this->call('event.webhook:read');
     $this->assertSame(['surface_examples_keys' => ['key_id' => 'webhook_signing']], json_decode((string) json_encode($read[OperationInputs::VALUES]['third_party_settings']), TRUE));
     $this->assertArrayNotHasKey('api_key', (array) $read[OperationInputs::VALUES]);
 
@@ -850,7 +853,7 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     $this->assertSame('wh-pasted-1', $stored['api_key'], 'The pasted key is kept as stored.');
     $this->assertSame(self::MOUNTED['third_party_settings'], $stored['third_party_settings']);
     $this->assertStringNotContainsString('wh-managed-9a1f2c', (string) json_encode($stored), 'The managed key\'s value is stored nowhere on the webhook.');
-    [, $read] = $this->call('event.webhook:configure:read');
+    [, $read] = $this->call('event.webhook:read');
     $this->assertStringNotContainsString('wh-', (string) json_encode($read), 'The read names neither key.');
     $this->assertStringNotContainsString('wh-', (string) json_encode($this->now('event.webhook')));
 

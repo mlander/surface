@@ -438,7 +438,7 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     $this->assertStringContainsString('Whether this may be changed is decided once the thing it belongs to is known', (string) $values->getPropertyDefinition('north')->getDescription());
 
     $read = function (): array {
-      $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.gallery:configure:read');
+      $tool = $this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.gallery:read');
       $this->assertTrue($tool->access());
       $tool->execute();
       return $tool->getOutputValue(OperationInputs::VALUES);
@@ -450,8 +450,9 @@ class AlterAccessTest extends SurfaceKernelTestBase {
     $this->assertSame(['name', 'caption', 'credit', 'medium', 'finish', 'rooms'], array_keys($read()), 'Left out once the walls are known.');
     $this->flag(WallAlter::DOWN, FALSE);
     $this->flag(GalleryAlter::CLOSED);
-    $this->assertFalse($this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.gallery:curate:read')->access(), 'Left out at the top: refused.');
-    $this->assertTrue($this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.gallery:configure:read')->access());
+    $this->assertFalse($this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.gallery:curate')->access(), 'Left out at the top: refused.');
+    // The read stands beside configure, the default update, and asks as it.
+    $this->assertTrue($this->container->get('plugin.manager.tool')->createInstance('surface:resource_test.gallery:read')->access());
   }
 
   /**

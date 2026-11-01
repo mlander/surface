@@ -159,7 +159,10 @@ use Drupal\surface_examples_first\Storage\NewsletterStorage;
 /**
  * The newsletter settings: a form, a tool and a schema, from this class.
  */
-#[Resource('first.newsletter', storage: NewsletterStorage::class)]
+#[Resource('first.newsletter',
+  label: new TranslatableMarkup('Newsletter settings'),
+  storage: NewsletterStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the newsletter'),
   description: new TranslatableMarkup('Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.'),
@@ -202,11 +205,13 @@ final class NewsletterResource implements ResourceInterface {
 
 Read it top to bottom:
 
-- **`#[Resource('first.newsletter', storage: ...)]`** names the resource
-  and its storage. The id is the resource's own machine name and needs
-  no module prefix; the config object is `surface_examples_first.newsletter`
-  because Drupal requires a module's config object names to start with
-  the module's name. The class goes in `src/Resource/`, where it is
+- **`#[Resource('first.newsletter', label: ..., storage: ...)]`** names
+  the resource, says what it is called, and names its storage. The id is
+  the resource's own machine name and needs no module prefix; the
+  config object is `surface_examples_first.newsletter` because Drupal
+  requires a module's config object names to start with the module's
+  name. The label is what the catalog and other lists print beside the
+  id. The class goes in `src/Resource/`, where it is
   found; nothing is registered by hand.
 - **`#[Operation('configure', ...)]`** is the one way it is asked for,
   on the class beside `#[Resource]`. There is only one newsletter, so
@@ -302,7 +307,7 @@ With the `tool` module installed, the same resource is a tool:
 drush pm:install tool
 drush tool:info surface:first.newsletter:configure
 drush tool:run surface:first.newsletter:configure --uid=1 --input='{"values":{"sender_name":"Weekly news","sender_email":"news@example.com","frequency":"monthly"}}'
-drush tool:run surface:first.newsletter:configure:read --uid=1
+drush tool:run surface:first.newsletter:read --uid=1
 ```
 
 `tool:info` lists the same four keys, bounded as the class says. The
@@ -336,8 +341,9 @@ class requires may be left out too once a value for it is stored, and
 the stored value stands. Where nothing is stored for it, on an
 operation that creates or for a thing that has no value yet, it cannot
 be left out: the resource refuses the call in the key's own words,
-"Sender name is required.", and nothing is written. The read tool
-beside the write tool answers with what is stored now:
+"Sender name is required.", and nothing is written. The resource's
+read, an operation the build adds beside `configure`, answers with what
+is stored now:
 
 ```
 Success: Configure the newsletter: the stored values were read, and nothing was written.

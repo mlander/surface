@@ -193,7 +193,13 @@ final class CatalogCommand extends Command {
       return self::SUCCESS;
     }
     $io->title($entry['id']);
-    $io->definitionList(
+    $facts = [];
+    foreach (['Label' => 'label', 'Description' => 'description'] as $name => $field) {
+      if (($entry[$field] ?? NULL) !== NULL) {
+        $facts[] = [$name => $entry[$field]];
+      }
+    }
+    array_push($facts,
       ['Kind' => $entry['kind']],
       ['Declared by' => ($entry['class'] ?? 'derived under ' . $entry['deriver']) . ' (' . $entry['module'] . ')'],
       ['Identity' => $entry['identity'] === [] ? 'none' : implode(', ', $entry['identity'])],
@@ -201,6 +207,7 @@ final class CatalogCommand extends Command {
       ['Access' => CatalogDocument::access($entry['answers'])],
       ['Keys read in' => $entry['built'] ?? 'nothing: it did not build'],
     );
+    $io->definitionList(...$facts);
     if ($entry['operations'] !== []) {
       $rows = [];
       foreach ($entry['operations'] as $operation) {
@@ -275,6 +282,7 @@ final class CatalogCommand extends Command {
    */
   protected static function markdownOne(array $entry): string {
     $document = '# ' . $entry['id'] . "\n\n";
+    $document .= CatalogDocument::names($entry);
     $document .= '- Kind: ' . $entry['kind'] . "\n";
     $document .= '- Declared by: `' . ($entry['class'] ?? $entry['deriver']) . '` (`' . $entry['module'] . "`)\n";
     $document .= '- Identity: ' . ($entry['identity'] === [] ? 'none' : '`' . implode('`, `', $entry['identity']) . '`') . "\n";

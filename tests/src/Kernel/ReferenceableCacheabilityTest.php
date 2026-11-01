@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
-use Drupal\surface_examples_entity\Plugin\SurfaceOptionsResolver\ReferenceableOptions;
+use Drupal\surface\Reference\References;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\node\Entity\Node;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -23,7 +23,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * be served the first's labels. They now carry what core's selection and
  * its query access read: node grants for a node, permissions for a term.
  *
- * @see \Drupal\surface_examples_entity\Plugin\SurfaceOptionsResolver\ReferenceableOptions
+ * @see \Drupal\surface\Plugin\SurfaceOptionsResolver\ReferenceOptions
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -83,9 +83,9 @@ class ReferenceableCacheabilityTest extends SurfaceKernelTestBase {
    * Tests what each target type's options vary by.
    */
   public function testEachTargetTypeSaysWhatItReads(): void {
-    $this->assertSame(['user.permissions', 'user.node_grants:view'], ReferenceableOptions::CONTEXTS['node']);
-    $this->assertSame(['user.permissions'], ReferenceableOptions::CONTEXTS['taxonomy_term']);
-    $this->assertArrayNotHasKey('file', ReferenceableOptions::CONTEXTS, 'A file\'s selection offers what the account uploaded: it varies by the account.');
+    $this->assertSame(['user.permissions', 'user.node_grants:view'], References::CONTEXTS['node']);
+    $this->assertSame(['user.permissions'], References::CONTEXTS['taxonomy_term']);
+    $this->assertArrayNotHasKey('file', References::CONTEXTS, 'A file\'s selection offers what the account uploaded: it varies by the account.');
     // The page's tags, a term reference, vary by permissions alone.
     $this->assertNotContains('user', $this->schema()->getCacheableMetadata()->getCacheContexts());
   }

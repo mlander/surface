@@ -7,6 +7,7 @@ namespace Drupal\surface\Refinement;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\surface\DefinitionMetadata;
 
 /**
  * The check that refinement only ever narrows.
@@ -30,7 +31,7 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * | Changing or dropping a Length or Count exactly | refused |
  * | Sharpening a label, description, default or example | neither |
  * | Changing the data type to one of its derivatives | narrower |
- * | Changing the data type any other way (except from 'any') | refused |
+ * | Changing the data type any other way (but from the placeholder) | refused |
  * | Turning off the required flag | refused |
  * | Removing a constraint | refused |
  * | Replacing the options of any other constraint | refused |
@@ -47,18 +48,22 @@ use Drupal\Core\TypedData\ListDataDefinitionInterface;
  * than guessed at. A refiner that has to swap such a constraint says so by
  * advertising the narrower one in the first place.
  *
- * 'any' is the declared escape hatch: it advertises nothing, so every
- * type is narrower than it. That is also the one way a shape may appear
- * during refinement: the variants' placeholder resolving to the map of the
- * variant its deciding key chose, or a refiner on an `any` key returning
- * a map itself, for a child that cannot be enumerated statically.
+ * The variants' placeholder, an `any` marked with its deciding key
+ * (DefinitionMetadata::variantsBy()), advertises nothing of its own, so
+ * every type is narrower than it: it resolves to the map of the variant
+ * its deciding key chose, the one way a shape may appear during
+ * refinement. Any other `any` is held to its type like every type: a
+ * blueprint declares none (add() refuses it), and a value a schema read
+ * holds whole stays `any`. A key whose shape depends on another key's
+ * value is variants, never a refiner returning a map.
+ * Decision: see docs/decisions.md#variants-not-slots.
  *
  * A derivative is the other narrower type: `entity:node` is typed data's
  * `entity` restricted to nodes, and `entity:node:article` that restricted
  * to one bundle, so every value of the derivative is a value of its base.
  * The derivative's own properties are its type's to compute, so only the
- * base's own flag and constraints are compared, as from `any`. The rule
- * is the Tool API's (TypedInputsTrait::assertRefinementNarrows()); its
+ * base's own flag and constraints are compared, as from the placeholder.
+ * The rule is the Tool API's (TypedInputsTrait::assertRefinementNarrows()); its
  * acceptance of a list item turning `any` is not adopted, because that
  * accepts every value the item refused.
  *
@@ -149,10 +154,11 @@ final class Narrowing {
     if (DoesNotApply::marks($before)) {
       return 'a key that did not apply was made to apply';
     }
-    if ($before->getDataType() === 'any' || self::isDerivative($before->getDataType(), $after->getDataType())) {
-      // Advertised as anything, or as the base of what it became, so the
-      // shape it becomes is no wider; only its own flag and constraints
-      // are left to compare.
+    if (($before->getDataType() === 'any' && DefinitionMetadata::variantsBy($before) !== NULL) || self::isDerivative($before->getDataType(), $after->getDataType())) {
+      // The variants' placeholder, which stands for what its deciding key
+      // chooses, or the base of what it became, so the shape it becomes
+      // is no wider; only its own flag and constraints are left to
+      // compare.
       return self::ownWidening($before, $after);
     }
     if ($before->getDataType() !== $after->getDataType()) {

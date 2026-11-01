@@ -28,11 +28,14 @@ use Symfony\Component\HttpFoundation\Request;
  * bundle, the field's own `/node/article/body` its edit's path. Which
  * operation a method means:
  *
- * - `GET` the path's default update, else its default read, else its
+ * - `GET` the path's default read, else its default update, else its
  *   default create: the envelope, what is stored and the schema for it
- *   (a create's: the declared defaults). On the collection of a resource
- *   with identity, a default read is a listing: `GET` runs it, its query
- *   string the values, and answers its outputs;
+ *   (a create's: the declared defaults). Where an update is, the default
+ *   read is the read of one thing, `read`, which the build adds where the
+ *   owner declares none; that one stands for its update, so the envelope
+ *   and the schema it serves are the update's. On the collection of a
+ *   resource with identity, a default read is a listing: `GET` runs it,
+ *   its query string the values, and answers its outputs;
  * - `PATCH` the path's default update; the collection of a resource with
  *   identity has none, since no operation there changes every thing, nor
  *   has a path shorter than the deepest one the resource's operations
@@ -48,8 +51,8 @@ use Symfony\Component\HttpFoundation\Request;
  * standard one (`create`, `update`, `read` or `list`, `delete`), or
  * `configure` for an update on a singleton
  * (OperationDefinition::defaultIds()), or else the only operation of
- * that kind there; a read is a default only
- * where no update is. Any other operation is a custom method on the path
+ * that kind there; where an update is, only `read` is the default read.
+ * Any other operation is a custom method on the path
  * of what it addresses: `GET .../{x}:{operation}` its envelope, a run of
  * it `PATCH .../{x}:{operation}` for an update and `POST` for any other,
  * and `.../{x}:{operation}/schema` its schema. A path of contract 2,
@@ -57,6 +60,7 @@ use Symfony\Component\HttpFoundation\Request;
  * (410), naming its replacement.
  *
  * Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
+ * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
  */
 final class ServedPaths {
 
@@ -218,7 +222,7 @@ final class ServedPaths {
         $schema && $method === 'POST' => ServedTarget::NARROW,
         !$schema && $method === 'GET' => ServedTarget::READ,
         !$schema && $method === $run => ServedTarget::WRITE,
-        default => throw $this->notAllowed($method, $schema ? ['GET', 'POST'] : ['GET', $run]),
+        default => throw $this->notAllowed($method, $schema ? ['GET', 'POST'] : array_values(array_unique(['GET', $run]))),
       };
     }
     else {
@@ -432,7 +436,10 @@ final class ServedPaths {
           $named === [] && count($candidates) === 1 => $candidates[0],
           default => NULL,
         };
-        if ($kind === OperationDefinition::READ && ($defaults[$depth][OperationDefinition::UPDATE] ?? NULL) !== NULL) {
+        // Where an update is, the default read is the read of one thing.
+        // Decision: see
+        // docs/decisions.md#a-read-is-an-operation-of-the-resource.
+        if ($kind === OperationDefinition::READ && ($defaults[$depth][OperationDefinition::UPDATE] ?? NULL) !== NULL && $default !== OperationDefinition::READ_ID) {
           $default = NULL;
         }
         // PATCH on the collection of things with identity would change
@@ -543,12 +550,12 @@ final class ServedPaths {
    *   The path's defaults, by kind.
    *
    * @return string|null
-   *   The default update, else the default read, else the default create;
+   *   The default read, else the default update, else the default create;
    *   NULL when there is none.
    */
   protected function readDefault(array $defaults): ?string {
-    return $defaults[OperationDefinition::UPDATE]
-      ?? $defaults[OperationDefinition::READ]
+    return $defaults[OperationDefinition::READ]
+      ?? $defaults[OperationDefinition::UPDATE]
       ?? $defaults[OperationDefinition::CREATE];
   }
 
@@ -561,11 +568,37 @@ final class ServedPaths {
    *   The operation.
    *
    * @return bool
-   *   TRUE when its envelope and schema are at the plain path; FALSE when
-   *   they are at its custom method's.
+   *   TRUE when its envelope and schema are at the plain path, as the
+   *   update's are where the read `GET` serves is the one the build adds
+   *   for it; FALSE when they are at its custom method's.
    */
   public function readsPlain(ResourceDefinition $definition, OperationDefinition $operation): bool {
-    return $this->readDefault($this->defaults($definition)[$this->depth($definition, $operation)]) === $operation->id;
+    $read = $this->readDefault($this->defaults($definition)[$this->depth($definition, $operation)]);
+    if ($read === $operation->id) {
+      return TRUE;
+    }
+    $operations = $this->registry->getOperations($definition->name());
+    return $read !== NULL && isset($operations[$read]) && $operations[$read]->reads === $operation->id;
+  }
+
+  /**
+   * Answers whether `GET` on an operation's plain path reads the thing.
+   *
+   * Where the path serves the read of one thing, a created thing's
+   * `Location` is that path, whichever operation the thing is found by.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return bool
+   *   TRUE when `GET` at its path serves a read of one thing.
+   */
+  public function readsThingAt(ResourceDefinition $definition, OperationDefinition $operation): bool {
+    $read = $this->readDefault($this->defaults($definition)[$this->depth($definition, $operation)]);
+    $operations = $this->registry->getOperations($definition->name());
+    return $read !== NULL && isset($operations[$read]) && $operations[$read]->readsOne();
   }
 
   /**
@@ -578,11 +611,15 @@ final class ServedPaths {
    *
    * @return array{0: string, 1: bool}
    *   `PATCH` on the plain path for the default update, `DELETE` on it for
-   *   the default delete, `POST` on it for the default create,
+   *   the default delete, `POST` on it for the default create, `GET` for
+   *   the read of one thing, which writes nothing and takes no values,
    *   and on the custom method `PATCH` for any other update and `POST` for
    *   any other operation; and whether the path names the operation.
    */
   public function writes(ResourceDefinition $definition, OperationDefinition $operation): array {
+    if ($operation->readsOne()) {
+      return ['GET', !$this->readsPlain($definition, $operation)];
+    }
     $defaults = $this->defaults($definition)[$this->depth($definition, $operation)];
     if ($defaults[OperationDefinition::UPDATE] === $operation->id) {
       return ['PATCH', FALSE];

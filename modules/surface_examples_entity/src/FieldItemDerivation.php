@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_entity;
 
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\Display\EntityFormDisplayInterface;
 use Drupal\Core\Entity\EntityFieldManagerInterface;
@@ -12,12 +13,16 @@ use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Field\FieldConfigInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\ComplexDataConstraint;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Resource\Arrangement;
+use Drupal\surface\DefinitionMetadata;
 
 /**
  * What a resource can carry of a bundle's fields, read from typed data.
@@ -35,8 +40,10 @@ use Drupal\Core\Validation\Plugin\Validation\Constraint\ComplexDataConstraint;
  * property when the field is, defaulting to the field's literal default.
  * What narrows is carried where a definition has the same word for it:
  * the Length, Range, Regex and Choice constraints the field type and the
- * property declare, a list field's allowed values, a reference's
- * targets when they can be listed, a text field's formats. What has no
+ * property declare, a list field's allowed values, a text field's
+ * formats. A reference field's `target_id` is a reference key, as
+ * refer() declares one (References::definition()), answered by the
+ * field's own selection handler with the field's settings. What has no
  * equivalent in a definition stays with the entity and is checked when the
  * storage validates it, at prepare.
  *
@@ -50,7 +57,8 @@ final class FieldItemDerivation {
    * The field types derived, each with its keys and their types.
    *
    * A reference's target id is typed when the field is read: an integer
-   * for an entity type whose ids are integers, a string otherwise.
+   * for an entity type whose ids are integers, a string otherwise, as a
+   * reference key's id is (References::idType()).
    */
   public const COVERED = [
     'string' => ['value' => 'string'],
@@ -93,6 +101,40 @@ final class FieldItemDerivation {
   ];
 
   /**
+   * The widget each form display component asks for, by component type.
+   *
+   * Read for a field's main property: the presentation settings the
+   * widget the stock rule picks reads (`multiline`, and each component's
+   * `size` and `rows`), and the word of a widget the stock rule does not
+   * always pick: `radios`, asked only of a key with a list of values, and
+   * `autocomplete`, asked only of a reference key, whose component's
+   * `match_operator` and `match_limit` say how its lookup matches and how
+   * many it suggests. Where the component draws what the stock rule draws
+   * (`string_textfield` the string widget, `number`, `boolean_checkbox`
+   * the checkbox, `options_select` the select) no word is set: the stock
+   * rule already picks it, and a word would refuse the select a context
+   * draws for a key it fixes. A component type not here asks for nothing.
+   * What is accepted is the field's definition, never the component's: no
+   * setting here changes it.
+   *
+   * Decision: see
+   * docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
+   */
+  public const WIDGETS = [
+    'string_textfield' => [],
+    'email_default' => [],
+    'string_textarea' => ['multiline' => TRUE],
+    'text_textfield' => [],
+    'text_textarea' => ['multiline' => TRUE],
+    'text_textarea_with_summary' => ['multiline' => TRUE],
+    'number' => [],
+    'boolean_checkbox' => [],
+    'options_select' => [],
+    'options_buttons' => ['widget' => 'radios', 'listed' => TRUE],
+    'entity_reference_autocomplete' => ['widget' => 'autocomplete', 'reference' => TRUE],
+  ];
+
+  /**
    * The pattern a datetime value is written in, by its datetime_type.
    */
   protected const DATE_PATTERNS = [
@@ -114,6 +156,8 @@ final class FieldItemDerivation {
    *   a field type's own constraints are asked of.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
+   * @param \Drupal\surface\Reference\References $references
+   *   What a reference key is, which a reference field's target id is.
    */
   public function __construct(
     protected readonly EntityTypeManagerInterface $entityTypeManager,
@@ -121,6 +165,7 @@ final class FieldItemDerivation {
     protected readonly EntityTypeBundleInfoInterface $bundleInfo,
     protected readonly TypedDataManagerInterface $typedDataManager,
     TranslationInterface $string_translation,
+    protected readonly References $references,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -150,6 +195,39 @@ final class FieldItemDerivation {
       }
     }
     return $bundles;
+  }
+
+  /**
+   * Lists the bundles of an entity type an account may create.
+   *
+   * Of the bundles a content entity resource is derived for, those the
+   * entity type's access control handler lets the account create, as
+   * core's add page lists them. With no account, the handler answers for
+   * the account the request is made as, as a reference's selection
+   * handler does.
+   *
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account, or NULL for the one the request is made as.
+   *
+   * @return array{0: array<string, \Drupal\Core\StringTranslation\TranslatableMarkup|string>, 1: \Drupal\Core\Cache\CacheableMetadata}
+   *   The bundles' labels, by bundle, in the order bundles() gives them,
+   *   and what the answers read: the bundle list's tags and every create
+   *   access answer's cacheability.
+   */
+  public function creatableBundles(string $entity_type_id, ?AccountInterface $account = NULL): array {
+    $cacheability = (new CacheableMetadata())->addCacheTags($this->listCacheTags());
+    $creatable = [];
+    $handler = $this->entityTypeManager->getAccessControlHandler($entity_type_id);
+    foreach ($this->bundles()[$entity_type_id] ?? [] as $bundle => $label) {
+      $access = $handler->createAccess((string) $bundle, $account, [], TRUE);
+      $cacheability->addCacheableDependency($access);
+      if ($access->isAllowed()) {
+        $creatable[(string) $bundle] = $label;
+      }
+    }
+    return [$creatable, $cacheability];
   }
 
   /**
@@ -269,7 +347,9 @@ final class FieldItemDerivation {
     $literal = $field->getDefaultValueLiteral()[0] ?? [];
     $described = [];
     foreach ($properties as $name => $type) {
-      $definition = $this->typedDataManager->createDataDefinition($type);
+      $definition = $name === 'target_id' && $field->getType() === 'entity_reference'
+        ? $this->reference($field)
+        : $this->typedDataManager->createDataDefinition($type);
       assert($definition instanceof DataDefinition);
       if (count($properties) === 1) {
         $definition->setLabel($field->getLabel());
@@ -292,7 +372,10 @@ final class FieldItemDerivation {
           $definition->addConstraint($constraint, $options);
         }
       }
-      $this->narrow($field, $bundle, $name, $definition);
+      $this->narrow($field, $name, $definition);
+      if ($name === $main) {
+        $this->askWidget($field, $bundle, $definition);
+      }
       $described[$name] = ['definition' => $definition, 'default' => $this->defaultOf($field, $name, $type, $literal)];
     }
     return $described;
@@ -323,9 +406,6 @@ final class FieldItemDerivation {
     }
     if ($field->getType() === 'decimal') {
       $notes['decimal'] = $this->t('A decimal travels as a float, so a value with more digits than a float holds loses them; its precision and scale are checked when the entity is validated.');
-    }
-    if ($field->getType() === 'entity_reference') {
-      $notes['target_id'] = $this->t("Its targets are its selection handler's, for the account asking: listed up to the site's limit, surface.settings:reference_list_limit, otherwise any id is taken and the handler checks it.");
     }
     return $notes;
   }
@@ -417,9 +497,49 @@ final class FieldItemDerivation {
    *   'integer' or 'string'.
    */
   public function idType(string $entity_type_id): string {
+    return $this->idField($entity_type_id)?->getType() === 'integer' ? 'integer' : 'string';
+  }
+
+  /**
+   * Answers whether the caller names an entity type's ids.
+   *
+   * Read from the id key's base field definition: an integer id is one
+   * SQL storage makes serial and assigns on save
+   * (SqlContentEntityStorageSchema::processIdentifierSchema()), as is an
+   * id field with a default of its own, a literal or a callback, which
+   * the entity holds once it is created. Any other id, a string with no
+   * default, is no storage's to give: whoever creates the entity names
+   * it.
+   *
+   * Decision: see
+   * docs/decisions.md#an-entity-types-id-is-computed-or-named-by-the-caller.
+   *
+   * @param string $entity_type_id
+   *   The entity type id.
+   *
+   * @return bool
+   *   TRUE when a create takes the id as a key the caller sends.
+   */
+  public function callerNamesId(string $entity_type_id): bool {
+    $field = $this->idField($entity_type_id);
+    return $field !== NULL
+      && $field->getType() !== 'integer'
+      && $field->getDefaultValueLiteral() === []
+      && (string) $field->getDefaultValueCallback() === '';
+  }
+
+  /**
+   * Gets the base field definition of an entity type's id key.
+   *
+   * @param string $entity_type_id
+   *   The entity type id.
+   *
+   * @return \Drupal\Core\Field\FieldDefinitionInterface|null
+   *   The id field, or NULL when the entity type keys its id by no field.
+   */
+  public function idField(string $entity_type_id): ?FieldDefinitionInterface {
     $key = (string) $this->entityTypeManager->getDefinition($entity_type_id)->getKey('id');
-    $definitions = $this->entityFieldManager->getBaseFieldDefinitions($entity_type_id);
-    return isset($definitions[$key]) && $definitions[$key]->getType() === 'integer' ? 'integer' : 'string';
+    return $this->entityFieldManager->getBaseFieldDefinitions($entity_type_id)[$key] ?? NULL;
   }
 
   /**
@@ -427,14 +547,12 @@ final class FieldItemDerivation {
    *
    * @param \Drupal\Core\Field\FieldDefinitionInterface $field
    *   The field.
-   * @param string $bundle
-   *   The bundle it is read for.
    * @param string $name
    *   The property name.
    * @param \Drupal\Core\TypedData\DataDefinition $definition
    *   The key's definition, narrowed in place.
    */
-  protected function narrow(FieldDefinitionInterface $field, string $bundle, string $name, DataDefinition $definition): void {
+  protected function narrow(FieldDefinitionInterface $field, string $name, DataDefinition $definition): void {
     $type = $field->getType();
     if (str_starts_with($type, 'list_') && function_exists('options_allowed_values')) {
       $allowed = options_allowed_values($field->getFieldStorageDefinition());
@@ -461,14 +579,80 @@ final class FieldItemDerivation {
       $formats = $this->formats($field);
       $definition->addConstraint('LabeledChoice', ['choices' => array_keys($formats), 'labels' => $formats]);
     }
-    if ($name === 'target_id') {
-      // Which targets is the selection handler's answer, for whoever
-      // asks: a constraint points at it, and its resolver lists them.
-      $definition->addConstraint('SurfaceReferenceable', [
-        'entityTypeId' => $field->getTargetEntityTypeId(),
-        'bundle' => $bundle,
-        'fieldName' => $field->getName(),
-      ]);
+  }
+
+  /**
+   * Builds a reference field's target id: a reference key.
+   *
+   * What refer() builds for the field's target type, its bundles the ones
+   * the field's handler settings name, answered by the field's own
+   * selection handler with the field's settings: what the key lists, what
+   * the lookup finds and what it accepts are what core's widget offers and
+   * the field's ValidReference accepts, for the account asking.
+   *
+   * Decision: see docs/decisions.md#a-reference-field-is-a-reference-key.
+   *
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field
+   *   The reference field.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The target id's definition.
+   */
+  protected function reference(FieldDefinitionInterface $field): DataDefinition {
+    $settings = $field->getSetting('handler_settings');
+    $settings = is_array($settings) ? $settings : [];
+    $bundles = is_array($settings['target_bundles'] ?? NULL) ? array_values(array_map('strval', $settings['target_bundles'])) : [];
+    $handler = $field->getSetting('handler');
+    return $this->references->definition($field->getName(), (string) $field->getSetting('target_type'), $bundles, is_string($handler) && $handler !== '' ? $handler : 'default', $settings);
+  }
+
+  /**
+   * Asks for the widget the form display's component draws the field with.
+   *
+   * Its type, by WIDGETS, and its `size`, `rows` and `placeholder`, which
+   * the widget and the arrangement read, and a reference's
+   * `match_operator` and `match_limit`, which the autocomplete hands its
+   * route; every other component setting is the core widget's own and is
+   * left behind.
+   *
+   * @param \Drupal\Core\Field\FieldDefinitionInterface $field
+   *   The field.
+   * @param string $bundle
+   *   The bundle whose form display draws it.
+   * @param \Drupal\Core\TypedData\DataDefinition $definition
+   *   Its main property's key.
+   */
+  protected function askWidget(FieldDefinitionInterface $field, string $bundle, DataDefinition $definition): void {
+    $component = $this->formDisplay($field->getTargetEntityTypeId(), $bundle)?->getComponent($field->getName());
+    $asked = self::WIDGETS[$component['type'] ?? ''] ?? NULL;
+    if ($asked === NULL
+      || (($asked['listed'] ?? FALSE) && !isset($definition->getConstraints()['LabeledChoice']))
+      || (($asked['reference'] ?? FALSE) && References::target($definition) === NULL)) {
+      return;
+    }
+    if (isset($asked['widget'])) {
+      $definition->setSetting('widget', $asked['widget']);
+    }
+    if ($asked['multiline'] ?? FALSE) {
+      $definition->setSetting('multiline', TRUE);
+    }
+    $settings = is_array($component['settings'] ?? NULL) ? $component['settings'] : [];
+    foreach (['size', 'rows'] as $setting) {
+      if (is_numeric($settings[$setting] ?? NULL) && (int) $settings[$setting] > 0) {
+        $definition->setSetting($setting, (int) $settings[$setting]);
+      }
+    }
+    if ($asked['reference'] ?? FALSE) {
+      if (is_string($settings['match_operator'] ?? NULL) && $settings['match_operator'] !== '') {
+        $definition->setSetting('match_operator', $settings['match_operator']);
+      }
+      if (is_numeric($settings['match_limit'] ?? NULL)) {
+        $definition->setSetting('match_limit', (int) $settings['match_limit']);
+      }
+    }
+    $placeholder = $settings['placeholder'] ?? NULL;
+    if (is_string($placeholder) && $placeholder !== '') {
+      DefinitionMetadata::setArrangement($definition, new Arrangement(placeholder: $placeholder));
     }
   }
 

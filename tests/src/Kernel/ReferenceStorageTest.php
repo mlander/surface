@@ -6,6 +6,11 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\surface\Pipeline\SurfaceResult;
+use Drupal\surface\Reference\References;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ResourceBlueprint;
+use Drupal\surface\SurfaceBuilder;
+use Drupal\surface_reference_test\Keys\ReferenceSlots;
 use Drupal\surface\Reference\ReferenceStorageLayout;
 use Drupal\surface\Storage\StoredSchemaInterface;
 use Drupal\surface_reference_test\Resource\ReferenceSettingsResource;
@@ -288,6 +293,45 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
 
     $this->submit(ReferenceSettingsResource::class, 'configure', ['role' => 'editor']);
     $this->assertSame($first->uuid(), $this->config('surface_reference_test.settings')->get('page'), 'The next write stores the uuid.');
+  }
+
+  /**
+   * Tests addEach() declares a reference per thing in refer()'s words.
+   *
+   * The type string `entity:<type>` is refused, as add() refuses it; an
+   * entry that refers to an entity names its entity type with `to:` and
+   * has no type of its own.
+   */
+  public function testAddEachRefersInReferWords(): void {
+    $refused = function (callable $call, string ...$words): void {
+      try {
+        $call();
+        $this->fail('Refused: ' . $words[0]);
+      }
+      catch (\LogicException $e) {
+        foreach ($words as $said) {
+          $this->assertStringContainsString($said, $e->getMessage());
+        }
+      }
+    };
+    $blueprint = (new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager')))->useReferences($this->container->get('surface.references'));
+    foreach (['entity:node', 'entity:node:article', 'entity'] as $type) {
+      $refused(fn () => $blueprint->addEach('pages', $type, from: ReferenceSlots::class), sprintf('addEach("pages", "%s") declares each entry with an entity type string', $type), "addEach('pages', NULL, from: ..., to: '<entity type>', bundles: [...])");
+    }
+    $refused(fn () => $blueprint->addEach('pages', 'integer', from: ReferenceSlots::class, to: 'node'), 'addEach("pages") names a type, integer, and an entity type each entry refers to, node');
+    $refused(fn () => $blueprint->addEach('pages', NULL, from: ReferenceSlots::class), 'addEach("pages") names no type');
+    $refused(fn () => $blueprint->addEach('pages', NULL, from: ReferenceSlots::class, bundles: ['page']), 'addEach("pages") names bundles and no entity type');
+    $blueprint->addEach('pages', NULL, from: ReferenceSlots::class, to: 'node', bundles: ['page']);
+    $declared = $blueprint->fromSite()['pages'];
+    $this->assertSame(['node', ['page']], [$declared['to'], $declared['bundles']]);
+
+    // Built, each entry is the id refer() declares.
+    $pages = $this->container->get('surface.resources')->build(ReferenceSettingsResource::class, new OperationContext('configure'))->getDefinitions()->entry('pages')?->attachment?->child;
+    $this->assertNotNull($pages);
+    foreach (['lead', 'aside'] as $entry) {
+      $this->assertSame('integer', $pages->getDefinition($entry)?->getDataType());
+      $this->assertSame(['entityType' => 'node', 'bundles' => []], References::target($pages->getDefinition($entry)));
+    }
   }
 
   /**

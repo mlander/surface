@@ -40,7 +40,9 @@ final class HexColor implements ShapeInterface {
 `message` is what a caller reads when a value does not match.
 `DefinitionMetadata::setExamples()` adds an example of a good value. A
 shape has no default and is never required: each place that uses it
-decides those.
+decides those. Nor does it have a permission or an access answer of
+its own, since `#[Shape]` takes only an id; the value takes the
+[access](15-access.md) of whatever holds it.
 
 ## Using it twice
 
@@ -50,7 +52,11 @@ value, and gives each its own label and default. This is
 do on [Resources](02-resources.md):
 
 ```php
-#[Resource('my_module.colors', storage: MyColorsStorage::class)]
+#[Resource('my_module.colors',
+  label: new TranslatableMarkup('My module colors'),
+  description: new TranslatableMarkup('The link and background colors my module draws with.'),
+  storage: MyColorsStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure my module colors'),
   permission: 'administer my_module',
@@ -85,11 +91,11 @@ pointer, the label and the default):
 "background_color": {"$ref": "#/$defs/my_module.hex_color", "title": "Background color", "default": "#FFFFFF"}
 ```
 
-The shape itself is written once:
+The shape itself is written once, titled by its label:
 
 ```json
 "my_module.hex_color": {
-  "title": "my_module.hex_color",
+  "title": "Color",
   "description": "A # and six hexadecimal digits, such as #0969DA.",
   "type": ["string", "null"],
   "pattern": "^#[0-9A-Fa-f]{6}$",

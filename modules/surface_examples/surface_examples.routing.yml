@@ -202,9 +202,10 @@ surface_examples.step15:
 
 # Example 15's three forms, each one operation of the venue resource,
 # served by the generic operation form: the update and delete routes' {id}
-# is upcast to the venue the operations take. The delete route draws a
-# confirmation, since a delete takes no values; the cosmetic layer says
-# what was done and goes back to the example's page.
+# is the machine name the operations take, which the venue storage loads.
+# The delete route draws a confirmation, since a delete takes no values;
+# the cosmetic layer says what was done and goes back to the example's
+# page.
 surface_examples.step15_create:
   path: '/surface-examples/15/add'
   defaults:
@@ -222,10 +223,6 @@ surface_examples.step15_update:
     _surface_resource: 'Drupal\surface_examples\Resource\VenueResource'
     _surface_operation: 'update'
     _surface_cosmetics: 'surface_examples.venue_form_cosmetics'
-  options:
-    parameters:
-      id:
-        type: 'entity:event_venue'
 
 surface_examples.step15_delete:
   path: '/surface-examples/15/venue/{id}/delete'
@@ -235,7 +232,3 @@ surface_examples.step15_delete:
     _surface_resource: 'Drupal\surface_examples\Resource\VenueResource'
     _surface_operation: 'delete'
     _surface_cosmetics: 'surface_examples.venue_form_cosmetics'
-  options:
-    parameters:
-      id:
-        type: 'entity:event_venue'

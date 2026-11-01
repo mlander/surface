@@ -48,6 +48,17 @@ final class Resource {
    *   and what stored-value migrations will be keyed by; a version above
    *   1 is refused until they are built (ROADMAP Phase D item 13).
    *   Decision: see docs/decisions.md#a-resource-evolves-in-the-open.
+   * @param string|\Stringable|null $label
+   *   What the resource is called, for people: written as
+   *   `new TranslatableMarkup(...)`. The id is for code; the catalog, the
+   *   contract panel and a def of it in a served contract say this beside
+   *   it. NULL, the default, leaves the id to name it, unless the one
+   *   plugin that hosts it names it.
+   * @param string|\Stringable|null $description
+   *   What the resource is for, in a sentence or two, for a reader or an
+   *   agent who has only the id otherwise. NULL says nothing.
+   *   Decision: see
+   *   docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
    */
   public function __construct(
     public readonly string $id,
@@ -55,6 +66,8 @@ final class Resource {
     public readonly ?string $storage = NULL,
     public readonly ?string $access = NULL,
     public readonly int $version = 1,
+    public readonly string|\Stringable|null $label = NULL,
+    public readonly string|\Stringable|null $description = NULL,
   ) {}
 
 }

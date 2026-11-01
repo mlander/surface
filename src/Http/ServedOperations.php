@@ -195,7 +195,8 @@ final class ServedOperations {
    *   parameter takes the entity's id.
    *
    * @return \Drupal\surface\Http\ServedOperation
-   *   The operation, built.
+   *   The operation, built. The read the build adds is served as the
+   *   update it reads: its envelope and its schema are the update's.
    *
    * @throws \InvalidArgumentException
    *   When the resource or operation is not discovered, or a parameter
@@ -204,6 +205,11 @@ final class ServedOperations {
   public function resolve(string $resource, string $operation, array $parameters): ServedOperation {
     $definition = $this->registry->getDefinition($resource);
     $found = $this->registry->getOperation($definition->name(), $operation);
+    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
+    if ($found->reads !== NULL) {
+      $found = $this->registry->getOperation($definition->name(), $found->reads);
+      $operation = $found->id;
+    }
     $context = $this->resources->operation($definition->name(), $operation, $parameters);
     $built = $this->resources->build($definition->name(), $context);
     $storage = $definition->storage === NULL ? NULL : $this->resources->storage($definition->name(), $context, $built);

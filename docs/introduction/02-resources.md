@@ -28,7 +28,11 @@ The attribute's first argument is the resource's id. The settings of
 `MySettingsResource`, and these are its attributes:
 
 ```php
-#[Resource('my_module.settings', storage: MySettingsStorage::class)]
+#[Resource('my_module.settings',
+  label: new TranslatableMarkup('My module settings'),
+  description: new TranslatableMarkup('What my module lists and how: its title, how many items a page shows, whether the author is shown, where notices go and the layout.'),
+  storage: MySettingsStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure my module'),
   permission: 'administer my_module',
@@ -37,6 +41,9 @@ The attribute's first argument is the resource's id. The settings of
 
 The second attribute, `#[Operation]`, and the `storage:` argument are
 the ideas of [Operations](09-operations.md) and [Storage](10-storage.md).
+`label:` and `description:` are optional: what the resource is called
+and what it is for, shown beside its id to a person or an AI agent who
+would otherwise see only the id.
 
 The content type and the placed block are resources because two
 example modules make them so, to try the pattern on things core already
@@ -73,18 +80,26 @@ module finds on a site. Its entry for the placed block starts:
 
 `Drupal\surface_examples_block\Resource\BlockPlacementResource`, in `surface_examples_block`.
 
+- Label: Placed block
+- Description: A block placed in a region of a theme under a machine name: its label, the settings its plugin takes, its weight, its status and when it shows.
 - Kind: resource
 ```
 
-`Kind` says what sort of entry it is: a resource, or a group of values
-held by something else, which [Structures](03-structures.md) covers.
+`Label` and `Description` are the attribute's `label:` and
+`description:`. `Kind` says what sort of entry it is: a resource, or a
+group of values held by something else, which
+[Structures](03-structures.md) covers.
 
 ## One of three kinds
 
 A resource is one of three kinds of thing the module describes. The
 next two pages give the others: a group of values held by a resource
 ([Structures](03-structures.md)), and one value used under many names
-([Shapes](04-shapes.md)).
+([Shapes](04-shapes.md)). Only a resource is asked for on its own, so
+only a resource names a permission for each way of asking for it; an
+access class named with `access:` on `#[Resource]` may then lock its
+values for an account or refuse the whole request
+([Access](15-access.md)).
 
 Next: [Structures](03-structures.md)
 

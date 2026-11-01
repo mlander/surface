@@ -253,7 +253,7 @@
                 "additionalProperties": false
             },
             "resource_test.sku": {
-                "title": "resource_test.sku",
+                "title": "Stock code",
                 "description": "Two capitals and digits, as printed on the shelf.",
                 "type": [
                     "string",

@@ -151,20 +151,33 @@ class ResourceCatalogTest extends SurfaceKernelTestBase {
         'permission' => NodeTypeResource::PERMISSION,
         'unresolvable' => [],
         'standalone' => TRUE,
-        'reads' => FALSE,
+        'default' => NULL,
       ],
       [
         'id' => 'update',
         'label' => 'Edit a content type',
         'provider' => NodeTypeResource::class . '::update()',
         'module' => 'surface_examples_node_type',
-        'parameters' => ['NodeTypeInterface $type'],
+        'parameters' => ['string $type'],
         'creates' => FALSE,
         'kind' => 'update',
         'permission' => NodeTypeResource::PERMISSION,
         'unresolvable' => [],
         'standalone' => TRUE,
-        'reads' => TRUE,
+        'default' => NULL,
+      ],
+      [
+        'id' => 'read',
+        'label' => 'Current values: Edit a content type',
+        'provider' => 'default read of update',
+        'module' => 'surface_examples_node_type',
+        'parameters' => ['string $type'],
+        'creates' => FALSE,
+        'kind' => 'read',
+        'permission' => NodeTypeResource::PERMISSION,
+        'unresolvable' => [],
+        'standalone' => TRUE,
+        'default' => 'update',
       ],
     ], $node_type['operations']);
     $this->assertSame([
@@ -195,11 +208,27 @@ class ResourceCatalogTest extends SurfaceKernelTestBase {
     ], $catalog['registration.step3']['alters'][0]['refines']);
 
     $field = $catalog['field.instance'];
-    $this->assertSame(['create', 'reuse', 'update'], array_column($field['operations'], 'id'));
+    $this->assertSame(['create', 'reuse', 'update', 'read'], array_column($field['operations'], 'id'));
     $this->assertSame(['string $entity_type', 'string $bundle', 'string $field_name'], $field['operations'][1]['parameters']);
     $this->assertSame(['settings' => ['address' => AddressFieldSettingsResource::class]], $field['variants']);
     $this->assertSame(FieldInstanceResource::class, $field['class']);
     $this->assertSame([], $field['plugins']);
+
+    // What each is called and is for: declared, the plugin's that holds
+    // it, or nothing.
+    // Decision: see
+    // docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
+    $this->assertSame('Content type', $node_type['label']);
+    $this->assertStringStartsWith('A content type: its name', (string) $node_type['description']);
+    $block = $catalog['block.surface_examples_plugins'];
+    $this->assertSame('Surface API example', $block['label'], 'The block\'s admin label.');
+    $this->assertNull($block['description'], 'A block definition has no description.');
+    $this->assertNull($catalog['registration.contact']['label']);
+    $this->assertNull($catalog['registration.contact']['description']);
+    $markdown = $this->container->get('surface.site_catalog')->markdown();
+    $this->assertStringContainsString(") | Content type | `NodeTypeResource` |", $markdown);
+    $this->assertStringContainsString("## node.type\n\n`" . NodeTypeResource::class . "`, in `surface_examples_node_type`.\n\n- Label: Content type\n- Description: A content type: its name", $markdown);
+    $this->assertStringContainsString(") |  | `ContactStructure` |", $markdown, 'No label: an empty cell.');
   }
 
   /**
@@ -226,24 +255,28 @@ class ResourceCatalogTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests which operations change a thing that exists, and so read.
+   * Tests which resources the build gives a read, and which update it reads.
    *
-   * Read off the attribute, for one that needs a subject as for one that
-   * needs nothing: an update reads, and a create (the field's add and
-   * reuse) or a read only operation does not. An operation that cannot be
-   * asked on its own has no read either.
+   * A resource with a default update that can be asked on its own has a
+   * read, the one the build adds, listed as its own operation with the
+   * update it reads; a resource with only creates has none, and the field
+   * storage's create, which cannot be asked on its own, changes nothing.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
    */
-  public function testTheCatalogueSaysWhatCanBeRead(): void {
+  public function testTheCatalogueListsEachReadAsAnOperation(): void {
     $catalog = $this->catalog();
-    $reads = static fn (string $surface): array => array_column($catalog[$surface]['operations'], 'reads', 'id');
-    $this->assertSame(['create' => FALSE, 'update' => TRUE], $reads('node.type'));
-    $this->assertSame(['create' => FALSE, 'reuse' => FALSE, 'update' => TRUE], $reads('field.instance'));
-    $this->assertSame(['create' => FALSE, 'update' => TRUE], $reads('field.storage'));
+    $defaults = static fn (string $surface): array => array_column($catalog[$surface]['operations'], 'default', 'id');
+    $this->assertSame(['create' => NULL, 'update' => NULL, 'read' => 'update'], $defaults('node.type'));
+    $this->assertSame(['create' => NULL, 'reuse' => NULL, 'update' => NULL, 'read' => 'update'], $defaults('field.instance'));
+    $this->assertSame(['create' => NULL, 'update' => NULL, 'read' => 'update'], $defaults('field.storage'));
     foreach (['registration.step1', 'registration.step2', 'registration.step3'] as $surface) {
-      $this->assertSame(['configure' => TRUE], $reads($surface), $surface);
+      $this->assertSame(['configure' => NULL, 'read' => 'configure'], $defaults($surface), $surface);
     }
-    // An operation that changes nothing has nothing to read first.
-    $this->assertSame(['configure' => TRUE, 'check' => FALSE], $reads('event.program'));
+    // A read only operation is no update, so the read stands beside configure.
+    $this->assertSame(['configure' => NULL, 'check' => NULL, 'read' => 'configure'], $defaults('event.program'));
+    // A structure has no storage, so no read.
+    $this->assertSame([], array_filter(array_column($catalog['registration.contact']['operations'], 'default')));
   }
 
   /**

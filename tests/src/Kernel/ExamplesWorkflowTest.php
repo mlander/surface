@@ -109,7 +109,7 @@ class ExamplesWorkflowTest extends SurfaceKernelTestBase {
     $this->setUpCurrentUser(permissions: ['administer site configuration']);
     $this->assertSame(['headline', 'sessions', 'published'], array_keys($this->full()['properties']));
     $this->assertSame(['headline', 'sessions', 'published'], $this->listed());
-    $read = $this->container->get('plugin.manager.tool')->createInstance('surface:event.program:configure:read');
+    $read = $this->container->get('plugin.manager.tool')->createInstance('surface:event.program:read');
     $read->execute();
     $this->assertSame(['headline', 'sessions', 'published'], array_keys($read->getOutputValue(OperationInputs::VALUES)));
 

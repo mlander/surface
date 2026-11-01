@@ -373,8 +373,8 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
     $card = $registry->getDefinition('route_test.card');
     $create = $registry->getOperation($card->name(), 'create');
     $served = $this->container->get('surface_examples_react.react_doors');
-    $this->assertSame([SiteCatalog::REACT => '/surface-test/card/react/{copies} (surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]'], $served->doors($card, $create, FALSE, FALSE));
-    $this->assertSame([], $served->links($card, $create, FALSE, FALSE), 'Its one page needs the copies.');
+    $this->assertSame([SiteCatalog::REACT => '/surface-test/card/react/{copies} (surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]'], $served->doors($card, $create, FALSE));
+    $this->assertSame([], $served->links($card, $create, FALSE), 'Its one page needs the copies.');
   }
 
 }

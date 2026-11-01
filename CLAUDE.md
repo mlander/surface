@@ -24,10 +24,21 @@ the record of the rework that brought the module to the pattern.
   registration settings first, a content type, then a basic page,
   `entity.content:node.page`, the same shape applied to content). One
   with no identity keys, such as a settings object, is a singleton
-  resource. `#[Resource(id, identity:, storage:, access:)]`.
+  resource. `#[Resource(id, identity:, storage:, access:, label:,
+  description:)]`.
 - **Structure**: a group of keys with no identity or storage of its
   own, held by a parent (attached or as a variant) or a plugin's host.
-  `#[Structure(id, access:)]`.
+  `#[Structure(id, access:, label:, description:, widget:)]`, `widget:`
+  the word of the widget that draws it as a whole wherever it is
+  attached, checked at the build like every key's `widget` setting
+  (`docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates`). The label and
+  description, both optional, say what either is called and is for:
+  `ResourceDefinition::label()` and `description()`, else the one
+  hosting plugin's (`ResourcePlugins::hostNames()`); they title and
+  describe its def in both documents (a def with no label is titled by
+  its key), offer a variant whose `#[Variant]` gives no label, print in
+  the catalog, and read back from a def's `title` and `description`
+  (`docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for`).
 - **Shape**: a named type (Smithy's word), of three kinds: resources,
   structures, and named scalar shapes. The third is `#[Shape(id)]` on a
   class in `src/Shape/` whose static `define()` returns one scalar
@@ -52,7 +63,16 @@ the record of the rework that brought the module to the pattern.
   `OperationContext` when it needs more, the attribute's id and
   `creates` stamped on it and a context saying otherwise refused
   (`docs/decisions.md#an-operation-on-the-class`); only ever on its
-  resource's or structure's own class. Its context adds `known`
+  resource's or structure's own class. Its parameters are values, never
+  objects: a method's is typed with a scalar named for a key of its
+  resource (`string $id`), a class type refused at discovery
+  (`OperationParameter::fromReflection()`), and the operation loads its
+  subject through its resource's storage (`ConfigEntityStorage::named()`,
+  `ContentEntityStorage::entity()`), which refuses a value that names
+  nothing; `OperationArguments` loads nothing, and no surface route
+  converts a parameter an operation takes, every door handing the raw
+  value (`docs/decisions.md#an-operation-is-handed-values-never-objects`).
+  Its context adds `known`
   identity, `withConstraint()` (a Choice of one value with `surface_fixed`
   fixes the key),
   `withDefaults()` (what keys start from, only on a context that
@@ -73,6 +93,19 @@ the record of the rework that brought the module to the pattern.
   update on a singleton), its label Drupal's word ("Add a venue"); an
   id `add`, `edit`, `remove` or `get` is refused at discovery
   (`docs/decisions.md#the-ids-are-the-standard-five-the-labels-are-drupals`).
+  The read of one thing is `read`, read only, taking no structure
+  (`OperationDefinition::readsOne()`): its parameters in, the stored
+  values out. Where a resource with storage has a default update that
+  can be asked on its own and declares no `read`, the build adds one
+  (`OperationDefinition::defaultRead()`, `ResourceRegistry::defaultRead()`),
+  labeled "Current values:" and the update's label, its `reads` the
+  update's id: it takes the update's parameters, permission and gates
+  and is asked in the update's context (`contextId()`;
+  `ResourcesInterface::operation()` builds the update's), so nothing
+  loosens; the catalog lists it as "default read of" the update. An
+  owner that declares `read` replaces it and answers access for reading
+  (the content entity example asks core's view access)
+  (`docs/decisions.md#a-read-is-an-operation-of-the-resource`).
   One about the things together names the structure whose keys it
   takes in place of the resource's, `structure:` (a listing's page, a
   reorder's list; `docs/resources.md#an-operation-that-takes-keys-of-its-own`).
@@ -85,7 +118,21 @@ the record of the rework that brought the module to the pattern.
 - **Blueprint**: what a resource or structure declares its members
   into, handed to `defineInputs()` and `defineOutputs()`
   (`BlueprintInterface`); an alter gets the add-only
-  `BlueprintAdditionsInterface`.
+  `BlueprintAdditionsInterface`. A key holds one value of a type in the
+  one table the blueprint, the emitter and the reader read
+  (`Contract\LeafTypes`: `string`, `email`, `uri`, `datetime_iso8601`,
+  `integer`, `timestamp`, `float`, `boolean`, or a shape or config
+  schema type of one); any other type is refused at the blueprint, at
+  any depth, naming the method meant
+  (`docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader`).
+- **Anonymous map**: `addMap($key, $label, fn (BlueprintInterface $map)
+  => ...)`, an object only its owner holds, written inline with no def;
+  plain keys make a map definition, a callable that attaches, mixes in,
+  narrows or resolves makes a structure with no id
+  (`ResourceRegistry::defineMap()`, whose inputs run the owner's
+  declaration again to the key, so the callable may run more than once
+  and is held to the keys it declared first), still written inline; an alter's and
+  an output's hold plain keys alone (`docs/decisions.md#an-anonymous-map`).
 - **Storage**: where a resource's values live: `load()`, `prepare()`,
   `commit()` on a `ResourceStorageInterface`.
 - **Layout**: how a storage lays accepted values out where that differs
@@ -125,7 +172,9 @@ the record of the rework that brought the module to the pattern.
 - **Variants from the site**: variants a provider lists rather than
   classes declare, `attachVariants($key, by: $sibling, from:
   Provider::class)`; the provider is the one keys from the site name, a
-  `SiteListInterface`, whose `list()` answers a `SiteList` (per value,
+  `SiteListInterface` (one listing for several owners a
+  `BoundSiteListInterface`, handed `arguments:` and asked `listFor()`),
+  whose `list()` answers a `SiteList` (per value,
   its label and the JSON Schema of what it chooses, `schema:`, or a
   structure class, `structure:`; a start or a lock refused), asked at
   every build and refused uncacheable or varying by the account. Each variant is a structure read
@@ -170,7 +219,9 @@ the record of the rework that brought the module to the pattern.
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
   key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
-  a type or shape per thing) or `attachEach('rows', Row::class, from:
+  a type or shape per thing; a reference per thing in `refer()`'s words,
+  `addEach('pages', NULL, from: Provider::class, to: 'node', bundles:
+  [...])`) or `attachEach('rows', Row::class, from:
   ...)` (a structure per thing); the provider is a service implementing
   `SiteListInterface`, whose `list()` answers a `SiteList` (id, label,
   optional start and lock, and the cacheability of what it read; an id
@@ -180,11 +231,14 @@ the record of the rework that brought the module to the pattern.
   ['selling' => 'on_sale'])` wires each entry's port to the entry of the
   same id in a sibling map from the same provider
   (`docs/resources.md#keys-that-come-from-the-site`).
-- **Reference key**: a key that refers to an entity, declared by the
-  data type string of what it refers to, `add('page', 'entity:node:article',
-  ...)`, `'entity:user'`, or the bare `'entity'` (two parts attached at
-  the key, `entity_type` and `id`, filtered by `SurfaceReferenceableType`
-  written on the key); every door sends and answers the id, and a config
+- **Reference key**: a key that refers to an entity, declared with
+  `refer()`: `refer('page', 'node', t(...), bundles: ['article'])`,
+  `refer('contact', 'user', ...)`, or `refer('thing', NULL, ...)` for any
+  entity type (two parts attached at the key, `entity_type` and `id`,
+  filtered by `SurfaceReferenceableType` written on the key);
+  `add($key, 'entity:…')` and `addEach($key, 'entity:…', ...)` are
+  refused naming it
+  (`docs/decisions.md#a-reference-is-declared-as-a-reference`); every door sends and answers the id, and a config
   storage stores a content entity's uuid (`ReferenceStorageLayout`, which
   the engine applies; `References::STORED_AS` keeps the id) and a config
   entity's id, a config entity depending on what its keys refer to
@@ -195,6 +249,11 @@ the record of the rework that brought the module to the pattern.
   .../{x}:lookup` over HTTP; `x-surface.reference` marks it in both
   documents (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
   `docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
+  A content entity's reference field's `target_id` is one, answered by
+  the field's own selection handler and settings
+  (`References::definition(handler:, handlerSettings:)`), drawn with the
+  autocomplete where its form display uses core's
+  (`docs/decisions.md#a-reference-field-is-a-reference-key`).
 - **Computed key**: a key of a resource whose value nobody types,
   `$inputs->compute('slug', 'string', t('Slug'), from: ['label'], using:
   Slugify::class, when: Compute::ON_CREATE)`; the class implements
@@ -384,11 +443,11 @@ With the `tool` module installed, the module derives one tool per
 operation that can be asked on its own, `surface:<id>:<operation>`
 (the Tool API door, `docs/tools.md`): its resource names storage, no
 plugin uses it, and every `%key` in its permission can be supplied by
-a parameter (`ResourceCatalog::standalone()`). Beside each such
-operation that changes a thing that exists it derives a read tool,
-`surface:<id>:<operation>:read`, taking the parameters and
+a parameter (`ResourceCatalog::standalone()`). The read of one thing is the tool
+`surface:<id>:read`, of its own class, taking the parameters and
 answering with the stored values less secrets
-(`ResourceCatalog::reads()`, `ResourceOperationReadTool`). Where an
+(`ResourceOperationReadTool`); no tool is derived beside an operation
+but the narrowing one. Where an
 operation's listing leaves a key's entries out, it derives a narrowing
 tool too, `surface:<id>:<operation>:schema`, answering what
 `POST .../schema` answers for the values sent, and the key's description
@@ -405,7 +464,8 @@ governs the two schema documents otherwise
 the operation's permission to the Tool API, unless it has a `%key`
 (`ResourceOperationToolDeriver::declaredPermission()`). A tool's title
 is the operation's label (with its resource added where labels are
-shared; the read tool's is "Current values:" and that), and its
+shared; the read the build adds is labeled "Current values:" and its
+update's label), and its
 description the operation's description and one line of call rules
 for its kind (`OperationInputs::description()`). The field
 tools are `surface:field.instance:create` / `:reuse` / `:update`; the
@@ -439,9 +499,9 @@ A child may be a resource with storage of its own, an attached resource
 (the field's storage, `FieldStorageResource`). A provider named by
 `attachVariants(from:)` lists variants for the values no variant class
 declares (`surface_examples_field` lists a field type's settings, and its
-storage settings, from its config schema). A child
-whose keys cannot be listed at all is a `#[RefinesInput]` method on an
-`any` key returning a map. A structure reads a value of its container
+storage settings, from its config schema). A key
+whose shape depends on another key's value is variants: `add()` refuses
+`any`, and only the variants' placeholder may become another type. A structure reads a value of its container
 through a port it declares, `reads()`, which `attach(..., reads:)` wires
 to a key of the container's; what depends on a port is stated at the
 site, on the container's `allOf`, never in the structure's def
@@ -464,12 +524,20 @@ carrying `#[DerivesResources(base:)]` and implementing
 `ResourceDeriverInterface` returns `DerivedResource` values at
 discovery, each `<base>:<derivative>` with no class
 (`ResourceDefinition::$class` NULL; every caller asks by `name()`), its
-inputs and operations `ResourceCallable`s, cached under the tags of what
+inputs and operations `ResourceCallable`s, each operation's parameters
+the names of keys it declares, `['id']`, handed their values and loaded
+by nothing but the storage (`docs/decisions.md#a-parameter-names-a-key`), cached under the tags of what
 it was read from. Its kind follows from what it names: one that names
 storage or identity keys is a resource, any other a structure.
 `surface_examples_entity` derives a resource per content entity bundle
 (`entity.content:*`) and a structure per field (`field.item:*`), with
-field access as each field child's access (`docs/entities.md`). A
+field access as each field child's access, and a resource per entity
+type, `entity.content:node`, whose `bundle` chooses the bundle's fields
+as variants under `fields` (`docs/entities.md`); whether `create` takes
+`id` is read from the id field (a serial integer, or a default, is
+computed; a string with no default is the caller's to name, required,
+and refused at `id` when taken;
+`docs/decisions.md#an-entity-types-id-is-computed-or-named-by-the-caller`). A
 child is built by the same build step in its own frame and sealed into
 the parent's entry as an `Attachment`, or among its `Variants`; the
 pipeline, refinement, the form and the tool bridge recurse through those
@@ -538,7 +606,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1805, Assertions: 41159, Errors: 0, Failures: 0, Skipped: 3. Classes: 252 of 252, 8 at a time, browser classes 4.
+phpunit: Tests: 1843, Assertions: 42935, Errors: 0, Failures: 0, Skipped: 3. Classes: 259 of 259, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -558,8 +626,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1697, Assertions: 37139, Skipped: 3, Deprecations: 130. Classes:
-203, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1735, Assertions: 38914, Skipped: 3, Deprecations: 130. Classes:
+210, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -644,8 +712,10 @@ variants, and is what `tool:info` prints). The base module's HTTP door
 (`src/Http/`, route `surface.api`) serves it with the widget hints on
 an API where the path is the resource and the method the operation
 (contract 3's paths, `ServedPaths`, both documents in contract 4's
-keywords): `GET /surface-api/{resource}[/{id}]` the
-envelope, its `ETag` the stored values' fingerprint; `GET .../schema` the
+keywords): `GET /surface-api/{resource}[/{id}]` the read's
+envelope, its `ETag` the stored values' fingerprint (the read the build
+adds served as its update, `ServedOperations::resolve()`, so the
+envelope is the update's); `GET .../schema` the
 full schema itself; `POST .../schema` the envelope narrowed for values
 in progress (the AJAX rebuild's equivalent, emitted from the form
 builder's `refinementOverlay()`, so an orphan is held unanswered and

@@ -162,7 +162,7 @@ class LockedAccessTest extends SurfaceKernelTestBase {
     $write = $this->runTool('surface:tool_test.cabinet:update', [OperationInputs::VALUES => ['drawers' => 9]]);
     $this->assertFalse($write['success']);
     $this->assertStringContainsString('The cabinet may be audited, not changed.', $write['message']);
-    $read = $this->runTool('surface:tool_test.cabinet:update:read');
+    $read = $this->runTool('surface:tool_test.cabinet:read');
     $this->assertTrue($read['success'], $read['message']);
     $this->assertSame(self::STORED, $read['values']);
 

@@ -17,7 +17,10 @@ use Drupal\surface\Resource\StructureInterface;
  *
  * @see \Drupal\surface_examples_plugins\Structure\ExampleBlockStructure
  */
-#[Structure('block.surface_examples_plugins.presentation.grid')]
+#[Structure('block.surface_examples_plugins.presentation.grid',
+  label: new TranslatableMarkup('Grid presentation'),
+  description: new TranslatableMarkup('What the example block needs to render a grid: how many columns, and whether summaries show.'),
+)]
 #[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 final class GridPresentationStructure implements StructureInterface {
 

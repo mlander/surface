@@ -332,7 +332,7 @@ class ComputedKeysTest extends SurfaceKernelTestBase {
     $refused(fn () => $inputs->compute('code', 'string', 'Code', [], BadgeCode::class), 'names no key it is computed from');
     $refused(fn () => $inputs->compute('code', 'string', 'Code', ['first'], DataDefinition::class), 'which implements no');
     $refused(fn () => $inputs->compute('code', 'string', 'Code', ['first'], BadgeCode::class, 'always'), 'says when: "always"; it is Compute::ON_CREATE, Compute::ON_CHANGE or Compute::UNLESS_SENT.');
-    $refused(fn () => $inputs->compute('codes', 'map', 'Codes', ['first'], BadgeCode::class), 'is a map');
+    $refused(fn () => $inputs->compute('codes', 'map', 'Codes', ['first'], BadgeCode::class), 'add("codes", "map") declares a key of the map type, which JSON Schema has no type for');
     $definition = $inputs->compute('code', 'string', 'Code', ['first'], BadgeCode::class);
     $this->assertEquals(new Computed(['first'], BadgeCode::class), Computed::of($definition));
   }

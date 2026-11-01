@@ -20,12 +20,16 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Core's entity autocomplete, for a reference with too many to list.
  *
- * A key that refers to one entity type, `entity:<type>[:<bundle>]` or a
- * bare `entity` key's id once its entity type is chosen, whose candidates
- * the options service does not list: there are more than the site's
- * limit. Core's `entity_autocomplete` element draws it, its route asking
- * the same selection handler with the same settings
- * (References::selectionSettings()), so it suggests what the key accepts.
+ * A key that refers to one entity type, refer('<key>', '<entity type>')
+ * or a bare reference's id once its entity type is chosen, whose
+ * candidates the options service does not list: there are more than the
+ * site's limit. A key that asks for it by name, `autocomplete` (a
+ * reference field whose form display draws it so), is drawn so however
+ * many there are. Core's `entity_autocomplete` element draws it, its
+ * route asking the same selection handler with the same settings
+ * (References::selectionSettings()), so it suggests what the key accepts;
+ * the key's `match_operator` and `match_limit` settings, where it has
+ * them, say how the route matches and how many it suggests.
  * Core's own check of the element is taken off, as the number widget's
  * is: the key's constraint refuses an id in its own words, and the
  * element is read back as the id it names, "Riverside Hall (riverside)"
@@ -100,7 +104,8 @@ final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFac
    * {@inheritdoc}
    */
   public function isApplicable(DataDefinitionInterface $definition): bool {
-    return static::draws($definition) && $this->options->resolve($definition) === NULL;
+    return static::draws($definition)
+      && ($definition->getSetting('widget') === 'autocomplete' || $this->options->resolve($definition) === NULL);
   }
 
   /**
@@ -109,14 +114,22 @@ final class AutocompleteWidget extends SurfaceWidgetBase implements ContainerFac
   public function buildElement(DataDefinitionInterface $definition, mixed $value): array {
     $target = References::target($definition);
     assert($target !== NULL);
+    [$handler, $settings] = References::handlerOf($definition);
     $entity = is_int($value) || (is_string($value) && $value !== '')
       ? $this->entityTypeManager->getStorage($target['entityType'])->load($value)
       : NULL;
+    // How the lookup matches and how many it suggests, as core's
+    // autocomplete widget hands them to its route; what is accepted stays
+    // the key's constraint's.
+    $matching = array_filter([
+      'match_operator' => $definition->getSetting('match_operator'),
+      'match_limit' => $definition->getSetting('match_limit'),
+    ], static fn (mixed $setting): bool => $setting !== NULL);
     return $this->baseElement($definition) + [
       '#type' => 'entity_autocomplete',
       '#target_type' => $target['entityType'],
-      '#selection_handler' => 'default',
-      '#selection_settings' => $this->references->selectionSettings($target['entityType'], $target['bundles']),
+      '#selection_handler' => $handler === '' ? 'default' : $handler,
+      '#selection_settings' => $this->references->selectionSettings($target['entityType'], $target['bundles'], $handler, $settings) + $matching,
       '#default_value' => $entity,
       // Core's element checks what was typed itself, before any form
       // level handler, and a form keeps the first error per element.

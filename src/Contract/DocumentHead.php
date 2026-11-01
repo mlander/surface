@@ -13,7 +13,8 @@ use Drupal\surface\SurfaceInterface;
  * class writes the document around it (top()): `$schema` and `$id`, the
  * title and description, the contract's version, how the operation
  * behaves and the resource's version under `x-surface`, `readOnly` when
- * the whole is locked, and each def's title. It describes the outputs
+ * the whole is locked, and each def's title where its structure or shape
+ * gave it none. It describes the outputs
  * (outputs()), and lays the whole schema out by the placement rules of
  * contract 2: no `x-surface` below an applicator, and the declared type
  * stated beside a keyword only one type reads (settled()).
@@ -113,12 +114,15 @@ final class DocumentHead {
     $schema = $this->lockedWhole($surface, $this->operation($operation, $this->versioned($surface, $schema)));
     $schema[self::EXTENSION] = ['contract' => ContractEmitter::CONTRACT] + $schema[self::EXTENSION];
     if (is_array($schema['$defs'] ?? NULL)) {
-      // Each def titled by its id: stable, language-free, and unique in
-      // the document, so a type generator names it the same every time.
-      // A site gives the key its label beside the reference, as before.
+      // Each def titled by what its structure or shape is called, and by
+      // its key where it is called nothing; a site gives the key its own
+      // label beside the reference, as before.
+      // Decision: see
+      // docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
       foreach ($schema['$defs'] as $key => $def) {
+        $title = is_string($def['title'] ?? NULL) && $def['title'] !== '' ? $def['title'] : (string) $key;
         unset($def['title']);
-        $schema['$defs'][$key] = ['title' => (string) $key] + $def;
+        $schema['$defs'][$key] = ['title' => $title] + $def;
       }
     }
     return $this->settled($top + $this->heading($label, $operation) + $schema);

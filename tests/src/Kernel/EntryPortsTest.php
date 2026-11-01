@@ -245,11 +245,11 @@ class EntryPortsTest extends SurfaceKernelTestBase {
     $stored = $this->config('surface_examples.sales');
     $this->assertFalse($stored->get('on_sale.student'));
     $this->assertSame(['per_order' => 1, 'waiting_list' => TRUE], $stored->get('limits.student'));
-    $read = $manager->createInstance('surface:event.sales:configure:read');
+    $read = $manager->createInstance('surface:event.sales:read');
     $read->execute();
     $this->assertSame([], $read->getResult()->getContextValues()[OperationInputs::VALUES]['limits']['student']);
     $this->assertTrue($call(['on_sale' => ['student' => TRUE]], FALSE)->isSuccess());
-    $read = $manager->createInstance('surface:event.sales:configure:read');
+    $read = $manager->createInstance('surface:event.sales:read');
     $read->execute();
     $this->assertSame(['per_order' => 1, 'waiting_list' => TRUE], $read->getResult()->getContextValues()[OperationInputs::VALUES]['limits']['student']);
   }

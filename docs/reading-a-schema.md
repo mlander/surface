@@ -47,7 +47,7 @@ the emitter wrote reads back as what it was written from
 | The schema says | Read as |
 | --- | --- |
 | a property | a key; `title` its label, `description` its description (a property with no title has no label) |
-| `type` `string`, `integer`, `number`, `boolean` | the data type `string`, `integer`, `float`, `boolean` |
+| `type` `string`, `integer`, `number`, `boolean` | the data type `string`, `integer`, `float`, `boolean`: the type table the emitter writes from (`Contract\LeafTypes`), read backwards, so every value a declaration holds is written with a `type` and read back to it ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)) |
 | `format` `idn-email` or `email`, `uri`, `date-time` | the data type `email`, `uri`, `datetime_iso8601`; `email` is written back as `idn-email`, which Drupal's validator holds to |
 | `format` `date`, `time`, `uuid` | a `Regex` of RFC 3339's date or full time (none beside a `pattern`, which is the rule), a `Uuid` constraint; a `date` is drawn as a date input |
 | any other `format` | dropped, noted: an annotation, which no constraint checks |
@@ -153,6 +153,16 @@ reader of a document reads it back as the same constraint:
 The documents are wider there than the pipeline, as they are wherever
 a rule is checked on the server alone, and never stricter
 (why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)).
+
+A def's `title` and `description` are kept as well, as what the
+structure read from it is called and is for: its label and its
+description, which the emitter writes on its def again, and which the
+catalog prints beside its id. A `title` that is the def's own key is
+what the emitter writes for a structure with no label, so it reads back
+as no label. The `title` of the root and of an object at a key is the
+operation's or the key's, and the structure takes neither
+(`SchemaReader::names()`;
+why: [decision](decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)).
 
 ## What is noted
 

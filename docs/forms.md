@@ -217,6 +217,40 @@ one form's: a borrowed element (the content type example puts the three
 groups its resource declares into core's vertical tabs, reaching each by
 `@group.<id>`), markup, the message and the redirect.
 
+## A widget a structure asks for
+
+A structure asks for the widget that draws it as a whole with
+`#[Structure(widget:)]`, the one word a key's `widget` setting uses
+(`setSetting('widget', 'radios')`): the build sets it on the key
+wherever the structure is attached, unless the owner set one there, and
+the hint `x-surface.widget` says it. A shape's `define()` sets the
+setting on its definition, which every key of the shape starts from. A
+widget draws and reads back; what is accepted is the keys' definitions,
+which the pipeline holds every door to. Three guards hold that:
+
+- **A widget word is checked when the resource is built.** Every key
+  whose `widget` setting asks for one, at any depth, is handed to the
+  widget manager's own check at the build: a word no widget answers to,
+  or a widget that does not draw the key (a checkbox for a map), is a
+  build refusal naming the key, never a form that fails to draw
+  (`Resources::assertWidgetsDraw()`, `WidgetAskTest`).
+- **A widget never validates.** A widget whose code gives an element an
+  `#element_validate` other than `[]` is refused when the widgets are
+  discovered (`SurfaceWidgetManager::assertNeverValidates()`): the stock
+  widgets set it empty, turning core's element checks off, so no form
+  refuses what another door accepts.
+- **A hint is all a widget changes.** For every example resource and
+  operation, both documents emitted with the widget hints, less every
+  hint, are byte for byte the documents emitted without them
+  (`WidgetHintsOnlyTest`).
+
+A content entity resource's keys ask for the widget their form
+display's component names ([Content entities](entities.md#what-is-derived-from-what)).
+
+A module's claim on a structure by its class, beside a claim on a
+shape, is not built: a structure asks for its widget itself
+([decision](decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates)).
+
 ## Other modules' keys
 
 The keys alters add are mounted under `third_party_settings`, one map
@@ -905,10 +939,6 @@ example.edit:
     _surface_resource: 'Drupal\example\Resource\ExampleResource'
     _surface_operation: 'update'
     _surface_cosmetics: 'example.surface_form_cosmetics'
-  options:
-    parameters:
-      example:
-        type: 'entity:example'
 ```
 
 The defaults:
@@ -923,10 +953,15 @@ The defaults:
 | `_surface_defaults` | Optional. A map of key paths to values, each the value its key starts from on this page, for an operation that creates; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
 | `_surface_query` | Optional. A map of key paths to query parameter names, each key a link may start from the parameter it names, `?subject=Pricing`, on any operation that draws values ([below](#keys-a-link-or-the-code-starts)). |
 
-The route's parameters are the operation method's, by name: an upcast
-entity parameter arrives as the entity, a plain one as its value, so
-`update(NodeTypeInterface $type)` is served by a route with a `{type}`
-parameter upcast to a node type. The module's own defaults start with an
+The route's parameters are the operation's, by name, each handed its raw
+value as the path carries it: `update(string $type)` is served by a
+route with a `{type}` parameter, the machine name, and the operation
+loads the content type through its resource's storage, which refuses a
+name that names nothing (a page not found). A route needs no converter
+for a parameter an operation takes, and one it names is not read: the
+operation is handed values, never objects
+([decision](decisions.md#an-operation-is-handed-values-never-objects)).
+The module's own defaults start with an
 underscore, which keeps each of them out of the route match's
 parameters and out of what `_title` substitutes. No converter runs for
 one, because none is declared for it under `options.parameters`, and
@@ -1119,7 +1154,7 @@ operation's own constraint, or its access class's answer
 A seed may be a reference to a variable of the route's own path, so the
 URL says which value a key is fixed to or starts from. The inquiry's
 `department` is a key that refers to a term of the departments
-vocabulary (`'entity:taxonomy_term:departments'`):
+vocabulary (`refer('department', 'taxonomy_term', ..., bundles: ['departments'])`):
 
 ```yaml
 example.inquiry_department:
@@ -1132,17 +1167,14 @@ example.inquiry_department:
     _surface_fixed: { department: '{department}' }
   requirements:
     department: '\d+'
-  options:
-    parameters:
-      department:
-        type: 'entity:taxonomy_term'
-        bundle: [departments]
 ```
 
 On `/contact/12` the department is drawn fixed to term 12 and stated
 `const: 12`, and a posted value other than 12 is refused. On
-`/contact/999` core's converter answers 404 before access is asked,
-since no term of the vocabulary has that id.
+`/contact/999` the key refuses the value, since no term of the
+vocabulary has that id, so the URL names nothing: a page not found for
+an account the operation lets in
+([below](#refusal-by-who-chose-the-value)).
 
 - **The raw value.** A reference reads the variable as the URL carries
   it, never the object a converter loads from it: the term arrives as
@@ -1196,19 +1228,16 @@ example.node_add:
     _title_callback: '\Drupal\surface\Form\SurfaceOperationForm::title'
     _surface_resource: 'entity.content:node.{node_type}'
     _surface_operation: 'create'
-  options:
-    parameters:
-      node_type:
-        type: 'entity:node_type'
+  requirements:
+    node_type: '[a-z0-9_]+'
 ```
 
 `/example/node/article/add` serves the create of
 `entity.content:node.article`, the id every other door already addresses
-that resource by. The variable is bounded as a reference's is, here by
-the `entity:node_type` converter, which loads its type where node is
-installed; a variable nothing bounds, or a `{name}` the path does not
-have, is refused. The converter answers 404 for a node type that does
-not exist. A node type the deriver lists no resource for, one with no
+that resource by. The variable is bounded as a reference's is, here by a
+requirement; a variable nothing bounds, or a `{name}` the path does not
+have, is refused. A node type that does not exist, or one the deriver
+lists no resource for, one with no
 stored default form display, fills an id no resource has: a page not
 found to any account, since there is no operation to ask a permission
 of. The context is the deriver's create, which knows the entity type and
@@ -1219,9 +1248,10 @@ the bundle from its binding, so nothing in it is read from the request
 label, which a derived create already words for its bundle, "Add Basic
 page", and answers "Page not found" for an id the path fills that no
 resource has. It serves any route whose `_title` cannot say what it
-serves, such as one with an upcast placeholder, which `_title` would
-print as its raw id; for node, core's `NodeController::addPageTitle`
-serves too. The catalog lists the route under every derived resource
+serves, such as one whose path names a thing by its id, which `_title`
+would print as written; for node, core's `NodeController::addPageTitle`
+serves too, on a route that converts `{node_type}` for it (a converter on
+a variable no operation takes, read by the title callback alone). The catalog lists the route under every derived resource
 whose id it fills, its path filled for each
 ([The site's catalog](catalog-command.md#the-doors)).
 
@@ -1534,7 +1564,7 @@ the whole of what a form class is still for:
 A route names one, in `_surface_cosmetics`. Each method is told the
 operation id, as `$operation`, and, as `$subject`, the raw value of the
 first of the operation's parameters that is a variable of the route's
-path (the string in the path, before upcasting), or `NULL` when the path
+path (the string in the path, as the operation is handed it), or `NULL` when the path
 carries none. A parameter a plain default pins is never the subject: it
 is the same on every URL of the route, so it says nothing of which thing
 the page is about.

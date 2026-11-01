@@ -69,6 +69,9 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
    */
   public function processDefinition(&$definition, $plugin_id): void {
     parent::processDefinition($definition, $plugin_id);
+    if (isset($definition['class']) && is_string($definition['class'])) {
+      static::assertNeverValidates($definition['class'], (string) $plugin_id);
+    }
     foreach ($definition['claims'] ?? [] as $claim) {
       $strings = is_array($claim) && array_filter($claim, static fn (mixed $part): bool => !is_string($part) || $part === '') === [];
       $unknown = is_array($claim) ? array_diff(array_keys($claim), self::CLAIM_KEYS) : [];
@@ -92,10 +95,72 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
   }
 
   /**
+   * Refuses a widget whose code gives an element validation of its own.
+   *
+   * What is accepted is the definition's, judged by the pipeline at every
+   * door; a widget draws and reads back, and an #element_validate of its
+   * own would refuse on the form what another door accepts. The stock
+   * widgets set it empty, turning core's element checks off. Read from
+   * the class's own code and its parents' below SurfaceWidgetBase, at
+   * discovery: `'#element_validate'` given anything but an empty array.
+   *
+   * Decision: see
+   * docs/decisions.md#a-structure-may-ask-for-its-widget-and-a-widget-never-validates.
+   *
+   * @param string $class
+   *   The widget's class.
+   * @param string $plugin_id
+   *   Its plugin ID, for the message.
+   *
+   * @throws \LogicException
+   *   When its code gives one.
+   */
+  public static function assertNeverValidates(string $class, string $plugin_id): void {
+    if (!class_exists($class)) {
+      return;
+    }
+    for ($reflection = new \ReflectionClass($class); $reflection !== FALSE && $reflection->getName() !== SurfaceWidgetBase::class; $reflection = $reflection->getParentClass()) {
+      $file = $reflection->getFileName();
+      if ($file === FALSE || !is_readable($file)) {
+        continue;
+      }
+      $quiet = [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT];
+      $read = token_get_all((string) file_get_contents($file));
+      $tokens = array_values(array_filter($read, static fn (mixed $token): bool => !is_array($token) || !in_array($token[0], $quiet, TRUE)));
+      foreach ($tokens as $at => $token) {
+        if (!is_array($token) || $token[0] !== T_CONSTANT_ENCAPSED_STRING || trim($token[1], '\'"') !== '#element_validate') {
+          continue;
+        }
+        $next = static fn (int $offset): string => is_array($tokens[$at + $offset] ?? NULL) ? $tokens[$at + $offset][1] : (string) ($tokens[$at + $offset] ?? '');
+        // `'#element_validate' => ...` or `['#element_validate'] = ...`.
+        $value = match (TRUE) {
+          $next(1) === '=>' => 2,
+          $next(1) === ']' && $next(2) === '=' => 3,
+          default => NULL,
+        };
+        if ($next(1) === ']' && $next(2) === '[') {
+          $value = -1;
+        }
+        if ($value === NULL) {
+          continue;
+        }
+        $empty = $value > 0 && (($next($value) === '[' && $next($value + 1) === ']') || (strtolower($next($value)) === 'array' && $next($value + 1) === '(' && $next($value + 2) === ')'));
+        if (!$empty) {
+          throw new \LogicException(sprintf('The %s widget (%s) gives an element an #element_validate of its own, on line %d. A widget draws a key and reads its value back; what is accepted is the key\'s definition, which the pipeline judges at every door, so a widget never validates: set #element_validate to [] to turn core\'s element checks off, as the stock widgets do.', $plugin_id, $reflection->getName(), $token[2]));
+        }
+      }
+    }
+  }
+
+  /**
    * Gets the widget serving a definition.
    *
    * A widget that claims the definition is asked first, the highest
-   * priority first (claimed()). Otherwise every other widget, instantiated
+   * priority first (claimed()). A definition that asks for a widget by its
+   * word is served by that widget when it serves the definition at all,
+   * whatever its weight: the autocomplete a reference asks for, which the
+   * select would serve first while its candidates are listed. Otherwise
+   * every other widget, instantiated
    * in weight order (lower first), is asked whether it serves the
    * definition; the first that says yes wins, so specialized widgets
    * undercut the generic per-type ones. Instantiating before asking is
@@ -118,6 +183,13 @@ final class SurfaceWidgetManager extends DefaultPluginManager {
       return $claimed;
     }
     $asked = $definition->getSetting('widget');
+    if (is_string($asked)) {
+      foreach ($this->widgets() as $widget) {
+        if ($widget instanceof SurfaceWidgetBase && in_array($asked, $widget->answersTo(), TRUE) && $widget->isApplicable($definition)) {
+          return $widget;
+        }
+      }
+    }
     foreach ($this->widgets() as $plugin_id => $widget) {
       if (isset($this->claimants()[$plugin_id]) && !in_array($asked, $widget instanceof SurfaceWidgetBase ? $widget->answersTo() : [$plugin_id], TRUE)) {
         continue;

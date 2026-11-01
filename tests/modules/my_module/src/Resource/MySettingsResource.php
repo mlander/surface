@@ -19,7 +19,11 @@ use Drupal\my_module\Storage\MySettingsStorage;
  * page's snippet to these lines, and IntroductionExcerptsTest produces
  * the form, the schema and the refusals the pages quote.
  */
-#[Resource('my_module.settings', storage: MySettingsStorage::class)]
+#[Resource('my_module.settings',
+  label: new TranslatableMarkup('My module settings'),
+  description: new TranslatableMarkup('What my module lists and how: its title, how many items a page shows, whether the author is shown, where notices go and the layout.'),
+  storage: MySettingsStorage::class,
+)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure my module'),
   permission: 'administer my_module',

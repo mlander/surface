@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Entity\EntityInterface;
-use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
@@ -13,66 +12,19 @@ use Drupal\Core\Routing\RouteMatchInterface;
  *
  * An operation's needs are its own signature. A route supplies them as
  * parameters of the same name, a tool as inputs of the same name, and
- * both arrive at the same method with the same values: a value for a
- * scalar parameter, and for a parameter typed with an entity class or
- * interface, the entity: handed over as it is when a route already
- * upcast it, loaded by its id when it arrives as one.
+ * both arrive at the same method with the same values.
  *
- * Which entity type a parameter takes is read off its type the way the
- * Tool API reads a typed method's: the one entity type whose class
- * satisfies it; a derived operation's parameter names it instead.
+ * Every parameter is a value: a method's is typed with a scalar, a
+ * derived operation's names a key of its resource. The operation
+ * receives the value (the raw value of a route's parameter, the id of an
+ * entity a PHP caller hands over), and nothing is loaded for it here:
+ * loading is the storage's, which the operation asks, so a storage that
+ * stands in front of another answers for what it names.
+ *
+ * Decision: see
+ * docs/decisions.md#an-operation-is-handed-values-never-objects.
  */
 final class OperationArguments {
-
-  /**
-   * Entity type ids by parameter class, once worked out.
-   *
-   * @var array<string, string|null>
-   */
-  protected array $entityTypes = [];
-
-  /**
-   * Constructs an OperationArguments.
-   *
-   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
-   *   The entity type manager, which names the entity type of a parameter
-   *   and loads the entity an id names.
-   */
-  public function __construct(
-    protected readonly EntityTypeManagerInterface $entityTypeManager,
-  ) {}
-
-  /**
-   * Names the entity type a parameter takes, if it takes an entity.
-   *
-   * @param \Drupal\surface\ResourceBuild\OperationParameter $parameter
-   *   The parameter.
-   *
-   * @return string|null
-   *   The entity type id, or NULL for a parameter that takes a value, or
-   *   an object no single entity type is.
-   */
-  public function entityTypeOf(OperationParameter $parameter): ?string {
-    if (!$parameter->takesObject()) {
-      return NULL;
-    }
-    if ($parameter->entityType !== NULL) {
-      return $parameter->entityType;
-    }
-    $class = (string) $parameter->type;
-    if (!array_key_exists($class, $this->entityTypes)) {
-      $matches = [];
-      if (is_a($class, EntityInterface::class, TRUE)) {
-        foreach ($this->entityTypeManager->getDefinitions() as $id => $entity_type) {
-          if (is_a($entity_type->getClass(), $class, TRUE)) {
-            $matches[] = $id;
-          }
-        }
-      }
-      $this->entityTypes[$class] = count($matches) === 1 ? $matches[0] : NULL;
-    }
-    return $this->entityTypes[$class];
-  }
 
   /**
    * Resolves the arguments for one operation.
@@ -80,16 +32,14 @@ final class OperationArguments {
    * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
    * @param array $arguments
-   *   The arguments, by parameter name or by position. An entity
-   *   parameter takes the entity, or its id.
+   *   The arguments, by parameter name or by position: each a value, or
+   *   an entity, which is named by its id.
    *
    * @return array
    *   The arguments, by parameter name, ready for the method.
    *
    * @throws \InvalidArgumentException
    *   When a parameter that has to be given is not.
-   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
-   *   When an id names no entity, naming the parameter.
    */
   public function resolve(OperationDefinition $operation, array $arguments): array {
     $resolved = [];
@@ -108,7 +58,9 @@ final class OperationArguments {
         }
         continue;
       }
-      $resolved[$parameter->name] = $this->resolveOne($operation, $parameter, $given[0]);
+      // An entity a PHP caller hands over is named by its id: what the
+      // operation takes is the value, which its storage loads.
+      $resolved[$parameter->name] = $given[0] instanceof EntityInterface ? $given[0]->id() : $given[0];
     }
     return $resolved;
   }
@@ -116,9 +68,10 @@ final class OperationArguments {
   /**
    * Reads an operation's arguments off a route match.
    *
-   * Each parameter is the route parameter of the same name, upcast when
-   * the route upcasts it; a parameter the route does not carry is left
-   * out, which is refused by resolve() unless it is optional.
+   * Each parameter is the raw value of the route parameter of the same
+   * name, as the path carries it, whatever a converter made of it; a
+   * plain default is its value. A parameter the route does not carry is
+   * left out, which is refused by resolve() unless it is optional.
    *
    * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
    *   The operation.
@@ -131,46 +84,12 @@ final class OperationArguments {
   public function fromRoute(OperationDefinition $operation, RouteMatchInterface $route_match): array {
     $arguments = [];
     foreach ($operation->parameters as $parameter) {
-      $value = $route_match->getParameter($parameter->name) ?? $route_match->getRawParameter($parameter->name);
+      $value = $route_match->getRawParameter($parameter->name) ?? $route_match->getParameter($parameter->name);
       if ($value !== NULL) {
         $arguments[$parameter->name] = $value;
       }
     }
     return $arguments;
-  }
-
-  /**
-   * Resolves one argument.
-   *
-   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
-   *   The operation, for messages.
-   * @param \Drupal\surface\ResourceBuild\OperationParameter $parameter
-   *   The parameter.
-   * @param mixed $value
-   *   What was given.
-   *
-   * @return mixed
-   *   The argument.
-   *
-   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
-   *   When an id names no entity, naming the parameter.
-   */
-  protected function resolveOne(OperationDefinition $operation, OperationParameter $parameter, mixed $value): mixed {
-    $entity_type_id = $this->entityTypeOf($parameter);
-    if ($entity_type_id === NULL || !(is_string($value) || is_int($value))) {
-      return $value;
-    }
-    $entity = $this->entityTypeManager->getStorage($entity_type_id)->load($value);
-    if ($entity === NULL) {
-      throw new NamesNothingException(sprintf(
-        'The "%s" operation needs a %s as $%s, and there is none with the id "%s".',
-        $operation->id,
-        $entity_type_id,
-        $parameter->name,
-        $value,
-      ), $parameter->name);
-    }
-    return $entity;
   }
 
 }

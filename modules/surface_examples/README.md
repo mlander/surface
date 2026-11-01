@@ -25,7 +25,7 @@ entity type of the module's own, a venue, with a resource over it from
 the start: one venue added, edited and removed, the venues listed a
 page at a time and reordered in one write
 ([below](#example-15-a-config-entity-of-your-own)). Example 16 is a key
-that refers to an entity, declared by the data type string of what it
+that refers to an entity, declared with `refer()` and the entity type it
 refers to, listed while the site has few and looked up past that, in a
 submodule that needs node
 ([below](#example-16-references-three-ways)). Example 17 is a bulk
@@ -342,7 +342,7 @@ final class RegistrationStep2Resource implements ResourceInterface {
 
     $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
 
-    $inputs->add(self::VENUE, 'entity:event_venue', t('Venue'))
+    $inputs->refer(self::VENUE, 'event_venue', t('Venue'))
       ->setRequired(TRUE);
 
     $inputs->add(self::ROOM, 'string', t('Room'))
@@ -387,8 +387,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
 }
 ```
 
-The venue refers to one of example 15's venue entities, by the data
-type string `entity:event_venue`: it holds the venue's machine name, its
+The venue refers to one of example 15's venue entities, declared with
+`refer(self::VENUE, 'event_venue', ...)`: it holds the venue's machine name, its
 candidates are core's entity reference selection handler's for the
 account, and both documents mark it `x-surface.reference`. This module
 writes no code for it. The list differs from the one example 2 had
@@ -719,7 +719,10 @@ third ticket is offered as soon as its class exists. The two tickets:
 <!-- code: src/Structure/FreeTicketStructure.php -->
 
 ```php
-#[Structure('registration.step3.ticket.free')]
+#[Structure('registration.step3.ticket.free',
+  label: new TranslatableMarkup('Free ticket'),
+  description: new TranslatableMarkup('The ticket when registration costs nothing: a note shown beside the register button.'),
+)]
 #[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'free', label: new TranslatableMarkup('Free'))]
 final class FreeTicketStructure implements StructureInterface {
 
@@ -737,7 +740,10 @@ final class FreeTicketStructure implements StructureInterface {
 <!-- code: src/Structure/PaidTicketStructure.php -->
 
 ```php
-#[Structure('registration.step3.ticket.paid')]
+#[Structure('registration.step3.ticket.paid',
+  label: new TranslatableMarkup('Paid ticket'),
+  description: new TranslatableMarkup('The ticket when registration costs money: its price and currency.'),
+)]
 #[Variant(of: RegistrationStep3Resource::class, at: 'ticket', for: 'paid', label: new TranslatableMarkup('Paid'))]
 final class PaidTicketStructure implements StructureInterface {
 
@@ -793,8 +799,8 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Resource/RegistrationStep3Resource.php`](src/Resource/RegistrationStep3Resource.php) | the resource: six keys, the ticket's variants chosen by the pricing, and the contact attached | 43 |
-| [`modules/surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 8 |
-| [`modules/surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 12 |
+| [`modules/surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 11 |
+| [`modules/surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 15 |
 | [`modules/surface_examples/src/Structure/ContactStructure.php`](src/Structure/ContactStructure.php) | the contact: a structure of two keys, attached | 8 |
 | [`modules/surface_examples/src/Storage/RegistrationStep3Storage.php`](src/Storage/RegistrationStep3Storage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step3` | the route | 8 |
@@ -1041,7 +1047,7 @@ nothing, so the Tool API door derives a tool
 from it, `surface:registration.step3:configure`. It takes what
 example 3's form takes, refuses what it refuses, with the same messages,
 and can rehearse a write without making it. Beside it is a read tool,
-`surface:registration.step3:configure:read`, which takes nothing
+`surface:registration.step3:read`, which takes nothing
 and answers with what is stored, in the shape the write tool takes, so
 a caller can see what is there before it changes it.
 
@@ -1097,7 +1103,7 @@ what is stored:
 ```bash
 drush tool:info surface:registration.step3:configure
 
-drush tool:run surface:registration.step3:configure:read --uid=1
+drush tool:run surface:registration.step3:read --uid=1
 
 drush tool:run surface:registration.step3:configure --uid=1 --input='{"values":{"title":"Autumn meetup","capacity":50,"venue":"harbour","room":"harbour_deck","pricing":"paid","ticket":{"price":12.5,"currency":"EUR"}}}'
 
@@ -1486,7 +1492,7 @@ volunteer is never asked for an email
 #[Resource('event.desk', storage: InfoDeskStorage::class)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the information desk'),
-  description: new TranslatableMarkup('Sets the information desk: its phone, whether it is listed in the printed program, its lead and up to four volunteers.'),
+  description: new TranslatableMarkup('Sets the information desk: its phone, whether it is listed in the printed program, where it stands, its lead and up to four volunteers.'),
   permission: 'administer site configuration',
 )]
 final class InfoDeskResource implements ResourceInterface {
@@ -1499,6 +1505,14 @@ final class InfoDeskResource implements ResourceInterface {
       ->setRequired(TRUE);
 
     $inputs->add('in_program', 'boolean', t('Listed in the printed program'), default: FALSE);
+
+    // A pair only the desk holds: an anonymous map, written inline.
+    $inputs->addMap('location', t('Where the desk stands'), static function (BlueprintInterface $location): void {
+      $location->add('lat', 'float', t('Latitude'), default: 43.6532)
+        ->addConstraint('Range', ['min' => -90, 'max' => 90]);
+      $location->add('lng', 'float', t('Longitude'), default: -79.3832)
+        ->addConstraint('Range', ['min' => -180, 'max' => 180]);
+    });
 
     $inputs->attach('lead', PersonStructure::class, reads: ['listed' => 'in_program'])
       ->setLabel(t('Desk lead'));
@@ -1564,14 +1578,14 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 17 |
 | [`modules/surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 14 |
 | [`modules/surface_examples/src/Storage/PressStorage.php`](src/Storage/PressStorage.php) | its storage: names the config object | 3 |
-| [`modules/surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, the person attached, and a collection of up to four | 17 |
+| [`modules/surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, where it stands as an anonymous map, the person attached, and a collection of up to four | 23 |
 | [`modules/surface_examples/src/Storage/InfoDeskStorage.php`](src/Storage/InfoDeskStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step8` | the press page's route | 8 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step8_desk` | the information desk's route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.press` | the press page's config schema, generated from the class | 39 |
-| [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.desk` | the information desk's config schema, generated from the class | 59 |
+| [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.desk` | the information desk's config schema, generated from the class | 79 |
 | [`modules/surface_examples/config/install/surface_examples.press.yml`](config/install/surface_examples.press.yml) | the press page's shipped settings | 7 |
-| [`modules/surface_examples/config/install/surface_examples.desk.yml`](config/install/surface_examples.desk.yml) | the information desk's shipped settings | 11 |
+| [`modules/surface_examples/config/install/surface_examples.desk.yml`](config/install/surface_examples.desk.yml) | the information desk's shipped settings | 14 |
 
 ## Example 9: keys that come from the site
 
@@ -3095,7 +3109,10 @@ final class CredentialSources implements ClosedSiteListInterface, ContainerInjec
 <!-- code: src/Structure/PastedCredentialStructure.php -->
 
 ```php
-#[Structure('event.mailer.credential.pasted')]
+#[Structure('event.mailer.credential.pasted',
+  label: new TranslatableMarkup('Pasted credential'),
+  description: new TranslatableMarkup('The mailer credential pasted in, kept as a secret and never read back.'),
+)]
 final class PastedCredentialStructure implements StructureInterface {
 
   /**
@@ -3114,7 +3131,10 @@ final class PastedCredentialStructure implements StructureInterface {
 <!-- code: src/Structure/ManagedCredentialStructure.php -->
 
 ```php
-#[Structure('event.mailer.credential.managed')]
+#[Structure('event.mailer.credential.managed',
+  label: new TranslatableMarkup('Managed credential'),
+  description: new TranslatableMarkup('The mailer credential as the name of a key the site manages, whose value is read where it is used.'),
+)]
 final class ManagedCredentialStructure implements StructureInterface {
 
   /**
@@ -3488,7 +3508,7 @@ Failed: The values were refused:
 ```
 
 ```bash
-drush tool:run surface:event.mailer:configure:read --uid=1
+drush tool:run surface:event.mailer:read --uid=1
 ```
 
 ```
@@ -3538,8 +3558,8 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 18 |
 | [`modules/surface_examples/src/Variants/CredentialSources.php`](src/Variants/CredentialSources.php) | the provider: the pasted source always, the managed source while the keys module is on, both named for storage | 28 |
-| [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 9 |
-| [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 9 |
+| [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 12 |
+| [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 12 |
 | [`modules/surface_examples/src/Storage/MailerStorage.php`](src/Storage/MailerStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step14` | the mailer's route | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.mailer` | the mailer's config schema, generated from the class | 18 |
@@ -3734,14 +3754,18 @@ final class VenueResource implements ResourceInterface {
 
   /**
    * Edits a venue, named by its machine name, which stays as it is.
+   *
+   * Handed the machine name; the venue storage loads the venue, and
+   * refuses a name no venue has.
    */
   #[Operation('update',
     label: new TranslatableMarkup('Edit a venue'),
     description: new TranslatableMarkup('Changes a venue, named by its machine name, which stays as it is: its name, capacity, address, rooms, weight and status.'),
     permission: self::ADMINISTER,
   )]
-  public static function update(EventVenue $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function update(string $id): OperationContext {
+    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "update" operation of event.venue');
+    return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 
   /**
@@ -3754,8 +3778,9 @@ final class VenueResource implements ResourceInterface {
     destructive: TRUE,
     deletes: TRUE,
   )]
-  public static function delete(EventVenue $id): OperationContext {
-    return new OperationContext(known: ['id' => (string) $id->id()]);
+  public static function delete(string $id): OperationContext {
+    $venue = \Drupal::classResolver(VenueStorage::class)->named($id, 'The "delete" operation of event.venue');
+    return new OperationContext(known: ['id' => (string) $venue->id()]);
   }
 
   /**
@@ -4428,7 +4453,7 @@ Success: Add a venue: the values were accepted and written.
 ```
 
 ```bash
-drush tool:run surface:event.venue:update:read --uid=1 --input='{"id":"town_hall"}'
+drush tool:run surface:event.venue:read --uid=1 --input='{"id":"town_hall"}'
 ```
 
 ```
@@ -4516,7 +4541,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 47 |
-| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 77 |
+| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 79 |
 | [`modules/surface_examples/src/Slugify.php`](src/Slugify.php) | the slug's deriver: a pure function of the name, run when a venue is added | 6 |
 | [`modules/surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 18 |
 | [`modules/surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
@@ -4529,8 +4554,8 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples/config/install/surface_examples.event_venue.library.yml`](config/install/surface_examples.event_venue.library.yml) | the Old Library, shipped | 18 |
 | [`modules/surface_examples/config/install/surface_examples.event_venue.harbour.yml`](config/install/surface_examples.event_venue.harbour.yml) | the Harbour Centre, shipped | 18 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_create` | the add form: the generic operation form | 8 |
-| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_update` | the edit form, its {id} the venue | 12 |
-| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_delete` | the remove form: a confirmation, since a delete takes no values | 12 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_update` | the edit form, its {id} the venue's machine name | 8 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step15_delete` | the remove form: a confirmation, since a delete takes no values | 8 |
 | [`modules/surface_examples/src/Form/VenueFormCosmetics.php`](src/Form/VenueFormCosmetics.php) | what the three forms say once they wrote, and the page they go back to | 20 |
 
 ## Example 16: references, three ways
@@ -4547,8 +4572,8 @@ has neither, a role, Sponsorship editor, and when it is installed it
 writes three nodes the calls name: an article, a draft article and a
 page. Uninstalled, it deletes them.
 
-A key that refers to an entity is declared by the data type string of
-what it refers to, and every door sends and answers the entity's id, as
+A key that refers to an entity is declared with `refer()` and the
+entity type it refers to, and every door sends and answers the entity's id, as
 the entity type keeps it: an integer for a node or a user, a string for
 a venue. The config object stores a node or a user by its uuid, which
 names the same entity on a site the config is deployed to, and a venue
@@ -4569,29 +4594,29 @@ final class SponsorshipResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('venue', 'entity:event_venue', t('Venue'), default: 'riverside')
+    $inputs->refer('venue', 'event_venue', t('Venue'), default: 'riverside')
       ->setDescription(t("Where the sponsor's stand is."))
       ->setRequired(TRUE);
 
-    $inputs->add('contact', 'entity:user', t('Contact'))
+    $inputs->refer('contact', 'user', t('Contact'))
       ->setDescription(t('Who answers for the sponsor.'));
 
-    $inputs->add('page', 'entity:node:article', t('Announcement'))
+    $inputs->refer('page', 'node', t('Announcement'), bundles: ['article'])
       ->setDescription(t('The article that announces the sponsor.'));
 
     // Of any type: an entity type, then an id of it.
-    $inputs->add('thing', 'entity', t('Featured beside'))
+    $inputs->refer('thing', NULL, t('Featured beside'))
       ->setDescription(t('Any content the sponsor is featured beside.'))
       ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
 
-    $inputs->add('setting', 'entity', t('Linked to'))
+    $inputs->refer('setting', NULL, t('Linked to'))
       ->setDescription(t('A venue or a role the sponsorship is linked to.'))
       ->addConstraint('SurfaceReferenceableType', [
         'interface' => ConfigEntityInterface::class,
         'targets' => ['event_venue' => [], 'user_role' => [], 'node' => []],
       ]);
 
-    $inputs->add('credit', 'entity', t('Credited on'))
+    $inputs->refer('credit', NULL, t('Credited on'))
       ->setDescription(t('An article or a user the sponsor is credited on.'))
       ->addConstraint('SurfaceReferenceableType', [
         'targets' => ['node' => ['article'], 'user' => []],
@@ -4603,12 +4628,12 @@ final class SponsorshipResource implements ResourceInterface {
 
 | Key | Declared as | What it builds |
 | --- | --- | --- |
-| `venue` | `entity:event_venue` | a string, the venue's machine name, with `SurfaceValidReference` naming the entity type |
-| `contact` | `entity:user` | an integer, a user's id, with the same constraint |
-| `page` | `entity:node:article` | an integer, a node's id, the constraint naming the bundle too |
-| `thing` | `entity`, content entities | two keys attached at the key: `entity_type`, a choice of the content entity types the account may reference one of, and `id`, a string, which a refiner narrows to the entity type chosen with the same constraint |
-| `setting` | `entity`, config entities among three | the same two keys; of the three entity types it names, node is no config entity, so the venue and the role are offered |
-| `credit` | `entity`, an article or a user | the same two keys; the bundle list narrows a node's id to articles |
+| `venue` | `refer('venue', 'event_venue', ...)` | a string, the venue's machine name, with `SurfaceValidReference` naming the entity type |
+| `contact` | `refer('contact', 'user', ...)` | an integer, a user's id, with the same constraint |
+| `page` | `refer('page', 'node', ..., bundles: ['article'])` | an integer, a node's id, the constraint naming the bundle too |
+| `thing` | `refer('thing', NULL, ...)`, content entities | two keys attached at the key: `entity_type`, a choice of the content entity types the account may reference one of, and `id`, a string, which a refiner narrows to the entity type chosen with the same constraint |
+| `setting` | `refer('setting', NULL, ...)`, config entities among three | the same two keys; of the three entity types it names, node is no config entity, so the venue and the role are offered |
+| `credit` | `refer('credit', NULL, ...)`, an article or a user | the same two keys; the bundle list narrows a node's id to articles |
 
 Which entities a key may name is core's entity reference selection
 handler's answer for the account asking: the `default` handler for the
@@ -4694,7 +4719,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_references/surface_examples_references.info.yml`](../surface_examples_references/surface_examples_references.info.yml) | the module: a second one, which needs node for the article the announcement is | 11 |
-| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys declared by the data type string of what they refer to, and three of any entity type, each filtered | 31 |
+| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys declared with refer() and the entity type they refer to, and three of any entity type, each filtered | 31 |
 | [`modules/surface_examples_references/src/Storage/SponsorshipStorage.php`](../surface_examples_references/src/Storage/SponsorshipStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples_references/surface_examples_references.routing.yml`](../surface_examples_references/surface_examples_references.routing.yml), entry `surface_examples.step16` | the route: the generic operation form, with the examples' panels | 8 |
 | [`modules/surface_examples_references/surface_examples_references.permissions.yml`](../surface_examples_references/surface_examples_references.permissions.yml) | its permission, to set the sponsorship | 3 |
@@ -4707,13 +4732,13 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_references/surface_examples_references.install`](../surface_examples_references/surface_examples_references.install) | deletes them when it is uninstalled | 3 |
 | [`modules/surface_examples_references/src/Sponsorship.php`](../surface_examples_references/src/Sponsorship.php) | the three nodes: an article, a draft article and a page, their ids kept in State | 40 |
 | [`modules/surface_examples_references/surface_examples_references.post_update.php`](../surface_examples_references/surface_examples_references.post_update.php) | stores as uuids the ids a site stored before the object stored uuids | 6 |
-| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 234 |
+| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 245 |
 | [`src/Reference/EntityReferenceStructure.php`](../../src/Reference/EntityReferenceStructure.php) | the two parts of a bare entity key, and the refiner that narrows its id to the entity type chosen; the main module's | 49 |
 | [`src/Reference/ReferenceStorageLayout.php`](../../src/Reference/ReferenceStorageLayout.php) | how a config storage keeps a reference to content: by uuid, read back as the id; the main module's | 373 |
-| [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 20 |
+| [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 22 |
 | [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |
 | [`src/Plugin/SurfaceOptionsResolver/ReferenceOptions.php`](../../src/Plugin/SurfaceOptionsResolver/ReferenceOptions.php) | the resolver that lists the candidates up to the limit; the main module's | 39 |
-| [`src/Plugin/SurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/SurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 59 |
+| [`src/Plugin/SurfaceWidget/AutocompleteWidget.php`](../../src/Plugin/SurfaceWidget/AutocompleteWidget.php) | core's entity autocomplete, for a key past the limit; the main module's | 65 |
 
 ## Example 17: retitle in bulk, access borrowed
 
@@ -4796,7 +4821,7 @@ final class RetitleItemStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('node', 'entity:node', t('Node'))
+    $inputs->refer('node', 'node', t('Node'))
       ->setDescription(t('The node to retitle.'))
       ->setRequired(TRUE);
 
@@ -5028,7 +5053,7 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_retitle/src/Hook/RetitleHooks.php`](../surface_examples_retitle/src/Hook/RetitleHooks.php) | writes the three pages once the module is installed, and locks the third one's title while a State flag is set, as another module would through core's field access | 26 |
 | [`modules/surface_examples_retitle/surface_examples_retitle.install`](../surface_examples_retitle/surface_examples_retitle.install) | deletes them when it is uninstalled | 3 |
 | [`modules/surface_examples_retitle/src/Retitle.php`](../surface_examples_retitle/src/Retitle.php) | the three pages, their ids kept in State | 38 |
-| [`src/ResourceBuild/Gates.php`](../../src/ResourceBuild/Gates.php) | what answers a gate: core's access handler, or another resource's operation; the main module's | 87 |
+| [`src/ResourceBuild/Gates.php`](../../src/ResourceBuild/Gates.php) | what answers a gate: core's access handler, or another resource's operation; the main module's | 84 |
 | [`src/ResourceBuild/ItemGates.php`](../../src/ResourceBuild/ItemGates.php) | the gates asked once per item, before the storage sees it; the main module's | 35 |
 
 ## How this page is kept true

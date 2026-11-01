@@ -44,11 +44,11 @@ final class ReactDoors implements CatalogDoorLinksInterface {
   /**
    * {@inheritdoc}
    */
-  public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array {
+  public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     // The React pages modules serve the operation at, each with what its
     // route says of the keys.
     $pages = $this->routes->reactPages($resource, $operation);
-    if (!$this->served($resource, $operation, $standalone, $reads)) {
+    if (!$this->served($resource, $operation, $standalone)) {
       return $pages === [] ? [] : [SiteCatalog::REACT => implode(', ', $pages)];
     }
     $own = str_ireplace('%3A', ':', $this->page($resource, $operation)->toString());
@@ -58,8 +58,8 @@ final class ReactDoors implements CatalogDoorLinksInterface {
   /**
    * {@inheritdoc}
    */
-  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): array {
-    if (!$this->served($resource, $operation, $standalone, $reads)) {
+  public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
+    if (!$this->served($resource, $operation, $standalone)) {
       $page = $this->routes->reactPageLink($resource, $operation);
       return $page === NULL ? [] : [SiteCatalog::REACT => $page];
     }
@@ -75,18 +75,17 @@ final class ReactDoors implements CatalogDoorLinksInterface {
    *   The operation.
    * @param bool $standalone
    *   Whether it can be asked on its own.
-   * @param bool $reads
-   *   Whether what it changes can be read on its own.
    *
    * @return bool
-   *   TRUE when the HTTP door names its path.
+   *   TRUE when the HTTP door names its path, and the operation takes
+   *   values: the read of one thing takes none, so it has no page.
    *
    * @throws \Throwable
    *   What the HTTP door throws for an operation it cannot name a path
    *   for, so the catalog leaves this door out with that one.
    */
-  protected function served(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone, bool $reads): bool {
-    return $this->http->doors($resource, $operation, $standalone, $reads) !== [];
+  protected function served(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): bool {
+    return !$operation->readsOne() && $this->http->doors($resource, $operation, $standalone) !== [];
   }
 
   /**

@@ -7,7 +7,7 @@ namespace Drupal\surface_examples;
 /**
  * Example 5's calls to the example 3 tools, written down once.
  *
- * Three calls to the write tool, and one to the read tool beside it,
+ * Three calls to the write tool, and one to the resource's read,
  * which answers with what is stored and changes nothing.
  *
  * The kernel test makes them, scripts/examples-dry-run.php prints what
@@ -25,9 +25,9 @@ final class ExampleCalls {
   public const TOOL = 'surface:registration.step3:configure';
 
   /**
-   * The read tool beside it, which answers with what is stored.
+   * The resource's read, which answers with what is stored.
    */
-  public const READ_TOOL = 'surface:registration.step3:configure:read';
+  public const READ_TOOL = 'surface:registration.step3:read';
 
   /**
    * The calls: what each sends, and whether it is a dry run.

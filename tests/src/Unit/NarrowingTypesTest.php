@@ -10,6 +10,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Narrowing;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -68,8 +69,8 @@ class NarrowingTypesTest extends UnitTestCase {
     $map = MapDataDefinition::create();
     $map->setPropertyDefinition('width', DataDefinition::create('integer'));
     return [
-      'any to a primitive' => [DataDefinition::create('any'), DataDefinition::create('string')],
-      'any to a map' => [DataDefinition::create('any'), $map],
+      'the placeholder to a primitive' => [static::placeholder(), DataDefinition::create('string')],
+      'the placeholder to a map' => [static::placeholder(), $map],
       'a type to its derivative' => [DataDefinition::create('entity'), DataDefinition::create('entity:node')],
       'a derivative to its own derivative' => [
         DataDefinition::create('entity:node'),
@@ -144,6 +145,16 @@ class NarrowingTypesTest extends UnitTestCase {
         DataDefinition::create('any'),
         'the data type changed from string to any',
       ],
+      'an any that is no placeholder to a primitive' => [
+        DataDefinition::create('any'),
+        DataDefinition::create('string'),
+        'the data type changed from any to string',
+      ],
+      'an any that is no placeholder to a map' => [
+        DataDefinition::create('any'),
+        MapDataDefinition::create(),
+        'the data type changed from any to map',
+      ],
       'a list item to any' => [
         new ListDataDefinition([], DataDefinition::create('string')),
         new ListDataDefinition([], DataDefinition::create('any')),
@@ -165,6 +176,18 @@ class NarrowingTypesTest extends UnitTestCase {
         'the NotNull constraint was removed',
       ],
     ];
+  }
+
+  /**
+   * Builds a variants' placeholder: the one `any` that becomes anything.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   An `any` marked with its deciding key.
+   */
+  protected static function placeholder(): DataDefinition {
+    $placeholder = DataDefinition::create('any');
+    DefinitionMetadata::setVariantsBy($placeholder, 'kind');
+    return $placeholder;
   }
 
 }

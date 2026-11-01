@@ -178,6 +178,16 @@ final class DefinitionMetadata {
   protected const RESOLVE_KEY = 'surface_resolve';
 
   /**
+   * The offset marking an `any` value a schema read holds whole.
+   *
+   * Written by SchemaReader on a value no type of the type table says,
+   * whose schema it keeps (a JsonSchema constraint) or which says nothing
+   * of it; the type table holds such an `any` where it refuses one an
+   * author declares.
+   */
+  protected const HELD_WHOLE_KEY = 'surface_held_whole';
+
+  /**
    * Declares the value a definition starts from.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
@@ -1076,6 +1086,29 @@ final class DefinitionMetadata {
       return array_key_exists($key, $definition->toArray());
     }
     return $access->offsetExists($key);
+  }
+
+  /**
+   * Marks an `any` value as one a schema read holds whole.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The value SchemaReader read.
+   */
+  public static function setHeldWhole(DataDefinitionInterface $definition): void {
+    static::arrayAccess($definition)->offsetSet(static::HELD_WHOLE_KEY, TRUE);
+  }
+
+  /**
+   * Answers whether an `any` value is one a schema read holds whole.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   *
+   * @return bool
+   *   TRUE when SchemaReader marked it.
+   */
+  public static function isHeldWhole(DataDefinitionInterface $definition): bool {
+    return $definition instanceof \ArrayAccess && $definition->offsetExists(static::HELD_WHOLE_KEY);
   }
 
   /**

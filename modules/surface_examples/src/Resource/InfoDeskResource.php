@@ -19,12 +19,13 @@ use Drupal\surface_examples\Structure\PersonStructure;
  * Its lead is the same person structure, its `listed` port reading this
  * desk's `in_program`; its volunteers are a collection of persons, up to
  * four, whose port nothing wires. Its phone is the same shape as a
- * person's.
+ * person's. Where it stands is a latitude and a longitude only the desk
+ * holds: an anonymous map, addMap(), with no def of its own.
  */
 #[Resource('event.desk', storage: InfoDeskStorage::class)]
 #[Operation('configure',
   label: new TranslatableMarkup('Configure the information desk'),
-  description: new TranslatableMarkup('Sets the information desk: its phone, whether it is listed in the printed program, its lead and up to four volunteers.'),
+  description: new TranslatableMarkup('Sets the information desk: its phone, whether it is listed in the printed program, where it stands, its lead and up to four volunteers.'),
   permission: 'administer site configuration',
 )]
 final class InfoDeskResource implements ResourceInterface {
@@ -37,6 +38,14 @@ final class InfoDeskResource implements ResourceInterface {
       ->setRequired(TRUE);
 
     $inputs->add('in_program', 'boolean', t('Listed in the printed program'), default: FALSE);
+
+    // A pair only the desk holds: an anonymous map, written inline.
+    $inputs->addMap('location', t('Where the desk stands'), static function (BlueprintInterface $location): void {
+      $location->add('lat', 'float', t('Latitude'), default: 43.6532)
+        ->addConstraint('Range', ['min' => -90, 'max' => 90]);
+      $location->add('lng', 'float', t('Longitude'), default: -79.3832)
+        ->addConstraint('Range', ['min' => -180, 'max' => 180]);
+    });
 
     $inputs->attach('lead', PersonStructure::class, reads: ['listed' => 'in_program'])
       ->setLabel(t('Desk lead'));

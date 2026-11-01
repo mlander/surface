@@ -35,13 +35,13 @@ final class ReferenceSettingsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('page', 'entity:node', 'Page');
-    $inputs->add('kept', 'entity:node', 'Kept by id')
+    $inputs->refer('page', 'node', 'Page');
+    $inputs->refer('kept', 'node', 'Kept by id')
       ->setSetting(References::STORED_AS, References::BY_ID);
-    $inputs->add('role', 'entity:user_role', 'Role');
-    $inputs->add('thing', 'entity', 'Thing')
+    $inputs->refer('role', 'user_role', 'Role');
+    $inputs->refer('thing', NULL, 'Thing')
       ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
-    $inputs->add('kept_thing', 'entity', 'Thing kept by id')
+    $inputs->refer('kept_thing', NULL, 'Thing kept by id')
       ->setSetting(References::STORED_AS, References::BY_ID)
       ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
     $inputs->attach('nested', AuthorStructure::class)
@@ -49,7 +49,7 @@ final class ReferenceSettingsResource implements ResourceInterface {
     $inputs->attachList('items', ItemStructure::class, max: 5)
       ->setLabel('Items');
 
-    $inputs->addEach('pages', 'entity:node', from: ReferenceSlots::class)
+    $inputs->addEach('pages', NULL, from: ReferenceSlots::class, to: 'node')
       ->setLabel('Pages');
 
     $inputs->attachEach('authors', AuthorStructure::class, from: ReferenceSlots::class)
