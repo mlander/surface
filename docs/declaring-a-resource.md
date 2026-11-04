@@ -69,7 +69,7 @@ part of a resource or structure has one home:
 | What | Where |
 | --- | --- |
 | Its id, and which keys say which thing it is | `#[Resource('id', identity: [...])]`; a structure has an id and no identity, `#[Structure('id')]` |
-| Its keys: type, label, default, constraints | `static defineInputs(BlueprintInterface $inputs)` |
+| Its keys: type, label, default, constraints | `static defineInputs(BlueprintInterface $inputs)`, or properties carrying attributes ([Declared as properties](#declared-as-properties)) |
 | What it emits | `static defineOutputs()`, on `DefinesOutputsInterface`; see [Outputs](outputs.md) |
 | A key whose allowed values depend on another key's value | a rule, `$inputs->narrow('key')->when(Condition::...)`, in `defineInputs()`; a static `#[RefinesInput('key')]` method where the effect must be computed ([Declaring a rule](refinement.md#declaring-a-rule)) |
 | How much is already known: add, edit, reuse | `#[Operation]` on the class, or on a static method returning an `OperationContext` when the context needs more |
@@ -370,6 +370,139 @@ if (\Drupal::moduleHandler()->moduleExists('help')) {
 $inputs->add('max_length', 'integer', t('Maximum alias length'), default: 100)
   ->setDescription($description);
 ```
+
+## Declared as properties
+
+A class may declare its keys as properties instead: each key a property
+carrying the attribute of the blueprint verb it stands for, and the class
+using `DeclaresByProperties`, which supplies `defineInputs()` and
+`defineOutputs()`. The build calls `defineInputs()` as on any class; the
+trait reads the properties in the order they are written and calls the
+same verbs the method would. It is a second spelling of the blueprint,
+never a second contract: what a verb refuses, it refuses, and the
+contract is the one the calls give. Example 18's caterer, shortened:
+
+```php
+#[Resource('event.catering', storage: CateringStorage::class)]
+#[Group('details', 'Details')]
+final class CateringResource implements ResourceInterface {
+
+  use DeclaresByProperties;
+
+  #[Input('Show the caterer on the event page')]
+  public bool $public = FALSE;
+
+  #[Input('Headcount', description: 'How many people to cater for.')]
+  #[Constraint('Range', ['min' => 1, 'max' => 5000])]
+  public int $headcount;
+
+  #[Input('Budget')]
+  #[Constraint('Range', ['min' => 0])]
+  #[Describe(group: 'details', suffix: 'EUR')]
+  public ?float $budget = NULL;
+
+  #[Input('Served at', description: 'HH:MM, on a 24-hour clock.')]
+  #[Widget('time')]
+  #[Rule(whenEquals: ['public', TRUE], require: TRUE, because: 'Say when food is served while the caterer is shown.')]
+  public ?string $served_at = NULL;
+
+  #[Attach(label: 'Caterer contact', reads: ['listed' => 'public'])]
+  public PersonStructure $contact;
+
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces); the
+attributes are in `Drupal\surface\Resource\Attribute`.
+
+PHP says the key's name (the property's), its type (`string`, `int`,
+`float`, `bool` or a shape's class), its default (the initializer) and
+whether it must be given. The attributes say the rest:
+
+| With calls | As a property |
+| --- | --- |
+| `add('capacity', 'integer', t('Capacity'))` | `#[Input('Capacity')] public int $capacity;` |
+| `->setRequired(TRUE)` | a type that is not nullable, with no initializer; `required: TRUE` where it also has a default |
+| `default: 0` | the initializer, `public int $weight = 0;` |
+| no default, not required | `public ?string $address = NULL;` |
+| `'email'`, `'machine_name'`, any type the property cannot say | `#[Input('Email', type: 'email')]` |
+| a shape | the property typed with the shape's class, `public ?PhoneNumber $phone = NULL;` |
+| `->setDescription(t(...))` | `description:` on the attribute |
+| `->addConstraint('Length', [...])` | `#[Constraint('Length', [...])]`, repeatable, in the order written |
+| `->setSetting('widget', 'time')` | `#[Widget('time')]`; any other setting `#[Setting('multiline', TRUE)]` |
+| `DefinitionMetadata::setExamples()` | `#[Examples('Harbour Kitchen')]` |
+| `describe('key', group:, weight:, placeholder:, prefix:, suffix:, help:)` | `#[Describe(...)]`, `group:` naming a `#[Group]` on the class |
+| `ArrangementGroup::fieldset()`, `::details()` | `#[Group('id', 'Label')]`, `details: TRUE` for a details element |
+| `addList('days', 'string', ...)` | `#[Input('Days', list: 'string')] public array $days = [];`, an item constraint `#[Constraint(..., item: TRUE)]` |
+| `addList()` of maps | `list:` naming a plain class of `#[Input]` properties |
+| `addMap('coordinates', ..., fn)` | `#[Map('Coordinates')] public Coordinates $coordinates;`, a plain class of `#[Input]` properties |
+| `attach('contact', PersonStructure::class, reads: [...])` | `#[Attach(reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
+| `attachList('rooms', VenueRoomStructure::class, max: 20)` | `#[AttachList(VenueRoomStructure::class, max: 20)] public array $rooms;` |
+| `attachVariants('ticket', by: 'pricing')` | `#[Variants(by: 'pricing')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
+| `addEach()`, `attachEach()` | `#[Each(from:, type:)]`, `#[AttachEach(Structure::class, from:)]` on an array property |
+| `reads('listed', 'boolean')` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
+| `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
+| `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['Range', ['max' => 5]])]` on `$items` |
+| `mixIn(ReviewStructure::class, reads: [...])` | `#[MixIn(ReviewStructure::class, reads: [...])]` on the class |
+| `defineOutputs()` | `#[Output(...)]`, which says what `#[Input]` says, on the class implementing `DefinesOutputsInterface` |
+
+`#[RefinesInput]` methods, `#[Operation]`, `#[Resource]`, `#[Structure]`,
+`#[Variant]`, alters, access and storage are as on any class.
+
+- **Required.** `required:` when given; else a property whose type is
+  not nullable and that has no initializer is required. The initializer
+  is the default, and a nullable property with `= NULL` has no default. A
+  key that must be sent and starts from a default says both:
+  `#[Input('Frequency', required: TRUE)] public string $frequency = 'weekly';`.
+  A computed key is never required by what its property says.
+- **Texts.** An attribute argument cannot call `t()`, so the texts the
+  reader names (a label, a description, a placeholder, a prefix, a
+  suffix, a help text, a group's title, a rule's reason) are written as
+  bare strings, which it wraps in `TranslatableMarkup`. A text inside a
+  constraint's options (a message, a choice's label) is handed to core
+  as it is, and is written `new TranslatableMarkup('...')`. The
+  trade-off: a bare string is translated where a translation exists, but
+  string extraction does not find it; `new TranslatableMarkup('...')` is
+  found.
+- **Order.** The properties, in the order written, each one's
+  `#[Describe]` right after it; then each `#[MixIn]`, its members after
+  every property; then each `#[Rule]`, in the order of the properties
+  carrying them. A class that mixes in before its own keys keeps
+  `defineInputs()`.
+- **What stays a method.** What an attribute argument cannot hold: a list
+  computed by a call (`Venues::rooms()`), a key declared in a loop, a
+  condition `#[Rule]` does not spell (it spells `whenEquals:`,
+  `whenPresent:`, `whenAbsent:` and `whenIn:`, all required to hold when
+  several are given; `not`, `anyOf` and a bound stay `narrow()` or a
+  `#[RefinesInput]` method). `addDefinition()`, `resolve()`,
+  `extendChoices()` and `addCacheableDependency()` have no attribute: the
+  long form has none by design, a resolve and a widening are an alter's,
+  and a cacheable dependency is a derived resource's, which has no class.
+- **One spelling per class.** A class declares its keys with
+  `defineInputs()` or with properties, never both; a derived resource,
+  which has no class, keeps its callables.
+- **What it refuses.** Beside what the verbs refuse: a public property
+  with no attribute saying what it is, a `#[Describe(group:)]` naming no
+  `#[Group]`, a property type that is no key type and no shape with no
+  `type:`, an `#[Attach]` or `#[Map]` naming no class, an item constraint
+  on a key that is no list, and an `#[Output]` on a class that does not
+  implement `DefinesOutputsInterface`. Each message names the class, the
+  property and the fix. A static or protected property with no attribute
+  is left alone, so a plugin that is its own structure keeps its own.
+- **The reader reads no value.** Only types, initializers and attributes,
+  so reading a class twice calls the same verbs, which `addMap()` needs
+  when it runs the declaration again to fill a map that needs a frame.
+- **Coding standard.** Drupal's asks a docblock on every property and a
+  lowerCamel name. On a key declared as a property the attribute is its
+  documentation and the name is the key's, snake_case as every key is,
+  so a module leaves `Drupal.Commenting.VariableComment.Missing` and
+  `Drupal.NamingConventions.ValidVariableName.LowerCamelName` off for
+  those classes, as this module's `phpcs.xml.dist` does.
+
+`tests/modules/surface_property_test` declares every attribute twice,
+once with calls and once as properties, and `PropertyDeclarationTest`
+holds the two to the same documents
+([decision](decisions.md#a-class-may-declare-its-keys-as-properties)).
 
 ## On a plugin
 

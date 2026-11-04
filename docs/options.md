@@ -197,6 +197,8 @@ the `#[SurfaceOptionsResolver]` attribute, which names the validation
 constraint plugin the resolver reads.
 
 ```php
+use Symfony\Component\Validator\Constraint;
+
 public function applies(Constraint $constraint): bool;
 public function resolve(Constraint $constraint, DataDefinitionInterface $definition): OptionSet;
 ```

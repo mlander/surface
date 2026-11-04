@@ -97,6 +97,10 @@ The API is in `Drupal\surface\Resource`; the attributes in
 | **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module** | `alterInputs($inputs)` | `#[RefinesInput('key')]` methods |
 
+An owner may write its keys as properties carrying attributes instead of
+`defineInputs()`: the same blueprint in a second spelling, chosen per
+class ([Declared as properties](declaring-a-resource.md#declared-as-properties)).
+
 The example block's configuration, `ExampleBlockStructure` in the example module,
 is the first one written this way. It is a structure: the block holds
 it, and the block's host stores it.

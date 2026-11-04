@@ -42,6 +42,11 @@ inputs, the values a caller sends; each input is a key. The calls
 chained after an `add()`, such as `setRequired()` and `addConstraint()`,
 say what the key allows: the next page's idea.
 
+A class may instead write each key as a property of its own, with an
+attribute saying what `add()` would say
+([Declared as properties](../declaring-a-resource.md#declared-as-properties));
+these pages use `defineInputs()` throughout.
+
 ## The four parts of a key
 
 `add()` takes the key's name, its type, its label and its default:

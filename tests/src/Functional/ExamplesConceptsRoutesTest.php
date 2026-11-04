@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests examples 7 to 12 and 14 over HTTP, as the video shows them.
+ * Tests examples 7 to 12, 14 and 18 over HTTP, as the video shows them.
  *
  * On a fresh site with only the examples enabled: every route answers an
  * administrator and refuses anonymous, the landing page lists each, and
@@ -49,6 +49,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     'surface-examples/12' => 'A JSON Schema the site already has is read into a structure, keyword by keyword',
     'surface-examples/14' => 'Two resources call a service with a credential',
     'surface-examples/14/webhook' => 'Two resources call a service with a credential',
+    'surface-examples/18' => 'The keys of this resource are properties of its class',
   ];
 
   /**
@@ -82,6 +83,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
       'Example 12: a schema read into a structure',
       'Example 14: an optional extension',
       'Example 15: a config entity of your own',
+      'Example 18: declared as properties',
     ] as $title) {
       $assert->pageTextContains($title);
     }

@@ -254,6 +254,12 @@ on one page, the shipped use C5 found missing
 The table's row says it; `PublicSurfaceTest` does not count a
 context's methods, so its pins are unchanged.
 
+*Grown 2026-11-04,* by eighteen attributes and their 76 arguments, the
+blueprint's verbs spelled as properties
+([A class may declare its keys as properties](#a-class-may-declare-its-keys-as-properties)):
+no blueprint method and no interface, since the trait calls the verbs
+there are. The pins below are 27 attributes and 112 arguments since.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -805,6 +811,14 @@ one that dropped the interface to get one past the compiler.
 (`Resources::buildResource()`, `Binding::assertStaticOnResource()`,
 `ResourceRegistry::assertResourceClass()`)
 
+*Amended 2026-11-04:* the keys may be declared as properties of the
+class instead of calls in `defineInputs()`
+([A class may declare its keys as properties](#a-class-may-declare-its-keys-as-properties)).
+Nothing here moves: `DeclaresByProperties` supplies `defineInputs()` and
+`defineOutputs()`, still `public static`, and the reader reads the
+properties' types, initializers and attributes, never a value, so the
+class is still never instantiated and a property is never set.
+
 Translatable strings in static context use the global `t()`: a
 resource's or structure's `defineInputs()`, refiners and operations, an alter's
 static refiners (with `PluralTranslatableMarkup` for a plural), a
@@ -820,6 +834,79 @@ always a placeholder. `new TranslatableMarkup` stays only inside
 attribute arguments (`#[Operation(label:)]`, plugin attributes), where
 a function call is not allowed; a class the container builds keeps
 injecting `string_translation` and calling `$this->t()`.
+
+### A class may declare its keys as properties
+
+Decided 2026-11-04. A resource or structure may declare its keys as
+properties of its class, each carrying the attribute of the blueprint
+verb it stands for (`#[Input]` for `add()` and, with `list:`,
+`addList()`; `#[Attach]` for `attach()`; `#[Rule]` for
+`narrow()->when()`; eighteen in all, in `src/Resource/Attribute/`), and
+use `DeclaresByProperties`, which supplies `defineInputs()` and
+`defineOutputs()` ([Declared as properties](declaring-a-resource.md#declared-as-properties)).
+
+- **A projection of the blueprint, never a second contract.** The trait
+  calls `PropertyDeclaration`, which walks the properties in the order
+  they are written and calls the same `BlueprintInterface` verbs the
+  method would: what a verb refuses is refused by the verb, and the
+  contract is the one the calls give. The engine, alters, refiners,
+  operations, access and the doors do not know which spelling a class
+  used. `PropertyDeclarationTest` holds a twin of every construct,
+  declared both ways, to the same two documents, byte for byte once the
+  ids are made the same.
+- **Why.** The type, the default and whether a key must be given are
+  said by PHP, read by the reader and by phpstan alike: one property per
+  key, and the attribute holds only what PHP cannot say. A child is a
+  property typed with its class, a port a property that stores nothing,
+  an anonymous map a nested plain class.
+- **What PHP says.** The key's name is the property's, its type the
+  property's (`string`, `int`, `float`, `bool` or a shape's class; any
+  other is `type:`), its default the initializer. Required is
+  `required:` when given, else a property whose type is not nullable and
+  that has no initializer; a nullable property with `= NULL` has no
+  default. A computed key is never required by inference.
+- **Texts.** An attribute argument cannot call `t()`. The reader wraps
+  the bare strings it names (labels, descriptions, the arrangement's
+  texts, a rule's reason) in `TranslatableMarkup`; a text inside a
+  constraint's options is handed to core as it is, so it is written
+  `new TranslatableMarkup()`. The trade-off: a bare string is translated
+  where a translation exists, but string extraction does not find it;
+  `new TranslatableMarkup('...')` is found and longer. Chosen: bare
+  strings where the reader wraps them, as the shorter spelling.
+- **Order.** The properties in the order written, each `#[Describe]`
+  right after its key, then each `#[MixIn]` (its members after every
+  property), then each `#[Rule]` in the order of the properties carrying
+  them. A class that mixes in before its own keys keeps the method.
+- **Conditions in words.** `Condition`'s factories are calls, so
+  `#[Rule]` spells four: `whenEquals:`, `whenPresent:`, `whenAbsent:`,
+  `whenIn:`, all required to hold when several are given. Any other is
+  `narrow()` in `defineInputs()` or a `#[RefinesInput]` method.
+- **Not spelled.** `addDefinition()`, the long form, which has no short
+  form by design; `resolve()` and `extendChoices()`, an alter's verbs,
+  and alters keep the blueprint; `addCacheableDependency()`, used by
+  derived resources, which have no class.
+- **Either spelling per class, never both.** The method stays for a
+  derived resource, which has no class, and for anything an attribute
+  argument cannot hold: a call (`Venues::rooms()`), a loop, a condition
+  `#[Rule]` does not spell.
+- **What the reader refuses.** Only what the verbs cannot know: a
+  public property with no attribute saying what it is, a group no
+  `#[Group]` declares, a type that is no key type and no shape with no
+  `type:`, a child or map naming no class, an item constraint on a key
+  that is no list, and an output on a class that does not implement
+  `DefinesOutputsInterface`. Each names the class, the property and the
+  fix.
+- **Pure.** The reader reads types, initializers and attributes and
+  never a value, so `addMap()`'s replay of a map that needs a frame
+  reads the same keys again.
+- **Drupal's coding standard** asks a docblock on every property and a
+  lowerCamel name; a key's property is documented by its attribute and
+  named for its key, snake_case, so `phpcs.xml.dist` leaves the two
+  sniffs off for the classes declared this way.
+
+(`Resource\DeclaresByProperties`, `ResourceBuild\PropertyDeclaration`,
+`Resource\Attribute\*`, `PropertyDeclarationTest`, `CateringResource`,
+example 18)
 
 ### An operation on the class
 
@@ -986,7 +1073,7 @@ mention is the constant: `add(self::VENUE, ...)`,
   pages and examples 1 and 2 carry it, since they are what an author
   copies first and what the generator's output is held to
   ([The generator writes what the first page shows](#the-generator-writes-what-the-first-page-shows)).
-  Examples 3 to 17 keep their strings: each shows one concept, the
+  Examples 3 to 18 keep their strings: each shows one concept, the
   constants would add a block to every quoted class for no new idea, and
   a key named as a string still works the same. It is a convention, not
   a rule the build checks.

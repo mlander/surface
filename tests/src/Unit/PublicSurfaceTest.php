@@ -42,6 +42,16 @@ use PHPUnit\Framework\Attributes\Group;
  * Cut on 2026-11-01 by one blueprint method, `refer()`: a reference is a
  * key of the id's type with the constraint every reader already reads
  * (docs/decisions.md#a-reference-is-a-constraint-on-a-value): 17 methods.
+ * Grown on 2026-11-04 by eighteen attributes and their 76 arguments, the
+ * blueprint's verbs spelled as properties (#[Input], #[Output], #[Map],
+ * #[Attach], #[AttachList], #[Variants], #[Each], #[AttachEach], #[Port],
+ * #[Computed], #[Constraint], #[Rule], #[Describe], #[Group], #[Examples],
+ * #[Widget], #[Setting], #[MixIn]), which DeclaresByProperties reads into
+ * the same verbs: a second spelling of the blueprint, never a second
+ * contract, so no blueprint method and no interface was added
+ * (docs/decisions.md#a-class-may-declare-its-keys-as-properties): 27
+ * attributes, 112 arguments. #[Output] extends #[Input], so its five
+ * arguments are counted with it.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -62,8 +72,8 @@ class PublicSurfaceTest extends UnitTestCase {
    * What the surface holds, by kind.
    */
   protected const PINNED = [
-    'attributes' => 9,
-    'attribute arguments' => 36,
+    'attributes' => 27,
+    'attribute arguments' => 112,
     'blueprint methods' => 17,
     'interfaces' => 22,
   ];

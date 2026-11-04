@@ -136,6 +136,7 @@ class ContractBaselineTest extends SurfaceKernelTestBase {
       'block.placement.condition',
       'block.surface_component',
       'event.bulletin',
+      'event.catering',
       'event.desk',
       'event.doors',
       'event.fees',

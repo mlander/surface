@@ -32,6 +32,9 @@ submodule that needs node
 retitle of nodes, a resource of its own that borrows each node's access,
 core's update and its title's edit, asked per node, in a submodule that
 needs node too ([below](#example-17-retitle-in-bulk-access-borrowed)).
+Example 18 is a caterer whose keys are properties of its class, each
+carrying an attribute, the same blueprint as the calls of the earlier
+examples ([below](#example-18-declared-as-properties)).
 
 ```bash
 drush pm:install surface_examples
@@ -45,7 +48,7 @@ venues the module ships, example 15's config entities, and each example
 keeps its settings in a config object of its own
 (`surface_examples.registration_step1` to `_step3`, then
 `surface_examples.bulletin`, `.press`, `.desk`, `.sales`,
-`.program`, `.doors`, `.spotlight`, `.mailer` and `.webhook`), so the examples never write over
+`.program`, `.doors`, `.spotlight`, `.mailer`, `.webhook` and `.catering`), so the examples never write over
 each other.
 
 Every code block on the pages is highlighted with Prism 1.30.0: the
@@ -5067,6 +5070,140 @@ of code, counted without blank lines or comments:
 | [`src/ResourceBuild/Gates.php`](../../src/ResourceBuild/Gates.php) | what answers a gate: core's access handler, or another resource's operation; the main module's | 84 |
 | [`src/ResourceBuild/ItemGates.php`](../../src/ResourceBuild/ItemGates.php) | the gates asked once per item, before the storage sees it; the main module's | 35 |
 
+## Example 18: declared as properties
+
+`/surface-examples/18`
+
+The event's caterer: who, for how many, the budget and dietary needs,
+when food is served, and who to contact. Nothing here is new to the
+series. Each key is a property of the class instead of a call in
+`defineInputs()`, carrying the attribute of the blueprint verb it
+stands for, and `DeclaresByProperties` answers `defineInputs()` by
+calling those verbs in the order the properties are written
+([Declared as properties](../../docs/declaring-a-resource.md#declared-as-properties)).
+
+<!-- code: src/Resource/CateringResource.php -->
+
+```php
+#[Resource('event.catering', storage: CateringStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the catering'),
+  description: new TranslatableMarkup('Sets who caters the event, for how many, the budget, the dietary needs, when food is served and who to contact.'),
+  permission: 'administer site configuration',
+)]
+#[Group('details', 'Details')]
+final class CateringResource implements ResourceInterface {
+
+  use DeclaresByProperties;
+
+  #[Input('Show the caterer on the event page')]
+  public bool $public = FALSE;
+
+  #[Input('Caterer')]
+  #[Constraint('Length', ['max' => 128])]
+  #[Examples('Harbour Kitchen')]
+  #[Describe(placeholder: 'The name on the contract')]
+  public string $provider;
+
+  #[Input('Headcount', description: 'How many people to cater for.')]
+  #[Constraint('Range', ['min' => 1, 'max' => 5000])]
+  public int $headcount;
+
+  #[Input('Budget')]
+  #[Constraint('Range', ['min' => 0])]
+  #[Describe(group: 'details', suffix: 'EUR')]
+  public ?float $budget = NULL;
+
+  #[Input('Dietary needs', list: 'string')]
+  #[Constraint('LabeledChoice', [
+    'choices' => [
+      'vegetarian' => new TranslatableMarkup('Vegetarian'),
+      'vegan' => new TranslatableMarkup('Vegan'),
+      'gluten_free' => new TranslatableMarkup('Gluten free'),
+      'halal' => new TranslatableMarkup('Halal'),
+      'kosher' => new TranslatableMarkup('Kosher'),
+    ],
+  ], item: TRUE)]
+  public array $dietary = [];
+
+  #[Input('Served at', description: 'HH:MM, on a 24-hour clock.')]
+  #[Widget('time')]
+  #[Constraint('Regex', [
+    'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
+    'message' => new TranslatableMarkup('Write the time as HH:MM, such as 18:30.'),
+  ])]
+  #[Rule(whenEquals: ['public', TRUE], require: TRUE, because: 'Say when food is served while the caterer is shown.')]
+  public ?string $served_at = NULL;
+
+  #[Input('Notes for the caterer')]
+  #[Setting('multiline', TRUE)]
+  #[Describe(group: 'details')]
+  public ?string $notes = NULL;
+
+  #[Attach(label: 'Caterer contact', reads: ['listed' => 'public'])]
+  public PersonStructure $contact;
+
+}
+```
+
+PHP says what it can, and the attributes say the rest. The key is the
+property's name and its type the property's type. The initializer is the
+default: `public` starts unchecked and `dietary` empty. A property that
+is not nullable and has no initializer must be given, so `provider` and
+`headcount` are required; `budget`, `served_at` and `notes` are nullable
+with `= NULL` and have no default. The contact is typed with example 8's
+person structure, which `#[Attach]` attaches, its port wired to `public`
+as the press page wires it.
+
+The labels, the descriptions, the placeholder, the suffix and the rule's
+reason are bare strings, which the reader makes translatable: a
+translation is used where one exists, but string extraction does not
+find a bare string. The dietary labels and the time's message sit inside
+a constraint's options, which the reader hands to core as they are, so
+they are written `new TranslatableMarkup()`, which extraction finds.
+
+Show the caterer and two rules hold: the class's own, on `served_at`,
+and the person's, which reads the port and asks for its email. The full
+schema states both as conditionals on `public`; the panel shows them
+beside what PHP made `required` and the defaults.
+
+```bash
+drush tool:run surface:event.catering:configure --uid=1 --input='{"values":{"public":true,"provider":"Harbour Kitchen","headcount":120,"contact":{"name":"Sam Ortiz","email":"catering@example.com"}}}' --input=dry_run=true
+
+drush tool:run surface:event.catering:configure --uid=1 --input='{"values":{"public":true,"provider":"Harbour Kitchen","headcount":120,"served_at":"18:30","contact":{"name":"Sam Ortiz","email":null}}}' --input=dry_run=true
+
+drush tool:run surface:event.catering:configure --uid=1 --input='{"values":{"public":false,"provider":"Harbour Kitchen","headcount":120,"contact":{"name":"Sam Ortiz","email":null}}}' --input=dry_run=true
+```
+
+```
+1. A caterer shown on the event page, with no serving time
+Failed: The values were refused:
+/served_at: Served at is required when Show the caterer on the event page is on.
+
+2. The same caterer served at half past six, its contact email cleared
+Failed: The values were refused:
+/contact/email: Email is required when Show the caterer on the event page is on.
+
+3. The same caterer, not shown, with no serving time and the email cleared
+Success: Dry run of Configure the catering: the values were accepted and prepared, and nothing was written.
+  values: {"public":false,"provider":"Harbour Kitchen","headcount":120,"budget":null,"dietary":["vegetarian"],"served_at":null,"notes":null,"contact":{"name":"Sam Ortiz","email":null,"phone":null}}
+```
+
+### Files
+
+What example 18 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 18 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/surface_examples/src/Resource/CateringResource.php`](src/Resource/CateringResource.php) | the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired | 49 |
+| [`modules/surface_examples/src/Storage/CateringStorage.php`](src/Storage/CateringStorage.php) | the storage: names the config object | 3 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18` | the route | 8 |
+| [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.catering` | the config schema, generated from the class | 66 |
+| [`modules/surface_examples/config/install/surface_examples.catering.yml`](config/install/surface_examples.catering.yml) | the settings the module ships with | 12 |
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
@@ -5075,7 +5212,7 @@ when one drifts, and so does the component example 12 quotes. Each
 example's Files table is its list in `Series`, the one its page and its
 line on the landing page are drawn from, and `ExampleFilesTest`
 fails when a table and the list differ, or the list and the module. The Drush
-commands and answers of examples 7 to 17 are asserted by
+commands and answers of examples 7 to 18 are asserted by
 `ExamplesConceptsToolTest`, and example 15's config schema entry is the
 schema file's, which `ExamplesReadmeTest` checks. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
@@ -5100,9 +5237,9 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, puts example 15's venues back as shipped, a venue removed made again and one added removed, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the use paragraph and the line naming the key a post is signed with, the lock not shipped, and the calls each state allows. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the use paragraph and the line naming the key a post is signed with, the lock not shipped, and the calls each state allows; example 18's full schema, what PHP made required and the defaults, the serving time and, through the port, the contact's email required while the caterer is shown, and its form refusing both then saving. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 17: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 18: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
 | `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of create, update, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; the slug computed from the name on create and kept on a rename, left out of the write and in the read, a slug sent equal noted and another refused, one another venue holds refused naming the name, and the post-update writing a missing one; example 2 offering a venue added, with no cache rebuild. |
 | `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the slug written and read, `POST .../schema` answering the slug it would compute, a `PATCH` sending another slug refused, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the create and update forms saving, the slug drawn fixed; the delete form's confirmation removing; the page and its calls. |
 | `Kernel\ReferenceKeysTest` | Example 16: the three spellings and what each builds; both documents of the sponsorship pinned whole under the limit and past it, under `tests/fixtures/references/`; the candidates the account's, cached by what they read; the refusals, in one message; the lookup and what it leaves out; the tool listing's enum and the sentence naming the lookup; the OpenAPI document's lookup; the page's panel. |
