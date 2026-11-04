@@ -22,6 +22,7 @@ use Drupal\surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\surface_examples\Resource\BulletinResource;
+use Drupal\surface_examples\Resource\CateringByMethodResource;
 use Drupal\surface_examples\Resource\CateringResource;
 use Drupal\surface_examples\Resource\DoorsResource;
 use Drupal\surface_examples\Resource\MailerResource;
@@ -816,11 +817,15 @@ final class ExamplesController extends ControllerBase {
       ],
       18 => [
         'title' => $series[18]['title'],
-        'sentence' => $this->t("A caterer whose keys are properties of its class instead of calls in defineInputs(), each carrying the attribute of the blueprint verb it stands for: the name, the type, the default and whether a key must be given are read from PHP, the rest from the attributes. The same blueprint, so the form, both documents and the tool are what the calls would give."),
+        'sentence' => $this->t("A caterer whose keys are properties of its class instead of calls in defineInputs(), each carrying the attribute of the blueprint verb it stands for: the name, the type, the default and whether a key must be given are read from PHP, the rest from the attributes. Beside it, the same keys declared with calls in defineInputs(), as examples 1 to 17 write them, saving to the same config object. The same blueprint, so the form, both documents and the tool of the two are the same."),
         'items' => [
           $this->route('surface_examples.step18'),
+          $this->route('surface_examples.step18_method'),
           $this->react('event.catering'),
-          $this->lines(CateringResource::class),
+          $this->t('The keys as properties: @properties lines of code; with calls: @method.', [
+            '@properties' => CodeLines::count($this->file(CateringResource::class)),
+            '@method' => CodeLines::count($this->file(CateringByMethodResource::class)),
+          ]),
         ],
       ],
     ];
