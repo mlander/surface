@@ -905,8 +905,8 @@ use `DeclaresByProperties`, which supplies `defineInputs()` and
   sniffs off for the classes declared this way.
 
 (`Resource\DeclaresByProperties`, `ResourceBuild\PropertyDeclaration`,
-`Resource\Attribute\*`, `PropertyDeclarationTest`, `CateringResource`,
-example 18)
+`Resource\Attribute\*`, `PropertyDeclarationTest`, `CateringResource`
+and its twin with calls, `CateringByMethodResource`, example 18)
 
 ### An operation on the class
 

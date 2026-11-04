@@ -53,6 +53,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
    */
   protected const READ_TOOLS = [
     'surface:event.bulletin:read' => 'surface:event.bulletin:configure',
+    'surface:event.catering.method:read' => 'surface:event.catering.method:configure',
     'surface:event.catering:read' => 'surface:event.catering:configure',
     'surface:event.desk:read' => 'surface:event.desk:configure',
     'surface:event.doors:read' => 'surface:event.doors:configure',

@@ -21,6 +21,7 @@ use Drupal\surface_examples\ExamplePanels;
 use Drupal\surface_examples\ConceptCalls;
 use Drupal\surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\surface_examples\Resource\BulletinResource;
+use Drupal\surface_examples\Resource\CateringByMethodResource;
 use Drupal\surface_examples\Resource\CateringResource;
 use Drupal\surface_examples\Resource\DoorsResource;
 use Drupal\surface_examples\Resource\InfoDeskResource;
@@ -31,6 +32,7 @@ use Drupal\surface_examples\Resource\SpotlightResource;
 use Drupal\surface_examples\Resource\TicketSalesResource;
 use Drupal\surface_examples\Resource\WebhookResource;
 use Drupal\surface_examples\Series;
+use Drupal\surface_examples\Storage\CateringStorage;
 use Drupal\surface_examples\Variants\CredentialSources;
 use Drupal\surface\Variants\ComponentProps;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -558,6 +560,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
       'step14' => 'event.mailer',
       'step14_webhook' => 'event.webhook',
       'step18' => 'event.catering',
+      'step18_method' => 'event.catering.method',
     ];
     $order = [ExamplePanels::CONCEPT, ExamplePanels::FILES, ExamplePanels::CONTRACT, ExamplePanels::TODAY];
     foreach ($pages as $route => $id) {
@@ -894,6 +897,54 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertSame(['vegan', 'halal'], $stored['dietary']);
     $this->assertSame('catering@example.com', $stored['contact']['email']);
     $this->assertCount(0, $this->container->get('config.typed')->get('surface_examples.catering')->validate(), 'What is stored is fully valid.');
+  }
+
+  /**
+   * Tests example 18's two spellings declare one contract.
+   *
+   * The caterer declared as properties and the same keys declared with
+   * calls emit the same full schema and the same schema for empty values,
+   * byte for byte, once the twin's id is made the caterer's, as
+   * PropertyDeclarationTest holds its twins.
+   */
+  public function testEighteenDeclaresOneContractBothWays(): void {
+    $emitter = $this->container->get('surface.contract_emitter');
+    $resources = $this->container->get('surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
+    $documents = [];
+    foreach ([CateringResource::class, CateringByMethodResource::class] as $class) {
+      $id = $registry->getDefinition($class)->id;
+      $operation = $registry->getOperation($class, 'configure');
+      $built = $resources->buildStatic($class, $resources->operation($class, 'configure'));
+      $documents[$id] = [
+        'full' => self::sameId($emitter->emitFull($built, $id, 'configure', $operation->label, operation: $operation->facts())->document),
+        'empty' => self::sameId($emitter->emit($built, [], $id, 'configure', $operation->label, operation: $operation->facts())->document),
+      ];
+    }
+    $this->assertSame(['event.catering', 'event.catering.method'], array_keys($documents));
+    $this->assertSame(['public', 'provider', 'headcount', 'budget', 'dietary', 'served_at', 'notes', 'contact'], array_keys(json_decode($documents['event.catering']['full'], TRUE)['schema']['properties']), 'What the two agree on is not nothing.');
+    $this->assertSame($documents['event.catering']['full'], $documents['event.catering.method']['full'], 'The full schema of the method twin is the properties\' one.');
+    $this->assertSame($documents['event.catering']['empty'], $documents['event.catering.method']['empty'], 'The schema for empty values of the method twin is the properties\' one.');
+    $this->assertSame(CateringStorage::CONFIG, constant($registry->getDefinition(CateringByMethodResource::class)->storage . '::CONFIG'), 'Both save to one config object.');
+  }
+
+  /**
+   * Writes a document as a client reads it, the method twin's id dropped.
+   *
+   * @param array $document
+   *   The document.
+   *
+   * @return string
+   *   Its JSON, `event.catering.method` written `event.catering`, and its
+   *   `$defs` in the order of their names.
+   */
+  protected static function sameId(array $document): string {
+    $json = (string) json_encode($document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    $document = json_decode(str_replace('event.catering.method', 'event.catering', $json), TRUE, 512, JSON_THROW_ON_ERROR);
+    if (isset($document['schema']['$defs'])) {
+      ksort($document['schema']['$defs']);
+    }
+    return (string) json_encode($document, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
   }
 
   /**
