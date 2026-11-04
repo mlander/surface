@@ -254,6 +254,12 @@ on one page, the shipped use C5 found missing
 The table's row says it; `PublicSurfaceTest` does not count a
 context's methods, so its pins are unchanged.
 
+*Grown 2026-11-04,* by eighteen attributes and their 76 arguments, the
+blueprint's verbs spelled as properties
+([A class may declare its keys as properties](#a-class-may-declare-its-keys-as-properties)):
+no blueprint method and no interface, since the trait calls the verbs
+there are. The pins below are 27 attributes and 112 arguments since.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -264,10 +270,12 @@ validates](#a-structure-may-ask-for-its-widget-and-a-widget-never-validates);
 copied](#a-gate-is-borrowed-never-copied); 31 until 2026-10-31, when
 `label:` and `description:` were added to `#[Resource]` and
 `#[Structure]`, [A resource and a structure may say what they are
-called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)), 18 blueprint methods (16
-until 2026-11-01, when `refer()` and `addMap()` were added, [A
-reference is declared as a reference](#a-reference-is-declared-as-a-reference)
-and [An anonymous map](#an-anonymous-map); 17 before; 15 until
+called and what they are for](#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for)), 17 blueprint methods (18
+until 2026-11-01, when `refer()` went, [A reference is a constraint on
+a value](#a-reference-is-a-constraint-on-a-value); 16 before `refer()`
+and `addMap()` were added the same day, [A reference is declared as a
+reference](#a-reference-is-declared-as-a-reference) and [An anonymous
+map](#an-anonymous-map); 17 before that; 15 until
 2026-10-27, when `resolve()` was added, [A key may stand for another at
 use](#a-key-may-stand-for-another-at-use)), 22
 interfaces (23 before; 20 until 2026-10-28, when
@@ -589,7 +597,12 @@ class says which types those are and how each is written
   type, naming the method for what was meant: `attach()` or `addMap()`
   for a group of keys, `addList()` for a list, `refer()` for an id,
   `addDefinition()` for a definition built by hand; `addDefinition()`
-  and `addList()` hold every value inside to the same rows. Why:
+  and `addList()` hold every value inside to the same rows. *Amended
+  2026-11-01:* an id is the id's type with `SurfaceValidReference`
+  ([A reference is a constraint on a value](#a-reference-is-a-constraint-on-a-value)),
+  and `addDefinition()` takes one value, a map or a list refused naming
+  `addMap()`, `attach()` or `addList()`
+  ([A blueprint takes no complex data types](#a-blueprint-takes-no-complex-data-types)). Why:
   `PropertySchema::type()` ended in `default => []`, so a key of a type
   it could not spell (`any`, `binary`, `duration_iso8601`, `language`)
   was accepted and written with no `type`: the contract vaguer than the
@@ -614,6 +627,61 @@ class says which types those are and how each is written
 
 (`LeafTypes`, `BlueprintAdapterBase::add()`, `PropertySchema::type()`,
 `SchemaReader`, `LeafTypesTest`)
+
+### A blueprint takes no complex data types
+
+Decided 2026-11-01, by the maintainer, for now: a key holds one value,
+and an object is declared only by a method that is one JSON Schema
+construct.
+
+| Method | JSON Schema |
+| --- | --- |
+| `attach()`, `attachList()` | `$ref` to the structure's def; an array of them |
+| `addMap()` | an inline object |
+| `mixIn()` | `allOf` |
+| the variants, `attachVariants()` | `if`/`then` on the deciding key |
+| `addEach()`, `attachEach()` | an object keyed by what the site has |
+| `addList()` | an array |
+
+- **`addDefinition()` takes one value.** A leaf whose type is a row of
+  the type table, its constraints and settings as it carries them; a
+  map or a list is refused when the declaration runs, naming `addMap()`,
+  `attach()` or `addList()`. What the blueprint builds itself (`add()`,
+  `addList()`, `addMap()`, an entry of `addEach()`) goes through the
+  adapter's protected `addKey()`, which still takes a list or a map.
+  Why: a map handed in from outside is an object no method names, so it
+  is the one object that reaches the contract without being one of the
+  constructs above.
+- **What moved.** The four callers that handed a map (the address
+  example's `field_overrides`, the extras example's review deadline,
+  the route test's greeting, the tool test's specimen size) declare it
+  with `addMap()`; the generator writes `addMap()`, each key inside its
+  callable; the schema reader declares a list read with `addList()` and
+  a map with `addMap()`, every key inside the same way
+  (`SchemaReader::declareRead()`), what the read said of the list or the
+  map laid on what the method declared. Their documents are unchanged
+  but for a map's default, which `addMap()` assembles from its keys'
+  and no document states.
+- **The reference to any entity type is a structure an example
+  declares.** The blueprint's own two-key reference, `refer($key,
+  NULL)` and `EntityReferenceStructure`, went: example 16 declares it,
+  `AnyEntityStructure` and one structure per filter, each naming the
+  entity types it may name in its own declaration, attached with
+  `attach()`. The base module keeps what reads it: an `id` with
+  `References::TARGETS` beside an `entity_type` with
+  `SurfaceReferenceableType`, read by the marker, the autocomplete, the
+  tool listing, the lookup and the storage layout. Why one structure
+  per filter: a structure is a static declaration, and nothing in a
+  parent names a key inside its child, so the entity types are the
+  structure's to say. A config storage keeps the id where the attached
+  map says `References::STORED_AS`, the owner's word on its storage.
+- **What waits.** Entity data types and other complex data types in
+  authoring, and a reference to a resource rather than an entity, are
+  set aside for now, open.
+
+(`BlueprintAdapterBase::addDefinition()`, `addKey()`,
+`SchemaReader::declareRead()`, `ResourceCode::map()`,
+`AnyEntityStructure`, `LeafTypesTest`, `ReferenceKeysTest`)
 
 ### Variants, not slots
 
@@ -743,6 +811,14 @@ one that dropped the interface to get one past the compiler.
 (`Resources::buildResource()`, `Binding::assertStaticOnResource()`,
 `ResourceRegistry::assertResourceClass()`)
 
+*Amended 2026-11-04:* the keys may be declared as properties of the
+class instead of calls in `defineInputs()`
+([A class may declare its keys as properties](#a-class-may-declare-its-keys-as-properties)).
+Nothing here moves: `DeclaresByProperties` supplies `defineInputs()` and
+`defineOutputs()`, still `public static`, and the reader reads the
+properties' types, initializers and attributes, never a value, so the
+class is still never instantiated and a property is never set.
+
 Translatable strings in static context use the global `t()`: a
 resource's or structure's `defineInputs()`, refiners and operations, an alter's
 static refiners (with `PluralTranslatableMarkup` for a plural), a
@@ -758,6 +834,79 @@ always a placeholder. `new TranslatableMarkup` stays only inside
 attribute arguments (`#[Operation(label:)]`, plugin attributes), where
 a function call is not allowed; a class the container builds keeps
 injecting `string_translation` and calling `$this->t()`.
+
+### A class may declare its keys as properties
+
+Decided 2026-11-04. A resource or structure may declare its keys as
+properties of its class, each carrying the attribute of the blueprint
+verb it stands for (`#[Input]` for `add()` and, with `list:`,
+`addList()`; `#[Attach]` for `attach()`; `#[Rule]` for
+`narrow()->when()`; eighteen in all, in `src/Resource/Attribute/`), and
+use `DeclaresByProperties`, which supplies `defineInputs()` and
+`defineOutputs()` ([Declared as properties](declaring-a-resource.md#declared-as-properties)).
+
+- **A projection of the blueprint, never a second contract.** The trait
+  calls `PropertyDeclaration`, which walks the properties in the order
+  they are written and calls the same `BlueprintInterface` verbs the
+  method would: what a verb refuses is refused by the verb, and the
+  contract is the one the calls give. The engine, alters, refiners,
+  operations, access and the doors do not know which spelling a class
+  used. `PropertyDeclarationTest` holds a twin of every construct,
+  declared both ways, to the same two documents, byte for byte once the
+  ids are made the same.
+- **Why.** The type, the default and whether a key must be given are
+  said by PHP, read by the reader and by phpstan alike: one property per
+  key, and the attribute holds only what PHP cannot say. A child is a
+  property typed with its class, a port a property that stores nothing,
+  an anonymous map a nested plain class.
+- **What PHP says.** The key's name is the property's, its type the
+  property's (`string`, `int`, `float`, `bool` or a shape's class; any
+  other is `type:`), its default the initializer. Required is
+  `required:` when given, else a property whose type is not nullable and
+  that has no initializer; a nullable property with `= NULL` has no
+  default. A computed key is never required by inference.
+- **Texts.** An attribute argument cannot call `t()`. The reader wraps
+  the bare strings it names (labels, descriptions, the arrangement's
+  texts, a rule's reason) in `TranslatableMarkup`; a text inside a
+  constraint's options is handed to core as it is, so it is written
+  `new TranslatableMarkup()`. The trade-off: a bare string is translated
+  where a translation exists, but string extraction does not find it;
+  `new TranslatableMarkup('...')` is found and longer. Chosen: bare
+  strings where the reader wraps them, as the shorter spelling.
+- **Order.** The properties in the order written, each `#[Describe]`
+  right after its key, then each `#[MixIn]` (its members after every
+  property), then each `#[Rule]` in the order of the properties carrying
+  them. A class that mixes in before its own keys keeps the method.
+- **Conditions in words.** `Condition`'s factories are calls, so
+  `#[Rule]` spells four: `whenEquals:`, `whenPresent:`, `whenAbsent:`,
+  `whenIn:`, all required to hold when several are given. Any other is
+  `narrow()` in `defineInputs()` or a `#[RefinesInput]` method.
+- **Not spelled.** `addDefinition()`, the long form, which has no short
+  form by design; `resolve()` and `extendChoices()`, an alter's verbs,
+  and alters keep the blueprint; `addCacheableDependency()`, used by
+  derived resources, which have no class.
+- **Either spelling per class, never both.** The method stays for a
+  derived resource, which has no class, and for anything an attribute
+  argument cannot hold: a call (`Venues::rooms()`), a loop, a condition
+  `#[Rule]` does not spell.
+- **What the reader refuses.** Only what the verbs cannot know: a
+  public property with no attribute saying what it is, a group no
+  `#[Group]` declares, a type that is no key type and no shape with no
+  `type:`, a child or map naming no class, an item constraint on a key
+  that is no list, and an output on a class that does not implement
+  `DefinesOutputsInterface`. Each names the class, the property and the
+  fix.
+- **Pure.** The reader reads types, initializers and attributes and
+  never a value, so `addMap()`'s replay of a map that needs a frame
+  reads the same keys again.
+- **Drupal's coding standard** asks a docblock on every property and a
+  lowerCamel name; a key's property is documented by its attribute and
+  named for its key, snake_case, so `phpcs.xml.dist` leaves the two
+  sniffs off for the classes declared this way.
+
+(`Resource\DeclaresByProperties`, `ResourceBuild\PropertyDeclaration`,
+`Resource\Attribute\*`, `PropertyDeclarationTest`, `CateringResource`,
+example 18)
 
 ### An operation on the class
 
@@ -825,8 +974,9 @@ top ([Which constraint to write](options.md#which-constraint-to-write)):
   can check.
 - **A list the site decides second.** A constraint that names a kind,
   read by a resolver (`PluginExists`, `EntityBundleExists`,
-  `LanguageExists`, `Country`), or a reference key, `refer()` (the type
-  string `entity:<type>` until 2026-11-01). Why:
+  `LanguageExists`, `Country`), or a reference key, `SurfaceValidReference`
+  (the type string `entity:<type>` until 2026-11-01, `refer()` that
+  day). Why:
   the class stays literal and holds no service, the resolver lists for
   the site, and the schema states the list as a `oneOf` while it is
   short, looked up or `deferred` past its budget, and a key a static
@@ -923,7 +1073,7 @@ mention is the constant: `add(self::VENUE, ...)`,
   pages and examples 1 and 2 carry it, since they are what an author
   copies first and what the generator's output is held to
   ([The generator writes what the first page shows](#the-generator-writes-what-the-first-page-shows)).
-  Examples 3 to 17 keep their strings: each shows one concept, the
+  Examples 3 to 18 keep their strings: each shows one concept, the
   constants would add a block to every quoted class for no new idea, and
   a key named as a string still works the same. It is a convention, not
   a rule the build checks.
@@ -3010,8 +3160,8 @@ inline object; requiring a named structure for every object made a
 class and an id where naming buys nothing.
 
 - **Plain, or a structure with no id.** A map whose callable declares
-  plain values (`add()`, `addList()`, `refer()` to one entity type, a
-  nested `addMap()`, `describe()`) is a map definition at the key. One
+  plain values (`add()`, `addList()`, `addDefinition()` of one value,
+  a nested `addMap()`, `describe()`) is a map definition at the key. One
   whose callable asks for a frame of its own (`attach()`, `attachList()`,
   `attachVariants()`, `mixIn()`, `narrow()`, `resolve()`) is a
   structure with no id, registered for the key
@@ -3036,6 +3186,10 @@ class and an id where naming buys nothing.
   call that needs a frame there is refused naming why.
 - **Read back.** `SchemaReader` reads an inline object that holds a
   structure as `addMap()`, so the document reads back to itself.
+  *Amended 2026-11-01:* every inline object is read as `addMap()` and
+  every list as `addList()`, and `addMap()` is the one way to declare a
+  map of plain keys: `addDefinition()` takes one value
+  ([A blueprint takes no complex data types](#a-blueprint-takes-no-complex-data-types)).
 
 (`BlueprintAdditionsInterface::addMap()`, `MapBlueprint`,
 `ResourceBlueprint::replay()`, `AnonymousMapTest`, example 8's
@@ -7325,6 +7479,9 @@ Decided 2026-10-23, with example 16, the sponsorship
   `add($key, 'entity:…')` is refused: the type string stood for an id
   and a constraint, where a type stands for one value's type
   ([A reference is declared as a reference](#a-reference-is-declared-as-a-reference)).
+  *Amended again 2026-11-01:* `refer()` went; a reference is the id's
+  type with `SurfaceValidReference`, the constraint every reader already
+  read ([A reference is a constraint on a value](#a-reference-is-a-constraint-on-a-value)).
 - **The value is the id.** The key holds the entity's id as the entity
   type keeps it, an integer where a content entity type's id field is
   one and a string for a config entity, never the entity object: what is
@@ -7356,6 +7513,10 @@ Decided 2026-10-23, with example 16, the sponsorship
   `targets`) is moved onto `entity_type` when the parts are built. A
   parent cannot name a key inside its child; this is the build writing
   the child from what the parent declared, not the parent reaching in.
+  *Amended 2026-11-01:* the two keys are a structure example 16
+  declares, one per filter, its entity types in its own declaration,
+  and `ResourceRegistry::defineReference()` went
+  ([A blueprint takes no complex data types](#a-blueprint-takes-no-complex-data-types)).
 - **The selection plugin for candidates and access.** Core's entity
   reference selection handler, `default:<type>` with the bundles as its
   `target_bundles` and the label as its `sort`, answers the options, the
@@ -7409,15 +7570,19 @@ Decided 2026-10-23, with example 16, the sponsorship
 references (`addList()` of an entity type); a lookup tool for an agent with no
 HTTP; a custom method's own lookup; a stored id the account may no
 longer reference, which core's field validator keeps and this refuses.
-(`References`, `EntityReferenceStructure`, `ValidReferenceConstraint`,
+(`References`, `AnyEntityStructure`, `ValidReferenceConstraint`,
 `ReferenceableTypeConstraint`, `ReferenceOptions`,
 `ReferenceableTypeOptions`, `AutocompleteWidget`,
-`ResourceRegistry::defineReference()`, `ServedPaths::LOOKUP`,
+`ServedPaths::LOOKUP`,
 `ResourceApiController::lookup()`, `InputDefinitions::withLookups()`,
 `OpenApiDocument::lookup()`, `SponsorshipResource`, `ReferenceKeysTest`,
 `ReferenceKeysFormTest`)
 
 ### A reference is declared as a reference
+
+*Superseded 2026-11-01* by [A reference is a constraint on a
+value](#a-reference-is-a-constraint-on-a-value): `refer()` went. Kept
+for why the type string went.
 
 Decided 2026-11-01. A key that refers to an entity is
 `refer($key, $to, $label, bundles: [...], default: ...)`: `$to` the entity
@@ -7452,10 +7617,57 @@ resource's or a structure's own blueprint declares.
 (`BlueprintAdditionsInterface::refer()`, `References::definition()`,
 `ReferenceKeysTest`)
 
+### A reference is a constraint on a value
+
+Decided 2026-11-01, by the maintainer, superseding [A reference is
+declared as a reference](#a-reference-is-declared-as-a-reference): a key
+that refers to an entity is a key of the id's type with the constraint
+every reader already reads.
+
+```php
+$inputs->add('page', 'integer', t('Announcement'))
+  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]);
+```
+
+- **Why.** A reference is a value: one id, of the type its entity type
+  keeps it as. A method of its own read as JSON Schema's `$ref`, which
+  is `attach()`'s; and everything that reads a reference read the
+  constraint already (`References::target()`, `handlerOf()`,
+  `ReferenceOptions`, `AutocompleteWidget`, the lookup, the emitter's
+  `x-surface.reference`), so `refer()` was a second spelling of one
+  key. `handler` and `handlerSettings` name another selection handler,
+  as a reference field's key does.
+- **The author names the id's type, and the build checks it.** Once the
+  owner and every alter have declared, `Declaring::settleReferences()`
+  hands each key to `References::settle()`, at any depth of a map or a
+  list: the constraint names an entity type the site has, the key is
+  typed as that entity type's id (`References::idType()`), and a key of
+  a content entity type is marked `References::CONTENT`, which a config
+  storage stores by uuid. A key of another type is refused naming the
+  right one: `declares "page" as a reference to node with the string
+  type, and an id of node is an integer: declare it add('page',
+  'integer', ...).` An id whose entity type a sibling names
+  (`References::TARGETS`) is a string for every entity type, and left
+  alone.
+- **What is unchanged.** Every served contract, every baseline and the
+  example 16 documents; `References::definition()` stays the helper for
+  code that derives a reference key (`addEach(to:)`'s entries, a
+  reference field's `target_id`). The generator's interview asks the
+  entity type and types the key by its id; the generator writes the
+  constraint as it writes any other.
+- **What is left.** `addEach($key, NULL, from:, to:, bundles:)` still
+  names the entity type and takes the id's type from it: one type for
+  every entry, which the provider's entries do not each say.
+
+(`BlueprintAdapterBase::add()`, `References::settle()`,
+`Declaring::settleReferences()`, `KeyAnswers`, `ResourceCode`,
+`ReferenceKeysTest`)
+
 ### A reference field is a reference key
 
 Decided 2026-11-01. A content entity's reference field's `target_id` is
-the key `refer()` declares for the field's target type, its bundles the
+the key `refer()` declares for the field's target type (*2026-11-01:*
+the id with `SurfaceValidReference`), its bundles the
 ones the field's handler settings name, answered by the field's own
 selection handler with the field's settings: `References::definition()`
 with `handler:` and `handlerSettings:`, which the `SurfaceValidReference`

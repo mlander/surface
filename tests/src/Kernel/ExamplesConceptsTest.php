@@ -11,6 +11,7 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Form\SurfaceFormBuilder;
+use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface_examples\CodeLines;
 use Drupal\surface_examples\ConceptPanel;
@@ -20,6 +21,7 @@ use Drupal\surface_examples\ExamplePanels;
 use Drupal\surface_examples\ConceptCalls;
 use Drupal\surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\surface_examples\Resource\BulletinResource;
+use Drupal\surface_examples\Resource\CateringResource;
 use Drupal\surface_examples\Resource\DoorsResource;
 use Drupal\surface_examples\Resource\InfoDeskResource;
 use Drupal\surface_examples\Resource\MailerResource;
@@ -538,7 +540,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the panel above examples 7 to 12, and none above 1 to 3.
+   * Tests the panel above examples 7 to 12, 14 and 18, and none above 1 to 3.
    */
   public function testThePanelSaysWhatEachShows(): void {
     $panel = $this->formAt('surface_examples.step3')[SurfaceOperationForm::PANEL_KEY];
@@ -555,6 +557,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
       'step12' => 'event.spotlight',
       'step14' => 'event.mailer',
       'step14_webhook' => 'event.webhook',
+      'step18' => 'event.catering',
     ];
     $order = [ExamplePanels::CONCEPT, ExamplePanels::FILES, ExamplePanels::CONTRACT, ExamplePanels::TODAY];
     foreach ($pages as $route => $id) {
@@ -827,6 +830,70 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
    */
   protected function thirteen(): array {
     return $this->container->get('class_resolver')->getInstanceFromDefinition(ExamplesController::class)->step13();
+  }
+
+  /**
+   * Tests example 18: what the port and the rule are for, and the form.
+   *
+   * Declared as properties, the caterer states what the same keys declared
+   * with calls would: the keys PHP says must be given, the initializers as
+   * defaults, the serving time required while the caterer is shown, and,
+   * through the port the contact wires to `public`, the contact's email
+   * required under the same condition.
+   */
+  public function testEighteenStatesWhatThePortAndTheRuleAreFor(): void {
+    $full = $this->full(CateringResource::class);
+    $this->assertSame(['public', 'provider', 'headcount', 'budget', 'dietary', 'served_at', 'notes', 'contact'], array_keys($full['properties']));
+    $this->assertSame(['provider', 'headcount'], $full['required']);
+    $this->assertFalse($full['properties']['public']['default']);
+    $this->assertSame([], $full['properties']['dietary']['default']);
+    $this->assertSame(['Vegetarian', 'Vegan', 'Gluten free', 'Halal', 'Kosher'], array_column($full['properties']['dietary']['items']['oneOf'], 'title'));
+    $this->assertSame(['listed' => 'public'], $full['properties']['contact'][ContractEmitter::EXTENSION]['reads']);
+    $public = array_values(array_filter($full['allOf'], static fn (array $branch): bool => ($branch['if']['properties']['public']['const'] ?? NULL) === TRUE));
+    $this->assertCount(2, $public);
+    $this->assertSame(['served_at'], $public[0]['then']['required']);
+    $this->assertSame('Say when food is served while the caterer is shown.', $public[0]['then']['properties']['served_at']['description']);
+    $this->assertSame(['email'], $public[1]['then']['properties']['contact']['required']);
+
+    // The form: the time widget, the group, the placeholder and suffix.
+    $form = $this->formAt('surface_examples.step18');
+    $this->assertSame('time', $form['served_at']['#attributes']['type']);
+    $this->assertSame('The name on the contract', (string) $form['provider']['#placeholder']);
+    $this->assertSame('fieldset', $form['@group.details']['#type']);
+    $this->assertSame('Details', (string) $form['@group.details']['#title']);
+    $this->assertSame('details', $form['budget'][SurfaceFormBuilderInterface::GROUP_KEY]['id']);
+    $this->assertSame('EUR', (string) $form['budget']['#field_suffix']);
+    $this->assertSame('details', $form['notes'][SurfaceFormBuilderInterface::GROUP_KEY]['id']);
+    $this->assertSame('textarea', $form['notes']['#type']);
+
+    // Shown, the rule asks for the serving time and the port for an email.
+    $errors = $this->submitTheForm([
+      'public' => '1',
+      'provider' => 'Harbour Kitchen',
+      'headcount' => '120',
+      'served_at' => '',
+      'contact' => ['name' => 'Sam Ortiz', 'email' => ''],
+    ])->getErrors();
+    $this->assertSame(['surface][served_at', 'surface][contact][email'], array_keys($errors));
+    $stored = $this->stored('surface_examples.catering');
+    $this->assertFalse($stored['public'], 'Nothing was written.');
+    $this->assertNull($stored['served_at']);
+
+    $this->assertSame([], $this->submitTheForm([
+      'public' => '1',
+      'provider' => 'Harbour Kitchen',
+      'headcount' => '150',
+      'served_at' => '18:30',
+      'dietary' => ['vegan' => 'vegan', 'halal' => 'halal'],
+      'contact' => ['name' => 'Sam Ortiz', 'email' => 'catering@example.com'],
+    ])->getErrors());
+    $stored = $this->stored('surface_examples.catering');
+    $this->assertTrue($stored['public']);
+    $this->assertSame(150, $stored['headcount']);
+    $this->assertSame('18:30', $stored['served_at']);
+    $this->assertSame(['vegan', 'halal'], $stored['dietary']);
+    $this->assertSame('catering@example.com', $stored['contact']['email']);
+    $this->assertCount(0, $this->container->get('config.typed')->get('surface_examples.catering')->validate(), 'What is stored is fully valid.');
   }
 
   /**

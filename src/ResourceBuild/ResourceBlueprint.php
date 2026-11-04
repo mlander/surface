@@ -16,7 +16,6 @@ use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Port;
-use Drupal\surface\Reference\EntityReferenceStructure;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\BoundSiteListInterface;
@@ -109,16 +108,6 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @var array<string, string>
    */
   protected array $origins = [];
-
-  /**
-   * The keys declared as a reference to any entity type, each with its map.
-   *
-   * Its two parts are registered once its author is done narrowing it,
-   * when the build step first asks for the children (attachments()).
-   *
-   * @var array<string, \Drupal\Core\TypedData\MapDataDefinition>
-   */
-  protected array $entities = [];
 
   /**
    * The map a declaration run again reaches, and who its callable fills.
@@ -335,7 +324,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * in, since a structure's members are the owner's keys: a clash is
    * refused naming both who declared it.
    */
-  public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
+  protected function addKey(string $key, DataDefinitionInterface $definition, mixed $default = NULL, string $verb = 'addDefinition'): DataDefinitionInterface {
     $root = $this->root();
     if (!$this->outputs && ($this->into !== NULL || isset($root->origins[$key])) && $root->isDeclared($key)) {
       $before = $root->origins[$key] ?? NULL;
@@ -346,7 +335,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         default => sprintf('%s, mixed into %s, declares "%s", which %s, also mixed in, declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once.', $this->name($this->owner), $owner, $key, $this->name($before)),
       });
     }
-    parent::addDefinition($key, $definition, $default);
+    parent::addKey($key, $definition, $default, $verb);
     if ($this->into !== NULL) {
       $this->into->adopt($key, (string) $this->owner);
     }
@@ -355,54 +344,24 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
 
   /**
    * {@inheritdoc}
+   *
+   * A structure's members mixed in are the owner's keys, so are their
+   * definitions.
+   */
+  public function definitions(): array {
+    $definitions = parent::definitions();
+    foreach ($this->mixins as $mixin) {
+      $definitions += $mixin['blueprint']->definitions();
+    }
+    return $definitions;
+  }
+
+  /**
+   * {@inheritdoc}
    */
   public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
     $this->assertHoldsNoChild('attaches ' . $child, $key);
     return parent::attach($key, $child, $reads);
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * A key declared as a reference to any entity type holds its two parts,
-   * registered for what its author narrowed it by.
-   */
-  public function attachments(): array {
-    foreach ($this->entities as $key => $shell) {
-      assert($this->registry !== NULL);
-      $owner = $this->owner === NULL ? NULL : $this->registry->getDefinition($this->owner);
-      $this->attachments[$key] = $this->registry->defineReference(
-        ($owner->id ?? $this->name($this->owner)) . '.' . $key,
-        $owner->module ?? 'surface',
-        EntityReferenceStructure::filter($shell),
-      );
-    }
-    $this->entities = [];
-    return parent::attachments();
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * Decision: see
-   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
-   */
-  protected function addEntity(string $key, string|\Stringable $label, mixed $default): DataDefinition {
-    if ($default !== NULL) {
-      throw new \LogicException(sprintf('refer("%s", NULL) was given a default: a reference to an entity of any type is two keys, its entity type and its id, which start from nothing.', $key));
-    }
-    if ($this->registry === NULL || $this->references === NULL || $this->outputs) {
-      throw new \LogicException(sprintf('refer("%s", NULL) declares a reference to an entity of any type where nothing can attach its two parts: a resource or a structure declares it among its inputs.', $key));
-    }
-    // Held for its two parts, registered once its author is done with it
-    // (attachments()).
-    $this->assertHoldsNoChild('attaches a reference to an entity of any type', $key);
-    $shell = $this->reserveChild('refer', $key);
-    $this->attachments[$key] = EntityReferenceStructure::class;
-    $this->wirings[$key] = [];
-    $shell->setLabel($label);
-    $this->entities[$key] = $shell;
-    return $shell;
   }
 
   /**
@@ -802,7 +761,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       throw new \LogicException(sprintf('addEach("%s") names no type: each entry is a value of a type, addEach(\'%s\', \'boolean\', from: ...), or an id of an entity, addEach(\'%s\', NULL, from: ..., to: \'<entity type>\').', $key, $key, $key));
     }
     elseif (LeafTypes::refersToEntity($type)) {
-      throw new \LogicException(sprintf('addEach("%s", "%s") declares each entry with an entity type string, which JSON Schema has no type for: an entry that refers to an entity says so as refer() does, addEach(\'%s\', NULL, from: ..., to: \'<entity type>\', bundles: [...]).', $key, $type, $key));
+      throw new \LogicException(sprintf('addEach("%s", "%s") declares each entry with an entity type string, which JSON Schema has no type for: an entry that refers to an entity names its entity type, addEach(\'%s\', NULL, from: ..., to: \'<entity type>\', bundles: [...]).', $key, $type, $key));
     }
     if ($type !== NULL && str_contains($type, '\\') && !Shapes::isShape($type)) {
       throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)

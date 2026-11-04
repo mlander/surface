@@ -166,6 +166,8 @@ class OperationKindsTest extends SurfaceKernelTestBase {
     $this->assertSame([
       'surface:event.bulletin:configure' => 'update',
       'surface:event.bulletin:read' => 'read',
+      'surface:event.catering:configure' => 'update',
+      'surface:event.catering:read' => 'read',
       'surface:event.desk:configure' => 'update',
       'surface:event.desk:read' => 'read',
       'surface:event.doors:configure' => 'update',

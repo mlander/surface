@@ -157,9 +157,13 @@ sealed one. The form, the pipeline and the contract emitter
 
 ## What passes through untouched
 
-- **The definitions.** `add()`, `addList()` and `attach()` return core's
-  `DataDefinition`, `ListDataDefinition` and `MapDataDefinition`; a
-  shape's `define()` returns a `DataDefinition`.
+- **The definitions.** `add()`, `addList()`, `addMap()` and `attach()`
+  return core's `DataDefinition`, `ListDataDefinition` and
+  `MapDataDefinition`; a shape's `define()` returns a `DataDefinition`.
+  A definition an author builds by hand is one value, handed to
+  `addDefinition()`; a map or a list is built by the blueprint, so every
+  object it holds is a method that is one JSON Schema construct
+  ([decision](decisions.md#a-blueprint-takes-no-complex-data-types)).
 - **The constraints.** A key's rules are core validation constraint
   plugins (`Range`, `Length`, `Regex`). The module's own, such as
   `LabeledChoice` and `UniqueItems`, are constraint plugins of the same

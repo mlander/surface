@@ -30,13 +30,14 @@ use Drupal\surface\Storage\StoredSchemaInterface;
  * for: every door sends and answers the id, and only the config holds the
  * uuid.
  *
- * - A key that refers to one content entity type (refer() with a user,
- *   or a node of the article bundle) is stored as the entity's uuid, its
- *   config schema type `uuid`.
- * - A bare `entity` key is stored as `{entity_type, id}` whatever entity
- *   type it holds: `id` holds the uuid where `entity_type` names a
- *   content entity type and the id where it names a config entity type,
- *   so its schema, two strings, is one shape.
+ * - A key that refers to one content entity type (a user, or a node of
+ *   the article bundle) is stored as the entity's uuid, its config schema
+ *   type `uuid`.
+ * - A reference to any entity type, a structure of an `entity_type` and
+ *   an `id` (References::TARGETS), is stored as `{entity_type, id}`
+ *   whatever entity type it holds: `id` holds the uuid where
+ *   `entity_type` names a content entity type and the id where it names a
+ *   config entity type, so its schema, two strings, is one shape.
  * - A key whose author kept the id (References::STORED_AS) is left alone.
  *
  * Read back, a uuid whose entity is gone, or not on this site yet, reads
@@ -314,8 +315,10 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
     if ($entry->attachment === NULL || $entry->list !== NULL) {
       return NULL;
     }
+    // The author keeps the id on the key the structure is attached at, or
+    // the structure on its own id.
     $id = $entry->attachment->child->getDefinition(self::ID);
-    if ($id === NULL || $id->getSetting(EntityReferenceStructure::TARGETS) === NULL || $id->getSetting(References::STORED_AS) === References::BY_ID) {
+    if ($id === NULL || $id->getSetting(References::TARGETS) === NULL || $entry->definition->getSetting(References::STORED_AS) === References::BY_ID || $id->getSetting(References::STORED_AS) === References::BY_ID) {
       return NULL;
     }
     return $id;
@@ -673,7 +676,7 @@ final class ReferenceStorageLayout implements StoredSchemaInterface {
         continue;
       }
       $id = $entry->attachment?->child->getDefinition(self::ID);
-      if ($entry->list === NULL && $id !== NULL && $id->getSetting(EntityReferenceStructure::TARGETS) !== NULL) {
+      if ($entry->list === NULL && $id !== NULL && $id->getSetting(References::TARGETS) !== NULL) {
         if (is_string($value[self::TYPE] ?? NULL) && isset($value[self::ID]) && $value[self::ID] !== '') {
           $entity = $this->entity($value[self::TYPE], $value[self::ID]);
           if ($entity !== NULL) {

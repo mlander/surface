@@ -209,12 +209,10 @@ PHP, $resource, 'Required in a fully validatable object, its default the value t
         ],
       ]);
 
-    $inputs->addDefinition(self::LINK, MapDataDefinition::create()
-      ->setPropertyDefinition('url', DataDefinition::create('uri')
-        ->setLabel(t('Address')))
-      ->setPropertyDefinition('label', DataDefinition::create('string')
-        ->setLabel(t('Link text'))))
-      ->setLabel(t('Link'));
+    $inputs->addMap(self::LINK, t('Link'), function (BlueprintInterface $map): void {
+      $map->add('url', 'uri', t('Address'));
+      $map->add('label', 'string', t('Link text'));
+    });
 PHP, $resource);
     $this->assertStringContainsString("public const ALWAYS_HELD = ['tone'];", $this->written('src/Storage/CardStorage.php', $out), 'An optional key that refuses null and has a default is one its storage always holds.');
     $schema = $this->written('config/schema/surface_examples_first.schema.yml', $out);
@@ -247,7 +245,7 @@ PHP, $resource, 'An enum is a Choice.');
     $inputs->attach(self::VENUE, VenueStructure::class)
       ->setLabel(t('Venue'));
 
-    $inputs->addDefinition(self::CONTACT, MapDataDefinition::create()
+    $inputs->addMap(self::CONTACT, t('Contact'), function (BlueprintInterface $map): void {
 PHP, $resource, 'A $ref to a scalar def is read in place; one to an object def is a structure of its own; a nested object is a map.');
     $this->assertStringContainsString(<<<'PHP'
     // From the schema, not written here: multipleOf on self::SEATS, which no

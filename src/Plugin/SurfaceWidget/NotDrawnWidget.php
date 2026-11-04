@@ -15,11 +15,12 @@ use Drupal\surface\Widget\SurfaceWidgetBase;
  *
  * Core's data types whose value is an object rather than a value a person
  * types: a language, and a reference to typed data (`language_reference`,
- * `entity_reference`; a key that refers to an entity is refer()'s id,
- * drawn as a select or an autocomplete). No blueprint declares one (the
- * type table refuses them), so only a definition handed to the engine by
- * hand reaches it. The item posts nothing, so the key keeps what it holds.
- * A list of them is not drawn either.
+ * `entity_reference`; a key that refers to an entity is an id with the
+ * SurfaceValidReference constraint, drawn as a select or an
+ * autocomplete). No blueprint declares one (the type table refuses them),
+ * so only a definition handed to the engine by hand reaches it. The item
+ * posts nothing, so the key keeps what it holds. A list of them is not
+ * drawn either.
  *
  * Decision: see
  * docs/decisions.md#the-form-never-refuses-to-draw-a-declared-key.

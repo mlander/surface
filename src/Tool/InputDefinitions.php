@@ -24,7 +24,6 @@ use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Pipeline\SurfacePipeline;
 use Drupal\surface\Pipeline\ViolationMessage;
-use Drupal\surface\Reference\EntityReferenceStructure;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Entry;
 use Drupal\surface\Variants;
@@ -332,7 +331,7 @@ final class InputDefinitions {
         continue;
       }
       $target = References::target($entry->definition);
-      $bare = $entry->definition->getSetting(EntityReferenceStructure::TARGETS) !== NULL;
+      $bare = $entry->definition->getSetting(References::TARGETS) !== NULL;
       if (($target === NULL || $this->options->resolve($entry->definition) !== NULL) && !$bare) {
         continue;
       }

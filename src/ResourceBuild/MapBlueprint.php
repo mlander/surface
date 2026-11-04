@@ -19,14 +19,14 @@ use Drupal\surface\SurfaceBuilderInterface;
 /**
  * What addMap() hands its callable first: keys that land in a plain map.
  *
- * A map whose keys are plain values (add(), addList(), refer() to one
- * entity type, a map inside, describe()) is a map definition at its
- * owner's key, as addDefinition() declares one. One whose callable asks
- * for a frame of its own (a child, a rule, a resolve, a port) is a
- * structure with no id of its own instead: the first such call stops the
- * callable here (NeedsFrame), and the owner's blueprint attaches the map
- * as that structure, which runs the callable again in its own blueprint
- * (ResourceBlueprint::addMap(), fill()). Where no structure can be
+ * A map whose keys are plain values (add(), addList(), addDefinition(), a
+ * map inside, describe()) is a map definition at its owner's key. One
+ * whose callable asks for a frame of its own (a child, a rule, a resolve,
+ * a port) is a structure with no id of its own instead: the first such
+ * call stops the callable here (NeedsFrame), and the owner's blueprint
+ * attaches the map as that structure, which runs the callable again in
+ * its own blueprint (ResourceBlueprint::addMap(), fill()). Where no
+ * structure can be
  * attached (an alter's keys, outputs, a structure mixed in) the call is
  * refused, naming why.
  *
@@ -178,17 +178,6 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
    */
   public function resolve(string $key, array $from, string $using): static {
     throw $this->framed(sprintf('resolve("%s")', $key));
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function refer(string $key, ?string $to, string|\Stringable $label, array $bundles = [], mixed $default = NULL): DataDefinition {
-    if ($to === NULL) {
-      // A reference to any entity type is two parts attached at the key.
-      throw $this->framed(sprintf('refer("%s", NULL)', $key));
-    }
-    return parent::refer($key, $to, $label, $bundles, $default);
   }
 
   /**

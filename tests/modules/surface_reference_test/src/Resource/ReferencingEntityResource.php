@@ -47,8 +47,10 @@ final class ReferencingEntityResource implements ResourceInterface {
     $inputs->add('label', 'string', 'Label')
       ->setRequired(TRUE)
       ->addConstraint('Regex', ['pattern' => '/([^\PC])/u', 'match' => FALSE]);
-    $inputs->refer('page', 'node', 'Page');
-    $inputs->refer('role', 'user_role', 'Role');
+    $inputs->add('page', 'integer', 'Page')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node']);
+    $inputs->add('role', 'string', 'Role')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user_role']);
   }
 
 }

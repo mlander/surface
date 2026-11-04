@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\Reference\References;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
-use Drupal\surface\ResourceBuild\ResourceBlueprintAdditions;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
@@ -32,8 +32,9 @@ use Symfony\Component\Routing\Route;
 /**
  * Tests a key that refers to an entity: example 16's sponsorship.
  *
- * The three spellings build (`entity:<type>`, `entity:<type>:<bundle>`
- * and the bare `entity`, two parts narrowed by a refiner); both documents
+ * The three kinds build (an id of one entity type, one of a bundle, and
+ * any entity type, a structure of two keys narrowed by a refiner), and
+ * the build holds a reference key to its entity type's id; both documents
  * of the configure operation are pinned whole under the limit and past it,
  * under tests/fixtures/references/ (written again with
  * SURFACE_REFERENCES_WRITE=1); the candidates are core's selection
@@ -42,6 +43,7 @@ use Symfony\Component\Routing\Route;
  * limit and past it.
  *
  * @see docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up
+ * @see docs/decisions.md#a-reference-is-a-constraint-on-a-value
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -150,53 +152,80 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the three spellings, and what each builds.
+   * Tests the three kinds of reference, and what each builds.
    */
   public function testTheThreeSpellingsBuild(): void {
     $built = $this->built();
     $venue = $built->getDefinition('venue');
     $this->assertSame('string', $venue->getDataType(), 'A config entity keeps its id as a string.');
     $this->assertSame(['entityTypeId' => 'event_venue'], $venue->getConstraints()[References::CONSTRAINT]);
+    $this->assertNull($venue->getSetting(References::CONTENT), 'A config entity is stored by its id.');
     $contact = $built->getDefinition('contact');
     $this->assertSame('integer', $contact->getDataType(), "A user's id field is an integer.");
     $this->assertSame(['entityTypeId' => 'user'], $contact->getConstraints()[References::CONSTRAINT]);
+    $this->assertTrue($contact->getSetting(References::CONTENT), 'The build marks a key that refers to a content entity, for the storage that keeps its uuid.');
     $page = $built->getDefinition('page');
     $this->assertSame('integer', $page->getDataType());
     $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], $page->getConstraints()[References::CONSTRAINT], 'The bundle is fixed: the selection handler is handed it as its target bundles.');
 
-    // The bare `entity`: two parts attached at the key, the filter its
-    // author wrote on it moved onto the entity type.
+    // Of any type: a structure the example declares, its entity type
+    // filtered by the structure's own declaration.
     $thing = $built->getDefinitions()->entry('thing');
     $this->assertNotNull($thing->attachment);
     $this->assertSame('event.sponsorship.thing', $thing->attachment->id);
     $child = $thing->attachment->child;
     $this->assertSame(['entity_type', 'id'], $child->getDefinitions()->names());
     $this->assertSame(['interface' => ContentEntityInterface::class], $child->getDefinition('entity_type')->getConstraints()[References::TYPE_CONSTRAINT]);
-    $this->assertArrayNotHasKey(References::TYPE_CONSTRAINT, $thing->definition->getConstraints(), 'Taken off the key, so nothing checks it twice.');
     $this->assertSame('string', $child->getDefinition('id')->getDataType(), 'Entity types keep their ids as integers or strings: any id is a string.');
-    // Its refiner narrows the id by the same constraint the spellings
-    // build, so one mechanism serves all three.
+    // Its refiner narrows the id by the constraint every reference key
+    // carries, so one mechanism serves all three.
     $refined = $child->refine(['entity_type' => 'node'], FALSE)->getDefinition('id');
     $this->assertSame(['entityTypeId' => 'node'], $refined->getConstraints()[References::CONSTRAINT]);
     $credit = $built->getDefinitions()->entry('credit')->attachment->child;
     $this->assertSame(['entityTypeId' => 'node', 'bundles' => ['article']], $credit->refine(['entity_type' => 'node'], FALSE)->getDefinition('id')->getConstraints()[References::CONSTRAINT], 'A bundle list narrows the id of each entity type it names.');
 
-    // What refer() refuses, and the type strings add() refuses naming it.
-    $blueprint = (new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager')))->useReferences($this->container->get('surface.references'));
+    // What the build refuses of a reference key, and the type strings
+    // add() refuses naming the constraint.
+    $references = $this->container->get('surface.references');
+    $key = static fn (string $type, array $options): DataDefinition => DataDefinition::create($type)->addConstraint(References::CONSTRAINT, $options);
     foreach ([
-      ['nope', [], 'names an entity type this site does not have'],
-      ['', [], 'names no entity type'],
-      ['node', ['article:x'], 'names no entity type'],
-      ['node', [''], 'names no entity type'],
-    ] as [$to, $bundles, $message]) {
+      [$key('integer', ['entityTypeId' => 'nope']), 'an entity type this site does not have'],
+      [$key('integer', []), 'names no entity type'],
+      [$key('integer', ['entityTypeId' => 'node', 'bundles' => ['article:x']]), 'names no entity type'],
+      [$key('integer', ['entityTypeId' => 'node', 'bundles' => ['']]), 'names no entity type'],
+      [
+        $key('string', ['entityTypeId' => 'node']),
+        "test declares \"x\" as a reference to node with the string type, and an id of node is an integer: declare it add('x', 'integer', ...).",
+      ],
+      [
+        $key('integer', ['entityTypeId' => 'user_role']),
+        "an id of user_role is a string: declare it add('x', 'string', ...).",
+      ],
+      [$key('email', ['entityTypeId' => 'user']), 'with the email type'],
+    ] as [$definition, $message]) {
       try {
-        $blueprint->refer('x', $to, 'X', $bundles);
-        $this->fail($to);
+        $references->settle('test', 'x', $definition);
+        $this->fail($message);
       }
       catch (\LogicException $e) {
         $this->assertStringContainsString($message, $e->getMessage());
       }
     }
+    $missing = $key('integer', ['entityTypeId' => 'node', 'bundles' => ['gallery']]);
+    $references->settle('test', 'missing_bundle', $missing);
+    $this->assertTrue($missing->getSetting(References::CONTENT), 'A bundle the site does not have yet is no refusal: the key offers nothing until it does.');
+    $any = $key('string', ['entityTypeId' => 'node'])->setSetting(References::TARGETS, []);
+    $references->settle('test', 'id', $any);
+    $this->assertNull($any->getSetting(References::CONTENT), 'An id whose entity type a sibling names is a string for every entity type, and is left alone.');
+    $nested = MapDataDefinition::create()->setPropertyDefinition('inner', $key('string', ['entityTypeId' => 'node']));
+    try {
+      $references->settle('test', 'map', $nested);
+      $this->fail('A key inside a map is checked as a key is.');
+    }
+    catch (\LogicException $e) {
+      $this->assertStringContainsString('test declares "map.inner" as a reference to node with the string type', $e->getMessage());
+    }
+    $blueprint = (new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager')))->useReferences($references);
     foreach (['entity:node', 'entity:node:article', 'entity'] as $type) {
       try {
         $blueprint->add('x', $type, 'X');
@@ -204,25 +233,8 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
       }
       catch (\LogicException $e) {
         $this->assertStringContainsString(sprintf('add("x", "%s") declares a key of the %s type, which JSON Schema has no type for', $type, $type), $e->getMessage());
-        $this->assertStringContainsString("an id of an entity is refer('<key>', '<entity type>', ...)", $e->getMessage());
+        $this->assertStringContainsString("an id of an entity is add('<key>', 'integer' or 'string', ...)", $e->getMessage());
       }
-    }
-    $this->assertSame('integer', $blueprint->refer('missing_bundle', 'node', 'Gallery', bundles: ['gallery'])->getDataType(), 'A bundle the site does not have yet is no refusal: the key offers nothing until it does.');
-    try {
-      $blueprint->refer('thing', NULL, 'Thing');
-      $this->fail('A blueprint with no registry attaches no parts.');
-    }
-    catch (\LogicException $e) {
-      $this->assertStringContainsString('where nothing can attach its two parts', $e->getMessage());
-    }
-    $alter = (new ResourceBlueprintAdditions(new SurfaceBuilder(), $this->container->get('typed_data_manager'), 'surface_test'))->useReferences($this->container->get('surface.references'));
-    $this->assertSame(['entityTypeId' => 'user'], $alter->refer('reviewer', 'user', 'Reviewer')->getConstraints()[References::CONSTRAINT], 'An alter refers to one entity type.');
-    try {
-      $alter->refer('thing', NULL, 'Thing');
-      $this->fail('An alter declares no reference to an entity of any type.');
-    }
-    catch (\LogicException $e) {
-      $this->assertStringContainsString("only a resource or a structure attaches it. An alter refers to one entity type, refer('thing', '<entity type>', ...).", $e->getMessage());
     }
   }
 
@@ -244,7 +256,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     $this->assertSame('integer', $known->definition('thing', 'zz_content')->getDataType(), "Its class's id field is an integer.");
     $this->assertSame('string', $known->definition('thing', 'zz_config')->getDataType());
     $this->assertSame(['entityTypeId' => 'zz_config'], $known->definition('thing', 'zz_config')->getConstraints()[References::CONSTRAINT]);
-    $this->expectExceptionMessage('names an entity type this site does not have');
+    $this->expectExceptionMessage('an entity type this site does not have');
     $references->definition('thing', 'zz_config');
   }
 
@@ -544,7 +556,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
    */
   public function testThePanel(): void {
     $panel = $this->container->get('surface_examples.concept_panel');
-    $this->assertStringContainsString("<code>'node'</code> with <code>bundles: ['article']</code> an article", (string) $panel->paragraph('event.sponsorship'));
+    $this->assertStringContainsString("<code>'node'</code> with <code>'bundles' => ['article']</code> an article", (string) $panel->paragraph('event.sponsorship'));
     $account = ConceptPanel::accountOf('event_sponsorship_editor');
     $this->assertNotNull($account);
     $this->assertTrue($account->hasPermission('set event sponsorship'));

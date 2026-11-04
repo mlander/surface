@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_tool_test\Resource;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\BlueprintInterface;
@@ -46,11 +45,11 @@ final class SpecimenResource implements ResourceInterface {
     $inputs->addList('tags', DataDefinition::create('string')
       ->addConstraint('Choice', ['choices' => ['a', 'b', 'c', 'd', 'x']]), t('Tags'))
       ->addConstraint('Count', ['max' => 3]);
-    $inputs->addDefinition('size', MapDataDefinition::create()
-      ->setLabel(t('Size'))
-      ->setPropertyDefinition('width', DataDefinition::create('integer')->setLabel(t('Width')))
-      ->setPropertyDefinition('unit', DataDefinition::create('string')->setLabel(t('Unit'))
-        ->addConstraint('Choice', ['choices' => ['cm', 'in']])));
+    $inputs->addMap('size', t('Size'), static function (BlueprintInterface $size): void {
+      $size->add('width', 'integer', t('Width'));
+      $size->add('unit', 'string', t('Unit'))
+        ->addConstraint('Choice', ['choices' => ['cm', 'in']]);
+    });
   }
 
 }

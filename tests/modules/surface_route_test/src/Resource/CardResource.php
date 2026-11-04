@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Drupal\surface_route_test\Resource;
 
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -92,11 +91,10 @@ final class CardResource implements ResourceInterface {
       ->setLabel('Format')
       ->setRequired(TRUE)
       ->addConstraint('Choice', ['choices' => ['plain', 'html']]);
-    DefinitionMetadata::setDefaultValue($format, 'plain');
-    $inputs->addDefinition('greeting', MapDataDefinition::create()
-      ->setLabel('Greeting')
-      ->setPropertyDefinition('value', DataDefinition::create('string')->setLabel('Text'))
-      ->setPropertyDefinition('format', $format));
+    $inputs->addMap('greeting', 'Greeting', static function (BlueprintInterface $greeting) use ($format): void {
+      $greeting->add('value', 'string', 'Text');
+      $greeting->addDefinition('format', $format, default: 'plain');
+    });
 
     $inputs->attach('envelope', EnvelopeStructure::class)->setLabel('Envelope');
 

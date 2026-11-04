@@ -24,7 +24,6 @@ use Drupal\surface\Plugin\SurfaceWidget\TimeWidget;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Options\OptionSet;
 use Drupal\surface\Pipeline\ValueState;
-use Drupal\surface\Reference\EntityReferenceStructure;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\Arrangement;
 use Drupal\surface\Refinement\DoesNotApply;
@@ -374,7 +373,7 @@ final class PropertySchema {
         $listed => $radios ? 'radios' : 'select',
         // A bare reference's id is drawn once its entity type is chosen:
         // listed, or looked up.
-        AutocompleteWidget::draws($definition), $definition->getSetting(EntityReferenceStructure::TARGETS) !== NULL => 'autocomplete',
+        AutocompleteWidget::draws($definition), $definition->getSetting(References::TARGETS) !== NULL => 'autocomplete',
         default => $this->widget($definition),
       };
       $extension = $this->extension($widget, $depends, $refined);
@@ -654,7 +653,7 @@ final class PropertySchema {
     if ($target !== NULL) {
       return $target['bundles'] === [] ? ['entityType' => $target['entityType']] : $target;
     }
-    return $definition->getSetting(EntityReferenceStructure::TARGETS) !== NULL ? ['by' => 'entity_type'] : NULL;
+    return $definition->getSetting(References::TARGETS) !== NULL ? ['by' => 'entity_type'] : NULL;
   }
 
   /**

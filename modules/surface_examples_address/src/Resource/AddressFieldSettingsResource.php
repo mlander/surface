@@ -7,7 +7,7 @@ namespace Drupal\surface_examples_address\Resource;
 use CommerceGuys\Addressing\AddressFormat\AddressField;
 use CommerceGuys\Addressing\AddressFormat\FieldOverride;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\BlueprintInterface;
@@ -65,13 +65,15 @@ final class AddressFieldSettingsResource implements ResourceInterface {
       ->setDescription(t('Ensures entered addresses are always formatted in the same language.'))
       ->addConstraint('LanguageExists', []);
 
-    $overrides = MapDataDefinition::create()
-      ->setLabel(t('Field overrides'))
+    $overrides = $inputs->addMap('field_overrides', t('Field overrides'), static function (BlueprintInterface $overrides): void {
+      foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
+        $overrides->addDefinition($field_name, $definition);
+      }
+    })
       ->setDescription(t('Override the country-specific address format, forcing properties to always be hidden, optional, or required.'));
-    foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
-      $overrides->setPropertyDefinition($field_name, $definition);
-    }
-    $inputs->addDefinition('field_overrides', $overrides, default: []);
+    // No override is an empty map, as the address module's own default
+    // settings say; no key inside starts from a value of its own.
+    DefinitionMetadata::setDefaultValue($overrides, []);
   }
 
   /**

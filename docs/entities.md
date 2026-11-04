@@ -409,7 +409,7 @@ done about it.
    value with more digits than a float holds loses them before the
    entity's precision check sees it.
 10. **A reference field's `target_id` is a reference key.** It is the
-    key `refer()` declares for the field's target type, its bundles the
+    id of the field's target type with `SurfaceValidReference`, its bundles the
     ones the field's handler settings name, answered by the field's own
     selection handler with the field's settings
     (`References::definition()` with `handler:` and `handlerSettings:`),

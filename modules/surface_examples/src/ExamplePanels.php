@@ -20,7 +20,7 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * this is one: the contract panel it is handed, unchanged, and below it
  * what config schema alone can say about the same settings, compared
  * key by key with the full schema the resource emits, the one that reads
- * no value. Above them, for examples 7 to 12 and 14 only, what the
+ * no value. Above them, for examples 7 to 12 and 14 to 18 only, what the
  * example shows (ConceptPanel), and on every example's page the files it
  * is made of (FilesPanel), between that and the contract. The form
  * replaces them on every rebuild; only the contract panel has anything
@@ -43,7 +43,7 @@ final class ExamplePanels implements SurfaceFormPanelInterface {
   public const TODAY = 'today_panel';
 
   /**
-   * The key the panel saying what examples 7 to 12 and 14 show is placed at.
+   * The key of the panel saying what examples 7 to 12 and 14 to 18 show.
    */
   public const CONCEPT = 'concept_panel';
 
@@ -66,7 +66,7 @@ final class ExamplePanels implements SurfaceFormPanelInterface {
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, for the full schema built for the account alone.
    * @param \Drupal\surface_examples\ConceptPanel $conceptPanel
-   *   The panel saying what examples 7 to 12 and 14 show.
+   *   The panel saying what examples 7 to 12 and 14 to 18 show.
    * @param \Drupal\surface_examples\FilesPanel $filesPanel
    *   The panel listing the files an example is made of.
    */
@@ -91,8 +91,8 @@ final class ExamplePanels implements SurfaceFormPanelInterface {
       '#weight' => $contract_panel['#weight'] ?? 0,
       self::CONTRACT => ['#weight' => 0] + $contract_panel,
     ];
-    // Examples 7 to 12 and 14 say what they show first; 1 to 3 have
-    // nothing more.
+    // Examples 7 to 12 and 14 to 18 say what they show first; 1 to 3
+    // have nothing more.
     $concept = $this->conceptPanel->build($served, $declared, $values);
     if ($concept !== NULL) {
       $panels[self::CONCEPT] = ['#weight' => -1] + $concept;

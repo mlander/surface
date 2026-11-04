@@ -912,7 +912,35 @@ final class Declaring {
       $declaring[sprintf('third_party_settings.%s.', $module)] = $blueprint;
     }
     static::assertShapesNarrowed($definition, $declaring);
+    $this->settleReferences($definition->id, $declaring);
     return [$builder, $inputs, $outputs, $links, $additions];
+  }
+
+  /**
+   * Checks the reference keys blueprints declared, once they are done.
+   *
+   * An author adds a reference key's constraint after declaring the key,
+   * so it is read here, after the owner and every alter: each names an
+   * entity type the site has and is typed as its id, and one that refers
+   * to a content entity type is marked for the storage that keeps a uuid.
+   *
+   * Decision: see docs/decisions.md#a-reference-is-a-constraint-on-a-value.
+   *
+   * @param string $who
+   *   The resource or structure, for the message.
+   * @param array<string, \Drupal\surface\ResourceBuild\BlueprintAdapterBase> $blueprints
+   *   The blueprints, each keyed by the prefix its keys are named with.
+   *
+   * @throws \LogicException
+   *   Naming the key and the type its entity type's id is.
+   */
+  public function settleReferences(string $who, array $blueprints): void {
+    $references = $this->references();
+    foreach ($blueprints as $prefix => $blueprint) {
+      foreach ($blueprint->definitions() as $key => $declared) {
+        $references->settle($who, $prefix . $key, $declared);
+      }
+    }
   }
 
   /**

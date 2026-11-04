@@ -20,8 +20,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Core's entity autocomplete, for a reference with too many to list.
  *
- * A key that refers to one entity type, refer('<key>', '<entity type>')
- * or a bare reference's id once its entity type is chosen, whose
+ * A key that refers to one entity type, the id with SurfaceValidReference,
+ * or the id of a reference to any entity type once one is chosen, whose
  * candidates the options service does not list: there are more than the
  * site's limit. A key that asks for it by name, `autocomplete` (a
  * reference field whose form display draws it so), is drawn so however

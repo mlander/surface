@@ -25,13 +25,16 @@ entity type of the module's own, a venue, with a resource over it from
 the start: one venue added, edited and removed, the venues listed a
 page at a time and reordered in one write
 ([below](#example-15-a-config-entity-of-your-own)). Example 16 is a key
-that refers to an entity, declared with `refer()` and the entity type it
-refers to, listed while the site has few and looked up past that, in a
+that refers to an entity, the id with a constraint naming the entity
+type it refers to, listed while the site has few and looked up past that, in a
 submodule that needs node
 ([below](#example-16-references-three-ways)). Example 17 is a bulk
 retitle of nodes, a resource of its own that borrows each node's access,
 core's update and its title's edit, asked per node, in a submodule that
 needs node too ([below](#example-17-retitle-in-bulk-access-borrowed)).
+Example 18 is a caterer whose keys are properties of its class, each
+carrying an attribute, the same blueprint as the calls of the earlier
+examples ([below](#example-18-declared-as-properties)).
 
 ```bash
 drush pm:install surface_examples
@@ -45,7 +48,7 @@ venues the module ships, example 15's config entities, and each example
 keeps its settings in a config object of its own
 (`surface_examples.registration_step1` to `_step3`, then
 `surface_examples.bulletin`, `.press`, `.desk`, `.sales`,
-`.program`, `.doors`, `.spotlight`, `.mailer` and `.webhook`), so the examples never write over
+`.program`, `.doors`, `.spotlight`, `.mailer`, `.webhook` and `.catering`), so the examples never write over
 each other.
 
 Every code block on the pages is highlighted with Prism 1.30.0: the
@@ -342,7 +345,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
 
     $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
 
-    $inputs->refer(self::VENUE, 'event_venue', t('Venue'))
+    $inputs->add(self::VENUE, 'string', t('Venue'))
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
       ->setRequired(TRUE);
 
     $inputs->add(self::ROOM, 'string', t('Room'))
@@ -387,8 +391,8 @@ final class RegistrationStep2Resource implements ResourceInterface {
 }
 ```
 
-The venue refers to one of example 15's venue entities, declared with
-`refer(self::VENUE, 'event_venue', ...)`: it holds the venue's machine name, its
+The venue refers to one of example 15's venue entities, a string with
+`SurfaceValidReference` naming `event_venue`: it holds the venue's machine name, its
 candidates are core's entity reference selection handler's for the
 account, and both documents mark it `x-surface.reference`. This module
 writes no code for it. The list differs from the one example 2 had
@@ -454,7 +458,7 @@ the resource uses. It edits the same config object. It chooses from
 Its page says what the two forms share and counts both, from the files,
 the way the landing page counts every class: without the namespace, the
 use statements, blank lines and comments. The twin is **94 lines of
-code**; example 2's resource and its storage are **44**. The storage is
+code**; example 2's resource and its storage are **45**. The storage is
 counted with the resource because the twin names its config object
 itself, which the resource leaves to its storage.
 
@@ -617,7 +621,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 41 |
+| [`modules/surface_examples/src/Resource/RegistrationStep2Resource.php`](src/Resource/RegistrationStep2Resource.php) | the resource: five keys and two refiners, the rooms by the venue and the capacity by the room; the venue refers to a venue entity | 42 |
 | [`modules/surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraint.php) | the room's constraint: a room of a venue the site has, a Choice whose list is the site's | 17 |
 | [`modules/surface_examples/src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php`](src/Plugin/Validation/Constraint/RoomOfEventVenueConstraint.php) | the constraint the room refiner adds: a room of the chosen venue | 6 |
 | [`modules/surface_examples/src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php`](src/Plugin/Validation/Constraint/EventVenueRoomConstraintValidator.php) | their validator: reads the rooms, then holds the value to them as Choice does | 14 |
@@ -4572,8 +4576,9 @@ has neither, a role, Sponsorship editor, and when it is installed it
 writes three nodes the calls name: an article, a draft article and a
 page. Uninstalled, it deletes them.
 
-A key that refers to an entity is declared with `refer()` and the
-entity type it refers to, and every door sends and answers the entity's id, as
+A key that refers to an entity is the id's type with the
+`SurfaceValidReference` constraint naming the entity type it refers to,
+and every door sends and answers the entity's id, as
 the entity type keeps it: an integer for a node or a user, a string for
 a venue. The config object stores a node or a user by its uuid, which
 names the same entity on a site the config is deployed to, and a venue
@@ -4594,33 +4599,32 @@ final class SponsorshipResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->refer('venue', 'event_venue', t('Venue'), default: 'riverside')
+    // A venue keeps its id as a string, a user and a node as an integer.
+    $inputs->add('venue', 'string', t('Venue'), default: 'riverside')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue'])
       ->setDescription(t("Where the sponsor's stand is."))
       ->setRequired(TRUE);
 
-    $inputs->refer('contact', 'user', t('Contact'))
+    $inputs->add('contact', 'integer', t('Contact'))
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user'])
       ->setDescription(t('Who answers for the sponsor.'));
 
-    $inputs->refer('page', 'node', t('Announcement'), bundles: ['article'])
+    $inputs->add('page', 'integer', t('Announcement'))
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])
       ->setDescription(t('The article that announces the sponsor.'));
 
     // Of any type: an entity type, then an id of it.
-    $inputs->refer('thing', NULL, t('Featured beside'))
-      ->setDescription(t('Any content the sponsor is featured beside.'))
-      ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+    $inputs->attach('thing', ThingStructure::class)
+      ->setLabel(t('Featured beside'))
+      ->setDescription(t('Any content the sponsor is featured beside.'));
 
-    $inputs->refer('setting', NULL, t('Linked to'))
-      ->setDescription(t('A venue or a role the sponsorship is linked to.'))
-      ->addConstraint('SurfaceReferenceableType', [
-        'interface' => ConfigEntityInterface::class,
-        'targets' => ['event_venue' => [], 'user_role' => [], 'node' => []],
-      ]);
+    $inputs->attach('setting', SettingStructure::class)
+      ->setLabel(t('Linked to'))
+      ->setDescription(t('A venue or a role the sponsorship is linked to.'));
 
-    $inputs->refer('credit', NULL, t('Credited on'))
-      ->setDescription(t('An article or a user the sponsor is credited on.'))
-      ->addConstraint('SurfaceReferenceableType', [
-        'targets' => ['node' => ['article'], 'user' => []],
-      ]);
+    $inputs->attach('credit', CreditStructure::class)
+      ->setLabel(t('Credited on'))
+      ->setDescription(t('An article or a user the sponsor is credited on.'));
   }
 
 }
@@ -4628,12 +4632,18 @@ final class SponsorshipResource implements ResourceInterface {
 
 | Key | Declared as | What it builds |
 | --- | --- | --- |
-| `venue` | `refer('venue', 'event_venue', ...)` | a string, the venue's machine name, with `SurfaceValidReference` naming the entity type |
-| `contact` | `refer('contact', 'user', ...)` | an integer, a user's id, with the same constraint |
-| `page` | `refer('page', 'node', ..., bundles: ['article'])` | an integer, a node's id, the constraint naming the bundle too |
-| `thing` | `refer('thing', NULL, ...)`, content entities | two keys attached at the key: `entity_type`, a choice of the content entity types the account may reference one of, and `id`, a string, which a refiner narrows to the entity type chosen with the same constraint |
-| `setting` | `refer('setting', NULL, ...)`, config entities among three | the same two keys; of the three entity types it names, node is no config entity, so the venue and the role are offered |
-| `credit` | `refer('credit', NULL, ...)`, an article or a user | the same two keys; the bundle list narrows a node's id to articles |
+| `venue` | `add('venue', 'string', ...)` | a string, the venue's machine name, with `SurfaceValidReference` naming the entity type |
+| `contact` | `add('contact', 'integer', ...)` | an integer, a user's id, with the same constraint |
+| `page` | `add('page', 'integer', ...)`, `'bundles' => ['article']` | an integer, a node's id, the constraint naming the bundle too |
+| `thing` | `attach('thing', ThingStructure::class)`, content entities | a structure of two keys: `entity_type`, a choice of the content entity types the account may reference one of, and `id`, a string, which the structure's refiner narrows to the entity type chosen with the same constraint |
+| `setting` | `attach('setting', SettingStructure::class)`, config entities among three | the same two keys; of the three entity types it names, node is no config entity, so the venue and the role are offered |
+| `credit` | `attach('credit', CreditStructure::class)`, an article or a user | the same two keys; the bundle list narrows a node's id to articles |
+
+The three structures extend `AnyEntityStructure`, which declares the two
+keys, their two rules and the refiner; each names the entity types it
+may name in `ENTITY_TYPES`, the `SurfaceReferenceableType` options, so
+the filter is the structure's own declaration
+([decision](../../docs/decisions.md#a-blueprint-takes-no-complex-data-types)).
 
 Which entities a key may name is core's entity reference selection
 handler's answer for the account asking: the `default` handler for the
@@ -4654,7 +4664,7 @@ up: the resource's lookup, `GET
 /surface-api/event.sponsorship:lookup?key=/contact&q=adm`, which answers
 ids and labels through the same handler, for the same account. Both
 documents mark every reference key `x-surface.reference`, `{"entityType":
-"node", "bundles": ["article"]}`, or for a bare key's id `{"by":
+"node", "bundles": ["article"]}`, or for the id of a reference of any type `{"by":
 "entity_type"}`. The page shows the keys as the full schema states them
 now, and again with the limit held at 1 for its own request, as
 `ddev drush config:set surface.settings reference_list_limit 1`
@@ -4719,11 +4729,15 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_references/surface_examples_references.info.yml`](../surface_examples_references/surface_examples_references.info.yml) | the module: a second one, which needs node for the article the announcement is | 11 |
-| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys declared with refer() and the entity type they refer to, and three of any entity type, each filtered | 31 |
+| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys of the id's type with the constraint naming the entity type they refer to, and three of any entity type, each a structure attached | 29 |
+| [`modules/surface_examples_references/src/Structure/AnyEntityStructure.php`](../surface_examples_references/src/Structure/AnyEntityStructure.php) | a reference to an entity of any type: its entity type, then its id, and the refiner that narrows the id to the entity type chosen | 29 |
+| [`modules/surface_examples_references/src/Structure/ThingStructure.php`](../surface_examples_references/src/Structure/ThingStructure.php) | content of any type, the entity types it names in its own declaration | 4 |
+| [`modules/surface_examples_references/src/Structure/SettingStructure.php`](../surface_examples_references/src/Structure/SettingStructure.php) | a venue or a role: config entities among three | 7 |
+| [`modules/surface_examples_references/src/Structure/CreditStructure.php`](../surface_examples_references/src/Structure/CreditStructure.php) | an article or a user | 6 |
 | [`modules/surface_examples_references/src/Storage/SponsorshipStorage.php`](../surface_examples_references/src/Storage/SponsorshipStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples_references/surface_examples_references.routing.yml`](../surface_examples_references/surface_examples_references.routing.yml), entry `surface_examples.step16` | the route: the generic operation form, with the examples' panels | 8 |
 | [`modules/surface_examples_references/surface_examples_references.permissions.yml`](../surface_examples_references/surface_examples_references.permissions.yml) | its permission, to set the sponsorship | 3 |
-| [`modules/surface_examples_references/config/schema/surface_examples_references.schema.yml`](../surface_examples_references/config/schema/surface_examples_references.schema.yml), entry `surface_examples_references.sponsorship` | the config schema, generated from the class: a node or a user typed uuid, which is how the object stores it, a venue its id; a bare key two strings | 53 |
+| [`modules/surface_examples_references/config/schema/surface_examples_references.schema.yml`](../surface_examples_references/config/schema/surface_examples_references.schema.yml), entry `surface_examples_references.sponsorship` | the config schema, generated from the class: a node or a user typed uuid, which is how the object stores it, a venue its id; a reference of any type two strings | 53 |
 | [`modules/surface_examples_references/config/install/surface_examples_references.sponsorship.yml`](../surface_examples_references/config/install/surface_examples_references.sponsorship.yml) | the settings the module ships with | 12 |
 | [`modules/surface_examples_references/config/install/user.role.event_sponsorship_editor.yml`](../surface_examples_references/config/install/user.role.event_sponsorship_editor.yml) | the role of the account that may not see a draft, which one call is made as | 13 |
 | [`modules/surface_examples_references/config/optional/node.type.article.yml`](../surface_examples_references/config/optional/node.type.article.yml) | the article bundle, for a site that has none | 10 |
@@ -4732,8 +4746,7 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples_references/surface_examples_references.install`](../surface_examples_references/surface_examples_references.install) | deletes them when it is uninstalled | 3 |
 | [`modules/surface_examples_references/src/Sponsorship.php`](../surface_examples_references/src/Sponsorship.php) | the three nodes: an article, a draft article and a page, their ids kept in State | 40 |
 | [`modules/surface_examples_references/surface_examples_references.post_update.php`](../surface_examples_references/surface_examples_references.post_update.php) | stores as uuids the ids a site stored before the object stored uuids | 6 |
-| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 245 |
-| [`src/Reference/EntityReferenceStructure.php`](../../src/Reference/EntityReferenceStructure.php) | the two parts of a bare entity key, and the refiner that narrows its id to the entity type chosen; the main module's | 49 |
+| [`src/Reference/References.php`](../../src/Reference/References.php) | what a reference key is: its definition, core's selection handler for its candidates, the limit and the lookup; the main module's | 286 |
 | [`src/Reference/ReferenceStorageLayout.php`](../../src/Reference/ReferenceStorageLayout.php) | how a config storage keeps a reference to content: by uuid, read back as the id; the main module's | 373 |
 | [`src/Plugin/Validation/Constraint/ValidReferenceConstraint.php`](../../src/Plugin/Validation/Constraint/ValidReferenceConstraint.php) | the id's constraint, core's ValidReference for a key that holds one id; the main module's | 22 |
 | [`src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php`](../../src/Plugin/Validation/Constraint/ReferenceableTypeConstraint.php) | the entity type's constraint, which the filters are options of; the main module's | 17 |
@@ -4821,7 +4834,8 @@ final class RetitleItemStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->refer('node', 'node', t('Node'))
+    $inputs->add('node', 'integer', t('Node'))
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node'])
       ->setDescription(t('The node to retitle.'))
       ->setRequired(TRUE);
 
@@ -5042,7 +5056,7 @@ of code, counted without blank lines or comments:
 | --- | --- | --- |
 | [`modules/surface_examples_retitle/surface_examples_retitle.info.yml`](../surface_examples_retitle/surface_examples_retitle.info.yml) | the module: a third one, which needs node for the pages it retitles | 11 |
 | [`modules/surface_examples_retitle/src/Resource/RetitleResource.php`](../surface_examples_retitle/src/Resource/RetitleResource.php) | the resource: a list of nodes and a style, its own permission, and two gates borrowed from core, a node's update and its title's edit | 28 |
-| [`modules/surface_examples_retitle/src/Structure/RetitleItemStructure.php`](../surface_examples_retitle/src/Structure/RetitleItemStructure.php) | an item: the node, which the gates ask about, and the new title, if one is sent | 11 |
+| [`modules/surface_examples_retitle/src/Structure/RetitleItemStructure.php`](../surface_examples_retitle/src/Structure/RetitleItemStructure.php) | an item: the node, which the gates ask about, and the new title, if one is sent | 12 |
 | [`modules/surface_examples_retitle/src/TitleRewriter.php`](../surface_examples_retitle/src/TitleRewriter.php) | the rewriter: title case, sentence case or a prefix, the same every time, where a model would suggest a title | 38 |
 | [`modules/surface_examples_retitle/src/Storage/RetitleStorage.php`](../surface_examples_retitle/src/Storage/RetitleStorage.php) | the storage: works out each title, then saves each node, and answers the titles before and after | 46 |
 | [`modules/surface_examples_retitle/surface_examples_retitle.routing.yml`](../surface_examples_retitle/surface_examples_retitle.routing.yml), entry `surface_examples.step17` | the route: the generic operation form, with the examples' panels | 8 |
@@ -5056,6 +5070,140 @@ of code, counted without blank lines or comments:
 | [`src/ResourceBuild/Gates.php`](../../src/ResourceBuild/Gates.php) | what answers a gate: core's access handler, or another resource's operation; the main module's | 84 |
 | [`src/ResourceBuild/ItemGates.php`](../../src/ResourceBuild/ItemGates.php) | the gates asked once per item, before the storage sees it; the main module's | 35 |
 
+## Example 18: declared as properties
+
+`/surface-examples/18`
+
+The event's caterer: who, for how many, the budget and dietary needs,
+when food is served, and who to contact. Nothing here is new to the
+series. Each key is a property of the class instead of a call in
+`defineInputs()`, carrying the attribute of the blueprint verb it
+stands for, and `DeclaresByProperties` answers `defineInputs()` by
+calling those verbs in the order the properties are written
+([Declared as properties](../../docs/declaring-a-resource.md#declared-as-properties)).
+
+<!-- code: src/Resource/CateringResource.php -->
+
+```php
+#[Resource('event.catering', storage: CateringStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the catering'),
+  description: new TranslatableMarkup('Sets who caters the event, for how many, the budget, the dietary needs, when food is served and who to contact.'),
+  permission: 'administer site configuration',
+)]
+#[Group('details', 'Details')]
+final class CateringResource implements ResourceInterface {
+
+  use DeclaresByProperties;
+
+  #[Input('Show the caterer on the event page')]
+  public bool $public = FALSE;
+
+  #[Input('Caterer')]
+  #[Constraint('Length', ['max' => 128])]
+  #[Examples('Harbour Kitchen')]
+  #[Describe(placeholder: 'The name on the contract')]
+  public string $provider;
+
+  #[Input('Headcount', description: 'How many people to cater for.')]
+  #[Constraint('Range', ['min' => 1, 'max' => 5000])]
+  public int $headcount;
+
+  #[Input('Budget')]
+  #[Constraint('Range', ['min' => 0])]
+  #[Describe(group: 'details', suffix: 'EUR')]
+  public ?float $budget = NULL;
+
+  #[Input('Dietary needs', list: 'string')]
+  #[Constraint('LabeledChoice', [
+    'choices' => [
+      'vegetarian' => new TranslatableMarkup('Vegetarian'),
+      'vegan' => new TranslatableMarkup('Vegan'),
+      'gluten_free' => new TranslatableMarkup('Gluten free'),
+      'halal' => new TranslatableMarkup('Halal'),
+      'kosher' => new TranslatableMarkup('Kosher'),
+    ],
+  ], item: TRUE)]
+  public array $dietary = [];
+
+  #[Input('Served at', description: 'HH:MM, on a 24-hour clock.')]
+  #[Widget('time')]
+  #[Constraint('Regex', [
+    'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
+    'message' => new TranslatableMarkup('Write the time as HH:MM, such as 18:30.'),
+  ])]
+  #[Rule(whenEquals: ['public', TRUE], require: TRUE, because: 'Say when food is served while the caterer is shown.')]
+  public ?string $served_at = NULL;
+
+  #[Input('Notes for the caterer')]
+  #[Setting('multiline', TRUE)]
+  #[Describe(group: 'details')]
+  public ?string $notes = NULL;
+
+  #[Attach(label: 'Caterer contact', reads: ['listed' => 'public'])]
+  public PersonStructure $contact;
+
+}
+```
+
+PHP says what it can, and the attributes say the rest. The key is the
+property's name and its type the property's type. The initializer is the
+default: `public` starts unchecked and `dietary` empty. A property that
+is not nullable and has no initializer must be given, so `provider` and
+`headcount` are required; `budget`, `served_at` and `notes` are nullable
+with `= NULL` and have no default. The contact is typed with example 8's
+person structure, which `#[Attach]` attaches, its port wired to `public`
+as the press page wires it.
+
+The labels, the descriptions, the placeholder, the suffix and the rule's
+reason are bare strings, which the reader makes translatable: a
+translation is used where one exists, but string extraction does not
+find a bare string. The dietary labels and the time's message sit inside
+a constraint's options, which the reader hands to core as they are, so
+they are written `new TranslatableMarkup()`, which extraction finds.
+
+Show the caterer and two rules hold: the class's own, on `served_at`,
+and the person's, which reads the port and asks for its email. The full
+schema states both as conditionals on `public`; the panel shows them
+beside what PHP made `required` and the defaults.
+
+```bash
+drush tool:run surface:event.catering:configure --uid=1 --input='{"values":{"public":true,"provider":"Harbour Kitchen","headcount":120,"contact":{"name":"Sam Ortiz","email":"catering@example.com"}}}' --input=dry_run=true
+
+drush tool:run surface:event.catering:configure --uid=1 --input='{"values":{"public":true,"provider":"Harbour Kitchen","headcount":120,"served_at":"18:30","contact":{"name":"Sam Ortiz","email":null}}}' --input=dry_run=true
+
+drush tool:run surface:event.catering:configure --uid=1 --input='{"values":{"public":false,"provider":"Harbour Kitchen","headcount":120,"contact":{"name":"Sam Ortiz","email":null}}}' --input=dry_run=true
+```
+
+```
+1. A caterer shown on the event page, with no serving time
+Failed: The values were refused:
+/served_at: Served at is required when Show the caterer on the event page is on.
+
+2. The same caterer served at half past six, its contact email cleared
+Failed: The values were refused:
+/contact/email: Email is required when Show the caterer on the event page is on.
+
+3. The same caterer, not shown, with no serving time and the email cleared
+Success: Dry run of Configure the catering: the values were accepted and prepared, and nothing was written.
+  values: {"public":false,"provider":"Harbour Kitchen","headcount":120,"budget":null,"dietary":["vegetarian"],"served_at":null,"notes":null,"contact":{"name":"Sam Ortiz","email":null,"phone":null}}
+```
+
+### Files
+
+What example 18 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 18 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/surface_examples/src/Resource/CateringResource.php`](src/Resource/CateringResource.php) | the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired | 49 |
+| [`modules/surface_examples/src/Storage/CateringStorage.php`](src/Storage/CateringStorage.php) | the storage: names the config object | 3 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18` | the route | 8 |
+| [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.catering` | the config schema, generated from the class | 66 |
+| [`modules/surface_examples/config/install/surface_examples.catering.yml`](config/install/surface_examples.catering.yml) | the settings the module ships with | 12 |
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
@@ -5064,7 +5212,7 @@ when one drifts, and so does the component example 12 quotes. Each
 example's Files table is its list in `Series`, the one its page and its
 line on the landing page are drawn from, and `ExampleFilesTest`
 fails when a table and the list differ, or the list and the module. The Drush
-commands and answers of examples 7 to 17 are asserted by
+commands and answers of examples 7 to 18 are asserted by
 `ExamplesConceptsToolTest`, and example 15's config schema entry is the
 schema file's, which `ExamplesReadmeTest` checks. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
@@ -5089,15 +5237,15 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, puts example 15's venues back as shipped, a venue removed made again and one added removed, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the use paragraph and the line naming the key a post is signed with, the lock not shipped, and the calls each state allows. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the use paragraph and the line naming the key a post is signed with, the lock not shipped, and the calls each state allows; example 18's full schema, what PHP made required and the defaults, the serving time and, through the port, the contact's email required while the caterer is shown, and its form refusing both then saving. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 17: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 18: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
 | `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of create, update, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; the slug computed from the name on create and kept on a rename, left out of the write and in the read, a slug sent equal noted and another refused, one another venue holds refused naming the name, and the post-update writing a missing one; example 2 offering a venue added, with no cache rebuild. |
 | `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the slug written and read, `POST .../schema` answering the slug it would compute, a `PATCH` sending another slug refused, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the create and update forms saving, the slug drawn fixed; the delete form's confirmation removing; the page and its calls. |
 | `Kernel\ReferenceKeysTest` | Example 16: the three spellings and what each builds; both documents of the sponsorship pinned whole under the limit and past it, under `tests/fixtures/references/`; the candidates the account's, cached by what they read; the refusals, in one message; the lookup and what it leaves out; the tool listing's enum and the sentence naming the lookup; the OpenAPI document's lookup; the page's panel. |
 | `Kernel\RetitleExampleTest` | Example 17: the module writes its three pages and its two roles, and deletes the pages when uninstalled; both documents of the retitle pinned whole under `tests/fixtures/retitle/`, the list marked `live` in the full schema alone; the tool listing's permission, its description and the sentence on the list; the rewriter the same every time, and again on what it wrote; the page's form and panel, the gates, the calls, and each title put back. |
 | `Functional\RetitleFormTest` | Example 17 through its form and over HTTP: anonymous refused; an account that may edit no page refused on its page, nothing written; the retitler's save written, and the page then making its calls as dry runs; `PATCH` refused with a 422 per item, a dry run answering the titles it would write, a write answering what it wrote, and the titles read back. |
-| `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the article saved by its uuid either way and drawn back as its id, and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating a bare key's id per entity type. |
+| `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the article saved by its uuid either way and drawn back as its id, and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating the id of a reference of any type per entity type. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
 | `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; the signer, the webhook's code, signing with the pasted key while the module is off or no managed key is chosen and with the managed key's value once one is, the pasted key kept in config and the managed value stored nowhere, and with no key for a name the site no longer manages; and this page quoting the documents, the use and the lock it does not ship. |
 | `Functional\ExamplesExtensionFormTest` | Example 14 through its forms without JavaScript: the one source drawn as its label and no select, then a select of two; the mailer's pasted key saved, the managed key chosen and the pasted source chosen back with nothing typed, the key kept; the webhook's pasted box gone once a managed key is saved, and back when the module is off. |
