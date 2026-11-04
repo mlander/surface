@@ -131,6 +131,40 @@ final class ConceptCalls {
   ];
 
   /**
+   * Example 18: three calls, made alike to the tool of each spelling.
+   */
+  protected const CATERING = [
+    'shown_without_time' => [
+      'label' => 'A caterer shown on the event page, with no serving time',
+      'values' => [
+        'public' => TRUE,
+        'provider' => 'Harbour Kitchen',
+        'headcount' => 120,
+        'contact' => ['name' => 'Sam Ortiz', 'email' => 'catering@example.com'],
+      ],
+    ],
+    'shown_without_email' => [
+      'label' => 'The same caterer served at half past six, its contact email cleared',
+      'values' => [
+        'public' => TRUE,
+        'provider' => 'Harbour Kitchen',
+        'headcount' => 120,
+        'served_at' => '18:30',
+        'contact' => ['name' => 'Sam Ortiz', 'email' => NULL],
+      ],
+    ],
+    'hidden' => [
+      'label' => 'The same caterer, not shown, with no serving time and the email cleared',
+      'values' => [
+        'public' => FALSE,
+        'provider' => 'Harbour Kitchen',
+        'headcount' => 120,
+        'contact' => ['name' => 'Sam Ortiz', 'email' => NULL],
+      ],
+    ],
+  ];
+
+  /**
    * The calls, by resource id and then by name.
    *
    * Each says what it shows, the operation it calls (configure unless it
@@ -363,36 +397,8 @@ final class ConceptCalls {
         'dry_run' => FALSE,
       ],
     ],
-    'event.catering' => [
-      'shown_without_time' => [
-        'label' => 'A caterer shown on the event page, with no serving time',
-        'values' => [
-          'public' => TRUE,
-          'provider' => 'Harbour Kitchen',
-          'headcount' => 120,
-          'contact' => ['name' => 'Sam Ortiz', 'email' => 'catering@example.com'],
-        ],
-      ],
-      'shown_without_email' => [
-        'label' => 'The same caterer served at half past six, its contact email cleared',
-        'values' => [
-          'public' => TRUE,
-          'provider' => 'Harbour Kitchen',
-          'headcount' => 120,
-          'served_at' => '18:30',
-          'contact' => ['name' => 'Sam Ortiz', 'email' => NULL],
-        ],
-      ],
-      'hidden' => [
-        'label' => 'The same caterer, not shown, with no serving time and the email cleared',
-        'values' => [
-          'public' => FALSE,
-          'provider' => 'Harbour Kitchen',
-          'headcount' => 120,
-          'contact' => ['name' => 'Sam Ortiz', 'email' => NULL],
-        ],
-      ],
-    ],
+    'event.catering' => self::CATERING,
+    'event.catering.method' => self::CATERING,
     'event.sponsorship' => [
       'valid' => [
         'label' => 'A venue, a contact, an article and a node of any content type: accepted',

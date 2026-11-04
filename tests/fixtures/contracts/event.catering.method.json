@@ -1,0 +1,252 @@
+{
+    "resource": "event.catering.method",
+    "module": "surface_examples",
+    "contract": 4,
+    "documents": [
+        {
+            "resource": "event.catering.method",
+            "operation": "configure",
+            "label": "Configure the catering",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the catering",
+                "description": "Sets who caters the event, for how many, the budget, the dietary needs, when food is served and who to contact.",
+                "x-surface": {
+                    "contract": 4,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the catering",
+                        "description": "Sets who caters the event, for how many, the budget, the dietary needs, when food is served and who to contact.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1,
+                    "rules": [
+                        0,
+                        1
+                    ]
+                },
+                "type": "object",
+                "properties": {
+                    "public": {
+                        "title": "Show the caterer on the event page",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false
+                    },
+                    "provider": {
+                        "title": "Caterer",
+                        "type": "string",
+                        "maxLength": 128,
+                        "examples": [
+                            "Harbour Kitchen"
+                        ]
+                    },
+                    "headcount": {
+                        "title": "Headcount",
+                        "description": "How many people to cater for.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5000
+                    },
+                    "budget": {
+                        "title": "Budget",
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": 0
+                    },
+                    "dietary": {
+                        "title": "Dietary needs",
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "items": {
+                            "type": "string",
+                            "oneOf": [
+                                {
+                                    "const": "vegetarian",
+                                    "title": "Vegetarian"
+                                },
+                                {
+                                    "const": "vegan",
+                                    "title": "Vegan"
+                                },
+                                {
+                                    "const": "gluten_free",
+                                    "title": "Gluten free"
+                                },
+                                {
+                                    "const": "halal",
+                                    "title": "Halal"
+                                },
+                                {
+                                    "const": "kosher",
+                                    "title": "Kosher"
+                                }
+                            ]
+                        },
+                        "default": []
+                    },
+                    "served_at": {
+                        "title": "Served at",
+                        "description": "HH:MM, on a 24-hour clock.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                        "x-surface": {
+                            "dependsOn": [
+                                "public"
+                            ],
+                            "patternMessage": "Write the time as HH:MM, such as 18:30."
+                        }
+                    },
+                    "notes": {
+                        "title": "Notes for the caterer",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "contact": {
+                        "title": "Caterer contact",
+                        "$ref": "#/$defs/event.person",
+                        "x-surface": {
+                            "dependsOn": [
+                                "public"
+                            ],
+                            "reads": {
+                                "listed": "public"
+                            }
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "provider",
+                    "headcount"
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "public": {
+                                    "const": true
+                                }
+                            },
+                            "required": [
+                                "public"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "served_at": {
+                                    "description": "Say when food is served while the caterer is shown.",
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "served_at"
+                            ]
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "public": {
+                                    "const": true
+                                }
+                            },
+                            "required": [
+                                "public"
+                            ]
+                        },
+                        "then": {
+                            "properties": {
+                                "contact": {
+                                    "type": "object",
+                                    "properties": {
+                                        "email": {
+                                            "description": "Required while this person is listed publicly.",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "email"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                ],
+                "$defs": {
+                    "event.person": {
+                        "title": "event.person",
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "title": "Name",
+                                "type": "string"
+                            },
+                            "email": {
+                                "title": "Email",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "idn-email",
+                                "x-surface": {
+                                    "dependsOn": [
+                                        "listed"
+                                    ]
+                                }
+                            },
+                            "phone": {
+                                "$ref": "#/$defs/event.phone",
+                                "title": "Phone",
+                                "x-surface": {
+                                    "patternMessage": "Write the number in digits, such as +1 555 0100."
+                                }
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "name"
+                        ],
+                        "x-surface": {
+                            "ports": {
+                                "listed": {
+                                    "type": "boolean",
+                                    "required": false
+                                }
+                            }
+                        }
+                    },
+                    "event.phone": {
+                        "title": "Phone",
+                        "description": "Digits, with spaces if you like, and a leading + for a country code.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "pattern": "^\\+?[0-9 ]{7,20}$",
+                        "examples": [
+                            "+1 555 0100"
+                        ],
+                        "x-surface": {
+                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}

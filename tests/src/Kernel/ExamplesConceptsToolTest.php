@@ -169,6 +169,9 @@ class ExamplesConceptsToolTest extends SurfaceKernelTestBase {
     $this->assertSame("Failed: The values were refused:\n" . '/served_at: Served at is required when Show the caterer on the event page is on.', $first($answers['event.catering']['shown_without_time']), 'The rule on served_at, declared as an attribute.');
     $this->assertSame("Failed: The values were refused:\n" . '/contact/email: Email is required when Show the caterer on the event page is on.', $first($answers['event.catering']['shown_without_email']), 'The person\'s rule, through the port the contact wires to public.');
     $this->assertStringContainsString('"served_at":null', $answers['event.catering']['hidden'], 'Not shown: neither rule holds.');
+    foreach (array_keys(ConceptCalls::CALLS['event.catering']) as $name) {
+      $this->assertSame($answers['event.catering'][$name], $answers['event.catering.method'][$name], sprintf('The same keys declared with calls answer %s the same.', $name));
+    }
     $pages = $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->ids();
     $this->assertStringContainsString(sprintf('titles: [{"node":%d,"old":"volunteer briefing for the night shift","new":"Volunteer Briefing for the Night Shift"},{"node":%d,"old":"WHERE TO PARK ON FESTIVAL DAYS","new":"Where to Park on Festival Days"}', $pages['one'], $pages['two']), $answers['ai.retitle']['dry_run'], 'A dry run answers each title it would write.');
     $this->assertSame("Failed: The values were refused:\n" . implode("\n", [

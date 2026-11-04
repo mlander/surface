@@ -98,6 +98,7 @@ class ResourceCatalogTest extends SurfaceKernelTestBase {
       'block.surface_examples_plugins.presentation.list',
       'event.bulletin',
       'event.catering',
+      'event.catering.method',
       'event.desk',
       'event.doors',
       'event.fees',
