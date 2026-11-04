@@ -119,12 +119,8 @@ final class ConceptPanel {
       'docs/outputs.md',
       'docs/decisions.md#a-gate-is-borrowed-never-copied',
     ],
-    'event.catering' => [
-      'docs/declaring-a-resource.md#declared-as-properties',
-      'docs/decisions.md#a-class-may-declare-its-keys-as-properties',
-      'docs/refinement.md#declaring-a-rule',
-      'docs/resources.md#ports',
-    ],
+    'event.catering' => self::CATERING_DOCS,
+    'event.catering.method' => self::CATERING_DOCS,
     'event.venue' => [
       'docs/storage.md#a-config-entity',
       'docs/resources.md#an-operation-that-takes-keys-of-its-own',
@@ -167,6 +163,16 @@ final class ConceptPanel {
     '/surface-api/event.sponsorship:lookup?key=/contact&q=adm',
     '/surface-api/event.sponsorship:lookup?key=/thing/id&type=node&q=Sponsor',
     '/surface-api/event.sponsorship:lookup?key=/setting&type=node&q=Sponsor',
+  ];
+
+  /**
+   * Example 18: the docs pages both its resources point at.
+   */
+  protected const CATERING_DOCS = [
+    'docs/declaring-a-resource.md#declared-as-properties',
+    'docs/decisions.md#a-class-may-declare-its-keys-as-properties',
+    'docs/refinement.md#declaring-a-rule',
+    'docs/resources.md#ports',
   ];
 
   /**
@@ -301,7 +307,7 @@ final class ConceptPanel {
       'event.mailer', 'event.webhook' => $this->extension(),
       'event.sponsorship' => $this->references($served),
       'ai.retitle' => $this->gates($served),
-      'event.catering' => $this->asProperties($served),
+      'event.catering', 'event.catering.method' => $this->twoSpellings($served, $id),
       default => NULL,
     };
     if ($blocks === NULL) {
@@ -345,7 +351,8 @@ final class ConceptPanel {
       'event.venue' => $this->t("A module that declares its own config entity type puts a resource over it from the start: the venue entity, with no form classes, no list builder and no links, and the resource <code>event.venue</code> naming it through a ConfigEntityStorage. Its config schema, <code>surface_examples.event_venue.*</code>, is written from the resource by <code>drush surface:config-schema --write</code>, as a config object's is. Add, edit and remove are about one venue. Listing and reordering are about the venues together, so they name none: each takes the keys of a structure of its own, a page and a filter, or a list of ids and weights, which <code>structure:</code> on its <code>#[Operation]</code> names. The listing is read only and declares outputs, the page and the total, each venue in it one the account may read; on HTTP it is what <code>GET</code> on the collection answers. The reorder is an update over the collection, written in one commit, served as a custom method, <code>PATCH /surface-api/event.venue:reorder</code>. The slug is a computed key, <code>\$inputs->compute('slug', ..., from: ['label'], using: Slugify::class)</code>: <code>Slugify</code> computes it from the name when a venue is added, and keeps it after, so a rename leaves its links working. Nobody types it: both documents state it <code>readOnly</code> with <code>x-surface.computed</code>, the write tool's values leave it out, the read answers it, a slug sent equal to the one it holds is noted and not taken, and any other is refused naming the name. Example 2 chooses its venue and room from these venues: add one here and example 2 offers it at the next request."),
       'event.mailer', 'event.webhook' => $this->t("Two resources call a service with a credential: a key pasted here, a secret, or a key the site manages, once a module that manages keys is on. @module stands in for the Key module. The mailer, at /surface-examples/14, is the owner's way: it declares both sources, each a structure of its own, and a provider lists them, the pasted one always and the managed one while the module is on. With one source to choose, the source is drawn as that source and stated as <code>const</code>. A pasted key stored is kept when the managed key is chosen, and taken up again when the pasted source is chosen back. The webhook, at /surface-examples/14/webhook, is the alter's way: it declares a pasted key and knows nothing of managed keys, and the module's alter mounts a managed key beside it and rules the pasted key out once one is chosen. Install the module and reload: the second source and the managed key are there at the next request, with no cache rebuild.", ['@module' => self::KEYS]),
       'event.sponsorship' => $this->t("A key that refers to an entity holds the entity's id: a key of the id's type with the <code>SurfaceValidReference</code> constraint naming the entity type it refers to, <code>['entityTypeId' => 'event_venue']</code> a venue, <code>'user'</code> a user, <code>'node'</code> with <code>'bundles' => ['article']</code> an article. Which entities it may name is core's selection handler's answer for the account asking, with the bundle and the access it checks, so a draft article is not one for an account that may not see it. While the site has at most @limit of them, <code>surface.settings:reference_list_limit</code>, the key lists them: a select on the form, a <code>oneOf</code> with their labels in both documents, an enum in the tool listing. Past it, the key is an id: core's entity autocomplete on the form, <code>x-surface.widget: autocomplete</code> in the documents, and the resource's lookup, <code>GET /surface-api/event.sponsorship:lookup</code>, which finds candidates by label for the same account. Any entity is a structure the example declares and attaches, <code>attach('thing', ThingStructure::class)</code>: an entity type, then an id of it, narrowed to that type by the same constraint; its entity types are filtered by what kind of entity type they are and by bundle, in the structure's own declaration, and by what the account may reference.", ['@limit' => $this->references->limit()]),
-      'event.catering' => $this->t("The keys of this resource are properties of its class, each carrying the attribute of the blueprint verb it stands for: <code>#[Input]</code> for <code>add()</code>, <code>#[Attach]</code> for <code>attach()</code>, <code>#[Rule]</code> for <code>narrow()->when()</code>. Nothing is new to the series: a choice list, bounds, a pattern, a widget, a group, a rule and a port each appear in an earlier example, declared with calls in <code>defineInputs()</code>. Here the class uses <code>DeclaresByProperties</code>, whose <code>defineInputs()</code> reads the properties in order and calls the same verbs, so the contract is the one the calls would give. PHP says what it can: the key's name, its type, its default (the initializer), and whether it must be given (a type that is not nullable, with no initializer: <code>provider</code> and <code>headcount</code>). The labels and descriptions are bare strings, which the reader makes translatable; the dietary labels sit inside a constraint's options, which the reader hands to core as they are, so they are written <code>new TranslatableMarkup()</code>. Show the caterer and the rule asks when food is served, and the person's own rule, reading the port the contact wires to <code>public</code>, asks for its email."),
+      'event.catering' => $this->t("The keys of this resource are properties of its class, each carrying the attribute of the blueprint verb it stands for: <code>#[Input]</code> for <code>add()</code>, <code>#[Attach]</code> for <code>attach()</code>, <code>#[Rule]</code> for <code>narrow()->when()</code>. Nothing is new to the series: a choice list, bounds, a pattern, a widget, a group, a rule and a port each appear in an earlier example, declared with calls in <code>defineInputs()</code>. Here the class uses <code>DeclaresByProperties</code>, whose <code>defineInputs()</code> reads the properties in order and calls the same verbs, so the contract is the one the calls would give. PHP says what it can: the key's name, its type, its default (the initializer), and whether it must be given (a type that is not nullable, with no initializer: <code>provider</code> and <code>headcount</code>). The labels and descriptions are bare strings, which the reader makes translatable; the dietary labels sit inside a constraint's options, which the reader hands to core as they are, so they are written <code>new TranslatableMarkup()</code>. Show the caterer and the rule asks when food is served, and the person's own rule, reading the port the contact wires to <code>public</code>, asks for its email. The same keys declared with calls in <code>defineInputs()</code>, as examples 1 to 17 write them, are at /surface-examples/18/method, saving to the same config object; both documents of the two are the same."),
+      'event.catering.method' => $this->t("The keys of this resource are calls in <code>defineInputs()</code>, written as examples 1 to 17 write them: <code>add()</code> with its chained setters, <code>describe()</code> for the group, the placeholder and the suffix, <code>addList()</code> with a constraint on its item, <code>attach()</code> with the port wired, and <code>narrow()->when()</code> for the rule. They are the keys of /surface-examples/18, which declares them as properties of its class, each carrying the attribute of the verb it stands for, and both save to the same config object. The properties reader calls these same verbs, so both documents of the two are the same, byte for byte once the id is made the same. Show the caterer and the rule asks when food is served, and the person's own rule, reading the port the contact wires to <code>public</code>, asks for its email."),
       'ai.retitle' => $this->t("A resource of your own may act on things another module owns. The retitle has its own keys, a list of nodes and a style, its own storage and its own permission, <code>retitle nodes</code>, and may retitle only a node the account may update and whose title it may edit. It does not copy those checks: it names them as gates, <code>gate: ['entity:node:update', 'field:node.title:edit']</code> on its <code>#[Operation]</code>, and each is core's answer through node's access handler, with every module that alters it, asked of each node in the list. Field access does not include entity access, which is why node's own form asks both, and so does the retitle. A node a gate refuses is refused on its own item, <code>/items/0/node</code>, with the owner's reason, and the storage never sees it. The retitle's permission is static and the tool listing declares it; whether each node may be retitled is settled per node, so the full schema marks the list <code>live</code>. A gate may also name another resource's operation, <code>entity.content:node.page:update</code>, answered whole. The new titles come from a rewriter that is no model: title case, sentence case or a prefix, the same every time, which a dry run answers before anything is written."),
       default => $this->t('Not an example of this series.'),
     };
@@ -693,15 +700,18 @@ final class ConceptPanel {
   }
 
   /**
-   * Example 18: what PHP and the attributes said, as the full schema states it.
+   * Example 18: what either spelling said, as the full schema states it.
    *
    * @param \Drupal\surface\ResourceBuild\OperationRoute $served
    *   What the form serves.
+   * @param string $id
+   *   The resource id: the caterer declared as properties, or the same
+   *   keys declared with calls.
    *
    * @return array
    *   The blocks.
    */
-  protected function asProperties(OperationRoute $served): array {
+  protected function twoSpellings(OperationRoute $served, string $id): array {
     $full = $this->full($served);
     $defaults = [];
     foreach ($full['properties'] ?? [] as $key => $property) {
@@ -709,8 +719,17 @@ final class ConceptPanel {
         $defaults[$key] = $property['default'];
       }
     }
+    [$title, $text] = $id === 'event.catering'
+      ? [
+        $this->t('What PHP said, and what the rule and the port say'),
+        $this->t("From PHP: the keys whose property is not nullable and has no initializer are <code>required</code>, and each initializer is a <code>default</code>. From the attributes: the rule on <code>served_at</code> and the person's own rule on its email, which reads the port the contact wires to <code>public</code>, each one conditional on <code>public</code>. The calls at /surface-examples/18/method state the same."),
+      ]
+      : [
+        $this->t('What the calls said, and what the rule and the port say'),
+        $this->t("From the calls: the keys set <code>setRequired(TRUE)</code> are <code>required</code>, and each <code>default:</code> is a <code>default</code>. From <code>narrow()</code> and <code>attach()</code>: the rule on <code>served_at</code> and the person's own rule on its email, which reads the port the contact wires to <code>public</code>, each one conditional on <code>public</code>. The properties at /surface-examples/18 state the same."),
+      ];
     return [
-      'stated' => $this->details($this->t('What PHP said, and what the rule and the port say'), $this->t("From PHP: the keys whose property is not nullable and has no initializer are <code>required</code>, and each initializer is a <code>default</code>. From the attributes: the rule on <code>served_at</code> and the person's own rule on its email, which reads the port the contact wires to <code>public</code>, each one conditional on <code>public</code>."), $this->json([
+      'stated' => $this->details($title, $text, $this->json([
         'required' => $full['required'] ?? [],
         'defaults' => $defaults,
         'allOf' => $full['allOf'] ?? [],
@@ -1242,6 +1261,7 @@ final class ConceptPanel {
     $ids = match ($id) {
       'event.press', 'event.desk' => ['event.press', 'event.desk'],
       'event.mailer', 'event.webhook' => ['event.mailer', 'event.webhook'],
+      'event.catering', 'event.catering.method' => ['event.catering', 'event.catering.method'],
       default => [$id],
     };
     // Example 15's calls write a fourth venue and remove it again, unless

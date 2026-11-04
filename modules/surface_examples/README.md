@@ -32,9 +32,10 @@ submodule that needs node
 retitle of nodes, a resource of its own that borrows each node's access,
 core's update and its title's edit, asked per node, in a submodule that
 needs node too ([below](#example-17-retitle-in-bulk-access-borrowed)).
-Example 18 is a caterer whose keys are properties of its class, each
-carrying an attribute, the same blueprint as the calls of the earlier
-examples ([below](#example-18-declared-as-properties)).
+Example 18 is a caterer's keys declared twice, once with calls in
+`defineInputs()` as the earlier examples write them and once as
+properties of the class, each carrying an attribute, the same blueprint
+saving to one config object ([below](#example-18-declared-as-properties)).
 
 ```bash
 drush pm:install surface_examples
@@ -5072,15 +5073,92 @@ of code, counted without blank lines or comments:
 
 ## Example 18: declared as properties
 
-`/surface-examples/18`
+`/surface-examples/18` and `/surface-examples/18/method`
 
 The event's caterer: who, for how many, the budget and dietary needs,
 when food is served, and who to contact. Nothing here is new to the
-series. Each key is a property of the class instead of a call in
-`defineInputs()`, carrying the attribute of the blueprint verb it
-stands for, and `DeclaresByProperties` answers `defineInputs()` by
-calling those verbs in the order the properties are written
-([Declared as properties](../../docs/declaring-a-resource.md#declared-as-properties)).
+series. The same keys are declared twice, by two resources over one
+config object: `event.catering.method` with calls in `defineInputs()`,
+as examples 1 to 17 write them, and `event.catering` with each key a
+property of the class, carrying the attribute of the blueprint verb it
+stands for. `DeclaresByProperties` answers `defineInputs()` by calling
+those verbs in the order the properties are written
+([Declared as properties](../../docs/declaring-a-resource.md#declared-as-properties)),
+so both documents of the two are the same, byte for byte once the id is
+made the same.
+
+Before, the keys as calls, at `/surface-examples/18/method`:
+
+<!-- code: src/Resource/CateringByMethodResource.php -->
+
+```php
+#[Resource('event.catering.method', storage: CateringStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the catering'),
+  description: new TranslatableMarkup('Sets who caters the event, for how many, the budget, the dietary needs, when food is served and who to contact.'),
+  permission: 'administer site configuration',
+)]
+final class CateringByMethodResource implements ResourceInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $details = ArrangementGroup::fieldset('details', t('Details'));
+
+    $inputs->add('public', 'boolean', t('Show the caterer on the event page'), default: FALSE);
+
+    $provider = $inputs->add('provider', 'string', t('Caterer'))
+      ->setRequired(TRUE)
+      ->addConstraint('Length', ['max' => 128]);
+    DefinitionMetadata::setExamples($provider, ['Harbour Kitchen']);
+    $inputs->describe('provider', placeholder: t('The name on the contract'));
+
+    $inputs->add('headcount', 'integer', t('Headcount'))
+      ->setDescription(t('How many people to cater for.'))
+      ->setRequired(TRUE)
+      ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
+
+    $inputs->add('budget', 'float', t('Budget'))
+      ->addConstraint('Range', ['min' => 0]);
+    $inputs->describe('budget', group: $details, suffix: t('EUR'));
+
+    $dietary = $inputs->addList('dietary', 'string', t('Dietary needs'), default: []);
+    $dietary->getItemDefinition()->addConstraint('LabeledChoice', [
+      'choices' => [
+        'vegetarian' => t('Vegetarian'),
+        'vegan' => t('Vegan'),
+        'gluten_free' => t('Gluten free'),
+        'halal' => t('Halal'),
+        'kosher' => t('Kosher'),
+      ],
+    ]);
+
+    $inputs->add('served_at', 'string', t('Served at'))
+      ->setDescription(t('HH:MM, on a 24-hour clock.'))
+      ->setSetting('widget', 'time')
+      ->addConstraint('Regex', [
+        'pattern' => '/^([01]\d|2[0-3]):[0-5]\d$/D',
+        'message' => t('Write the time as HH:MM, such as 18:30.'),
+      ]);
+
+    $inputs->add('notes', 'string', t('Notes for the caterer'))
+      ->setSetting('multiline', TRUE);
+    $inputs->describe('notes', group: $details);
+
+    $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
+      ->setLabel(t('Caterer contact'));
+
+    $inputs->narrow('served_at')
+      ->when(Condition::equals('public', TRUE))
+      ->require()
+      ->because(t('Say when food is served while the caterer is shown.'));
+  }
+
+}
+```
+
+After, the same keys as properties, at `/surface-examples/18`:
 
 <!-- code: src/Resource/CateringResource.php -->
 
@@ -5175,6 +5253,17 @@ drush tool:run surface:event.catering:configure --uid=1 --input='{"values":{"pub
 drush tool:run surface:event.catering:configure --uid=1 --input='{"values":{"public":false,"provider":"Harbour Kitchen","headcount":120,"contact":{"name":"Sam Ortiz","email":null}}}' --input=dry_run=true
 ```
 
+The same three calls to the tool of the calls,
+`surface:event.catering.method:configure`, answer the same, below:
+
+```bash
+drush tool:run surface:event.catering.method:configure --uid=1 --input='{"values":{"public":true,"provider":"Harbour Kitchen","headcount":120,"contact":{"name":"Sam Ortiz","email":"catering@example.com"}}}' --input=dry_run=true
+
+drush tool:run surface:event.catering.method:configure --uid=1 --input='{"values":{"public":true,"provider":"Harbour Kitchen","headcount":120,"served_at":"18:30","contact":{"name":"Sam Ortiz","email":null}}}' --input=dry_run=true
+
+drush tool:run surface:event.catering.method:configure --uid=1 --input='{"values":{"public":false,"provider":"Harbour Kitchen","headcount":120,"contact":{"name":"Sam Ortiz","email":null}}}' --input=dry_run=true
+```
+
 ```
 1. A caterer shown on the event page, with no serving time
 Failed: The values were refused:
@@ -5198,10 +5287,12 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/CateringResource.php`](src/Resource/CateringResource.php) | the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired | 49 |
-| [`modules/surface_examples/src/Storage/CateringStorage.php`](src/Storage/CateringStorage.php) | the storage: names the config object | 3 |
-| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18` | the route | 8 |
-| [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.catering` | the config schema, generated from the class | 66 |
+| [`modules/surface_examples/src/Resource/CateringByMethodResource.php`](src/Resource/CateringByMethodResource.php) | the before: the same keys with defineInputs(), as examples 1 to 17 write them | 50 |
+| [`modules/surface_examples/src/Resource/CateringResource.php`](src/Resource/CateringResource.php) | the after, the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired | 49 |
+| [`modules/surface_examples/src/Storage/CateringStorage.php`](src/Storage/CateringStorage.php) | the storage both save through: names the config object | 3 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18` | the route of the properties | 8 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18_method` | the route of the calls | 8 |
+| [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.catering` | the config schema, generated from either class, the same entry | 66 |
 | [`modules/surface_examples/config/install/surface_examples.catering.yml`](config/install/surface_examples.catering.yml) | the settings the module ships with | 12 |
 
 ## How this page is kept true
@@ -5237,7 +5328,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, puts example 15's venues back as shipped, a venue removed made again and one added removed, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the use paragraph and the line naming the key a post is signed with, the lock not shipped, and the calls each state allows; example 18's full schema, what PHP made required and the defaults, the serving time and, through the port, the contact's email required while the caterer is shown, and its form refusing both then saving. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the use paragraph and the line naming the key a post is signed with, the lock not shipped, and the calls each state allows; example 18's full schema, what PHP made required and the defaults, the serving time and, through the port, the contact's email required while the caterer is shown, and its form refusing both then saving; and the same keys declared with calls emitting both documents the same, byte for byte once the id is made the same, saving to the same config object. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
 | `Kernel\ExamplesConceptsToolTest` | Examples 7 to 18: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
 | `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of create, update, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; the slug computed from the name on create and kept on a rename, left out of the write and in the read, a slug sent equal noted and another refused, one another venue holds refused naming the name, and the post-update writing a missing one; example 2 offering a venue added, with no cache rebuild. |

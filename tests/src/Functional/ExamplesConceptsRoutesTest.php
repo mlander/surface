@@ -50,6 +50,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     'surface-examples/14' => 'Two resources call a service with a credential',
     'surface-examples/14/webhook' => 'Two resources call a service with a credential',
     'surface-examples/18' => 'The keys of this resource are properties of its class',
+    'surface-examples/18/method' => 'The keys of this resource are calls in',
   ];
 
   /**

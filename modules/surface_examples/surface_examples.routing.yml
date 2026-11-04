@@ -18,8 +18,9 @@
 # Example 14 is two resources served the same way, the mailer and the
 # webhook, each page with the same panel; the module that manages keys is a
 # submodule the panel tells you to enable.
-# Example 18 is one resource served the same way, with the same panel, its
-# keys declared as properties of its class.
+# Example 18 is the same keys declared twice, served the same way, each page
+# with the same panel: as properties of the class, and with calls in
+# defineInputs(), both saving to one config object.
 
 surface_examples.index:
   path: '/surface-examples'
@@ -241,5 +242,14 @@ surface_examples.step18:
     _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Example 18: declared as properties'
     _surface_resource: 'Drupal\surface_examples\Resource\CateringResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+
+surface_examples.step18_method:
+  path: '/surface-examples/18/method'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 18, the same keys declared with defineInputs()'
+    _surface_resource: 'Drupal\surface_examples\Resource\CateringByMethodResource'
     _surface_operation: 'configure'
     _surface_panel: 'surface_examples.panels'

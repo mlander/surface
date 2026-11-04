@@ -166,6 +166,8 @@ class OperationKindsTest extends SurfaceKernelTestBase {
     $this->assertSame([
       'surface:event.bulletin:configure' => 'update',
       'surface:event.bulletin:read' => 'read',
+      'surface:event.catering.method:configure' => 'update',
+      'surface:event.catering.method:read' => 'read',
       'surface:event.catering:configure' => 'update',
       'surface:event.catering:read' => 'read',
       'surface:event.desk:configure' => 'update',
@@ -228,8 +230,9 @@ class OperationKindsTest extends SurfaceKernelTestBase {
    *
    * A client lists tools by title. The examples' three registration steps
    * say which step they are; where operations of several resources still
-   * share a label, each tool adds its resource, and the read the build
-   * adds is "Current values:" and its update's title.
+   * share a label, as example 18's two spellings do, each tool adds its
+   * resource, and the read the build adds is "Current values:" and its
+   * update's title.
    */
   public function testNoTwoToolsShareTitles(): void {
     $titles = [];
@@ -245,7 +248,16 @@ class OperationKindsTest extends SurfaceKernelTestBase {
     $deriver = ResourceOperationToolDeriver::create($this->container, OperationInputs::TOOL);
     $shared = new \ReflectionMethod($deriver, 'sharedLabels');
     $registry = $this->container->get('surface.resource_registry');
-    $this->assertSame([], $shared->invoke($deriver, $registry->getDefinitions()), 'No shipped label is shared.');
+    // Example 18 declares the caterer's keys twice, one operation on each
+    // class: the one shipped label two tools share.
+    $this->assertSame([
+      'Configure the catering' => TRUE,
+      'Current values: Configure the catering' => TRUE,
+    ], $shared->invoke($deriver, $registry->getDefinitions()), 'Only example 18\'s labels are shared.');
+    $this->assertSame('Configure the catering (event.catering)', $titles['surface:event.catering:configure']);
+    $this->assertSame('Configure the catering (event.catering.method)', $titles['surface:event.catering.method:configure']);
+    $this->assertSame('Current values: Configure the catering (event.catering)', $titles['surface:event.catering:read']);
+    $this->assertSame('Current values: Configure the catering (event.catering.method)', $titles['surface:event.catering.method:read']);
     $title = new \ReflectionMethod($deriver, 'title');
     $vault = $registry->getDefinition(VaultResource::class);
     $configure = $registry->getOperation(VaultResource::class, 'configure');

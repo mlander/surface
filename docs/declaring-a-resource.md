@@ -499,6 +499,12 @@ whether it must be given. The attributes say the rest:
   `Drupal.NamingConventions.ValidVariableName.LowerCamelName` off for
   those classes, as this module's `phpcs.xml.dist` does.
 
+Example 18 declares the same keys both ways, over one config object:
+`CateringByMethodResource` with calls at `/surface-examples/18/method`,
+and `CateringResource` as properties at `/surface-examples/18`, so the
+two can be read side by side
+([the example](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-18-declared-as-properties)).
+
 `tests/modules/surface_property_test` declares every attribute twice,
 once with calls and once as properties, and `PropertyDeclarationTest`
 holds the two to the same documents
