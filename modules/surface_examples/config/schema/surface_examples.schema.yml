@@ -582,3 +582,72 @@ surface_examples.event_venue.*:
     status:
       type: boolean
       label: 'Enabled'
+
+# Example 18: the caterer, its keys declared as properties.
+# Generated from the event.catering resource by drush surface:config-schema.
+surface_examples.catering:
+  type: config_object
+  label: 'Catering settings, example 18'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    public:
+      type: boolean
+      label: 'Show the caterer on the event page'
+      nullable: true
+    provider:
+      type: string
+      label: 'Caterer'
+      constraints:
+        Length:
+          max: 128
+    headcount:
+      type: integer
+      label: 'Headcount'
+      constraints:
+        Range:
+          min: 1
+          max: 5000
+    budget:
+      type: float
+      label: 'Budget'
+      nullable: true
+      constraints:
+        Range:
+          min: 0
+    dietary:
+      type: sequence
+      label: 'Dietary needs'
+      nullable: true
+      sequence:
+        type: string
+        label: 'Dietary needs'
+    served_at:
+      type: string
+      label: 'Served at'
+      nullable: true
+      constraints:
+        Regex:
+          pattern: '/^([01]\d|2[0-3]):[0-5]\d$/D'
+    notes:
+      type: string
+      label: 'Notes for the caterer'
+      nullable: true
+    contact:
+      type: mapping
+      label: 'Caterer contact'
+      mapping:
+        name:
+          type: string
+          label: 'Name'
+        email:
+          type: email
+          label: 'Email'
+          nullable: true
+        phone:
+          type: string
+          label: 'Phone'
+          nullable: true
+          constraints:
+            Regex:
+              pattern: '/^\+?[0-9 ]{7,20}$/D'

@@ -118,7 +118,15 @@ the record of the rework that brought the module to the pattern.
 - **Blueprint**: what a resource or structure declares its members
   into, handed to `defineInputs()` and `defineOutputs()`
   (`BlueprintInterface`); an alter gets the add-only
-  `BlueprintAdditionsInterface`. A key holds one value of a type in the
+  `BlueprintAdditionsInterface`. A class may instead declare its keys as
+  properties, each carrying the attribute of the verb it stands for
+  (`#[Input]`, `#[Attach]`, `#[Rule]`, eighteen in `src/Resource/Attribute/`),
+  with `DeclaresByProperties`, whose `defineInputs()` and
+  `defineOutputs()` call the same verbs in property order
+  (`ResourceBuild\PropertyDeclaration`, which reads no value): a second
+  spelling, never a second contract, either per class, never both
+  (example 18,
+  `docs/decisions.md#a-class-may-declare-its-keys-as-properties`). A key holds one value of a type in the
   one table the blueprint, the emitter and the reader read
   (`Contract\LeafTypes`: `string`, `email`, `uri`, `datetime_iso8601`,
   `integer`, `timestamp`, `float`, `boolean`, or a shape or config
@@ -365,7 +373,8 @@ A resource is a class in a module's `src/Resource/` carrying
 `#[Resource]`, a structure one in `src/Structure/` carrying
 `#[Structure]`; the attribute decides the kind, and either directory
 works. Each has a static `defineInputs()` (and, on `DefinesOutputsInterface`,
-a static `defineOutputs()`), static `#[RefinesInput]` methods and
+a static `defineOutputs()`), or declares its keys as properties with
+`DeclaresByProperties`, which supplies both; static `#[RefinesInput]` methods and
 `#[Operation]` on the class or on static methods; it is never
 instantiated. Another module
 changes either with an alter in `src/Alter/` carrying `#[Alters]`. A
@@ -622,7 +631,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1843, Assertions: 42994, Errors: 0, Failures: 0, Skipped: 3. Classes: 259 of 259, 8 at a time, browser classes 4.
+phpunit: Tests: 1850, Assertions: 43520, Errors: 0, Failures: 0, Skipped: 3. Classes: 260 of 260, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -642,8 +651,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1735, Assertions: 38973, Skipped: 3, Deprecations: 130. Classes:
-210, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1742, Assertions: 39449, Skipped: 3, Deprecations: 130. Classes:
+211, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -826,7 +835,9 @@ so the rule is this sentence. `npm test` is not part of
   `TranslatableMarkup`, and extractable); a container-built class of
   ours injects `string_translation` and calls `$this->t()`; `new
   TranslatableMarkup` appears only inside attribute arguments, where a
-  call is not allowed.
+  call is not allowed; a key declared as a property takes bare strings,
+  which its reader wraps, and `new TranslatableMarkup` inside a
+  constraint's options.
 - No closures anywhere a form array or a data surface carries: both are
   serialized. Use a service, a callable string, or a class.
 - House style for `defineInputs()`, `defineOutputs()` and a shape's
@@ -884,7 +895,10 @@ See `docs/declaring-a-resource.md` for all four in full.
 src/                     Data surface, builder (internal), definition map, host trait;
                          Computed and Resolve, a computed key's and a
                          resolved key's metadata.
-src/Resource/            The authoring API and attributes (Attribute/).
+src/Resource/            The authoring API and attributes (Attribute/), the
+                         property attributes among them, and
+                         DeclaresByProperties, which reads them
+                         (ResourceBuild/PropertyDeclaration.php).
 src/ResourceBuild/       Discovery pass, registry, build step, adapters,
                          derived variants, catalog, operation routes.
                          The build step is Resources.php, the order and

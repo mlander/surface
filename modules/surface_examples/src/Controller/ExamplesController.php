@@ -22,6 +22,7 @@ use Drupal\surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\surface_examples\Hook\SpotlightBlockHooks;
 use Drupal\surface_examples\Resource\BulletinResource;
+use Drupal\surface_examples\Resource\CateringResource;
 use Drupal\surface_examples\Resource\DoorsResource;
 use Drupal\surface_examples\Resource\MailerResource;
 use Drupal\surface_examples\Resource\ProgramResource;
@@ -812,6 +813,15 @@ final class ExamplesController extends ControllerBase {
               '#markup' => $this->t('Enable it: <code>ddev drush pm:install @module</code>; its page is then /surface-examples/17.', ['@module' => self::RETITLE]),
             ],
           ],
+      ],
+      18 => [
+        'title' => $series[18]['title'],
+        'sentence' => $this->t("A caterer whose keys are properties of its class instead of calls in defineInputs(), each carrying the attribute of the blueprint verb it stands for: the name, the type, the default and whether a key must be given are read from PHP, the rest from the attributes. The same blueprint, so the form, both documents and the tool are what the calls would give."),
+        'items' => [
+          $this->route('surface_examples.step18'),
+          $this->react('event.catering'),
+          $this->lines(CateringResource::class),
+        ],
       ],
     ];
   }

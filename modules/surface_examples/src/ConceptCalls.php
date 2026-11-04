@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface_examples;
 
 /**
- * The tool calls examples 7 to 17 show, written down once.
+ * The tool calls examples 7 to 18 show, written down once.
  *
  * None leaves anything written: every call is a dry run, which accepts,
  * validates and prepares the values, answers with what would be stored
@@ -361,6 +361,36 @@ final class ConceptCalls {
         'operation' => 'delete',
         'parameters' => ['id' => 'town_hall'],
         'dry_run' => FALSE,
+      ],
+    ],
+    'event.catering' => [
+      'shown_without_time' => [
+        'label' => 'A caterer shown on the event page, with no serving time',
+        'values' => [
+          'public' => TRUE,
+          'provider' => 'Harbour Kitchen',
+          'headcount' => 120,
+          'contact' => ['name' => 'Sam Ortiz', 'email' => 'catering@example.com'],
+        ],
+      ],
+      'shown_without_email' => [
+        'label' => 'The same caterer served at half past six, its contact email cleared',
+        'values' => [
+          'public' => TRUE,
+          'provider' => 'Harbour Kitchen',
+          'headcount' => 120,
+          'served_at' => '18:30',
+          'contact' => ['name' => 'Sam Ortiz', 'email' => NULL],
+        ],
+      ],
+      'hidden' => [
+        'label' => 'The same caterer, not shown, with no serving time and the email cleared',
+        'values' => [
+          'public' => FALSE,
+          'provider' => 'Harbour Kitchen',
+          'headcount' => 120,
+          'contact' => ['name' => 'Sam Ortiz', 'email' => NULL],
+        ],
       ],
     ],
     'event.sponsorship' => [

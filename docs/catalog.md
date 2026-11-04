@@ -39,6 +39,7 @@ Refused. `docs/resources.md` says how each part works.
 | [`block.surface_examples_plugins.presentation.grid`](#blocksurface_examples_pluginspresentationgrid) | Grid presentation | `GridPresentationStructure` | none | none |
 | [`block.surface_examples_plugins.presentation.list`](#blocksurface_examples_pluginspresentationlist) | List presentation | `ListPresentationStructure` | none | none |
 | [`event.bulletin`](#eventbulletin) |  | `BulletinResource` | none | `configure`, `read` |
+| [`event.catering`](#eventcatering) |  | `CateringResource` | none | `configure`, `read` |
 | [`event.desk`](#eventdesk) |  | `InfoDeskResource` | none | `configure`, `read` |
 | [`event.doors`](#eventdoors) |  | `DoorsResource` | none | `configure`, `read` |
 | [`event.fees`](#eventfees) |  | `FeesStructure` | none | none |
@@ -170,6 +171,23 @@ Refused. `docs/resources.md` says how each part works.
 
 - `configure` reaches form `/surface-examples/7 (surface_examples.step7)`, http `PATCH /surface-api/event.bulletin`, tool `surface:event.bulletin:configure`, openapi `event.bulletin:configure:write`, react `/surface-react/event.bulletin/configure`.
 - `read` reaches http `GET /surface-api/event.bulletin`, tool `surface:event.bulletin:read`, openapi `event.bulletin:read:read`.
+
+## event.catering
+
+`Drupal\surface_examples\Resource\CateringResource`, in `surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\surface_examples\Storage\CateringStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the catering | nothing | no | `administer site configuration` | yes | `#[Operation] on CateringResource` (`surface_examples`) |
+| `read` | Current values: Configure the catering | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
+
+- `configure` reaches form `/surface-examples/18 (surface_examples.step18)`, http `PATCH /surface-api/event.catering`, tool `surface:event.catering:configure`, openapi `event.catering:configure:write`, react `/surface-react/event.catering/configure`.
+- `read` reaches http `GET /surface-api/event.catering`, tool `surface:event.catering:read`, openapi `event.catering:read:read`.
 
 ## event.desk
 

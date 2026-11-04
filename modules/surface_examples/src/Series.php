@@ -447,6 +447,20 @@ final class Series {
           'src/ResourceBuild/ItemGates.php' => t("the gates asked once per item, before the storage sees it; the main module's"),
         ],
       ],
+      18 => [
+        'title' => t('declared as properties'),
+        'concept' => t("a resource's keys declared as properties carrying attributes, the same blueprint in a second spelling"),
+        'docs' => 'docs/declaring-a-resource.md#declared-as-properties',
+        'decision' => 'a-class-may-declare-its-keys-as-properties',
+        'routes' => ['surface_examples.step18'],
+        'files' => [
+          self::MODULE . 'src/Resource/CateringResource.php' => t('the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired'),
+          self::MODULE . 'src/Storage/CateringStorage.php' => t('the storage: names the config object'),
+          self::ROUTES . 'surface_examples.step18' => t('the route'),
+          self::SCHEMA . 'surface_examples.catering' => t('the config schema, generated from the class'),
+          self::INSTALL . 'surface_examples.catering.yml' => t('the settings the module ships with'),
+        ],
+      ],
     ];
   }
 

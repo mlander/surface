@@ -79,7 +79,7 @@ class ExampleFilesTest extends UnitTestCase {
    * Tests every listed file is there, and is read as the docs tests read it.
    */
   public function testEveryListedFileIsThere(): void {
-    $this->assertSame(range(1, 17), array_keys(Series::examples()));
+    $this->assertSame(range(1, 18), array_keys(Series::examples()));
     foreach (Series::examples() as $number => $example) {
       $this->assertNotSame('', (string) $example['title']);
       $this->assertNotSame('', (string) $example['concept']);
