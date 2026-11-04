@@ -193,6 +193,8 @@ class DerivedToolDefinitionsTest extends SurfaceKernelTestBase {
     $this->assertSame([
       'surface:event.bulletin:configure',
       'surface:event.bulletin:read',
+      'surface:event.catering:configure',
+      'surface:event.catering:read',
       'surface:event.desk:configure',
       'surface:event.desk:read',
       'surface:event.doors:configure',

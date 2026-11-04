@@ -41,7 +41,19 @@ interface BlueprintAdditionsInterface {
    * owner's build checks. It may be a config schema type of one value,
    * `machine_name`, which is the string underneath with the type's
    * constraints. Any other type is refused: a group of keys is attach()
-   * or addMap(), a list addList(), an id of an entity refer().
+   * or addMap(), a list addList().
+   *
+   * A key that refers to an entity is one of these, the id as the entity
+   * type keeps it, with the SurfaceValidReference constraint naming the
+   * entity type and the bundles it may be of; the build refuses an id
+   * type that is not the entity type's:
+   *
+   * @code
+   * $inputs->add('venue', 'string', t('Venue'), default: 'riverside')
+   *   ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue']);
+   * $inputs->add('page', 'integer', t('Announcement'))
+   *   ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]);
+   * @endcode
    *
    * @param string $key
    *   The key.
@@ -64,61 +76,18 @@ interface BlueprintAdditionsInterface {
    *   shape that declares what only a key may (a default, required) or a
    *   map or list, and, for an alter of a shape, always: a shape has no
    *   keys to add to.
-   */
-  public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition;
-
-  /**
-   * Adds a key that refers to an entity: its id.
-   *
-   * The key holds one id of the entity type, of one of the bundles when
-   * it names any, typed as the entity type's id key is (an integer for a
-   * node, a string for a user role); its candidates are core's selection
-   * handler's for the account, listed while there are few and looked up
-   * past that, and every door sends and answers the id.
-   *
-   * With no entity type, `refer('thing', NULL, ...)`, the key is a choice
-   * of entity type and id, two keys attached at the key, `entity_type`
-   * and `id`, the entity types filtered by a SurfaceReferenceableType
-   * constraint on the key; only a resource's or a structure's own
-   * blueprint declares one.
-   *
-   * @code
-   * $inputs->refer('venue', 'event_venue', t('Venue'), default: 'riverside');
-   * $inputs->refer('page', 'node', t('Announcement'), bundles: ['article']);
-   * $inputs->refer('thing', NULL, t('Featured beside'))
-   *   ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
-   * @endcode
-   *
-   * @param string $key
-   *   The key.
-   * @param string|null $to
-   *   The entity type it refers to, or NULL for any.
-   * @param string|\Stringable $label
-   *   The label.
-   * @param string[] $bundles
-   *   The bundles it may name; none for every bundle.
-   * @param mixed $default
-   *   The id it starts from; NULL declares none.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinition
-   *   The key's definition, already part of the blueprint: the id, or the
-   *   map its two parts are attached at.
-   *
-   * @throws \LogicException
-   *   For an entity type the site does not have; with no entity type, for
-   *   bundles, a default, outputs, or an alter's blueprint.
    *
    * @see docs/options.md#a-key-that-refers-to-an-entity
-   * @see docs/decisions.md#a-reference-is-declared-as-a-reference
+   * @see docs/decisions.md#a-reference-is-a-constraint-on-a-value
    */
-  public function refer(string $key, ?string $to, string|\Stringable $label, array $bundles = [], mixed $default = NULL): DataDefinition;
+  public function add(string $key, string $type, string|\Stringable $label, mixed $default = NULL): DataDefinition;
 
   /**
    * Adds a map of keys held here alone: an anonymous object.
    *
    * The callable is handed a blueprint whose keys are the map's, declared
-   * with add(), addList(), refer() to one entity type and addMap(), and
-   * worded and arranged with describe(); what they start from is the
+   * with add(), addList(), addMap() and addDefinition(), and worded and
+   * arranged with describe(); what they start from is the
    * map's default. Both documents write the map inline, `type: object`
    * with its properties, and no def. The cost: no alter can address it,
    * nothing else uses it, and its access is its owner's; anything two

@@ -7,11 +7,10 @@ namespace Drupal\surface_examples_extras\Alter;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\DataDefinition;
-use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\AltersStorageLayoutInterface;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
+use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\AltersInputsInterface;
 use Drupal\surface\Storage\StorageLayoutInterface;
 use Drupal\surface_examples_extras\NodeTypeReviewSettings;
@@ -90,15 +89,13 @@ final class NodeTypeAlter implements AltersInputsInterface, AltersStorageLayoutI
           NodeTypeReviewSettings::BUSINESS_DAYS => $this->t('Business days'),
         ],
       ]);
-    DefinitionMetadata::setDefaultValue($unit, NodeTypeReviewSettings::DEFAULT_UNIT);
-    $inputs->addDefinition(NodeTypeReviewSettings::DEADLINE, MapDataDefinition::create()
-      ->setLabel($this->t('Review deadline'))
+    $inputs->addMap(NodeTypeReviewSettings::DEADLINE, $this->t('Review deadline'), function (BlueprintInterface $deadline) use ($unit): void {
+      $deadline->add(NodeTypeReviewSettings::AMOUNT, 'integer', $this->t('Amount'))
+        ->addConstraint('Range', ['min' => 1]);
+      $deadline->addDefinition(NodeTypeReviewSettings::UNIT, $unit, default: NodeTypeReviewSettings::DEFAULT_UNIT);
+    })
       ->setDescription($this->t('How long an editor has to review new content of this type, from one hour to thirty days. Leave the amount empty for no deadline.'))
-      ->setPropertyDefinition(NodeTypeReviewSettings::AMOUNT, DataDefinition::create('integer')
-        ->setLabel($this->t('Amount'))
-        ->addConstraint('Range', ['min' => 1]))
-      ->setPropertyDefinition(NodeTypeReviewSettings::UNIT, $unit)
-      ->addConstraint('SurfaceExamplesExtrasReviewDeadline', []));
+      ->addConstraint('SurfaceExamplesExtrasReviewDeadline', []);
 
     $tag = DataDefinition::create('string')
       ->setLabel($this->t('Audience tag'))

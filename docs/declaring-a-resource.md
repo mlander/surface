@@ -69,7 +69,7 @@ part of a resource or structure has one home:
 | What | Where |
 | --- | --- |
 | Its id, and which keys say which thing it is | `#[Resource('id', identity: [...])]`; a structure has an id and no identity, `#[Structure('id')]` |
-| Its keys: type, label, default, constraints | `static defineInputs(BlueprintInterface $inputs)` |
+| Its keys: type, label, default, constraints | `static defineInputs(BlueprintInterface $inputs)`, or properties carrying attributes ([Declared as properties](#declared-as-properties)) |
 | What it emits | `static defineOutputs()`, on `DefinesOutputsInterface`; see [Outputs](outputs.md) |
 | A key whose allowed values depend on another key's value | a rule, `$inputs->narrow('key')->when(Condition::...)`, in `defineInputs()`; a static `#[RefinesInput('key')]` method where the effect must be computed ([Declaring a rule](refinement.md#declaring-a-rule)) |
 | How much is already known: add, edit, reuse | `#[Operation]` on the class, or on a static method returning an `OperationContext` when the context needs more |
@@ -107,8 +107,9 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   the one every door shows: the form element's title, the tool's
   property label, the schema's `title`; the description is the text
   under the element and the property's description.
-  `addList()` is the same for a list of values, and `addDefinition()`
-  the long form, for a map ([Maps and lists](#maps-and-lists)). The label is
+  `addList()` is the same for a list of values, `addMap()` for a map,
+  and `addDefinition()` the long form, for one value built by hand
+  ([Maps and lists](#maps-and-lists)). The label is
   `t('...')` with a literal string; see [Translatable
   strings](#translatable-strings). The type may be a shape's class, a
   value declared once for every key that asks for it ([Named
@@ -146,12 +147,13 @@ type such as `machine_name`, `label`, `path`, `color_hex` or `langcode`
 is the string underneath with the type's constraints. Any other type is
 refused when the blueprint is filled, naming the method for what was
 meant: `attach()` for a group of keys (or `addMap()` for keys only this
-one holds), `addList()` for a list, `refer()` for an entity's id,
-`addDefinition()` for a typed data definition built by hand. A
-definition handed to `addDefinition()` is held to the same table at
-every depth: each property of a map, each list's item. So the contract
-states a type for every value the runtime accepts, and is never vaguer
-than it ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
+one holds), `addList()` for a list, the id's type and a constraint for
+an entity's id, `addDefinition()` for one value built by hand.
+`addDefinition()` takes one value of a type in the table, and refuses a
+map or a list, naming `addMap()`, `attach()` or `addList()`; a list's
+item is held to the table at every depth. So the contract states a type
+for every value the runtime accepts, and is never vaguer than it
+([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
 
 One table, `Contract\LeafTypes`, holds the rows: the blueprint refuses
 by it, the emitter writes each row, and the schema reader reads a JSON
@@ -159,21 +161,41 @@ type and format back into the row's type. How each type is drawn and
 coerced is keyed by the type where it is done: each widget's
 `isApplicable()` and `Pipeline\Coercion`.
 
-A key that refers to an entity is `refer()`
+A key that refers to an entity is one of these, the id as its entity
+type keeps it, with the `SurfaceValidReference` constraint naming the
+entity type and the bundles it may be of
 ([Options](options.md#a-key-that-refers-to-an-entity)):
 
 ```php
-$inputs->refer('venue', 'event_venue', t('Venue'), default: 'riverside');
-$inputs->refer('page', 'node', t('Announcement'), bundles: ['article']);
-$inputs->refer('thing', NULL, t('Featured beside'));
+$inputs->add('venue', 'string', t('Venue'), default: 'riverside')
+  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'event_venue']);
+$inputs->add('page', 'integer', t('Announcement'))
+  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']]);
 ```
 
-`refer(string $key, ?string $to, string|\Stringable $label, array
-$bundles = [], mixed $default = NULL)`: the id of an entity of the type
-`$to` names, of one of the bundles where it names any; with `$to` NULL,
-an entity of any type, two keys attached at the key, which only a
-resource's or a structure's own blueprint declares
-([decision](decisions.md#a-reference-is-declared-as-a-reference)).
+A config entity keeps its id as a string, a content entity whose id
+field is an integer as an integer. The build checks the type against
+the entity type's id and refuses another, naming the right one. A
+reference to an entity of any type is a structure of two keys, an
+entity type and an id, which example 16 declares and attaches
+([decision](decisions.md#a-reference-is-a-constraint-on-a-value)).
+
+### What declares an object
+
+A key holds one value. An object is declared only by a method that is
+one JSON Schema construct:
+
+| Method | JSON Schema |
+| --- | --- |
+| `attach()`, `attachList()` | a `$ref` to the structure's def; an array of them |
+| `addMap()` | an inline `type: object` with its properties |
+| `mixIn()` | `allOf` of the structure's def and the owner's properties |
+| `attachVariants()` | `allOf` of `if`/`then`, one per value of the deciding key |
+| `addEach()`, `attachEach()` | an object with one property per thing the site has |
+| `addList()` | `type: array` of one value's items |
+
+`addDefinition()` takes one value, never a map or a list
+([decision](decisions.md#a-blueprint-takes-no-complex-data-types)).
 
 ### What it is called
 
@@ -307,7 +329,7 @@ is decided by runtime dependence, not by structure: `PluginExists`,
 whose values are resolved from a plugin manager, is still written down
 as a literal constraint, and so is `EntityBundleExists`, handed the
 entity type by a refiner. A refiner points; the resolver fetches. Look
-for a stock constraint or a reference key (`refer()`) first; only when none names the list does a module add one with its
+for a stock constraint or a reference key (`SurfaceValidReference`) first; only when none names the list does a module add one with its
 resolver, as the example does with `SurfaceExamplesBundleField`; see
 [Which constraint to write](options.md#which-constraint-to-write).
 
@@ -348,6 +370,139 @@ if (\Drupal::moduleHandler()->moduleExists('help')) {
 $inputs->add('max_length', 'integer', t('Maximum alias length'), default: 100)
   ->setDescription($description);
 ```
+
+## Declared as properties
+
+A class may declare its keys as properties instead: each key a property
+carrying the attribute of the blueprint verb it stands for, and the class
+using `DeclaresByProperties`, which supplies `defineInputs()` and
+`defineOutputs()`. The build calls `defineInputs()` as on any class; the
+trait reads the properties in the order they are written and calls the
+same verbs the method would. It is a second spelling of the blueprint,
+never a second contract: what a verb refuses, it refuses, and the
+contract is the one the calls give. Example 18's caterer, shortened:
+
+```php
+#[Resource('event.catering', storage: CateringStorage::class)]
+#[Group('details', 'Details')]
+final class CateringResource implements ResourceInterface {
+
+  use DeclaresByProperties;
+
+  #[Input('Show the caterer on the event page')]
+  public bool $public = FALSE;
+
+  #[Input('Headcount', description: 'How many people to cater for.')]
+  #[Constraint('Range', ['min' => 1, 'max' => 5000])]
+  public int $headcount;
+
+  #[Input('Budget')]
+  #[Constraint('Range', ['min' => 0])]
+  #[Describe(group: 'details', suffix: 'EUR')]
+  public ?float $budget = NULL;
+
+  #[Input('Served at', description: 'HH:MM, on a 24-hour clock.')]
+  #[Widget('time')]
+  #[Rule(whenEquals: ['public', TRUE], require: TRUE, because: 'Say when food is served while the caterer is shown.')]
+  public ?string $served_at = NULL;
+
+  #[Attach(label: 'Caterer contact', reads: ['listed' => 'public'])]
+  public PersonStructure $contact;
+
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces); the
+attributes are in `Drupal\surface\Resource\Attribute`.
+
+PHP says the key's name (the property's), its type (`string`, `int`,
+`float`, `bool` or a shape's class), its default (the initializer) and
+whether it must be given. The attributes say the rest:
+
+| With calls | As a property |
+| --- | --- |
+| `add('capacity', 'integer', t('Capacity'))` | `#[Input('Capacity')] public int $capacity;` |
+| `->setRequired(TRUE)` | a type that is not nullable, with no initializer; `required: TRUE` where it also has a default |
+| `default: 0` | the initializer, `public int $weight = 0;` |
+| no default, not required | `public ?string $address = NULL;` |
+| `'email'`, `'machine_name'`, any type the property cannot say | `#[Input('Email', type: 'email')]` |
+| a shape | the property typed with the shape's class, `public ?PhoneNumber $phone = NULL;` |
+| `->setDescription(t(...))` | `description:` on the attribute |
+| `->addConstraint('Length', [...])` | `#[Constraint('Length', [...])]`, repeatable, in the order written |
+| `->setSetting('widget', 'time')` | `#[Widget('time')]`; any other setting `#[Setting('multiline', TRUE)]` |
+| `DefinitionMetadata::setExamples()` | `#[Examples('Harbour Kitchen')]` |
+| `describe('key', group:, weight:, placeholder:, prefix:, suffix:, help:)` | `#[Describe(...)]`, `group:` naming a `#[Group]` on the class |
+| `ArrangementGroup::fieldset()`, `::details()` | `#[Group('id', 'Label')]`, `details: TRUE` for a details element |
+| `addList('days', 'string', ...)` | `#[Input('Days', list: 'string')] public array $days = [];`, an item constraint `#[Constraint(..., item: TRUE)]` |
+| `addList()` of maps | `list:` naming a plain class of `#[Input]` properties |
+| `addMap('coordinates', ..., fn)` | `#[Map('Coordinates')] public Coordinates $coordinates;`, a plain class of `#[Input]` properties |
+| `attach('contact', PersonStructure::class, reads: [...])` | `#[Attach(reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
+| `attachList('rooms', VenueRoomStructure::class, max: 20)` | `#[AttachList(VenueRoomStructure::class, max: 20)] public array $rooms;` |
+| `attachVariants('ticket', by: 'pricing')` | `#[Variants(by: 'pricing')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
+| `addEach()`, `attachEach()` | `#[Each(from:, type:)]`, `#[AttachEach(Structure::class, from:)]` on an array property |
+| `reads('listed', 'boolean')` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
+| `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
+| `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['Range', ['max' => 5]])]` on `$items` |
+| `mixIn(ReviewStructure::class, reads: [...])` | `#[MixIn(ReviewStructure::class, reads: [...])]` on the class |
+| `defineOutputs()` | `#[Output(...)]`, which says what `#[Input]` says, on the class implementing `DefinesOutputsInterface` |
+
+`#[RefinesInput]` methods, `#[Operation]`, `#[Resource]`, `#[Structure]`,
+`#[Variant]`, alters, access and storage are as on any class.
+
+- **Required.** `required:` when given; else a property whose type is
+  not nullable and that has no initializer is required. The initializer
+  is the default, and a nullable property with `= NULL` has no default. A
+  key that must be sent and starts from a default says both:
+  `#[Input('Frequency', required: TRUE)] public string $frequency = 'weekly';`.
+  A computed key is never required by what its property says.
+- **Texts.** An attribute argument cannot call `t()`, so the texts the
+  reader names (a label, a description, a placeholder, a prefix, a
+  suffix, a help text, a group's title, a rule's reason) are written as
+  bare strings, which it wraps in `TranslatableMarkup`. A text inside a
+  constraint's options (a message, a choice's label) is handed to core
+  as it is, and is written `new TranslatableMarkup('...')`. The
+  trade-off: a bare string is translated where a translation exists, but
+  string extraction does not find it; `new TranslatableMarkup('...')` is
+  found.
+- **Order.** The properties, in the order written, each one's
+  `#[Describe]` right after it; then each `#[MixIn]`, its members after
+  every property; then each `#[Rule]`, in the order of the properties
+  carrying them. A class that mixes in before its own keys keeps
+  `defineInputs()`.
+- **What stays a method.** What an attribute argument cannot hold: a list
+  computed by a call (`Venues::rooms()`), a key declared in a loop, a
+  condition `#[Rule]` does not spell (it spells `whenEquals:`,
+  `whenPresent:`, `whenAbsent:` and `whenIn:`, all required to hold when
+  several are given; `not`, `anyOf` and a bound stay `narrow()` or a
+  `#[RefinesInput]` method). `addDefinition()`, `resolve()`,
+  `extendChoices()` and `addCacheableDependency()` have no attribute: the
+  long form has none by design, a resolve and a widening are an alter's,
+  and a cacheable dependency is a derived resource's, which has no class.
+- **One spelling per class.** A class declares its keys with
+  `defineInputs()` or with properties, never both; a derived resource,
+  which has no class, keeps its callables.
+- **What it refuses.** Beside what the verbs refuse: a public property
+  with no attribute saying what it is, a `#[Describe(group:)]` naming no
+  `#[Group]`, a property type that is no key type and no shape with no
+  `type:`, an `#[Attach]` or `#[Map]` naming no class, an item constraint
+  on a key that is no list, and an `#[Output]` on a class that does not
+  implement `DefinesOutputsInterface`. Each message names the class, the
+  property and the fix. A static or protected property with no attribute
+  is left alone, so a plugin that is its own structure keeps its own.
+- **The reader reads no value.** Only types, initializers and attributes,
+  so reading a class twice calls the same verbs, which `addMap()` needs
+  when it runs the declaration again to fill a map that needs a frame.
+- **Coding standard.** Drupal's asks a docblock on every property and a
+  lowerCamel name. On a key declared as a property the attribute is its
+  documentation and the name is the key's, snake_case as every key is,
+  so a module leaves `Drupal.Commenting.VariableComment.Missing` and
+  `Drupal.NamingConventions.ValidVariableName.LowerCamelName` off for
+  those classes, as this module's `phpcs.xml.dist` does.
+
+`tests/modules/surface_property_test` declares every attribute twice,
+once with calls and once as properties, and `PropertyDeclarationTest`
+holds the two to the same documents
+([decision](decisions.md#a-class-may-declare-its-keys-as-properties)).
 
 ## On a plugin
 
@@ -632,19 +787,19 @@ method is static and calls `t()`.
 
 ## Maps and lists
 
-Core's `MapDataDefinition` takes only its own definition array in its
-constructor and gains its property definitions through a setter. Set
-them on the definition before handing it to the blueprint, with the core
-setter:
+A map is `addMap()`, a list `addList()`; `addDefinition()` takes one
+value and refuses either. Keys built by hand go into the map's callable
+one by one, each with `addDefinition()`:
 
 ```php
-$overrides = MapDataDefinition::create()
-  ->setLabel(t('Field overrides'));
-foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
-  $overrides->setPropertyDefinition($field_name, $definition);
-}
-$inputs->addDefinition('field_overrides', $overrides, default: []);
+$inputs->addMap('field_overrides', t('Field overrides'), static function (BlueprintInterface $overrides): void {
+  foreach (self::fieldOverrideDefinitions() as $field_name => $definition) {
+    $overrides->addDefinition($field_name, $definition);
+  }
+});
 ```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 `AddressFieldSettingsResource` is the worked example. A map whose
 properties are another class's keys is a child instead: `attach()` or
@@ -675,7 +830,7 @@ no def; the form draws it as a fieldset, the tool takes it as a map in
 is the map's default.
 
 Every blueprint method works inside the callable: `add()`, `addList()`,
-`refer()`, a nested `addMap()`, `describe()`, and `attach()`,
+`addDefinition()`, a nested `addMap()`, `describe()`, and `attach()`,
 `attachList()`, `attachVariants()`, `mixIn()`, `narrow()` and
 `resolve()`. A map whose keys need a frame of their own (a child, a
 rule, a resolve) is a structure with no id, attached at the key and

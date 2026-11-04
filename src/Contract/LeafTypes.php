@@ -239,7 +239,8 @@ final class LeafTypes {
    * Answers whether a type string spells an entity, which is no type here.
    *
    * Typed data's `entity`, `entity:<type>` and `entity:<type>:<bundle>`:
-   * an id and a constraint, declared with refer(), or addEach()'s `to:`.
+   * an id and a constraint, the id's type with SurfaceValidReference, or
+   * addEach()'s `to:`.
    *
    * @param string $type
    *   The type string.
@@ -262,7 +263,7 @@ final class LeafTypes {
    */
   public static function meant(string $type): string {
     return match (TRUE) {
-      static::refersToEntity($type) => 'an id of an entity is refer(\'<key>\', \'<entity type>\', ...).',
+      static::refersToEntity($type) => 'an id of an entity is add(\'<key>\', \'integer\' or \'string\', ...), the type the entity type keeps its id as, with the SurfaceValidReference constraint naming the entity type: ->addConstraint(\'SurfaceValidReference\', [\'entityTypeId\' => \'<entity type>\']).',
       $type === 'map' => 'a group of keys is attach(\'<key>\', <structure>::class), or addMap() for keys only this one holds.',
       $type === 'list' => 'a list is addList().',
       $type === self::ANY => 'a value whose shape depends on another key is variants, attachVariants().',

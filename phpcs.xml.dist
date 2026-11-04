@@ -27,4 +27,16 @@
   <rule ref="Drupal.InfoFiles.AutoAddedKeys.Version">
     <exclude-pattern>tests/modules/*</exclude-pattern>
   </rule>
+  <!-- A class that declares its keys as properties: each property is named
+       for its key, snake_case as every key is, and its attribute is what it
+       documents, its label and description. Neither sniff is left off
+       anywhere else. -->
+  <rule ref="Drupal.NamingConventions.ValidVariableName.LowerCamelName">
+    <exclude-pattern>modules/surface_examples/src/Resource/CateringResource.php</exclude-pattern>
+    <exclude-pattern>tests/modules/surface_property_test/*</exclude-pattern>
+  </rule>
+  <rule ref="Drupal.Commenting.VariableComment.Missing">
+    <exclude-pattern>modules/surface_examples/src/Resource/CateringResource.php</exclude-pattern>
+    <exclude-pattern>tests/modules/surface_property_test/*</exclude-pattern>
+  </rule>
 </ruleset>

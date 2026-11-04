@@ -97,6 +97,10 @@ The API is in `Drupal\surface\Resource`; the attributes in
 | **Owner** | `static defineInputs($inputs)`, optionally `static defineOutputs($outputs)` | static `#[RefinesInput('key')]` methods |
 | **Another module** | `alterInputs($inputs)` | `#[RefinesInput('key')]` methods |
 
+An owner may write its keys as properties carrying attributes instead of
+`defineInputs()`: the same blueprint in a second spelling, chosen per
+class ([Declared as properties](declaring-a-resource.md#declared-as-properties)).
+
 The example block's configuration, `ExampleBlockStructure` in the example module,
 is the first one written this way. It is a structure: the block holds
 it, and the block's host stores it.
@@ -149,7 +153,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   accepted.
 - **`add()` takes name, type and label** and returns the core
   definition, so the rest is plain core API. `addList()` is the same
-  for a list of values, and `addDefinition()` the long form, for a map.
+  for a list of values, `addMap()` for a map, and `addDefinition()` the
+  long form, for one value built by hand.
   A label is `t('...')`, with a literal
   string: a static method has no instance for the translation service
   to be injected into, and `t()` returns the same lazy
@@ -687,8 +692,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 What the gate is asked about:
 
 - **The thing the context knows.** An identity key declared as a
-  reference to the gate's entity type (`$inputs->refer('node',
-  'node', ...)`), or the `entity_type` and `id` a content entity
+  reference to the gate's entity type (`$inputs->add('node', 'integer',
+  ...)` with `SurfaceValidReference` naming `node`), or the
+  `entity_type` and `id` a content entity
   resource knows. A gate naming a content entity resource's operation,
   whose parameter is the identity key `id`, is asked about that entity
   and hands the operation its id. The gate is asked after the operation's permission and
@@ -2301,9 +2307,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   value per thing, each as `add()` declares a key: a type of the type
   table or a shape, labeled with the thing's label, starting from the
   thing's default or else `default:`. An entry that refers to an entity
-  is declared in `refer()`'s words and has no type of its own,
+  names its entity type and has no type of its own,
   `addEach('pages', NULL, from: Slots::class, to: 'node', bundles:
-  ['page'])`: each entry is the id `refer()` declares, and `entity:node`
+  ['page'])`: each entry is the id, typed as the entity type keeps it,
+  with `SurfaceValidReference`, and `entity:node`
   as the type is refused, as `add()` refuses it. `attachEach($key, Structure::class, from:)`
   holds the structure at every thing, as `attach()` holds one. Both
   return the map at the key, for the owner to label and describe.

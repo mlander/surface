@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the tool calls of examples 7 to 17, and the README quoting them.
+ * Tests the tool calls of examples 7 to 18, and the README quoting them.
  *
  * Makes every call ConceptCalls writes down, on the settings the module
  * ships, the way each example's panel makes it, with example 10's
@@ -166,6 +166,9 @@ class ExamplesConceptsToolTest extends SurfaceKernelTestBase {
     $this->assertSame("Failed: The values were refused:\n" . sprintf('/page: This entity (node: %d) cannot be referenced.', $nodes['page']), $first($answers['event.sponsorship']['wrong_bundle']), 'A page where an article is asked for.');
     $this->assertSame("Failed: The values were refused:\n" . sprintf('/page: This entity (node: %d) cannot be referenced.', $nodes['draft']), $first($answers['event.sponsorship']['not_referenceable']), 'The draft, for an account that may not see unpublished content.');
     $this->assertStringContainsString('/setting/entity_type: The entity type node cannot be referenced here.', $answers['event.sponsorship']['not_config']);
+    $this->assertSame("Failed: The values were refused:\n" . '/served_at: Served at is required when Show the caterer on the event page is on.', $first($answers['event.catering']['shown_without_time']), 'The rule on served_at, declared as an attribute.');
+    $this->assertSame("Failed: The values were refused:\n" . '/contact/email: Email is required when Show the caterer on the event page is on.', $first($answers['event.catering']['shown_without_email']), 'The person\'s rule, through the port the contact wires to public.');
+    $this->assertStringContainsString('"served_at":null', $answers['event.catering']['hidden'], 'Not shown: neither rule holds.');
     $pages = $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->ids();
     $this->assertStringContainsString(sprintf('titles: [{"node":%d,"old":"volunteer briefing for the night shift","new":"Volunteer Briefing for the Night Shift"},{"node":%d,"old":"WHERE TO PARK ON FESTIVAL DAYS","new":"Where to Park on Festival Days"}', $pages['one'], $pages['two']), $answers['ai.retitle']['dry_run'], 'A dry run answers each title it would write.');
     $this->assertSame("Failed: The values were refused:\n" . implode("\n", [

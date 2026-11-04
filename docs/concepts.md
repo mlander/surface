@@ -61,7 +61,7 @@ first resource's (`surface_examples_first`); a dash where none does.
 | Cosmetic layer, `_surface_cosmetics` | - | Does one operation form need a borrowed element (vertical tabs), markup, a message or a redirect, with nothing meaning something else? Grouping and order are the arrangement's. | The generated form, arranged, is the form you want. | - | - |
 | Panel, `_surface_panel` | - | Should the contract be shown beside the form? | Nobody needs to see it there. | 1 | `/surface-examples/1` |
 | Options resolver | - | Is the list of allowed values the site's (entity types, bundles), not a literal? Which constraint to write is a ladder: a stock constraint the schema states, then a list the site decides, then one of your own ([Options](options.md#which-constraint-to-write)). | It is a literal list: `LabeledChoice`. | 2, 14 | `/surface-examples/2`; `/surface-examples/14/webhook` (with `surface_examples_keys`) |
-| Reference key, `refer($key, '<entity type>', bundles: [...])` and `refer($key, NULL)` | - | Does a key hold an entity's id: a user, an article, a venue, or an entity of any type? Its candidates are core's selection handler's for the account, listed up to `surface.settings:reference_list_limit` and looked up past it with the resource's `:lookup` ([Options](options.md#a-key-that-refers-to-an-entity)). | It holds a value of its own, not an entity's id. | 16 | `/surface-examples/16` (with `surface_examples_references`) |
+| Reference key, `add($key, <its id's type>)->addConstraint('SurfaceValidReference', ['entityTypeId' => ...])`, and a structure for any entity type | - | Does a key hold an entity's id: a user, an article, a venue, or an entity of any type? Its candidates are core's selection handler's for the account, listed up to `surface.settings:reference_list_limit` and looked up past it with the resource's `:lookup` ([Options](options.md#a-key-that-refers-to-an-entity)). | It holds a value of its own, not an entity's id. | 16 | `/surface-examples/16` (with `surface_examples_references`) |
 | Widget plugin | - | Does a key need an element no stock widget draws? Checkboxes, radios, rows for a list of free values, a time input and a date input are stock, asked for with `setSetting('widget', ...)` where the rule does not pick them ([Widgets](widgets.md#which-element-a-list-of-choices-is)). Should my module's widget draw every key of a kind on the site, every string whose `format` setting is `color`? It claims them, `claims:`, and a key whose owner asks for a widget keeps its own ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)). | The stock widgets draw it. | 11 | The stock widgets, `/surface-examples/11` |
 | Stale values | - | What happens to a stored value a refiner no longer allows? ([Value semantics](semantics.md#stale-values-the-third-state)) | No refiner narrows a key that has a stored value. | 2 | `/surface-examples/2` |
 | Tool and read tool | [Doors](introduction/12-doors.md) | Should the command line (`drush tool:run`), ECA, FlowDrop, Maestro, an MCP server or an AI agent run it? One tool made from an operation can be run by everything that runs Tool API tools. | You do not install the `tool` module; there is nothing to write either way. | 5 | `/surface-examples/5` |
@@ -111,6 +111,9 @@ refused.
 | `AltersStorageLayoutInterface` | `use Drupal\surface\Resource\AltersStorageLayoutInterface;` |
 | `Arrangement` | `use Drupal\surface\Resource\Arrangement;` |
 | `ArrangementGroup` | `use Drupal\surface\Resource\ArrangementGroup;` |
+| `Attach` | `use Drupal\surface\Resource\Attribute\Attach;` |
+| `AttachEach` | `use Drupal\surface\Resource\Attribute\AttachEach;` |
+| `AttachList` | `use Drupal\surface\Resource\Attribute\AttachList;` |
 | `BaseFieldOverrideStorage` | `use Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage;` |
 | `BlueprintAdditionsInterface` | `use Drupal\surface\Resource\BlueprintAdditionsInterface;` |
 | `BlueprintInterface` | `use Drupal\surface\Resource\BlueprintInterface;` |
@@ -118,31 +121,43 @@ refused.
 | `ComponentProps` | `use Drupal\surface\Variants\ComponentProps;` |
 | `CompositeStorage` | `use Drupal\surface\Pipeline\Storage\CompositeStorage;` |
 | `Compute` | `use Drupal\surface\Resource\Compute;` |
+| `Computed` | `use Drupal\surface\Resource\Attribute\Computed;` |
 | `ComputesValueInterface` | `use Drupal\surface\Resource\ComputesValueInterface;` |
 | `Condition` | `use Drupal\surface\Refinement\Condition;` |
 | `ConfigEntityStorage` | `use Drupal\surface\Storage\ConfigEntityStorage;` |
 | `ConfigObjectStorage` | `use Drupal\surface\Storage\ConfigObjectStorage;` |
 | `ConfigSchemaGenerator` | `use Drupal\surface\Storage\ConfigSchemaGenerator;` |
+| `Constraint` | `use Drupal\surface\Resource\Attribute\Constraint;` |
+| `DeclaresByProperties` | `use Drupal\surface\Resource\DeclaresByProperties;` |
 | `DefinesOutputsInterface` | `use Drupal\surface\Resource\DefinesOutputsInterface;` |
 | `DefinitionMetadata` | `use Drupal\surface\DefinitionMetadata;` |
 | `DeletableStorageInterface` | `use Drupal\surface\Resource\DeletableStorageInterface;` |
 | `DerivedOperation` | `use Drupal\surface\Resource\DerivedOperation;` |
 | `DerivedResource` | `use Drupal\surface\Resource\DerivedResource;` |
 | `DerivesResources` | `use Drupal\surface\Resource\Attribute\DerivesResources;` |
+| `Describe` | `use Drupal\surface\Resource\Attribute\Describe;` |
 | `DoesNotApply` | `use Drupal\surface\Refinement\DoesNotApply;` |
+| `Each` | `use Drupal\surface\Resource\Attribute\Each;` |
+| `Examples` | `use Drupal\surface\Resource\Attribute\Examples;` |
 | `FieldSettingsStorage` | `use Drupal\surface\Pipeline\Storage\FieldSettingsStorage;` |
 | `FieldSurfaceProviderInterface` | `use Drupal\surface\Form\FieldSurfaceProviderInterface;` |
+| `Group` | `use Drupal\surface\Resource\Attribute\Group;` |
 | `HeldToConfigSchemaInterface` | `use Drupal\surface\Resource\HeldToConfigSchemaInterface;` |
 | `HeldToConfigSchemaTrait` | `use Drupal\surface\Storage\HeldToConfigSchemaTrait;` |
+| `Input` | `use Drupal\surface\Resource\Attribute\Input;` |
 | `KnowsClearableKeysInterface` | `use Drupal\surface\Resource\KnowsClearableKeysInterface;` |
 | `KnowsDerivativeListTagsInterface` | `use Drupal\surface\Resource\KnowsDerivativeListTagsInterface;` |
 | `MachineName` | `use Drupal\surface\Compute\MachineName;` |
+| `Map` | `use Drupal\surface\Resource\Attribute\Map;` |
+| `MixIn` | `use Drupal\surface\Resource\Attribute\MixIn;` |
 | `NotEmitted` | `use Drupal\surface\Pipeline\NotEmitted;` |
 | `Operation` | `use Drupal\surface\Resource\Attribute\Operation;` |
 | `OperationAccessInterface` | `use Drupal\surface\Resource\OperationAccessInterface;` |
 | `OperationContext` | `use Drupal\surface\Resource\OperationContext;` |
 | `OptionSet` | `use Drupal\surface\Options\OptionSet;` |
+| `Output` | `use Drupal\surface\Resource\Attribute\Output;` |
 | `PluginConfigurationStorage` | `use Drupal\surface\Pipeline\Storage\PluginConfigurationStorage;` |
+| `Port` | `use Drupal\surface\Resource\Attribute\Port;` |
 | `PreparedValues` | `use Drupal\surface\Pipeline\PreparedValues;` |
 | `RefinesInput` | `use Drupal\surface\Resource\Attribute\RefinesInput;` |
 | `Resource` | `use Drupal\surface\Resource\Attribute\Resource;` |
@@ -150,8 +165,10 @@ refused.
 | `ResourceDeriverInterface` | `use Drupal\surface\Resource\ResourceDeriverInterface;` |
 | `ResourceInterface` | `use Drupal\surface\Resource\ResourceInterface;` |
 | `ResourceStorageInterface` | `use Drupal\surface\Resource\ResourceStorageInterface;` |
+| `Rule` | `use Drupal\surface\Resource\Attribute\Rule;` |
 | `SchemaReader` | `use Drupal\surface\Contract\SchemaReader;` |
 | `SchemaViolations` | `use Drupal\surface\Storage\SchemaViolations;` |
+| `Setting` | `use Drupal\surface\Resource\Attribute\Setting;` |
 | `Shape` | `use Drupal\surface\Resource\Attribute\Shape;` |
 | `ShapeInterface` | `use Drupal\surface\Resource\ShapeInterface;` |
 | `SiteList` | `use Drupal\surface\Resource\SiteList;` |
@@ -175,5 +192,7 @@ refused.
 | `TypedFormatterBase` | `use Drupal\surface\Plugin\Field\FieldFormatter\TypedFormatterBase;` |
 | `UsesStructure` | `use Drupal\surface\Resource\Attribute\UsesStructure;` |
 | `Variant` | `use Drupal\surface\Resource\Attribute\Variant;` |
+| `Variants` | `use Drupal\surface\Resource\Attribute\Variants;` |
 | `Violation` | `use Drupal\surface\Pipeline\Violation;` |
 | `ViolationSet` | `use Drupal\surface\Pipeline\ViolationSet;` |
+| `Widget` | `use Drupal\surface\Resource\Attribute\Widget;` |

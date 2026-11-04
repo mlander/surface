@@ -104,7 +104,7 @@ abstract class ResourceGeneratorTestBase extends KernelTestBase {
       $modules,
       $this->root,
     );
-    $generator = new ResourceGenerator($sources, $schemas, $modules, $this->sandbox);
+    $generator = new ResourceGenerator($sources, $schemas, $modules, $this->sandbox, references: $container->get('surface.references'));
     $generator->setApplication(DcgApplication::create($container));
     $tester = new CommandTester($generator);
     $tester->setInputs($answers);

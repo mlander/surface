@@ -127,18 +127,19 @@ Example 16 declares two of its keys this way:
 <!-- excerpt: modules/surface_examples_references/src/Resource/SponsorshipResource.php -->
 
 ```php
-$inputs->refer('page', 'node', t('Announcement'), bundles: ['article'])
+$inputs->add('page', 'integer', t('Announcement'))
+  ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])
   ->setDescription(t('The article that announces the sponsor.'));
 
 // Of any type: an entity type, then an id of it.
-$inputs->refer('thing', NULL, t('Featured beside'))
-  ->setDescription(t('Any content the sponsor is featured beside.'))
-  ->addConstraint('SurfaceReferenceableType', ['interface' => ContentEntityInterface::class]);
+$inputs->attach('thing', ThingStructure::class)
+  ->setLabel(t('Featured beside'))
+  ->setDescription(t('Any content the sponsor is featured beside.'));
 ```
 
 Its config object stores a content entity by its uuid, which names the
 same node on a site the config is deployed to: `page` as the node's
-uuid, and the bare `thing` as its two parts, `{entity_type, id}`, the
+uuid, and `thing`, a structure of any entity type, as its two parts, `{entity_type, id}`, the
 `id` the uuid of the content entity it holds. The engine translates,
 with the stock `ReferenceStorageLayout`, and every door still sends and
 answers the id

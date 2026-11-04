@@ -1,0 +1,12 @@
+public: false
+provider: 'Harbour Kitchen'
+headcount: 120
+budget: ~
+dietary:
+  - vegetarian
+served_at: ~
+notes: ~
+contact:
+  name: 'Sam Ortiz'
+  email: catering@example.com
+  phone: ~
