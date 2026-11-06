@@ -447,7 +447,7 @@ whether it must be given. The attributes say the rest:
 | `attach('contact', PersonStructure::class, t('Caterer contact'), reads: [...])` | `#[Attach(label: 'Caterer contact', reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
 | `attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)` | `#[AttachList(VenueRoomStructure::class, label: 'Rooms', max: 20)] public array $rooms;` |
 | `attachVariants('ticket', by: 'pricing', label: t('Ticket'))` | `#[AttachVariants(by: 'pricing', label: 'Ticket')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
-| `addEach('on_sale', 'boolean', from:, label:)`, `attachEach()` | `#[Each('boolean', from:, label:)]`, `#[AttachEach(Structure::class, from:, label:)]` on an array property |
+| `addEach('on_sale', 'boolean', from:, label:)`, `attachEach()` | `#[Each('boolean', from:, label:)]`, a constraint on each entry `#[Constraint(..., item: TRUE)]`; `#[AttachEach(Structure::class, from:, label:)]` on an array property |
 | `reads('listed', 'boolean')` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
 | `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
 | `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['Range', ['max' => 5]])]` on `$items` |

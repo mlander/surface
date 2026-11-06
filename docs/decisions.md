@@ -268,6 +268,14 @@ flat, which neither `mixIn()` (one structure) nor `attachVariants()`
 (nested under a key) can declare. The pins are 28 attributes, 115
 arguments and 18 blueprint methods since.
 
+*Shrunk 2026-11-06,* by two attribute arguments, `#[Each(to:,
+bundles:)]`: a reference per entry is the entry's definition with
+the reference constraint, `#[Constraint(..., item: TRUE)]` beside
+`#[Each]`
+([A reference is a constraint on a value](#a-reference-is-a-constraint-on-a-value)).
+The pins are 28 attributes, 113 arguments and 18 blueprint methods
+since.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -7925,7 +7933,10 @@ resource's or a structure's own blueprint declares.
   `References::spells()` and `spelled()` went. Why `NULL` for the type:
   an entry that refers to an entity has no type of its own, its id
   typed as the entity type keeps it, and the type stays the second
-  argument for every other entry.
+  argument for every other entry. *Superseded 2026-11-06:* `to:`,
+  `bundles:` and the `NULL` type went; the entry is a definition
+  carrying the constraint
+  ([A reference is a constraint on a value](#a-reference-is-a-constraint-on-a-value)).
 
 (`BlueprintAdditionsInterface::refer()`, `References::definition()`,
 `ReferenceKeysTest`)
@@ -7964,13 +7975,23 @@ $inputs->add('page', 'integer', t('Announcement'))
   alone.
 - **What is unchanged.** Every served contract, every baseline and the
   example 16 documents; `References::definition()` stays the helper for
-  code that derives a reference key (`addEach(to:)`'s entries, a
-  reference field's `target_id`). The generator's interview asks the
+  code that derives a reference key (a reference field's `target_id`, a
+  reference the typed data reader reads). The generator's interview asks the
   entity type and types the key by its id; the generator writes the
   constraint as it writes any other.
 - **What is left.** `addEach($key, NULL, from:, to:, bundles:)` still
   names the entity type and takes the id's type from it: one type for
-  every entry, which the provider's entries do not each say.
+  every entry, which the provider's entries do not each say. *Done
+  2026-11-06:* `addEach()` takes an entry definition as `addList()`
+  takes an item; a reference per entry is the constraint on that
+  definition, `addEach('pages',
+  DataDefinition::create('integer')->addConstraint('SurfaceValidReference',
+  ['entityTypeId' => 'node']), from: Slots::class, label: t('Pages'))`,
+  checked by `References::settle()` at the build as any key is
+  (`Declaring::settleReferences()` hands it the definition every entry
+  is copied from); `#[Each('integer', ...)]` with
+  `#[Constraint('SurfaceValidReference', [...], item: TRUE)]` as a
+  property. `to:` and `bundles:` are gone.
 
 (`BlueprintAdapterBase::add()`, `References::settle()`,
 `Declaring::settleReferences()`, `KeyAnswers`, `ResourceCode`,

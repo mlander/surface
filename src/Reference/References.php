@@ -264,9 +264,9 @@ final class References {
    *
    * An author declares a reference as any key, add() with the id's type and
    * the constraint; this is for code that builds the key from what it
-   * reads: an entry of addEach() that names the entity type it refers to,
-   * and a content entity's reference field (FieldItemDerivation). The id
-   * is typed as the entity type's id key holds it, an integer or a string,
+   * reads: a content entity's reference field (FieldItemDerivation) and a
+   * reference the typed data reader reads (TypedDataReader). The id is
+   * typed as the entity type's id key holds it, an integer or a string,
    * and carries the constraint that names the type and the bundles, which
    * the options resolver reads as the candidates and its validator holds a
    * value to.
@@ -326,12 +326,15 @@ final class References {
    *   The key's name in messages.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The key.
+   * @param bool $entry
+   *   TRUE for the definition every entry of the map at $key is copied
+   *   from (addEach()), which the messages name as such.
    *
    * @throws \LogicException
    *   For a constraint that names no entity type the site has, or a key of
    *   another type than the entity type's id.
    */
-  public function settle(string $who, string $key, DataDefinitionInterface $definition): void {
+  public function settle(string $who, string $key, DataDefinitionInterface $definition, bool $entry = FALSE): void {
     if ($definition instanceof ListDataDefinitionInterface) {
       $this->settle($who, $key . '.*', $definition->getItemDefinition());
       return;
@@ -348,20 +351,21 @@ final class References {
     }
     $entity_type_id = is_string($options['entityTypeId'] ?? NULL) ? $options['entityTypeId'] : '';
     $bundles = array_map('strval', (array) ($options['bundles'] ?? []));
-    $where = sprintf('%s declares "%s"', $who, $key);
+    $where = sprintf($entry ? '%s declares each entry of "%s"' : '%s declares "%s"', $who, $key);
     $this->assertTarget($where, $entity_type_id, $bundles);
     $type = $this->idType($entity_type_id);
     if ($definition->getDataType() !== $type) {
       throw new \LogicException(sprintf(
-        '%s as a reference to %s with the %s type, and an id of %s is %s %s: declare it add(\'%s\', \'%s\', ...).',
+        '%s as a reference to %s with the %s type, and an id of %s is %s %s: declare it %s.',
         $where,
         $entity_type_id,
         $definition->getDataType(),
         $entity_type_id,
         $type === 'integer' ? 'an' : 'a',
         $type,
-        $key,
-        $type,
+        $entry
+          ? sprintf('addEach(\'%s\', DataDefinition::create(\'%s\')->addConstraint(\'%s\', [...]), from: ..., label: ...), or #[Each(\'%s\', ...)]', $key, $type, self::CONSTRAINT, $type)
+          : sprintf('add(\'%s\', \'%s\', ...)', $key, $type),
       ));
     }
     if ($this->isContent($entity_type_id)) {

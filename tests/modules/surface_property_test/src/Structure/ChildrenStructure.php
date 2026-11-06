@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_property_test\Structure;
 
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
@@ -13,7 +14,8 @@ use Drupal\surface_property_test\Keys\Letters;
  * Children of every kind, with calls: ChildrenPropertiesStructure's twin.
  *
  * A child attached twice, wired, a collection with bounds, variants a
- * sibling chooses, and keys from the site, a value and a child each.
+ * sibling chooses, and keys from the site, a value, a child and a
+ * reference each.
  */
 #[Structure('property_test.children')]
 final class ChildrenStructure implements StructureInterface {
@@ -42,6 +44,9 @@ final class ChildrenStructure implements StructureInterface {
     $inputs->addEach('on_sale', 'boolean', from: Letters::class, label: t('On sale'));
 
     $inputs->attachEach('limits', EntryStructure::class, from: Letters::class, label: t('Limits'), reads: ['selling' => 'on_sale']);
+
+    $inputs->addEach('roles', DataDefinition::create('string')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user_role']), from: Letters::class, label: t('Roles'));
   }
 
 }

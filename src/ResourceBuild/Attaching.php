@@ -328,7 +328,7 @@ final class Attaching {
    *   frame and ancestry its children are built under.
    * @param string $key
    *   The key the map sits at.
-   * @param array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>, to: string|null, bundles: string[]} $each
+   * @param array{each: string|\Drupal\Core\TypedData\DataDefinitionInterface, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>} $each
    *   What the blueprint recorded for it.
    * @param array<string, array> $maps
    *   Every map of keys from the site the owner declared, by key, as the
@@ -357,7 +357,7 @@ final class Attaching {
     // schema is written from.
     $shell = $builder->getDefinition($key);
     if ($shell !== NULL) {
-      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->addEntry($key, $each['each'], $shell->getLabel() ?? $key, $each['default'], $each['to'], $each['bundles']));
+      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->addEntry($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
     }
     $entries = $keys->entries();
     $map = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
@@ -412,9 +412,9 @@ final class Attaching {
       }
     }
     else {
-      $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references());
+      $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->declaring->shapes());
       foreach ($entries as $id => $entry) {
-        $blueprint->addEntry((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default'], $each['to'], $each['bundles']);
+        $blueprint->addEntry((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default']);
         if ($entry['locked']) {
           $map->hold((string) $id);
         }
@@ -507,7 +507,7 @@ final class Attaching {
       $other = $maps[$sibling] ?? NULL;
       $problem = match (TRUE) {
         $sibling === $key => 'which is the map itself: a port reads a value its container holds beside the entry',
-        $other === NULL => sprintf('which is no map of keys from the site: an entry\'s port reads the entry of the same id in a sibling map, addEach(\'%s\', ..., from: %s::class)', $sibling, $each['from']),
+        $other === NULL => sprintf('which is no map of keys from the site: an entry\'s port reads the entry of the same id in a sibling map, addEach(\'%s\', ..., from: %s::class, label: ...)', $sibling, $each['from']),
         $other['child'] => 'which holds a structure at every entry: a port reads one value',
         $other['from'] !== $each['from'] => sprintf('which lists its keys from %s: an entry\'s port reads the entry of the same id, so both maps list their keys from %s', $other['from'], $each['from']),
         default => NULL,
@@ -527,7 +527,7 @@ final class Attaching {
         }
         if (static::unshaped($ports[$port], $match) !== NULL) {
           $shape = DefinitionMetadata::shapeOf($match);
-          throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", whose "%s" entry is declared with %s, and the port reads the shape %s: the sibling map declares its entries with it, addEach(\'%s\', <shape>::class, ...).', $definition->id, $port, $id, $key, $sibling, $entry, $shape === NULL ? 'a type alone' : 'the shape ' . $shape, $ports[$port]->shape, $sibling));
+          throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", whose "%s" entry is declared with %s, and the port reads the shape %s: the sibling map declares its entries with it, addEach(\'%s\', <shape>::class, from: ..., label: ...).', $definition->id, $port, $id, $key, $sibling, $entry, $shape === NULL ? 'a type alone' : 'the shape ' . $shape, $ports[$port]->shape, $sibling));
         }
         $wired[$entry][$port] = Surface::deepClone($match);
       }

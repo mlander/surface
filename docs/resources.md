@@ -2467,13 +2467,18 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **The spelling.** `addEach($key, $type, from:, label:, default:)`
   declares one value per thing, each as `add()` declares a key: a type
   of the type table or a shape, labeled with the thing's label, starting
-  from the thing's default or else `default:`. The map's label is
-  required, since its values have no structure to borrow one from. An
-  entry that refers to an entity names its entity type and has no type
-  of its own, `addEach('pages', NULL, from: Slots::class, label:
-  t('Pages'), to: 'node', bundles: ['page'])`: each entry is the id,
-  typed as the entity type keeps it, with `SurfaceValidReference`, and
-  `entity:node` as the type is refused, as `add()` refuses it.
+  from the thing's default or else `default:`. `$type` may be the
+  entry's definition instead, as `addList()` takes its item's, copied
+  for every thing. The map's label is required, since its values have
+  no structure to borrow one from. An entry that refers to an entity is
+  the id's type with `SurfaceValidReference`, as any reference key is,
+  `addEach('pages',
+  DataDefinition::create('integer')->addConstraint('SurfaceValidReference',
+  ['entityTypeId' => 'node', 'bundles' => ['page']]), from: Slots::class,
+  label: t('Pages'))`, its type checked against the entity type's id
+  when the resource is built; as a property, `#[Each('integer', from:,
+  label:)]` with `#[Constraint('SurfaceValidReference', [...], item:
+  TRUE)]`. `entity:node` as the type is refused, as `add()` refuses it.
   `attachEach($key, Structure::class, from:, label:)` holds the
   structure at every thing, as `attach()` holds one, its label optional
   as `attach()`'s is. Both return the map at the key, for the owner to

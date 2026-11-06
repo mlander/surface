@@ -239,8 +239,8 @@ final class LeafTypes {
    * Answers whether a type string spells an entity, which is no type here.
    *
    * Typed data's `entity`, `entity:<type>` and `entity:<type>:<bundle>`:
-   * an id and a constraint, the id's type with SurfaceValidReference, or
-   * addEach()'s `to:`.
+   * an id and a constraint, the id's type with SurfaceValidReference, for
+   * a key and for each entry of addEach() alike.
    *
    * @param string $type
    *   The type string.

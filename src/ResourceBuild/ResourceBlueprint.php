@@ -8,6 +8,7 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Computed;
@@ -85,7 +86,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * The maps of keys from the site declared through this blueprint, by key.
    *
-   * @var array<string, array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>, to: string|null, bundles: string[]}>
+   * @var array<string, array{each: string|\Drupal\Core\TypedData\DataDefinitionInterface, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
    */
   protected array $fromSite = [];
 
@@ -215,7 +216,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     if (is_subclass_of($structure, DefinesOutputsInterface::class)) {
       throw new \LogicException(sprintf('%s mixes %s in, which declares outputs. A structure\'s inputs are mixed in; its outputs are not, yet.', $who, $this->name($structure)));
     }
-    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this))->useShapes($this->shapes)->useReferences($this->references);
+    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this))->useShapes($this->shapes);
     $structure::defineInputs($mixin);
     $this->mixins[] = ['class' => $structure, 'reads' => $reads, 'blueprint' => $mixin];
     return $this;
@@ -623,8 +624,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   public function replay(string $owner, string $key, array $declared = []): void {
     assert($this->registry !== NULL);
     $capture = (new static(new SurfaceBuilder(), $this->typedDataManager, FALSE, $this->registry, $owner))
-      ->useShapes($this->shapes)
-      ->useReferences($this->references);
+      ->useShapes($this->shapes);
     $capture->capture = [$key, $this];
     $this->registry->declareInputs($this->registry->getDefinition($owner), $capture);
     if (!$capture->captured) {
@@ -907,7 +907,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   For SchemaReader alone.
    */
   public function mixInRead(string $name): static {
-    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $name, $this))->useShapes($this->shapes)->useReferences($this->references);
+    $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $name, $this))->useShapes($this->shapes);
     $inputs = $this->registry?->getDefinition($name)->inputs;
     if ($inputs !== NULL) {
       // A read structure's inputs are SchemaReader::fill(), a static
@@ -955,27 +955,30 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function addEach(string $key, ?string $type, string $from, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
     $this->assertHoldsNoChild('declares keys from the site', $key);
-    if ($to !== NULL || $bundles !== []) {
-      if ($type !== NULL || $to === NULL) {
-        throw new \LogicException($type !== NULL
-          ? sprintf('addEach("%s") names a type, %s, and an entity type each entry refers to, %s: an entry that refers to an entity takes its type from the entity type\'s id, addEach(\'%s\', NULL, from: ..., to: \'%s\').', $key, $type, (string) $to, $key, (string) $to)
-          : sprintf('addEach("%s") names bundles and no entity type: each entry refers to an entity of the type to: names, addEach(\'%s\', NULL, from: ..., to: \'<entity type>\', bundles: [...]).', $key, $key));
+    if ($type instanceof DataDefinitionInterface) {
+      if (!LeafTypes::isLeaf($type)) {
+        throw new \LogicException(sprintf('addEach("%s") was handed a %s as its entry: each entry is one value, addEach(\'%s\', \'<type>\', from: ..., label: ...) or the definition of one value; a group of keys per entry is a child, attachEach(\'%s\', <structure>::class, from: ..., label: ...).', $key, $type instanceof ListDataDefinitionInterface ? 'list' : 'map', $key, $key));
       }
-    }
-    elseif ($type === NULL) {
-      throw new \LogicException(sprintf('addEach("%s") names no type: each entry is a value of a type, addEach(\'%s\', \'boolean\', from: ...), or an id of an entity, addEach(\'%s\', NULL, from: ..., to: \'<entity type>\').', $key, $key, $key));
+      LeafTypes::assertHeld(sprintf('addEach("%s")', $key), $type);
     }
     elseif (LeafTypes::refersToEntity($type)) {
-      throw new \LogicException(sprintf('addEach("%s", "%s") declares each entry with an entity type string, which JSON Schema has no type for: an entry that refers to an entity names its entity type, addEach(\'%s\', NULL, from: ..., to: \'<entity type>\', bundles: [...]).', $key, $type, $key));
+      throw new \LogicException(sprintf('addEach("%s", "%s") declares each entry with an entity type string, which JSON Schema has no type for: an entry that refers to an entity is the id typed as the entity type keeps it, with the SurfaceValidReference constraint, addEach(\'%s\', DataDefinition::create(\'integer\')->addConstraint(\'SurfaceValidReference\', [\'entityTypeId\' => \'<entity type>\']), from: ..., label: ...).', $key, $type, $key));
     }
-    if ($type !== NULL && str_contains($type, '\\') && !Shapes::isShape($type)) {
+    elseif (str_contains($type, '\\') && !Shapes::isShape($type)) {
       throw new \LogicException(is_subclass_of($type, DefinesInputsInterface::class)
         ? sprintf('addEach("%s") was handed %s, a resource or structure: an entry that is a group of keys is a child, attachEach(\'%s\', ...).', $key, $type, $key)
         : sprintf('addEach("%s") was handed %s, which is no typed data type and no shape: each entry is declared as add() declares a key.', $key, $type));
     }
-    return static::labeled($this->reserveEach('addEach', $key, (string) $type, $from, $default, FALSE, to: $to, bundles: $bundles), $label);
+    $shell = $this->reserveEach('addEach', $key, $type, $from, $default, FALSE);
+    if ($type instanceof DataDefinitionInterface) {
+      // What each entry is, known now: a property's constraint on its
+      // item reaches it here (PropertyDeclaration::decorate()). The build
+      // writes the entry it labels in its place.
+      DefinitionMetadata::setEach($shell, $type);
+    }
+    return static::labeled($shell, $label);
   }
 
   /**
@@ -996,8 +999,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   addEach or attachEach, for the messages.
    * @param string $key
    *   The key.
-   * @param string $each
-   *   What each entry is: a type, a shape, or a structure.
+   * @param string|\Drupal\Core\TypedData\DataDefinitionInterface $each
+   *   What each entry is: a type, a shape, a definition, or a structure.
    * @param string $from
    *   The provider's class.
    * @param mixed $default
@@ -1006,10 +1009,6 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   TRUE when each entry is a child.
    * @param array<string, string> $reads
    *   For a child, each port mapped to the sibling map it reads per entry.
-   * @param string|null $to
-   *   For an entry that refers to an entity, its entity type.
-   * @param string[] $bundles
-   *   The bundles such an entry may name; none for every bundle.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key.
@@ -1017,7 +1016,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @throws \LogicException
    *   When the provider is none.
    */
-  protected function reserveEach(string $verb, string $key, string $each, string $from, mixed $default, bool $child, array $reads = [], ?string $to = NULL, array $bundles = []): MapDataDefinition {
+  protected function reserveEach(string $verb, string $key, string|DataDefinitionInterface $each, string $from, mixed $default, bool $child, array $reads = []): MapDataDefinition {
     if (!is_subclass_of($from, SiteListInterface::class)) {
       throw new \LogicException(sprintf('%s("%s") names %s as where its keys come from, which does not implement %s: a provider lists the site\'s things with list().', $verb, $key, $from, SiteListInterface::class));
     }
@@ -1028,8 +1027,6 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       'default' => $default,
       'child' => $child,
       'reads' => $reads,
-      'to' => $to,
-      'bundles' => $bundles,
     ];
     return $shell;
   }
@@ -1037,11 +1034,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the maps of keys from the site declared through this blueprint.
    *
-   * @return array<string, array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>, to: string|null, bundles: string[]}>
+   * @return array<string, array{each: string|\Drupal\Core\TypedData\DataDefinitionInterface, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>}>
    *   What each entry is, the provider, the default for every entry,
-   *   whether each entry is a child, the sibling map each of its ports
-   *   reads per entry, and for an entry that refers to an entity its
-   *   entity type and bundles, by key, in declaration order.
+   *   whether each entry is a child, and the sibling map each of its ports
+   *   reads per entry, by key, in declaration order.
    */
   public function fromSite(): array {
     return $this->fromSite;

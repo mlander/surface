@@ -277,7 +277,10 @@ final class PropertyDeclaration {
       return $definition;
     }
     if ($each = self::attribute($property, Each::class)) {
-      $definition = $blueprint->addEach($key, $each->type, $each->from, self::label($each->label), $each->default, $each->to, $each->bundles);
+      // An entry a constraint is laid on, `item: TRUE`, is a definition,
+      // which decorate() reaches through the map.
+      $entry = self::constrainsItem($property) ? DataDefinition::create($each->type) : $each->type;
+      $definition = $blueprint->addEach($key, $entry, $each->from, self::label($each->label), $each->default);
       self::word($definition, $each->description);
       return $definition;
     }
@@ -324,11 +327,16 @@ final class PropertyDeclaration {
     foreach ($property->getAttributes() as $attribute) {
       $instance = $attribute->newInstance();
       if ($instance instanceof Constraint) {
-        if ($instance->item && !$definition instanceof ListDataDefinition) {
-          throw new \LogicException(sprintf('%s::$%s puts #[Constraint(\'%s\')] on its item, `item: TRUE`, but the key is no list. Drop `item:`, or declare a list with #[Input(list:)].', $property->getDeclaringClass()->getName(), $property->getName(), $instance->name));
+        $constrained = $definition;
+        if ($instance->item) {
+          // A list's item, or on an #[Each] property each entry: the
+          // definition the map copies for every entry the site lists.
+          $constrained = $definition instanceof ListDataDefinition ? $definition->getItemDefinition() : DefinitionMetadata::eachOf($definition);
+          if (!$constrained instanceof DataDefinitionInterface) {
+            throw new \LogicException(sprintf('%s::$%s puts #[Constraint(\'%s\')] on its item, `item: TRUE`, but the key is no list and no #[Each]. Drop `item:`, or declare a list with #[Input(list:)].', $property->getDeclaringClass()->getName(), $property->getName(), $instance->name));
+          }
         }
-        ($definition instanceof ListDataDefinition && $instance->item ? $definition->getItemDefinition() : $definition)
-          ->addConstraint($instance->name, $instance->options);
+        $constrained->addConstraint($instance->name, $instance->options);
       }
       elseif ($instance instanceof Examples) {
         DefinitionMetadata::setExamples($definition, $instance->values);
@@ -593,6 +601,24 @@ final class PropertyDeclaration {
   private static function attribute(\ReflectionProperty $property, string $attribute): ?object {
     $found = $property->getAttributes($attribute);
     return $found === [] ? NULL : $found[0]->newInstance();
+  }
+
+  /**
+   * Answers whether a property lays a constraint on its item.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   *
+   * @return bool
+   *   TRUE when a #[Constraint] it carries says `item: TRUE`.
+   */
+  private static function constrainsItem(\ReflectionProperty $property): bool {
+    foreach ($property->getAttributes(Constraint::class) as $attribute) {
+      if ($attribute->newInstance()->item) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
 }
