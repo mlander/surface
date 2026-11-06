@@ -2052,10 +2052,14 @@ already has:
 - **`Declaring`** answers what the thing declares: its blueprints filled
   from the class and its alters, the site's defaults, the context's
   constraints and known identity, and the context a child is invoked in.
+- **`Mixing`** answers what the thing takes in as its own keys:
+  each structure and each variant mixed in, built by itself for its def
+  and its access, its members settled in the owner's frame, and what of
+  the owner's names a member it may not depend on refused.
 - **`Attaching`** answers what the thing holds: each child, collection,
-  variant, map of keys from the site, structure mixed in and structure at
-  an alter's mount, each built through the whole sequence again in its
-  own frame, its ports wired to the parent's keys.
+  variant, map of keys from the site and structure at an alter's mount,
+  each built through the whole sequence again in its own frame, its
+  ports wired to the parent's keys.
 - **`Binding`** answers what each contributor says about its keys: the
   `#[RefinesInput]` methods and the rules declared as data, bound into
   the builder, the owner's before any alter's.
@@ -2077,7 +2081,13 @@ phases. A core reviewer reviews one phase at a time, its dependencies
 named by its constructor. Nothing changed in what is built: the method
 bodies moved as they were, and the sealed data surfaces, the documents
 and the contract baselines are byte for byte what they were.
-(`Resources`, `Declaring`, `Attaching`, `Binding`, `Gating`)
+
+*Split 2026-11-05:* the mixing phase split out of attaching once
+variants mixed in made it the larger half; same behavior. `Mixing` is
+constructed over `Attaching`, which builds each structure and variant
+mixed in by itself and finds a call's variants; `Attaching` reaches
+`Mixing::layVariantMixins()` through a closure `Resources` hands it.
+(`Resources`, `Declaring`, `Mixing`, `Attaching`, `Binding`, `Gating`)
 
 ## Refinement
 
@@ -3172,8 +3182,8 @@ answered conditionals dropped), where `/refine` inlined carries the
 def's too, the same constraints written twice; the Vitest chain for the
 journal leaves the child's step out for it.
 (`BlueprintAdditionsInterface::mixIn()`, `ResourceBlueprint::mixIn()`,
-`Attaching::mixIn()`, `Binding::bindMixin()`,
-`Attaching::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
+`Mixing::mixIn()`, `Binding::bindMixin()`,
+`Mixing::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
 
 *Amended 2026-11-05:* a mixin may be chosen by a sibling key: the
@@ -3229,12 +3239,12 @@ the own-key form into it. Each choice, and why:
   built, and every member of every variant is declared into the owner's
   frame then, where the call stands: the call holds a place in the
   builder's order (`SurfaceBuilderInterface::reservePlace()`), and
-  `Attaching::layVariantMixins()` fills it once the declaration ran,
+  `Mixing::layVariantMixins()` fills it once the declaration ran,
   before the alters, the site's defaults and the context are read.
   Nothing swaps a shape: a member of a variant not chosen does not
   apply, and the chosen variant's required members are required, each a
   declared rule on the deciding key the build binds
-  (`Attaching::chosenRules()`), so the pipeline, the form and the tool
+  (`Mixing::chosenRules()`), so the pipeline, the form and the tool
   listing read it as any rule. Nothing is lazy: the members exist in
   the frame before any value is known, so `VariantsToSettle` stays the
   nested variants'. [A resource or structure is static](#a-resource-or-structure-is-static)
@@ -3293,8 +3303,8 @@ variant chosen by a locked deciding key refusing its owner's access, as
 a nested variant so chosen may ([A chosen variant may refuse](#a-chosen-variant-may-refuse)):
 a mixed-in variant its access omits is only not offered.
 (`BlueprintAdditionsInterface::mixInVariants()`,
-`ResourceBlueprint::mixInVariants()`, `Attaching::layVariantMixins()`,
-`Attaching::mixInVariants()`, `MixinVariants`,
+`ResourceBlueprint::mixInVariants()`, `Mixing::layVariantMixins()`,
+`Mixing::mixInVariants()`, `MixinVariants`,
 `ContractEmitter::composedVariants()`, `SchemaResolver::mixInVariants()`,
 `SchemaReader::variantsMixedIn()`, `ConfigSchemaReader::ownKey()`,
 `MixinVariantsTest`)
@@ -3314,7 +3324,7 @@ in `text`, a string in `text_custom`) keep the fallback for a key
 declared two ways, and `views.field` and `views.filter` for a variant
 holding variants at a key (`views.field.field`'s `settings`,
 `views.filter.entity_reference`'s `sub_handler_settings`).
-(`Attaching::declareMembers()`, `Attaching::alike()`, the pack in
+(`Mixing::declareMembers()`, `Mixing::alike()`, the pack in
 `MixinVariantsTest`)
 
 *Amended 2026-11-05, step 3:* a variant mixed in may hold variants at a
@@ -3336,8 +3346,8 @@ fallback for a key declared two ways (`separator`, a `label` with its
 `Regex` in `views.field.field`, a `string` in
 `views.field.prerender_list`), as `views.cache` and `views.area` do, and
 each of the three declares every key its types declare beside the
-fallback's open. (`Attaching::declareMembers()`,
-`Attaching::nestedVariants()`, `Attaching::variantKeysOf()`, the shelter
+fallback's open. (`Mixing::declareMembers()`,
+`Mixing::nestedVariants()`, `Attaching::variantKeysOf()`, the shelter
 and the camp in `MixinVariantsTest`)
 
 *Amended 2026-11-05, step 4:* a member two variants declare unlike is
@@ -3370,8 +3380,8 @@ unlike, since the owner's variants at a key are one set; and `mixIn()`
 of plain structures declaring one key unlike, since no value chooses
 between them. The reader's wall follows: in core `views.field`,
 `views.cache` and `views.area` mix their variants in, and nothing falls
-back. (`Attaching::declareMembers()`, `Attaching::widest()`,
-`Attaching::chosenRules()`, `Rule::holdTo()`, `Narrowing`, `Accepting`,
+back. (`Mixing::declareMembers()`, `Mixing::widest()`,
+`Mixing::chosenRules()`, `Rule::holdTo()`, `Narrowing`, `Accepting`,
 `SchemaResolver::mixInVariants()`, the beacon in `MixinVariantsTest`)
 
 ### An anonymous map

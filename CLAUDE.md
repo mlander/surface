@@ -192,13 +192,13 @@ the record of the rework that brought the module to the pattern.
   (`#[MixInVariants]`): every variant's members the owner's keys,
   stored flat beside the deciding key where the call stands, declared
   when the owner is built (a place held, `reservePlace()`, filled by
-  `Attaching::layVariantMixins()`), each applying only where its
+  `Mixing::layVariantMixins()`), each applying only where its
   variant is chosen and required where it requires it (declared rules
   the build binds, `DeclaredRefiner::$chooses`); a member two variants
   declare alike is one key (the label and description aside, the first
   variant's worn), one declared differently one key too, declared as
   wide as both and held to the chosen variant's definition
-  (`Attaching::widest()`, `Rule::holdTo()`, `DefinitionMap::heldTo()`);
+  (`Mixing::widest()`, `Rule::holdTo()`, `DefinitionMap::heldTo()`);
   a child a variant
   holds is the owner's child at that key, and variants it holds at a key
   the owner's variants there, chosen by its member and found as the
@@ -949,8 +949,8 @@ src/Resource/            The authoring API and attributes (Attribute/), the
 src/ResourceBuild/       Discovery pass, registry, build step, adapters,
                          derived variants, catalog, operation routes.
                          The build step is Resources.php, the order and
-                         the caches, over its four phases: Declaring.php,
-                         Attaching.php, Binding.php, Gating.php.
+                         the caches, over its five phases: Declaring.php,
+                         Mixing.php, Attaching.php, Binding.php, Gating.php.
 src/Access/              The operation route's access check.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.

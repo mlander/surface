@@ -877,7 +877,7 @@ final class Declaring {
    *   What runs once the owner has declared, before its alters: handed
    *   the inputs blueprint and the builder, it declares the members of
    *   the variants mixed in where each call stands
-   *   (Attaching::layVariantMixins()).
+   *   (Mixing::layVariantMixins()).
    *
    * @return array{0: \Drupal\surface\SurfaceBuilder, 1: \Drupal\surface\ResourceBuild\ResourceBlueprint, 2: \Drupal\surface\ResourceBuild\ResourceBlueprint, 3: array<int, array{0: object|string, 1: \Drupal\surface\ResourceBuild\RefinerDefinition[], 2: string|null}>, 4: array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions>}
    *   The builder; the inputs and the outputs blueprints; the refiner

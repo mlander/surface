@@ -593,7 +593,7 @@ member fits.
 
 Precisely: what the owner's frame declares for a member two variants
 mixed in declare unlike: of one data type, that type with what every
-variant declares alike; otherwise an open value (`Attaching::widest()`).
+variant declares alike; otherwise an open value (`Mixing::widest()`).
 
 Not in the introduction. Reference: [Variants mixed in](resources.md#variants-mixed-in).
 

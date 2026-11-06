@@ -59,9 +59,12 @@ order, or fixes the group once they have written
 
 `ResourcesInterface::build(string $resource, OperationContext $context):
 SurfaceInterface`, in `Resources::buildResource()`, which calls its
-phases in order: `Declaring` for steps 1 to 4, `Attaching` and `Binding`
-for the mixins, the refiners and the children, and `Gating` for every
-access answer (why: [decision](decisions.md#the-build-is-read-by-phase)):
+phases in order: `Declaring` for steps 1 to 4, `Mixing` for the
+structures and variants mixed in, `Attaching` and `Binding` for the
+mounts, the refiners and the children, and `Gating` for every access
+answer (why: [decision](decisions.md#the-build-is-read-by-phase)). On
+2026-11-05 the mixing phase split out of attaching once variants mixed
+in made it the larger half; same behavior:
 
 ```
 build(FieldInstanceResource::class, $context):

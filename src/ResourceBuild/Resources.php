@@ -59,15 +59,15 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  *    added to its key and held to the narrowing check; each identity key
  *    the context knows becomes that key's default and is locked, which is
  *    the engine's lock: the value fixed to the declared default.
- * 5. Each structure mixed in (Attaching::mixIn()): its ports' wiring
+ * 5. Each structure mixed in (Mixing::mixIn()): its ports' wiring
  *    checked, built by itself for its def and its access, which holds its
  *    members to what is stored or takes them back out; then each variant
- *    mixed in the same way (Attaching::mixInVariants()), its value offered
+ *    mixed in the same way (Mixing::mixInVariants()), its value offered
  *    on the deciding key, whose members were declared where the call
  *    stands once the owner's declaration ran
- *    (Attaching::layVariantMixins(), from step 1); then what of the
+ *    (Mixing::layVariantMixins(), from step 1); then what of the
  *    owner's names its members is checked
- *    (Attaching::assertMixinsUnnamed()), and its refiners, rules and
+ *    (Mixing::assertMixinsUnnamed()), and its refiners, rules and
  *    alters are bound in the owner's frame first (Binding::bindMixin()).
  * 6. The refiners. Every #[RefinesInput] method is checked against the
  *    shape, then bound: the keys it watches become the engine's
@@ -125,9 +125,12 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * - Declaring: steps 1 to 4, the blueprint filled from the class, its
  *   alters, the site's defaults and the context, and the context a child
  *   is invoked in.
- * - Attaching: steps 5 and 7, each child, collection, variant, map of keys
- *   from the site, structure mixed in and structure at an alter's mount,
- *   each built through this class again in its own frame.
+ * - Mixing: step 5, each structure and each variant mixed in, built by
+ *   itself, its members settled, and what of the owner's names them
+ *   checked.
+ * - Attaching: steps 2 and 7, each child, collection, variant, map of keys
+ *   from the site and structure at an alter's mount, each built through
+ *   this class again in its own frame.
  * - Binding: step 6, the refiners and rules each contributor declared.
  * - Gating: who may ask and what they may see, the permission, the gates,
  *   the access classes and the alters answering access, at the top and
@@ -160,9 +163,14 @@ final class Resources implements ResourcesInterface {
   protected Gating $gating;
 
   /**
-   * The children, collections, variants, site lists, mixins and mounts.
+   * The children, collections, variants, site lists and mounts.
    */
   protected Attaching $attaching;
+
+  /**
+   * The structures and the variants mixed in.
+   */
+  protected Mixing $mixing;
 
   /**
    * How many sealed builds are kept, the least recently asked let go.
@@ -305,7 +313,7 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Constructs the four phases over this build step's services.
+   * Constructs the five phases over this build step's services.
    *
    * Called again by withRegistry() on the build step it makes, once that
    * one holds the references it was handed.
@@ -314,7 +322,8 @@ final class Resources implements ResourcesInterface {
     $this->declaring = new Declaring($this->registry, $this->typedDataManager, $this->classResolver, $this->watchedValueCheck, $this->siteDefaults, $this->heldReferences, $this, $this->typedConfig);
     $this->binding = new Binding($this->typedDataManager, $this->declaring);
     $this->gating = new Gating($this->registry, $this->typedDataManager, $this->classResolver, $this->currentUser, $this->permissionsHashGenerator, $this->declaring, $this);
-    $this->attaching = new Attaching($this->registry, $this->typedDataManager, $this->watchedValueCheck, $this->declaring, $this->binding, $this->gating, $this, $this->buildResource(...), $this->buildRead(...));
+    $this->attaching = new Attaching($this->registry, $this->typedDataManager, $this->watchedValueCheck, $this->declaring, $this->binding, $this->gating, $this, $this->buildResource(...), $this->buildRead(...), fn (ResourceDefinition $definition, ResourceBlueprint $inputs, SurfaceBuilderInterface $builder) => $this->mixing->layVariantMixins($definition, $inputs, $builder));
+    $this->mixing = new Mixing($this->registry, $this->declaring, $this->gating, $this->attaching);
   }
 
   /**
@@ -914,7 +923,7 @@ final class Resources implements ResourcesInterface {
     // The members of the variants mixed in are declared where each call
     // stands, once its declaration is done.
     // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-    $lay = fn (ResourceBlueprint $inputs, SurfaceBuilderInterface $builder) => $this->attaching->layVariantMixins($definition, $inputs, $builder);
+    $lay = fn (ResourceBlueprint $inputs, SurfaceBuilderInterface $builder) => $this->mixing->layVariantMixins($definition, $inputs, $builder);
     [$builder, $inputs, $outputs, $links, $additions] = $this->declaring->declareShape($definition, $context, $lay);
 
     $input_keys = $inputs->keys();
@@ -975,11 +984,11 @@ final class Resources implements ResourcesInterface {
     // owner's may name what that access may take away, or rule a member
     // out.
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
-    $mixins = $this->attaching->mixIn($build, $inputs);
+    $mixins = $this->mixing->mixIn($build, $inputs);
     // Then each variant mixed in, the same way, and where each member
     // applies.
     // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-    $mixins = $this->attaching->mixInVariants($build, $inputs, $mixins);
+    $mixins = $this->mixing->mixInVariants($build, $inputs, $mixins);
     $owned_rules = [$inputs->rules()];
     $wirings = [];
     foreach (array_keys($inputs->attachments()) as $key) {
@@ -991,7 +1000,7 @@ final class Resources implements ResourcesInterface {
         $wirings[(string) $key] = $blueprint->wiring((string) $key);
       }
     }
-    $this->attaching->assertMixinsUnnamed($definition, $mixins, $links, array_merge(...$owned_rules), $wirings);
+    $this->mixing->assertMixinsUnnamed($definition, $mixins, $links, array_merge(...$owned_rules), $wirings);
     $input_keys = array_values(array_filter($input_keys, static fn (string $key): bool => $builder->getDefinition($key) !== NULL));
     $build = $build->withInputKeys($input_keys);
     // Each alter's structure at its own mount, built before any refiner or
