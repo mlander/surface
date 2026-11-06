@@ -258,32 +258,32 @@ final class PropertyDeclaration {
     }
     if ($computed = self::attribute($property, Computed::class)) {
       $definition = $blueprint->compute($key, $computed->type ?? self::type($property), self::label($computed->label), $computed->from, $computed->using, $computed->when);
-      self::word($definition, NULL, $computed->description);
+      self::word($definition, $computed->description);
       return $definition;
     }
     if ($attach = self::attribute($property, Attach::class)) {
-      $definition = $blueprint->attach($key, $attach->structure ?? self::classType($property, 'Attach', 'structure'), $attach->reads);
-      self::word($definition, $attach->label, $attach->description);
+      $definition = $blueprint->attach($key, $attach->structure ?? self::classType($property, 'Attach', 'structure'), self::text($attach->label), $attach->reads);
+      self::word($definition, $attach->description);
       return $definition;
     }
     if ($list = self::attribute($property, AttachList::class)) {
-      $definition = $blueprint->attachList($key, $list->structure, $list->min, $list->max);
-      self::word($definition, $list->label, $list->description);
+      $definition = $blueprint->attachList($key, $list->structure, self::text($list->label), $list->min, $list->max);
+      self::word($definition, $list->description);
       return $definition;
     }
     if ($variants = self::attribute($property, AttachVariants::class)) {
-      $definition = $blueprint->attachVariants($key, $variants->by, $variants->from, $variants->arguments);
-      self::word($definition, $variants->label, $variants->description);
+      $definition = $blueprint->attachVariants($key, $variants->by, self::text($variants->label), $variants->from, $variants->arguments);
+      self::word($definition, $variants->description);
       return $definition;
     }
     if ($each = self::attribute($property, Each::class)) {
-      $definition = $blueprint->addEach($key, $each->type, $each->from, $each->default, $each->to, $each->bundles);
-      self::word($definition, $each->label, $each->description);
+      $definition = $blueprint->addEach($key, $each->type, $each->from, self::label($each->label), $each->default, $each->to, $each->bundles);
+      self::word($definition, $each->description);
       return $definition;
     }
     if ($each = self::attribute($property, AttachEach::class)) {
-      $definition = $blueprint->attachEach($key, $each->structure, $each->from, $each->reads);
-      self::word($definition, $each->label, $each->description);
+      $definition = $blueprint->attachEach($key, $each->structure, $each->from, self::text($each->label), $each->reads);
+      self::word($definition, $each->description);
       return $definition;
     }
     if ($map = self::attribute($property, Map::class)) {
@@ -291,7 +291,7 @@ final class PropertyDeclaration {
       $definition = $blueprint->addMap($key, self::label($map->label), static function (BlueprintInterface $inner) use ($of): void {
         self::inputs($of, $inner);
       });
-      self::word($definition, NULL, $map->description);
+      self::word($definition, $map->description);
       return $definition;
     }
     $attribute = self::attribute($property, $outputs ? Output::class : Input::class)
@@ -305,7 +305,7 @@ final class PropertyDeclaration {
     else {
       $definition = $blueprint->add($key, $attribute->type ?? self::type($property), self::label($attribute->label), $default);
     }
-    self::word($definition, NULL, $attribute->description);
+    self::word($definition, $attribute->description);
     if ($attribute->required ?? self::required($property)) {
       $definition->setRequired(TRUE);
     }
@@ -459,7 +459,7 @@ final class PropertyDeclaration {
       if ($key->required ?? self::required($property)) {
         $definition->setRequired(TRUE);
       }
-      self::word($definition, NULL, $key->description);
+      self::word($definition, $key->description);
       self::decorate($property, $definition);
       $map->setPropertyDefinition($property->getName(), $definition);
     }
@@ -531,21 +531,19 @@ final class PropertyDeclaration {
   }
 
   /**
-   * Sets a label and a description where the attribute gives them.
+   * Sets a description where the attribute gives one.
+   *
+   * The label is the verb's to take, with the key; the description is
+   * the core setter's, on what the verb returned.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   What a verb declared.
-   * @param string|\Stringable|null $label
-   *   The label, or NULL to leave it.
    * @param string|\Stringable|null $description
    *   The description, or NULL to leave it.
    */
-  private static function word(DataDefinitionInterface $definition, string|\Stringable|null $label, string|\Stringable|null $description): void {
+  private static function word(DataDefinitionInterface $definition, string|\Stringable|null $description): void {
     if (!$definition instanceof DataDefinition) {
       return;
-    }
-    if ($label !== NULL) {
-      $definition->setLabel(self::label($label));
     }
     if ($description !== NULL) {
       $definition->setDescription(self::label($description));

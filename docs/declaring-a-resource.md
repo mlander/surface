@@ -109,7 +109,13 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   under the element and the property's description.
   `addList()` is the same for a list of values, `addMap()` for a map,
   and `addDefinition()` the long form, for one value built by hand
-  ([Maps and lists](#maps-and-lists)). The label is
+  ([Maps and lists](#maps-and-lists)). Every verb that declares a key
+  takes its label with it, after what fills the key:
+  `attach('contact', ContactStructure::class, t('Contact'))`,
+  `attachList()` and `attachVariants()` third, `attachEach()` and
+  `addEach()` after `from:`. On the four `attach` verbs it is optional,
+  NULL leaving the structure's own; `addEach()` requires one, since its
+  values have no structure to borrow a name from. The label is
   `t('...')` with a literal string; see [Translatable
   strings](#translatable-strings). The type may be a shape's class, a
   value declared once for every key that asks for it ([Named
@@ -231,8 +237,9 @@ Both are optional. Where they are said:
   out.
 - **The contract panel** names a part by its label, its id after it.
 
-Two labels are not the same thing. The label `attach()` or
-`attachVariants()` gives the key, `->setLabel(t('Ticket'))`, is the
+Two labels are not the same thing. The label given with the key to
+`attach()` or `attachVariants()`,
+`attachVariants('ticket', by: 'pricing', label: t('Ticket'))`, is the
 key's: the form element's title, the property's `title` beside the
 `$ref`. The structure's own label is what the structure is wherever it
 is held, the def's `title`. A structure that one plugin holds takes the
@@ -437,10 +444,10 @@ whether it must be given. The attributes say the rest:
 | `addList('days', 'string', ...)` | `#[Input('Days', list: 'string')] public array $days = [];`, an item constraint `#[Constraint(..., item: TRUE)]` |
 | `addList()` of maps | `list:` naming a plain class of `#[Input]` properties |
 | `addMap('coordinates', ..., fn)` | `#[Map('Coordinates')] public Coordinates $coordinates;`, a plain class of `#[Input]` properties |
-| `attach('contact', PersonStructure::class, reads: [...])` | `#[Attach(reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
-| `attachList('rooms', VenueRoomStructure::class, max: 20)` | `#[AttachList(VenueRoomStructure::class, max: 20)] public array $rooms;` |
-| `attachVariants('ticket', by: 'pricing')` | `#[AttachVariants(by: 'pricing')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
-| `addEach()`, `attachEach()` | `#[Each(from:, type:)]`, `#[AttachEach(Structure::class, from:)]` on an array property |
+| `attach('contact', PersonStructure::class, t('Caterer contact'), reads: [...])` | `#[Attach(label: 'Caterer contact', reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
+| `attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)` | `#[AttachList(VenueRoomStructure::class, label: 'Rooms', max: 20)] public array $rooms;` |
+| `attachVariants('ticket', by: 'pricing', label: t('Ticket'))` | `#[AttachVariants(by: 'pricing', label: 'Ticket')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
+| `addEach('on_sale', 'boolean', from:, label:)`, `attachEach()` | `#[Each('boolean', from:, label:)]`, `#[AttachEach(Structure::class, from:, label:)]` on an array property |
 | `reads('listed', 'boolean')` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
 | `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
 | `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['Range', ['max' => 5]])]` on `$items` |

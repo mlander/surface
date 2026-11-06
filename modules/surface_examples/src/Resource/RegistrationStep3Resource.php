@@ -56,11 +56,9 @@ final class RegistrationStep3Resource implements ResourceInterface {
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE);
 
-    $inputs->attachVariants('ticket', by: 'pricing')
-      ->setLabel(t('Ticket'));
+    $inputs->attachVariants('ticket', by: 'pricing', label: t('Ticket'));
 
-    $inputs->attach('contact', ContactStructure::class)
-      ->setLabel(t('Contact'));
+    $inputs->attach('contact', ContactStructure::class, t('Contact'));
   }
 
   /**

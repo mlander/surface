@@ -61,10 +61,32 @@ final class RecordingBlueprint implements BlueprintInterface {
   }
 
   /**
+   * Labels a definition where a verb was given a label.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinition $definition
+   *   What the verb declared.
+   * @param string|\Stringable|null $label
+   *   The label, or NULL to leave it.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The definition.
+   *
+   * @template T of \Drupal\Core\TypedData\DataDefinition
+   * @phpstan-param T $definition
+   * @phpstan-return T
+   */
+  private static function labeled(DataDefinition $definition, string|\Stringable|null $label): DataDefinition {
+    if ($label !== NULL) {
+      $definition->setLabel($label);
+    }
+    return $definition;
+  }
+
+  /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, ?string $from = NULL, array $arguments = []): MapDataDefinition {
-    $map = MapDataDefinition::create();
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = []): MapDataDefinition {
+    $map = self::labeled(MapDataDefinition::create(), $label);
     $this->record($key, 'attachVariants', $map, ['by' => $by, 'from' => $from, 'arguments' => $arguments]);
     return $map;
   }
@@ -72,8 +94,8 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, ?string $type, string $from, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
-    $map = MapDataDefinition::create();
+  public function addEach(string $key, ?string $type, string $from, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
+    $map = MapDataDefinition::create()->setLabel($label);
     $this->record($key, 'addEach', $map, ['from' => $from]);
     return $map;
   }
@@ -81,8 +103,8 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachEach(string $key, string $structure, string $from, array $reads = []): MapDataDefinition {
-    $map = MapDataDefinition::create();
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+    $map = self::labeled(MapDataDefinition::create(), $label);
     $this->record($key, 'attachEach', $map, ['child' => $structure, 'from' => $from]);
     return $map;
   }
@@ -157,8 +179,8 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition {
-    $map = MapDataDefinition::create();
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+    $map = self::labeled(MapDataDefinition::create(), $label);
     $this->record($key, 'attach', $map, ['child' => $structure]);
     return $map;
   }
@@ -166,8 +188,8 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
-    $list = new ListDataDefinition([], MapDataDefinition::create());
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+    $list = self::labeled(new ListDataDefinition([], MapDataDefinition::create()), $label);
     $this->record($key, 'attachList', $list, ['child' => $structure]);
     return $list;
   }

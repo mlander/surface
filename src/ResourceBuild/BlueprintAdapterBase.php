@@ -487,13 +487,13 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
     static::assertNoShape('attach', $key, $structure);
     static::assertReads($key, $reads);
     $shell = $this->reserveChild('attach', $key);
     $this->attachments[$key] = $structure;
     $this->wirings[$key] = $reads;
-    return $shell;
+    return static::labeled($shell, $label);
   }
 
   /**
@@ -543,7 +543,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
     static::assertNoShape('attachList', $key, $structure);
     if (($min !== NULL && $min < 0) || ($max !== NULL && $max < 0) || ($min !== NULL && $max !== NULL && $min > $max)) {
       throw new \InvalidArgumentException(sprintf(
@@ -570,7 +570,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     }
     $this->declare($key, $shell, NULL);
     $this->lists[$key] = $structure;
-    return $shell;
+    return static::labeled($shell, $label);
   }
 
   /**
@@ -845,9 +845,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * The child is built after the context is applied, so the key is
    * declared now as an empty map: that keeps it where defineInputs()
-   * put it, and is what attach() and attachVariants() hand back for the owner
-   * to label and describe with the core setters. The engine keeps that
-   * same map as the shell the child is advertised in.
+   * put it, labeled with what the verb was given, and is what attach()
+   * and attachVariants() hand back for the owner to describe with the
+   * core setters. The engine keeps that same map as the shell the child
+   * is advertised in.
    *
    * @param string $verb
    *   attach or attachVariants, for the message.
@@ -874,6 +875,31 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $shell = MapDataDefinition::create();
     $this->declare($key, $shell, NULL);
     return $shell;
+  }
+
+  /**
+   * Labels what a verb declared at a key, where the verb was given a label.
+   *
+   * A verb that declares a key takes its label with it; NULL leaves the
+   * definition as declared, which for a child is the structure's own.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinition $definition
+   *   What the verb declared.
+   * @param string|\Stringable|null $label
+   *   The label, or NULL to leave it.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The definition, labeled where a label was given.
+   *
+   * @template T of \Drupal\Core\TypedData\DataDefinition
+   * @phpstan-param T $definition
+   * @phpstan-return T
+   */
+  protected static function labeled(DataDefinition $definition, string|\Stringable|null $label): DataDefinition {
+    if ($label !== NULL) {
+      $definition->setLabel($label);
+    }
+    return $definition;
   }
 
   /**

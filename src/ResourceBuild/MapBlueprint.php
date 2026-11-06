@@ -113,21 +113,21 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
     throw $this->framed(sprintf('attach("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
     throw $this->framed(sprintf('attachList("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, ?string $from = NULL, array $arguments = []): MapDataDefinition {
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = []): MapDataDefinition {
     throw $this->framed(sprintf('attachVariants("%s")', $key));
   }
 
@@ -148,14 +148,14 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, ?string $type, string $from, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
+  public function addEach(string $key, ?string $type, string $from, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
     throw $this->framed(sprintf('addEach("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachEach(string $key, string $structure, string $from, array $reads = []): MapDataDefinition {
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
     throw $this->framed(sprintf('attachEach("%s")', $key));
   }
 

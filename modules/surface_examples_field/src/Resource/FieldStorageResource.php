@@ -154,8 +154,7 @@ final class FieldStorageResource implements ResourceInterface {
     $inputs->add('translatable', 'boolean', t('Translatable'), default: TRUE);
 
     // Its part.
-    $inputs->attachVariants('settings', by: 'field_type', from: FieldStorageSettingsSchemaVariants::class)
-      ->setLabel(t('Storage settings'))
+    $inputs->attachVariants('settings', by: 'field_type', label: t('Storage settings'), from: FieldStorageSettingsSchemaVariants::class)
       ->setDescription(t('Settings every bundle using this field shares, described by the field type itself.'));
   }
 

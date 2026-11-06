@@ -461,7 +461,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
         // A mapping's default is its keys' defaults, laid inside it.
         $inside = is_array($defaults[$key] ?? NULL) ? $defaults[$key] : [];
         if ($this->isNamedMapping($named, $property)) {
-          $shell = $inputs->attach($key, $this->structure($this->determine($named) ?? $named, '', '', $inside));
+          $shell = $inputs->attach($key, $this->structure($this->determine($named) ?? $named, '', '', $inside), $label);
           $reading->structure($here, static::id($this->determine($named) ?? $named));
         }
         else {
@@ -470,9 +470,6 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
             $this->mapping($map, (array) ($merged['mapping'] ?? []), $type, $full, $strict, $inner, '', $inside);
           });
           $reading->nest($here, $inner);
-        }
-        if ($label !== NULL) {
-          $shell->setLabel($label);
         }
         $this->carryOnMap($shell, $merged, $reading, $here);
         if ($required) {
@@ -605,7 +602,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
           ? [$this->determine($named) ?? $named, '']
           : [$type, $full . '.*'];
         $this->defaultNotLaid($defaults, $key, $reading, $here, 'a list of structures takes no default');
-        $list = $inputs->attachList($key, $this->structure(...$structure), $bounds['min'] ?? NULL, $bounds['max'] ?? NULL);
+        $list = $inputs->attachList($key, $this->structure(...$structure), $label, $bounds['min'] ?? NULL, $bounds['max'] ?? NULL);
         if ($bounds !== NULL) {
           unset($merged['constraints']['Count']);
         }
@@ -637,9 +634,6 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
     // Declared open by named(), labeled there: nothing of the list holds.
     if (!$list instanceof DataDefinition || DefinitionMetadata::isHeldWhole($list)) {
       return;
-    }
-    if ($label !== NULL) {
-      $list->setLabel($label);
     }
     $this->carryOnMap($list, $merged, $reading, $here);
     if ($required) {
@@ -689,10 +683,11 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
           $reading->expression($here, $named, 'parent', $by, 'open');
           return $this->open($inputs, $key, $label, $required, $reading, $here, sprintf('Its type is chosen by "%s", which this mapping holds as no value: variants are chosen by a sibling of one value, so the key is declared open, holding any value.', $by));
         }
-        $shell = $inputs->attachVariants($key, by: $by, from: ConfigSchemaTypes::class, arguments: [$type, $full, $by]);
-        if ($label !== NULL) {
-          $shell->setLabel($label);
-        }
+        $shell = $inputs->attachVariants($key, by: $by, label: $label, from: ConfigSchemaTypes::class, arguments: [
+          $type,
+          $full,
+          $by,
+        ]);
         $reading->expression($here, $named, 'parent', $by, 'variants');
         return $shell;
 
@@ -708,10 +703,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
         // walled, the fallback's keys and every other key declared open.
         $wall = $this->ownKeyWall($expression, $fallback);
         $structure = $this->structure($named);
-        $declared = $item ? $inputs->attachList($key, $structure) : $inputs->attach($key, $structure);
-        if ($label !== NULL) {
-          $declared->setLabel($label);
-        }
+        $declared = $item ? $inputs->attachList($key, $structure, $label) : $inputs->attach($key, $structure, $label);
         $reading->structure($here, static::id($named));
         if ($wall !== NULL) {
           $reading->expression($here, $named, 'own key', $by, 'fallback ' . $fallback);

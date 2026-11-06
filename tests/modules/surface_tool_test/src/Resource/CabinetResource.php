@@ -42,8 +42,7 @@ final class CabinetResource implements ResourceInterface {
       ->addConstraint('Range', ['min' => 1, 'max' => 12]);
     $inputs->add('lock', 'string', t('Lock'), default: 'key')
       ->addConstraint('Choice', ['choices' => ['key', 'code']]);
-    $inputs->attachVariants('lock_settings', by: 'lock')
-      ->setLabel(t('Lock settings'));
+    $inputs->attachVariants('lock_settings', by: 'lock', label: t('Lock settings'));
   }
 
 }

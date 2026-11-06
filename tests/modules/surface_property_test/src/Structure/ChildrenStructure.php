@@ -27,24 +27,21 @@ final class ChildrenStructure implements StructureInterface {
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE);
 
-    $inputs->attach('contact', ContactStructure::class, reads: ['listed' => 'public', 'anything' => 'pricing'])
-      ->setLabel(t('Contact'));
+    $inputs->attach('contact', ContactStructure::class, t('Contact'), reads: [
+      'listed' => 'public',
+      'anything' => 'pricing',
+    ]);
 
-    $inputs->attach('backup', ContactStructure::class, reads: ['anything' => 'pricing'])
-      ->setLabel(t('Backup contact'))
+    $inputs->attach('backup', ContactStructure::class, t('Backup contact'), reads: ['anything' => 'pricing'])
       ->setDescription(t('Asked when the contact is away.'));
 
-    $inputs->attachList('rows', EntryStructure::class, min: 1, max: 3)
-      ->setLabel(t('Rows'));
+    $inputs->attachList('rows', EntryStructure::class, t('Rows'), min: 1, max: 3);
 
-    $inputs->attachVariants('ticket', by: 'pricing')
-      ->setLabel(t('Ticket'));
+    $inputs->attachVariants('ticket', by: 'pricing', label: t('Ticket'));
 
-    $inputs->addEach('on_sale', 'boolean', from: Letters::class)
-      ->setLabel(t('On sale'));
+    $inputs->addEach('on_sale', 'boolean', from: Letters::class, label: t('On sale'));
 
-    $inputs->attachEach('limits', EntryStructure::class, from: Letters::class, reads: ['selling' => 'on_sale'])
-      ->setLabel(t('Limits'));
+    $inputs->attachEach('limits', EntryStructure::class, from: Letters::class, label: t('Limits'), reads: ['selling' => 'on_sale']);
   }
 
 }

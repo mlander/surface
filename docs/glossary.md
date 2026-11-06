@@ -504,7 +504,7 @@ Keys and variants from the site are one key, or one variant, per thing
 the site has, listed when the data surface is built.
 
 Precisely: one key per thing the site has, such as a checkbox per form,
-in a map at a key: `addEach($key, $type, from:)` for a value per thing,
+in a map at a key: `addEach($key, $type, from:, label:)` for a value per thing,
 `attachEach($key, Structure::class, from:)` for a structure per thing;
 or one variant per thing, each read from its JSON Schema or a structure
 it names by class or id (one read from config schema among them),

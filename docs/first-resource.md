@@ -228,7 +228,8 @@ Read it top to bottom:
   ...), its label and, optionally, a `default:`, and returns core's own
   data definition, so the rest is core API: `setRequired()`,
   `setDescription()`, `addConstraint()`.
-- **The label** is the third argument of `add()`. It is the form
+- **The label** is the third argument of `add()`, and every verb that
+  declares a key takes one with the key the same way. It is the form
   element's title, the tool's property label and the schema's `title`;
   `setDescription()` is the text under the element and the property's
   description.

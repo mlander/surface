@@ -31,11 +31,9 @@ final class FramePackStructure implements StructureInterface {
     $inputs->add('capacity', 'integer', t('Capacity'))
       ->addConstraint('Range', ['min' => 10]);
 
-    $inputs->attach('belt', BeltStructure::class)
-      ->setLabel(t('Hip belt'));
+    $inputs->attach('belt', BeltStructure::class, t('Hip belt'));
 
-    $inputs->attachList('pockets', PocketStructure::class, max: 3)
-      ->setLabel(t('Pockets'));
+    $inputs->attachList('pockets', PocketStructure::class, t('Pockets'), max: 3);
   }
 
 }

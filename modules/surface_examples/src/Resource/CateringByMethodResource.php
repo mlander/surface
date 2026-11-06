@@ -75,8 +75,7 @@ final class CateringByMethodResource implements ResourceInterface {
       ->setSetting('multiline', TRUE);
     $inputs->describe('notes', group: $details);
 
-    $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
-      ->setLabel(t('Caterer contact'));
+    $inputs->attach('contact', PersonStructure::class, t('Caterer contact'), reads: ['listed' => 'public']);
 
     $inputs->narrow('served_at')
       ->when(Condition::equals('public', TRUE))

@@ -33,12 +33,12 @@ page of their own, and the test module's kit the seventh.
 
 | The question you are asking | What it gives | The example that shows it | On this page |
 | --- | --- | --- | --- |
-| Is this group of keys a thing of its own? | `attach($key, Child::class)`: a fixed child, its keys stored as a map under the key, behind the wall; the schema refers to the child's def at the key. | The contact, `/surface-examples/3`; the press contact, `/surface-examples/8` | [Children](#children) |
+| Is this group of keys a thing of its own? | `attach($key, Child::class, $label)`: a fixed child, its keys stored as a map under the key, behind the wall; the schema refers to the child's def at the key. | The contact, `/surface-examples/3`; the press contact, `/surface-examples/8` | [Children](#children) |
 | Are these keys shared members that are part of this thing? | `mixIn(Structure::class)`: a mixin, its members the owner's own keys, stored flat beside them; the schema is `allOf` of the structure's def and the owner's properties. | The review, `/surface-examples/8` | [Mixins](#mixins) |
 | Does a structure need a value its container holds? | `reads($port, $type)` in the structure, wired by `attach(..., reads: [$port => $key])`: a port, the value kept at the container's key and stored by nothing in the structure; the def lists its ports, and what depends on one is stated on the container's `allOf`. | The person's `listed`, `/surface-examples/8` and `/surface-examples/8/desk` | [Ports](#ports) |
-| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
+| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling, label:)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
 | Does one key's value choose which further keys apply, stored flat beside it? | `mixInVariants($sibling)` and a `#[Variant]` per value, or `from:` a provider: variants mixed in, every variant's members the owner's own keys, stored flat beside the deciding key; the schema is an `if`/`then` on the sibling for each variant, its `then` the variant's def. | The test module's kit; config schema's `views.sort.[plugin_id]` and `condition.plugin.[id]` | [Variants mixed in](#variants-mixed-in) |
-| Does a group of keys repeat? | `attachList($key, Child::class, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
+| Does a group of keys repeat? | `attachList($key, Child::class, $label, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
 | Is there one key per thing the site has? | `addEach()` or `attachEach()` with a provider: keys from the site, a map under the key with one entry per thing the provider lists at every build; the schema states every entry, the map a def of the owner's. | The ticket types, `/surface-examples/9` | [Keys that come from the site](#keys-that-come-from-the-site) |
 
 The rule of thumb: nest for a thing of its own, mix in for shared
@@ -47,8 +47,8 @@ container holds. Use variants when a key chooses the keys (mixed in when
 the chosen keys are stored flat beside it), and a collection when groups
 repeat. Use keys from the site when the site,
 not the code, decides how many there are. Whichever way, the key takes
-the label the parent gives it, and the child's def in the schema the
-label the child gives itself, `#[Structure(label:)]`
+the label the parent gives it with the key, and the child's def in the
+schema the label the child gives itself, `#[Structure(label:)]`
 ([What it is called](declaring-a-resource.md#what-it-is-called)).
 
 ## Where things live
@@ -1574,15 +1574,18 @@ it at all of them ([Named shapes](declaring-a-resource.md#named-shapes)).
 The compliance structure's license is one; a shape handed to `attach()`
 is refused.
 
-- `attach('key', Child::class)` is a fixed child.
-- `attachVariants('key', by: 'sibling')` attaches **variants**: children
-  the sibling's value chooses between, one per value
-  ([Variants](#variants)).
+- `attach('key', Child::class, t('Label'))` is a fixed child.
+- `attachVariants('key', by: 'sibling', label: t('Label'))` attaches
+  **variants**: children the sibling's value chooses between, one per
+  value ([Variants](#variants)).
 
-`attach()` and `attachVariants()` return the map definition at the key, a
-core `MapDataDefinition`, the way `add()` returns its definition, so
-the owner labels and describes its own child's key with the core
-setters. A structure may ask for the widget that draws it as a whole,
+The label is given with the key, as `add()`'s is, and is optional: NULL
+gives the key no label of its own, leaving the structure's, which titles
+its def. `attach()` and `attachVariants()` return the map
+definition at the key, a core `MapDataDefinition`, the way `add()`
+returns its definition, so the owner describes its own child's key with
+the core setters (`setLabel()` still works, and says in two statements
+what one says). A structure may ask for the widget that draws it as a whole,
 `#[Structure('event.pair', widget: 'my_pair')]`, by the word a key's
 `widget` setting uses; it is set on the key wherever the structure is
 attached, unless the owner set one there, and a widget that cannot draw
@@ -1645,7 +1648,7 @@ output attaches nothing; both are refused by name otherwise.
 ### Variants
 
 Variants are a tagged union whose tag is a sibling key.
-`attachVariants('key', by: 'sibling')` attaches them at the key, and the
+`attachVariants('key', by: 'sibling', label: t('Label'))` attaches them at the key, and the
 sibling, the deciding key, chooses one. They are always open. The parent
 never names them: every class marked
 `#[Variant(of: Parent::class, at: 'key', for: '...', label: ...)]` is the
@@ -1688,8 +1691,7 @@ as are the storage's own settings:
 $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
   ->setRequired(TRUE);
 
-$inputs->attachVariants('presentation_settings', by: 'presentation')
-  ->setLabel(t('Presentation settings'))
+$inputs->attachVariants('presentation_settings', by: 'presentation', label: t('Presentation settings'))
   ->setDescription(t('What the chosen presentation needs.'));
 
 // ListPresentationStructure and GridPresentationStructure, beside it
@@ -1706,15 +1708,12 @@ $inputs->attachVariants('presentation_settings', by: 'presentation')
 #[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 
 // FieldInstanceResource, in surface_examples_field
-$inputs->attach('storage', FieldStorageResource::class)
-  ->setLabel(t('Field storage'));
+$inputs->attach('storage', FieldStorageResource::class, t('Field storage'));
 
-$inputs->attachVariants('settings', by: 'field_type')
-  ->setLabel(t('Field settings'));
+$inputs->attachVariants('settings', by: 'field_type', label: t('Field settings'));
 
 // FieldStorageResource, in surface_examples_field
-$inputs->attachVariants('settings', by: 'field_type')
-  ->setLabel(t('Storage settings'));
+$inputs->attachVariants('settings', by: 'field_type', label: t('Storage settings'));
 
 // AddressFieldSettingsResource, in surface_examples_address
 #[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
@@ -2199,8 +2198,7 @@ verb reads what it needs of an entry and refuses the rest:
 // SpotlightResource, example 12
 $inputs->add('component', 'string', t('Component'), default: 'surface_examples:card')
   ->setRequired(TRUE);
-$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
-  ->setLabel(t('Props'));
+$inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 
 // ComponentProps, the main module's, built by the class resolver
 final class ComponentProps implements SiteListInterface {
@@ -2379,19 +2377,19 @@ the variants' placeholder may become another type
 
 ### Collections
 
-`attachList('key', Child::class, min: 1, max: 4)` is a collection: a
-key whose value is a list, every item of which is an instance of the
-child. It returns the list definition at the key, a core
-`ListDataDefinition` whose item is the child's map, so the owner labels
-and describes it with the core setters, as `attach()` returns its map.
+`attachList('key', Child::class, t('Label'), min: 1, max: 4)` is a
+collection: a key whose value is a list, every item of which is an
+instance of the child, labeled as `attach()` labels its key. It returns
+the list definition at the key, a core `ListDataDefinition` whose item
+is the child's map, so the owner describes it with the core setters, as
+`attach()` returns its map.
 `min` and `max` are the list's `Count`; a NULL `max` is unlimited. The
 child is named the way `attach()` names one, by class or by a derived
 resource's id, and a derived resource's inputs callable may call it too.
 
 ```php
 // CellarResource, in the test module
-$inputs->attachList('racks', SpiceRackResource::class, min: 1, max: 4)
-  ->setLabel('Spice racks')
+$inputs->attachList('racks', SpiceRackResource::class, 'Spice racks', min: 1, max: 4)
   ->setDescription('One rack to four.');
 
 #[RefinesInput('racks')]
@@ -2448,8 +2446,7 @@ the things:
 
 ```php
 // HoneypotSettingsResource, in the honeypot port
-$inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, default: FALSE)
-  ->setLabel(t('Honeypot Enabled Forms'));
+$inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, label: t('Honeypot Enabled Forms'), default: FALSE);
 
 // ProtectedForms, a service
 final class ProtectedForms implements SiteListInterface {
@@ -2467,17 +2464,20 @@ final class ProtectedForms implements SiteListInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-- **The spelling.** `addEach($key, $type, from:, default:)` declares one
-  value per thing, each as `add()` declares a key: a type of the type
-  table or a shape, labeled with the thing's label, starting from the
-  thing's default or else `default:`. An entry that refers to an entity
-  names its entity type and has no type of its own,
-  `addEach('pages', NULL, from: Slots::class, to: 'node', bundles:
-  ['page'])`: each entry is the id, typed as the entity type keeps it,
-  with `SurfaceValidReference`, and `entity:node`
-  as the type is refused, as `add()` refuses it. `attachEach($key, Structure::class, from:)`
-  holds the structure at every thing, as `attach()` holds one. Both
-  return the map at the key, for the owner to label and describe.
+- **The spelling.** `addEach($key, $type, from:, label:, default:)`
+  declares one value per thing, each as `add()` declares a key: a type
+  of the type table or a shape, labeled with the thing's label, starting
+  from the thing's default or else `default:`. The map's label is
+  required, since its values have no structure to borrow one from. An
+  entry that refers to an entity names its entity type and has no type
+  of its own, `addEach('pages', NULL, from: Slots::class, label:
+  t('Pages'), to: 'node', bundles: ['page'])`: each entry is the id,
+  typed as the entity type keeps it, with `SurfaceValidReference`, and
+  `entity:node` as the type is refused, as `add()` refuses it.
+  `attachEach($key, Structure::class, from:, label:)` holds the
+  structure at every thing, as `attach()` holds one, its label optional
+  as `attach()`'s is. Both return the map at the key, for the owner to
+  describe.
 - **The provider** implements `SiteListInterface`, the one interface
   [variants from the site](#variants-from-the-site) name too: `list()`
   answers a `SiteList`, an id and a label per thing in order, and for
@@ -2564,8 +2564,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   to `attachEach()`; a list that cannot be cached or varies by the
   account; at the things, a structure that names storage or identity, or
   requires a port its owner leaves unwired, and a thing that says what a
-  structure starts from; either verb from an alter or inside a structure
-  mixed in.
+  structure starts from; either verb inside a structure mixed in. An
+  alter has neither verb: both are on `BlueprintInterface`, the owner's
+  blueprint, and not on the `BlueprintAdditionsInterface` an alter is
+  handed.
 
 A deriver ([below](#derived-resources)) is for what is a resource or
 structure of its own: operations, storage, identity, or a use at many
@@ -2585,8 +2587,8 @@ the same provider; the entry `<id>` reads the sibling's entry `<id>`:
 
 ```php
 // TicketSalesResource, example 9
-$inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE);
-$inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, reads: ['selling' => 'on_sale']);
+$inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, label: t('On sale'), default: FALSE);
+$inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, label: t('Limits'), reads: ['selling' => 'on_sale']);
 
 // TicketLimitStructure
 $inputs->reads('selling', 'boolean');

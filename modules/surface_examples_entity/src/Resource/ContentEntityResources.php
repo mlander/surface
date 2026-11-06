@@ -364,8 +364,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
    */
   public function defineFields(BlueprintInterface $inputs, string $entity_type_id, string $bundle, array $overridden = []): void {
     foreach ($this->derivation->fields($entity_type_id, $bundle, $overridden)['fields'] as $name => $field) {
-      $child = $inputs->attach($name, 'field.item:' . $entity_type_id . '.' . $bundle . '.' . $name)
-        ->setLabel($field->getLabel());
+      $child = $inputs->attach($name, 'field.item:' . $entity_type_id . '.' . $bundle . '.' . $name, $field->getLabel());
       if ((string) $field->getDescription() !== '') {
         $child->setDescription($field->getDescription());
       }
@@ -397,8 +396,7 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
 
     $this->defineId($inputs, $entity_type_id);
 
-    $inputs->attachVariants(self::FIELDS, by: 'bundle', from: BundleFieldStructures::class, arguments: [$entity_type_id])
-      ->setLabel($this->t('Fields'))
+    $inputs->attachVariants(self::FIELDS, by: 'bundle', label: $this->t('Fields'), from: BundleFieldStructures::class, arguments: [$entity_type_id])
       ->setDescription($this->t("The fields of the @bundle_label chosen, as that @bundle_label's own resource holds them.", [
         '@bundle_label' => $bundle_label,
       ]));

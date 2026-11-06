@@ -265,17 +265,16 @@ a bench per bench its configuration lists:
 <!-- excerpt: tests/modules/surface_resource_test/src/Resource/Workshop/WorkshopResource.php -->
 
 ```php
-$inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class)
-  ->setLabel(t('Benches'));
-$inputs->addEach('lights', 'boolean', from: WorkshopBenches::class, default: FALSE)
-  ->setLabel(t('Lights'))
+$inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, label: t('Benches'));
+$inputs->addEach('lights', 'boolean', from: WorkshopBenches::class, label: t('Lights'), default: FALSE)
   ->setDescription(t('Which benches have their lamp on.'));
-$inputs->addEach('codes', Sku::class, from: WorkshopBenches::class)
-  ->setLabel(t('Bench codes'));
+$inputs->addEach('codes', Sku::class, from: WorkshopBenches::class, label: t('Bench codes'));
 ```
 
-`addEach()` is one value per thing, of a type or a shape; `attachEach()`
-is one structure per thing. The provider is a class of its own, never
+`addEach()` is one value per thing, of a type or a shape, and requires
+a label, since its values have none to borrow; `attachEach()` is one
+structure per thing, its label optional, the structure's own when it is
+left out. The provider is a class of its own, never
 the resource, and says what it read, so the form, both schemas and the
 tool listing change when the configuration does:
 
@@ -312,8 +311,7 @@ translate. The alias settings ask for their types so:
 <!-- excerpt: tests/modules/surface_schema_test/src/Resource/AliasSettingsResource.php -->
 
 ```php
-$inputs->addEach('types', 'boolean', from: AliasTypes::class, default: FALSE)
-  ->setLabel(t('Types with aliases'));
+$inputs->addEach('types', 'boolean', from: AliasTypes::class, label: t('Types with aliases'), default: FALSE);
 ```
 
 The translation is a layout, a `StorageLayoutInterface` with two

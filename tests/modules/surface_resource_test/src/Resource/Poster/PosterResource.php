@@ -37,8 +37,7 @@ final class PosterResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('layout', 'string', t('Layout'), default: 'grid')
       ->setRequired(TRUE);
-    $inputs->attachVariants('panels', by: 'layout', from: PosterLayouts::class)
-      ->setLabel(t('Panels'));
+    $inputs->attachVariants('panels', by: 'layout', label: t('Panels'), from: PosterLayouts::class);
   }
 
 }

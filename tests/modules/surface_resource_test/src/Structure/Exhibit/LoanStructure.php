@@ -24,8 +24,7 @@ final class LoanStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('lender', 'string', t('Lender'));
     $inputs->add('until', 'integer', t('Until'));
-    $inputs->attach('insurance', InsuranceStructure::class)
-      ->setLabel(t('Insurance'));
+    $inputs->attach('insurance', InsuranceStructure::class, t('Insurance'));
   }
 
 }

@@ -22,8 +22,7 @@ final class BlockJsonStructure implements StructureInterface {
     $inputs->add('plugin', 'string', t('Plugin'))
       ->addConstraint('Choice', ['choices' => ['page_title_block', 'system_branding_block', 'system_menu_block:main']]);
 
-    $inputs->attachVariants('settings', by: 'plugin', from: BlockPluginJsonStructures::class)
-      ->setLabel(t('Settings'));
+    $inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: BlockPluginJsonStructures::class);
   }
 
 }

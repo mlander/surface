@@ -25,14 +25,10 @@ final class CupboardStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attach('upper', ShelfStructure::class)
-      ->setLabel('Upper shelf');
-    $inputs->attach('lower', ShelfStructure::class)
-      ->setLabel('Lower shelf');
-    $inputs->attach('left', BinResource::class)
-      ->setLabel('Left bin');
-    $inputs->attach('right', BinResource::class)
-      ->setLabel('Right bin');
+    $inputs->attach('upper', ShelfStructure::class, 'Upper shelf');
+    $inputs->attach('lower', ShelfStructure::class, 'Lower shelf');
+    $inputs->attach('left', BinResource::class, 'Left bin');
+    $inputs->attach('right', BinResource::class, 'Right bin');
   }
 
 }

@@ -22,12 +22,11 @@ final class FieldStorageDirectStructure implements StructureInterface {
     $inputs->add('type', 'string', t('Plugin'))
       ->addConstraint('Choice', ['choices' => ['decimal', 'entity_reference', 'string']]);
 
-    $inputs->attachVariants('settings', by: 'type', from: ConfigSchemaTypes::class, arguments: [
+    $inputs->attachVariants('settings', by: 'type', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [
       'field.storage.*.*',
       'settings',
       'type',
-    ])
-      ->setLabel(t('Settings'));
+    ]);
   }
 
 }

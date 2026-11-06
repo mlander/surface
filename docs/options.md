@@ -412,7 +412,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   `surface_examples_references`, each naming its entity types in its own
   declaration ([decision](decisions.md#a-blueprint-takes-no-complex-data-types)).
 - **One per thing the site has**, `addEach('pages', NULL, from:
-  Slots::class, to: 'node', bundles: ['page'])`: a map of keys from the
+  Slots::class, label: t('Pages'), to: 'node', bundles: ['page'])`: a map of keys from the
   site whose every entry is such an id, typed as the entity type keeps
   it, with the constraint; `addEach($key, 'entity:node', ...)` is
   refused, as `add()` refuses it.

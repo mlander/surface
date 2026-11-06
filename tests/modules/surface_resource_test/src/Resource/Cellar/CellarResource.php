@@ -55,11 +55,9 @@ final class CellarResource implements ResourceInterface {
     $inputs->add('larder', 'string', 'Larder')->setRequired(TRUE);
     $inputs->add('size', 'string', 'Size', default: 'large')
       ->addConstraint('Choice', ['choices' => ['small', 'large']]);
-    $inputs->attachList('racks', SpiceRackResource::class, min: 1, max: 4)
-      ->setLabel('Spice racks')
+    $inputs->attachList('racks', SpiceRackResource::class, 'Spice racks', min: 1, max: 4)
       ->setDescription('One rack to four.');
-    $inputs->attachList('shelves', ShelfStructure::class, max: 3)
-      ->setLabel('Shelves');
+    $inputs->attachList('shelves', ShelfStructure::class, 'Shelves', max: 3);
   }
 
   /**

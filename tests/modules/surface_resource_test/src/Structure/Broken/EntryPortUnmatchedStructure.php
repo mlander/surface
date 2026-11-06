@@ -20,7 +20,7 @@ final class EntryPortUnmatchedStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('layouts', 'string', from: ShiftingBenches::class);
+    $inputs->addEach('layouts', 'string', from: ShiftingBenches::class, label: t('Layouts'));
     $inputs->attachEach('seats', SeatingStructure::class, from: ShiftingBenches::class, reads: ['layout' => 'layouts']);
   }
 

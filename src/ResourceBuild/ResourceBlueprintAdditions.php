@@ -181,7 +181,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    */
-  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
     static::assertNoShape('attach', $key, $structure);
     $this->assertWithinMixin('attaches ' . $structure, NULL);
     static::assertReads($key, $reads);
@@ -206,13 +206,13 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
     }
     $this->attachments[$key] = $structure;
     $this->wirings[$key] = $reads;
-    return $this->builder->reserveThirdPartyMount($this->provider);
+    return static::labeled($this->builder->reserveThirdPartyMount($this->provider), $label);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $structure, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
     throw new \LogicException(sprintf(
       'The %s alter cannot attach a collection of %s at "%s" yet: an alter attaches a structure at its own mount, third_party_settings.%s, and a collection under the mount is not built.',
       $this->provider,
