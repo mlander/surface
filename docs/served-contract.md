@@ -522,15 +522,28 @@ key declared with it refers to.
    its class's `#[Structure]` or `#[Resource]` (`registration.contact`).
    A child with no class, a [variant from the site](resources.md#variants-from-the-site), is keyed
    `<parent id>.<key>.<value>` (`field.storage.settings.string`), an
-   attached one `<parent id>.<key>`. The same class at two keys, or in
-   two frames, is one def. A def may refer to other defs (a child inside
-   a variant). Two children claiming one id with declarations that are
-   not the same, which only a hand-sealed data surface or two different
-   contexts can produce, keep one def each, the second as `<id>@2`,
-   because a site may only narrow its def and neither would narrow the
-   other. A child reached inside its own def would be referred to, so a
-   resource or structure that ever contained itself ends; the build step
-   already refuses one.
+   attached one `<parent id>.<key>`. A structure read from config schema
+   (`ConfigSchemaReader`) is keyed
+   `config_schema:<type>[:<path>][:own]`, `<type>` the schema type's
+   name, which may hold `:` itself
+   (`config_schema:block.settings.system_menu_block:*:own`), or an
+   own-key expression as written
+   (`config_schema:views.field.[plugin_id]`), and `<path>` the dotted
+   path of a mapping inside the type that a key holds inline. `:own` is
+   a promise about the def: it holds the type's keys less those of its
+   frame type, the type itself or a type it extends, matched by keys
+   (`config_schema:condition.plugin.request_path:own` holds the keys
+   `condition.plugin` does not). Two reads of one type under one id with
+   different content, such as two plugins of one type with different
+   defaults, keep one def each, filed apart as `<id>@<n>`. The same
+   class at two keys, or in two frames, is one def. A def may refer to
+   other defs (a child inside a variant). Two children claiming one id
+   with declarations that are not the same, which only a hand-sealed
+   data surface or two different contexts can produce, keep one def
+   each, the second as `<id>@2`, because a site may only narrow its def
+   and neither would narrow the other. A child reached inside its own
+   def would be referred to, so a resource or structure that ever
+   contained itself ends; the build step already refuses one.
 2. **The def is the declaration**: the child's frame as it emits itself
    for no values, with nothing locked. Its properties, `required` and
    `additionalProperties: false`; its own conditionals under its

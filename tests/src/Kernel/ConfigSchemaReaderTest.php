@@ -197,6 +197,65 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests `:own` is a type's keys less its frame type's, matched by keys.
+   *
+   * The frame type is the type itself or a type it extends, at any
+   * distance. `block.settings.system_branding_block` is `type:
+   * block_settings`; `block.settings.*` is too and adds no key, so either
+   * left out is one structure under one id. A type less itself, as a
+   * plugin with no schema of its own is read, holds no key.
+   * `views.argument.date_day` is `type: views.argument.date`, which is
+   * `type: views_argument`, as `views.argument.*` is: less the root it
+   * holds the intermediate type's keys and its own. A type left out whose
+   * keys are those of no type in the ancestry is refused, since the id
+   * would say what the structure does not hold. Typed config drops a
+   * definition's `type:` once it has merged it for a value, and the frame
+   * type is found as the schema writes it all the same.
+   */
+  public function testOwnIsTheTypeLessItsFrameType(): void {
+    $this->enableModules(['views']);
+    $this->container->get('config.typed')->clearCachedDefinitions();
+    $reader = $this->container->get(ConfigSchemaReader::class);
+    $registry = $this->container->get('surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
+    $names = fn (string $name): array => $resources->buildStatic($name, new OperationContext('configure'))->getDefinitions()->names();
+
+    $typed = $this->container->get('config.typed');
+    $block = [
+      'plugin' => 'system_branding_block',
+      'settings' => ['use_site_logo' => TRUE],
+    ];
+    $typed->createFromNameAndData('block.block.branding', $block)->get('settings')->getElements();
+    $this->assertArrayNotHasKey('type', $typed->getDefinitions()['block.settings.system_branding_block'], 'Merged for a value, the definition has lost its type.');
+
+    $parent = $reader->structure('block.settings.system_branding_block', '', 'block_settings');
+    $same = $reader->structure('block.settings.system_branding_block', '', 'block.settings.*');
+    $this->assertSame('config_schema:block.settings.system_branding_block:own', $registry->getDefinition($parent)->id);
+    $this->assertSame($registry->getDefinition($parent)->id, $registry->getDefinition($same)->id, 'The frame type, or a type with its keys: one id.');
+    $this->assertSame($names($parent), $names($same));
+    $this->assertSame(['use_site_logo', 'use_site_name', 'use_site_slogan'], $names($parent), 'The branding block\'s own keys.');
+
+    foreach (['block.settings.system_branding_block', 'block.settings.*'] as $type) {
+      $itself = $reader->structure($type, '', $type);
+      $this->assertSame('config_schema:' . $type . ':own', $registry->getDefinition($itself)->id);
+      $this->assertSame([], $names($itself), $type . ' less itself holds no key.');
+    }
+
+    $day = $reader->structure('views.argument.date_day', '', 'views.argument.*');
+    $this->assertSame('config_schema:views.argument.date_day:own', $registry->getDefinition($day)->id);
+    $this->assertEqualsCanonicalizing(['date', 'node_created', 'node_changed', 'day'], $names($day), 'Less the root: the intermediate type\'s keys and its own.');
+
+    try {
+      $reader->structure('block.settings.system_branding_block', '', 'condition.plugin');
+      $this->fail('A type left out with the keys of no type in the ancestry is accepted.');
+    }
+    catch (\LogicException $e) {
+      $this->assertStringStartsWith('ConfigSchemaReader reads block.settings.system_branding_block less the keys of condition.plugin, which are the keys of neither the type nor a type it extends (it extends block_settings): an :own structure leaves out the keys of its frame type, the type itself or a type it extends, matched by keys. The keys that differ from block_settings: ', $e->getMessage());
+      $this->assertStringContainsString('negate', $e->getMessage());
+    }
+  }
+
+  /**
    * Tests a whole placed block, read: each form of named type.
    */
   public function testPlacedBlockRead(): void {

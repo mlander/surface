@@ -69,7 +69,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * The arguments each provider of variants from the site is bound to.
    *
-   * @var array<string, list<string|int>>
+   * By key; the shape is the provider's.
+   *
+   * @var array<string, array>
    */
   protected array $variantsArguments = [];
 
@@ -107,7 +109,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * The variants mixed in through this blueprint, in call order.
    *
-   * @var list<array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, place: string, at: int, read: array<string, array{name: string, label: string|null}>, laid?: array}>
+   * @var list<array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: array, place: string, at: int, read: array<string, array{name: string, label: string|null}>, laid?: array}>
    */
   protected array $variantMixins = [];
 
@@ -268,7 +270,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the variants mixed in through this blueprint, in call order.
    *
-   * @return list<array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, place: string, at: int, read: array<string, array{name: string, label: string|null}>, laid?: array}>
+   * @return list<array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: array, place: string, at: int, read: array<string, array{name: string, label: string|null}>, laid?: array}>
    *   Each call's deciding key, provider and its arguments, the place it
    *   holds in the builder, the position in this blueprint's keys its
    *   members land at, the variants a schema read into it states, and,
@@ -286,7 +288,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   The call, by its index in variantMixins().
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $members
    *   Each member's definition in the owner's frame, by key, in order.
-   * @param array{children: array<string, string>, labels: array<string, string|\Stringable>, blueprints: array<string, \Drupal\surface\ResourceBuild\ResourceBlueprint>, values: array<string, string[]>, required: array<string, string[]>, attachments: array<string, string>, lists: array<string, string>, variants: array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>, widened: string[]} $laid
+   * @param array{children: array<string, string>, labels: array<string, string|\Stringable>, blueprints: array<string, \Drupal\surface\ResourceBuild\ResourceBlueprint>, values: array<string, string[]>, required: array<string, string[]>, attachments: array<string, string>, lists: array<string, string>, variants: array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: array, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>, widened: string[]} $laid
    *   What the build found: each value's variant by name, its label, the
    *   blueprint it declared its keys through, for each member the values
    *   it applies under and those it is required under, the members that
@@ -676,8 +678,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the arguments each provider of variants from the site is bound to.
    *
-   * @return array<string, list<string|int>>
-   *   The arguments of each key whose provider was handed some.
+   * @return array<string, array>
+   *   The arguments of each key whose provider was handed some. The shape
+   *   is the provider's.
    */
   public function variantsArguments(): array {
     $arguments = $this->variantsArguments;
@@ -1274,7 +1277,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the variants at a key each variant mixed in brought, laid.
    *
-   * @return array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>
+   * @return array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: array, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>
    *   Each, by key.
    */
   protected function laidVariants(): array {

@@ -318,8 +318,8 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
    * Registers the structure a schema type is, for a request to build.
    *
    * A derived structure by id, `config_schema:<type>` (with `:<path>` for
-   * a mapping inside it a key holds inline, and `:own` for one less the
-   * keys of the type its frame declares; or the expression as written,
+   * a mapping inside it a key holds inline, and `:own` for its keys less
+   * those of its frame type; or the expression as written,
    * `config_schema:views.field.[plugin_id]`, for a type chosen by a key
    * inside its own value, ownKey()), its inputs fill(). Registered
    * on demand, as a structure read from a JSON Schema is, so nothing
@@ -334,19 +334,56 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
    * plugins of one type with different defaults are two structures under
    * one id, which a document files apart as `<id>@<n>`.
    *
+   * `:own` means one thing, since the id is a def key on the wire: the
+   * type's keys less those of its frame type, which is the type itself
+   * (a plugin with no schema of its own, read as its fallback less
+   * itself, holds no key) or a type it extends at any distance. The frame
+   * type is matched by keys, not by name: $less is accepted when its keys
+   * are the type's or those of any type in its ancestry (ancestry()), so
+   * `block.settings.*`, which is `type: block_settings` and adds no key,
+   * and `block_settings` are one frame, and `views.argument.*` is the
+   * frame of `views.argument.date_day`, which is `type:
+   * views.argument.date`, which is `type: views_argument`, as
+   * `views.argument.*` is.
+   *
    * @param string $type
    *   The schema type.
    * @param string $path
    *   The dotted path into it of the mapping; empty for the type.
    * @param string $less
-   *   A type whose keys are left out; empty for none.
+   *   The frame type, whose keys are left out: the type itself, a type it
+   *   extends, or one with the keys of either; empty for none.
    * @param array $defaults
    *   The defaults laid on the keys read, by key; none for none.
    *
    * @return string
    *   The name it is attached, listed and chosen by.
+   *
+   * @throws \LogicException
+   *   When the keys of $less are those of no type in the ancestry.
    */
   public function structure(string $type, string $path = '', string $less = '', array $defaults = []): string {
+    if ($less !== '') {
+      $left = array_map('strval', array_keys((array) ($this->typedConfig->getDefinition($less)['mapping'] ?? [])));
+      sort($left);
+      $ancestry = $this->ancestry($type, $path, $this->typedConfig->getDefinitions());
+      if (!in_array($left, $ancestry, TRUE)) {
+        // Typed config drops the `type:` of a definition it has merged for
+        // a value (TypedConfigManager::getDefinitionWithReplacements()), so
+        // the walk ends early there; it is made again on the definitions
+        // as written, which a copy of the manager reads afresh.
+        $written = clone $this->typedConfig;
+        $written->useCaches(FALSE);
+        $written->useCaches(TRUE);
+        $ancestry = $this->ancestry($type, $path, $written->getDefinitions());
+      }
+      if (!in_array($left, $ancestry, TRUE)) {
+        $names = array_keys($ancestry);
+        $nearest = $names[1] ?? $names[0];
+        $differ = [...array_diff($left, $ancestry[$nearest]), ...array_diff($ancestry[$nearest], $left)];
+        throw new \LogicException(sprintf('ConfigSchemaReader reads %s less the keys of %s, which are the keys of neither the type nor a type it extends (%s): an :own structure leaves out the keys of its frame type, the type itself or a type it extends, matched by keys. The keys that differ from %s: %s.', $type . ($path === '' ? '' : ' at ' . $path), $less, count($names) > 1 ? 'it extends ' . implode(', ', array_slice($names, 1)) : 'it extends none', $nearest, implode(', ', $differ)));
+      }
+    }
     // With no defaults, the arguments and the hash are a read of the type
     // alone, so each caller of one type with none gets one structure.
     $arguments = [$type, $path, $less];
@@ -406,13 +443,63 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
    * @param string $path
    *   The dotted path of a mapping inside it, or empty.
    * @param string $less
-   *   A type whose keys are left out, or empty.
+   *   The frame type whose keys are left out (structure()), or empty.
    *
    * @return string
-   *   `config_schema:<type>`, then `:<path>`, then `:own`, where given.
+   *   `config_schema:<type>`, then `:<path>` where given, then `:own`
+   *   where the keys of its frame type are left out.
    */
   public static function id(string $type, string $path = '', string $less = ''): string {
     return self::PREFIX . $type . ($path === '' ? '' : ':' . $path) . ($less === '' ? '' : ':own');
+  }
+
+  /**
+   * Lists the keys of a type and of each type it extends, nearest first.
+   *
+   * The walk follows the `type:` of each definition passed: the type's
+   * (or its fallback's, as determine() resolves a name with no definition
+   * of its own), then that type's, until a type with no mapping or one
+   * with no `type:` (`mapping` itself), which is left out. For a path it
+   * starts at the mapping there and the `type:` it is written with.
+   *
+   * @param string $type
+   *   The schema type.
+   * @param string $path
+   *   The dotted path into it of the mapping; empty for the type.
+   * @param array $definitions
+   *   The schema's definitions, by name, whose `type:` is followed; the
+   *   caller decides which: those typed config holds, which may have
+   *   dropped a `type:` it merged, or those as written.
+   *
+   * @return array<string, list<string>>
+   *   The mapping keys of each, merged and sorted, by type name: the type
+   *   first (`<type>:<path>` for a path), then each type it extends.
+   */
+  private function ancestry(string $type, string $path, array $definitions): array {
+    $keys = static function (array $merged): array {
+      $keys = array_map('strval', array_keys((array) ($merged['mapping'] ?? [])));
+      sort($keys);
+      return $keys;
+    };
+    if ($path === '') {
+      $ancestry = [$type => $keys($this->typedConfig->getDefinition($type))];
+      $next = (string) ($definitions[$this->determine($type) ?? '']['type'] ?? '');
+    }
+    else {
+      $written = $this->propertyAt($type, $path)[0] ?? [];
+      $ancestry = [$type . ':' . $path => $keys($this->merged($written))];
+      $next = (string) ($written['type'] ?? '');
+    }
+    while ($next !== '' && !str_contains($next, '[') && ($name = $this->determine($next)) !== NULL && !isset($ancestry[$name])) {
+      // `mapping` itself is written with no `type:`, and holds no key.
+      $merged = $this->typedConfig->getDefinition($name);
+      if (!isset($definitions[$name]['type']) || !is_array($merged['mapping'] ?? NULL)) {
+        break;
+      }
+      $ancestry[$name] = $keys($merged);
+      $next = (string) ($definitions[$name]['type'] ?? '');
+    }
+    return $ancestry;
   }
 
   /**

@@ -7670,6 +7670,26 @@ read back would lose its refiners, children and defaults. Values from a
 read from the schema alone. (`ConfigSchemaTypes::resolve()`,
 `ConfigSchemaTypesTest`)
 
+*Amended 2026-11-06:* `:own` means one thing, since the id is a def key
+on the wire: the type's keys less those of its frame type, which is the
+type itself (a plugin with no schema of its own, read as its fallback
+less itself, holds no key) or a type it extends at any distance, matched
+by keys. `ConfigSchemaReader::structure()` walks the type's ancestry,
+the `type:` each definition is written with, and accepts the type left
+out when its keys are the type's or those of any type in it; it refuses
+any other with the ancestry and the keys that differ from the nearest.
+So `block.settings.*`, which is `type: block_settings` and adds no key,
+and `block_settings` are one frame, and `views.argument.*` is the frame
+of `views.argument.date_day`, which is `type: views.argument.date`,
+which is `type: views_argument`, as `views.argument.*` is: the variant
+holds every key the chosen type has beyond the fallback's, intermediate
+types included. Why: the id promises what the def holds; read less a
+type that is not its frame, one `:own` id would carry different keys.
+Two reads of one type under one id with different content are filed
+apart as `<id>@<n>`, as for defaults.
+(`ConfigSchemaReader::structure()`,
+`ConfigSchemaReaderTest::testOwnIsTheTypeLessItsFrameType()`)
+
 ### A listing is a read-only operation with outputs; a reorder is an update over the collection
 
 Decided 2026-10-23, with example 15, the first module of the series to

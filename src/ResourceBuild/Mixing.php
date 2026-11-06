@@ -345,7 +345,7 @@ final class Mixing {
    *   The members another call laid, each with its deciding key, its first
    *   value and that variant's id.
    *
-   * @return array{0: array<string, \Drupal\Core\TypedData\DataDefinitionInterface>, 1: array<string, string[]>, 2: array<string, string[]>, 3: array{attachments: array<string, string>, lists: array<string, string>, variants: array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>}, 4: string[]}
+   * @return array{0: array<string, \Drupal\Core\TypedData\DataDefinitionInterface>, 1: array<string, string[]>, 2: array<string, string[]>, 3: array{attachments: array<string, string>, lists: array<string, string>, variants: array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: array, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>}, 4: string[]}
    *   Each member's definition in the owner's frame, by key, in order;
    *   the values each member applies under; the values under which each
    *   plain member is required; the members holding a child, at a fixed
