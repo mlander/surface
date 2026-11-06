@@ -226,7 +226,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * The variants are found when the owner is built, after this
    * declaration ran: a place is held here, in the builder's order and in
-   * this blueprint's keys, and Attaching::layVariantMixins() declares
+   * this blueprint's keys, and Mixing::layVariantMixins() declares
    * every variant's members into it before the context and the site's
    * defaults are read.
    *
@@ -296,7 +296,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   declare unlike, declared as wide as both.
    *
    * @internal
-   *   For Attaching::layVariantMixins() alone, once per call, in call
+   *   For Mixing::layVariantMixins() alone, once per call, in call
    *   order.
    */
   public function layVariantMixin(int $call, array $members, array $laid): void {
