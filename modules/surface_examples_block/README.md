@@ -46,7 +46,8 @@ $inputs->attachList('visibility', VisibilityConditionStructure::class)
   itself. Config schema has no defaults, so the provider hands the
   reader the plugin's own as each key's default. The provider keeps
   only what config schema cannot know: which plugins are offered, their
-  labels and their defaults.
+  labels and their defaults. A `#[Variant]` declared for the placement at
+  `settings` wins over both, as at any key.
 - **The theme chooses the region.** The theme is one of the installed
   themes (core's `ExtensionExists`, read by the main module's
   `extension_exists` resolver); the region, a visible region of any

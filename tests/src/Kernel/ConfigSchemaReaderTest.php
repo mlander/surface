@@ -92,9 +92,11 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * Where the differences are written, for the README.
+   * The file the differences are written to.
+   *
+   * In the directory SURFACE_READER_REPORT names, when it names one.
    */
-  protected const REPORT = '/tmp/surface-reader/config-schema-comparison.json';
+  protected const REPORT = 'config-schema-comparison.json';
 
   /**
    * {@inheritdoc}
@@ -135,8 +137,10 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
         }
       }
     }
-    @mkdir(dirname(self::REPORT), 0777, TRUE);
-    file_put_contents(self::REPORT, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    if (getenv('SURFACE_READER_REPORT')) {
+      // Every difference, for a reader comparing the two routes.
+      file_put_contents(getenv('SURFACE_READER_REPORT') . '/' . self::REPORT, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
     $this->assertSame([], $unexplained, 'The direct route says everything the JSON route says, but what it cannot know.');
     $this->assertNotEmpty($report, 'And it says more.');
     unset($resources, $emitter);

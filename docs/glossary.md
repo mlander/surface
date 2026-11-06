@@ -507,7 +507,8 @@ Precisely: one key per thing the site has, such as a checkbox per form,
 in a map at a key: `addEach($key, $type, from:)` for a value per thing,
 `attachEach($key, Structure::class, from:)` for a structure per thing;
 or one variant per thing, each read from its JSON Schema or a structure
-class, `attachVariants($key, by: $sibling, from:)`. The provider is one
+it names by class or id (one read from config schema among them),
+`attachVariants($key, by: $sibling, from:)`. The provider is one
 interface for both, a service implementing `SiteListInterface`, whose
 `list()` answers a `SiteList`, asked at every build; a closed one,
 `ClosedSiteListInterface`, names every structure it may list.
@@ -572,6 +573,64 @@ members that are part of this thing.
 
 Named in [Resources made of structures](introduction/11-resources-made-of-structures.md).
 Reference: [Mixins](resources.md#mixins).
+
+### Variants mixed in
+
+Variants mixed in are structures a sibling key chooses between, whose
+keys are added to the owner's own keys, not held under a key.
+
+Precisely: `$inputs->mixInVariants($by, from:, arguments:)`, every
+variant's members declared into the owner's frame when it is built,
+stored flat beside the deciding key, each applying only where its
+variant is chosen.
+
+Not in the introduction. Reference: [Variants mixed in](resources.md#variants-mixed-in).
+
+### Widest
+
+The widest definition is the one every variant's definition of a
+member fits.
+
+Precisely: what the owner's frame declares for a member two variants
+mixed in declare unlike: of one data type, that type with what every
+variant declares alike; otherwise an open value (`Attaching::widest()`).
+
+Not in the introduction. Reference: [Variants mixed in](resources.md#variants-mixed-in).
+
+### Held to
+
+A member held to a definition is read by that definition in place of
+its own while a condition holds.
+
+Precisely: the declared rule the build binds, `Rule::holdTo()`, that
+puts the chosen variant's own definition in the place of a member
+declared widest, the member's label and description kept.
+
+Not in the introduction. Reference: [Variants mixed in](resources.md#variants-mixed-in).
+
+### Reader
+
+A reader turns a definition written somewhere else into a blueprint.
+
+Precisely: a class that calls the blueprint's verbs with what its
+source says, a `Reader\DeclarationReaderInterface`
+(`ConfigSchemaReader` for a config schema type, `TypedDataReader` for a
+typed data definition, `SchemaReader` for a JSON Schema document), and
+notes what no verb takes in a `Reader\Reading`.
+
+Not in the introduction. Reference: [Reading a schema](reading-a-schema.md),
+[Config schema](reading-a-schema.md#config-schema).
+
+### Open
+
+A key declared open accepts any value, as it is stored.
+
+Precisely: an `any` held whole to nothing (`LeafRules::open()`), what a
+reader declares at a key it reads no shape for, so the closed frame
+still holds what is stored there; both documents write it with its
+title and no type.
+
+Not in the introduction. Reference: [Config schema](reading-a-schema.md#config-schema).
 
 ### Port
 

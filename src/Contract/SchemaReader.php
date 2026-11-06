@@ -1694,9 +1694,10 @@ final class SchemaReader {
         static::declareRead($inputs, $name, $this->finished($map, $property, $required, in_array('null', $types, TRUE)));
         return;
       }
-      if (array_diff(array_keys($property), [...self::MAP, ContractEmitter::EXTENSION]) === [] && ($property['additionalProperties'] ?? NULL) === FALSE) {
+      if (array_diff(array_keys($property), [...self::MAP, 'allOf']) === [] && ($property['additionalProperties'] ?? NULL) === FALSE) {
         // An object written as a map, holding what a plain map does not
-        // (a structure, a rule): an anonymous map, written inline again.
+        // (a structure, a rule, which its `allOf` states): an anonymous
+        // map, written inline again.
         // Decision: see docs/decisions.md#an-anonymous-map.
         $shell = $inputs->addMap($name, is_string($property['title'] ?? NULL) ? $property['title'] : $name, function (BlueprintInterface $map) use ($name, $property, $pointer, $root): void {
           if (!$map instanceof ResourceBlueprint) {

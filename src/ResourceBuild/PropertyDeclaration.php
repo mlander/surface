@@ -10,6 +10,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Reader\LeafRules;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\Rule as DeclaredRule;
 use Drupal\surface\Resource\ArrangementGroup;
@@ -509,22 +510,17 @@ final class PropertyDeclaration {
   }
 
   /**
-   * Makes a text of an attribute translatable, as the module writes one.
+   * Makes a text of an attribute translatable, as every reader does.
    *
    * @param string|\Stringable $text
    *   A bare string, or a text already made.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
    *   A bare string wrapped in TranslatableMarkup, a TranslatableMarkup as
-   *   it came, any other text as a string.
+   *   it came, any other text as a string (LeafRules::label()).
    */
   private static function label(string|\Stringable $text): TranslatableMarkup|string {
-    return match (TRUE) {
-      // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-      is_string($text) => new TranslatableMarkup($text),
-      $text instanceof TranslatableMarkup => $text,
-      default => (string) $text,
-    };
+    return LeafRules::label($text);
   }
 
   /**

@@ -914,8 +914,8 @@ final class Resources implements ResourcesInterface {
     // The members of the variants mixed in are declared where each call
     // stands, once its declaration is done.
     // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-    $settle = fn (ResourceBlueprint $inputs, SurfaceBuilderInterface $builder) => $this->attaching->layVariantMixins($definition, $inputs, $builder);
-    [$builder, $inputs, $outputs, $links, $additions] = $this->declaring->declareShape($definition, $context, $settle);
+    $lay = fn (ResourceBlueprint $inputs, SurfaceBuilderInterface $builder) => $this->attaching->layVariantMixins($definition, $inputs, $builder);
+    [$builder, $inputs, $outputs, $links, $additions] = $this->declaring->declareShape($definition, $context, $lay);
 
     $input_keys = $inputs->keys();
     $attached = array_merge(array_keys($inputs->attachments()), array_keys($inputs->variants()), array_keys($inputs->fromSite()));

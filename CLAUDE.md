@@ -198,7 +198,7 @@ the record of the rework that brought the module to the pattern.
   declare alike is one key (the label and description aside, the first
   variant's worn), one declared differently one key too, declared as
   wide as both and held to the chosen variant's definition
-  (`Attaching::widest()`, `Rule::holdTo()`, `MixinVariants::$heldTo`);
+  (`Attaching::widest()`, `Rule::holdTo()`, `DefinitionMap::heldTo()`);
   a child a variant
   holds is the owner's child at that key, and variants it holds at a key
   the owner's variants there, chosen by its member and found as the
@@ -261,6 +261,19 @@ the record of the rework that brought the module to the pattern.
   declaration reads back to itself (`SchemaRoundTripTest`)
   (`docs/reading-a-schema.md`,
   `docs/decisions.md#a-schema-can-be-read-back-into-a-structure`).
+- **Reader**: a class that reads a definition written elsewhere into
+  the blueprint's verbs, `Reader\DeclarationReaderInterface`:
+  `ConfigSchemaReader`, a config schema type read straight, with no
+  JSON Schema between (registered as `config_schema:<type>`, `:own` for
+  one less a fallback's keys, a caller's defaults laid over as a second
+  source), and `TypedDataReader`, a typed data definition; `LeafRules`
+  holds what both share and `Reading` what no verb took, by path. A key
+  either reads no shape for is declared **open**, `any` held whole to
+  nothing (`LeafRules::open()`), since a derived structure is closed.
+  `Variants\ConfigSchemaTypes` lists the variants a type named through
+  another key chooses, a plugin's `#[UsesStructure]` before its schema
+  where a plugin manager gives the values
+  (`docs/reading-a-schema.md#config-schema`).
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
   key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
@@ -663,7 +676,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1905, Assertions: 45204, Errors: 0, Failures: 0, Skipped: 3. Classes: 264 of 264, 8 at a time, browser classes 4.
+phpunit: Tests: 1907, Assertions: 45222, Errors: 0, Failures: 0, Skipped: 3. Classes: 265 of 265, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -683,8 +696,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1797, Assertions: 41055, Skipped: 3, Deprecations: 130. Classes:
-215, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1799, Assertions: 41073, Skipped: 3, Deprecations: 130. Classes:
+216, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -927,6 +940,8 @@ See `docs/declaring-a-resource.md` for all four in full.
 src/                     Data surface, builder (internal), definition map, host trait;
                          Computed and Resolve, a computed key's and a
                          resolved key's metadata.
+src/Reader/              Readers into the blueprint: ConfigSchemaReader,
+                         TypedDataReader, LeafRules and Reading.
 src/Resource/            The authoring API and attributes (Attribute/), the
                          property attributes among them, and
                          DeclaresByProperties, which reads them

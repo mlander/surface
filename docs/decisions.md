@@ -780,6 +780,14 @@ anything holds for the variants' placeholder alone (`Narrowing`).
 cover the same behavior
 ([One table of leaf types](#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
 
+*Amended 2026-11-05:* an open value, `any` held whole
+(`LeafRules::open()`), may become any type too, since it accepts every
+value: a reader declares a key it reads no shape for open, and the
+frame of variants mixed in declares a member two variants declare
+unlike open, held to the chosen variant's own definition there
+(`Narrowing`, [A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)).
+`add()` still refuses `any`.
+
 ### A page stands without the decisions page
 
 Decided 2026-10-26, from the fresh-eyes runs: the second reader counted
@@ -3087,9 +3095,11 @@ journal is the first case. Each choice, and why:
   structure mixed in, declares (named both ways: the owner first, the
   structure first, two structures), since one name is declared once; a
   structure mixed into itself, directly or through another; a structure
-  holding a child (a child of the owner at a key the structure named is
-  not built: attach it instead); a resource, which stores itself; one
-  with outputs, which are not merged. A structure may mix another in.
+  holding variants at a key or keys from the site, which the owner's
+  frame does not find, or wiring the ports of a child it attaches (a
+  child at a fixed key or in a collection is the owner's child at that
+  key); a resource, which stores itself; one with outputs, which are not
+  merged. A structure may mix another in.
 - **Emitted as a composition, so the def stays reusable.** The frame is
   `allOf` of a reference to each structure's def and its own
   `properties`, closed with `unevaluatedProperties: false`. Each member
@@ -3155,9 +3165,8 @@ journal is the first case. Each choice, and why:
   definitions and has no `allOf` to carry.
 
 Open: listing mixins in the catalog; an optional port a mixin's owner
-leaves unwired; a mixed-in structure's alter that mounts; a mixed-in
-structure holding a child; a container opting out of a structure's
-alters. Found on the way and left: the React page narrows an attached
+leaves unwired; a mixed-in structure's alter that mounts; a container
+opting out of a structure's alters. Found on the way and left: the React page narrows an attached
 child whose def states conditionals of its own to the instance (its
 answered conditionals dropped), where `/refine` inlined carries the
 def's too, the same constraints written twice; the Vitest chain for the
@@ -3269,16 +3278,17 @@ the own-key form into it. Each choice, and why:
   itself, each variant the `:own` structure of a type. With no `*`
   fallback and no type of the prefix's name, the fallback is the type
   every named type extends, where it declares the deciding key
-  (`views_cache` for `views.cache.[type]`). Where the types named would
-  be refused (one holds a child, two declare a key differently), the
-  reader declares the fallback closed as before and notes why
-  (`ConfigSchemaReader::ownKeyWall()`): in core, `views.field`,
-  `views.area` and `views.filter` (a handler holding a child) and
-  `views.argument` and `views.cache` (one key declared two ways).
+  (`views_cache` for `views.cache.[type]`). Where the build would refuse
+  the types named (two declare one key unlike where one holds variants
+  at it), the reader declares the fallback's keys and every key a named
+  type declares beside them open, and notes why
+  (`ConfigSchemaReader::ownKeyWall()`); in core no type is refused, and
+  every own-key site mixes its variants in.
 
 Not built: lazy variants mixed in, built when a door reads them; a
 mixin chosen by an ancestor's key, which a port would have to decide; a
-variant mixed in that holds a child or reads a port; an alter's call; a
+variant mixed in that reads a port, holds keys from the site or mixes
+variants in of its own; an alter's call; a
 variant chosen by a locked deciding key refusing its owner's access, as
 a nested variant so chosen may ([A chosen variant may refuse](#a-chosen-variant-may-refuse)):
 a mixed-in variant its access omits is only not offered.
@@ -3405,6 +3415,11 @@ class and an id where naming buys nothing.
   every list as `addList()`, and `addMap()` is the one way to declare a
   map of plain keys: `addDefinition()` takes one value
   ([A blueprint takes no complex data types](#a-blueprint-takes-no-complex-data-types)).
+  *Amended 2026-11-05:* an inline object whose `allOf` states its rules
+  is read as `addMap()` too; it was read as a structure attached at
+  `<owner>.<key>`, so a map framed by a rule alone wrote a def where it
+  had been inline and did not read back to itself (`SchemaReader`, the
+  awning in `SchemaRoundTripTest`).
 
 (`BlueprintAdditionsInterface::addMap()`, `MapBlueprint`,
 `ResourceBlueprint::replay()`, `AnonymousMapTest`, example 8's
@@ -7458,17 +7473,19 @@ form, each validated as any resource is. Each choice, and why:
   yet, and the `plugin` key's description says so. A plugin whose class
   carries `#[UsesStructure]` is its declared structure, built as
   declared: `SiteList::add(..., structure:)` names a structure class where
-  an entry otherwise carries a schema. Any other plugin is read with the
-  schema reader from `block.settings.<plugin id>`, resolved as typed
-  config resolves it (a wildcard type, and `block.settings.*` for a
-  plugin with none), less the keys every block has, written as JSON
-  Schema by `ConfigSchemaDocument`, the plugin's own defaults each key's
-  default. Why both: a declared structure keeps its refiners, children
-  and variants, which its schema read back would not (a coded refiner
-  cannot be read back), and the config schema is the one description a
-  plain plugin has. What a config schema says that JSON Schema says too
-  is carried (Choice, Range, Length, Count, NotBlank); the rest is left
-  to storage, which holds the whole block to its schema before anything
+  an entry otherwise carries a schema. Any other plugin is the structure
+  `ConfigSchemaReader::structure()` reads straight from
+  `block.settings.<plugin id>`, resolved as typed config resolves it (a
+  wildcard type, and `block.settings.*` for a plugin with none), in its
+  `:own` form, less the keys every block has, the plugin's own defaults
+  laid over it as each key's default. A `#[Variant]` declared for the
+  placement at `settings` wins over both, as at any key. Why both: a
+  declared structure keeps its refiners, children and variants, which
+  its schema read would not (a coded refiner is code), and the config
+  schema is the one description a plain plugin has. Every constraint
+  the schema states on a value is carried but one whose options name
+  another value of the typed config tree (`%parent`), which only typed
+  config resolves; storage holds the whole block to its schema before anything
   is written, so neither document is stricter than the block.
 - **The keys every block has are the resource's.** `label`,
   `label_display` (a boolean, stored as core's `visible` or `0`),
@@ -7496,8 +7513,9 @@ form, each validated as any resource is. Each choice, and why:
   chooses, from `ConditionPluginStructures`: the conditions the block
   layout offers (those whose contexts the site can give, less the
   current theme, and the language while the site has one), each its
-  declared structure or read from `condition.plugin.<id>`, with a
-  `context_mapping` of one key per context it reads, offering the
+  declared structure or read from `condition.plugin.<id>` as a block's
+  settings are, a condition that reads a context written as JSON Schema
+  with a `context_mapping` of one key per context it reads, offering the
   site's contexts that fit, the first the default, as the block layout
   assigns it. Storage writes core's map by condition id and refuses a
   condition held twice (`taken`, by its place in the list); a list of
@@ -7555,6 +7573,45 @@ chosen. (`BlockPlacementResource`, `BlockPlacementStorage`,
 `BlockPlacementToolsTest`, `BlockPlacementApiTest`,
 `BlockPlacementFormTest`, `BlockPlacementReactTest`,
 `ConfigEntityStorageTest`)
+
+*Changed 2026-11-04:* a plugin with no declared structure is no longer
+written as JSON Schema. `BlockPluginStructures` and
+`ConditionPluginStructures` keep the list and its filtering, the labels
+and the plugin's defaults; each entry names the structure
+`ConfigSchemaReader::structure()` reads from `block.settings.<id>`
+(`condition.plugin.<id>`) in its `:own` form, less the keys of
+`block.settings.*` (`condition.plugin`), the defaults laid over it as
+each key's default, since config schema states none. So a settings
+structure is found in this order: a `#[Variant]` class declared for the
+placement, then the plugin's `#[UsesStructure]`, then
+`block.settings.<id>` read from schema with the plugin's defaults laid
+over. Why: config schema becomes a structure with no JSON Schema
+between, so the contract states what the JSON step dropped (a fully
+validatable plugin's keys required; `MenuLinkDepth` on a menu block's
+`level`, checked on the server) and titles a key by its own label. Each
+variant's def is named by its structure's id,
+`config_schema:<type>:own`, and plugins of one type with the same
+defaults share it. A constraint whose options name another value of the
+typed config tree (`%parent`) is not carried: only typed config
+resolves it, and the storage holds the block to its schema. A condition
+that reads a context is still written as JSON Schema, its context
+mapping added: which contexts the site has is site state, which no
+schema says. (`ConfigSchemaReader::structure()`,
+`LeafRules::treeExpression()`, `BlockPlacementResourceTest`)
+
+*Amended 2026-11-05:* the generic provider follows the same order.
+`ConfigSchemaTypes`, behind `attachVariants(..., from:
+ConfigSchemaTypes::class)` and the variants a config schema type chosen
+by its own key mixes in, lists a plugin whose class names its settings
+with `#[UsesStructure]` as that structure where the deciding key's
+values are a plugin manager's (a `PluginExists` constraint), read from
+the plugin definition with no plugin built, and reads every other value
+from its schema; a `#[Variant]` declared for the owner still wins. Why:
+the plugin's declared structure is what its host builds, and a schema
+read back would lose its refiners, children and defaults. Values from a
+`Choice` or from the schema names have no plugin definition, and are
+read from the schema alone. (`ConfigSchemaTypes::resolve()`,
+`ConfigSchemaTypesTest`)
 
 ### A listing is a read-only operation with outputs; a reorder is an update over the collection
 

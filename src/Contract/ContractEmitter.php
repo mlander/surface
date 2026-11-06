@@ -1044,9 +1044,8 @@ final class ContractEmitter {
     $branches = [];
     $stated = [];
     $named = [];
-    $heldTo = [];
+    $heldTo = $advertised->heldTo();
     foreach ($advertised->mixinVariants() as $mixed) {
-      $heldTo += array_fill_keys($mixed->heldTo, TRUE);
       $by = $mixed->by;
       $deciding = $advertised->get($by);
       foreach ($mixed->variants as $value => $variant) {
