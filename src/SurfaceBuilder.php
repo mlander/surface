@@ -7,6 +7,7 @@ namespace Drupal\surface;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
@@ -187,6 +188,20 @@ final class SurfaceBuilder implements SurfaceBuilderInterface {
    * @var \Drupal\surface\Mixin[]
    */
   protected array $mixins = [];
+
+  /**
+   * The variants mixed in, one table per deciding key, in order.
+   *
+   * @var \Drupal\surface\MixinVariants[]
+   */
+  protected array $mixinVariants = [];
+
+  /**
+   * The places held for keys declared later, by name.
+   *
+   * @var array<string, true>
+   */
+  protected array $places = [];
 
   /**
    * What the frame as a whole is held to beyond its keys, in order.
@@ -479,18 +494,78 @@ final class SurfaceBuilder implements SurfaceBuilderInterface {
     if ($by === $key) {
       throw new \InvalidArgumentException(sprintf('The variants at "%s" cannot choose their own variant: the deciding key is a sibling.', $key));
     }
+    $kept = $this->offerVariants($by, array_map('strval', array_keys($variants)), $labels, sprintf('The variants at "%s"', $key), sprintf('the variants at "%s"', $key));
+    $variants = array_intersect_key($variants, array_flip($kept));
+    $this->definitions[$key] = $this->shellFor($key);
+    $this->variants[$key] = ['by' => $by, 'variants' => $variants];
+    $this->refinements[$key] = array_values(array_unique(array_merge($this->refinements[$key] ?? [], [$by])));
+    // A variant held unsettled adds what it read once it is built: the
+    // data surface asks its settled children for theirs.
+    // Decision: see
+    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
+    foreach ($variants as $variant) {
+      $settled = $variant->settledChild();
+      if ($settled !== NULL) {
+        $this->cacheability->addCacheableDependency($settled);
+      }
+    }
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function addMixinVariants(MixinVariants $mixed): static {
+    $this->assertMutable();
+    $kept = $this->offerVariants($mixed->by, $mixed->variantIds(), $mixed->labels, sprintf('The variants mixed in by "%s"', $mixed->by), sprintf('the variants mixed in by "%s"', $mixed->by));
+    if ($kept !== $mixed->variantIds()) {
+      // A list the deciding key declares narrows the variants: one whose
+      // value it leaves out is not offered, and its members do not apply.
+      $mixed = new MixinVariants($mixed->by, array_intersect_key($mixed->variants, array_flip($kept)), $mixed->labels, $mixed->withdrawn);
+    }
+    $this->mixinVariants[] = $mixed;
+    foreach ($mixed->variants as $variant) {
+      $this->cacheability->addCacheableDependency($variant->structure->child);
+    }
+    return $this;
+  }
+
+  /**
+   * Offers the values variants are for on their deciding key.
+   *
+   * The complete set of values the variants can be chosen by is part of
+   * what the deciding key advertises, so it says them in its own
+   * vocabulary, in the variants' words when they give any; a list the key
+   * declares itself narrows them instead, and keeps its own words.
+   *
+   * Decision: see docs/decisions.md#variants-not-slots.
+   *
+   * @param string $by
+   *   The deciding key.
+   * @param string[] $ids
+   *   The values a variant is offered for, in order.
+   * @param array<string, string|\Stringable> $labels
+   *   What each value is offered as, by value.
+   * @param string $refused
+   *   The variants, in words, at the head of a refusal.
+   * @param string $narrowing
+   *   The variants, in words, for the narrowing check.
+   *
+   * @return string[]
+   *   The values still offered: all of them, or those a declared list
+   *   keeps.
+   *
+   * @throws \InvalidArgumentException
+   *   When the deciding key holds a list or a map.
+   */
+  protected function offerVariants(string $by, array $ids, array $labels, string $refused, string $narrowing): array {
     $deciding = $this->named($by);
     if ($deciding instanceof ListDataDefinitionInterface || $deciding instanceof ComplexDataDefinitionInterface) {
-      throw new \InvalidArgumentException(sprintf('The variants at "%s" are chosen by "%s", which is a %s: a deciding key holds one value.', $key, $by, $deciding->getDataType()));
+      throw new \InvalidArgumentException(sprintf('%s are chosen by "%s", which is a %s: a deciding key holds one value.', $refused, $by, $deciding->getDataType()));
     }
-    $ids = array_map('strval', array_keys($variants));
     $before = Surface::deepClone($deciding);
     $set = ChoiceSet::of($deciding);
-    // Decision: see docs/decisions.md#variants-not-slots.
     if ($set === NULL) {
-      // The complete set of values the variants can be chosen by is part
-      // of what the key advertises, so the deciding key says it in its own
-      // vocabulary, in the variants' words when they give any.
       if ($labels === []) {
         $deciding->addConstraint('Choice', ['choices' => $ids]);
       }
@@ -513,27 +588,52 @@ final class SurfaceBuilder implements SurfaceBuilderInterface {
       // leaves out is not offered, and a value no variant is offered for
       // here (one withheld from this account) leaves the list.
       $allowed = array_map('strval', $set->values);
-      $variants = array_intersect_key($variants, array_flip($allowed));
-      $ids = array_map('strval', array_keys($variants));
+      $ids = array_values(array_intersect($ids, $allowed));
       $set->withValues(array_values(array_filter(
         $set->values,
         static fn (mixed $value): bool => in_array((string) $value, $ids, TRUE),
       )))->applyTo($deciding);
     }
-    Narrowing::assertNarrows($by, sprintf('the variants at "%s"', $key), $before, $deciding);
-    $this->definitions[$key] = $this->shellFor($key);
-    $this->variants[$key] = ['by' => $by, 'variants' => $variants];
-    $this->refinements[$key] = array_values(array_unique(array_merge($this->refinements[$key] ?? [], [$by])));
-    // A variant held unsettled adds what it read once it is built: the
-    // data surface asks its settled children for theirs.
-    // Decision: see
-    // docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
-    foreach ($variants as $variant) {
-      $settled = $variant->settledChild();
-      if ($settled !== NULL) {
-        $this->cacheability->addCacheableDependency($settled);
+    Narrowing::assertNarrows($by, $narrowing, $before, $deciding);
+    return $ids;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function reservePlace(string $place): static {
+    $this->assertMutable();
+    if (isset($this->definitions[$place])) {
+      throw new \LogicException(sprintf('The place "%s" is held already.', $place));
+    }
+    $this->definitions[$place] = DataDefinition::create('any');
+    $this->places[$place] = TRUE;
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function fillPlace(string $place, array $definitions): static {
+    $this->assertMutable();
+    if (!isset($this->places[$place])) {
+      throw new \LogicException(sprintf('No place "%s" is held.', $place));
+    }
+    $filled = [];
+    foreach ($this->definitions as $name => $definition) {
+      if ($name !== $place) {
+        $filled[$name] = $definition;
+        continue;
+      }
+      foreach ($definitions as $key => $member) {
+        if (isset($this->definitions[$key])) {
+          throw new \LogicException(sprintf('The "%s" key is declared already, so it cannot fill the place "%s".', $key, $place));
+        }
+        $filled[$key] = $member;
       }
     }
+    $this->definitions = $filled;
+    unset($this->places[$place]);
     return $this;
   }
 
@@ -728,7 +828,9 @@ final class SurfaceBuilder implements SurfaceBuilderInterface {
         implode(', ', array_keys($unmounted)),
       ));
     }
-    $definitions = $this->definitions;
+    // A place nothing filled holds no key: a declaration read for what it
+    // says alone (its static defaults), with no variant found for it.
+    $definitions = array_diff_key($this->definitions, $this->places);
     foreach ($this->attachments as $key => $attachment) {
       $definitions[$key] = Attachment::mapOf($this->assertShell((string) $key), $attachment->child);
     }
@@ -794,6 +896,7 @@ final class SurfaceBuilder implements SurfaceBuilderInterface {
         runtimeAccess: $this->runtimeAccessWhole ? array_map('strval', array_keys($definitions)) : array_values(array_intersect($this->runtimeAccess, array_keys($definitions))),
         lockReasons: array_intersect_key($this->lockReasons, $definitions),
         frameConstraints: $this->frameConstraints,
+        mixinVariants: $this->mixinVariants,
       ),
       $this->cacheability,
       DefinitionMap::fromArrays(definitions: $outputs),

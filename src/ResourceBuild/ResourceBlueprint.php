@@ -8,7 +8,6 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Component\Plugin\Exception\PluginNotFoundException;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Computed;
@@ -41,8 +40,10 @@ use Drupal\surface\Contract\SchemaReader;
  * its own over the same builder, so its members land among the owner's
  * keys where the call stands, in order. That blueprint keeps what is the
  * structure's apart (its ports, which only its own refiners read, and its
- * rules, which the build step binds as the structure's), and refuses a
- * child: a mixed-in structure holds keys and maps.
+ * rules, which the build step binds as the structure's). A child it
+ * attaches at a fixed key or in a collection is the owner's child at that
+ * key (attachments(), lists()); it refuses variants at a key and keys
+ * from the site.
  *
  * @internal
  */
@@ -101,6 +102,28 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @var array<int, array{class: class-string, reads: array<string, string>, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint}>
    */
   protected array $mixins = [];
+
+  /**
+   * The variants mixed in through this blueprint, in call order.
+   *
+   * @var list<array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, place: string, at: int, read: array<string, array{name: string, label: string|null}>, laid?: array}>
+   */
+  protected array $variantMixins = [];
+
+  /**
+   * How many members of variants mixed in were laid into the keys so far.
+   */
+  protected int $laidMembers = 0;
+
+  /**
+   * Every key declared through this blueprint and those mixed into it.
+   *
+   * In declaration order, the keys holding a child among them: the order a
+   * variant's members are laid in where it is mixed in.
+   *
+   * @var string[]
+   */
+  protected array $order = [];
 
   /**
    * The structure that brought each key mixed in, by key, at the owner's.
@@ -195,6 +218,165 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
     $mixin = (new static($this->builder, $this->typedDataManager, FALSE, $this->registry, $structure, $this))->useShapes($this->shapes)->useReferences($this->references);
     $structure::defineInputs($mixin);
     $this->mixins[] = ['class' => $structure, 'reads' => $reads, 'blueprint' => $mixin];
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The variants are found when the owner is built, after this
+   * declaration ran: a place is held here, in the builder's order and in
+   * this blueprint's keys, and Attaching::layVariantMixins() declares
+   * every variant's members into it before the context and the site's
+   * defaults are read.
+   *
+   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   */
+  public function mixInVariants(string $by, ?string $from = NULL, array $arguments = []): static {
+    $who = $this->name($this->owner);
+    if ($this->outputs) {
+      throw new \LogicException(sprintf('%s mixes the variants chosen by "%s" into its outputs. Variants are mixed into what is sent; outputs hold no structures yet.', $who, $by));
+    }
+    if ($this->into !== NULL) {
+      throw new \LogicException(sprintf('%s, mixed into %s, mixes in the variants chosen by "%s". A mixed-in structure holds keys and maps, not variants, for now: mix the variants into %s itself.', $who, $this->name($this->root()->owner), $by, $this->name($this->root()->owner)));
+    }
+    if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
+      throw new \LogicException(sprintf('mixInVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema or structure, with list().', $by, $from, SiteListInterface::class));
+    }
+    if ($arguments !== []) {
+      if ($from === NULL || !is_subclass_of($from, BoundSiteListInterface::class)) {
+        throw new \LogicException(sprintf('mixInVariants("%s") hands arguments to %s, which does not implement %s: only a provider that lists for what its owner binds takes them, with listFor().', $by, $from ?? 'no provider', BoundSiteListInterface::class));
+      }
+      if (is_subclass_of($from, EntrySchemasInterface::class)) {
+        throw new \LogicException(sprintf('mixInVariants("%s") hands arguments to %s, which answers an entry\'s schema when it is read: that is asked by value alone, so such a provider takes no arguments.', $by, $from));
+      }
+    }
+    $place = "\0mixInVariants:" . count($this->variantMixins);
+    $this->builder->reservePlace($place);
+    $this->variantMixins[] = [
+      'by' => $by,
+      'from' => $from,
+      'arguments' => $arguments,
+      'place' => $place,
+      'at' => count($this->keys),
+      'read' => [],
+    ];
+    return $this;
+  }
+
+  /**
+   * Gets the variants mixed in through this blueprint, in call order.
+   *
+   * @return list<array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, place: string, at: int, read: array<string, array{name: string, label: string|null}>, laid?: array}>
+   *   Each call's deciding key, provider and its arguments, the place it
+   *   holds in the builder, the position in this blueprint's keys its
+   *   members land at, the variants a schema read into it states, and,
+   *   once the build laid its members, what it found
+   *   (layVariantMixin()).
+   */
+  public function variantMixins(): array {
+    return $this->variantMixins;
+  }
+
+  /**
+   * Declares the members of one call's variants where the call stands.
+   *
+   * @param int $call
+   *   The call, by its index in variantMixins().
+   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $members
+   *   Each member's definition in the owner's frame, by key, in order.
+   * @param array{children: array<string, string>, labels: array<string, string|\Stringable>, blueprints: array<string, \Drupal\surface\ResourceBuild\ResourceBlueprint>, values: array<string, string[]>, required: array<string, string[]>, attachments: array<string, string>, lists: array<string, string>, variants: array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>} $laid
+   *   What the build found: each value's variant by name, its label, the
+   *   blueprint it declared its keys through, for each member the values
+   *   it applies under and those it is required under, the members that
+   *   hold a child, at a fixed key or as a collection, each by the
+   *   child's name, and those that hold variants, each with its deciding
+   *   key, its provider and arguments, what a schema read states, and the
+   *   variant that declared it, by name.
+   *
+   * @internal
+   *   For Attaching::layVariantMixins() alone, once per call, in call
+   *   order.
+   */
+  public function layVariantMixin(int $call, array $members, array $laid): void {
+    $this->variantMixins[$call]['laid'] = $laid;
+    ['place' => $place, 'at' => $at] = $this->variantMixins[$call];
+    $this->builder->fillPlace($place, $members);
+    // A member that holds a child is the owner's child at its key, as one
+    // the owner attached is: among attachments() or lists(), not keys().
+    $plain = array_values(array_diff(array_map('strval', array_keys($members)), array_keys($laid['attachments']), array_keys($laid['lists']), array_keys($laid['variants'])));
+    array_splice($this->keys, $at + $this->laidMembers, 0, $plain);
+    $this->laidMembers += count($plain);
+  }
+
+  /**
+   * Gets every key declared through this blueprint, in declaration order.
+   *
+   * The keys holding a child among them, and those of each structure
+   * mixed in, where it was mixed in; a place held for variants mixed in is
+   * none.
+   *
+   * @return string[]
+   *   The keys.
+   */
+  public function declarationOrder(): array {
+    return $this->order;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A child a structure mixed in attaches, or a variant mixed in brings,
+   * is the owner's child at its key, nothing wiring its ports.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   */
+  public function attachments(): array {
+    $attachments = parent::attachments();
+    foreach ($this->mixins as $mixin) {
+      $attachments += $mixin['blueprint']->attachments();
+    }
+    foreach ($this->variantMixins as $mixed) {
+      $attachments += $mixed['laid']['attachments'] ?? [];
+    }
+    return $attachments;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * A collection a structure mixed in attaches, or a variant mixed in
+   * brings, is the owner's collection at its key.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   */
+  public function lists(): array {
+    $lists = parent::lists();
+    foreach ($this->mixins as $mixin) {
+      $lists += $mixin['blueprint']->lists();
+    }
+    foreach ($this->variantMixins as $mixed) {
+      $lists += $mixed['laid']['lists'] ?? [];
+    }
+    return $lists;
+  }
+
+  /**
+   * Mixes in variants a schema read into this blueprint states.
+   *
+   * @param string $by
+   *   The deciding key.
+   * @param array<string, array{name: string, label: string|null}> $variants
+   *   Each value's structure, by its read name, and its label, if any.
+   *
+   * @return $this
+   *
+   * @internal
+   *   For SchemaReader alone.
+   */
+  public function mixInReadVariants(string $by, array $variants): static {
+    $this->mixInVariants($by);
+    $this->variantMixins[array_key_last($this->variantMixins)]['read'] = $variants;
     return $this;
   }
 
@@ -360,7 +542,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * {@inheritdoc}
    */
   public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
-    $this->assertHoldsNoChild('attaches ' . $child, $key);
+    $this->assertUnwiredInMixin($child, $key, $reads);
     return parent::attach($key, $child, $reads);
   }
 
@@ -410,7 +592,6 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   protected function unframed(): ?string {
     return match (TRUE) {
       $this->outputs => 'outputs hold no attached structures yet.',
-      $this->into !== NULL => 'a structure mixed in holds keys and maps, not children, for now.',
       $this->registry === NULL || $this->owner === NULL => 'this blueprint has no registry and no owner to attach one by.',
       default => NULL,
     };
@@ -464,14 +645,6 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
-    $this->assertHoldsNoChild('attaches a collection of ' . $child, $key);
-    return parent::attachList($key, $child, $min, $max);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function attachVariants(string $key, string $by, ?string $from = NULL, array $arguments = []): MapDataDefinition {
     $this->assertHoldsNoChild('attaches variants', $key);
     if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
@@ -506,7 +679,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   The arguments of each key whose provider was handed some.
    */
   public function variantsArguments(): array {
-    return $this->variantsArguments;
+    $arguments = $this->variantsArguments;
+    foreach ($this->laidVariants() as $key => $variants) {
+      if ($variants['arguments'] !== []) {
+        $arguments[$key] = $variants['arguments'];
+      }
+    }
+    return $arguments;
   }
 
   /**
@@ -518,7 +697,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   The provider of each key that names one.
    */
   public function variantsFrom(): array {
-    return $this->variantsFrom;
+    $from = $this->variantsFrom;
+    foreach ($this->laidVariants() as $key => $variants) {
+      if ($variants['from'] !== NULL) {
+        $from[$key] = $variants['from'];
+      }
+    }
+    return $from;
   }
 
   /**
@@ -624,6 +809,19 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   }
 
   /**
+   * Gets the name of what declares through this blueprint.
+   *
+   * @return string|null
+   *   Its name, as the registry builds it by; NULL where none was given.
+   *
+   * @internal
+   *   For the build step alone.
+   */
+  public function ownerName(): ?string {
+    return $this->owner;
+  }
+
+  /**
    * Gets a key declared through this blueprint, or its owner's.
    *
    * @param string $key
@@ -685,7 +883,13 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   Each key's variants: each value's read structure and label.
    */
   public function readVariants(): array {
-    return $this->readVariants;
+    $read = $this->readVariants;
+    foreach ($this->laidVariants() as $key => $variants) {
+      if ($variants['read'] !== []) {
+        $read[$key] = $variants['read'];
+      }
+    }
+    return $read;
   }
 
   /**
@@ -841,7 +1045,12 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   }
 
   /**
-   * Refuses a child in a structure being mixed in.
+   * Refuses variants at a key and keys from the site in a structure mixed in.
+   *
+   * A child at a fixed key or a collection is the owner's child at that
+   * key; variants at a key are found by the owner the #[Variant] names,
+   * and keys from the site by a provider the owner's frame asks, neither
+   * of which a structure mixed in is.
    *
    * @param string $verb
    *   What it did, for the message.
@@ -856,11 +1065,42 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       return;
     }
     throw new \LogicException(sprintf(
-      '%s, mixed into %s, %s at "%s". A mixed-in structure holds keys and maps, not children, for now: attach %s under a key of its own instead.',
+      '%s, mixed into %s, %s at "%s". A mixed-in structure holds keys, maps and children at a fixed key or in a collection, not variants at a key or keys from the site, for now: attach %s under a key of its own instead.',
       $this->name($this->owner),
       $this->name($this->root()->owner),
       $verb,
       $key,
+      $this->name($this->owner),
+    ));
+  }
+
+  /**
+   * Refuses a wiring of a child a structure mixed in attaches.
+   *
+   * The child is the owner's child at the key, and nothing wires its
+   * ports, as nothing wires a collection's item or a variant's.
+   *
+   * @param string $child
+   *   The child, by class.
+   * @param string $key
+   *   The key it sits at.
+   * @param array<string, string> $reads
+   *   The wiring.
+   *
+   * @throws \LogicException
+   *   Inside mixIn(), for a wiring.
+   */
+  protected function assertUnwiredInMixin(string $child, string $key, array $reads): void {
+    if ($this->into === NULL || $reads === []) {
+      return;
+    }
+    throw new \LogicException(sprintf(
+      '%s, mixed into %s, attaches %s at "%s" and wires its "%s" port. A child a mixed-in structure attaches is the owner\'s child at that key, and nothing wires its ports, for now: attach it with no reads:, or attach %s under a key of its own.',
+      $this->name($this->owner),
+      $this->name($this->root()->owner),
+      $this->name($child),
+      $key,
+      (string) array_key_first($reads),
       $this->name($this->owner),
     ));
   }
@@ -1001,13 +1241,49 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Gets the variants attached through this blueprint.
    *
+   * Those a variant mixed in holds at a key among them, once the build
+   * laid its members: the owner's variants at that key
+   * (variantsDeclaredBy()).
+   *
    * @return array<string, string>
    *   The deciding key of the variants at each key, keyed by key, in
    *   declaration order.
    *   Discovery's #[Variant] classes fill them.
    */
   public function variants(): array {
-    return $this->variants;
+    return $this->variants + array_map(static fn (array $variants): string => $variants['by'], $this->laidVariants());
+  }
+
+  /**
+   * Names what declared each key's variants, where it is not the owner.
+   *
+   * Variants a variant mixed in holds at a key are the owner's at that
+   * key, chosen by a member of the variant, which is the owner's key now;
+   * which #[Variant] classes they are, and the ids of those a provider
+   * lists, are the declaring variant's, as when it is built alone, so
+   * one variant mixed into two owners holds the same variants in both.
+   *
+   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   *
+   * @return array<string, string>
+   *   The variant that declared the variants at each such key, by name.
+   */
+  public function variantsDeclaredBy(): array {
+    return array_map(static fn (array $variants): string => $variants['declaredBy'], $this->laidVariants());
+  }
+
+  /**
+   * Gets the variants at a key each variant mixed in brought, laid.
+   *
+   * @return array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>
+   *   Each, by key.
+   */
+  protected function laidVariants(): array {
+    $laid = [];
+    foreach ($this->variantMixins as $mixed) {
+      $laid += $mixed['laid']['variants'] ?? [];
+    }
+    return $laid;
   }
 
   /**
@@ -1027,6 +1303,14 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       }
       $this->builder->setOutputDefinition($key, $definition);
       return;
+    }
+    // In order at every level, and, for a structure mixed in, the key's
+    // origin at the owner's, a child's among them.
+    for ($level = $this; $level !== NULL; $level = $level->into) {
+      $level->order[] = $key;
+    }
+    if ($this->into !== NULL) {
+      $this->root()->origins[$key] ??= (string) $this->owner;
     }
     $this->builder->setDefinition($key, $definition);
     if ($default !== NULL) {

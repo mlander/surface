@@ -114,6 +114,13 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
+  public function mixInVariants(string $by, ?string $from = NULL, array $arguments = []): static {
+    throw $this->refused('mixInVariants()');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function extendChoices(string $key, array $choices): static {
     throw new \LogicException(sprintf('%s alters the shape %s and calls extendChoices(): a shape only narrows, at every key that uses it, so nothing offers more values on it.', $this->alter, $this->shape));
   }

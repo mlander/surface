@@ -77,6 +77,7 @@ the emitter wrote reads back as what it was written from
 | an array of objects, or of references to one | a collection, its Count from `minItems` and `maxItems`, `UniqueItems` from `uniqueItems: true` |
 | a property that is a `oneOf` or `anyOf` of objects, each chosen by a conditional `if` naming a sibling's `const` | variants that sibling chooses, each the object its conditional names; the conditionals are the variants' |
 | an `allOf` holding a reference to an object def, beside the frame's own properties | that structure mixed in, at its first member's place |
+| a conditional whose `if` names one sibling's `const` and whose `then` is a reference to an object def, alone or the one entry of an `allOf` | the variants that sibling chooses, mixed in (`mixInVariants()`): each value's def read as a structure, its members after the deciding key; a member the frame narrows is not read (why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key)) |
 | a conditional whose `if` is a condition of the vocabulary and whose `then` only narrows | a declared rule ([Declaring a rule](refinement.md#declaring-a-rule)): `{"properties": {k: false}}` `doesNotApply()`, `required` `require()`, a bound, a list or a pattern `constrain()`, a `description` `because()` |
 | a conditional on a key a child's port is wired to, reaching into the child | the child's rule, on the port |
 | `additionalProperties: false`, `unevaluatedProperties: false` | closed, as every structure is |
@@ -95,6 +96,7 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | --- | --- |
 | `ports` | `reads()`, each port's type, or its shape where the site has one |
 | `reads` | the wiring of a child's ports, where the wired key is a key of the object holding the child |
+| `variantsMixedIn` | dropped: each conditional says the def its value chooses, and is read as variants mixed in |
 | `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
 | `collection` | a collection (`list` in contract 3) |
 | `patternMessage` | the `Regex`'s message |
@@ -237,6 +239,41 @@ to, or differs otherwise:
 
 Each of these still reads, builds, and holds values to what the document
 says; what it loses is a marker or the code that would compute it.
+
+## Config schema
+
+`Reader\ConfigSchemaReader` reads a config schema type into a blueprint
+the same way, with no JSON Schema between: a mapping is a map or an
+attached structure, a sequence a list or a collection, a type named
+through a sibling (`[%parent.<key>]`) variants at the key, and a type
+chosen by a key inside its own value (`views.sort.[plugin_id]`) the
+fallback's keys with the chosen type's mixed in flat beside them
+(`mixInVariants()`).
+
+**A key the schema declares is always declared.** A derived structure
+is closed, so a key left out would refuse the stored value that holds
+it. Where the reader derives no shape (a type of `ignore` or
+`undefined`, a type chosen by a key outside the frame, an entry typed by
+its own key, a sequence of sequences of mappings, a class of no leaf
+type), the key is an `any` held whole to nothing
+(`LeafRules::open()`): it accepts what is stored there as it is, and
+both documents write it with its title and no type. The reason is still
+noted at the key's path (`Reading::left()`)
+(why: [decision](decisions.md#a-schema-can-be-read-back-into-a-structure)).
+
+**What still falls back.** A type chosen by its own key mixes its
+variants in unless the build would refuse them
+(`ConfigSchemaReader::ownKeyWall()`): two types that declare one key
+unlike. A variant may hold children, maps and variants at a key. Where
+the build would refuse, the frame holds the fallback's keys, and every
+key a chosen type declares beside them open. In core three expressions
+fall back: `views.field.[plugin_id]` (`separator` a `label`, with its
+`Regex`, in `views.field.field`, a `string` in
+`views.field.prerender_list`), `views.cache.[type]` (`options` a
+sequence in `none` and `tag`, a mapping in `time`) and
+`views.area.[plugin_id]` (`content` a `text_format` in `text`, a `text`
+in `text_custom`)
+(why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key)).
 
 ## The decision
 

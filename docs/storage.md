@@ -664,6 +664,13 @@ repeats the members.
 A member the structure's access omits for the account writing is kept
 as stored, at the owner's level or inside a child the owner stores.
 
+The members of [variants mixed in](resources.md#variants-mixed-in) are
+the owner's keys the same way: the schema lists every variant's members
+flat beside the deciding key, each optional (`nullable: true`), since
+one may not apply to the variant stored. A member of a variant not
+chosen keeps what is stored, and a variant's own member its access
+omits is kept as stored too.
+
 ### The site's defaults are not stored values
 
 A site's own defaults live in their own config object,

@@ -68,6 +68,16 @@ services:
   # by class in the read definitions the build registers.
   Drupal\surface\ResourceBuild\SiteEntries:
     arguments: ['@class_resolver', '@language_manager']
+  # Readers straight into the blueprint, prototype: a config schema type
+  # and a typed data definition, each a structure registered on demand by
+  # the class (ResourceCallable), and the variants a config schema type
+  # names through another key.
+  Drupal\surface\Reader\ConfigSchemaReader:
+    arguments: ['@config.typed', '@surface.resource_registry']
+  Drupal\surface\Reader\TypedDataReader:
+    arguments: ['@typed_data_manager', '@surface.references', '@surface.resource_registry']
+  Drupal\surface\Variants\ConfigSchemaTypes:
+    arguments: ['@Drupal\surface\Reader\ConfigSchemaReader', '@config.typed', '@service_container']
   # The defaults a site sets over the declared ones, surface.defaults,
   # which every build reads and carries the cache tag of.
   surface.site_defaults:

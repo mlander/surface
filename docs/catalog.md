@@ -731,8 +731,7 @@ operation here read, grouped by where they are read and counted;
 
 | Read at | Structures | Module |
 | --- | --- | --- |
-| `block.placement.condition.settings` | 4 | `surface_examples_block` |
-| `block.placement.settings` | 11 | `surface_examples_block` |
+| `block.placement.condition.settings` | 2 | `surface_examples_block` |
 | `block.surface_component.props` | 4 | `surface_examples_component_block` |
 | `block.surface_component.slots` | 4 | `surface_examples_component_block` |
 | `component.nested` | 2 | `surface_examples` |
@@ -740,6 +739,12 @@ operation here read, grouped by where they are read and counted;
 | `component.props` | 3 | `surface_examples` |
 | `component.slot` | 4 | `surface_examples` |
 | `component.slots` | 4 | `surface_examples` |
+| `config_schema:block.settings.*:own` | 1 | `surface` |
+| `config_schema:block.settings.entity_test_block:own` | 1 | `surface` |
+| `config_schema:block.settings.local_tasks_block:own` | 1 | `surface` |
+| `config_schema:block.settings.system_branding_block:own` | 1 | `surface` |
+| `config_schema:condition.plugin.request_path:own` | 1 | `surface` |
+| `config_schema:condition.plugin.response_status:own` | 1 | `surface` |
 | `event.spotlight.props` | 4 | `surface_examples` |
 | `event.spotlight.slots` | 4 | `surface_examples` |
 | `field.instance.settings` | 21 | `surface_examples_field` |

@@ -52,6 +52,12 @@ use PHPUnit\Framework\Attributes\Group;
  * (docs/decisions.md#a-class-may-declare-its-keys-as-properties): 27
  * attributes, 112 arguments. #[Output] extends #[Input], so its five
  * arguments are counted with it.
+ * Grown on 2026-11-05 by one blueprint method, `mixInVariants()`, the
+ * structure a sibling key chooses mixed in flat, as config schema stores
+ * a type chosen by a key inside its own value, and its attribute,
+ * #[MixInVariants], with its three arguments
+ * (docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key): 18
+ * methods, 28 attributes, 115 arguments.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -72,9 +78,9 @@ class PublicSurfaceTest extends UnitTestCase {
    * What the surface holds, by kind.
    */
   protected const PINNED = [
-    'attributes' => 27,
-    'attribute arguments' => 112,
-    'blueprint methods' => 17,
+    'attributes' => 28,
+    'attribute arguments' => 115,
+    'blueprint methods' => 18,
     'interfaces' => 22,
   ];
 

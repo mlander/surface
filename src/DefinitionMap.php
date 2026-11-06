@@ -76,6 +76,13 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   private array $frameConstraints = [];
 
   /**
+   * The variants mixed into the data surface, in the order mixed in.
+   *
+   * @var \Drupal\surface\MixinVariants[]
+   */
+  private array $mixinVariants = [];
+
+  /**
    * Constructs a DefinitionMap.
    *
    * This is where a data surface's shape is checked, once: afterwards every
@@ -191,6 +198,9 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * @param array<int, array> $frameConstraints
    *   What the frame as a whole is held to beyond its keys, each a JSON
    *   Schema (frameConstraints()).
+   * @param \Drupal\surface\MixinVariants[] $mixinVariants
+   *   The variants mixed into it, whose members are among the
+   *   definitions (mixinVariants()).
    *
    * @return static
    *   The map.
@@ -217,6 +227,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     array $runtimeAccess = [],
     array $lockReasons = [],
     array $frameConstraints = [],
+    array $mixinVariants = [],
   ): static {
     foreach (array_merge(array_keys($refiners), array_keys($contributions), $locked, array_keys($attachments), array_keys($variants), array_keys($lists), array_keys($mounted)) as $key) {
       if (!isset($definitions[$key])) {
@@ -272,6 +283,14 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
     }
     $map = new static($entries, $ports, $mixins);
     $map->frameConstraints = array_values($frameConstraints);
+    foreach ($mixinVariants as $mixed) {
+      foreach ($mixed->members() as $key) {
+        if (!isset($definitions[$key])) {
+          throw new \InvalidArgumentException(sprintf('"%s", which a variant chosen by "%s" brought, is not a data surface definition.', $key, $mixed->by));
+        }
+      }
+    }
+    $map->mixinVariants = array_values($mixinVariants);
     return $map;
   }
 
@@ -541,6 +560,24 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    */
   public function mixins(): array {
     return $this->mixins;
+  }
+
+  /**
+   * Gets the variants mixed into the data surface.
+   *
+   * Their members are entries of this map like any other key; this says
+   * which key chooses them and which variant brought which member, for the
+   * contract, which states each variant once as a def the owner composes
+   * under a conditional on the deciding key.
+   *
+   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   *
+   * @return \Drupal\surface\MixinVariants[]
+   *   The variants mixed in, one table per deciding key, in the order
+   *   mixed in.
+   */
+  public function mixinVariants(): array {
+    return $this->mixinVariants;
   }
 
   /**

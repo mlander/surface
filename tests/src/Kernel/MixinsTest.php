@@ -21,9 +21,11 @@ use Drupal\surface_resource_test\Structure\Broken\MixinResourceStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinRulesOutStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinUnwiredStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinWiresMemberStructure;
+use Drupal\surface_resource_test\Structure\Broken\MixinWiresChildStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinWithChildStructure;
 use Drupal\surface_resource_test\Structure\Broken\TwoMixinsClashStructure;
 use Drupal\surface_resource_test\Structure\Mixin\EntryStructure;
+use Drupal\surface_resource_test\Structure\Mixin\HarnessedStructure;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\StaticRefinerAgreementTrait;
@@ -251,7 +253,8 @@ class MixinsTest extends SurfaceKernelTestBase {
       MixinClashLateStructure::class => 'resource_test.broken.mixin_clash_late declares "changed", which resource_test.timestamps, mixed in, declares already. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.',
       TwoMixinsClashStructure::class => 'resource_test.broken.created_only, mixed into resource_test.broken.two_mixins_clash, declares "created", which resource_test.timestamps, also mixed in, declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once.',
       MixinByAlterStructure::class => 'The surface_resource_test alter mixes Drupal\surface_resource_test\Structure\Mixin\TimestampsStructure in. Only an owner mixes a structure in: an alter\'s keys live under its own module\'s name, and a mixed-in structure\'s members would be the owner\'s. Attach it at the alter\'s own mount, third_party_settings.surface_resource_test, instead.',
-      MixinWithChildStructure::class => 'resource_test.notice, mixed into resource_test.broken.mixin_with_child, attaches Drupal\surface_resource_test\Structure\Notice\NoticeAddressStructure at "address". A mixed-in structure holds keys and maps, not children, for now: attach resource_test.notice under a key of its own instead.',
+      MixinWithChildStructure::class => 'resource_test.notice, mixed into resource_test.broken.mixin_with_child, attaches variants at "schedule". A mixed-in structure holds keys, maps and children at a fixed key or in a collection, not variants at a key or keys from the site, for now: attach resource_test.notice under a key of its own instead.',
+      MixinWiresChildStructure::class => 'resource_test.broken.pack.wired_ownership, mixed into resource_test.broken.mixin_wires_child, attaches resource_test.ownership at "owned" and wires its "audience" port. A child a mixed-in structure attaches is the owner\'s child at that key, and nothing wires its ports, for now: attach it with no reads:, or attach resource_test.broken.pack.wired_ownership under a key of its own.',
       MixinCycleStructure::class => 'resource_test.broken.mixin_cycle_loop mixes resource_test.broken.mixin_cycle in, through resource_test.broken.mixin_cycle -> resource_test.broken.mixin_cycle_loop -> resource_test.broken.mixin_cycle: a structure cannot be mixed into itself, directly or through another.',
       MixinUnwiredStructure::class => 'resource_test.broken.mixin_unwired mixes resource_test.ownership in without wiring its "audience" port: with(..., reads: [\'audience\' => \'<key>\']) names the key of resource_test.broken.mixin_unwired it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
       MixinWiresMemberStructure::class => 'resource_test.broken.mixin_wires_member wires the "audience" port of resource_test.ownership, mixed in, to "owner", which resource_test.ownership brought itself: a port reads a key of the owner it is mixed into, and its members are its own.',
@@ -528,6 +531,50 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertFalse($this->validates($full, ['created' => 5, 'changed' => NULL]), 'The timestamps\' rule holds, two levels down.');
     $this->assertFalse($this->validates($full, ['fax' => 1]));
     $this->assertStaticRefinersAgree($entry);
+  }
+
+  /**
+   * Tests a child a structure mixed in attaches is the owner's at its key.
+   *
+   * The harness brings its hip belt (a child at a fixed key), its pockets
+   * (a collection) and its rain cover (a map holding a pouch, a structure with
+   * no id): each is the owner's child where the call stands, built as the
+   * owner's own children are, and the def says each by reference.
+   */
+  public function testMixedInStructureHoldsChildren(): void {
+    $harnessed = $this->container->get('surface.resources')->build(HarnessedStructure::class, new OperationContext('configure'));
+    $map = $harnessed->getDefinitions();
+    $this->assertSame(['name', 'straps', 'belt', 'pockets', 'cover', 'notes'], $map->names(), 'Where the call stands, in the harness\'s order.');
+    $this->assertSame(['straps', 'belt', 'pockets', 'cover'], $map->mixins()[0]->keys);
+    $this->assertSame('resource_test.pack.belt', $map->entry('belt')->attachment?->id);
+    $this->assertSame('resource_test.pack.pocket', $map->entry('pockets')->list?->item->id);
+    $this->assertSame('resource_test.harness.cover', $map->entry('cover')->attachment?->id);
+    $value = [
+      'name' => 'Ridge',
+      'straps' => 2,
+      'belt' => ['width' => 6],
+      'pockets' => [['name' => 'Lid']],
+      'cover' => ['color' => 'red', 'pouch' => ['name' => 'Fold']],
+    ];
+    $this->assertSame([], $this->refusals($harnessed, $value, []));
+    $this->assertSame(['belt.width' => 'This value should be 1 or more.'], $this->refusals($harnessed, ['belt' => ['width' => 0]] + $value, []), 'The belt\'s own keys, in its own frame.');
+    $this->assertSame(['pockets' => 'This collection should contain 2 elements or less.'], $this->refusals($harnessed, ['pockets' => array_fill(0, 3, ['name' => 'Side'])] + $value, []), 'The harness\'s count.');
+    $this->assertSame(['cover.pouch.name' => 'Name is required.'], $this->refusals($harnessed, ['cover' => ['pouch' => ['name' => NULL]]] + $value, []));
+
+    $emitter = $this->container->get('surface.contract_emitter');
+    $full = json_decode((string) json_encode($emitter->emitFull($harnessed, 'resource_test.harnessed')->document['schema']), TRUE);
+    $this->assertSame(['$ref' => '#/$defs/resource_test.harness'], $full['allOf'][0]);
+    foreach (['straps', 'belt', 'pockets', 'cover'] as $key) {
+      $this->assertTrue($full['properties'][$key], $key . ': the def says all there is.');
+    }
+    $harness = $full['$defs']['resource_test.harness'];
+    $this->assertSame(['title' => 'Hip belt', '$ref' => '#/$defs/resource_test.pack.belt'], $harness['properties']['belt']);
+    $this->assertSame(['$ref' => '#/$defs/resource_test.pack.pocket'], $harness['properties']['pockets']['items']);
+    $this->assertSame(['name', 'straps', 'belt', 'pockets', 'cover', 'notes'], array_keys(SchemaResolver::inline($full)['properties']));
+    $this->assertTrue($this->validates($full, $value));
+    $this->assertFalse($this->validates($full, ['belt' => ['width' => 0]] + $value));
+    $this->assertFalse($this->validates($full, ['cover' => ['pouch' => ['name' => NULL]]] + $value));
+    $this->assertStaticRefinersAgree($harnessed);
   }
 
   /**

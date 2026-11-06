@@ -6,6 +6,7 @@ ciphertext
 ciphertexts
 containerless
 cset
+daypack
 ddev
 deriver
 derivers

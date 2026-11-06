@@ -876,6 +876,10 @@ final class ContractEmitter {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
       $schema = $this->composed($advertised, $schema, $emission);
     }
+    if ($advertised->mixinVariants() !== []) {
+      // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+      $schema = $this->composedVariants($advertised, $schema, $emission);
+    }
     return [$schema, $shown === [] ? new \stdClass() : $shown];
   }
 
@@ -941,6 +945,10 @@ final class ContractEmitter {
         $properties[$name] = $flat[$name];
         continue;
       }
+      if (static::childAsDeclared($advertised, $name, $flat[$name], $members[$name], $subschemas)) {
+        $properties[$name] = TRUE;
+        continue;
+      }
       $narrowing = is_array($flat[$name]) ? $this->propertySchema->narrowing($flat[$name], $members[$name], $subschemas->transient) : $flat[$name];
       $properties[$name] = $narrowing === [] ? TRUE : $narrowing;
     }
@@ -955,6 +963,208 @@ final class ContractEmitter {
     $composed['allOf'] = [...$references, ...$conditions];
     $composing = ['type', 'properties', 'additionalProperties', 'required', 'allOf'];
     return $composed + array_diff_key($schema, array_flip($composing));
+  }
+
+  /**
+   * Answers whether a member holding a child is here what its def says.
+   *
+   * A child a mixin brings is the owner's child at the key, the same
+   * child the mixin's own build holds, and variants a variant mixed in
+   * holds at a key are the owner's there, the same variants; so the
+   * owner's frame and the def each name them by reference. The def is
+   * read flat, its references followed, so the member is followed too
+   * before the two are compared: the same, it says nothing the def does
+   * not.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param \Drupal\surface\DefinitionMap $advertised
+   *   The frame's definitions.
+   * @param string $name
+   *   The member.
+   * @param mixed $property
+   *   What the frame, described flat, says of it.
+   * @param array $def
+   *   What the def says of it, read flat.
+   * @param \Drupal\surface\Contract\Subschemas $subschemas
+   *   The defs written so far, the child's among them.
+   *
+   * @return bool
+   *   TRUE for a member holding a child or variants that the frame states
+   *   as its def does; FALSE otherwise, a plain member among them.
+   */
+  protected static function childAsDeclared(DefinitionMap $advertised, string $name, mixed $property, array $def, Subschemas $subschemas): bool {
+    $entry = $advertised->entry($name);
+    if (!is_array($property) || ($entry?->attachment === NULL && $entry?->list === NULL && $entry?->variants === NULL)) {
+      return FALSE;
+    }
+    // Followed as a property, as the def's is: a union of variants is
+    // what the conditionals state, and read flat it is not said.
+    $followed = SchemaResolver::inline(['properties' => [$name => $property]], ['$defs' => $subschemas->all()])['properties'][$name] ?? NULL;
+    return is_array($followed) && Subschemas::same($followed, $def);
+  }
+
+  /**
+   * Composes a frame from the variants mixed into it and its own keys.
+   *
+   * The frame is first described flat, as the pipeline reads it: every
+   * member of every variant is the owner's key, applying or not. Each
+   * variant is then written once, as a def, from the structure built by
+   * itself, and stated by one conditional on the deciding key: `if` it
+   * holds the variant's value, `then` the def, by reference. The members
+   * leave the frame's `properties`, since a member stated there would be
+   * evaluated whatever is chosen, and come back only where the owner
+   * narrows one here, as what differs from the def; the frame is closed
+   * with `unevaluatedProperties`, so a member of a variant not chosen is
+   * refused, as the pipeline refuses it. What the defs require and the
+   * conditionals they state are said there, not again; the rules the
+   * build wrote to say where each member applies are this construct, and
+   * are not written (Conditionals::rules()). `x-surface.variantsMixedIn`
+   * names, by deciding key, the def each value chooses, as a key's
+   * `x-surface.variants` does for nested variants.
+   *
+   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   *
+   * @param \Drupal\surface\DefinitionMap $advertised
+   *   The frame's definitions, which say which variants are mixed in.
+   * @param array $schema
+   *   The frame, described flat, or composed with the structures it mixes
+   *   in (composed()).
+   * @param \Drupal\surface\Contract\Emission $emission
+   *   The walk, at the frame: its owner is the id the frame was built from.
+   *
+   * @return array
+   *   The frame, composed.
+   */
+  protected function composedVariants(DefinitionMap $advertised, array $schema, Emission $emission): array {
+    $owner = $emission->owner;
+    $subschemas = $emission->subschemas;
+    $flat = is_array($schema['properties']) ? $schema['properties'] : [];
+    $members = [];
+    $branches = [];
+    $stated = [];
+    $named = [];
+    foreach ($advertised->mixinVariants() as $mixed) {
+      $by = $mixed->by;
+      $deciding = $advertised->get($by);
+      foreach ($mixed->variants as $value => $variant) {
+        $key = $this->define($variant->structure, $owner . '.' . $by . '.' . $value, $emission);
+        // Read flat: a structure it mixes in itself says its members there.
+        $def = SchemaResolver::inline($subschemas->get($key) ?? [], ['$defs' => $subschemas->all()]);
+        $declared = is_array($def['properties'] ?? NULL) ? $def['properties'] : [];
+        foreach ($variant->keys as $name) {
+          $members[$name] ??= [
+            'by' => $by,
+            'def' => is_array($declared[$name] ?? NULL) ? $declared[$name] : [],
+            'required' => in_array($name, $def['required'] ?? [], TRUE),
+          ];
+        }
+        // What the def states, as written and read flat: the conditionals
+        // of variants it holds at a key name their defs by reference.
+        $written = $subschemas->get($key) ?? [];
+        array_push($stated, ...(is_array($def['allOf'] ?? NULL) ? $def['allOf'] : []), ...(is_array($written['allOf'] ?? NULL) ? $written['allOf'] : []));
+        $pointer = self::DEFS . self::pointer($key);
+        $named[$by][(string) $value] = $pointer;
+        $branches[] = [
+          'if' => [
+            'properties' => [$by => ['const' => $deciding === NULL ? (string) $value : $this->propertySchema->cast($value, $deciding)]],
+            'required' => [$by],
+          ],
+          'then' => ['allOf' => [['$ref' => $pointer]]],
+        ];
+      }
+    }
+    $properties = [];
+    foreach ($flat as $name => $property) {
+      if (!isset($members[$name])) {
+        $properties[$name] = $property;
+        continue;
+      }
+      if (!is_array($property)) {
+        continue;
+      }
+      // What the deciding key moves is the construct's to say.
+      $depends = array_values(array_diff((array) ($property[self::EXTENSION]['dependsOn'] ?? []), [$members[$name]['by']]));
+      if ($depends === []) {
+        unset($property[self::EXTENSION]['dependsOn']);
+      }
+      else {
+        $property[self::EXTENSION]['dependsOn'] = $depends;
+      }
+      if (($property[self::EXTENSION] ?? NULL) === []) {
+        unset($property[self::EXTENSION]);
+      }
+      if ($members[$name]['required']) {
+        // Required where its variant is chosen, which the def says, and
+        // so never null there: the owner's frame holds it optional only
+        // because it may not apply.
+        $property = static::withoutNull($property);
+      }
+      if (static::childAsDeclared($advertised, $name, $property, $members[$name]['def'], $subschemas)) {
+        continue;
+      }
+      $narrowing = $this->propertySchema->narrowing($property, $members[$name]['def'], $subschemas->transient);
+      $unmarked = [...$subschemas->transient, 'refined'];
+      $marks = array_diff_key((array) ($narrowing[self::EXTENSION] ?? []), array_flip($unmarked));
+      if (array_keys($narrowing) === [self::EXTENSION] && Subschemas::same($marks, array_diff_key((array) ($members[$name]['def'][self::EXTENSION] ?? []), array_flip($subschemas->transient)))) {
+        // Refined by the choice alone, which the conditional states.
+        $narrowing = [];
+      }
+      if ($narrowing !== []) {
+        $properties[$name] = $narrowing;
+      }
+    }
+    $conditions = is_array($schema['allOf'] ?? NULL) ? $schema['allOf'] : [];
+    $references = array_values(array_filter($conditions, static fn (mixed $entry): bool => is_array($entry) && isset($entry['$ref']) && count($entry) === 1));
+    $conditions = array_values(array_filter($conditions, static fn (mixed $entry): bool => !(is_array($entry) && isset($entry['$ref']) && count($entry) === 1) && array_filter($stated, static fn (mixed $said): bool => Subschemas::same($said, $entry)) === []));
+    $composed = [
+      'type' => 'object',
+      'properties' => $properties === [] ? new \stdClass() : $properties,
+      'unevaluatedProperties' => FALSE,
+    ];
+    $required = array_values(array_diff($schema['required'] ?? [], array_keys($members)));
+    if ($required !== []) {
+      $composed['required'] = $required;
+    }
+    $composed['allOf'] = [...$references, ...$branches, ...$conditions];
+    $extension = is_array($schema[self::EXTENSION] ?? NULL) ? $schema[self::EXTENSION] : [];
+    if (isset($extension['doesNotApply'])) {
+      $extension['doesNotApply'] = array_diff_key($extension['doesNotApply'], $members);
+      if ($extension['doesNotApply'] === []) {
+        unset($extension['doesNotApply']);
+      }
+    }
+    $extension['variantsMixedIn'] = array_map(static fn (array $values): object => (object) $values, $named);
+    $composing = [
+      'type',
+      'properties',
+      'additionalProperties',
+      'unevaluatedProperties',
+      'required',
+      'allOf',
+      self::EXTENSION,
+    ];
+    return $composed + array_diff_key($schema, array_flip($composing)) + [self::EXTENSION => $extension];
+  }
+
+  /**
+   * Writes a property's schema without the null it would allow.
+   *
+   * @param array $property
+   *   The property.
+   *
+   * @return array
+   *   The same, `null` left out of its `type` and its `oneOf`.
+   */
+  protected static function withoutNull(array $property): array {
+    if (is_array($property['type'] ?? NULL)) {
+      $types = array_values(array_diff($property['type'], ['null']));
+      $property['type'] = count($types) === 1 ? $types[0] : $types;
+    }
+    if (is_array($property['oneOf'] ?? NULL)) {
+      $property['oneOf'] = array_values(array_filter($property['oneOf'], static fn (mixed $choice): bool => $choice !== ['const' => NULL]));
+    }
+    return $property;
   }
 
   /**
@@ -978,6 +1188,13 @@ final class ContractEmitter {
     foreach ($surface->getDefinitions()->mixins() as $mixin) {
       $ids[] = (string) ($mixin->structure->id ?? $mixin->structure->source);
       array_push($ids, ...$this->mixedIn($mixin->structure->child, $seen));
+    }
+    // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+    foreach ($surface->getDefinitions()->mixinVariants() as $mixed) {
+      foreach ($mixed->variants as $variant) {
+        $ids[] = (string) ($variant->structure->id ?? $variant->structure->source);
+        array_push($ids, ...$this->mixedIn($variant->structure->child, $seen));
+      }
     }
     foreach ($surface->getDefinitions()->entries() as $entry) {
       $children = match (TRUE) {

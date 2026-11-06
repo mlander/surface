@@ -1,0 +1,7 @@
+title: 'Ridge shelter'
+kind: hut
+roof: thatch
+covering:
+  depth: 30
+size: ~
+notes: ''

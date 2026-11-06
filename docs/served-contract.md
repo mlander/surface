@@ -906,6 +906,54 @@ schema, abbreviated:
   the subject is marked `x-surface.live` in the full schema, beside the
   def.
 
+### Variants mixed in are conditionals
+
+The variants a sibling key chooses, [mixed in](resources.md#variants-mixed-in),
+are written once each, as a def, like any child, from the variant built
+by itself, open as a mixed-in def is. The owner's frame states each by a
+conditional on its deciding key, `if` it holds the variant's value,
+`then` the def by reference, and lists only its own keys in
+`properties`, closed with `unevaluatedProperties: false`: a member stated
+in the frame's `properties` would be evaluated whatever is chosen, so it
+is there only where the owner narrows it here, as what differs from the
+def. `x-surface.variantsMixedIn` names, by deciding key, the def each
+value chooses, as a key's `x-surface.variants` does for variants at a
+key. The test module's kit, in full:
+
+```json
+"properties": {"title": {...}, "kind": {"title": "Kind", "type": "string", "oneOf": [{"const": "stove", "title": "Stove"}, {"const": "tent", "title": "Tent"}]}, "notes": {...}},
+"unevaluatedProperties": false,
+"required": ["title", "kind"],
+"allOf": [
+  {"if": {"properties": {"kind": {"const": "stove"}}, "required": ["kind"]},
+   "then": {"allOf": [{"$ref": "#/$defs/resource_test.kit.stove"}]}},
+  {"if": {"properties": {"kind": {"const": "tent"}}, "required": ["kind"]},
+   "then": {"allOf": [{"$ref": "#/$defs/resource_test.kit.tent"}]}}
+],
+"x-surface": {..., "variantsMixedIn": {"kind": {"stove": "#/$defs/resource_test.kit.stove", "tent": "#/$defs/resource_test.kit.tent"}}},
+"$defs": {
+  "resource_test.kit.stove": {"title": "resource_test.kit.stove", "type": "object",
+    "properties": {"weight": {...}, "fuel": {"title": "Fuel", "type": "string", "oneOf": [...], "default": "gas"}},
+    "required": ["fuel"]},
+  "resource_test.kit.tent": {...}
+}
+```
+
+- **A validator holds it as the pipeline does.** A member of a variant
+  not chosen is evaluated by no conditional, so the closed frame refuses
+  it; the chosen variant's def requires its own required members and
+  states its own rules.
+- **Inline, the frame is flat.** `SchemaResolver::inline()` lays every
+  variant's members into the frame after the deciding key, the defs'
+  conditionals first, and in place of the variants' conditionals one per
+  member: `false` unless the deciding key holds a value whose variant
+  brings it, `required` where that variant requires it, each marked
+  `declared` as the inline reading marks a rule's. The marker is spent.
+- **Read back.** `SchemaReader` reads each such conditional, an `if` on
+  one sibling's `const` and a `then` that is a reference to an object
+  def, alone or the one entry of an `allOf`, as `mixInVariants()`, the
+  members after the deciding key.
+
 ### A shape is one def
 
 A key declared with a [shape](declaring-a-resource.md#named-shapes) is

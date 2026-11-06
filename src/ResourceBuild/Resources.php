@@ -19,6 +19,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
+use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Resolve;
 use Drupal\surface\SettledCacheability;
@@ -60,7 +61,11 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  *    the engine's lock: the value fixed to the declared default.
  * 5. Each structure mixed in (Attaching::mixIn()): its ports' wiring
  *    checked, built by itself for its def and its access, which holds its
- *    members to what is stored or takes them back out; then what of the
+ *    members to what is stored or takes them back out; then each variant
+ *    mixed in the same way (Attaching::mixInVariants()), its value offered
+ *    on the deciding key, whose members were declared where the call
+ *    stands once the owner's declaration ran
+ *    (Attaching::layVariantMixins(), from step 1); then what of the
  *    owner's names its members is checked
  *    (Attaching::assertMixinsUnnamed()), and its refiners, rules and
  *    alters are bound in the owner's frame first (Binding::bindMixin()).
@@ -670,7 +675,11 @@ final class Resources implements ResourcesInterface {
         }
       }
     }
-    foreach ($surface->getDefinitions()->mixins() as $mixin) {
+    $mixins = $surface->getDefinitions()->mixins();
+    foreach ($surface->getDefinitions()->mixinVariants() as $mixed) {
+      array_push($mixins, ...array_values($mixed->variants));
+    }
+    foreach ($mixins as $mixin) {
       $child = $mixin->structure->settledChild();
       if ($mixin->structure->source !== NULL && ($definition = $this->registry->readDefinition($mixin->structure->source)) !== NULL) {
         $read[$mixin->structure->source] = $definition;
@@ -902,7 +911,11 @@ final class Resources implements ResourcesInterface {
       }
     }
 
-    [$builder, $inputs, $outputs, $links, $additions] = $this->declaring->declareShape($definition, $context);
+    // The members of the variants mixed in are declared where each call
+    // stands, once its declaration is done.
+    // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+    $settle = fn (ResourceBlueprint $inputs, SurfaceBuilderInterface $builder) => $this->attaching->layVariantMixins($definition, $inputs, $builder);
+    [$builder, $inputs, $outputs, $links, $additions] = $this->declaring->declareShape($definition, $context, $settle);
 
     $input_keys = $inputs->keys();
     $attached = array_merge(array_keys($inputs->attachments()), array_keys($inputs->variants()), array_keys($inputs->fromSite()));
@@ -963,6 +976,10 @@ final class Resources implements ResourcesInterface {
     // out.
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
     $mixins = $this->attaching->mixIn($build, $inputs);
+    // Then each variant mixed in, the same way, and where each member
+    // applies.
+    // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+    $mixins = $this->attaching->mixInVariants($build, $inputs, $mixins);
     $owned_rules = [$inputs->rules()];
     $wirings = [];
     foreach (array_keys($inputs->attachments()) as $key) {
