@@ -581,6 +581,26 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
   }
 
   /**
+   * Gets the members held to the chosen variant's own definition.
+   *
+   * The members two variants mixed in declare unlike, of every call: the
+   * frame declares each as wide as every variant's definition, and a rule
+   * holds it to the chosen variant's, which the pipeline reads it by.
+   *
+   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   *
+   * @return array<string, true>
+   *   Each such member, by key.
+   */
+  public function heldTo(): array {
+    $held = [];
+    foreach ($this->mixinVariants as $mixed) {
+      $held += array_fill_keys($mixed->heldTo, TRUE);
+    }
+    return $held;
+  }
+
+  /**
    * Answers whether a locked key holds what is stored, not a known value.
    *
    * @param string $name

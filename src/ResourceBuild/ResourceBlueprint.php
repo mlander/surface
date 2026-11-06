@@ -238,7 +238,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       throw new \LogicException(sprintf('%s mixes the variants chosen by "%s" into its outputs. Variants are mixed into what is sent; outputs hold no structures yet.', $who, $by));
     }
     if ($this->into !== NULL) {
-      throw new \LogicException(sprintf('%s, mixed into %s, mixes in the variants chosen by "%s". A mixed-in structure holds keys and maps, not variants, for now: mix the variants into %s itself.', $who, $this->name($this->root()->owner), $by, $this->name($this->root()->owner)));
+      throw new \LogicException(sprintf('%s, mixed into %s, mixes in the variants chosen by "%s". A mixed-in structure holds keys, maps and children at a fixed key or in a collection, not variants mixed in, for now: mix the variants into %s itself.', $who, $this->name($this->root()->owner), $by, $this->name($this->root()->owner)));
     }
     if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
       throw new \LogicException(sprintf('mixInVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema or structure, with list().', $by, $from, SiteListInterface::class));
@@ -285,14 +285,15 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   The call, by its index in variantMixins().
    * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $members
    *   Each member's definition in the owner's frame, by key, in order.
-   * @param array{children: array<string, string>, labels: array<string, string|\Stringable>, blueprints: array<string, \Drupal\surface\ResourceBuild\ResourceBlueprint>, values: array<string, string[]>, required: array<string, string[]>, attachments: array<string, string>, lists: array<string, string>, variants: array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>} $laid
+   * @param array{children: array<string, string>, labels: array<string, string|\Stringable>, blueprints: array<string, \Drupal\surface\ResourceBuild\ResourceBlueprint>, values: array<string, string[]>, required: array<string, string[]>, attachments: array<string, string>, lists: array<string, string>, variants: array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>, widened: string[]} $laid
    *   What the build found: each value's variant by name, its label, the
    *   blueprint it declared its keys through, for each member the values
    *   it applies under and those it is required under, the members that
    *   hold a child, at a fixed key or as a collection, each by the
-   *   child's name, and those that hold variants, each with its deciding
+   *   child's name, those that hold variants, each with its deciding
    *   key, its provider and arguments, what a schema read states, and the
-   *   variant that declared it, by name.
+   *   variant that declared it, by name, and the members two variants
+   *   declare unlike, declared as wide as both.
    *
    * @internal
    *   For Attaching::layVariantMixins() alone, once per call, in call

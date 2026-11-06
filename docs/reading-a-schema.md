@@ -69,7 +69,7 @@ the emitter wrote reads back as what it was written from
 | `allOf`, `anyOf` of parts each one constraint | `Sequentially`, `AtLeastOneOf` of them (why: [decision](decisions.md#a-composite-is-its-parts)) |
 | `readOnly` | the key locked, at its `const` |
 | `writeOnly` | a secret |
-| an object with properties | a map, each property a definition of its own; where it holds more than a map can (a reference, a rule, variants), a structure attached at the key, `<owner>.<key>` |
+| an object with properties | a map, each property a definition of its own; where it holds more than a map can (a reference, a rule or variants its `allOf` states), an anonymous map with a frame of its own, `addMap()`, written inline again; closed otherwise, or saying what a map does not write, a structure attached at the key, `<owner>.<key>` |
 | an object with no properties | a value of type `any`, held whole to its schema |
 | `$ref` to an object under `$defs` | a structure attached at the key, its id the def's key: one structure wherever it is used |
 | `$ref` to a scalar under `$defs` | the shape of that id, where the site has one, and what the property says beside it; otherwise the def read in place, noted |
@@ -261,21 +261,34 @@ both documents write it with its title and no type. The reason is still
 noted at the key's path (`Reading::left()`)
 (why: [decision](decisions.md#a-schema-can-be-read-back-into-a-structure)).
 
-**What still falls back.** A type chosen by its own key mixes its
-variants in unless the build would refuse them
+**When the variants are not mixed in.** A type chosen by its own key
+mixes its variants in unless the build would refuse them
 (`ConfigSchemaReader::ownKeyWall()`): two types that declare one key
 unlike where one holds variants at it. A variant may hold children,
 maps and variants at a key, and two may declare one key unlike: the
 structure declares it as wide as both, and holds it to the chosen type's
 own definition. Where the build would refuse, the frame holds the
 fallback's keys, and every key a chosen type declares beside them open.
-In core nothing falls back: `views.field.[plugin_id]` holds `separator`
+In core every one mixes them in: `views.field.[plugin_id]` holds `separator`
 to a `label`, with its `Regex`, under `views.field.field` and to a
 plain `string` under `views.field.prerender_list`, `views.cache.[type]`
 holds `options` to any value under `none` and `tag` and to a mapping
 under `time`, and `views.area.[plugin_id]` holds `content` to a
 `text_format` mapping under `text` and to a `text` under `text_custom`
 (why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key)).
+
+**Which structure each value is.** `Variants\ConfigSchemaTypes` lists the
+variants of both forms, bound to the type and the path of the value
+(`['block.block.*', 'settings', 'plugin']`) or to an own-key expression
+(`['condition.plugin.[id]', '', 'id']`). Its values come from a
+`PluginExists` constraint on the deciding key (the plugin manager's
+definitions), else a `Choice`, else the schema's type names. Where they
+come from a plugin manager, a plugin whose class names its settings
+with `#[UsesStructure]` is that structure, built as declared, its
+refiners, children and defaults with it, and its schema is not read;
+every other value is the structure its schema type is. A `#[Variant]`
+declared for the owner at the key wins over both, as for any provider
+(why: [decision](decisions.md#a-placed-block-is-a-resource)).
 
 ## The decision
 

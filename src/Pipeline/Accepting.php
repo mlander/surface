@@ -190,10 +190,7 @@ final class Accepting {
     $deferred = [];
     $computed = [];
     $held = [];
-    $heldTo = [];
-    foreach ($definitions->mixinVariants() as $mixed) {
-      $heldTo += array_fill_keys($mixed->heldTo, TRUE);
-    }
+    $heldTo = $definitions->heldTo();
     foreach ($definitions->entries() as $name => $entry) {
       if (!$entry->locked && Computed::of($entry->definition) !== NULL) {
         // Computed from the accepted values of the keys it names, so last.

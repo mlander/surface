@@ -51,9 +51,11 @@ class TypedDataReaderTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * Where the differences are written, for the README.
+   * The file the differences are written to.
+   *
+   * In the directory SURFACE_READER_REPORT names, when it names one.
    */
-  protected const REPORT = '/tmp/surface-reader/field-comparison.json';
+  protected const REPORT = 'field-comparison.json';
 
   /**
    * {@inheritdoc}
@@ -94,11 +96,13 @@ class TypedDataReaderTest extends SurfaceKernelTestBase {
         $this->differ($name, (string) $key, $a, $b, $a_default, $direct[$key]['default'] ?? NULL, $report);
       }
       foreach ($reading->left() as $path => $reasons) {
-        $report[$name][] = ['key' => $path, 'knows more' => 'left out', 'what' => implode(' ', $reasons)];
+        $report[$name][] = ['key' => $path, 'knows more' => 'noted', 'what' => implode(' ', $reasons)];
       }
     }
-    @mkdir(dirname(self::REPORT), 0777, TRUE);
-    file_put_contents(self::REPORT, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    if (getenv('SURFACE_READER_REPORT')) {
+      // Every difference, for a reader comparing the two routes.
+      file_put_contents(getenv('SURFACE_READER_REPORT') . '/' . self::REPORT, json_encode($report, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    }
 
     // The reference key, read from the computed reference beside the id.
     $tags = new RecordingBlueprint();

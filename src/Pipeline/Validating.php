@@ -193,10 +193,7 @@ final class Validating {
   protected function validateLevel(SurfaceInterface $surface, array $values, array $current): array {
     $refined = $surface->refine($values);
     $errors = [];
-    $heldTo = [];
-    foreach ($surface->getDefinitions()->mixinVariants() as $mixed) {
-      $heldTo += array_fill_keys($mixed->heldTo, TRUE);
-    }
+    $heldTo = $surface->getDefinitions()->heldTo();
     foreach ($refined->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       $definition = $entry->definition;

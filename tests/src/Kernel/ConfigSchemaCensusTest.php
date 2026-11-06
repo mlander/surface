@@ -19,9 +19,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * knows that is a `config_object` or a `config_entity`, ConfigSchemaReader
  * reads it into a blueprint that writes down the verbs, then every
  * structure it attaches and every variant ConfigSchemaTypes lists, once
- * each, and the table counts what was read, carried, resolved and left
- * out. It asserts only that each type reads; the table is written to
- * REPORT for the README. It may be deleted once the readers are settled.
+ * each, and the table counts what was read, carried, resolved and noted,
+ * a key no shape is read for declared open with its note. It asserts only
+ * that each type reads; the table is written to REPORT where
+ * SURFACE_READER_REPORT names a directory. It may be deleted once the
+ * readers are settled.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -69,9 +71,11 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
   ];
 
   /**
-   * Where the table is written.
+   * The file the table is written to.
+   *
+   * In the directory SURFACE_READER_REPORT names, when it names one.
    */
-  protected const REPORT = '/tmp/surface-reader/census.md';
+  protected const REPORT = 'census.md';
 
   /**
    * Tests every config object and config entity type reads.
@@ -251,8 +255,9 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
     $build_ms = $tally['build_ms']['views.view.*'];
     $views_built = isset($tally['refused']['views.view.*']) ? 'refused' : 'built';
 
-    @mkdir(dirname(self::REPORT), 0777, TRUE);
-    file_put_contents(self::REPORT, $this->table($tally, $built, $views, $read_ms, $reach_ms, $build_ms, $views_built));
+    if (getenv('SURFACE_READER_REPORT')) {
+      file_put_contents(getenv('SURFACE_READER_REPORT') . '/' . self::REPORT, $this->table($tally, $built, $views, $read_ms, $reach_ms, $build_ms, $views_built));
+    }
     $this->assertNotEmpty($roots);
     $this->assertGreaterThan(0, $tally['keys']);
   }

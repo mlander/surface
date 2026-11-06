@@ -42,8 +42,8 @@ use Drupal\surface\Variants\ConfigSchemaTypes;
  *   structure of its own for the expression, the fallback type's keys
  *   and the variants that key chooses mixed in flat beside them
  *   (mixInVariants()), listed by ConfigSchemaTypes too;
- *   `[%parent.%parent...]` and `[%key]` are left out, with the spelling
- *   the blueprint would need.
+ *   `[%parent.%parent...]` and `[%key]` are declared open (open()), the
+ *   note giving the spelling the blueprint would need.
  *
  * What it reads is a definition and never a value: reading a type twice
  * calls the same verbs, so addMap()'s replay may run it again. Config
@@ -261,17 +261,35 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
    *   The types, in the order the schema lists them.
    */
   protected function namedTypes(array $expression, string $fallback): array {
+    return array_values(array_diff($this->typesNamed($expression), [$fallback]));
+  }
+
+  /**
+   * Lists the schema types an expression's prefix and suffix name, by id.
+   *
+   * Each type whose name is the prefix, one id of no dot and no wildcard,
+   * and the suffix: `views.field.boolean` for `views.field.[plugin_id]`,
+   * never `views.field.*`.
+   *
+   * @param array{prefix: string, suffix: string} $expression
+   *   What expression() read.
+   *
+   * @return array<string, string>
+   *   Each type's name, by the id it fills in, in the order the schema
+   *   lists them.
+   */
+  public function typesNamed(array $expression): array {
     $named = [];
     foreach (array_keys($this->typedConfig->getDefinitions()) as $name) {
       $name = (string) $name;
-      if (!str_starts_with($name, $expression['prefix']) || !str_ends_with($name, $expression['suffix']) || $name === $fallback) {
+      if (!str_starts_with($name, $expression['prefix']) || !str_ends_with($name, $expression['suffix'])) {
         continue;
       }
       $id = substr($name, strlen($expression['prefix']), strlen($name) - strlen($expression['prefix']) - strlen($expression['suffix']));
       if ($id === '' || str_contains($id, '*') || str_contains($id, '.')) {
         continue;
       }
-      $named[] = $name;
+      $named[$id] = $name;
     }
     return $named;
   }
@@ -985,15 +1003,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
    */
   protected function extendedByAll(array $expression, array $definitions): ?string {
     $common = NULL;
-    foreach (array_keys($definitions) as $name) {
-      $name = (string) $name;
-      if (!str_starts_with($name, $expression['prefix']) || !str_ends_with($name, $expression['suffix'])) {
-        continue;
-      }
-      $id = substr($name, strlen($expression['prefix']), strlen($name) - strlen($expression['prefix']) - strlen($expression['suffix']));
-      if ($id === '' || str_contains($id, '*') || str_contains($id, '.')) {
-        continue;
-      }
+    foreach ($this->typesNamed($expression) as $name) {
       // The types it extends, nearest first.
       $chain = [];
       for ($at = (string) ($definitions[$name]['type'] ?? ''); isset($definitions[$at]) && !in_array($at, $chain, TRUE) && $at !== 'mapping'; $at = (string) ($definitions[$at]['type'] ?? '')) {

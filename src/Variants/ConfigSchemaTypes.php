@@ -8,6 +8,7 @@ use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\surface\Reader\ConfigSchemaReader;
+use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface\Resource\BoundSiteListInterface;
 use Drupal\surface\Resource\SiteList;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -40,6 +41,14 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * For `[<key>]`, a type chosen by a key inside the value, each variant is
  * the type less the keys of its fallback, which the frame declares:
  * ConfigSchemaReader mixes them in flat beside those keys.
+ *
+ * Where the values are a plugin manager's, a plugin whose class names its
+ * settings with #[UsesStructure] is that structure, built as declared, and
+ * its schema is not read: the plugin's definition carries the class
+ * (UsesStructure::DEFINITION_KEY), so no plugin is instantiated. Any other
+ * value is read from its schema. A #[Variant] declared for the owner wins
+ * over both, as for any provider. Values from a Choice or from the schema
+ * names have no plugin definition, and are read from the schema alone.
  *
  * A third argument restates the deciding key, since listFor() is handed
  * the arguments alone: the list is refused when the expression found is
@@ -94,7 +103,11 @@ final class ConfigSchemaTypes implements BoundSiteListInterface {
       throw new \LogicException(sprintf('ConfigSchemaTypes lists the variants of %s at %s for "%s", and the schema types it by "%s" (%s): the variants are chosen by the key the schema names.', $type, $path, $by, $resolved['by'], $resolved['expression']));
     }
     $list = (new SiteList())->addCacheableDependency($resolved['cacheability']);
-    foreach ($resolved['candidates'] as $id => ['label' => $label, 'type' => $chosen]) {
+    foreach ($resolved['candidates'] as $id => ['label' => $label, 'type' => $chosen, 'structure' => $declared]) {
+      if ($declared !== NULL) {
+        $list->add((string) $id, $label, structure: $declared);
+        continue;
+      }
       if ($chosen === NULL) {
         continue;
       }
@@ -112,11 +125,12 @@ final class ConfigSchemaTypes implements BoundSiteListInterface {
    *   The dotted path of the value typed through another key; empty for
    *   an expression.
    *
-   * @return array{expression: string, form: string, by: string, source: string, less: string, candidates: array<string, array{label: string|\Stringable, type: string|null}>, cacheability: \Drupal\Core\Cache\CacheableMetadata}
+   * @return array{expression: string, form: string, by: string, source: string, less: string, candidates: array<string, array{label: string|\Stringable, type: string|null, structure: string|null}>, cacheability: \Drupal\Core\Cache\CacheableMetadata}
    *   The type as written; its form; the deciding key; where the values
    *   came from; the type whose keys each variant leaves out (for
-   *   `[<key>]`); each value's label and the type it resolves to (NULL
-   *   for none, which typed config reads as undefined); and what was read.
+   *   `[<key>]`); each value's label, the type it resolves to (NULL for
+   *   none, which typed config reads as undefined) and the structure its
+   *   plugin declares (NULL for none); and what was read.
    *
    * @throws \LogicException
    *   When the path names no such value, or one of a form no variants
@@ -147,6 +161,7 @@ final class ConfigSchemaTypes implements BoundSiteListInterface {
     $cacheability = (new CacheableMetadata())->addCacheTags(['config:core.extension']);
     $constraints = is_array($deciding) ? (array) ($this->reader->merged($deciding)['constraints'] ?? []) : [];
     $values = [];
+    $declared = [];
     $source = 'schema names';
     $manager_id = $constraints['PluginExists']['manager'] ?? NULL;
     if (is_string($manager_id) && $this->container->has($manager_id)) {
@@ -158,6 +173,10 @@ final class ConfigSchemaTypes implements BoundSiteListInterface {
       foreach ($manager->getDefinitions() as $id => $definition) {
         $label = is_array($definition) ? ($definition['label'] ?? $definition['admin_label'] ?? NULL) : (method_exists($definition, 'getLabel') ? $definition->getLabel() : NULL);
         $values[(string) $id] = $label === NULL || (string) $label === '' ? (string) $id : $label;
+        $structure = is_array($definition) ? ($definition[UsesStructure::DEFINITION_KEY] ?? NULL) : NULL;
+        if (is_string($structure) && $structure !== '') {
+          $declared[(string) $id] = $structure;
+        }
       }
     }
     elseif (is_array($constraints['Choice']['choices'] ?? NULL)) {
@@ -167,16 +186,10 @@ final class ConfigSchemaTypes implements BoundSiteListInterface {
       }
     }
     else {
-      foreach ($this->typedConfig->getDefinitions() as $name => $definition) {
-        $name = (string) $name;
-        if (!str_starts_with($name, $expression['prefix']) || !str_ends_with($name, $expression['suffix'])) {
-          continue;
-        }
-        $id = substr($name, strlen($expression['prefix']), strlen($name) - strlen($expression['prefix']) - strlen($expression['suffix']));
-        if ($id === '' || str_contains($id, '*') || str_contains($id, '.')) {
-          continue;
-        }
-        $values[$id] = isset($definition['label']) && (string) $definition['label'] !== '' ? (string) $definition['label'] : $id;
+      $definitions = $this->typedConfig->getDefinitions();
+      foreach ($this->reader->typesNamed($expression) as $id => $name) {
+        $label = $definitions[$name]['label'] ?? NULL;
+        $values[$id] = $label !== NULL && (string) $label !== '' ? (string) $label : (string) $id;
       }
     }
     ksort($values);
@@ -185,6 +198,7 @@ final class ConfigSchemaTypes implements BoundSiteListInterface {
       $candidates[(string) $id] = [
         'label' => $label,
         'type' => $this->reader->determine($expression['prefix'] . $id . $expression['suffix']),
+        'structure' => $declared[(string) $id] ?? NULL,
       ];
     }
     return [

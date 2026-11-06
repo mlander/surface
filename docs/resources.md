@@ -2185,11 +2185,13 @@ racks a context whole, where the access class answers the same and
 ### Variants from the site
 
 Some variants are the site's, not the code's: one per component a
-site's themes provide, one per layout its configuration lists. No class
-can be written for each, and each says what it holds already, in a
-JSON Schema. `attachVariants()` names a provider that lists them, each
-with its schema, and the reader writes each schema into a variant
-([Reading a schema](reading-a-schema.md)). The provider is the one
+site's themes provide, one per layout its configuration lists, one per
+plugin. No class can be written for each, and each says what it holds
+already, in a JSON Schema or a config schema. `attachVariants()` names a
+provider that lists them, each with its schema, which the reader writes
+into a variant ([Reading a schema](reading-a-schema.md)), or with the
+structure it is: one a plugin declares, or one read straight from config
+schema ([Config schema](reading-a-schema.md#config-schema)). The provider is the one
 interface [keys from the site](#keys-that-come-from-the-site) name too,
 `SiteListInterface`, and its list the one list type, `SiteList`; each
 verb reads what it needs of an entry and refuses the rest:
@@ -2222,7 +2224,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **The provider** implements `SiteListInterface`: `list()` answers a
   `SiteList`, per value of the deciding key its label and the schema of
   what it chooses, `add($value, $label, schema: $schema)`, an object in
-  JSON Schema 2020-12 or an older draft. An entry that says a start or a
+  JSON Schema 2020-12 or an older draft, or the structure it is,
+  `add($value, $label, structure: $class_or_id)`. An entry that says a start or a
   lock, which only a key per thing reads, is refused, and so is one with
   neither a schema nor a structure. It is built by the class resolver, and asked at every
   build, as a provider of [keys from the site](#keys-that-come-from-the-site)
@@ -2232,7 +2235,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **Each variant is a structure read from its schema**, its id
   `<owner>.<key>.<value>` (`event.spotlight.props.surface_examples:card`),
   built by the build step as a class is: its keys, their constraints,
-  its maps, children, variants and rules, what its schema says.
+  its maps, children, variants and rules, what its schema says. An
+  entry that names a structure, `add($value, $label, structure:)`, is
+  that structure, by class or by id.
 - **Bound to its owner.** A provider that lists for several owners
   implements `BoundSiteListInterface`, whose `listFor($arguments)` the
   build asks with what the owner bound, `attachVariants('fields', by:
@@ -2310,9 +2315,10 @@ layout offers. A plugin whose class names its settings with
 `#[UsesStructure]` is that structure, built as declared, which a
 provider says with `SiteList::add($value, $label, structure: $class)`
 in place of a schema; the component block's is one, its own
-variants, the components' props, inside it. Any other plugin is read
-from its config schema, `block.settings.<plugin id>`, written as JSON
-Schema for the reader. The keys every block has (its title, whether it
+variants, the components' props, inside it. Any other plugin is the
+structure its config schema is, `block.settings.<plugin id>`, read
+straight from the schema less the keys every block has, the plugin's
+defaults laid over it. The keys every block has (its title, whether it
 shows, its theme, region, weight and status) are the resource's own, and
 its visibility a collection of conditions chosen the same way
 (why: [decision](decisions.md#a-placed-block-is-a-resource)).

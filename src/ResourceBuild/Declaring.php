@@ -873,7 +873,7 @@ final class Declaring {
    *   The resource or structure.
    * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is built in, which decides the alters that apply.
-   * @param \Closure|null $settle
+   * @param \Closure|null $afterDeclaring
    *   What runs once the owner has declared, before its alters: handed
    *   the inputs blueprint and the builder, it declares the members of
    *   the variants mixed in where each call stands
@@ -885,14 +885,14 @@ final class Declaring {
    *   its module (NULL for the owner); and each alter's additions, by
    *   module.
    */
-  public function declareShape(ResourceDefinition $definition, OperationContext $context, ?\Closure $settle = NULL): array {
+  public function declareShape(ResourceDefinition $definition, OperationContext $context, ?\Closure $afterDeclaring = NULL): array {
     $builder = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $inputs = $this->blueprint($builder, $definition);
     $outputs = $this->blueprint($builder, $definition, TRUE);
     $this->fillBlueprints($definition, $inputs, $outputs);
-    if ($settle !== NULL) {
+    if ($afterDeclaring !== NULL) {
       // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-      $settle($inputs, $builder);
+      $afterDeclaring($inputs, $builder);
     }
 
     // The owner's own refiners first, one link per class they are on:

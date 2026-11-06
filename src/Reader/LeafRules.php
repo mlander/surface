@@ -235,6 +235,7 @@ final class LeafRules {
    */
   public static function label(string|\Stringable $text): TranslatableMarkup|string {
     return match (TRUE) {
+      // A label read from a schema or an attribute: no literal to extract.
       // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
       is_string($text) => new TranslatableMarkup($text),
       $text instanceof TranslatableMarkup => $text,

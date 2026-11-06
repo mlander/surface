@@ -434,15 +434,19 @@ interface BlueprintAdditionsInterface {
    * found as attachVariants() finds them: every #[Variant(of:, at:)] whose
    * `at` is the deciding key, and the entries a provider lists from the
    * site, a #[Variant] winning for a value both name. Each is an ordinary
-   * structure holding keys, maps and children at a fixed key or in a
-   * collection, with no port, no variants at a key and no keys from the
-   * site; a child it holds is the owner's child at that key.
+   * structure holding keys, maps, children at a fixed key or in a
+   * collection, and variants at a key, with no port, no keys from the site
+   * and no variants mixed in of its own; a child it holds is the owner's
+   * child at that key, and variants it holds at a key the owner's variants
+   * there.
    *
    * Every member of every variant is declared when the owner is built, in
    * variant order then key order, a member two variants declare alike
    * once (the label and the description aside, the first variant's
-   * worn); a member of a variant not chosen does not apply, and the chosen
-   * variant's required members are required. The deciding key is offered
+   * worn), and one they declare unlike once too, as wide as both and held
+   * to the chosen variant's own definition; a member of a variant not
+   * chosen does not apply, and the chosen variant's required members are
+   * required. The deciding key is offered
    * the variants' values with their labels, as attachVariants() offers
    * them.
    *

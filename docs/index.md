@@ -60,11 +60,12 @@ install; read it first.
   defaults, locking, secrets, required.
 - [Resources and structures](resources.md): [which way to compose](resources.md#which-way-to-compose), operations, alters,
   attached structures and variants, variants from the site, ports,
-  mixins, collections, keys from the site, access, storage, tools, the
-  catalog.
+  mixins, variants mixed in, collections, keys from the site, access,
+  storage, tools, the catalog.
 - [Reading a schema](reading-a-schema.md): a JSON Schema read into a
   structure: the mapping, what is kept and checked on the server, what
-  is noted and refused, older drafts, the round trip.
+  is noted and refused, older drafts, the round trip; and a config
+  schema type read straight into one.
 - [Refinement](refinement.md): an alter offering values and a refiner
   narrowing them, a rule declared as data, a key that does not apply,
   the narrowing table, cacheability, a worked example, and what it does
