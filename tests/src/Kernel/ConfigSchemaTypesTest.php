@@ -94,6 +94,24 @@ class ConfigSchemaTypesTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests the provider refuses an argument it does not take.
+   */
+  public function testTheProviderRefusesAnUnknownArgument(): void {
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('ConfigSchemaTypes takes the arguments type, path and by; given at.');
+    $this->container->get(ConfigSchemaTypes::class)->listFor(['type' => 'block.block.*', 'at' => 'settings']);
+  }
+
+  /**
+   * Tests a deciding key refused for an own-key expression names no path.
+   */
+  public function testTheDecidingKeyRefusedForAnExpressionNamesItAlone(): void {
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('ConfigSchemaTypes lists the variants of condition.plugin.[id] for "plugin", and the schema types it by "id"');
+    $this->container->get(ConfigSchemaTypes::class)->listFor(['type' => 'condition.plugin.[id]', 'by' => 'plugin']);
+  }
+
+  /**
    * Builds a structure in the configure context and emits its full schema.
    *
    * @param string $name

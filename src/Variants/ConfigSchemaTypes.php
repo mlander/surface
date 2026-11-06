@@ -98,19 +98,24 @@ final class ConfigSchemaTypes implements BoundSiteListInterface {
    *
    * @throws \LogicException
    *   When the arguments hold a key by position or name no type, when
-   *   the path names no value typed through another key, or one that key
-   *   is not the deciding key named.
+   *   they hold a key other than the three, when the path names no value
+   *   typed through another key, or one that key is not the deciding key
+   *   named.
    */
   public function listFor(array $arguments): SiteList {
     if (!isset($arguments['type']) || array_filter(array_keys($arguments), 'is_int') !== []) {
       throw new \LogicException(sprintf('ConfigSchemaTypes takes its arguments by name, arguments: [\'type\' => \'block.block.*\', \'path\' => \'settings\'] or [\'type\' => \'condition.plugin.[id]\'], with \'by\' => <key> to check the deciding key; given %s.', json_encode($arguments, JSON_UNESCAPED_SLASHES)));
+    }
+    $unknown = array_diff_key($arguments, array_flip(['type', 'path', 'by']));
+    if ($unknown !== []) {
+      throw new \LogicException(sprintf('ConfigSchemaTypes takes the arguments type, path and by; given %s.', implode(', ', array_keys($unknown))));
     }
     $type = (string) $arguments['type'];
     $path = (string) ($arguments['path'] ?? '');
     $by = (string) ($arguments['by'] ?? '');
     $resolved = $this->resolve($type, $path);
     if ($by !== '' && $resolved['by'] !== $by) {
-      throw new \LogicException(sprintf('ConfigSchemaTypes lists the variants of %s at %s for "%s", and the schema types it by "%s" (%s): the variants are chosen by the key the schema names.', $type, $path, $by, $resolved['by'], $resolved['expression']));
+      throw new \LogicException(sprintf('ConfigSchemaTypes lists the variants of %s for "%s", and the schema types it by "%s" (%s): the variants are chosen by the key the schema names.', $type . ($path === '' ? '' : ' at ' . $path), $by, $resolved['by'], $resolved['expression']));
     }
     $list = (new SiteList())->addCacheableDependency($resolved['cacheability']);
     foreach ($resolved['candidates'] as $id => ['label' => $label, 'type' => $chosen, 'structure' => $declared]) {

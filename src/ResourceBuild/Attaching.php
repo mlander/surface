@@ -586,9 +586,9 @@ final class Attaching {
    *
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
-   * @param list<string|int> $arguments
+   * @param array $arguments
    *   What its owner bound it to, for a BoundSiteListInterface; none for
-   *   its list().
+   *   its list(). The shape is the provider's.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed.
@@ -1027,8 +1027,8 @@ final class Attaching {
    *   The variants a schema read into the blueprint states there.
    * @param class-string<\Drupal\surface\Resource\SiteListInterface>|null $from
    *   The provider of variants from the site, if any.
-   * @param list<string|int> $arguments
-   *   What the provider is bound to.
+   * @param array $arguments
+   *   What the provider is bound to. The shape is the provider's.
    *
    * @return array{children: array<string, string>, labels: array<string, string|\Stringable>, site: array<string, true>}
    *   Each value's variant by name, the label a read or listed one gives
@@ -1219,8 +1219,9 @@ final class Attaching {
    *   The key the variants sit at, for the messages.
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
-   * @param list<string|int> $arguments
-   *   What the owner bound the provider to, if anything.
+   * @param array $arguments
+   *   What the owner bound the provider to, if anything. The shape is the
+   *   provider's.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed, each entry of a closed provider naming the structure

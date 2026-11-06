@@ -288,7 +288,16 @@ on the deciding key (the plugin manager's definitions), else a
 manager, a plugin whose class names its settings with
 `#[UsesStructure]` is that structure, built as declared, its refiners,
 children and defaults with it, and its schema is not read;
-every other value is the structure its schema type is. A `#[Variant]`
+every other value is the structure its schema type is. For an own-key
+expression that structure is the type's `:own` form,
+`config_schema:<type>:own`: its keys less those of the fallback, which
+is the type itself or has the keys of a type it extends at any
+distance. So `views.argument.date_day` (`type: views.argument.date`,
+which is `type: views_argument`, as `views.argument.*` is) holds
+`views.argument.date`'s keys and its own, less those of
+`views.argument.*`. The fallback is matched by keys, not by name, and a
+type left out whose keys are those of no type in the chosen type's
+ancestry is refused (`ConfigSchemaReader::structure()`). A `#[Variant]`
 declared for the owner at the key wins over both, as for any provider
 (why: [decision](decisions.md#a-placed-block-is-a-resource)).
 
