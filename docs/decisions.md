@@ -3418,6 +3418,16 @@ back. (`Mixing::declareMembers()`, `Mixing::widest()`,
 `Mixing::chosenRules()`, `Rule::holdTo()`, `Narrowing`, `Accepting`,
 `SchemaResolver::mixInVariants()`, the beacon in `MixinVariantsTest`)
 
+*Amended 2026-11-06:* `ConfigSchemaTypes` takes its arguments by name,
+as core passes a constraint's options: `['type' => <expression>]` for
+the own-key form above, `['type' => 'block.block.*', 'path' =>
+'settings']` for a value typed through a parent key. `by` is optional:
+given, the provider refuses an expression decided by another key, which
+protects a binding written by hand; the reader gives none, since it
+binds the key the schema names. A list by position is refused, the
+message showing the keyed spelling. Other providers read their
+arguments as they did. (`ConfigSchemaTypes::listFor()`)
+
 ### An anonymous map
 
 Decided 2026-11-01. `addMap($key, $label, $define)` declares an object

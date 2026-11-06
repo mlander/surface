@@ -57,7 +57,11 @@ class ConfigSchemaTypesTest extends SurfaceKernelTestBase {
    * Tests a block plugin's declared structure is its variant at a key.
    */
   public function testBlockSettingsNameTheDeclaredStructure(): void {
-    $entries = $this->container->get(ConfigSchemaTypes::class)->listFor(['block.block.*', 'settings', 'plugin'])->entries();
+    $entries = $this->container->get(ConfigSchemaTypes::class)->listFor([
+      'type' => 'block.block.*',
+      'path' => 'settings',
+      'by' => 'plugin',
+    ])->entries();
     $this->assertSame(StickyNoteBlock::class, $entries['surface_resource_test_sticky_note']['structure'], 'The plugin that is its own structure is listed as its class.');
     $this->assertSame(ConfigSchemaReader::id('block.settings.*'), $this->registry()->getDefinition($entries['system_powered_by_block']['structure'])->id, 'A plugin naming none is read from its schema.');
 
@@ -73,7 +77,10 @@ class ConfigSchemaTypesTest extends SurfaceKernelTestBase {
    * Tests a condition's declared structure is its variant mixed in.
    */
   public function testConditionNamesTheDeclaredStructure(): void {
-    $entries = $this->container->get(ConfigSchemaTypes::class)->listFor(['condition.plugin.[id]', '', 'id'])->entries();
+    $entries = $this->container->get(ConfigSchemaTypes::class)->listFor([
+      'type' => 'condition.plugin.[id]',
+      'by' => 'id',
+    ])->entries();
     $this->assertSame(ThresholdStructure::class, $entries['surface_resource_test_threshold']['structure']);
     $this->assertSame(ConfigSchemaReader::id('condition.plugin.request_path', '', 'condition.plugin'), $this->registry()->getDefinition($entries['request_path']['structure'])->id);
 
