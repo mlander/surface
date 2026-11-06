@@ -106,3 +106,41 @@ surface_reader_test.format.italic:
     slant:
       type: integer
       label: 'Slant'
+
+# A signal typed by its own key, two types declaring one key unlike: a
+# string in one, a mapping in the other, as views.area.text and
+# views.area.text_custom declare their content.
+surface_reader_test_signal:
+  type: mapping
+  label: 'Signal'
+  mapping:
+    kind:
+      type: string
+      label: 'Kind'
+
+surface_reader_test.signal.*:
+  type: surface_reader_test_signal
+  label: 'Any signal'
+
+surface_reader_test.signal.word:
+  type: surface_reader_test_signal
+  label: 'Word'
+  mapping:
+    pattern:
+      type: string
+      label: 'Pattern'
+
+surface_reader_test.signal.timed:
+  type: surface_reader_test_signal
+  label: 'Timed'
+  mapping:
+    pattern:
+      type: mapping
+      label: 'Pattern'
+      mapping:
+        on:
+          type: integer
+          label: 'On'
+        off:
+          type: integer
+          label: 'Off'

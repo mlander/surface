@@ -914,3 +914,32 @@ surface_resource_test.shelter.covering.thatch:
       constraints:
         Range:
           min: 1
+
+# Generated from the resource_test.beacon resource by drush surface:config-schema.
+surface_resource_test.beacon:
+  type: config_object
+  label: 'resource_test.beacon'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    mode:
+      type: string
+      label: 'Mode'
+    code:
+      type: string
+      label: 'Code'
+      nullable: true
+    color:
+      type: string
+      label: 'Color'
+      nullable: true
+    pattern:
+      type: ignore
+      label: 'Pattern'
+    notes:
+      type: string
+      label: 'Notes'
+      nullable: true

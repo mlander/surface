@@ -643,6 +643,8 @@ final class ResourceCode {
    *   The statement.
    */
   protected function rule(Rule $rule): string {
+    // A rule holding a key to a definition is the build's, never declared.
+    assert($rule->heldTo() === NULL);
     $this->uses[Condition::class] = TRUE;
     $calls = [];
     $condition = $rule->condition();

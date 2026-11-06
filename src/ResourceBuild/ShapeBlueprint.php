@@ -174,8 +174,9 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
    *   The shape, tightened.
    *
    * @throws \LogicException
-   *   For a rule with a condition, or one that requires or rules out, and
-   *   for an effect that would widen the shape.
+   *   For a rule with a condition, or one that requires, rules out or
+   *   holds the shape to another definition, and for an effect that would
+   *   widen the shape.
    */
   public function applyTo(DataDefinition $definition): DataDefinition {
     foreach ($this->rules as $rule) {
@@ -183,6 +184,7 @@ final class ShapeBlueprint implements BlueprintAdditionsInterface {
         $rule->condition() !== NULL => 'with a condition, and a shape has no siblings for one to read: its rule holds wherever it is used',
         $rule->requires() => 'that requires it, and whether a value must be given is each key\'s',
         $rule->rulesOut() => 'that rules it out, and a value that does not apply is each key\'s to say',
+        $rule->heldTo() !== NULL => 'that holds it to another definition, which only the build says, of a member of variants mixed in',
         default => NULL,
       };
       if ($problem !== NULL) {

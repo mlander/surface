@@ -252,7 +252,10 @@ final class SchemaResolver {
    * defs' own conditionals hold in the frame, and the conditionals on the
    * deciding key are the rules the build bound for the choice, one per
    * member: it does not apply unless the key holds a value whose variant
-   * brings it, and is required where that variant requires it. The marker
+   * brings it, it is held to the chosen variant's own schema where two
+   * variants declare it unlike (the frame states it as wide as every def,
+   * the keywords they all state alike), and it is required where that
+   * variant requires it. The marker
    * that named the defs is spent, so the frame reads flat however often
    * it is resolved.
    *
@@ -299,6 +302,8 @@ final class SchemaResolver {
       $under = [];
       $requiring = [];
       $stated = [];
+      // Each member's schema by def, less what presents it, by value.
+      $declared_by = [];
       foreach ($references as $reference => $value) {
         $name = self::defName($reference);
         if ($name === NULL || !array_key_exists($value, $consts)) {
@@ -309,6 +314,8 @@ final class SchemaResolver {
         foreach (is_array($def['properties'] ?? NULL) ? $def['properties'] : [] as $member => $property) {
           $members[(string) $member] ??= $property;
           $under[(string) $member][] = $consts[$value];
+          $unlabeled = is_array($property) ? array_diff_key($property, array_flip(['title', 'description'])) : $property;
+          $declared_by[(string) $member][] = [$consts[$value], $unlabeled];
         }
         foreach (is_array($def['required'] ?? NULL) ? $def['required'] : [] as $member) {
           $requiring[(string) $member][] = $consts[$value];
@@ -318,6 +325,29 @@ final class SchemaResolver {
             $stated[] = $condition;
           }
         }
+      }
+      // A member two defs declare unlike: as wide as every def, the
+      // keywords they all state alike, held to each one's own by a
+      // conditional on the value that chooses it.
+      $unlike = [];
+      foreach ($declared_by as $member => $schemas) {
+        $alike = [];
+        foreach ($schemas as [$value, $schema]) {
+          $alike[serialize($schema)][0][] = $value;
+          $alike[serialize($schema)][1] = $schema;
+        }
+        if (count($alike) < 2) {
+          continue;
+        }
+        $unlike[$member] = array_values($alike);
+        $wide = is_array($members[$member]) ? array_intersect_key($members[$member], array_flip(['title', 'description'])) : [];
+        $first = $schemas[0][1];
+        foreach (is_array($first) ? $first : [] as $keyword => $said) {
+          if (array_filter($schemas, static fn (array $one): bool => !is_array($one[1]) || !array_key_exists($keyword, $one[1]) || $one[1][$keyword] !== $said) === []) {
+            $wide[$keyword] = $said;
+          }
+        }
+        $members[$member] = $wide;
       }
       // The members after the deciding key, each with what the frame
       // narrows of it laid over.
@@ -349,9 +379,19 @@ final class SchemaResolver {
           'then' => ['properties' => [$member => FALSE]],
           ContractEmitter::EXTENSION => ['declared' => TRUE],
         ];
+        foreach ($unlike[$member] ?? [] as [$values, $schema]) {
+          $rules[] = [
+            'if' => $chosen_by($values),
+            'then' => ['properties' => [$member => $schema]],
+            ContractEmitter::EXTENSION => ['declared' => TRUE],
+          ];
+        }
         if (isset($requiring[$member])) {
-          // Required, and so never null: its type as the def states it.
-          $typed = is_array($members[$member]) ? array_intersect_key($members[$member], array_flip(['type', 'oneOf'])) : [];
+          // Required, and so never null: its type as the def states it, or
+          // as the conditional holding it to its def does.
+          $typed = is_array($members[$member]) && !isset($unlike[$member])
+            ? array_intersect_key($members[$member], array_flip(['type', 'oneOf']))
+            : [];
           $rules[] = [
             'if' => $chosen_by($requiring[$member]),
             'then' => ($typed === [] ? [] : ['properties' => [$member => $typed]]) + ['required' => [$member]],

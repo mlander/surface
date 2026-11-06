@@ -3190,6 +3190,13 @@ that is the owner's key; a structure mixed in with `mixIn()` still
 refuses them, as it refuses keys from the site.
 ([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key))
 
+*Amended 2026-11-05, step 4:* a member two variants mixed in declare
+unlike is declared at the frame as wide as both and held to the chosen
+variant's definition, since the chosen value says which definition
+reads it; a member that two structures mixed in with `mixIn()` both
+declare is still refused, since no value chooses between them.
+([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key))
+
 ### A mixin may be chosen by a sibling key
 
 Decided 2026-11-05, by the maintainer. Config schema's own-key form,
@@ -3225,11 +3232,16 @@ the own-key form into it. Each choice, and why:
   is untouched; [Variants](#variants-not-slots) said refinement narrows
   values and cannot swap a shape, which is why this works.
 - **Collisions.** A member two variants declare alike (its type,
-  constraints, settings, default and label, required aside) is one key,
-  which applies when either is chosen. A member they declare
-  differently, or one that is a key the owner, a structure mixed in or
-  another call's variant declares, is refused at build, naming the
-  owner, the variants and the key. A variant may not read a port: any
+  constraints, settings and default, label and required aside) is one
+  key, which applies when either is chosen. A member they declare
+  differently is one key too, declared at the frame with the widest
+  definition both fit, and held to the chosen variant's own definition
+  when that variant is chosen (a declared rule the build binds,
+  `Rule::holdTo()`): of one type, what every variant declares alike;
+  otherwise any value, held whole. A member that is a key the owner, a
+  structure mixed in or another call's variant declares is refused at
+  build, naming the owner, the variants and the key, as are variants at
+  a key two variants declare unlike. A variant may not read a port: any
   module may add one, so the owner could write no wiring that names its
   ports, and `mixInVariants()` takes no `reads:`.
 - **The contract.** The frame's `properties` list the owner's own keys;
@@ -3317,6 +3329,40 @@ each of the three declares every key its types declare beside the
 fallback's open. (`Attaching::declareMembers()`,
 `Attaching::nestedVariants()`, `Attaching::variantKeysOf()`, the shelter
 and the camp in `MixinVariantsTest`)
+
+*Amended 2026-11-05, step 4:* a member two variants declare unlike is
+declared once at the frame with the widest definition both fit, and held
+to the chosen variant's own definition when that variant is chosen, so
+the collision refusal is gone for `mixInVariants()`. Config schema has
+one whole type per value (`views.field.field` extends `views_field`,
+which extends `views_handler`, and a stored handler is one mapping of
+that type) and no frame its sibling types share, so nothing in it asks
+two types to declare a key alike, and `views.field.field`'s `separator`
+(a `label` with core's `Regex`) beside `views.field.prerender_list`'s (a
+`string`) is no defect. The frame they share is ours, so the conflict is
+ours to absorb, and the model stays: declared statically, narrowed by
+value. Widest: of one class and data type, that type with the
+constraints, settings and default every variant declares alike (`label`,
+`text` and `string` are one data type, `string`; `email` is its own);
+anything else, a child against a value or two children of different
+structures among it, any value, held whole, as the reader declares a key
+it reads no shape for. Held: one declared rule per distinct definition,
+`holdTo()`, after the rule that says where the member applies and before
+the one that requires it; the pipeline accepts the member by the
+definition it is held to, the chosen variant's default laid in where
+nothing is stored. The full document is unchanged in form: each def
+states its member strictly, and the frame lists none, since a property
+of the frame is evaluated whatever is chosen; the inline reading lays
+the wide definition into the flat frame and states the holding as one
+conditional per def. Nothing is nested, no stored shape changes, no
+schema changes. Still refused: variants at a key two variants declare
+unlike, since the owner's variants at a key are one set; and `mixIn()`
+of plain structures declaring one key unlike, since no value chooses
+between them. The reader's wall follows: in core `views.field`,
+`views.cache` and `views.area` mix their variants in, and nothing falls
+back. (`Attaching::declareMembers()`, `Attaching::widest()`,
+`Attaching::chosenRules()`, `Rule::holdTo()`, `Narrowing`, `Accepting`,
+`SchemaResolver::mixInVariants()`, the beacon in `MixinVariantsTest`)
 
 ### An anonymous map
 

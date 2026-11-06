@@ -9,7 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 
 /**
- * Mixes in two variants that declare "size" differently.
+ * Mixes in two variants that declare "size" differently, held to each.
  */
 #[Structure('resource_test.broken.kit_clash')]
 final class KitClashStructure implements StructureInterface {

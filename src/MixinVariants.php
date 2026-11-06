@@ -24,8 +24,10 @@ use Drupal\surface\Pipeline\ValueState;
  * What this carries is what only the contract and the doors still need
  * to tell apart: the deciding key, each variant as a Mixin (the
  * structure built by itself for its def, and the owner's keys it
- * brought), the labels its values are offered as, and the members its
- * access took back out, which storage keeps as stored.
+ * brought), the labels its values are offered as, the members its
+ * access took back out, which storage keeps as stored, and the members
+ * two variants declare unlike, which the frame declares as wide as both
+ * and a rule holds to the chosen variant's definition.
  *
  * @see \Drupal\surface\Resource\BlueprintAdditionsInterface::mixInVariants()
  * @see docs/resources.md#variants-mixed-in
@@ -46,12 +48,18 @@ final class MixinVariants {
    * @param string[] $withdrawn
    *   The members access took back out, with the variants it left out:
    *   storage keeps what it holds under them.
+   * @param string[] $heldTo
+   *   The members two variants declare unlike: the owner's frame declares
+   *   each as wide as every variant's definition, and a rule holds it to
+   *   the chosen variant's own, so it is read by that one, a value
+   *   accepted against it.
    */
   public function __construct(
     public readonly string $by,
     public readonly array $variants,
     public readonly array $labels = [],
     public readonly array $withdrawn = [],
+    public readonly array $heldTo = [],
   ) {
   }
 

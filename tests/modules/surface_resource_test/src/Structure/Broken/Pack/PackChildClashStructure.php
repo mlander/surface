@@ -10,7 +10,7 @@ use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Variants\KitVariants;
 
 /**
- * Mixes in two variants that hold different children at "belt".
+ * Mixes in two variants that hold different children at "belt", held to each.
  */
 #[Structure('resource_test.broken.pack_child_clash')]
 final class PackChildClashStructure implements StructureInterface {

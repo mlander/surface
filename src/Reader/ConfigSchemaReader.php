@@ -716,13 +716,16 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
   /**
    * Says why the types an own-key expression names cannot be mixed in.
    *
-   * The build refuses (mixInVariants()) two variants that declare one key
-   * unlike: its type, constraints, settings and default, or the child or
-   * the variants it holds, the label and the description aside. A child
-   * at a fixed key or a collection is the owner's child at its key, and
-   * variants at a key the owner's variants there, and neither is a wall.
-   * Each type the expression names is read here, less the fallback's
-   * keys, as the variant it would be.
+   * Two variants that declare one key unlike are no wall: the build
+   * declares the key as wide as both and holds it to the chosen type's
+   * own definition (mixInVariants()), since config schema has one type
+   * per value and no frame its types share. A child at a fixed key or a
+   * collection is the owner's child at its key, and variants at a key the
+   * owner's variants there. The build refuses one thing of these: a key
+   * two variants declare unlike where one holds variants at it, since the
+   * owner's variants at a key are one set of variants. Each type the
+   * expression names is read here, less the fallback's keys, as the
+   * variant it would be.
    *
    * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
    *
@@ -768,8 +771,8 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
         if ($signature === NULL) {
           continue;
         }
-        if (isset($declared[$key]) && $declared[$key][1] !== $signature) {
-          return sprintf('the types %s and %s both declare "%s", and not alike', $declared[$key][0], $name, $key);
+        if (isset($declared[$key]) && $declared[$key][1] !== $signature && (str_starts_with($declared[$key][1], 'variants ') || str_starts_with($signature, 'variants '))) {
+          return sprintf('the types %s and %s both declare "%s", and not alike, where one holds variants at it', $declared[$key][0], $name, $key);
         }
         $declared[$key] ??= [$name, $signature];
       }

@@ -264,15 +264,17 @@ noted at the key's path (`Reading::left()`)
 **What still falls back.** A type chosen by its own key mixes its
 variants in unless the build would refuse them
 (`ConfigSchemaReader::ownKeyWall()`): two types that declare one key
-unlike. A variant may hold children, maps and variants at a key. Where
-the build would refuse, the frame holds the fallback's keys, and every
-key a chosen type declares beside them open. In core three expressions
-fall back: `views.field.[plugin_id]` (`separator` a `label`, with its
-`Regex`, in `views.field.field`, a `string` in
-`views.field.prerender_list`), `views.cache.[type]` (`options` a
-sequence in `none` and `tag`, a mapping in `time`) and
-`views.area.[plugin_id]` (`content` a `text_format` in `text`, a `text`
-in `text_custom`)
+unlike where one holds variants at it. A variant may hold children,
+maps and variants at a key, and two may declare one key unlike: the
+structure declares it as wide as both, and holds it to the chosen type's
+own definition. Where the build would refuse, the frame holds the
+fallback's keys, and every key a chosen type declares beside them open.
+In core nothing falls back: `views.field.[plugin_id]` holds `separator`
+to a `label`, with its `Regex`, under `views.field.field` and to a
+plain `string` under `views.field.prerender_list`, `views.cache.[type]`
+holds `options` to any value under `none` and `tag` and to a mapping
+under `time`, and `views.area.[plugin_id]` holds `content` to a
+`text_format` mapping under `text` and to a `text` under `text_custom`
 (why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key)).
 
 ## The decision
