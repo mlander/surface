@@ -271,9 +271,11 @@ the record of the rework that brought the module to the pattern.
   either reads no shape for is declared **open**, `any` held whole to
   nothing (`LeafRules::open()`), since a derived structure is closed.
   `Variants\ConfigSchemaTypes` lists the variants a type named through
-  another key chooses, a plugin's `#[UsesStructure]` before its schema
-  where a plugin manager gives the values
-  (`docs/reading-a-schema.md#config-schema`).
+  another key chooses, bound by keyed arguments (`['type' =>
+  'block.block.*', 'path' => 'settings']`, `['type' =>
+  'condition.plugin.[id]']`, `'by'` optional, checked when given), a
+  plugin's `#[UsesStructure]` before its schema where a plugin manager
+  gives the values (`docs/reading-a-schema.md#config-schema`).
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
   key, `addEach('forms', 'boolean', from: Provider::class, label:
@@ -686,7 +688,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1908, Assertions: 45237, Errors: 0, Failures: 0, Skipped: 3. Classes: 265 of 265, 8 at a time, browser classes 4.
+phpunit: Tests: 1909, Assertions: 45242, Errors: 0, Failures: 0, Skipped: 3. Classes: 265 of 265, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -706,7 +708,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1800, Assertions: 41088, Skipped: 3, Deprecations: 130. Classes:
+`Tests: 1801, Assertions: 41093, Skipped: 3, Deprecations: 130. Classes:
 216, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 

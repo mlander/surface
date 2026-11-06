@@ -63,9 +63,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param string|null $from
    *   The provider of variants from the site, by class, or NULL for the
    *   #[Variant] classes alone.
-   * @param list<string|int> $arguments
+   * @param array $arguments
    *   What the provider lists for (BoundSiteListInterface::listFor()), or
-   *   none for its list().
+   *   none for its list(). The shape is the provider's.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to describe with the core
@@ -268,7 +268,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @code
    * $inputs->add('kind', 'string', t('Kind'));
    * $inputs->mixInVariants('kind');
-   * $inputs->mixInVariants('plugin_id', from: ConfigSchemaTypes::class, arguments: ['views.field.[plugin_id]', '', 'plugin_id']);
+   * $inputs->mixInVariants('plugin_id', from: ConfigSchemaTypes::class, arguments: ['type' => 'views.field.[plugin_id]']);
    * @endcode
    *
    * @param string $by
@@ -276,9 +276,9 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param string|null $from
    *   The provider of variants from the site, by class, or NULL for the
    *   #[Variant] classes alone.
-   * @param list<string|int> $arguments
+   * @param array $arguments
    *   What the provider lists for (BoundSiteListInterface::listFor()), or
-   *   none for its list().
+   *   none for its list(). The shape is the provider's.
    *
    * @return $this
    *

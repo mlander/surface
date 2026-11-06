@@ -123,8 +123,7 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
     // What a variants expression lists, counted, each typed candidate read
     // in turn.
     $variants = static function (string $where, array $arguments, int $depth, string $from) use ($provider, &$tally, &$views, &$queue): void {
-      [$v_type, $v_path] = $arguments;
-      $resolved = $provider->resolve($v_type, $v_path);
+      $resolved = $provider->resolve((string) $arguments['type'], (string) ($arguments['path'] ?? ''));
       $typed_count = count(array_filter($resolved['candidates'], static fn (array $candidate): bool => $candidate['type'] !== NULL));
       $count = count($resolved['candidates']);
       $tally['sources'][] = [$where, $resolved['expression'], $resolved['source'], $count, $typed_count];

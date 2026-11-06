@@ -175,7 +175,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
     $by = (string) $expression['by'];
     $wall = $this->ownKeyWall($expression, $fallback);
     if ($wall === NULL) {
-      $inputs->mixInVariants($by, from: ConfigSchemaTypes::class, arguments: [$named, '', $by]);
+      $inputs->mixInVariants($by, from: ConfigSchemaTypes::class, arguments: ['type' => $named]);
       return;
     }
     // What the build would refuse to mix in: every key a type it chooses
@@ -684,9 +684,8 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
           return $this->open($inputs, $key, $label, $required, $reading, $here, sprintf('Its type is chosen by "%s", which this mapping holds as no value: variants are chosen by a sibling of one value, so the key is declared open, holding any value.', $by));
         }
         $shell = $inputs->attachVariants($key, by: $by, label: $label, from: ConfigSchemaTypes::class, arguments: [
-          $type,
-          $full,
-          $by,
+          'type' => $type,
+          'path' => $full,
         ]);
         $reading->expression($here, $named, 'parent', $by, 'variants');
         return $shell;

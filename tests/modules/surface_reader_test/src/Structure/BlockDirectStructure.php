@@ -23,9 +23,9 @@ final class BlockDirectStructure implements StructureInterface {
       ->addConstraint('Choice', ['choices' => ['page_title_block', 'system_branding_block', 'system_menu_block:main']]);
 
     $inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [
-      'block.block.*',
-      'settings',
-      'plugin',
+      'type' => 'block.block.*',
+      'path' => 'settings',
+      'by' => 'plugin',
     ]);
   }
 

@@ -29,8 +29,8 @@ final class MixInVariants {
    * @param string|null $from
    *   The provider of variants from the site, by class, or NULL for the
    *   #[Variant] classes alone.
-   * @param list<string|int> $arguments
-   *   What the provider lists for, or none.
+   * @param array $arguments
+   *   What the provider lists for, or none. The shape is the provider's.
    */
   public function __construct(
     public readonly string $by,

@@ -278,14 +278,16 @@ under `time`, and `views.area.[plugin_id]` holds `content` to a
 (why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key)).
 
 **Which structure each value is.** `Variants\ConfigSchemaTypes` lists the
-variants of both forms, bound to the type and the path of the value
-(`['block.block.*', 'settings', 'plugin']`) or to an own-key expression
-(`['condition.plugin.[id]', '', 'id']`). Its values come from a
-`PluginExists` constraint on the deciding key (the plugin manager's
-definitions), else a `Choice`, else the schema's type names. Where they
-come from a plugin manager, a plugin whose class names its settings
-with `#[UsesStructure]` is that structure, built as declared, its
-refiners, children and defaults with it, and its schema is not read;
+variants of both forms, bound by name to the type and the path of the
+value (`['type' => 'block.block.*', 'path' => 'settings']`) or to an
+own-key expression (`['type' => 'condition.plugin.[id]']`), with
+`'by' => <key>` where a binding written by hand checks the deciding
+key the schema names. Its values come from a `PluginExists` constraint
+on the deciding key (the plugin manager's definitions), else a
+`Choice`, else the schema's type names. Where they come from a plugin
+manager, a plugin whose class names its settings with
+`#[UsesStructure]` is that structure, built as declared, its refiners,
+children and defaults with it, and its schema is not read;
 every other value is the structure its schema type is. A `#[Variant]`
 declared for the owner at the key wins over both, as for any provider
 (why: [decision](decisions.md#a-placed-block-is-a-resource)).

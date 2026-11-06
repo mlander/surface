@@ -16,14 +16,14 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
 /**
  * Variants from a config schema type named through another key.
  *
- * Bound to a schema type and a dotted path into it, the value whose type
- * is written `prefix.[%parent.<key>]` (or `prefix.[<key>]`), and the key
- * that decides it; or, for `prefix.[<key>]`, to the expression itself
- * with no path, which names it wherever it is used:
+ * Bound by keyed arguments: `type`, a schema type, and `path`, a dotted
+ * path into it, the value whose type is written `prefix.[%parent.<key>]`
+ * (or `prefix.[<key>]`); or, for `prefix.[<key>]`, `type` the expression
+ * itself and no path, which names it wherever it is used:
  *
  * @code
- * $inputs->attachVariants('settings', by: 'type', from: ConfigSchemaTypes::class, arguments: ['field.storage.*.*', 'settings', 'type']);
- * $inputs->mixInVariants('plugin_id', from: ConfigSchemaTypes::class, arguments: ['views.field.[plugin_id]', '', 'plugin_id']);
+ * $inputs->attachVariants('settings', by: 'type', from: ConfigSchemaTypes::class, arguments: ['type' => 'field.storage.*.*', 'path' => 'settings', 'by' => 'type']);
+ * $inputs->mixInVariants('plugin_id', from: ConfigSchemaTypes::class, arguments: ['type' => 'views.field.[plugin_id]']);
  * @endcode
  *
  * It resolves the expression as core's TypeResolver does, each value's
@@ -50,9 +50,12 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * over both, as for any provider. Values from a Choice or from the schema
  * names have no plugin definition, and are read from the schema alone.
  *
- * A third argument restates the deciding key, since listFor() is handed
- * the arguments alone: the list is refused when the expression found is
- * decided by another key.
+ * A `by` argument, optional, restates the deciding key: listFor() is
+ * handed the arguments alone, not the key they are bound at, so a binding
+ * written by hand says which key it expects, and the list is refused when
+ * the expression found is decided by another key. Without it nothing is
+ * checked: the reader binds what the schema names, and the check would
+ * compare the key with itself.
  *
  * Decision: see
  * docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
@@ -87,17 +90,24 @@ final class ConfigSchemaTypes implements BoundSiteListInterface {
   /**
    * {@inheritdoc}
    *
-   * @param list<string|int> $arguments
-   *   The schema type, the dotted path of the value in it, and the key
-   *   that decides it; or an own-key expression as written, no path, and
-   *   the key.
+   * @param array $arguments
+   *   By name, checked here since an owner may bind any array: `type`,
+   *   the schema type, or an own-key expression as written; `path`, the
+   *   dotted path of the value in it, absent or empty for an expression;
+   *   `by`, the key that decides it, absent for no check.
    *
    * @throws \LogicException
-   *   When the path names no value typed through another key, or one that
-   *   key is not the deciding key named.
+   *   When the arguments hold a key by position or name no type, when
+   *   the path names no value typed through another key, or one that key
+   *   is not the deciding key named.
    */
   public function listFor(array $arguments): SiteList {
-    [$type, $path, $by] = array_map('strval', $arguments) + ['', '', ''];
+    if (!isset($arguments['type']) || array_filter(array_keys($arguments), 'is_int') !== []) {
+      throw new \LogicException(sprintf('ConfigSchemaTypes takes its arguments by name, arguments: [\'type\' => \'block.block.*\', \'path\' => \'settings\'] or [\'type\' => \'condition.plugin.[id]\'], with \'by\' => <key> to check the deciding key; given %s.', json_encode($arguments, JSON_UNESCAPED_SLASHES)));
+    }
+    $type = (string) $arguments['type'];
+    $path = (string) ($arguments['path'] ?? '');
+    $by = (string) ($arguments['by'] ?? '');
     $resolved = $this->resolve($type, $path);
     if ($by !== '' && $resolved['by'] !== $by) {
       throw new \LogicException(sprintf('ConfigSchemaTypes lists the variants of %s at %s for "%s", and the schema types it by "%s" (%s): the variants are chosen by the key the schema names.', $type, $path, $by, $resolved['by'], $resolved['expression']));

@@ -154,9 +154,9 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $typed = $this->container->get('config.typed');
     $provider = $this->container->get(ConfigSchemaTypes::class);
     $bound = [
-      'block' => ['block.block.*', 'settings', 'plugin'],
-      'field storage' => ['field.storage.*.*', 'settings', 'type'],
-      'condition' => ['block.block.*', 'visibility.*', 'id'],
+      'block' => ['type' => 'block.block.*', 'path' => 'settings', 'by' => 'plugin'],
+      'field storage' => ['type' => 'field.storage.*.*', 'path' => 'settings', 'by' => 'type'],
+      'condition' => ['type' => 'block.block.*', 'path' => 'visibility.*', 'by' => 'id'],
     ];
     $values = [
       'block' => ['page_title_block', 'system_branding_block', 'system_menu_block:main'],
@@ -180,7 +180,20 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
   public function testTheProviderRefusesAnotherDecidingKey(): void {
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('ConfigSchemaTypes lists the variants of field.storage.*.* at settings for "field_type", and the schema types it by "type"');
-    $this->container->get(ConfigSchemaTypes::class)->listFor(['field.storage.*.*', 'settings', 'field_type']);
+    $this->container->get(ConfigSchemaTypes::class)->listFor([
+      'type' => 'field.storage.*.*',
+      'path' => 'settings',
+      'by' => 'field_type',
+    ]);
+  }
+
+  /**
+   * Tests the provider refuses its arguments by position.
+   */
+  public function testTheProviderRefusesPositionalArguments(): void {
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('ConfigSchemaTypes takes its arguments by name, arguments: [\'type\' => \'block.block.*\', \'path\' => \'settings\']');
+    $this->container->get(ConfigSchemaTypes::class)->listFor(['block.block.*', 'settings', 'plugin']);
   }
 
   /**
@@ -194,7 +207,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame('attachVariants', $keys['settings']['verb']);
     $this->assertSame('plugin', $keys['settings']['by']);
     $this->assertSame(ConfigSchemaTypes::class, $keys['settings']['from']);
-    $this->assertSame(['block.block.*', 'settings', 'plugin'], $keys['settings']['arguments']);
+    $this->assertSame(['type' => 'block.block.*', 'path' => 'settings'], $keys['settings']['arguments']);
     $this->assertSame('attachList', $keys['visibility']['verb']);
     $this->assertSame('config_schema:condition.plugin.[id]', $reading->structures()['visibility.*']);
     $this->assertSame('own key', $reading->expressions()['visibility.*']['form']);
@@ -240,7 +253,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
       [
         'by' => 'id',
         'from' => ConfigSchemaTypes::class,
-        'arguments' => ['condition.plugin.[id]', '', 'id'],
+        'arguments' => ['type' => 'condition.plugin.[id]'],
         'after' => end($fallback),
       ],
     ], $inputs->mixedInVariants, 'Then the variants the id chooses, bound to the expression.');
@@ -250,7 +263,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $full = $this->full($name);
     $this->assertSame($fallback, array_keys($full['properties']), 'The fallback\'s keys alone: a member is stated by its variant\'s def.');
     $this->assertFalse($full['unevaluatedProperties']);
-    $listed = $this->container->get(ConfigSchemaTypes::class)->listFor(['condition.plugin.[id]', '', 'id'])->entries();
+    $listed = $this->container->get(ConfigSchemaTypes::class)->listFor(['type' => 'condition.plugin.[id]', 'by' => 'id'])->entries();
     $this->assertNotEmpty($listed);
     $branches = [];
     foreach ($full['allOf'] as $conditional) {

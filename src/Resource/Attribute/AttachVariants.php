@@ -39,8 +39,9 @@ final class AttachVariants {
    * @param string|null $from
    *   The provider that lists variants for the values no #[Variant]
    *   declares, a SiteListInterface service class; NULL for none.
-   * @param list<string|int> $arguments
-   *   What a BoundSiteListInterface provider is handed.
+   * @param array $arguments
+   *   What a BoundSiteListInterface provider is handed. The shape is the
+   *   provider's.
    */
   public function __construct(
     public readonly string $by,
