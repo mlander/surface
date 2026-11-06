@@ -22,8 +22,7 @@ final class FieldStorageJsonStructure implements StructureInterface {
     $inputs->add('field_type', 'string', t('Plugin'))
       ->addConstraint('Choice', ['choices' => ['decimal', 'entity_reference', 'string']]);
 
-    $inputs->attachVariants('settings', by: 'field_type', from: FieldStorageSettingsSchemaVariants::class)
-      ->setLabel(t('Settings'));
+    $inputs->attachVariants('settings', by: 'field_type', label: t('Settings'), from: FieldStorageSettingsSchemaVariants::class);
   }
 
 }

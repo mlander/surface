@@ -24,8 +24,7 @@ final class NarrowsAttachedStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('channel', 'string', 'Channel')
       ->addConstraint('Choice', ['choices' => ['post', 'email']]);
-    $inputs->attach('address', NoticeAddressStructure::class)
-      ->setLabel('Address');
+    $inputs->attach('address', NoticeAddressStructure::class, 'Address');
   }
 
   /**

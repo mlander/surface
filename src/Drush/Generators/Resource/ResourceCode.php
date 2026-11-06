@@ -27,8 +27,9 @@ use Drupal\surface\Refinement\Rule;
  * reference among them, its constraint written), addList() for a list of
  * values, addMap() for a map, attach() and
  * attachList() of a structure written as a class of its own, and
- * narrow()->when() for each declared rule, each key's label, description,
- * required and constraints chained as core's setters. What it cannot write
+ * narrow()->when() for each declared rule, each key's label given to its
+ * verb and its description, required and constraints chained as core's
+ * setters. What it cannot write
  * as a call is written as a comment above the key it is about, naming it:
  * a constraint the reader kept as JsonSchema (a foreign constraint), with
  * the keywords it holds; variants, a mixin, a port; and, for a config
@@ -333,7 +334,6 @@ final class ResourceCode {
     if ($unlabeled) {
       $this->unlabeled[] = $name;
     }
-    $calls = [];
     if ($entry->list !== NULL || $entry->attachment !== NULL) {
       $child = $entry->list !== NULL ? $entry->list->item : $entry->attachment;
       $class = $this->structure($child->child, $child->source ?? $at, $name, $label);
@@ -343,13 +343,12 @@ final class ResourceCode {
         foreach (['min', 'max'] as $bound) {
           $bounds .= isset($count[$bound]) ? sprintf(', %s: %s', $bound, PhpLiteral::scalar($count[$bound])) : '';
         }
-        $head = sprintf('$inputs->attachList(%s, %s::class%s)', $this->ref($name), $class, $bounds);
+        $head = sprintf('$inputs->attachList(%s, %s::class, %s%s)', $this->ref($name), $class, PhpLiteral::translated($label), $bounds);
       }
       else {
-        $head = sprintf('$inputs->attach(%s, %s::class)', $this->ref($name), $class);
+        $head = sprintf('$inputs->attach(%s, %s::class, %s)', $this->ref($name), $class, PhpLiteral::translated($label));
       }
-      $calls[] = '->setLabel(' . PhpLiteral::translated($label) . ')';
-      $calls = [...$calls, ...$this->described($definition)];
+      $calls = $this->described($definition);
     }
     else {
       $default = $surface->getDefault($name);

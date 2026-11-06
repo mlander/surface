@@ -35,8 +35,7 @@ final class DigestResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('frequency', 'string', 'Frequency', default: 'weekly')
       ->setRequired(TRUE);
-    $inputs->attachVariants('schedule', by: 'frequency')
-      ->setLabel('Schedule');
+    $inputs->attachVariants('schedule', by: 'frequency', label: 'Schedule');
   }
 
 }

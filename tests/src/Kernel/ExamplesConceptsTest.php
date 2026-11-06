@@ -679,7 +679,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertSame('Both are enabled on this site now.', $items[1]);
     $this->assertSame('Place a component block in stark: /admin/structure/block/add/surface_component/stark', $items[4]);
     [$spotlight, $block_lines] = array_map(static fn (array $cell): string => (string) $cell['data']['#code'], $page['parts']['two_lines']['#rows'][0]);
-    $lines = "\$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)\n  ->setLabel(t('Props'));\n\$inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)\n  ->setLabel(t('Slots'));";
+    $lines = "\$inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);\n\$inputs->attachVariants('slots', by: 'component', label: t('Slots'), from: ComponentSlots::class);";
     $this->assertStringContainsString($lines, $spotlight);
     $this->assertSame("\$inputs->add('component', 'string', t('Component'));\n" . $lines, $block_lines);
     $contract = json_decode((string) $page['parts']['contract']['content']['#code'], TRUE);

@@ -96,13 +96,13 @@ final class CardResource implements ResourceInterface {
       $greeting->addDefinition('format', $format, default: 'plain');
     });
 
-    $inputs->attach('envelope', EnvelopeStructure::class)->setLabel('Envelope');
+    $inputs->attach('envelope', EnvelopeStructure::class, 'Envelope');
 
-    $inputs->attachList('inserts', EnvelopeStructure::class)->setLabel('Inserts');
+    $inputs->attachList('inserts', EnvelopeStructure::class, 'Inserts');
 
     $inputs->add('paper', 'string', 'Paper', default: 'plain');
 
-    $inputs->attachVariants('paper_settings', by: 'paper')->setLabel('Paper settings');
+    $inputs->attachVariants('paper_settings', by: 'paper', label: 'Paper settings');
 
     $code = $inputs->add('code', 'string', 'Code');
     DefinitionMetadata::setSecret($code);

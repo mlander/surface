@@ -27,11 +27,9 @@ the `tool` module; the HTTP door is the base module's.
 `status`), the plugin's settings and the visibility:
 
 ```php
-$inputs->attachVariants('settings', by: 'plugin', from: BlockPluginStructures::class)
-  ->setLabel(t('Settings'));
+$inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: BlockPluginStructures::class);
 // ...
-$inputs->attachList('visibility', VisibilityConditionStructure::class)
-  ->setLabel(t('Visibility'));
+$inputs->attachList('visibility', VisibilityConditionStructure::class, t('Visibility'));
 ```
 
 - **The plugin chooses the settings.** `Variants\BlockPluginStructures`

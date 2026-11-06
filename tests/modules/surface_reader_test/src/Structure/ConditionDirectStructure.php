@@ -24,12 +24,11 @@ final class ConditionDirectStructure implements StructureInterface {
     $inputs->add('id', 'string', t('Plugin'))
       ->addConstraint('Choice', ['choices' => ['request_path', 'response_status', 'user_role']]);
 
-    $inputs->attachVariants('settings', by: 'id', from: ConfigSchemaTypes::class, arguments: [
+    $inputs->attachVariants('settings', by: 'id', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [
       'block.block.*',
       'visibility.*',
       'id',
-    ])
-      ->setLabel(t('Settings'));
+    ]);
   }
 
 }

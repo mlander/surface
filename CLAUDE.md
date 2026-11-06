@@ -276,11 +276,12 @@ the record of the rework that brought the module to the pattern.
   (`docs/reading-a-schema.md#config-schema`).
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
-  key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
-  a type or shape per thing; a reference per thing naming its entity
-  type, `addEach('pages', NULL, from: Provider::class, to: 'node', bundles:
-  [...])`) or `attachEach('rows', Row::class, from:
-  ...)` (a structure per thing); the provider is a service implementing
+  key, `addEach('forms', 'boolean', from: Provider::class, label:
+  t('Forms'))` (a value of a type or shape per thing, its label
+  required; a reference per thing naming its entity type,
+  `addEach('pages', NULL, from: Provider::class, label: t('Pages'), to:
+  'node', bundles: [...])`) or `attachEach('rows', Row::class, from:
+  ..., label: ...)` (a structure per thing); the provider is a service implementing
   `SiteListInterface`, whose `list()` answers a `SiteList` (id, label,
   optional start and lock, and the cacheability of what it read; an id
   with a dot or a colon, a schema or a structure refused), asked at
@@ -557,8 +558,13 @@ traits, which the module's own matrix and round trip tests use.
 Attached structures are `attach()` (a fixed child, by class) and
 `attachVariants()` (variants a sibling key chooses between, always
 open: every `#[Variant]` at the key is one, and the parent names none).
-Both return the map at the key, which the owner labels with the core
-setters; `describe()` rewords a key for an alter that does not own it,
+Every verb that declares a key takes its label with the key, after what
+fills it: optional on `attach()`, `attachList()`, `attachVariants()`
+and `attachEach()`, NULL leaving the structure's own, required on
+`addEach()`, whose values have none to borrow
+(`docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for`).
+Each returns the core definition at the key, which the owner describes
+with the core setters; `describe()` rewords a key for an alter that does not own it,
 and arranges a key (group, weight, placeholder, prefix, suffix, help)
 for its owner or an alter, after the key is declared; a second alter
 setting a fact another alter set on the key is refused at build.

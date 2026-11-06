@@ -19,7 +19,7 @@ final class AccountKeysStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('own', 'boolean', from: AccountKeys::class);
+    $inputs->addEach('own', 'boolean', from: AccountKeys::class, label: t('Own'));
   }
 
 }

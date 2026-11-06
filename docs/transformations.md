@@ -132,8 +132,7 @@ $inputs->add('page', 'integer', t('Announcement'))
   ->setDescription(t('The article that announces the sponsor.'));
 
 // Of any type: an entity type, then an id of it.
-$inputs->attach('thing', ThingStructure::class)
-  ->setLabel(t('Featured beside'))
+$inputs->attach('thing', ThingStructure::class, t('Featured beside'))
   ->setDescription(t('Any content the sponsor is featured beside.'));
 ```
 

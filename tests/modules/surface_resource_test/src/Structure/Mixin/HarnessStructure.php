@@ -26,16 +26,13 @@ final class HarnessStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('straps', 'integer', t('Straps'), default: 2);
 
-    $inputs->attach('belt', BeltStructure::class)
-      ->setLabel(t('Hip belt'));
+    $inputs->attach('belt', BeltStructure::class, t('Hip belt'));
 
-    $inputs->attachList('pockets', PocketStructure::class, max: 2)
-      ->setLabel(t('Pockets'));
+    $inputs->attachList('pockets', PocketStructure::class, t('Pockets'), max: 2);
 
     $inputs->addMap('cover', t('Rain cover'), static function (BlueprintInterface $cover): void {
       $cover->add('color', 'string', t('Color'));
-      $cover->attach('pouch', PocketStructure::class)
-        ->setLabel(t('Pouch'));
+      $cover->attach('pouch', PocketStructure::class, t('Pouch'));
     });
   }
 

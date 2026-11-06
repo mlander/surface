@@ -11,7 +11,7 @@ namespace Drupal\surface\Resource\Attribute;
  * provider lists.
  *
  * @code
- * #[Each(from: TicketTypes::class, type: 'boolean', label: 'On sale')]
+ * #[Each('boolean', from: TicketTypes::class, label: 'On sale')]
  * public array $on_sale;
  * @endcode
  *
@@ -23,13 +23,14 @@ final class Each {
   /**
    * Constructs an Each attribute.
    *
-   * @param string $from
-   *   The provider, a SiteListInterface service class.
    * @param string|null $type
    *   Each entry's type, of those add() takes or a shape's class; NULL
    *   for a reference per entry, with `to:`.
-   * @param string|\Stringable|null $label
-   *   The map's label, written as #[Input]'s is; NULL for none.
+   * @param string $from
+   *   The provider, a SiteListInterface service class.
+   * @param string|\Stringable $label
+   *   The map's label, written as #[Input]'s is: the values have no
+   *   structure to borrow one from.
    * @param string|\Stringable|null $description
    *   Its description; NULL for none.
    * @param mixed $default
@@ -41,9 +42,9 @@ final class Each {
    *   For a reference per entry, the bundles it may be of; empty for any.
    */
   public function __construct(
+    public readonly ?string $type,
     public readonly string $from,
-    public readonly ?string $type = NULL,
-    public readonly string|\Stringable|null $label = NULL,
+    public readonly string|\Stringable $label,
     public readonly string|\Stringable|null $description = NULL,
     public readonly mixed $default = NULL,
     public readonly ?string $to = NULL,

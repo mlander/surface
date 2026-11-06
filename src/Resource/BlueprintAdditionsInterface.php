@@ -223,8 +223,7 @@ interface BlueprintAdditionsInterface {
    * text emptied where the owner gave one is refused.
    *
    * @code
-   * $inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class)
-   *   ->setLabel(t('Punctuation'));
+   * $inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class, label: t('Punctuation'));
    * $inputs->describe('punctuation', group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE));
    * @endcode
    *
@@ -303,11 +302,11 @@ interface BlueprintAdditionsInterface {
    * they allow stays the structure's.
    *
    * Returns the map definition at the key, as add() returns its
-   * definition, so the owner labels and describes it with the core
-   * setters. The child fills its properties when it is built.
+   * definition, so the owner describes it with the core setters. The
+   * child fills its properties when it is built.
    *
    * @code
-   * $inputs->attach('compliance', ComplianceStructure::class, reads: ['capacity' => 'seats']);
+   * $inputs->attach('compliance', ComplianceStructure::class, t('Compliance'), reads: ['capacity' => 'seats']);
    * @endcode
    *
    * @param string $key
@@ -315,6 +314,9 @@ interface BlueprintAdditionsInterface {
    *   `third_party_settings.<module>`.
    * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface> $structure
    *   The child's class.
+   * @param string|\Stringable|null $label
+   *   The map's label, or NULL to leave the structure's (an alter's
+   *   mount keeps the module's name).
    * @param array<string, string> $reads
    *   The child's ports, each mapped to the container's key it reads: an
    *   owner's key by its name.
@@ -328,7 +330,7 @@ interface BlueprintAdditionsInterface {
    *   wiring is checked when the parent is built: see
    *   docs/resources.md#ports.
    */
-  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition;
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition;
 
   /**
    * A collection at a key: a list whose every item is the child.
@@ -348,13 +350,15 @@ interface BlueprintAdditionsInterface {
    * method on the key, and its value is a list of item maps, in order.
    *
    * Returns the list definition at the key, whose item is the child's
-   * map, as attach() returns the map: the owner labels and describes it
-   * with the core setters, and may add list constraints of its own.
+   * map, as attach() returns the map: the owner describes it with the
+   * core setters, and may add list constraints of its own.
    *
    * @param string $key
    *   The key the collection sits at.
    * @param string $structure
    *   What every item is: its class, or a derived resource's id.
+   * @param string|\Stringable|null $label
+   *   The list's label, or NULL to leave the structure's.
    * @param int|null $min
    *   The fewest items, or NULL for no bound.
    * @param int|null $max
@@ -370,7 +374,7 @@ interface BlueprintAdditionsInterface {
    * @throws \InvalidArgumentException
    *   When a bound is negative, or $min is above $max.
    */
-  public function attachList(string $key, string $structure, ?int $min = NULL, ?int $max = NULL): ListDataDefinition;
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition;
 
   /**
    * Offers more values on a key someone else declared, as an alter.

@@ -34,8 +34,7 @@ final class StoreroomResource implements ResourceInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('name', 'string', 'Name', default: 'Storeroom');
-    $inputs->attachList('aisles', AisleStructure::class, max: 3)
-      ->setLabel('Aisles');
+    $inputs->attachList('aisles', AisleStructure::class, 'Aisles', max: 3);
   }
 
 }

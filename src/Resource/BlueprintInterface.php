@@ -49,8 +49,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * `arguments:`, and implements BoundSiteListInterface.
    *
    * @code
-   * $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
-   *   ->setLabel(t('Props'));
+   * $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
    * $inputs->attachVariants('fields', by: 'bundle', from: BundleFields::class, arguments: ['node']);
    * @endcode
    *
@@ -58,6 +57,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   The key the structure sits at.
    * @param string $by
    *   The sibling input key whose value chooses the structure.
+   * @param string|\Stringable|null $label
+   *   The map's label, or NULL to leave each variant's.
    * @param string|null $from
    *   The provider of variants from the site, by class, or NULL for the
    *   #[Variant] classes alone.
@@ -66,8 +67,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   none for its list().
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, for the owner to label and describe with the
-   *   core setters, as attach() returns it.
+   *   The map at the key, for the owner to describe with the core
+   *   setters, as attach() returns it.
    *
    * @throws \LogicException
    *   When the key is already declared, for outputs, which do not attach
@@ -77,7 +78,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @see docs/resources.md#variants-from-the-site
    */
-  public function attachVariants(string $key, string $by, ?string $from = NULL, array $arguments = []): MapDataDefinition;
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = []): MapDataDefinition;
 
   /**
    * A map with one value per thing the site has: keys from the site.
@@ -99,10 +100,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * change when the site does.
    *
    * @code
-   * $inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, default: FALSE)
-   *   ->setLabel(t('Protected forms'));
-   * $inputs->addEach('pages', NULL, from: Slots::class, to: 'node', bundles: ['page'])
-   *   ->setLabel(t('Pages'));
+   * $inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, label: t('Protected forms'), default: FALSE);
+   * $inputs->addEach('pages', NULL, from: Slots::class, label: t('Pages'), to: 'node', bundles: ['page']);
    * @endcode
    *
    * The map is the owner's key: a rule of the owner's may say it does not
@@ -116,6 +115,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   entity type's id.
    * @param string $from
    *   The provider's class, implementing SiteListInterface.
+   * @param string|\Stringable $label
+   *   The map's label: the values have no structure to borrow one from.
    * @param mixed $default
    *   What every entry starts from unless it says otherwise; NULL for
    *   nothing.
@@ -125,7 +126,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   The bundles such an entry may name; none for every bundle.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, for the owner to label and describe.
+   *   The map at the key, for the owner to describe.
    *
    * @throws \LogicException
    *   When the key is taken, for outputs, inside a structure mixed in,
@@ -135,7 +136,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @see docs/resources.md#keys-that-come-from-the-site
    */
-  public function addEach(string $key, ?string $type, string $from, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition;
+  public function addEach(string $key, ?string $type, string $from, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition;
 
   /**
    * A map with one child per thing the site has: keys from the site.
@@ -150,8 +151,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * sibling map that addEach() declared from the same provider.
    *
    * @code
-   * $inputs->attachEach('rows', RowStructure::class, from: SiteRows::class)
-   *   ->setLabel(t('Rows'));
+   * $inputs->attachEach('rows', RowStructure::class, from: SiteRows::class, label: t('Rows'));
    * $inputs->attachEach('limits', LimitStructure::class, from: Types::class, reads: ['selling' => 'on_sale']);
    * @endcode
    *
@@ -161,19 +161,21 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   The structure each entry is, by class, or a derived one's id.
    * @param string $from
    *   The provider's class, implementing SiteListInterface.
+   * @param string|\Stringable|null $label
+   *   The map's label, or NULL to leave the structure's.
    * @param array<string, string> $reads
    *   Each port of the structure, mapped to a sibling map from the same
    *   provider, whose entry of the same id it reads.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, for the owner to label and describe.
+   *   The map at the key, for the owner to describe.
    *
    * @throws \LogicException
    *   As addEach() does, and for a shape.
    *
    * @see docs/resources.md#ports-on-an-entry
    */
-  public function attachEach(string $key, string $structure, string $from, array $reads = []): MapDataDefinition;
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition;
 
   /**
    * Mixes a structure in: its members become this blueprint's own keys.

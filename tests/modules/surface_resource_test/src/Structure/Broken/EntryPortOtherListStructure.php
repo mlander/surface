@@ -21,7 +21,7 @@ final class EntryPortOtherListStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('layouts', 'string', from: GalleryRooms::class);
+    $inputs->addEach('layouts', 'string', from: GalleryRooms::class, label: t('Layouts'));
     $inputs->attachEach('seats', SeatingStructure::class, from: WorkshopBenches::class, reads: ['layout' => 'layouts']);
   }
 

@@ -127,8 +127,7 @@ final class VenueResource implements ResourceInterface {
     $inputs->add('address', 'string', t('Address'))
       ->addConstraint('Length', ['max' => 255]);
 
-    $inputs->attachList('rooms', VenueRoomStructure::class, max: 20)
-      ->setLabel(t('Rooms'))
+    $inputs->attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)
       ->setDescription(t('The rooms an event at the venue may be held in.'));
 
     $inputs->add('weight', 'integer', t('Weight'), default: 0)

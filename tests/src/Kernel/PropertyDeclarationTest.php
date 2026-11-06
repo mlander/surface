@@ -162,7 +162,7 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     }
     $this->assertSame([
       ['add', ['seats', 'integer', 'Seats', 1]],
-      ['attach', ['row', EntryPropertiesStructure::class, []]],
+      ['attach', ['row', EntryPropertiesStructure::class, 'Row', []]],
     ], $readings[1]);
     $this->assertSame($readings[1], $readings[2]);
   }

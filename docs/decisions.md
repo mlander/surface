@@ -1168,6 +1168,16 @@ one plugin that holds it, else NULL, and a caller names it by its id
   is wherever it is held. The `#[Variant]` label is the choice's word and
   stands over the structure's: the paid ticket is offered as "Paid" and
   titled "Paid ticket".
+- **The key's label is given with the key.** *Amended 2026-11-06:* a key
+  is declared in one statement, what it is and what it is called.
+  `attach()`, `attachList()` and `attachVariants()` take the label
+  third, `attachEach()` and `addEach()` after `from:`, as `add()` takes
+  its own. The label is optional where a structure has its own (NULL
+  leaves the structure's), and required on `addEach()` and `#[Each]`,
+  whose values have none to borrow. `->setLabel()` on the definition a
+  verb returns stays: it is core's setter, and a key labeled with it
+  emits the same documents. The description stays a setter
+  (`->setDescription()`, `description:` on an attribute twin).
 - **Rejected: a label on every `#[Variant]`**, the only place a
   structure could be named before. It names a structure only where it is
   a variant, says nothing in the catalog or at an attached child's def,
@@ -1191,7 +1201,7 @@ one plugin that holds it, else NULL, and a caller names it by its id
 `ResourcePlugins::hostNames()`, `Subschemas::named()`,
 `DocumentHead::top()`, `Attaching::variantLabels()`,
 `SchemaReader::names()`, `CatalogDocument::names()`,
-`ResourceLabelsTest`)
+`BlueprintAdapterBase::labeled()`, `ResourceLabelsTest`)
 
 ## Context
 
@@ -7102,10 +7112,8 @@ punctuation character, a checkbox per form the site has) declares them
 inline, where a key is declared, and names who lists them:
 
 ```php
-$inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class)
-  ->setLabel(t('Punctuation'));
-$inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class)
-  ->setLabel(t('Benches'));
+$inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class, label: t('Punctuation'));
+$inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, label: t('Benches'));
 ```
 
 The `from:` class is a provider, `SiteListInterface::list()`, answering

@@ -542,9 +542,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
     $this->assertUnwiredInMixin($structure, $key, $reads);
-    return parent::attach($key, $structure, $reads);
+    return parent::attach($key, $structure, $label, $reads);
   }
 
   /**
@@ -646,7 +646,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attachVariants(string $key, string $by, ?string $from = NULL, array $arguments = []): MapDataDefinition {
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = []): MapDataDefinition {
     $this->assertHoldsNoChild('attaches variants', $key);
     if ($from !== NULL && !is_subclass_of($from, SiteListInterface::class)) {
       throw new \LogicException(sprintf('attachVariants("%s") names %s as where its variants come from, which does not implement %s: a provider lists the site\'s variants, each with its schema or structure, with list().', $key, $from, SiteListInterface::class));
@@ -670,7 +670,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
       }
       DefinitionMetadata::setVariantsFrom($shell, $from);
     }
-    return $shell;
+    return static::labeled($shell, $label);
   }
 
   /**
@@ -863,6 +863,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   The deciding key.
    * @param array<string, array{name: string, label: string|null}> $variants
    *   Each value's structure, by its read name, and its label, if any.
+   * @param string|\Stringable|null $label
+   *   The map's label, or NULL to leave each variant's.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key.
@@ -870,8 +872,8 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @internal
    *   For SchemaReader alone.
    */
-  public function attachReadVariants(string $key, string $by, array $variants): MapDataDefinition {
-    $shell = $this->attachVariants($key, $by);
+  public function attachReadVariants(string $key, string $by, array $variants, string|\Stringable|null $label = NULL): MapDataDefinition {
+    $shell = $this->attachVariants($key, $by, $label);
     $this->readVariants[$key] = $variants;
     DefinitionMetadata::setReadVariants($shell);
     return $shell;
@@ -953,7 +955,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function addEach(string $key, ?string $type, string $from, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
+  public function addEach(string $key, ?string $type, string $from, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
     $this->assertHoldsNoChild('declares keys from the site', $key);
     if ($to !== NULL || $bundles !== []) {
       if ($type !== NULL || $to === NULL) {
@@ -973,7 +975,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
         ? sprintf('addEach("%s") was handed %s, a resource or structure: an entry that is a group of keys is a child, attachEach(\'%s\', ...).', $key, $type, $key)
         : sprintf('addEach("%s") was handed %s, which is no typed data type and no shape: each entry is declared as add() declares a key.', $key, $type));
     }
-    return $this->reserveEach('addEach', $key, (string) $type, $from, $default, FALSE, to: $to, bundles: $bundles);
+    return static::labeled($this->reserveEach('addEach', $key, (string) $type, $from, $default, FALSE, to: $to, bundles: $bundles), $label);
   }
 
   /**
@@ -981,10 +983,10 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *
    * Decision: see docs/decisions.md#keys-that-come-from-the-site.
    */
-  public function attachEach(string $key, string $structure, string $from, array $reads = []): MapDataDefinition {
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
     $this->assertHoldsNoChild('attaches a child per thing the site has', $key);
     static::assertNoShape('attachEach', $key, $structure);
-    return $this->reserveEach('attachEach', $key, $structure, $from, NULL, TRUE, $reads);
+    return static::labeled($this->reserveEach('attachEach', $key, $structure, $from, NULL, TRUE, $reads), $label);
   }
 
   /**

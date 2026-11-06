@@ -29,8 +29,7 @@ final class HutStructure implements StructureInterface {
     $inputs->add('roof', 'string', t('Roof'))
       ->setRequired(TRUE);
 
-    $inputs->attachVariants('covering', by: 'roof')
-      ->setLabel(t('Covering'));
+    $inputs->attachVariants('covering', by: 'roof', label: t('Covering'));
   }
 
 }

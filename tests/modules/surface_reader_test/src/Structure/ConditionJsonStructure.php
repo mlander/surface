@@ -22,8 +22,7 @@ final class ConditionJsonStructure implements StructureInterface {
     $inputs->add('id', 'string', t('Plugin'))
       ->addConstraint('Choice', ['choices' => ['request_path', 'response_status', 'user_role']]);
 
-    $inputs->attachVariants('settings', by: 'id', from: ConditionPluginJsonStructures::class)
-      ->setLabel(t('Settings'));
+    $inputs->attachVariants('settings', by: 'id', label: t('Settings'), from: ConditionPluginJsonStructures::class);
   }
 
 }

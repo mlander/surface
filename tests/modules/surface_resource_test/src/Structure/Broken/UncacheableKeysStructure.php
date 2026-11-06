@@ -19,7 +19,7 @@ final class UncacheableKeysStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('moments', 'boolean', from: UncacheableKeys::class);
+    $inputs->addEach('moments', 'boolean', from: UncacheableKeys::class, label: t('Moments'));
   }
 
 }

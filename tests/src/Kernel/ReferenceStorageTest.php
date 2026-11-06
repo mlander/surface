@@ -316,12 +316,12 @@ class ReferenceStorageTest extends SurfaceKernelTestBase {
     };
     $blueprint = (new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager')))->useReferences($this->container->get('surface.references'));
     foreach (['entity:node', 'entity:node:article', 'entity'] as $type) {
-      $refused(fn () => $blueprint->addEach('pages', $type, from: ReferenceSlots::class), sprintf('addEach("pages", "%s") declares each entry with an entity type string', $type), "addEach('pages', NULL, from: ..., to: '<entity type>', bundles: [...])");
+      $refused(fn () => $blueprint->addEach('pages', $type, from: ReferenceSlots::class, label: 'Pages'), sprintf('addEach("pages", "%s") declares each entry with an entity type string', $type), "addEach('pages', NULL, from: ..., to: '<entity type>', bundles: [...])");
     }
-    $refused(fn () => $blueprint->addEach('pages', 'integer', from: ReferenceSlots::class, to: 'node'), 'addEach("pages") names a type, integer, and an entity type each entry refers to, node');
-    $refused(fn () => $blueprint->addEach('pages', NULL, from: ReferenceSlots::class), 'addEach("pages") names no type');
-    $refused(fn () => $blueprint->addEach('pages', NULL, from: ReferenceSlots::class, bundles: ['page']), 'addEach("pages") names bundles and no entity type');
-    $blueprint->addEach('pages', NULL, from: ReferenceSlots::class, to: 'node', bundles: ['page']);
+    $refused(fn () => $blueprint->addEach('pages', 'integer', from: ReferenceSlots::class, label: 'Pages', to: 'node'), 'addEach("pages") names a type, integer, and an entity type each entry refers to, node');
+    $refused(fn () => $blueprint->addEach('pages', NULL, from: ReferenceSlots::class, label: 'Pages'), 'addEach("pages") names no type');
+    $refused(fn () => $blueprint->addEach('pages', NULL, from: ReferenceSlots::class, label: 'Pages', bundles: ['page']), 'addEach("pages") names bundles and no entity type');
+    $blueprint->addEach('pages', NULL, from: ReferenceSlots::class, label: 'Pages', to: 'node', bundles: ['page']);
     $declared = $blueprint->fromSite()['pages'];
     $this->assertSame(['node', ['page']], [$declared['to'], $declared['bundles']]);
 

@@ -121,8 +121,7 @@ final class BlockPlacementResource implements ResourceInterface {
       ->setDescription(t('What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.'))
       ->setRequired(TRUE);
 
-    $inputs->attachVariants('settings', by: 'plugin', from: BlockPluginStructures::class)
-      ->setLabel(t('Settings'))
+    $inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: BlockPluginStructures::class)
       ->setDescription(t('The settings of the block chosen, as its plugin declares them.'));
 
     $inputs->add('theme', 'string', t('Theme'))
@@ -144,8 +143,7 @@ final class BlockPlacementResource implements ResourceInterface {
     $inputs->add('status', 'boolean', t('Enabled'), default: TRUE)
       ->setDescription(t('Whether the block is shown at all.'));
 
-    $inputs->attachList('visibility', VisibilityConditionStructure::class)
-      ->setLabel(t('Visibility'))
+    $inputs->attachList('visibility', VisibilityConditionStructure::class, t('Visibility'))
       ->setDescription(t('The conditions the block is shown under, each at most once; with none, it is shown on every page.'));
   }
 

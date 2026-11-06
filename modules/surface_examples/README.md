@@ -680,11 +680,9 @@ final class RegistrationStep3Resource implements ResourceInterface {
     $inputs->add('pricing', 'string', t('Pricing'), default: 'free')
       ->setRequired(TRUE);
 
-    $inputs->attachVariants('ticket', by: 'pricing')
-      ->setLabel(t('Ticket'));
+    $inputs->attachVariants('ticket', by: 'pricing', label: t('Ticket'));
 
-    $inputs->attach('contact', ContactStructure::class)
-      ->setLabel(t('Contact'));
+    $inputs->attach('contact', ContactStructure::class, t('Contact'));
   }
 
   /**
@@ -803,7 +801,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/RegistrationStep3Resource.php`](src/Resource/RegistrationStep3Resource.php) | the resource: six keys, the ticket's variants chosen by the pricing, and the contact attached | 43 |
+| [`modules/surface_examples/src/Resource/RegistrationStep3Resource.php`](src/Resource/RegistrationStep3Resource.php) | the resource: six keys, the ticket's variants chosen by the pricing, and the contact attached | 41 |
 | [`modules/surface_examples/src/Structure/FreeTicketStructure.php`](src/Structure/FreeTicketStructure.php) | the free ticket: the variant for the pricing free, a note | 11 |
 | [`modules/surface_examples/src/Structure/PaidTicketStructure.php`](src/Structure/PaidTicketStructure.php) | the paid ticket: the variant for the pricing paid, a price and a currency | 15 |
 | [`modules/surface_examples/src/Structure/ContactStructure.php`](src/Structure/ContactStructure.php) | the contact: a structure of two keys, attached | 8 |
@@ -1476,8 +1474,7 @@ final class PressResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
 
-    $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
-      ->setLabel(t('Press contact'));
+    $inputs->attach('contact', PersonStructure::class, t('Press contact'), reads: ['listed' => 'public']);
 
     $inputs->mixIn(ReviewStructure::class);
   }
@@ -1519,11 +1516,9 @@ final class InfoDeskResource implements ResourceInterface {
         ->addConstraint('Range', ['min' => -180, 'max' => 180]);
     });
 
-    $inputs->attach('lead', PersonStructure::class, reads: ['listed' => 'in_program'])
-      ->setLabel(t('Desk lead'));
+    $inputs->attach('lead', PersonStructure::class, t('Desk lead'), reads: ['listed' => 'in_program']);
 
-    $inputs->attachList('volunteers', PersonStructure::class, max: 4)
-      ->setLabel(t('Volunteers'));
+    $inputs->attachList('volunteers', PersonStructure::class, t('Volunteers'), max: 4);
   }
 
 }
@@ -1581,9 +1576,9 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples/src/Structure/PersonStructure.php`](src/Structure/PersonStructure.php) | the person: three keys, and a rule that reads a port, listed | 14 |
 | [`modules/surface_examples/src/Shape/PhoneNumber.php`](src/Shape/PhoneNumber.php) | the phone: a named shape | 14 |
 | [`modules/surface_examples/src/Structure/ReviewStructure.php`](src/Structure/ReviewStructure.php) | the review: two keys and a rule, mixed into the press page | 17 |
-| [`modules/surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 14 |
+| [`modules/surface_examples/src/Resource/PressResource.php`](src/Resource/PressResource.php) | the press page: one key, the person attached, the review mixed in | 13 |
 | [`modules/surface_examples/src/Storage/PressStorage.php`](src/Storage/PressStorage.php) | its storage: names the config object | 3 |
-| [`modules/surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, where it stands as an anonymous map, the person attached, and a collection of up to four | 23 |
+| [`modules/surface_examples/src/Resource/InfoDeskResource.php`](src/Resource/InfoDeskResource.php) | the information desk: the phone, where it stands as an anonymous map, the person attached, and a collection of up to four | 21 |
 | [`modules/surface_examples/src/Storage/InfoDeskStorage.php`](src/Storage/InfoDeskStorage.php) | its storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step8` | the press page's route | 8 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step8_desk` | the information desk's route | 8 |
@@ -1616,12 +1611,10 @@ final class TicketSalesResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE)
-      ->setLabel(t('On sale'))
+    $inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, label: t('On sale'), default: FALSE)
       ->setDescription(t('Which ticket types can be bought.'));
 
-    $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, reads: ['selling' => 'on_sale'])
-      ->setLabel(t('Limits'));
+    $inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, label: t('Limits'), reads: ['selling' => 'on_sale']);
   }
 
 }
@@ -1790,7 +1783,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/TicketSalesResource.php`](src/Resource/TicketSalesResource.php) | the resource: a checkbox and a set of limits per ticket type | 15 |
+| [`modules/surface_examples/src/Resource/TicketSalesResource.php`](src/Resource/TicketSalesResource.php) | the resource: a checkbox and a set of limits per ticket type | 13 |
 | [`modules/surface_examples/src/Structure/TicketLimitStructure.php`](src/Structure/TicketLimitStructure.php) | one type's limits: two keys that apply while it is on sale, read through a port | 11 |
 | [`modules/surface_examples/src/Keys/TicketTypes.php`](src/Keys/TicketTypes.php) | the provider: lists the ticket types from the site's configuration | 17 |
 | [`modules/surface_examples/src/Storage/TicketSalesStorage.php`](src/Storage/TicketSalesStorage.php) | the storage: names the config object | 3 |
@@ -1910,8 +1903,7 @@ final class ProgramResource implements ResourceInterface {
 
     $inputs->add('published', 'boolean', t('Published'), default: FALSE);
 
-    $inputs->attach('fees', FeesStructure::class)
-      ->setLabel(t('Fees'));
+    $inputs->attach('fees', FeesStructure::class, t('Fees'));
   }
 
 }
@@ -2083,7 +2075,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/ProgramResource.php`](src/Resource/ProgramResource.php) | the resource: four keys, and two operations, one of which changes nothing | 23 |
+| [`modules/surface_examples/src/Resource/ProgramResource.php`](src/Resource/ProgramResource.php) | the resource: four keys, and two operations, one of which changes nothing | 22 |
 | [`modules/surface_examples/src/Structure/FeesStructure.php`](src/Structure/FeesStructure.php) | the fees: two keys, naming their access class | 9 |
 | [`modules/surface_examples/src/Access/FeesAccess.php`](src/Access/FeesAccess.php) | the access class: locks the fees by permission, then once the program is published | 18 |
 | [`modules/surface_examples/src/Storage/ProgramStorage.php`](src/Storage/ProgramStorage.php) | the storage: names the config object | 3 |
@@ -2244,11 +2236,9 @@ final class SpotlightResource implements ResourceInterface {
     $inputs->add('component', 'string', t('Component'), default: 'surface_examples:card')
       ->setRequired(TRUE);
 
-    $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
-      ->setLabel(t('Props'));
+    $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 
-    $inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
-      ->setLabel(t('Slots'));
+    $inputs->attachVariants('slots', by: 'component', label: t('Slots'), from: ComponentSlots::class);
   }
 
 }
@@ -2612,7 +2602,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 16 |
+| [`modules/surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 14 |
 | [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 40 |
 | [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 229 |
 | [`src/Variants/ComponentsOffered.php`](../../src/Variants/ComponentsOffered.php) | the components both providers offer: every one, or those surface.settings:components_offered allows; the main module's | 31 |
@@ -2659,11 +2649,9 @@ final class ComponentBlockStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('component', 'string', t('Component'));
 
-    $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
-      ->setLabel(t('Props'));
+    $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 
-    $inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
-      ->setLabel(t('Slots'));
+    $inputs->attachVariants('slots', by: 'component', label: t('Slots'), from: ComponentSlots::class);
   }
 
 }
@@ -2974,7 +2962,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_component_block/surface_examples_component_block.info.yml`](../surface_examples_component_block/surface_examples_component_block.info.yml) | the module the block lives in | 10 |
-| [`modules/surface_examples_component_block/src/Structure/ComponentBlockStructure.php`](../surface_examples_component_block/src/Structure/ComponentBlockStructure.php) | the block's structure: example 12's three lines under the block's id | 10 |
+| [`modules/surface_examples_component_block/src/Structure/ComponentBlockStructure.php`](../surface_examples_component_block/src/Structure/ComponentBlockStructure.php) | the block's structure: example 12's three lines under the block's id | 8 |
 | [`modules/surface_examples_component_block/src/Plugin/Block/ComponentBlock.php`](../surface_examples_component_block/src/Plugin/Block/ComponentBlock.php) | the block plugin: names the structure and draws the chosen component | 96 |
 | [`modules/surface_examples_component_block/config/schema/surface_examples_component_block.schema.yml`](../surface_examples_component_block/config/schema/surface_examples_component_block.schema.yml), entry `block.settings.surface_component` | the config schema of the block's settings | 14 |
 | [`modules/surface_examples/src/Hook/SpotlightBlockHooks.php`](src/Hook/SpotlightBlockHooks.php) | places the Spotlight and Tonight blocks once both modules are enabled | 36 |
@@ -3033,8 +3021,7 @@ final class MailerResource implements ResourceInterface {
     $inputs->add('source', 'string', t('Credential source'), default: 'pasted')
       ->setRequired(TRUE);
 
-    $inputs->attachVariants('credential', by: 'source', from: CredentialSources::class)
-      ->setLabel(t('Credential'));
+    $inputs->attachVariants('credential', by: 'source', label: t('Credential'), from: CredentialSources::class);
   }
 
 }
@@ -3561,7 +3548,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 18 |
+| [`modules/surface_examples/src/Resource/MailerResource.php`](src/Resource/MailerResource.php) | the owner's way: a sender, a mail service, and a credential whose source a provider lists | 17 |
 | [`modules/surface_examples/src/Variants/CredentialSources.php`](src/Variants/CredentialSources.php) | the provider: the pasted source always, the managed source while the keys module is on, both named for storage | 28 |
 | [`modules/surface_examples/src/Structure/PastedCredentialStructure.php`](src/Structure/PastedCredentialStructure.php) | the pasted source: a key, a secret | 12 |
 | [`modules/surface_examples/src/Structure/ManagedCredentialStructure.php`](src/Structure/ManagedCredentialStructure.php) | the managed source: the name of a key the site manages | 12 |
@@ -3817,8 +3804,7 @@ final class VenueResource implements ResourceInterface {
     $inputs->add('address', 'string', t('Address'))
       ->addConstraint('Length', ['max' => 255]);
 
-    $inputs->attachList('rooms', VenueRoomStructure::class, max: 20)
-      ->setLabel(t('Rooms'))
+    $inputs->attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)
       ->setDescription(t('The rooms an event at the venue may be held in.'));
 
     $inputs->add('weight', 'integer', t('Weight'), default: 0)
@@ -3935,8 +3921,7 @@ final class VenueReorderStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attachList('venues', VenueOrderStructure::class, min: 1)
-      ->setLabel(t('Venues'))
+    $inputs->attachList('venues', VenueOrderStructure::class, t('Venues'), min: 1)
       ->setDescription(t('Each venue to move, once, with its new weight; a venue left out keeps its own.'))
       ->setRequired(TRUE);
   }
@@ -4546,11 +4531,11 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Entity/EventVenue.php`](src/Entity/EventVenue.php) | the entity type: its declaration, its keys and the properties it exports, and no form, list builder or link | 47 |
-| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 79 |
+| [`modules/surface_examples/src/Resource/VenueResource.php`](src/Resource/VenueResource.php) | the resource: a venue by its machine name, computed from its name unless one is given, added, edited and removed, and the venues listed and reordered; its slug a computed key | 78 |
 | [`modules/surface_examples/src/Slugify.php`](src/Slugify.php) | the slug's deriver: a pure function of the name, run when a venue is added | 6 |
 | [`modules/surface_examples/src/Structure/VenueRoomStructure.php`](src/Structure/VenueRoomStructure.php) | a room: an item of the venue's rooms | 18 |
 | [`modules/surface_examples/src/Structure/VenueListingStructure.php`](src/Structure/VenueListingStructure.php) | what the listing takes, a page and a filter, and what it answers, the page and the total | 27 |
-| [`modules/surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 9 |
+| [`modules/surface_examples/src/Structure/VenueReorderStructure.php`](src/Structure/VenueReorderStructure.php) | what the reorder takes: a list of venues and their weights | 8 |
 | [`modules/surface_examples/src/Structure/VenueOrderStructure.php`](src/Structure/VenueOrderStructure.php) | an item of that list: a venue and its new weight | 12 |
 | [`modules/surface_examples/src/Storage/VenueStorage.php`](src/Storage/VenueStorage.php) | the storage: a ConfigEntityStorage, which reads the listing, writes the reorder in one commit, and holds a slug to one venue | 151 |
 | [`modules/surface_examples/src/Access/VenueAccess.php`](src/Access/VenueAccess.php) | the access class: a disabled venue is only for an account that administers the venues | 17 |
@@ -4615,16 +4600,13 @@ final class SponsorshipResource implements ResourceInterface {
       ->setDescription(t('The article that announces the sponsor.'));
 
     // Of any type: an entity type, then an id of it.
-    $inputs->attach('thing', ThingStructure::class)
-      ->setLabel(t('Featured beside'))
+    $inputs->attach('thing', ThingStructure::class, t('Featured beside'))
       ->setDescription(t('Any content the sponsor is featured beside.'));
 
-    $inputs->attach('setting', SettingStructure::class)
-      ->setLabel(t('Linked to'))
+    $inputs->attach('setting', SettingStructure::class, t('Linked to'))
       ->setDescription(t('A venue or a role the sponsorship is linked to.'));
 
-    $inputs->attach('credit', CreditStructure::class)
-      ->setLabel(t('Credited on'))
+    $inputs->attach('credit', CreditStructure::class, t('Credited on'))
       ->setDescription(t('An article or a user the sponsor is credited on.'));
   }
 
@@ -4730,7 +4712,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_references/surface_examples_references.info.yml`](../surface_examples_references/surface_examples_references.info.yml) | the module: a second one, which needs node for the article the announcement is | 11 |
-| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys of the id's type with the constraint naming the entity type they refer to, and three of any entity type, each a structure attached | 29 |
+| [`modules/surface_examples_references/src/Resource/SponsorshipResource.php`](../surface_examples_references/src/Resource/SponsorshipResource.php) | the resource: three keys of the id's type with the constraint naming the entity type they refer to, and three of any entity type, each a structure attached | 26 |
 | [`modules/surface_examples_references/src/Structure/AnyEntityStructure.php`](../surface_examples_references/src/Structure/AnyEntityStructure.php) | a reference to an entity of any type: its entity type, then its id, and the refiner that narrows the id to the entity type chosen | 29 |
 | [`modules/surface_examples_references/src/Structure/ThingStructure.php`](../surface_examples_references/src/Structure/ThingStructure.php) | content of any type, the entity types it names in its own declaration | 4 |
 | [`modules/surface_examples_references/src/Structure/SettingStructure.php`](../surface_examples_references/src/Structure/SettingStructure.php) | a venue or a role: config entities among three | 7 |
@@ -4795,8 +4777,7 @@ final class RetitleResource implements ResourceInterface, DefinesOutputsInterfac
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attachList('items', RetitleItemStructure::class, min: 1, max: 50)
-      ->setLabel(t('Nodes'))
+    $inputs->attachList('items', RetitleItemStructure::class, t('Nodes'), min: 1, max: 50)
       ->setDescription(t('Each node to retitle, one to fifty.'))
       ->setRequired(TRUE);
 
@@ -5056,7 +5037,7 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples_retitle/surface_examples_retitle.info.yml`](../surface_examples_retitle/surface_examples_retitle.info.yml) | the module: a third one, which needs node for the pages it retitles | 11 |
-| [`modules/surface_examples_retitle/src/Resource/RetitleResource.php`](../surface_examples_retitle/src/Resource/RetitleResource.php) | the resource: a list of nodes and a style, its own permission, and two gates borrowed from core, a node's update and its title's edit | 28 |
+| [`modules/surface_examples_retitle/src/Resource/RetitleResource.php`](../surface_examples_retitle/src/Resource/RetitleResource.php) | the resource: a list of nodes and a style, its own permission, and two gates borrowed from core, a node's update and its title's edit | 27 |
 | [`modules/surface_examples_retitle/src/Structure/RetitleItemStructure.php`](../surface_examples_retitle/src/Structure/RetitleItemStructure.php) | an item: the node, which the gates ask about, and the new title, if one is sent | 12 |
 | [`modules/surface_examples_retitle/src/TitleRewriter.php`](../surface_examples_retitle/src/TitleRewriter.php) | the rewriter: title case, sentence case or a prefix, the same every time, where a model would suggest a title | 38 |
 | [`modules/surface_examples_retitle/src/Storage/RetitleStorage.php`](../surface_examples_retitle/src/Storage/RetitleStorage.php) | the storage: works out each title, then saves each node, and answers the titles before and after | 46 |
@@ -5146,8 +5127,7 @@ final class CateringByMethodResource implements ResourceInterface {
       ->setSetting('multiline', TRUE);
     $inputs->describe('notes', group: $details);
 
-    $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
-      ->setLabel(t('Caterer contact'));
+    $inputs->attach('contact', PersonStructure::class, t('Caterer contact'), reads: ['listed' => 'public']);
 
     $inputs->narrow('served_at')
       ->when(Condition::equals('public', TRUE))
@@ -5287,7 +5267,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/CateringByMethodResource.php`](src/Resource/CateringByMethodResource.php) | the before: the same keys with defineInputs(), as examples 1 to 17 write them | 50 |
+| [`modules/surface_examples/src/Resource/CateringByMethodResource.php`](src/Resource/CateringByMethodResource.php) | the before: the same keys with defineInputs(), as examples 1 to 17 write them | 49 |
 | [`modules/surface_examples/src/Resource/CateringResource.php`](src/Resource/CateringResource.php) | the after, the resource: eight keys as properties, a type, a default and presence read from PHP, the rest from one attribute per verb, and the person attached with its port wired | 49 |
 | [`modules/surface_examples/src/Storage/CateringStorage.php`](src/Storage/CateringStorage.php) | the storage both save through: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step18` | the route of the properties | 8 |

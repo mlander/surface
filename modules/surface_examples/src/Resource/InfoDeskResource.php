@@ -47,11 +47,9 @@ final class InfoDeskResource implements ResourceInterface {
         ->addConstraint('Range', ['min' => -180, 'max' => 180]);
     });
 
-    $inputs->attach('lead', PersonStructure::class, reads: ['listed' => 'in_program'])
-      ->setLabel(t('Desk lead'));
+    $inputs->attach('lead', PersonStructure::class, t('Desk lead'), reads: ['listed' => 'in_program']);
 
-    $inputs->attachList('volunteers', PersonStructure::class, max: 4)
-      ->setLabel(t('Volunteers'));
+    $inputs->attachList('volunteers', PersonStructure::class, t('Volunteers'), max: 4);
   }
 
 }

@@ -52,16 +52,13 @@ final class SponsorshipResource implements ResourceInterface {
       ->setDescription(t('The article that announces the sponsor.'));
 
     // Of any type: an entity type, then an id of it.
-    $inputs->attach('thing', ThingStructure::class)
-      ->setLabel(t('Featured beside'))
+    $inputs->attach('thing', ThingStructure::class, t('Featured beside'))
       ->setDescription(t('Any content the sponsor is featured beside.'));
 
-    $inputs->attach('setting', SettingStructure::class)
-      ->setLabel(t('Linked to'))
+    $inputs->attach('setting', SettingStructure::class, t('Linked to'))
       ->setDescription(t('A venue or a role the sponsorship is linked to.'));
 
-    $inputs->attach('credit', CreditStructure::class)
-      ->setLabel(t('Credited on'))
+    $inputs->attach('credit', CreditStructure::class, t('Credited on'))
       ->setDescription(t('An article or a user the sponsor is credited on.'));
   }
 

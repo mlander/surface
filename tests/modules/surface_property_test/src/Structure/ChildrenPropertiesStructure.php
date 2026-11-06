@@ -41,7 +41,7 @@ final class ChildrenPropertiesStructure implements StructureInterface {
   #[AttachVariants(by: 'pricing', label: 'Ticket')]
   public array $ticket;
 
-  #[Each(from: Letters::class, type: 'boolean', label: 'On sale')]
+  #[Each('boolean', from: Letters::class, label: 'On sale')]
   public array $on_sale;
 
   #[AttachEach(EntryPropertiesStructure::class, from: Letters::class, label: 'Limits', reads: ['selling' => 'on_sale'])]

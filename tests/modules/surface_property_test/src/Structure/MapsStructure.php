@@ -32,8 +32,7 @@ final class MapsStructure implements StructureInterface {
 
     $inputs->addMap('booking', t('Booking'), static function (BlueprintInterface $map): void {
       $map->add('seats', 'integer', t('Seats'), default: 1);
-      $map->attach('row', EntryStructure::class)
-        ->setLabel(t('Row'));
+      $map->attach('row', EntryStructure::class, t('Row'));
     });
   }
 

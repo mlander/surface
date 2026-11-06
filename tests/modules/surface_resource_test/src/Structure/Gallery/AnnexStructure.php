@@ -19,8 +19,7 @@ final class AnnexStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('opening', 'string', t('Opening'));
-    $inputs->attach('wall', WallStructure::class)
-      ->setLabel(t('Wall'));
+    $inputs->attach('wall', WallStructure::class, t('Wall'));
   }
 
 }

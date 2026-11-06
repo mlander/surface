@@ -27,11 +27,9 @@ final class RelayHubResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->mixIn(RelayLinkStructure::class);
 
-    $inputs->attach('primary', RelayLinkStructure::class)
-      ->setLabel(t('Primary link'));
+    $inputs->attach('primary', RelayLinkStructure::class, t('Primary link'));
 
-    $inputs->attachList('backups', RelayLinkStructure::class, max: 3)
-      ->setLabel(t('Backup links'));
+    $inputs->attachList('backups', RelayLinkStructure::class, t('Backup links'), max: 3);
   }
 
 }

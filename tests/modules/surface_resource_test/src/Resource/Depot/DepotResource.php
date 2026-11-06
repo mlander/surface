@@ -43,8 +43,7 @@ final class DepotResource implements ResourceInterface {
     $inputs->add('spare', Sku::class, t('Spare code'), default: 'ZZ9')
       ->setDescription(t('Printed on the back of the shelf.'))
       ->addConstraint('Length', ['max' => 6]);
-    $inputs->attach('tag', ShelfTagStructure::class, reads: ['code' => 'sku'])
-      ->setLabel(t('Shelf tag'));
+    $inputs->attach('tag', ShelfTagStructure::class, t('Shelf tag'), reads: ['code' => 'sku']);
   }
 
 }

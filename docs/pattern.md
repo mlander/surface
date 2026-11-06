@@ -115,8 +115,11 @@ method.
   values, no context, no services. On a resource or structure they are
   static, so the language holds them to that: the build step calls them
   on the class and never makes an instance. The owner gets
-  `BlueprintInterface`; an alter gets `BlueprintAdditionsInterface`, which is
-  the same minus `attachVariants()` and `reads()`, and whose `attach()` places a
+  `BlueprintInterface`; an alter gets `BlueprintAdditionsInterface`, which
+  the owner's extends with eight methods an alter does not have
+  (`attachVariants()`, `addEach()`, `attachEach()`, `mixIn()`,
+  `mixInVariants()`, `reads()`, `compute()` and
+  `addCacheableDependency()`), and whose `attach()` places a
   structure at the alter's own mount and nowhere else, while
   `attachList()` refuses by name for now: an alter's keys are mounted
   under its module, and a collection inside a mount is not built
@@ -176,11 +179,9 @@ final class FieldInstanceResource implements ResourceInterface {
     $inputs->add('required', 'boolean', t('Required field'), default: FALSE);
 
     // Its parts.
-    $inputs->attach('storage', FieldStorageResource::class)
-      ->setLabel(t('Field storage'));
+    $inputs->attach('storage', FieldStorageResource::class, t('Field storage'));
 
-    $inputs->attachVariants('settings', by: 'field_type')
-      ->setLabel(t('Field settings'));
+    $inputs->attachVariants('settings', by: 'field_type', label: t('Field settings'));
   }
 
   /**
@@ -212,7 +213,9 @@ below.)
 - **Name, type and label sit on one line.** `add()` takes those three
   and returns the core definition, so the rest is plain core API.
   `addList()` is the same for a list of values, `addMap()` for a map,
-  and `addDefinition()` the long form, for one value. The label is
+  and `addDefinition()` the long form, for one value. The verbs that
+  attach take the label with the key too, after the structure:
+  optional, the structure's own when left out. The label is
   `t('...')`, a literal string.
 - **It is ordered like the thing it describes.** Identity first, the
   thing's own keys next, its parts last.
@@ -251,9 +254,9 @@ own, as the field's storage is.
   child, its Count the parent's
   ([Resources and structures](resources.md#collections)).
 
-Both return the map definition at the key, as `add()` returns its
-definition, so the owner labels and describes its own child's key with
-the core setters.
+Each takes the key's label with the key, and returns the map definition
+at the key, as `add()` returns its definition, so the owner describes
+its own child's key with the core setters.
 
 A child is invoked the way a resource asked on its own is: through one
 of its own operations, the one its parent's context names, else the one

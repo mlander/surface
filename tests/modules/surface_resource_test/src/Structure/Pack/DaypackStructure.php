@@ -34,8 +34,7 @@ final class DaypackStructure implements StructureInterface {
 
     $inputs->addMap('cover', t('Rain cover'), static function (BlueprintInterface $cover): void {
       $cover->add('color', 'string', t('Color'));
-      $cover->attach('pouch', PocketStructure::class)
-        ->setLabel(t('Pouch'));
+      $cover->attach('pouch', PocketStructure::class, t('Pouch'));
     });
   }
 

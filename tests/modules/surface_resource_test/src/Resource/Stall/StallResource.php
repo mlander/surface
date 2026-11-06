@@ -38,10 +38,10 @@ final class StallResource implements ResourceInterface {
 
     $inputs->addMap('kit', t('Kit'), static function (BlueprintInterface $kit): void {
       $kit->add('tent', 'boolean', t('Tent'), default: FALSE);
-      $kit->attach('bench', BenchStructure::class)->setLabel(t('Bench'));
+      $kit->attach('bench', BenchStructure::class, t('Bench'));
       $kit->addMap('spare', t('Spare'), static function (BlueprintInterface $spare): void {
         $spare->add('count', 'integer', t('How many'), default: 0);
-        $spare->attach('bench', BenchStructure::class)->setLabel(t('Spare bench'));
+        $spare->attach('bench', BenchStructure::class, t('Spare bench'));
       });
     });
     $inputs->describe('kit', description: t('What the stall brings.'));

@@ -51,8 +51,7 @@ final class PantryResource implements ResourceInterface {
       ->addConstraint('Choice', ['choices' => ['jar', 'tin']]);
     $inputs->attach('shelf', ShelfStructure::class);
     $inputs->attach('label', LabelResource::class);
-    $inputs->attachVariants('kind_settings', by: 'kind')
-      ->setLabel('Kind settings')
+    $inputs->attachVariants('kind_settings', by: 'kind', label: 'Kind settings')
       ->setDescription('What the kind of container needs.');
   }
 
