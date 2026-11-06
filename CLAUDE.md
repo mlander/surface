@@ -120,7 +120,7 @@ the record of the rework that brought the module to the pattern.
   (`BlueprintInterface`); an alter gets the add-only
   `BlueprintAdditionsInterface`. A class may instead declare its keys as
   properties, each carrying the attribute of the verb it stands for
-  (`#[Input]`, `#[Attach]`, `#[Rule]`, eighteen in `src/Resource/Attribute/`),
+  (`#[Input]`, `#[Attach]`, `#[Rule]`, nineteen in `src/Resource/Attribute/`),
   with `DeclaresByProperties`, whose `defineInputs()` and
   `defineOutputs()` call the same verbs in property order
   (`ResourceBuild\PropertyDeclaration`, which reads no value): a second
@@ -135,8 +135,10 @@ the record of the rework that brought the module to the pattern.
   (`docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader`).
   An object is declared only by a method that is one JSON Schema
   construct: `attach()` / `attachList()` (`$ref`), `addMap()` (inline
-  object), `mixIn()` (`allOf`), the variants (`if`/`then`), `addEach()`
-  / `attachEach()` (an object keyed by the site), `addList()` (array);
+  object), `mixIn()` (`allOf`), the variants (`if`/`then`),
+  `mixInVariants()` (`allOf` of `if`/`then`, each `then` a reference),
+  `addEach()` / `attachEach()` (an object keyed by the site), `addList()`
+  (array);
   `addDefinition()` takes one value and refuses a map or a list
   (`docs/decisions.md#a-blueprint-takes-no-complex-data-types`).
 - **Anonymous map**: `addMap($key, $label, fn (BlueprintInterface $map)
@@ -176,15 +178,39 @@ the record of the rework that brought the module to the pattern.
 - **Mixin**: a structure whose members are merged into the owner's own
   keys, `$inputs->mixIn(TimestampsStructure::class, reads: [...])`:
   stored flat, refined in the owner's frame, emitted as `allOf` of its
-  def and the owner's properties; the owner's only, never an alter's.
+  def and the owner's properties; the owner's only, never an alter's. A
+  child it attaches at a fixed key or in a collection is the owner's
+  child at that key, nothing wiring its ports.
   Nest for a thing of its own, mix in for shared members that are part
   of this thing (`docs/resources.md#mixins`).
 - **Variants**: a tagged union whose tag is a sibling key: structures
   that key chooses between, attached at one key,
   `attachVariants($key, by: $sibling)`. Always open: the parent names
   none, any module may declare one.
+- **Variants mixed in**: a mixin chosen by a sibling key,
+  `$inputs->mixInVariants($by, from:, arguments:)`
+  (`#[MixInVariants]`): every variant's members the owner's keys,
+  stored flat beside the deciding key where the call stands, declared
+  when the owner is built (a place held, `reservePlace()`, filled by
+  `Attaching::layVariantMixins()`), each applying only where its
+  variant is chosen and required where it requires it (declared rules
+  the build binds, `DeclaredRefiner::$chooses`); a member two variants
+  declare alike is one key (the label and description aside, the first
+  variant's worn), one declared differently refused; a child a variant
+  holds is the owner's child at that key, and variants it holds at a key
+  the owner's variants there, chosen by its member and found as the
+  variant finds them (`ResourceBlueprint::variantsDeclaredBy()`); emitted
+  as one `if`/`then` per variant on the deciding key, `then` a
+  reference to its open def, the frame closed with
+  `unevaluatedProperties`, `x-surface.variantsMixedIn` naming the defs;
+  the table on the frame is `MixinVariants`. Config schema's own-key
+  form, `views.sort.[plugin_id]`, is read into it, and a key the reader
+  derives no shape for is declared open (`LeafRules::open()`)
+  (`docs/resources.md#variants-mixed-in`,
+  `docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key`).
 - **Variant**: one structure (or resource) among the variants, for one
-  value of the deciding key, `#[Variant(of:, at:, for:)]`.
+  value of the deciding key, `#[Variant(of:, at:, for:)]`; `at` is the
+  key the variants sit at, or the deciding key of variants mixed in.
 - **Variants from the site**: variants a provider lists rather than
   classes declare, `attachVariants($key, by: $sibling, from:
   Provider::class)`; the provider is the one keys from the site name, a
@@ -533,7 +559,10 @@ site, on the container's `allOf`, never in the structure's def
 (`docs/resources.md#ports`). `mixIn()` mixes a structure in: its
 members are the owner's own keys, its refiners and rules bound in the
 owner's frame on its members and its ports, its access locking or
-omitting its members (`docs/resources.md#mixins`). `attachList()` is a collection: a list of
+omitting its members (`docs/resources.md#mixins`). `mixInVariants()`
+mixes in the variant a sibling key chooses the same way, every variant's
+members declared and each applying only where its variant is chosen
+(`docs/resources.md#variants-mixed-in`). `attachList()` is a collection: a list of
 child instances, the list (its Count) the parent's, each item the
 child's, its entry a `Collection` (`docs/resources.md#collections`).
 
@@ -631,7 +660,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1851, Assertions: 43909, Errors: 0, Failures: 0, Skipped: 3. Classes: 260 of 260, 8 at a time, browser classes 4.
+phpunit: Tests: 1893, Assertions: 44896, Errors: 0, Failures: 0, Skipped: 3. Classes: 264 of 264, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -651,8 +680,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1743, Assertions: 39760, Skipped: 3, Deprecations: 130. Classes:
-211, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1785, Assertions: 40747, Skipped: 3, Deprecations: 130. Classes:
+215, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -937,7 +966,8 @@ src/Plugin/tool/ src/Plugin/Derivative/
                          the tool module's plugin manager.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
-src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
+src/Variants/            Variants from the site: ComponentProps and ComponentSlots;
+                         ConfigSchemaTypes, a config schema type's.
 src/Refinement/          Narrowing and choice sets.
 modules/                 Nineteen example submodules, each with its own README,
                          in two groups (below).

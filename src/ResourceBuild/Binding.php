@@ -120,8 +120,10 @@ final class Binding {
    *
    * Step 6 of the build. The keys a coded or runtime refiner may rule
    * out, which a declared rule may then not require; each structure mixed
-   * in, in the owner's frame; then each contributor's coded refiners and
-   * the rules it declared, the owner's before any alter's.
+   * in, in the owner's frame; each variant mixed in, where its members
+   * apply first, then as a structure mixed in; then each contributor's
+   * coded refiners and the rules it declared, the owner's before any
+   * alter's.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build, its frame and its input keys resolved.
@@ -131,8 +133,10 @@ final class Binding {
    *   The refiner links, as declareShape() answered them.
    * @param array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions> $additions
    *   Each alter's additions, by module.
-   * @param array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]} $mixins
-   *   What mixIn() answered.
+   * @param array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached: string[], lists: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[], variants?: list<array{by: string, rules: \Drupal\surface\Refinement\Rule[], bind: list<array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached: string[], lists: string[]}>}>} $mixins
+   *   What mixIn() answered, and mixInVariants() added: each call's
+   *   deciding key, the rules saying where its members apply, and its
+   *   variants to bind as structures mixed in.
    * @param array<string, string[]> $readable
    *   The keys of the structure each module attached at its mount.
    * @param array<string, string[]> $mounted_by
@@ -161,6 +165,16 @@ final class Binding {
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
     foreach ($mixins['bind'] as $mixin) {
       $this->bindMixin($build, $mixin);
+    }
+    // Each variant mixed in: first where each of its members applies,
+    // in the owner's frame, then the variant's own refiners and rules, as a
+    // structure mixed in binds them.
+    // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+    foreach ($mixins['variants'] ?? [] as ['by' => $by, 'rules' => $rules, 'bind' => $variants]) {
+      $this->bindRules($build, $rules, $by);
+      foreach ($variants as $variant) {
+        $this->bindMixin($build, $variant);
+      }
     }
     // Each contributor's coded refiners, then the rules it declared, the
     // owner's before any alter's.
@@ -202,8 +216,10 @@ final class Binding {
    * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build: its builder, the owner, and its context, which
    *   says which alters apply.
-   * @param array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]} $mixin
-   *   The structure, as mixIn() lists it.
+   * @param array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached?: string[], lists?: string[]} $mixin
+   *   The structure, as mixIn() lists it: its plain members, and those
+   *   holding a child at a fixed key or a collection, which its refiners
+   *   and rules may only rule out.
    */
   protected function bindMixin(Build $build, array $mixin): void {
     $builder = $build->builder;
@@ -219,7 +235,7 @@ final class Binding {
         $ruling[] = $refiner->key;
       }
     }
-    $inside = $build->forMixin($structure, $keys, $ports, $reads, $ruling);
+    $inside = $build->forMixin($structure, $keys, $ports, $reads, $ruling, $mixin['attached'] ?? [], $mixin['lists'] ?? []);
     $this->bindRefiners($inside, $structure->isDerived() ? $structure->name() : Declaring::resourceClass($structure), $structure->refiners);
     $this->bindRules($inside, $mixin['blueprint']->rules());
     foreach ($structure->alters as $alter) {
@@ -414,11 +430,14 @@ final class Binding {
    *     reads.
    * @param \Drupal\surface\Refinement\Rule[] $rules
    *   The rules the contributor declared, in order.
+   * @param string|null $chooses
+   *   For the rules saying where the members of variants mixed in apply,
+   *   their deciding key; NULL for rules a contributor declared.
    *
    * @throws \LogicException
    *   Naming the rule and what is wrong with it.
    */
-  protected function bindRules(Build $build, array $rules): void {
+  protected function bindRules(Build $build, array $rules, ?string $chooses = NULL): void {
     $builder = $build->builder;
     $definition = $build->definition;
     $module = $build->module;
@@ -519,7 +538,7 @@ final class Binding {
       $builder->addRefinement($own ? RefinesInputRefiner::path((string) $module, $rule->key) : $rule->key, $watched, FALSE, TRUE);
       $bound[$own ? RefinesInputRefiner::MOUNT : $rule->key][] = $rule;
     }
-    $link = new DeclaredRefiner($bound, $module, $paths);
+    $link = new DeclaredRefiner($bound, $module, $paths, chooses: $chooses);
     foreach (array_keys($bound) as $key) {
       $builder->addRefiner((string) $key, $link);
     }

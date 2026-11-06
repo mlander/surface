@@ -197,19 +197,23 @@ final readonly class Build {
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
    *   The structure.
    * @param string[] $keys
-   *   Its members still there.
+   *   Its plain members still there.
    * @param array<string, \Drupal\surface\Port> $ports
    *   The ports it reads.
    * @param array<string, string> $translated
    *   Each port mapped to the owner's key it is wired to.
    * @param string[] $ruling
    *   The members a coded refiner of the structure may rule out.
+   * @param string[] $attached
+   *   Its members holding a child at a fixed key, the owner's children.
+   * @param string[] $lists
+   *   Its members holding a collection.
    *
    * @return self
    *   The new build.
    */
-  public function forMixin(ResourceDefinition $structure, array $keys, array $ports, array $translated, array $ruling): self {
-    return new self($this->builder, $structure, $this->context, inputKeys: $keys, ports: $ports, ruling: $ruling, translated: $translated);
+  public function forMixin(ResourceDefinition $structure, array $keys, array $ports, array $translated, array $ruling, array $attached = [], array $lists = []): self {
+    return new self($this->builder, $structure, $this->context, inputKeys: $keys, attached: $attached, lists: $lists, ports: $ports, ruling: $ruling, translated: $translated);
   }
 
   /**

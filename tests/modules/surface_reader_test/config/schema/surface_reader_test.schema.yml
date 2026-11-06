@@ -1,0 +1,108 @@
+# A sequence's Count, carried onto the list the reader declares: one of
+# values, one of mappings. Core's own schema declares none.
+surface_reader_test.counted:
+  type: config_object
+  label: 'Counted'
+  mapping:
+    tags:
+      type: sequence
+      label: 'Tags'
+      constraints:
+        Count:
+          min: 1
+          max: 3
+      sequence:
+        type: string
+        label: 'Tag'
+    stops:
+      type: sequence
+      label: 'Stops'
+      constraints:
+        Count:
+          min: 1
+          max: 3
+      sequence:
+        type: mapping
+        label: 'Stop'
+        mapping:
+          name:
+            type: string
+            label: 'Name'
+
+# Keys no shape is read for, each declared open: one the schema checks
+# nothing of, and one whose type a key outside its frame chooses.
+surface_reader_test.open:
+  type: config_object
+  label: 'Open'
+  mapping:
+    kind:
+      type: string
+      label: 'Kind'
+    loose:
+      type: ignore
+      label: 'Loose'
+    nested:
+      type: mapping
+      label: 'Nested'
+      mapping:
+        options:
+          type: surface_reader_test.options.[%parent.%parent.kind]
+          label: 'Options'
+
+surface_reader_test.options.wide:
+  type: mapping
+  label: 'Wide'
+  mapping:
+    width:
+      type: integer
+      label: 'Width'
+
+# A handler typed by its own key, one type holding variants at a key that
+# a key of its own chooses, as views.field.field holds its formatter's
+# settings.
+surface_reader_test_handler:
+  type: mapping
+  label: 'Handler'
+  mapping:
+    plugin_id:
+      type: string
+      label: 'Plugin'
+
+surface_reader_test.handler.*:
+  type: surface_reader_test_handler
+  label: 'Any handler'
+
+surface_reader_test.handler.formatted:
+  type: surface_reader_test_handler
+  label: 'Formatted'
+  mapping:
+    format:
+      type: string
+      label: 'Format'
+    settings:
+      type: surface_reader_test.format.[%parent.format]
+      label: 'Settings'
+
+surface_reader_test.handler.plain:
+  type: surface_reader_test_handler
+  label: 'Plain'
+  mapping:
+    size:
+      type: integer
+      label: 'Size'
+
+surface_reader_test.format.bold:
+  type: mapping
+  label: 'Bold'
+  mapping:
+    weight:
+      type: integer
+      label: 'Weight'
+
+surface_reader_test.format.italic:
+  type: mapping
+  label: 'Italic'
+  mapping:
+    slant:
+      type: integer
+      label: 'Slant'

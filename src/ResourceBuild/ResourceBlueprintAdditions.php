@@ -237,6 +237,18 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   }
 
   /**
+   * {@inheritdoc}
+   */
+  public function mixInVariants(string $by, ?string $from = NULL, array $arguments = []): static {
+    throw new \LogicException(sprintf(
+      'The %s alter mixes in the variants chosen by "%s". Only an owner mixes variants in: an alter\'s keys live under its own module\'s name, and a variant\'s members would be the owner\'s. Attach the variants at the alter\'s own mount, third_party_settings.%s, instead.',
+      $this->provider,
+      $by,
+      $this->provider,
+    ));
+  }
+
+  /**
    * The owner's keys this module offered more values on, in order.
    *
    * @var string[]

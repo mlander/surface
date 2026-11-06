@@ -309,9 +309,11 @@ class LockedAccessTest extends SurfaceKernelTestBase {
     // The code lock is a variant with an access class.
     $this->assertTrue($may->invoke($gating->getValue($resources), $registry->getDefinition(CabinetResource::class)));
 
-    // Without this module, the access classes left are none of a variant's,
-    // and the one variant answered for is the gallery's oil finish, by an
-    // alter: it alone could refuse, so nothing else is built for it.
+    // Without this module, the access classes left are a variant's only
+    // where the kit's stove and the pack's frame pack, mixed in, have one,
+    // and the one variant at a
+    // key answered for is the gallery's oil finish, by an alter: it alone
+    // could refuse, so nothing else is built for it.
     $this->installSchema('user', ['users_data']);
     $this->container->get('module_installer')->uninstall(['surface_tool_test']);
     $this->container->get('module_installer')->install(['surface_resource_test']);
@@ -329,7 +331,7 @@ class LockedAccessTest extends SurfaceKernelTestBase {
         }
       }
     }
-    $this->assertSame(['resource_test.gallery.finish.oil'], $answered);
+    $this->assertSame(['resource_test.gallery.finish.oil', 'resource_test.kit.stove', 'resource_test.pack.frame'], $answered);
     $this->assertNull($registry->getDefinition(OilFinishStructure::class)->access, 'Answered for by an alter, with no access class.');
     $this->assertTrue($may->invoke($gating->getValue($resources), $registry->getDefinition(GalleryResource::class)));
     $this->assertFalse($may->invoke($gating->getValue($resources), $registry->getDefinition(OilFinishStructure::class)), 'Nothing but itself answers.');

@@ -1,0 +1,7 @@
+services:
+  # The placement's two providers as they were, writing a plugin's config
+  # schema as JSON Schema, kept for the comparison with the direct route.
+  Drupal\surface_reader_test\Variants\BlockPluginJsonStructures:
+    arguments: ['@plugin.manager.block', '@surface.config_schema_document', '@module_handler']
+  Drupal\surface_reader_test\Variants\ConditionPluginJsonStructures:
+    arguments: ['@plugin.manager.condition', '@context.repository', '@context.handler', '@language_manager', '@surface.config_schema_document', '@string_translation']

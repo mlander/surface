@@ -1106,6 +1106,19 @@ final class SchemaReader {
       $this->note($at, 'Kept as a JsonSchema constraint on the frame: no key or rule says it.');
     }
 
+    // Variants mixed in: a conditional on one sibling's value whose `then`
+    // is a def, by reference, its members among the frame's keys.
+    // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+    $chosen = $this->variantsMixedIn($conditionals, $properties, $root);
+    foreach ($chosen as ['consumed' => $consumed, 'members' => $brought]) {
+      foreach ($consumed as $i) {
+        unset($conditionals[$i]);
+      }
+      foreach ($brought as $key => $def) {
+        $members[$key] ??= $def;
+      }
+    }
+
     // Variants: a key a sibling's value chooses an object for.
     $variants = [];
     foreach ($properties as $name => $property) {
@@ -1125,6 +1138,11 @@ final class SchemaReader {
     foreach ($properties as $name => $property) {
       $name = (string) $name;
       $at = static::below($pointer, 'properties', $name);
+      if (isset($members[$name]) && !isset($mixins[$members[$name]])) {
+        // A member of variants mixed in, narrowed by the frame.
+        $this->note($at, 'Not read: what an owner narrows of a member of variants mixed in is said where the owner declares it.');
+        continue;
+      }
       if (isset($members[$name])) {
         $structure = $members[$name];
         if (!isset($mixed[$structure])) {
@@ -1154,6 +1172,11 @@ final class SchemaReader {
         continue;
       }
       $this->key($name, $property, in_array($name, $required, TRUE), $at, $inputs, $root, array_map('strval', array_keys($properties)));
+      if (isset($chosen[$name])) {
+        // Where the emitter states them: the members follow the key that
+        // chooses them.
+        $this->mixVariantsIn($name, $chosen[$name], $properties, $inputs, $root);
+      }
     }
     foreach (array_diff($required, array_map('strval', array_keys($properties))) as $name) {
       if (!isset($members[$name])) {
@@ -1164,7 +1187,11 @@ final class SchemaReader {
     // A rule may narrow a member of a structure mixed in, which the frame
     // says nothing of beside its place: read it as its def declares it.
     $declared = $properties;
-    foreach (array_keys($mixins) as $structure) {
+    $defs = array_keys($mixins);
+    foreach ($chosen as ['variants' => $by_value]) {
+      array_push($defs, ...array_values($by_value));
+    }
+    foreach (array_unique($defs) as $structure) {
       $def = SchemaResolver::inline($root['$defs'][$structure], $root);
       foreach (is_array($def['properties'] ?? NULL) ? $def['properties'] : [] as $key => $member) {
         if (isset($members[(string) $key]) && is_array($member)) {
@@ -1193,6 +1220,88 @@ final class SchemaReader {
     if ($left !== []) {
       $inputs->constrainFrame($this->withDefs($left, $root));
     }
+  }
+
+  /**
+   * Finds variants mixed in: the defs a sibling's value chooses, flat.
+   *
+   * Each an `if` naming one sibling's `const` and a `then` that is a
+   * reference to an object def, alone or as the one entry of an `allOf`,
+   * as the emitter writes mixInVariants(). Today's rule reading would keep
+   * such a conditional as a constraint on the frame, since its `then`
+   * names no property.
+   *
+   * @param array<int, array> $conditionals
+   *   The frame's conditionals, by index.
+   * @param array $properties
+   *   The frame's properties: the deciding key is one of them.
+   * @param array $root
+   *   The document.
+   *
+   * @return array<string, array{variants: array<string, string>, consumed: int[], members: array<string, string>}>
+   *   By deciding key: each value's def, the conditionals that state them,
+   *   and each member with the def that brings it first.
+   */
+  protected function variantsMixedIn(array $conditionals, array $properties, array $root): array {
+    $found = [];
+    foreach ($conditionals as $i => $conditional) {
+      $then = $conditional['then'];
+      if (array_keys($then) === ['allOf'] && is_array($then['allOf']) && count($then['allOf']) === 1 && is_array($then['allOf'][0] ?? NULL)) {
+        $then = $then['allOf'][0];
+      }
+      $test = static::condition($conditional['if']);
+      if ($test === NULL || $test->kind !== 'equals' || !isset($properties[$test->key]) || array_keys($then) !== ['$ref'] || !is_string($then['$ref']) || !static::isLocal($then['$ref'])) {
+        continue;
+      }
+      $name = (string) SchemaResolver::defName($then['$ref']);
+      if (!is_array($root['$defs'][$name] ?? NULL) || !$this->isObject($root['$defs'][$name])) {
+        continue;
+      }
+      $value = is_bool($test->operand) ? ($test->operand ? '1' : '0') : (string) $test->operand;
+      $found[$test->key]['variants'][$value] = $name;
+      $found[$test->key]['consumed'][] = $i;
+      foreach ($this->membersOf($root['$defs'][$name], $root) as $key) {
+        $found[$test->key]['members'][$key] ??= $name;
+      }
+    }
+    return $found;
+  }
+
+  /**
+   * Mixes in the variants a sibling's value chooses, each a read structure.
+   *
+   * @param string $by
+   *   The deciding key, just declared.
+   * @param array{variants: array<string, string>, consumed: int[], members: array<string, string>} $found
+   *   What variantsMixedIn() found for it.
+   * @param array $properties
+   *   The frame's properties, for the deciding key's labels.
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   *   The blueprint.
+   * @param array $root
+   *   The document.
+   */
+  protected function mixVariantsIn(string $by, array $found, array $properties, ResourceBlueprint $inputs, array $root): void {
+    $labels = [];
+    $deciding = is_array($properties[$by] ?? NULL) ? $properties[$by] : [];
+    foreach (is_array($deciding['oneOf'] ?? NULL) ? $deciding['oneOf'] : [] as $choice) {
+      if (is_array($choice) && array_key_exists('const', $choice) && is_string($choice['title'] ?? NULL) && $choice['const'] !== NULL) {
+        $labels[is_bool($choice['const']) ? ($choice['const'] ? '1' : '0') : (string) $choice['const']] = $choice['title'];
+      }
+    }
+    if (is_scalar($deciding['const'] ?? NULL) && is_string($deciding[ContractEmitter::EXTENSION]['fixed'] ?? NULL)) {
+      // The one value a deciding key may hold, and the label it is drawn
+      // with.
+      $labels[(string) $deciding['const']] = $deciding[ContractEmitter::EXTENSION]['fixed'];
+    }
+    $variants = [];
+    foreach ($found['variants'] as $value => $def) {
+      $variants[(string) $value] = [
+        'name' => $this->structureAt($inputs, $def, $root, static::below('', '$defs', $def)),
+        'label' => $labels[(string) $value] ?? NULL,
+      ];
+    }
+    $inputs->mixInReadVariants($by, $variants);
   }
 
   /**

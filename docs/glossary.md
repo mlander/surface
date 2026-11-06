@@ -45,7 +45,7 @@ answer access for its keys. Declared as a class carrying
 its def's title and description (with none, it takes those of the one
 plugin that holds it), implementing `Resource\StructureInterface`;
 or a plugin that is its own structure, `#[UsesStructure]` with no
-argument. The six ways one is made of others are side by side in
+argument. The seven ways one is made of others are side by side in
 [Which way to compose](resources.md#which-way-to-compose).
 
 Introduced in [Structures](introduction/03-structures.md). Reference:

@@ -26,10 +26,10 @@ pattern left open.
 
 ## Which way to compose
 
-A resource or structure is made of others in six ways. Each answers a
+A resource or structure is made of others in seven ways. Each answers a
 different question, keeps the keys in a different place and is stated
-differently in the schema; the examples module shows every one on a
-page of its own.
+differently in the schema; the examples module shows six of them on a
+page of their own, and the test module's kit the seventh.
 
 | The question you are asking | What it gives | The example that shows it | On this page |
 | --- | --- | --- | --- |
@@ -37,13 +37,15 @@ page of its own.
 | Are these keys shared members that are part of this thing? | `mixIn(Structure::class)`: a mixin, its members the owner's own keys, stored flat beside them; the schema is `allOf` of the structure's def and the owner's properties. | The review, `/surface-examples/8` | [Mixins](#mixins) |
 | Does a structure need a value its container holds? | `reads($port, $type)` in the structure, wired by `attach(..., reads: [$port => $key])`: a port, the value kept at the container's key and stored by nothing in the structure; the def lists its ports, and what depends on one is stated on the container's `allOf`. | The person's `listed`, `/surface-examples/8` and `/surface-examples/8/desk` | [Ports](#ports) |
 | Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
+| Does one key's value choose which further keys apply, stored flat beside it? | `mixInVariants($sibling)` and a `#[Variant]` per value, or `from:` a provider: variants mixed in, every variant's members the owner's own keys, stored flat beside the deciding key; the schema is an `if`/`then` on the sibling for each variant, its `then` the variant's def. | The test module's kit; config schema's `views.sort.[plugin_id]` and `condition.plugin.[id]` | [Variants mixed in](#variants-mixed-in) |
 | Does a group of keys repeat? | `attachList($key, Child::class, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
 | Is there one key per thing the site has? | `addEach()` or `attachEach()` with a provider: keys from the site, a map under the key with one entry per thing the provider lists at every build; the schema states every entry, the map a def of the owner's. | The ticket types, `/surface-examples/9` | [Keys that come from the site](#keys-that-come-from-the-site) |
 
 The rule of thumb: nest for a thing of its own, mix in for shared
 members that are part of this thing, and read a port for a value the
-container holds. Use variants when a key chooses the keys, and a
-collection when groups repeat. Use keys from the site when the site,
+container holds. Use variants when a key chooses the keys (mixed in when
+the chosen keys are stored flat beside it), and a collection when groups
+repeat. Use keys from the site when the site,
 not the code, decides how many there are. Whichever way, the key takes
 the label the parent gives it, and the child's def in the schema the
 label the child gives itself, `#[Structure(label:)]`
@@ -1549,9 +1551,12 @@ Each refusal names the class and method at fault:
 - an alter attaching anywhere but its own mount, beside keys of its own
   there, a collection, or a resource, a structure with children of its
   own, or one whose access is not open, at its mount;
-- a structure mixed in that clashes, cycles, holds a child, stores
-  itself, has outputs, is mixed in by an alter, or is wired wrong, and
-  an owner naming what it may not of it ([Mixins](#mixins)).
+- a structure mixed in that clashes, cycles, holds variants at a key or
+  keys from the site, wires a child's ports, stores itself, has outputs,
+  is mixed in by an alter, or is wired wrong, and an owner naming what it
+  may not of it ([Mixins](#mixins)); two variants mixed in that declare
+  a member unlike, or one that holds variants at a key
+  ([Variants mixed in](#variants-mixed-in)).
 
 ## Children
 
@@ -1894,19 +1899,159 @@ timestamps' two are the journal's own.
   not there and storage keeps them. The owner's access answers for the
   rest, and where both answer for the same keys the stricter stands
   (why: [decision](decisions.md#a-mixin-is-merged-flat)).
+- **Children.** A child the structure attaches at a fixed key or in a
+  collection, an anonymous map with a frame among them, is the owner's
+  child at that key: built with the owner's children, in its own frame,
+  its access its own, stored at the key beside the members, nothing
+  wiring its ports. Omitted with the structure, it goes; locked with it,
+  it is locked. The test module's harnessed structure mixes in a harness
+  that brings a hip belt, its pockets and a rain cover.
 - **One def.** Both documents write the structure once, as a def, and
   the owner's frame is `allOf` of a reference to it and the owner's own
   properties, closed with `unevaluatedProperties`
   ([the served contract](served-contract.md#a-mixed-in-structure-is-composed)).
 - **Refused at build**, naming the class or the method: a member the
   owner, or another structure mixed in, declares too; a structure mixed
-  into itself, directly or through another; a structure that attaches a
-  child, attaches variants or a collection; a resource; one with outputs;
+  into itself, directly or through another; a structure that attaches
+  variants at a key or keys from the site, or wires the ports of a child
+  it attaches; a resource; one with outputs;
   a `mixIn()` from an alter; an unwired port, one wired to a key the
   owner does not declare, to one of the structure's own members, or of
   another type; an owner's refiner or rule ruling a member out, or
   naming a member of a structure with an access class; a structure's
   alter that mounts a key.
+
+### Variants mixed in
+
+Variants nest the structure a sibling key chooses under a key of its
+own. Mixing them in merges every variant's members into the owner's own
+keys instead, where the call stands among them, as `mixIn()` merges one
+structure's:
+
+```php
+#[Resource('resource_test.kit', storage: KitStorage::class, label: new TranslatableMarkup('Camping kit'))]
+final class KitResource implements ResourceInterface {
+
+  #[Operation('configure', label: 'Configure the kit', permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('title', 'string', t('Title'))
+      ->setRequired(TRUE);
+    $inputs->add('kind', 'string', t('Kind'))
+      ->setRequired(TRUE);
+    $inputs->mixInVariants('kind');
+    $inputs->add('notes', 'string', t('Notes'));
+  }
+
+}
+
+#[Structure('resource_test.kit.tent', label: new TranslatableMarkup('Tent kit'))]
+#[Variant(of: KitResource::class, at: 'kind', for: 'tent', label: new TranslatableMarkup('Tent'))]
+final class TentKitStructure implements StructureInterface {
+
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('weight', 'integer', t('Weight'))
+      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('poles', 'integer', t('Poles'), default: 2)
+      ->setRequired(TRUE)
+      ->addConstraint('Range', ['min' => 1]);
+    $inputs->add('fly', 'boolean', t('Rain fly'), default: FALSE);
+    $inputs->narrow('poles')
+      ->when(Condition::equals('fly', TRUE))
+      ->constrain('Range', ['min' => 2])
+      ->because(t('A rain fly takes two poles at least.'));
+  }
+
+}
+```
+
+Each class's `use` line: [Namespaces](concepts.md#namespaces).
+
+The stove is the variant for `stove`, with the same `weight` and a
+`fuel` of its own. The kit's keys are `title`, `kind`, `weight`, `fuel`,
+`poles`, `fly`, `notes`: every variant's members, in the order the
+variants were found and then each one's key order, a member two variants
+declare alike once. As properties, `#[MixInVariants(by: 'kind')]` on the
+class, after its properties and its `#[MixIn]`s
+([Declaring a resource](declaring-a-resource.md#declared-as-properties)).
+
+- **Which to choose.** `attachVariants()` where the chosen keys are a
+  thing under a key of their own (a block's settings, a field's). Mix
+  them in where the stored shape is flat and the deciding key sits
+  beside the members: a config schema type chosen by a key inside its
+  own value, `views.sort.[plugin_id]`, or an OpenAPI schema with an
+  inline discriminator.
+- **Found as variants are found.** Every `#[Variant(of:, at:)]` whose
+  `at` is the deciding key, and what a provider lists,
+  `mixInVariants('plugin_id', from: ConfigSchemaTypes::class,
+  arguments: [...])`, a `#[Variant]` winning for a value both name. The
+  deciding key is offered the variants' values by their labels, as for
+  variants at a key. A variant is an ordinary `#[Structure]` holding
+  keys, maps, children at a fixed key or in a collection, and variants
+  at a key.
+- **Declared before anything is chosen.** Every member of every variant
+  is the owner's key once the owner is built, before any value is
+  known: nothing is built later, as a variant the site lists at a key
+  is. A member of a variant not chosen does not apply (the form draws
+  nothing for it, the pipeline refuses it sent, naming the deciding
+  value: "Fuel does not apply when Kind is Tent."), and the chosen
+  variant's required members are required. Its defaults are laid in
+  once it is chosen, and a write stores the members flat beside the
+  deciding key.
+- **Shared members.** A member two variants declare alike (its type,
+  constraints, settings and default, and for a child the child it
+  holds) is one key, which applies when either is chosen. The label and
+  the description are presentation: the owner's key wears the first
+  variant's, and each variant's def its own (the test module's pack:
+  the daypack's capacity is "Volume", the frame pack's "Capacity", one
+  key). One they declare differently is refused at build, naming the
+  owner, both variants and the key, as is a member that is a key the
+  owner, a structure mixed in or another call's variant declares.
+- **Children.** A child a variant holds at a fixed key or in a
+  collection, an anonymous map with a frame among them, is the owner's
+  child at that key, among the members where the variant declares it,
+  applying where its variant is chosen: the pack's frame pack brings a
+  hip belt and its pockets, its daypack a rain cover. Each is built with
+  the owner's children, its access its own, nothing wiring its ports;
+  the variant's def holds it by reference, so the conditional that
+  names the def names the child's def inside it.
+- **Variants inside.** Variants a variant holds at a key,
+  `attachVariants('covering', by: 'roof')` in the test module's hut, are
+  the owner's variants at that key, chosen by the variant's member, which
+  is the owner's key, and applying where the variant is chosen: the
+  shelter stores its roof flat beside its kind and the covering under
+  its key. Which `#[Variant]` classes they are (`of: HutStructure::class,
+  at: 'covering'`), and the ids of those a provider lists, are the
+  variant's, so the camp, which mixes the same hut in, holds the same
+  covering. Two variants share the key where the same deciding key
+  chooses the same structures by the same values. One the site lists is
+  settled in the owner's frame when a door reads it. The variant's def
+  states them as any def states variants at a key, `if` the roof holds a
+  value, `then` the covering's def.
+- **Refined in the owner's frame**, as a structure mixed in is: each
+  variant's refiners and rules on its own members. A variant reads no
+  port: any module may add one, so no wiring the owner writes could name
+  its ports.
+- **Access.** A variant's access class answers for it: omitted, its
+  value is not offered and its own members are not there (storage keeps
+  them); locked, its members hold what is stored. A member another
+  variant offered brings stays as that one leaves it.
+- **One def per variant.** Both documents write each variant once, as a
+  def, and state it by a conditional on the deciding key, `if` it holds
+  the variant's value, `then` the def by reference; the frame lists the
+  owner's own keys and is closed with `unevaluatedProperties`, and
+  `x-surface.variantsMixedIn` names the def each value chooses
+  ([the served contract](served-contract.md#variants-mixed-in-are-conditionals)).
+- **Refused at build**, naming the class or the method: a deciding key
+  the owner does not declare as a plain input, or one that holds a list
+  or a map; a variant that is a resource, a shape, has outputs, reads a
+  port, holds keys from the site or mixes variants in of its own, or
+  wires the ports of a child it holds; a `mixInVariants()` from an alter
+  or inside a structure mixed in; a key that both holds variants and
+  chooses variants mixed in. Why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key).
 
 ### Reusing a structure from another module
 

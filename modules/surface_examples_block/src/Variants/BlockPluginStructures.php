@@ -9,7 +9,7 @@ use Drupal\Core\Block\BlockPluginInterface;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Plugin\Context\ContextDefinitionInterface;
-use Drupal\surface\Contract\ConfigSchemaDocument;
+use Drupal\surface\Reader\ConfigSchemaReader;
 use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface\Resource\SiteList;
 use Drupal\surface\Resource\SiteListInterface;
@@ -28,13 +28,14 @@ use Drupal\surface\Resource\SiteListInterface;
  *   settings with #[UsesStructure] (the component block, the example block)
  *   is that structure, built as declared, its refiners, children and
  *   variants with it.
- * - **Its config schema, read.** Any other plugin's settings are what
- *   `block.settings.<plugin id>` says, falling back to
- *   `block.settings.*` as typed config does, less the keys every block
- *   has, which the placement holds itself (its label, whether the label
- *   shows, the provider, the context mapping), written as JSON Schema
- *   (ConfigSchemaDocument) for the schema reader. The plugin's own
- *   defaults are each key's default.
+ * - **Its config schema, read.** Any other plugin's settings are the
+ *   structure `block.settings.<plugin id>` is, falling back to
+ *   `block.settings.*` as typed config does, read straight from the
+ *   schema (ConfigSchemaReader) in its `:own` form: less the keys of
+ *   `block.settings.*`, which every block has and the placement holds
+ *   itself (its label, whether the label shows, the provider, the context
+ *   mapping). The plugin's own defaults, which the schema does not know,
+ *   are laid over it as each key's default.
  *
  * Which plugins there are follows from the extensions installed, from the
  * content blocks a site has and from its menus, so the list is cached by
@@ -50,6 +51,11 @@ final class BlockPluginStructures implements SiteListInterface {
   public const BASE = ['id', 'label', 'label_display', 'provider', 'context_mapping'];
 
   /**
+   * The type whose keys every block has: what a variant leaves out.
+   */
+  public const FALLBACK = 'block.settings.*';
+
+  /**
    * The plugins never offered: the one standing in for a missing plugin.
    */
   protected const NEVER = ['broken'];
@@ -60,18 +66,25 @@ final class BlockPluginStructures implements SiteListInterface {
   protected ?SiteList $list = NULL;
 
   /**
+   * What each structure in the list was read from: its type and defaults.
+   *
+   * @var list<array{0: string, 1: array}>
+   */
+  protected array $read = [];
+
+  /**
    * Constructs the provider.
    *
    * @param \Drupal\Core\Block\BlockManagerInterface $blocks
    *   The block plugin manager.
-   * @param \Drupal\surface\Contract\ConfigSchemaDocument $schemas
-   *   Writes a plugin's settings schema as JSON Schema.
+   * @param \Drupal\surface\Reader\ConfigSchemaReader $reader
+   *   Reads a plugin's settings schema into the structure it is.
    * @param \Drupal\Core\Extension\ModuleHandlerInterface $moduleHandler
    *   The module handler, asked which modules derive plugins from content.
    */
   public function __construct(
     protected readonly BlockManagerInterface $blocks,
-    protected readonly ConfigSchemaDocument $schemas,
+    protected readonly ConfigSchemaReader $reader,
     protected readonly ModuleHandlerInterface $moduleHandler,
   ) {}
 
@@ -80,6 +93,13 @@ final class BlockPluginStructures implements SiteListInterface {
    */
   public function list(): SiteList {
     if ($this->list !== NULL) {
+      // A structure read from config schema is held by the registry only
+      // once registered, and a build answered from the cache registers it
+      // again from this list: registered at every call, as the list is
+      // asked at every build.
+      foreach ($this->read as [$type, $defaults]) {
+        $this->reader->structure($type, '', self::FALLBACK, $defaults);
+      }
       return $this->list;
     }
     $list = (new SiteList())->addCacheTags(['config:core.extension']);
@@ -99,7 +119,10 @@ final class BlockPluginStructures implements SiteListInterface {
         $list->add($id, $label, structure: $structure);
         continue;
       }
-      $list->add($id, $label, schema: $this->schemas->object('block.settings.' . $id, self::BASE, $this->defaults($id)));
+      $type = $this->reader->determine('block.settings.' . $id) ?? self::FALLBACK;
+      $defaults = $this->defaults($id);
+      $this->read[] = [$type, $defaults];
+      $list->add($id, $label, structure: $this->reader->structure($type, '', self::FALLBACK, $defaults));
     }
     return $this->list = $list;
   }

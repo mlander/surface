@@ -8,8 +8,9 @@ namespace Drupal\surface\Resource\Attribute;
  * Says which variants this structure is one of, and for which value.
  *
  * Variants are the structures a sibling key chooses between, attached at
- * one key with attachVariants(); each is the variant for one value of the
- * deciding key. The child declares it, so the parent never has to know
+ * one key with attachVariants(), or mixed in flat beside the deciding key
+ * with mixInVariants(); each is the variant for one value of the deciding
+ * key. The child declares it, so the parent never has to know
  * its children: a new field type brings its own settings structure.
  *
  * Discovery collects it, and the build step adds this structure to the
@@ -33,7 +34,8 @@ final class Variant {
    * @param class-string $of
    *   The resource or structure that attaches the variants.
    * @param string $at
-   *   The key on it the variants are attached at.
+   *   The key on it the variants are attached at; for variants mixed in,
+   *   which have no key of their own, the deciding key.
    * @param string $for
    *   The value of the deciding key this structure is the variant for.
    * @param string|\Stringable|null $label

@@ -169,6 +169,11 @@ final class SchemaResolver {
     foreach (array_reverse($mixed) as $def) {
       $resolved = self::mixIn($resolved, $def);
     }
+    $chosen = $resolved[ContractEmitter::EXTENSION]['variantsMixedIn'] ?? NULL;
+    if ($frame && is_array($chosen)) {
+      // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+      $resolved = self::mixInVariants($resolved, $chosen, $root, $ancestors);
+    }
     if (($resolved['unevaluatedProperties'] ?? NULL) === FALSE && isset($resolved['properties']) && !isset($resolved['$ref'])) {
       // Every key is in the frame's own properties now, so it closes them.
       $closed = [];
@@ -233,6 +238,136 @@ final class SchemaResolver {
     ];
     if ($conditions !== []) {
       $frame['allOf'] = $conditions;
+    }
+    return $frame;
+  }
+
+  /**
+   * Lays a frame over the defs of the variants a sibling key mixes in.
+   *
+   * The frame states each variant by a conditional on its deciding key,
+   * its `then` the variant's def; read flat, as the pipeline reads it,
+   * every member of every variant is a property of the frame, after the
+   * deciding key (what the frame narrows of one laid over its def), the
+   * defs' own conditionals hold in the frame, and the conditionals on the
+   * deciding key are the rules the build bound for the choice, one per
+   * member: it does not apply unless the key holds a value whose variant
+   * brings it, and is required where that variant requires it. The marker
+   * that named the defs is spent, so the frame reads flat however often
+   * it is resolved.
+   *
+   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   *
+   * @param array $frame
+   *   The frame, resolved.
+   * @param array $chosen
+   *   Its `x-surface.variantsMixedIn`: by deciding key, the def each
+   *   value chooses.
+   * @param array $root
+   *   The document's root, which holds `$defs`.
+   * @param string[] $ancestors
+   *   The defs followed on the way to the frame.
+   *
+   * @return array
+   *   The frame, every member of every variant described in it.
+   */
+  protected static function mixInVariants(array $frame, array $chosen, array $root, array $ancestors): array {
+    $own = is_array($frame['properties'] ?? NULL) ? $frame['properties'] : [];
+    $conditions = is_array($frame['allOf'] ?? NULL) ? $frame['allOf'] : [];
+    foreach ($chosen as $by => $values) {
+      $by = (string) $by;
+      $references = [];
+      foreach ((array) $values as $value => $reference) {
+        if (is_string($reference)) {
+          $references[$reference] = (string) $value;
+        }
+      }
+      // The deciding key's value each variant is chosen by, as its
+      // conditional spells it; the conditionals themselves are read flat.
+      $consts = [];
+      $kept = [];
+      foreach ($conditions as $condition) {
+        $reference = is_array($condition) ? ($condition['then']['allOf'][0]['$ref'] ?? NULL) : NULL;
+        $value = is_string($reference) ? ($references[$reference] ?? NULL) : NULL;
+        if ($value !== NULL && count($condition['then']['allOf']) === 1 && array_key_exists('const', $condition['if']['properties'][$by] ?? [])) {
+          $consts[$value] = $condition['if']['properties'][$by]['const'];
+          continue;
+        }
+        $kept[] = $condition;
+      }
+      $members = [];
+      $under = [];
+      $requiring = [];
+      $stated = [];
+      foreach ($references as $reference => $value) {
+        $name = self::defName($reference);
+        if ($name === NULL || !array_key_exists($value, $consts)) {
+          continue;
+        }
+        $alone = $ancestors;
+        $def = self::follow([], $name, $reference, $root, $ancestors, $alone);
+        foreach (is_array($def['properties'] ?? NULL) ? $def['properties'] : [] as $member => $property) {
+          $members[(string) $member] ??= $property;
+          $under[(string) $member][] = $consts[$value];
+        }
+        foreach (is_array($def['required'] ?? NULL) ? $def['required'] : [] as $member) {
+          $requiring[(string) $member][] = $consts[$value];
+        }
+        foreach (is_array($def['allOf'] ?? NULL) ? $def['allOf'] : [] as $condition) {
+          if (!in_array($condition, $stated, FALSE)) {
+            $stated[] = $condition;
+          }
+        }
+      }
+      // The members after the deciding key, each with what the frame
+      // narrows of it laid over.
+      $properties = [];
+      foreach ($own as $name => $property) {
+        if (isset($members[(string) $name])) {
+          continue;
+        }
+        $properties[$name] = $property;
+        if ((string) $name === $by) {
+          foreach ($members as $member => $declared) {
+            $narrowed = $own[$member] ?? NULL;
+            $properties[$member] = is_array($narrowed) && is_array($declared) ? self::merge($declared, $narrowed) : $declared;
+          }
+        }
+      }
+      $own = $properties + $members;
+      // The rules the build bound for the choice, as a flat frame states
+      // a declared rule: one conditional each, marked as the inline
+      // reading marks every rule's.
+      $chosen_by = static fn (array $values): array => [
+        'properties' => [$by => count($values) === 1 ? ['const' => $values[0]] : ['enum' => $values]],
+        'required' => [$by],
+      ];
+      $rules = [];
+      foreach (array_keys($members) as $member) {
+        $rules[] = [
+          'if' => ['not' => $chosen_by($under[$member])],
+          'then' => ['properties' => [$member => FALSE]],
+          ContractEmitter::EXTENSION => ['declared' => TRUE],
+        ];
+        if (isset($requiring[$member])) {
+          // Required, and so never null: its type as the def states it.
+          $typed = is_array($members[$member]) ? array_intersect_key($members[$member], array_flip(['type', 'oneOf'])) : [];
+          $rules[] = [
+            'if' => $chosen_by($requiring[$member]),
+            'then' => ($typed === [] ? [] : ['properties' => [$member => $typed]]) + ['required' => [$member]],
+            ContractEmitter::EXTENSION => ['declared' => TRUE],
+          ];
+        }
+      }
+      // The defs' conditionals first, as each variant's rules and refiners
+      // run before the owner's.
+      $conditions = [...$stated, ...$kept, ...$rules];
+    }
+    $frame['properties'] = $own;
+    $frame['allOf'] = $conditions;
+    unset($frame[ContractEmitter::EXTENSION]['variantsMixedIn']);
+    if (($frame[ContractEmitter::EXTENSION] ?? NULL) === []) {
+      unset($frame[ContractEmitter::EXTENSION]);
     }
     return $frame;
   }

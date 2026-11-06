@@ -141,6 +141,13 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
+  public function mixInVariants(string $by, ?string $from = NULL, array $arguments = []): static {
+    throw $this->framed('mixInVariants()');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function addEach(string $key, ?string $type, string $from, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
     throw $this->framed(sprintf('addEach("%s")', $key));
   }

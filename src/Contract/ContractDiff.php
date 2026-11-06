@@ -508,6 +508,28 @@ final class ContractDiff {
           $add($at . '/' . $port, $change, $effect);
         }
       }
+      elseif ($name === 'variantsMixedIn') {
+        // Which def each value chooses, as a key's `variants` names them for
+        // nested variants: the deciding key's choices and the conditionals
+        // judge what a variant added or removed does.
+        // Decision: see
+        // docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+        foreach (array_unique([...array_keys((array) $a), ...array_keys((array) $b)]) as $by) {
+          $was = (array) ($a[$by] ?? []);
+          $is = (array) ($b[$by] ?? []);
+          foreach (array_diff_key($is, $was) as $value => $def) {
+            $add($at . '/' . $by . '/' . $value, 'variant mixed in added', self::NOTE);
+          }
+          foreach (array_diff_key($was, $is) as $value => $def) {
+            $add($at . '/' . $by . '/' . $value, 'variant mixed in removed', self::NOTE);
+          }
+          foreach (array_intersect_key($is, $was) as $value => $def) {
+            if ($was[$value] !== $def) {
+              $add($at . '/' . $by . '/' . $value, 'variant mixed in names another def', self::NOTE);
+            }
+          }
+        }
+      }
       elseif ($name === 'operation') {
         foreach (self::FACTS as $fact) {
           if (($a[$fact] ?? NULL) !== ($b[$fact] ?? NULL)) {

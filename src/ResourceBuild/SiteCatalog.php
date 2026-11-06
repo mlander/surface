@@ -393,6 +393,11 @@ final class SiteCatalog {
     foreach ($surface->getDefinitions()->mixins() as $mixin) {
       static::settle($mixin->structure->child, $seen);
     }
+    foreach ($surface->getDefinitions()->mixinVariants() as $mixed) {
+      foreach ($mixed->variants as $variant) {
+        static::settle($variant->structure->child, $seen);
+      }
+    }
   }
 
   /**

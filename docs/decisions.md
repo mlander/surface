@@ -260,6 +260,14 @@ blueprint's verbs spelled as properties
 no blueprint method and no interface, since the trait calls the verbs
 there are. The pins below are 27 attributes and 112 arguments since.
 
+*Grown 2026-11-05,* by one blueprint method, `mixInVariants()`, and its
+attribute, `#[MixInVariants(by:, from:, arguments:)]`
+([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)):
+a config schema type chosen by a key inside its own value is stored
+flat, which neither `mixIn()` (one structure) nor `attachVariants()`
+(nested under a key) can declare. The pins are 28 attributes, 115
+arguments and 18 blueprint methods since.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -640,6 +648,7 @@ construct.
 | `addMap()` | an inline object |
 | `mixIn()` | `allOf` |
 | the variants, `attachVariants()` | `if`/`then` on the deciding key |
+| `mixInVariants()` | `allOf` of `if`/`then` on the deciding key, each `then` a reference |
 | `addEach()`, `attachEach()` | an object keyed by what the site has |
 | `addList()` | an array |
 
@@ -752,6 +761,13 @@ and `paid`, in the form and both documents.
 
 (`Resource\Attribute\Variant::$label`, `SurfaceBuilder::attachVariants()`,
 `Attaching::assertListNarrowsVariants()`)
+
+*Amended 2026-11-05:* the structure a sibling key chooses may be mixed
+in, its members stored flat beside the deciding key, with
+`mixInVariants($by)`. The tags live on the variants there too: a
+`#[Variant(of:, at:)]` whose `at` is the deciding key is one, and the
+deciding key is offered the variants' values by their labels, the same
+way ([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)).
 
 *Amended 2026-11-01:* there is no escape hatch beside variants. A key
 declared `any` with a `#[RefinesInput]` method returning a whole
@@ -3151,6 +3167,157 @@ journal leaves the child's step out for it.
 `Attaching::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
 
+*Amended 2026-11-05:* a mixin may be chosen by a sibling key: the
+variants that key chooses mixed in, each variant's members the owner's
+keys, flat, where the call stands
+([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)).
+What this entry says of a structure mixed in holds for each variant:
+built by itself for its def, refined in the owner's frame on its own
+members, its access locking or omitting them, its def written open.
+
+*Amended 2026-11-05, later:* a structure mixed in may hold a child at a
+fixed key or in a collection, an anonymous map with a frame among them,
+lifted from the refusals above, since a child the structure brings is
+the owner's child at that key, built with the owner's children, its
+access its own, nothing wiring its ports; variants at a key and keys
+from the site stay refused. (`ResourceBlueprint::attachments()`,
+`ResourceBlueprint::lists()`, `MixinsTest::testMixedInStructureHoldsChildren()`)
+
+*Amended 2026-11-05, step 3:* a variant mixed in may hold variants at a
+key, since the nested variants are declared statically under the key
+like any member and narrowed by the owner's frame, chosen by a member
+that is the owner's key; a structure mixed in with `mixIn()` still
+refuses them, as it refuses keys from the site.
+([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key))
+
+### A mixin may be chosen by a sibling key
+
+Decided 2026-11-05, by the maintainer. Config schema's own-key form,
+`views.sort.[plugin_id]` or `condition.plugin.[id]`, is a mapping whose
+type a key inside it chooses: the keys of a fallback type every value
+holds, and the chosen type's keys stored flat beside them. Neither verb
+could declare it: `mixIn()` merges one structure, and `attachVariants()`
+nests the chosen one under a key of its own, which changes the stored
+shape. `mixInVariants($by, from:, arguments:)` is a mixin chosen by a
+sibling key, `#[MixInVariants(by:, from:, arguments:)]` as a property.
+The test module's kit is the first case; the config schema reader reads
+the own-key form into it. Each choice, and why:
+
+- **A verb, not a flag on `attachVariants()`.** The vocabulary stays:
+  attach puts a structure under a key of yours, mix in puts its keys
+  among yours. This is the second move with a choice, so it is the
+  second verb, beside `mixIn()`.
+- **Declared statically, narrowed by value.** Every variant is found
+  (`#[Variant(of:, at:)]` with `at` the deciding key, and a provider's
+  list, as `attachVariants()` finds them) and built when the owner is
+  built, and every member of every variant is declared into the owner's
+  frame then, where the call stands: the call holds a place in the
+  builder's order (`SurfaceBuilderInterface::reservePlace()`), and
+  `Attaching::layVariantMixins()` fills it once the declaration ran,
+  before the alters, the site's defaults and the context are read.
+  Nothing swaps a shape: a member of a variant not chosen does not
+  apply, and the chosen variant's required members are required, each a
+  declared rule on the deciding key the build binds
+  (`Attaching::chosenRules()`), so the pipeline, the form and the tool
+  listing read it as any rule. Nothing is lazy: the members exist in
+  the frame before any value is known, so `VariantsToSettle` stays the
+  nested variants'. [A resource or structure is static](#a-resource-or-structure-is-static)
+  is untouched; [Variants](#variants-not-slots) said refinement narrows
+  values and cannot swap a shape, which is why this works.
+- **Collisions.** A member two variants declare alike (its type,
+  constraints, settings, default and label, required aside) is one key,
+  which applies when either is chosen. A member they declare
+  differently, or one that is a key the owner, a structure mixed in or
+  another call's variant declares, is refused at build, naming the
+  owner, the variants and the key. A variant may not read a port: any
+  module may add one, so the owner could write no wiring that names its
+  ports, and `mixInVariants()` takes no `reads:`.
+- **The contract.** The frame's `properties` list the owner's own keys;
+  each variant is `allOf` of one conditional, `if` the deciding key
+  `const` its value, `then` `allOf` of a reference to its def, written
+  open as a mixed-in def is, and the frame closed with
+  `unevaluatedProperties: false`. A member is in the frame's properties
+  only where the owner narrows it there, as what differs from its def.
+  `x-surface.variantsMixedIn` names the def each value chooses, by
+  deciding key, as a key's `x-surface.variants` does; the build's rules
+  are not written as rules (`DeclaredRefiner::$chooses`), since the
+  conditionals state them. `SchemaResolver::inline()` lays every member
+  into the frame and states those rules as a flat frame would;
+  `SchemaReader` reads the conditionals back into `mixInVariants()`;
+  `ContractDiff` judges a variant added or removed by the deciding key's
+  choices and the conditionals, as for nested variants.
+- **What stays nested, and why.** Variants at a key are unchanged:
+  `attachVariants()`, `Variants`, `VariantsToSettle`, the block
+  example's `settings`. A block's settings are a thing of their own
+  under a key; the stored shape says which verb fits.
+- **Config schema.** `ConfigSchemaReader` reads `prefix.[<key>]` as one
+  structure, `config_schema:<expression>`: the fallback's keys, then
+  `mixInVariants($key, from: ConfigSchemaTypes::class, arguments:
+  [<expression>, '', $key])`, the provider bound to the expression
+  itself, each variant the `:own` structure of a type. With no `*`
+  fallback and no type of the prefix's name, the fallback is the type
+  every named type extends, where it declares the deciding key
+  (`views_cache` for `views.cache.[type]`). Where the types named would
+  be refused (one holds a child, two declare a key differently), the
+  reader declares the fallback closed as before and notes why
+  (`ConfigSchemaReader::ownKeyWall()`): in core, `views.field`,
+  `views.area` and `views.filter` (a handler holding a child) and
+  `views.argument` and `views.cache` (one key declared two ways).
+
+Not built: lazy variants mixed in, built when a door reads them; a
+mixin chosen by an ancestor's key, which a port would have to decide; a
+variant mixed in that holds a child or reads a port; an alter's call; a
+variant chosen by a locked deciding key refusing its owner's access, as
+a nested variant so chosen may ([A chosen variant may refuse](#a-chosen-variant-may-refuse)):
+a mixed-in variant its access omits is only not offered.
+(`BlueprintAdditionsInterface::mixInVariants()`,
+`ResourceBlueprint::mixInVariants()`, `Attaching::layVariantMixins()`,
+`Attaching::mixInVariants()`, `MixinVariants`,
+`ContractEmitter::composedVariants()`, `SchemaResolver::mixInVariants()`,
+`SchemaReader::variantsMixedIn()`, `ConfigSchemaReader::ownKey()`,
+`MixinVariantsTest`)
+
+*Amended 2026-11-05, later:* two variants that declare a member alike
+but for its label and description share it, since the label is
+presentation and the first variant's serves the owner's key, each def
+keeping its own. A variant may hold a child at a fixed key or in a
+collection, since a child the structure brings is the owner's child at
+that key, applying where its variant is chosen, nothing wiring its
+ports; variants at a key and keys from the site in a variant stay
+refused, since the owner's frame does not find them. The reader's wall
+follows (`ConfigSchemaReader::ownKeyWall()`): in core `views.argument`
+now mixes its variants in; `views.cache` (`options` a sequence in one
+type, a mapping in another) and `views.area` (`content` a formatted text
+in `text`, a string in `text_custom`) keep the fallback for a key
+declared two ways, and `views.field` and `views.filter` for a variant
+holding variants at a key (`views.field.field`'s `settings`,
+`views.filter.entity_reference`'s `sub_handler_settings`).
+(`Attaching::declareMembers()`, `Attaching::alike()`, the pack in
+`MixinVariantsTest`)
+
+*Amended 2026-11-05, step 3:* a variant mixed in may hold variants at a
+key, since the nested variants are declared statically under the key
+like any member and narrowed by the owner's frame: the key is the
+owner's variants at that key, chosen by the variant's member, which is
+the owner's key, applying where its variant is chosen, settled in the
+owner's frame when a door reads one the site lists. Which `#[Variant]`
+classes they are, and the ids of those a provider lists, are the
+declaring variant's (`ResourceBlueprint::variantsDeclaredBy()`), so one
+variant mixed into two owners holds the same variants in both; two
+variants share the key where the same deciding key chooses the same
+structures. The variant's def holds them as any def holds variants at a
+key, and `ContractDiff` judges them so. Still refused: keys from the
+site in a variant, a variant's child whose ports it wires, and a variant
+that mixes variants in of its own. The reader's wall follows: in core
+`views.filter` now mixes its variants in; `views.field` keeps the
+fallback for a key declared two ways (`separator`, a `label` with its
+`Regex` in `views.field.field`, a `string` in
+`views.field.prerender_list`), as `views.cache` and `views.area` do, and
+each of the three declares every key its types declare beside the
+fallback's open. (`Attaching::declareMembers()`,
+`Attaching::nestedVariants()`, `Attaching::variantKeysOf()`, the shelter
+and the camp in `MixinVariantsTest`)
+
 ### An anonymous map
 
 Decided 2026-11-01. `addMap($key, $label, $define)` declares an object
@@ -3182,8 +3349,10 @@ class and an id where naming buys nothing.
   that an alter should reach, is a structure.
 - **Where it holds plain keys alone.** An alter's map and an output's:
   an alter attaches a structure at its own mount alone, and outputs
-  hold no attached structures; a structure mixed in holds no child. A
-  call that needs a frame there is refused naming why.
+  hold no attached structures. A call that needs a frame there is
+  refused naming why. *Amended 2026-11-05:* a structure mixed in may
+  hold one, the owner's child at that key
+  ([A mixin is merged flat](#a-mixin-is-merged-flat)).
 - **Read back.** `SchemaReader` reads an inline object that holds a
   structure as `addMap()`, so the document reads back to itself.
   *Amended 2026-11-01:* every inline object is read as `addMap()` and
@@ -6930,7 +7099,9 @@ why:
   provider). The structure at the entries is built once for the map, so
   its access answers once, as a collection's item's does; it may name no
   storage or identity, its owner storing it. Neither verb is offered to
-  an alter, or inside a structure mixed in, which holds no children.
+  an alter, or inside a structure mixed in, which holds no keys from the
+  site (*amended 2026-11-05:* it may hold a child at a fixed key or in a
+  collection, [A mixin is merged flat](#a-mixin-is-merged-flat)).
 - **Ports on an entry.** Decided by the owner on 2026-10-21:
   `attachEach($key, Structure::class, from:, reads: ['port' =>
   'sibling'])` wires the port of the entry `<id>` to `sibling.<id>`, the
@@ -9410,6 +9581,17 @@ in configuration a site edits, as a provider of variants.
 `Resource\SiteList`, `Plugin\Validation\Constraint\JsonSchemaConstraint`,
 `ResourceRegistry::defineRead()`, `DefinitionMap::frameConstraints()`,
 `SchemaReaderTest`, `SchemaRoundTripTest`, `VariantsFromSiteTest`)
+
+*Amended 2026-11-05:* a key a config schema or a typed data definition
+declares is always declared, open where the reader derives no shape for
+it, because the frame is closed: a key left out would refuse the stored
+value that holds it, in the structure that claims to describe it. Open
+is `any` held whole to nothing (`LeafRules::open()`), written with its
+title and no type, read back to itself; the reason stays noted at its
+path. A type chosen by its own key that falls back declares every key
+its types declare beside the fallback's open the same way.
+(`ConfigSchemaReader::open()`, `TypedDataReader::open()`,
+`ConfigSchemaReaderTest::testKeyNoShapeIsReadForIsOpen()`)
 
 ## Evolution
 
