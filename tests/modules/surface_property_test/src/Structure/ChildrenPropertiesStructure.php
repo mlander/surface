@@ -7,10 +7,10 @@ namespace Drupal\surface_property_test\Structure;
 use Drupal\surface\Resource\Attribute\Attach;
 use Drupal\surface\Resource\Attribute\AttachEach;
 use Drupal\surface\Resource\Attribute\AttachList;
+use Drupal\surface\Resource\Attribute\AttachVariants;
 use Drupal\surface\Resource\Attribute\Each;
 use Drupal\surface\Resource\Attribute\Input;
 use Drupal\surface\Resource\Attribute\Structure;
-use Drupal\surface\Resource\Attribute\Variants;
 use Drupal\surface\Resource\DeclaresByProperties;
 use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_property_test\Keys\Letters;
@@ -38,7 +38,7 @@ final class ChildrenPropertiesStructure implements StructureInterface {
   #[AttachList(EntryPropertiesStructure::class, label: 'Rows', min: 1, max: 3)]
   public array $rows;
 
-  #[Variants(by: 'pricing', label: 'Ticket')]
+  #[AttachVariants(by: 'pricing', label: 'Ticket')]
   public array $ticket;
 
   #[Each(from: Letters::class, type: 'boolean', label: 'On sale')]

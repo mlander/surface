@@ -19,6 +19,7 @@ use Drupal\surface_property_test\OutsideDiscovery\MapNamesNoClass;
 use Drupal\surface_property_test\OutsideDiscovery\NoAttribute;
 use Drupal\surface_property_test\OutsideDiscovery\NoKeyType;
 use Drupal\surface_property_test\OutsideDiscovery\OutputWithoutInterface;
+use Drupal\surface_property_test\OutsideDiscovery\TwoKinds;
 use Drupal\surface_property_test\OutsideDiscovery\UnknownGroup;
 use Drupal\surface_property_test\Plugin\Block\PropertyNoteBlock;
 use Drupal\surface_property_test\Structure\EntryPropertiesStructure;
@@ -49,7 +50,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * and each effect (`require:`, `doesNotApply:`, `constrain:`, with and
  * without `because:`); #[Map] with a nested class, plain and needing a
  * frame; #[Attach] by the property's type and by argument, wired with
- * `reads:`; #[AttachList] with a minimum and a maximum; #[Variants] with
+ * `reads:`; #[AttachList] with a minimum and a maximum; #[AttachVariants] with
  * two #[Variant] children; #[Each] and #[AttachEach] from a
  * SiteListInterface provider, wired with `reads:`; #[Port] typed and of
  * `any`, required and not; #[Computed] with `when:`, never required by
@@ -196,7 +197,8 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
    */
   public function testWhatTheVerbsCannotKnowIsRefused(): void {
     $refused = [
-      NoAttribute::class => NoAttribute::class . '::$loose carries no attribute that says what it is. Mark it #[Input], #[Output], #[Port], #[Computed], #[Map], #[Attach], #[AttachList], #[Variants], #[Each] or #[AttachEach], or make it static or protected, which the reader leaves alone.',
+      NoAttribute::class => NoAttribute::class . '::$loose carries no attribute that says what it is. Mark it #[Input], #[Output], #[Port], #[Computed], #[Map], #[Attach], #[AttachList], #[AttachVariants], #[Each] or #[AttachEach], or make it static or protected, which the reader leaves alone.',
+      TwoKinds::class => TwoKinds::class . '::$contact carries #[Input] and #[Attach], which each say what it is. A property is one key of one kind: keep one of them.',
       UnknownGroup::class => UnknownGroup::class . '::$aside is drawn in the group "side", which no #[Group] on the class declares. Declare it on the class, #[Group(\'side\', \'<label>\')], or name one it declares: main.',
       NoKeyType::class => NoKeyType::class . '::$tags is typed array, which is no key type and no shape. Type it string, int, float, bool or a shape\'s class, or say the key type on its attribute with type:; a list is #[Input(list:)].',
       AttachNamesNoClass::class => AttachNamesNoClass::class . '::$contact carries #[Attach] and names no class. Type the property with the class, or name it on the attribute with structure:.',

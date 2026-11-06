@@ -250,8 +250,6 @@ own, as the field's storage is.
 - `attachList()` is a collection: a list whose every item is the
   child, its Count the parent's
   ([Resources and structures](resources.md#collections)).
-  `attachListBy()`, a list whose every item chooses its own child, is
-  **deferred**; see [Deferred](#deferred).
 
 Both return the map definition at the key, as `add()` returns its
 definition, so the owner labels and describes its own child's key with
@@ -566,10 +564,11 @@ not built, or built only in part.
 `attachList($key, Child::class)`, a list whose every item is the child,
 is built ([Resources and structures](resources.md#collections)); the
 rest of this section is the position it was built to, and what is still
-open. `attachListBy($key, by: 'plugin')` would be a list whose every
-item chooses its own child, the deciding key being *inside* each item
-(visibility conditions, each naming its plugin), children marking
-themselves with `#[Variant]` as for `attachVariants()`.
+open. A list whose every item chooses its own child, the deciding key
+being *inside* each item (visibility conditions, each naming its
+plugin), is `attachList()` of a structure that holds the deciding key
+and its variants at a key, `attachVariants()`, so no verb is missing
+([decision](decisions.md#a-list-of-child-invocations)).
 
 The contract is an ordered list, as typed data lists and field items
 already are: delta is position, reordering is sending the items in

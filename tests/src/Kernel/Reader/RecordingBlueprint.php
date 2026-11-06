@@ -157,18 +157,18 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition {
     $map = MapDataDefinition::create();
-    $this->record($key, 'attach', $map, ['child' => $child]);
+    $this->record($key, 'attach', $map, ['child' => $structure]);
     return $map;
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
     $list = new ListDataDefinition([], MapDataDefinition::create());
-    $this->record($key, 'attachList', $list, ['child' => $child]);
+    $this->record($key, 'attachList', $list, ['child' => $structure]);
     return $list;
   }
 

@@ -16,7 +16,7 @@ namespace Drupal\surface\Resource\Attribute;
  * #[MixInVariants(by: 'kind')]
  * @endcode
  *
- * @see \Drupal\surface\Resource\BlueprintAdditionsInterface::mixInVariants()
+ * @see \Drupal\surface\Resource\BlueprintInterface::mixInVariants()
  */
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
 final class MixInVariants {

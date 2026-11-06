@@ -487,11 +487,11 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
-    static::assertNoShape('attach', $key, $child);
+  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition {
+    static::assertNoShape('attach', $key, $structure);
     static::assertReads($key, $reads);
     $shell = $this->reserveChild('attach', $key);
-    $this->attachments[$key] = $child;
+    $this->attachments[$key] = $structure;
     $this->wirings[$key] = $reads;
     return $shell;
   }
@@ -543,8 +543,8 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
-    static::assertNoShape('attachList', $key, $child);
+  public function attachList(string $key, string $structure, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+    static::assertNoShape('attachList', $key, $structure);
     if (($min !== NULL && $min < 0) || ($max !== NULL && $max < 0) || ($min !== NULL && $max !== NULL && $min > $max)) {
       throw new \InvalidArgumentException(sprintf(
         'attachList() was given %s to %s items for "%s": a collection holds from none upwards, and its fewest cannot be more than its most.',
@@ -569,7 +569,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       $shell->addConstraint('Count', $count);
     }
     $this->declare($key, $shell, NULL);
-    $this->lists[$key] = $child;
+    $this->lists[$key] = $structure;
     return $shell;
   }
 

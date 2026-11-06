@@ -1552,9 +1552,9 @@ Each refusal names the class and method at fault:
   there, a collection, or a resource, a structure with children of its
   own, or one whose access is not open, at its mount;
 - a structure mixed in that clashes, cycles, holds variants at a key or
-  keys from the site, wires a child's ports, stores itself, has outputs,
-  is mixed in by an alter, or is wired wrong, and an owner naming what it
-  may not of it ([Mixins](#mixins)); two variants mixed in that declare
+  keys from the site, wires a child's ports, stores itself, has outputs
+  or is wired wrong, and an owner naming what it may not of it
+  ([Mixins](#mixins)); two variants mixed in that declare
   a member unlike where one holds variants at it
   ([Variants mixed in](#variants-mixed-in)).
 
@@ -1914,12 +1914,11 @@ timestamps' two are the journal's own.
   owner, or another structure mixed in, declares too; a structure mixed
   into itself, directly or through another; a structure that attaches
   variants at a key or keys from the site, or wires the ports of a child
-  it attaches; a resource; one with outputs;
-  a `mixIn()` from an alter; an unwired port, one wired to a key the
-  owner does not declare, to one of the structure's own members, or of
-  another type; an owner's refiner or rule ruling a member out, or
-  naming a member of a structure with an access class; a structure's
-  alter that mounts a key.
+  it attaches; a resource; one with outputs; an unwired port, one wired
+  to a key the owner does not declare, to one of the structure's own
+  members, or of another type; an owner's refiner or rule ruling a
+  member out, or naming a member of a structure with an access class; a
+  structure's alter that mounts a key.
 
 ### Variants mixed in
 
@@ -2064,9 +2063,9 @@ class, after its properties and its `#[MixIn]`s
   or a map; a variant that is a resource, a shape, has outputs, reads a
   port, holds keys from the site or mixes variants in of its own, or
   wires the ports of a child it holds; two variants that declare one key
-  unlike where one holds variants at it; a `mixInVariants()` from an
-  alter or inside a structure mixed in; a key that both holds variants
-  and chooses variants mixed in. Why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key).
+  unlike where one holds variants at it; a `mixInVariants()` inside a
+  structure mixed in; a key that both holds variants and chooses
+  variants mixed in. Why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key).
 
 ### Reusing a structure from another module
 
@@ -2437,8 +2436,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 A collection is not an attached child in the engine's sense: its entry
 carries a `Collection` (`Entry::$list`), not an attachment, so
 `isNested()` is FALSE and the key is refined and locked as the
-parent's own. A list whose every item chooses its own child,
-`attachListBy()`, is not built.
+parent's own.
 
 ## Keys that come from the site
 
@@ -2725,7 +2723,6 @@ what is derived from what, and where core's APIs fell short.
 
 ## Not built yet
 
-A collection whose items choose their own child (`attachListBy()`),
-input shapes, and options sources with their alters are deferred; [the pattern](pattern.md#deferred) records the position each is held to.
+Input shapes and options sources with their alters are deferred; [the pattern](pattern.md#deferred) records the position each is held to.
 Until options sources exist, a live list is a constraint with an
 options resolver.

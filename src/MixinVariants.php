@@ -29,7 +29,7 @@ use Drupal\surface\Pipeline\ValueState;
  * two variants declare unlike, which the frame declares as wide as both
  * and a rule holds to the chosen variant's definition.
  *
- * @see \Drupal\surface\Resource\BlueprintAdditionsInterface::mixInVariants()
+ * @see \Drupal\surface\Resource\BlueprintInterface::mixInVariants()
  * @see docs/resources.md#variants-mixed-in
  */
 final class MixinVariants {

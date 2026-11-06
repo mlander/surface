@@ -439,7 +439,7 @@ whether it must be given. The attributes say the rest:
 | `addMap('coordinates', ..., fn)` | `#[Map('Coordinates')] public Coordinates $coordinates;`, a plain class of `#[Input]` properties |
 | `attach('contact', PersonStructure::class, reads: [...])` | `#[Attach(reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
 | `attachList('rooms', VenueRoomStructure::class, max: 20)` | `#[AttachList(VenueRoomStructure::class, max: 20)] public array $rooms;` |
-| `attachVariants('ticket', by: 'pricing')` | `#[Variants(by: 'pricing')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
+| `attachVariants('ticket', by: 'pricing')` | `#[AttachVariants(by: 'pricing')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
 | `addEach()`, `attachEach()` | `#[Each(from:, type:)]`, `#[AttachEach(Structure::class, from:)]` on an array property |
 | `reads('listed', 'boolean')` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
 | `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
@@ -447,6 +447,11 @@ whether it must be given. The attributes say the rest:
 | `mixIn(ReviewStructure::class, reads: [...])` | `#[MixIn(ReviewStructure::class, reads: [...])]` on the class |
 | `mixInVariants('kind', from:, arguments:)` | `#[MixInVariants(by: 'kind', from:, arguments:)]` on the class; each variant still carries `#[Variant(of:, at:)]`, `at` the deciding key |
 | `defineOutputs()` | `#[Output(...)]`, which says what `#[Input]` says, on the class implementing `DefinesOutputsInterface` |
+
+An attribute for the owner's own keys names the kind of member
+(`Input`, `Output`, `Map`, `Each`, `Computed`, `Port`); an attribute for
+a composition restates the verb (`Attach`, `AttachList`, `AttachEach`,
+`AttachVariants`, `MixIn`).
 
 `#[RefinesInput]` methods, `#[Operation]`, `#[Resource]`, `#[Structure]`,
 `#[Variant]`, alters, access and storage are as on any class.
@@ -459,8 +464,9 @@ whether it must be given. The attributes say the rest:
   A computed key is never required by what its property says.
 - **Texts.** An attribute argument cannot call `t()`, so the texts the
   reader names (a label, a description, a placeholder, a prefix, a
-  suffix, a help text, a group's title, a rule's reason) are written as
-  bare strings, which it wraps in `TranslatableMarkup`. A text inside a
+  suffix, a help text, a group's title, a rule's reason, a `#[Variant]`'s
+  label) are written as bare strings, which it wraps in
+  `TranslatableMarkup`. A text inside a
   constraint's options (a message, a choice's label) is handed to core
   as it is, and is written `new TranslatableMarkup('...')`. The
   trade-off: a bare string is translated where a translation exists, but

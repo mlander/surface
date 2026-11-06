@@ -15,7 +15,7 @@ namespace Drupal\surface\Resource\Attribute;
  * #[MixIn(ReviewStructure::class)]
  * @endcode
  *
- * @see \Drupal\surface\Resource\BlueprintAdditionsInterface::mixIn()
+ * @see \Drupal\surface\Resource\BlueprintInterface::mixIn()
  */
 #[\Attribute(\Attribute::TARGET_CLASS | \Attribute::IS_REPEATABLE)]
 final class MixIn {

@@ -542,9 +542,9 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
-    $this->assertUnwiredInMixin($child, $key, $reads);
-    return parent::attach($key, $child, $reads);
+  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition {
+    $this->assertUnwiredInMixin($structure, $key, $reads);
+    return parent::attach($key, $structure, $reads);
   }
 
   /**
@@ -933,7 +933,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   }
 
   /**
-   * Locks a key a schema read into this blueprint says is read only.
+   * Locks a key a reader read into this blueprint as read only.
    *
    * @param string $key
    *   The key.
@@ -941,7 +941,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    * @return $this
    *
    * @internal
-   *   For SchemaReader alone.
+   *   For SchemaReader and TypedDataReader alone.
    */
   public function lockRead(string $key): static {
     $this->builder->lock($key);

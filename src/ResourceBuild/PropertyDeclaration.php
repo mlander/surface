@@ -17,6 +17,7 @@ use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\Attribute\Attach;
 use Drupal\surface\Resource\Attribute\AttachEach;
 use Drupal\surface\Resource\Attribute\AttachList;
+use Drupal\surface\Resource\Attribute\AttachVariants;
 use Drupal\surface\Resource\Attribute\Computed;
 use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Describe;
@@ -31,7 +32,6 @@ use Drupal\surface\Resource\Attribute\Output;
 use Drupal\surface\Resource\Attribute\Port;
 use Drupal\surface\Resource\Attribute\Rule;
 use Drupal\surface\Resource\Attribute\Setting;
-use Drupal\surface\Resource\Attribute\Variants;
 use Drupal\surface\Resource\Attribute\Widget;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
@@ -44,10 +44,10 @@ use Drupal\surface\Resource\ShapeInterface;
  * blueprint's verbs, called with what the property says, in declaration
  * order, so what the verbs refuse is refused the same way, since it is
  * they that run. This class refuses only what the verbs cannot know: a
- * property with no attribute saying what it is, a group no #[Group]
- * declares, a property type that is no key type, a child or map that
- * names no class, an item constraint on a key that is no list, and an
- * output on a class that declares none.
+ * property with no attribute saying what it is, or with two, a group no
+ * #[Group] declares, a property type that is no key type, a child or map
+ * that names no class, an item constraint on a key that is no list, and
+ * an output on a class that declares none.
  *
  * It is pure. Nothing instantiates the class or reads a property's
  * value: only the types, the initializers and the attributes are read,
@@ -83,6 +83,22 @@ final class PropertyDeclaration {
    * The namespace of the attributes a property declares itself with.
    */
   private const NAMESPACE = 'Drupal\\surface\\Resource\\Attribute\\';
+
+  /**
+   * The attributes that each say what kind of member a property is.
+   */
+  private const KINDS = [
+    Input::class,
+    Output::class,
+    Port::class,
+    Computed::class,
+    Map::class,
+    Attach::class,
+    AttachList::class,
+    AttachVariants::class,
+    Each::class,
+    AttachEach::class,
+  ];
 
   /**
    * Fills the input blueprint from the class's properties.
@@ -131,6 +147,7 @@ final class PropertyDeclaration {
     $groups = self::groups($reflection);
     $rules = [];
     foreach (self::properties($reflection) as $property) {
+      self::assertOneKind($property);
       $is_output = $property->getAttributes(Output::class) !== [];
       if ($is_output && !$reflection->implementsInterface(DefinesOutputsInterface::class)) {
         throw new \LogicException(sprintf('%s marks the property $%s #[Output], but the class does not implement %s, so nothing reads its outputs. Implement it: the trait answers defineOutputs().', $class, $property->getName(), DefinesOutputsInterface::class));
@@ -193,6 +210,32 @@ final class PropertyDeclaration {
   }
 
   /**
+   * Refuses a property that carries two attributes saying what it is.
+   *
+   * The method declare() calls the verb of the first such attribute it
+   * looks for, in a fixed order, so any other would be dropped without a
+   * word.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   *
+   * @throws \LogicException
+   *   Naming the property and each such attribute it carries.
+   */
+  private static function assertOneKind(\ReflectionProperty $property): void {
+    $kinds = [];
+    foreach ($property->getAttributes() as $attribute) {
+      if (in_array($attribute->getName(), self::KINDS, TRUE)) {
+        $kinds[] = '#[' . substr($attribute->getName(), strlen(self::NAMESPACE)) . ']';
+      }
+    }
+    if (count($kinds) > 1) {
+      $last = array_pop($kinds);
+      throw new \LogicException(sprintf('%s::$%s carries %s and %s, which each say what it is. A property is one key of one kind: keep one of them.', $property->getDeclaringClass()->getName(), $property->getName(), implode(', ', $kinds), $last));
+    }
+  }
+
+  /**
    * Calls the one verb the property's attribute stands for.
    *
    * @param \ReflectionProperty $property
@@ -228,7 +271,7 @@ final class PropertyDeclaration {
       self::word($definition, $list->label, $list->description);
       return $definition;
     }
-    if ($variants = self::attribute($property, Variants::class)) {
+    if ($variants = self::attribute($property, AttachVariants::class)) {
       $definition = $blueprint->attachVariants($key, $variants->by, $variants->from, $variants->arguments);
       self::word($definition, $variants->label, $variants->description);
       return $definition;
@@ -252,7 +295,7 @@ final class PropertyDeclaration {
       return $definition;
     }
     $attribute = self::attribute($property, $outputs ? Output::class : Input::class)
-      ?? throw new \LogicException(sprintf('%s::$%s carries no attribute that says what it is. Mark it #[Input], #[Output], #[Port], #[Computed], #[Map], #[Attach], #[AttachList], #[Variants], #[Each] or #[AttachEach], or make it static or protected, which the reader leaves alone.', $property->getDeclaringClass()->getName(), $key));
+      ?? throw new \LogicException(sprintf('%s::$%s carries no attribute that says what it is. Mark it #[Input], #[Output], #[Port], #[Computed], #[Map], #[Attach], #[AttachList], #[AttachVariants], #[Each] or #[AttachEach], or make it static or protected, which the reader leaves alone.', $property->getDeclaringClass()->getName(), $key));
     if ($attribute->list !== NULL) {
       $item = class_exists($attribute->list) && !is_subclass_of($attribute->list, ShapeInterface::class)
         ? self::itemMap($attribute->list)
