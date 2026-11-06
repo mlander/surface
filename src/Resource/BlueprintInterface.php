@@ -6,6 +6,7 @@ namespace Drupal\surface\Resource;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 
 /**
@@ -89,11 +90,12 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * one: of $type, labeled with the entry's label, starting from the
    * entry's default or else $default, held to what is stored when the
    * entry is locked; an entry that names a schema or a structure is
-   * refused, since a key per thing reads neither. An entry that refers to
-   * an entity names no type of its own: `to:` its entity type and
-   * `bundles:` the bundles it may name, each entry then the id typed as
-   * the entity type keeps it, with the SurfaceValidReference constraint
-   * naming the type and the bundles. The provider is asked
+   * refused, since a key per thing reads neither. $type is a type or a
+   * definition, as addList() takes its item: an entry with constraints of
+   * its own is a definition, and an entry that refers to an entity is the
+   * id's type with the SurfaceValidReference constraint, as any reference
+   * key is, its type checked against the entity type's id at the build
+   * (References::settle()). The provider is asked
    * when the resource is built,
    * never by the resource; what it read is the built resource's
    * cacheability, so the form, both schema documents and the tool listing
@@ -101,7 +103,8 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @code
    * $inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, label: t('Protected forms'), default: FALSE);
-   * $inputs->addEach('pages', NULL, from: Slots::class, label: t('Pages'), to: 'node', bundles: ['page']);
+   * $inputs->addEach('pages', DataDefinition::create('integer')
+   *   ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['page']]), from: Slots::class, label: t('Pages'));
    * @endcode
    *
    * The map is the owner's key: a rule of the owner's may say it does not
@@ -109,10 +112,10 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @param string $key
    *   The key the map sits at.
-   * @param string|null $type
-   *   What each entry is: a type of the type table, or a shape's class;
-   *   NULL for an entry that refers to an entity, whose type is its
-   *   entity type's id.
+   * @param string|\Drupal\Core\TypedData\DataDefinitionInterface $type
+   *   What each entry is: one of the types add() takes, the class of a
+   *   shape, or the entry's definition, one value, copied for every
+   *   entry.
    * @param string $from
    *   The provider's class, implementing SiteListInterface.
    * @param string|\Stringable $label
@@ -120,23 +123,21 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * @param mixed $default
    *   What every entry starts from unless it says otherwise; NULL for
    *   nothing.
-   * @param string|null $to
-   *   The entity type each entry refers to; NULL for an entry of a type.
-   * @param string[] $bundles
-   *   The bundles such an entry may name; none for every bundle.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
    *   The map at the key, for the owner to describe.
    *
    * @throws \LogicException
    *   When the key is taken, for outputs, inside a structure mixed in,
-   *   when the provider implements no SiteListInterface, for a type and an
-   *   entity type both or neither, and for an entity type string,
-   *   `entity:<type>`, which is no type of the table.
+   *   when the provider implements no SiteListInterface, for a definition
+   *   that is a map or a list or whose type is no type of the table
+   *   (LeafTypes), for a class that is no shape's, a resource's or a
+   *   structure's among them, and for an
+   *   entity type string, `entity:<type>`, which is no type of the table.
    *
    * @see docs/resources.md#keys-that-come-from-the-site
    */
-  public function addEach(string $key, ?string $type, string $from, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition;
+  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition;
 
   /**
    * A map with one child per thing the site has: keys from the site.

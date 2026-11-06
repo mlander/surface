@@ -61,6 +61,11 @@ use PHPUnit\Framework\Attributes\Group;
  * Unchanged on 2026-11-06 by a rename, #[Variants] to #[AttachVariants],
  * and by mixIn() and mixInVariants() moving from the add-only interface to
  * BlueprintInterface, which this test counts together.
+ * Cut on 2026-11-06 by two arguments, #[Each(to:, bundles:)]: a reference
+ * per entry is the entry's definition with the reference constraint,
+ * #[Constraint(..., item: TRUE)] beside #[Each]
+ * (docs/decisions.md#a-reference-is-a-constraint-on-a-value): 113
+ * arguments.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -82,7 +87,7 @@ class PublicSurfaceTest extends UnitTestCase {
    */
   protected const PINNED = [
     'attributes' => 28,
-    'attribute arguments' => 115,
+    'attribute arguments' => 113,
     'blueprint methods' => 18,
     'interfaces' => 22,
   ];

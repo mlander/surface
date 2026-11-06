@@ -6,6 +6,7 @@ namespace Drupal\surface\Reader;
 
 use Drupal\Core\Entity\TypedData\EntityDataDefinitionInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
@@ -203,6 +204,7 @@ final class TypedDataReader implements DeclarationReaderInterface {
         continue;
       }
       $required = $list === NULL ? $property->isRequired() : $list->isRequired() && ($property->isRequired() || $key === $main);
+      $label = $this->label($property);
       if ($property instanceof ListDataDefinitionInterface) {
         $item = $property->getItemDefinition();
         if ($item instanceof ComplexDataDefinitionInterface) {
@@ -211,24 +213,24 @@ final class TypedDataReader implements DeclarationReaderInterface {
             $declared = $this->open($inputs, $key, $property);
           }
           else {
-            $declared = $inputs->attachList($key, $this->structure($item->getDataType()));
+            $declared = $inputs->attachList($key, $this->structure($item->getDataType()), $label);
             $reading->structure($here . '.*', self::PREFIX . $item->getDataType());
           }
         }
         else {
           // Noted by value() where it reads no type.
           $value = $this->value($item, $laid[$key] ?? [], $reading, $here . '.*', NULL);
-          $declared = $value === NULL ? $this->open($inputs, $key, $property) : $inputs->addList($key, $value, $property->getLabel() ?? $key);
+          $declared = $value === NULL ? $this->open($inputs, $key, $property) : $inputs->addList($key, $value, $label ?? $property->getLabel() ?? $key);
         }
       }
       elseif ($property instanceof ComplexDataDefinitionInterface && !$property instanceof DataReferenceDefinitionInterface) {
         if ($this->isNamed($property)) {
-          $declared = $inputs->attach($key, $this->structure($property->getDataType()));
+          $declared = $inputs->attach($key, $this->structure($property->getDataType()), $label);
           $reading->structure($here, self::PREFIX . $property->getDataType());
         }
         else {
           $inner = new Reading();
-          $declared = $inputs->addMap($key, $property->getLabel() ?? $key, function (BlueprintInterface $map) use ($property, $inner): void {
+          $declared = $inputs->addMap($key, $label ?? $property->getLabel() ?? $key, function (BlueprintInterface $map) use ($property, $inner): void {
             $this->properties($map, $property, NULL, [], $inner);
           });
           $reading->nest($here, $inner);
@@ -241,6 +243,9 @@ final class TypedDataReader implements DeclarationReaderInterface {
           $declared = $this->open($inputs, $key, $property);
         }
         else {
+          if ($label !== NULL) {
+            $declared->setLabel($label);
+          }
           $inputs->addDefinition($key, $declared, $defaults[$key] ?? $property->getSetting('default_value'));
         }
       }
@@ -339,7 +344,21 @@ final class TypedDataReader implements DeclarationReaderInterface {
   }
 
   /**
-   * Sets the label and description a property gives.
+   * Reads the label a property gives, as the module writes one.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $property
+   *   The property read.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string|null
+   *   The label, or NULL where it gives none: the verb is handed it.
+   */
+  protected function label(DataDefinitionInterface $property): TranslatableMarkup|string|null {
+    $label = $property->getLabel();
+    return $label !== NULL && (string) $label !== '' ? LeafRules::label($label) : NULL;
+  }
+
+  /**
+   * Sets the description a property gives; its label is the verb's.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $declared
    *   What a verb declared.
@@ -347,13 +366,7 @@ final class TypedDataReader implements DeclarationReaderInterface {
    *   The property read.
    */
   protected function word(DataDefinitionInterface $declared, DataDefinitionInterface $property): void {
-    if (!$declared instanceof DataDefinition) {
-      return;
-    }
-    if ($property->getLabel() !== NULL && (string) $property->getLabel() !== '') {
-      $declared->setLabel(LeafRules::label($property->getLabel()));
-    }
-    if ($property->getDescription() !== NULL && (string) $property->getDescription() !== '') {
+    if ($declared instanceof DataDefinition && $property->getDescription() !== NULL && (string) $property->getDescription() !== '') {
       $declared->setDescription(LeafRules::label($property->getDescription()));
     }
   }
@@ -378,7 +391,7 @@ final class TypedDataReader implements DeclarationReaderInterface {
    *   The key's definition.
    */
   protected function open(BlueprintInterface $inputs, string $key, DataDefinitionInterface $property): DataDefinition {
-    $definition = LeafRules::open($property->getLabel());
+    $definition = LeafRules::open($this->label($property) ?? $property->getLabel());
     $inputs->addDefinition($key, $definition);
     return $definition;
   }

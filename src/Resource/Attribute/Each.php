@@ -15,6 +15,16 @@ namespace Drupal\surface\Resource\Attribute;
  * public array $on_sale;
  * @endcode
  *
+ * An entry that refers to an entity names the id's type, and carries the
+ * reference constraint on each entry, `item: TRUE`, since an attribute
+ * argument is a constant expression and no definition:
+ *
+ * @code
+ * #[Each('integer', from: Slots::class, label: 'Pages')]
+ * #[Constraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['page']], item: TRUE)]
+ * public array $pages;
+ * @endcode
+ *
  * @see \Drupal\surface\Resource\BlueprintInterface::addEach()
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
@@ -23,9 +33,9 @@ final class Each {
   /**
    * Constructs an Each attribute.
    *
-   * @param string|null $type
-   *   Each entry's type, of those add() takes or a shape's class; NULL
-   *   for a reference per entry, with `to:`.
+   * @param string $type
+   *   Each entry's type, of those add() takes or a shape's class; for a
+   *   reference per entry, the type the entity type keeps its id as.
    * @param string $from
    *   The provider, a SiteListInterface service class.
    * @param string|\Stringable $label
@@ -36,19 +46,13 @@ final class Each {
    * @param mixed $default
    *   What each entry starts from, unless the provider says; NULL for
    *   nothing.
-   * @param string|null $to
-   *   For a reference per entry, the entity type it refers to.
-   * @param string[] $bundles
-   *   For a reference per entry, the bundles it may be of; empty for any.
    */
   public function __construct(
-    public readonly ?string $type,
+    public readonly string $type,
     public readonly string $from,
     public readonly string|\Stringable $label,
     public readonly string|\Stringable|null $description = NULL,
     public readonly mixed $default = NULL,
-    public readonly ?string $to = NULL,
-    public readonly array $bundles = [],
   ) {}
 
 }

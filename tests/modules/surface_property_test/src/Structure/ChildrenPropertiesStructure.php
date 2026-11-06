@@ -8,6 +8,7 @@ use Drupal\surface\Resource\Attribute\Attach;
 use Drupal\surface\Resource\Attribute\AttachEach;
 use Drupal\surface\Resource\Attribute\AttachList;
 use Drupal\surface\Resource\Attribute\AttachVariants;
+use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Each;
 use Drupal\surface\Resource\Attribute\Input;
 use Drupal\surface\Resource\Attribute\Structure;
@@ -46,5 +47,9 @@ final class ChildrenPropertiesStructure implements StructureInterface {
 
   #[AttachEach(EntryPropertiesStructure::class, from: Letters::class, label: 'Limits', reads: ['selling' => 'on_sale'])]
   public array $limits;
+
+  #[Each('string', from: Letters::class, label: 'Roles')]
+  #[Constraint('SurfaceValidReference', ['entityTypeId' => 'user_role'], item: TRUE)]
+  public array $roles;
 
 }

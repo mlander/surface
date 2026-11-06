@@ -94,7 +94,7 @@ final class RecordingBlueprint implements BlueprintInterface {
   /**
    * {@inheritdoc}
    */
-  public function addEach(string $key, ?string $type, string $from, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition {
+  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition {
     $map = MapDataDefinition::create()->setLabel($label);
     $this->record($key, 'addEach', $map, ['from' => $from]);
     return $map;

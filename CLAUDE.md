@@ -278,10 +278,13 @@ the record of the rework that brought the module to the pattern.
 - **Keys from the site**: one key per thing the site has, in a map at a
   key, `addEach('forms', 'boolean', from: Provider::class, label:
   t('Forms'))` (a value of a type or shape per thing, its label
-  required; a reference per thing naming its entity type,
-  `addEach('pages', NULL, from: Provider::class, label: t('Pages'), to:
-  'node', bundles: [...])`) or `attachEach('rows', Row::class, from:
-  ..., label: ...)` (a structure per thing); the provider is a service implementing
+  required, or of an entry definition as `addList()` takes an item; a
+  reference per thing is that definition with the reference constraint,
+  `addEach('pages', DataDefinition::create('integer')->addConstraint(
+  'SurfaceValidReference', ['entityTypeId' => 'node']), from:
+  Provider::class, label: t('Pages'))`, `#[Each('integer', ...)]` with
+  `#[Constraint(..., item: TRUE)]` as a property) or `attachEach('rows',
+  Row::class, from: ..., label: ...)` (a structure per thing); the provider is a service implementing
   `SiteListInterface`, whose `list()` answers a `SiteList` (id, label,
   optional start and lock, and the cacheability of what it read; an id
   with a dot or a colon, a schema or a structure refused), asked at
@@ -296,7 +299,8 @@ the record of the rework that brought the module to the pattern.
   'bundles' => ['article']])`, the type checked against the entity
   type's id at build (`References::settle()`, from
   `Declaring::settleReferences()`, which also marks a content entity's
-  key, `References::CONTENT`). A reference to any entity type is a
+  key, `References::CONTENT`, and checks the definition an `addEach()`
+  entry is copied from). A reference to any entity type is a
   structure the example declares (`surface_examples_references`'
   `AnyEntityStructure`, one subclass per filter naming its entity types
   in `ENTITY_TYPES`): `entity_type` with `SurfaceReferenceableType`, `id`
@@ -318,7 +322,7 @@ the record of the rework that brought the module to the pattern.
   A content entity's reference field's `target_id` is one, answered by
   the field's own selection handler and settings
   (`References::definition(handler:, handlerSettings:)`, the helper for
-  code that derives a reference key, and for `addEach(to:)`), drawn with the
+  code that derives a reference key), drawn with the
   autocomplete where its form display uses core's
   (`docs/decisions.md#a-reference-field-is-a-reference-key`).
 - **Computed key**: a key of a resource whose value nobody types,
@@ -682,7 +686,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1907, Assertions: 45224, Errors: 0, Failures: 0, Skipped: 3. Classes: 265 of 265, 8 at a time, browser classes 4.
+phpunit: Tests: 1908, Assertions: 45237, Errors: 0, Failures: 0, Skipped: 3. Classes: 265 of 265, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -702,7 +706,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1799, Assertions: 41075, Skipped: 3, Deprecations: 130. Classes:
+`Tests: 1800, Assertions: 41088, Skipped: 3, Deprecations: 130. Classes:
 216, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
