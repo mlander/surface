@@ -15,6 +15,7 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Reader\LeafRules;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Resource\SiteList;
 use Drupal\surface\Resource\SiteListInterface;
@@ -1317,9 +1318,10 @@ final class Attaching {
   /**
    * Gets what each variant calls its value.
    *
-   * Its #[Variant]'s label, the choice's word, else what the structure
-   * itself is called (ResourceDefinition::label()), so a structure that
-   * names itself is not named again on each #[Variant].
+   * Its #[Variant]'s label, the choice's word, made translatable as every
+   * property attribute's label is (LeafRules::label()), else what the
+   * structure itself is called (ResourceDefinition::label()), so a
+   * structure that names itself is not named again on each #[Variant].
    *
    * Decision: see
    * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
@@ -1336,7 +1338,8 @@ final class Attaching {
     $labels = [];
     foreach ($children as $value => $child) {
       $attribute = class_exists($child) ? ((new \ReflectionClass($child))->getAttributes(Variant::class)[0] ?? NULL) : NULL;
-      $label = $attribute?->newInstance()->label ?? ($this->registry->hasDefinition($child) ? $this->registry->getDefinition($child)->label() : NULL);
+      $own = $attribute?->newInstance()->label;
+      $label = $own !== NULL ? LeafRules::label($own) : ($this->registry->hasDefinition($child) ? $this->registry->getDefinition($child)->label() : NULL);
       if ($label !== NULL) {
         $labels[(string) $value] = $label;
       }

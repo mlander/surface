@@ -914,10 +914,10 @@ use `DeclaresByProperties`, which supplies `defineInputs()` and
   argument cannot hold: a call (`Venues::rooms()`), a loop, a condition
   `#[Rule]` does not spell.
 - **What the reader refuses.** Only what the verbs cannot know: a
-  public property with no attribute saying what it is, a group no
-  `#[Group]` declares, a type that is no key type and no shape with no
-  `type:`, a child or map naming no class, an item constraint on a key
-  that is no list, and an output on a class that does not implement
+  public property with no attribute saying what it is, or with two, a
+  group no `#[Group]` declares, a type that is no key type and no shape
+  with no `type:`, a child or map naming no class, an item constraint on
+  a key that is no list, and an output on a class that does not implement
   `DefinesOutputsInterface`. Each names the class, the property and the
   fix.
 - **Pure.** The reader reads types, initializers and attributes and
@@ -931,6 +931,19 @@ use `DeclaresByProperties`, which supplies `defineInputs()` and
 (`Resource\DeclaresByProperties`, `ResourceBuild\PropertyDeclaration`,
 `Resource\Attribute\*`, `PropertyDeclarationTest`, `CateringResource`
 and its twin with calls, `CateringByMethodResource`, example 18)
+
+*Amended 2026-11-06:* `#[Variants]` is `#[AttachVariants]`, by the rule
+the attributes now follow: an attribute for the owner's own keys names
+the kind of member (`Input`, `Output`, `Map`, `Each`, `Computed`,
+`Port`); an attribute for a composition restates the verb (`Attach`,
+`AttachList`, `AttachEach`, `AttachVariants`, `MixIn`). `Variants` was
+the one composition attribute without its verb, and the same word
+already named the engine class `Drupal\surface\Variants` and the
+namespace `Drupal\surface\Variants\`. A property carrying two of the
+attributes that say what it is (`#[Input]` and `#[Attach]`, say) is
+refused, naming both; the reader had called one of their verbs, in an
+order of its own, and dropped the other without a word. A `#[Variant]`'s `label:` is wrapped
+in `TranslatableMarkup` as a property attribute's is.
 
 ### An operation on the class
 
@@ -3092,8 +3105,11 @@ journal is the first case. Each choice, and why:
   closed, which the emitter reads off the document (below).
 - **Declared by the owner only.** An alter's keys live under its own
   module's name, so a structure an alter mixed in would put its members
-  at the owner's level, which is what the mount exists to prevent; an
-  alter's `mixIn()` is refused, naming the mount to attach at instead.
+  at the owner's level, which is what the mount exists to prevent. An
+  alter attaches at its own mount instead. Since 2026-11-06 `mixIn()` is
+  declared on the owner's `BlueprintInterface`, so an alter's blueprint
+  has no such verb; it was declared on `BlueprintAdditionsInterface` and
+  refused at run time.
 - **Stored flat, described by the owner's config schema.** The members
   are the owner's keys, so storage holds them beside the owner's own
   and the owner's config schema lists them. A mapping of the members
@@ -3181,7 +3197,7 @@ child whose def states conditionals of its own to the instance (its
 answered conditionals dropped), where `/refine` inlined carries the
 def's too, the same constraints written twice; the Vitest chain for the
 journal leaves the child's step out for it.
-(`BlueprintAdditionsInterface::mixIn()`, `ResourceBlueprint::mixIn()`,
+(`BlueprintInterface::mixIn()`, `ResourceBlueprint::mixIn()`,
 `Mixing::mixIn()`, `Binding::bindMixin()`,
 `Mixing::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
@@ -3302,7 +3318,7 @@ variants in of its own; an alter's call; a
 variant chosen by a locked deciding key refusing its owner's access, as
 a nested variant so chosen may ([A chosen variant may refuse](#a-chosen-variant-may-refuse)):
 a mixed-in variant its access omits is only not offered.
-(`BlueprintAdditionsInterface::mixInVariants()`,
+(`BlueprintInterface::mixInVariants()`,
 `ResourceBlueprint::mixInVariants()`, `Mixing::layVariantMixins()`,
 `Mixing::mixInVariants()`, `MixinVariants`,
 `ContractEmitter::composedVariants()`, `SchemaResolver::mixInVariants()`,
@@ -3480,6 +3496,11 @@ item as a list in its place ([A collection on a form](forms.md#a-collection-on-a
 routing an item to its child's storage, which needs an identity key on
 the child to say which stored item it is. (`Resources::buildResource()`,
 `Collection`, `Form\Drawing::buildCollection()`)
+
+*Amended 2026-11-06:* `attachListBy()`, a list whose every item chooses
+its own child, is dropped from every page that named it as not built. A
+list whose items choose their own child is `attachList()` of a structure
+holding variants at a key, so no verb is missing.
 
 ### Access once per list
 

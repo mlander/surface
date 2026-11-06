@@ -973,7 +973,7 @@ final class Mixing {
     foreach ($ports as $port) {
       if (!isset($reads[$port->name])) {
         throw new \LogicException(sprintf(
-          '%s mixes %s in without wiring its "%s" port: with(..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
+          '%s mixes %s in without wiring its "%s" port: mixIn(..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
           $definition->id,
           $structure->id,
           $port->name,

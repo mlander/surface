@@ -13,8 +13,9 @@ use Drupal\surface\Refinement\Rule;
 /**
  * What anyone may do to a blueprint: add to it.
  *
- * Handed to alterInputs(). The owner gets
- * BlueprintInterface, which adds attachVariants().
+ * Handed to alterInputs(). The owner gets BlueprintInterface, which adds
+ * attachVariants(), addEach(), attachEach(), mixIn(), mixInVariants(),
+ * reads(), compute() and addCacheableDependency().
  *
  * Neither the owner nor an alter may add a key twice: adding is never
  * replacing, so nothing an owner declared can be changed by adding. The
@@ -173,10 +174,13 @@ interface BlueprintAdditionsInterface {
   /**
    * Adds a key, the long form.
    *
-   * For a definition add() and addList() do not build: a map, say. Every
-   * value inside is held to the types add() takes. Like every declaring
-   * verb, it returns what it declared, for the owner to go on labeling
-   * with the core setters.
+   * For one value whose definition the caller builds: a DataDefinition of
+   * one of the types add() takes, with settings or constraints of its
+   * own. A map or a list is refused, naming the verb that declares it
+   * (addMap() or attach(), addList()), so every object a blueprint holds
+   * is declared by a verb that is one JSON Schema construct. Like every
+   * declaring verb, it returns what it declared, for the owner to go on
+   * labeling with the core setters.
    *
    * @param string $key
    *   The key.
@@ -193,8 +197,8 @@ interface BlueprintAdditionsInterface {
    * @phpstan-return T
    *
    * @throws \LogicException
-   *   When the key is declared already, or a value inside is of a type
-   *   add() refuses.
+   *   When the key is declared already, when the definition is a map or a
+   *   list, or when its type is one add() refuses.
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface;
 
@@ -309,7 +313,7 @@ interface BlueprintAdditionsInterface {
    * @param string $key
    *   The key the child sits at; for an alter, its own mount,
    *   `third_party_settings.<module>`.
-   * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface> $child
+   * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface> $structure
    *   The child's class.
    * @param array<string, string> $reads
    *   The child's ports, each mapped to the container's key it reads: an
@@ -324,7 +328,7 @@ interface BlueprintAdditionsInterface {
    *   wiring is checked when the parent is built: see
    *   docs/resources.md#ports.
    */
-  public function attach(string $key, string $child, array $reads = []): MapDataDefinition;
+  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition;
 
   /**
    * A collection at a key: a list whose every item is the child.
@@ -347,12 +351,9 @@ interface BlueprintAdditionsInterface {
    * map, as attach() returns the map: the owner labels and describes it
    * with the core setters, and may add list constraints of its own.
    *
-   * A list whose every item chooses its own child (attachListBy()) is not
-   * built.
-   *
    * @param string $key
    *   The key the collection sits at.
-   * @param string $child
+   * @param string $structure
    *   What every item is: its class, or a derived resource's id.
    * @param int|null $min
    *   The fewest items, or NULL for no bound.
@@ -369,122 +370,7 @@ interface BlueprintAdditionsInterface {
    * @throws \InvalidArgumentException
    *   When a bound is negative, or $min is above $max.
    */
-  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition;
-
-  /**
-   * Mixes a structure in: its members become this blueprint's own keys.
-   *
-   * Where attach() nests a structure under a key, behind the wall, this
-   * merges its members into the owner's keys at this point of the
-   * declaration: stored flat, described by the owner's config schema,
-   * refined in the owner's frame, drawn and accepted as the owner's own.
-   * The structure keeps what makes it reusable: its coded refiners and
-   * declared rules (which narrow only its own members and read only its
-   * members and its ports), its alters, its access class (which locks or
-   * omits its members) and its def, one id however many owners mix it in.
-   * What it reads of the owner it declares as ports
-   * (BlueprintInterface::reads()), which $reads wires to the owner's
-   * keys, as attach() wires them; every port is wired. A child it attaches
-   * at a fixed key or in a collection is the owner's child at that key,
-   * nothing wiring its ports.
-   *
-   * Nest for a thing of its own inside this one (a contact, a ticket);
-   * mix in for shared members that are part of this thing (timestamps,
-   * ownership, publishing flags).
-   *
-   * Owner only: an alter's keys live under its own module's name, so an
-   * alter's call is refused; an alter attaches a structure at its own
-   * mount instead.
-   *
-   * @code
-   * $inputs->mixIn(TimestampsStructure::class);
-   * $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
-   * @endcode
-   *
-   * @param string $structure
-   *   The structure's class: an ordinary #[Structure], holding keys, maps
-   *   and children at a fixed key or in a collection, no variants at a
-   *   key and no keys from the site.
-   * @param array<string, string> $reads
-   *   Its ports, each mapped to the owner's key it reads, by name.
-   *
-   * @return $this
-   *
-   * @throws \LogicException
-   *   For an alter, for outputs, for a class that is no resource or
-   *   structure, for a structure mixed into itself (directly or through
-   *   another), for one holding variants at a key, keys from the site or a
-   *   child whose ports it wires, and when one of its members is a key this
-   *   blueprint, or another structure mixed in, declares already.
-   *   The structure, its access and the wiring are checked when the owner
-   *   is built: see docs/resources.md#mixins.
-   *
-   * @see docs/decisions.md#a-mixin-is-merged-flat
-   */
-  public function mixIn(string $structure, array $reads = []): static;
-
-  /**
-   * Mixes in the variant a sibling key chooses: its members are this one's.
-   *
-   * Where attachVariants() nests the structure a sibling key chooses under
-   * a key of its own, this merges every variant's members into the owner's
-   * keys at this point of the declaration, as mixIn() merges one
-   * structure's: stored flat beside the deciding key, refined in the
-   * owner's frame, drawn and accepted as the owner's own. The variants are
-   * found as attachVariants() finds them: every #[Variant(of:, at:)] whose
-   * `at` is the deciding key, and the entries a provider lists from the
-   * site, a #[Variant] winning for a value both name. Each is an ordinary
-   * structure holding keys, maps, children at a fixed key or in a
-   * collection, and variants at a key, with no port, no keys from the site
-   * and no variants mixed in of its own; a child it holds is the owner's
-   * child at that key, and variants it holds at a key the owner's variants
-   * there.
-   *
-   * Every member of every variant is declared when the owner is built, in
-   * variant order then key order, a member two variants declare alike
-   * once (the label and the description aside, the first variant's
-   * worn), and one they declare unlike once too, as wide as both and held
-   * to the chosen variant's own definition; a member of a variant not
-   * chosen does not apply, and the chosen variant's required members are
-   * required. The deciding key is offered
-   * the variants' values with their labels, as attachVariants() offers
-   * them.
-   *
-   * Choose it over attachVariants() where the stored shape is flat and
-   * the deciding key sits beside the members: a config schema type chosen
-   * by a key inside its own value (`views.field.[plugin_id]`), or an
-   * OpenAPI inline discriminator.
-   *
-   * Owner only: an alter's keys live under its own module's name, so an
-   * alter's call is refused.
-   *
-   * @code
-   * $inputs->add('kind', 'string', t('Kind'));
-   * $inputs->mixInVariants('kind');
-   * $inputs->mixInVariants('plugin_id', from: ConfigSchemaTypes::class, arguments: ['views.field.[plugin_id]', '', 'plugin_id']);
-   * @endcode
-   *
-   * @param string $by
-   *   The owner's plain input key whose value chooses the variant.
-   * @param string|null $from
-   *   The provider of variants from the site, by class, or NULL for the
-   *   #[Variant] classes alone.
-   * @param list<string|int> $arguments
-   *   What the provider lists for (BoundSiteListInterface::listFor()), or
-   *   none for its list().
-   *
-   * @return $this
-   *
-   * @throws \LogicException
-   *   For an alter, for outputs, when the provider implements no
-   *   SiteListInterface, or when it is handed arguments and implements no
-   *   BoundSiteListInterface. The variants, their members and the
-   *   deciding key are checked when the owner is built: see
-   *   docs/resources.md#variants-mixed-in.
-   *
-   * @see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key
-   */
-  public function mixInVariants(string $by, ?string $from = NULL, array $arguments = []): static;
+  public function attachList(string $key, string $structure, ?int $min = NULL, ?int $max = NULL): ListDataDefinition;
 
   /**
    * Offers more values on a key someone else declared, as an alter.

@@ -58,6 +58,9 @@ use PHPUnit\Framework\Attributes\Group;
  * #[MixInVariants], with its three arguments
  * (docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key): 18
  * methods, 28 attributes, 115 arguments.
+ * Unchanged on 2026-11-06 by a rename, #[Variants] to #[AttachVariants],
+ * and by mixIn() and mixInVariants() moving from the add-only interface to
+ * BlueprintInterface, which this test counts together.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */

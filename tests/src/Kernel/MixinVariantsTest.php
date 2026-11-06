@@ -28,7 +28,6 @@ use Drupal\surface_resource_test\Resource\Pack\PackResource;
 use Drupal\surface_resource_test\Resource\Shelter\ShelterResource;
 use Drupal\surface_resource_test\Structure\Beacon\BeaconPostStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitBothStructure;
-use Drupal\surface_resource_test\Structure\Broken\Kit\KitByAlterStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitChildVariantStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitCoveringClashStructure;
@@ -344,7 +343,6 @@ class MixinVariantsTest extends SurfaceKernelTestBase {
       PackWiredChildStructure::class => 'resource_test.broken.pack_wired_child mixes in the variants chosen by "kind", and the variant for "shared" is resource_test.broken.pack.wired_ownership, which attaches resource_test.ownership at "owned" and wires its "audience" port. A child a variant mixed in brings is the owner\'s child at that key, and nothing wires its ports, for now: attach it with no reads:.',
       KitPortVariantStructure::class => 'resource_test.broken.kit_port_variant mixes in the variants chosen by "kind", and the variant for "owned" is resource_test.ownership, which reads the "audience" port. Nothing wires a variant mixed in: any module may add one, so no wiring the owner writes could name its ports.',
       KitBothStructure::class => 'In resource_test.broken.kit_both, "kind" holds variants (attachVariants()) and chooses variants mixed in (mixInVariants()), and a #[Variant(of:, at: \'kind\')] names one of the two: Drupal\surface_resource_test\Structure\Broken\Kit\KitBothVariantStructure would be a variant of both. The variants at a key and the variants a key mixes in are found by the same `at`, so one name is one of them: rename the key the variants sit at, or the deciding key.',
-      KitByAlterStructure::class => 'The surface_resource_test alter mixes in the variants chosen by "kind". Only an owner mixes variants in: an alter\'s keys live under its own module\'s name, and a variant\'s members would be the owner\'s. Attach the variants at the alter\'s own mount, third_party_settings.surface_resource_test, instead.',
     ]);
   }
 

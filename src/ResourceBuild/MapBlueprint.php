@@ -113,14 +113,14 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
+  public function attach(string $key, string $structure, array $reads = []): MapDataDefinition {
     throw $this->framed(sprintf('attach("%s")', $key));
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
     throw $this->framed(sprintf('attachList("%s")', $key));
   }
 

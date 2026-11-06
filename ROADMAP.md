@@ -410,11 +410,10 @@ to.
 
 1. **Collections**: ~~`attachList()`, an ordered list whose items are a
    child structure, delta as position~~ DONE 2026-10-16 (`docs/resources.md`,
-   Collections). Still open: `attachListBy()`, each item choosing its own
-   child; an item routed to its child's own storage, its stable identity
-   an identity key on the child and weights the storage's business; a
-   collection inside an item on the form; content entity fields of more
-   than one value, with the entity side.
+   Collections). Still open: an item routed to its child's own storage,
+   its stable identity an identity key on the child and weights the
+   storage's business; a collection inside an item on the form; content
+   entity fields of more than one value, with the entity side.
 2. **Input shapes**: another way to enter the same value, converted to
    one canonical value; the widget alter layer on the `variants` branch.
 3. **Options**: options sources, the `OptionsList` constraint naming
@@ -792,21 +791,16 @@ renames sit in A because they are cheapest before new code exists.
    - A secret inside a collection item hiding the whole list from the
      read tool. DONE: only the secret is left out of each item
      (`docs/decisions.md#a-read-leaves-a-secret-out`).
-   - `attachListBy()`. Not small, a design question, not built. A list
-     whose items each choose their variant by a key inside the item is
-     expressible today, nested: a collection of a structure that holds
-     the deciding key and its `attachVariants()` variants (`{plugin, settings}` per
-     item), which the engine, the pipeline and both documents recurse
-     into. Two things stand between that and `attachListBy()`. The
-     design question: whether the variant's keys sit flat beside the
-     deciding key in each item (a discriminated union, one `oneOf` per
-     item, variants with no key of their own, which no door has a
-     spelling for) or nested under the variants' key (no new concept, one
-     more level). And the form reads a drawn item back through the
-     child's sealed map, which holds only the variants' placeholder, so
-     variants inside an item are not read back on the form (read in
-     `extractCollection()`, not yet pinned by a test); that is the first
-     fix whichever spelling wins.
+   - Variants inside a collection's item on the form. A list whose
+     items each choose their variant by a key inside the item is a
+     collection of a structure that holds the deciding key and its
+     `attachVariants()` variants (`{plugin, settings}` per item), which
+     the engine, the pipeline and both documents recurse into; no verb
+     is missing (`docs/decisions.md#a-list-of-child-invocations`). The
+     form reads a drawn item back through the child's sealed map, which
+     holds only the variants' placeholder, so variants inside an item
+     are not read back on the form (read in `extractCollection()`, not
+     yet pinned by a test).
    - An item routed to its child's own storage. Not small, a design
      question, not built: an item needs an identity key on the child to
      say which stored thing it is, removing an item from the list then

@@ -11,18 +11,23 @@ namespace Drupal\surface\Resource\Attribute;
  * still says it is one with #[Variant], `of:` this class and `at:` this
  * property's name, or a provider named by `from:` lists them.
  *
+ * An attribute for the owner's own keys names the kind of member (Input,
+ * Output, Map, Each, Computed, Port); an attribute for a composition
+ * restates the verb (Attach, AttachList, AttachEach, AttachVariants,
+ * MixIn).
+ *
  * @code
- * #[Variants(by: 'pricing', label: 'Ticket')]
+ * #[AttachVariants(by: 'pricing', label: 'Ticket')]
  * public array $ticket;
  * @endcode
  *
  * @see \Drupal\surface\Resource\BlueprintInterface::attachVariants()
  */
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
-final class Variants {
+final class AttachVariants {
 
   /**
-   * Constructs a Variants attribute.
+   * Constructs an AttachVariants attribute.
    *
    * @param string $by
    *   The sibling key whose value chooses the variant.

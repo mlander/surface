@@ -8,11 +8,12 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Refinement\DoesNotApply;
+use Drupal\surface\Resource\BlueprintAdditionsInterface;
+use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_resource_test\Resource\Journal\JournalResource;
 use Drupal\surface_resource_test\Resource\Journal\LedgerResource;
 use Drupal\surface_resource_test\Structure\Broken\MixesMountingStructure;
-use Drupal\surface_resource_test\Structure\Broken\MixinByAlterStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinClashLateStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\MixinCycleStructure;
@@ -246,17 +247,18 @@ class MixinsTest extends SurfaceKernelTestBase {
 
   /**
    * Tests each mixin the build cannot honor is refused, naming it.
+   *
+   * An alter's mixin is no refusal: its blueprint has no verb for one.
    */
   public function testEachRefusal(): void {
     $refusals = [
       MixinClashStructure::class => 'resource_test.timestamps, mixed into resource_test.broken.mixin_clash, declares "created", which resource_test.broken.mixin_clash declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.',
       MixinClashLateStructure::class => 'resource_test.broken.mixin_clash_late declares "changed", which resource_test.timestamps, mixed in, declares already. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the structure under a key of its own.',
       TwoMixinsClashStructure::class => 'resource_test.broken.created_only, mixed into resource_test.broken.two_mixins_clash, declares "created", which resource_test.timestamps, also mixed in, declares too. A mixed-in structure\'s members are the owner\'s keys, so a name is declared once.',
-      MixinByAlterStructure::class => 'The surface_resource_test alter mixes Drupal\surface_resource_test\Structure\Mixin\TimestampsStructure in. Only an owner mixes a structure in: an alter\'s keys live under its own module\'s name, and a mixed-in structure\'s members would be the owner\'s. Attach it at the alter\'s own mount, third_party_settings.surface_resource_test, instead.',
       MixinWithChildStructure::class => 'resource_test.notice, mixed into resource_test.broken.mixin_with_child, attaches variants at "schedule". A mixed-in structure holds keys, maps and children at a fixed key or in a collection, not variants at a key or keys from the site, for now: attach resource_test.notice under a key of its own instead.',
       MixinWiresChildStructure::class => 'resource_test.broken.pack.wired_ownership, mixed into resource_test.broken.mixin_wires_child, attaches resource_test.ownership at "owned" and wires its "audience" port. A child a mixed-in structure attaches is the owner\'s child at that key, and nothing wires its ports, for now: attach it with no reads:, or attach resource_test.broken.pack.wired_ownership under a key of its own.',
       MixinCycleStructure::class => 'resource_test.broken.mixin_cycle_loop mixes resource_test.broken.mixin_cycle in, through resource_test.broken.mixin_cycle -> resource_test.broken.mixin_cycle_loop -> resource_test.broken.mixin_cycle: a structure cannot be mixed into itself, directly or through another.',
-      MixinUnwiredStructure::class => 'resource_test.broken.mixin_unwired mixes resource_test.ownership in without wiring its "audience" port: with(..., reads: [\'audience\' => \'<key>\']) names the key of resource_test.broken.mixin_unwired it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
+      MixinUnwiredStructure::class => 'resource_test.broken.mixin_unwired mixes resource_test.ownership in without wiring its "audience" port: mixIn(..., reads: [\'audience\' => \'<key>\']) names the key of resource_test.broken.mixin_unwired it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
       MixinWiresMemberStructure::class => 'resource_test.broken.mixin_wires_member wires the "audience" port of resource_test.ownership, mixed in, to "owner", which resource_test.ownership brought itself: a port reads a key of the owner it is mixed into, and its members are its own.',
       MixinGuardStructure::class => 'Drupal\surface_resource_test\Structure\Broken\MixinGuardStructure::noteOfTheOwner() names "owner", a member of resource_test.ownership, which is mixed into resource_test.broken.mixin_guard and has an access class. What that access may take away for one account, nothing of the owner\'s may depend on: read it inside resource_test.ownership, or drop the access class.',
       MixinRulesOutStructure::class => 'narrow("changed") in resource_test.broken.mixin_rules_out may answer that "changed", a member of resource_test.timestamps mixed into resource_test.broken.mixin_rules_out, does not apply. Whether a mixed-in structure\'s member applies is the structure\'s to say: its def, which every owner shares, says where it is required.',
@@ -272,6 +274,12 @@ class MixinsTest extends SurfaceKernelTestBase {
       catch (\LogicException $e) {
         $this->assertSame($message, $e->getMessage(), $class);
       }
+    }
+    // Only an owner mixes in: an alter's blueprint has neither verb, so an
+    // alter's call fails where it is written, before any build.
+    foreach (['mixIn', 'mixInVariants'] as $verb) {
+      $this->assertTrue((new \ReflectionClass(BlueprintInterface::class))->hasMethod($verb), $verb);
+      $this->assertFalse((new \ReflectionClass(BlueprintAdditionsInterface::class))->hasMethod($verb), $verb);
     }
   }
 
