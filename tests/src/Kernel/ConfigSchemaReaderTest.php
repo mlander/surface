@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Pipeline\TypeMismatchException;
 use Drupal\surface\Pipeline\UnknownKeysException;
 use Drupal\surface\Pipeline\VariantMismatchException;
 use Drupal\surface\Reader\ConfigSchemaReader;
@@ -314,6 +315,45 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     catch (VariantMismatchException $e) {
       $this->assertSame('The value at settings is shaped for another variant than "italic", which format chose: weight.', $e->getMessage());
     }
+  }
+
+  /**
+   * Tests two types declaring one key unlike are mixed in, the key held apart.
+   *
+   * The test module's signal declares its pattern a string in one type and
+   * a mapping in the other, as views.area.text and views.area.text_custom
+   * declare their content: one key of the structure's, any value, held to
+   * the type its kind chooses.
+   *
+   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   */
+  public function testOwnKeyTypesDeclaringKeyUnlikeAreMixedIn(): void {
+    $reader = $this->container->get(ConfigSchemaReader::class);
+    $expression = ConfigSchemaReader::expression('surface_reader_test.signal.[kind]');
+    $this->assertNull($reader->ownKeyWall($expression, (string) $reader->fallbackOf($expression)), 'A key two types declare unlike is no wall.');
+    $name = $reader->structure('surface_reader_test.signal.[kind]');
+    $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
+    $map = $built->getDefinitions();
+    $this->assertSame(['kind', 'pattern'], $map->names());
+    $this->assertSame(['pattern'], $map->mixinVariants()[0]->heldTo);
+    $this->assertSame('any', $map->get('pattern')->getDataType());
+    $refusals = function (array $value) use ($built): array {
+      try {
+        $accepted = $this->pipeline()->accept($built, $value, []);
+      }
+      catch (TypeMismatchException $e) {
+        return [$e->getPath() => $e->getMessage()];
+      }
+      $messages = [];
+      foreach ($this->pipeline()->validate($built, $accepted, []) as $violation) {
+        $messages[$violation->fullPath()] = strip_tags((string) $violation->message);
+      }
+      return $messages;
+    };
+    $this->assertSame([], $refusals(['kind' => 'word', 'pattern' => 'dot dash']), 'Each stored shape, under its kind.');
+    $this->assertSame([], $refusals(['kind' => 'timed', 'pattern' => ['on' => 2, 'off' => 1]]));
+    $mismatch = ['pattern' => 'The value at "pattern" must be of type map, string given.'];
+    $this->assertSame($mismatch, $refusals(['kind' => 'timed', 'pattern' => 'dot dash']), 'The string under the mapping\'s kind.');
   }
 
   /**

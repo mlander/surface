@@ -1,0 +1,8 @@
+title: 'Ridge beacon'
+mode: flash
+code: SOS
+color: red
+pattern:
+  - long
+  - short
+notes: ''

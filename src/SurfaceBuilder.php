@@ -521,7 +521,7 @@ final class SurfaceBuilder implements SurfaceBuilderInterface {
     if ($kept !== $mixed->variantIds()) {
       // A list the deciding key declares narrows the variants: one whose
       // value it leaves out is not offered, and its members do not apply.
-      $mixed = new MixinVariants($mixed->by, array_intersect_key($mixed->variants, array_flip($kept)), $mixed->labels, $mixed->withdrawn);
+      $mixed = new MixinVariants($mixed->by, array_intersect_key($mixed->variants, array_flip($kept)), $mixed->labels, $mixed->withdrawn, $mixed->heldTo);
     }
     $this->mixinVariants[] = $mixed;
     foreach ($mixed->variants as $variant) {

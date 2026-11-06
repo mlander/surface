@@ -34,6 +34,7 @@ use Drupal\surface\MixinVariants;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Port;
+use Drupal\surface\Reader\LeafRules;
 
 /**
  * The attach phase of the build: children, collections, variants, mixins.
@@ -732,7 +733,8 @@ final class Attaching {
    *   nested variants too; when a variant is a resource, a shape, has
    *   outputs, reads a port, holds keys from the site or variants mixed in
    *   of its own, or wires a child's ports; or when a member is a key the
-   *   owner, a structure mixed in or another variant declares
+   *   owner, a structure mixed in or another variant declares, or one two
+   *   variants declare unlike where one holds variants at it
    *   (declareMembers()).
    */
   public function layVariantMixins(ResourceDefinition $definition, ResourceBlueprint $inputs, SurfaceBuilderInterface $builder): void {
@@ -766,7 +768,7 @@ final class Attaching {
       foreach ($children as $value => $child) {
         $blueprints[(string) $value] = $this->variantBlueprint($definition, $by, (string) $value, $child);
       }
-      [$members, $values, $required, $held] = $this->declareMembers($definition, $inputs, $builder, $by, $blueprints, $laid);
+      [$members, $values, $required, $held, $widened] = $this->declareMembers($definition, $inputs, $builder, $by, $blueprints, $laid);
       $inputs->layVariantMixin($call, $members, [
         'children' => array_map('strval', $children),
         'labels' => $labels + $this->variantLabels($children),
@@ -776,6 +778,7 @@ final class Attaching {
         'attachments' => $held['attachments'],
         'lists' => $held['lists'],
         'variants' => $held['variants'],
+        'widened' => $widened,
       ]);
       foreach ($values as $key => $for) {
         $laid[$key] = [$by, $for[0], $this->registry->getDefinition($children[$for[0]])->id];
@@ -859,13 +862,17 @@ final class Attaching {
    * In variant order, then each variant's declaration order, a member
    * holding a child or variants among them. A member two variants declare
    * alike is one key, which applies when either is chosen and wears the
-   * label and description of the first variant to declare it; one they
-   * declare differently, or a key the owner, a structure mixed in or
-   * another call's variant declares, is refused. Variants at a key are
-   * alike where the same deciding key chooses the same structures by the
-   * same values, found as the variant built alone finds them
-   * (findVariants()), which the first variant to declare them finds
-   * for the owner.
+   * label and description of the first variant to declare it. One they
+   * declare unlike is one key too, declared as wide as every variant's
+   * definition (widest()), and held to the chosen variant's own where it
+   * is chosen (chosenRules()); a child that is not alike in every variant
+   * is such a member, and no child of the owner's. Refused: a key the
+   * owner, a structure mixed in or another call's variant declares, and
+   * variants at a key that are not alike in every variant that holds
+   * them. Variants at a key are alike where the same deciding key chooses
+   * the same structures by the same values, found as the variant built
+   * alone finds them (findVariants()), which the first variant to declare
+   * them finds for the owner.
    *
    * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
    *
@@ -883,22 +890,23 @@ final class Attaching {
    *   The members another call laid, each with its deciding key, its first
    *   value and that variant's id.
    *
-   * @return array{0: array<string, \Drupal\Core\TypedData\DataDefinitionInterface>, 1: array<string, string[]>, 2: array<string, string[]>, 3: array{attachments: array<string, string>, lists: array<string, string>, variants: array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>}}
+   * @return array{0: array<string, \Drupal\Core\TypedData\DataDefinitionInterface>, 1: array<string, string[]>, 2: array<string, string[]>, 3: array{attachments: array<string, string>, lists: array<string, string>, variants: array<string, array{by: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>|null, arguments: list<string|int>, read: array<string, array{name: string, label: string|null}>, declaredBy: string}>}, 4: string[]}
    *   Each member's definition in the owner's frame, by key, in order;
    *   the values each member applies under; the values under which each
-   *   plain member is required; and the members holding a child, at a
-   *   fixed key or as a collection, each by the child's name, and those
-   *   holding variants, each as the variant that declared it holds them.
+   *   plain member is required; the members holding a child, at a fixed
+   *   key or as a collection, each by the child's name, and those holding
+   *   variants, each as the variant that declared it holds them; and the
+   *   members held to the chosen variant's definition.
    *
    * @throws \LogicException
    *   Naming the owner, the variants and the key.
    */
   protected function declareMembers(ResourceDefinition $definition, ResourceBlueprint $inputs, SurfaceBuilderInterface $builder, string $by, array $blueprints, array $laid): array {
-    $members = [];
     $values = [];
-    $required = [];
     $held = ['attachments' => [], 'lists' => [], 'variants' => []];
-    $first = [];
+    // Each member's declarations, by value: the definition, the child or
+    // the variants it holds, and the blueprint that declared it.
+    $declarations = [];
     $mixedBy = [];
     foreach ($inputs->mixins() as ['class' => $class, 'blueprint' => $mixin]) {
       foreach ($mixin->declarationOrder() as $key) {
@@ -921,26 +929,7 @@ final class Attaching {
           isset($nested[$key]) => ['variants', $this->nestedVariants($blueprint, $builder, $key)],
           default => NULL,
         };
-        if (isset($members[$key])) {
-          if ($child !== $first[$key][2] || !static::alike($declared, $first[$key][1])) {
-            throw new \LogicException(sprintf(
-              '%s mixes in the variants chosen by "%s": the variant for "%s", %s, and the variant for "%s", %s, both declare "%s", and not alike. A member two variants share is one key of the owner\'s, so both declare it alike (its type, constraints, settings and default, and the child or the variants it holds; the label and the description aside): declare it alike, or rename one.',
-              $definition->id,
-              $by,
-              $first[$key][0],
-              $blueprints[$first[$key][0]]->ownerId(),
-              $value,
-              $variant,
-              $key,
-            ));
-          }
-          $values[$key][] = (string) $value;
-          if ($child === NULL && $declared->isRequired()) {
-            $required[$key][] = (string) $value;
-          }
-          continue;
-        }
-        if ($builder->getDefinition($key) !== NULL) {
+        if (!isset($declarations[$key]) && $builder->getDefinition($key) !== NULL) {
           throw new \LogicException(sprintf(
             '%s mixes in the variants chosen by "%s": the variant for "%s", %s, declares "%s", which %s declares too. A variant\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the variants under a key of their own with attachVariants().',
             $definition->id,
@@ -955,35 +944,157 @@ final class Attaching {
             },
           ));
         }
-        $member = Surface::deepClone($declared);
-        // Required only where its variant is chosen: a rule says where.
-        if ($member instanceof DataDefinition) {
-          $member->setRequired(FALSE);
-        }
-        $members[$key] = $member;
-        $first[$key] = [(string) $value, $declared, $child];
-        $values[$key] = [(string) $value];
-        if ($child !== NULL && $child[0] === 'variants') {
-          // The owner's variants at the key, chosen by the variant's member,
-          // found as the variant that declared them finds them.
-          $held['variants'][$key] = [
-            'by' => $nested[$key],
-            'from' => $blueprint->variantsFrom()[$key] ?? NULL,
-            'arguments' => $blueprint->variantsArguments()[$key] ?? [],
-            'read' => $blueprint->readVariants()[$key] ?? [],
-            'declaredBy' => $blueprint->ownerName() ?? $variant,
-          ];
-        }
-        elseif ($child !== NULL) {
-          // The owner's child at the key, built with its own children.
-          $held[$child[0]][$key] = $child[1];
-        }
-        elseif ($declared->isRequired()) {
-          $required[$key] = [(string) $value];
-        }
+        $declarations[$key][(string) $value] = [$declared, $child, $blueprint];
+        $values[$key][] = (string) $value;
       }
     }
-    return [$members, $values, $required, $held];
+    $members = [];
+    $required = [];
+    $widened = [];
+    foreach ($declarations as $key => $declared_by) {
+      $first = (string) array_key_first($declared_by);
+      [$declared, $child, $blueprint] = $declared_by[$first];
+      $alike = TRUE;
+      foreach ($declared_by as $value => [$other, $other_child]) {
+        if ($other_child !== $child || !static::alike($other, $declared)) {
+          $alike = FALSE;
+          if (($child !== NULL && $child[0] === 'variants') || ($other_child !== NULL && $other_child[0] === 'variants')) {
+            throw new \LogicException(sprintf(
+              '%s mixes in the variants chosen by "%s": the variant for "%s", %s, and the variant for "%s", %s, both declare "%s", and not alike, where one holds variants at it. Variants a variant mixed in holds at a key are the owner\'s variants there, so every variant that declares the key holds the same variants by the same deciding key: declare them alike, or rename one.',
+              $definition->id,
+              $by,
+              $first,
+              $blueprint->ownerId(),
+              $value,
+              $declared_by[$value][2]->ownerId(),
+              $key,
+            ));
+          }
+        }
+      }
+      $requiring = array_keys(array_filter($declared_by, static fn (array $one): bool => $one[0]->isRequired()));
+      if (!$alike) {
+        // As wide as every variant's, held to the chosen one's by a rule.
+        // A child against a value or another child is no shape the frame
+        // can hold: any value.
+        $holds_child = array_filter($declared_by, static fn (array $one): bool => $one[1] !== NULL) !== [];
+        $members[$key] = static::widest(array_map(static fn (array $one): DataDefinitionInterface => $one[0], $declared_by), $holds_child);
+        $widened[] = (string) $key;
+        if ($requiring !== []) {
+          $required[$key] = array_map('strval', $requiring);
+        }
+        continue;
+      }
+      $member = Surface::deepClone($declared);
+      // Required only where its variant is chosen: a rule says where.
+      if ($member instanceof DataDefinition) {
+        $member->setRequired(FALSE);
+      }
+      $members[$key] = $member;
+      if ($child !== NULL && $child[0] === 'variants') {
+        // The owner's variants at the key, chosen by the variant's member,
+        // found as the variant that declared them finds them.
+        $held['variants'][$key] = [
+          'by' => $blueprint->variants()[$key],
+          'from' => $blueprint->variantsFrom()[$key] ?? NULL,
+          'arguments' => $blueprint->variantsArguments()[$key] ?? [],
+          'read' => $blueprint->readVariants()[$key] ?? [],
+          'declaredBy' => $blueprint->ownerName() ?? (string) $blueprint->ownerId(),
+        ];
+      }
+      elseif ($child !== NULL) {
+        // The owner's child at the key, built with its own children.
+        $held[$child[0]][$key] = $child[1];
+      }
+      elseif ($requiring !== []) {
+        $required[$key] = array_map('strval', $requiring);
+      }
+    }
+    return [$members, $values, $required, $held, $widened];
+  }
+
+  /**
+   * Gives the widest definition every variant's of one member fits.
+   *
+   * Of one class and one data type, and for a map or a list alike inside
+   * (its keys, its item): that type, with the constraints, the settings
+   * and every other entry of its definition (the default among them)
+   * that every variant declares identically; what any of them declares
+   * otherwise is no part of it, so a default that differs is none. Two
+   * config schema leaf types that typed data reads as one data type, such
+   * as `label` and `string`, are that type here. Anything else (a list
+   * against a map, a map against a value, an integer against a string, a
+   * child against a value, two children of different structures) is a
+   * value of any shape, open, as a reader declares a key it reads no
+   * shape for (LeafRules::open()). The label and the description are the
+   * first variant's.
+   *
+   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface[] $definitions
+   *   Each variant's definition of the member, the first first.
+   * @param bool $child
+   *   Whether one of them holds a child, which makes it open.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
+   *   The definition in the owner's frame, optional.
+   */
+  protected static function widest(array $definitions, bool $child = FALSE): DataDefinitionInterface {
+    $first = reset($definitions);
+    assert($first instanceof DataDefinitionInterface);
+    $same = !$child;
+    foreach ($definitions as $other) {
+      $shape = static::withoutPresentation($other);
+      $mine = static::withoutPresentation($first);
+      unset($shape['own'], $mine['own']);
+      if ($other::class !== $first::class || $other->getDataType() !== $first->getDataType() || serialize($shape) !== serialize($mine)) {
+        $same = FALSE;
+      }
+    }
+    if (!$same || !$first instanceof DataDefinition) {
+      $open = LeafRules::open($first->getLabel());
+      if ($first->getDescription() !== NULL) {
+        $open->setDescription($first->getDescription());
+      }
+      return $open;
+    }
+    $widest = Surface::deepClone($first);
+    assert($widest instanceof DataDefinition);
+    // Each of one class with the first, so each a DataDefinition.
+    $arrays = array_map(static fn (DataDefinitionInterface $one): array => $one instanceof DataDefinition ? $one->toArray() : [], $definitions);
+    $shared = static function (array $entries) use ($arrays): array {
+      $kept = [];
+      foreach ($entries as $name => $entry) {
+        foreach ($arrays as $array) {
+          if (!array_key_exists($name, $array) || serialize($array[$name]) !== serialize($entry)) {
+            continue 2;
+          }
+        }
+        $kept[$name] = $entry;
+      }
+      return $kept;
+    };
+    $own = $arrays[array_key_first($arrays)];
+    $widest->setConstraints(array_filter(
+      $own['constraints'] ?? [],
+      static fn (mixed $options, string|int $name): bool => array_filter($arrays, static fn (array $array): bool => !isset($array['constraints'][$name]) || serialize($array['constraints'][$name]) !== serialize($options)) === [],
+      ARRAY_FILTER_USE_BOTH,
+    ));
+    $widest->setSettings(array_filter(
+      $own['settings'] ?? [],
+      static fn (mixed $setting, string|int $name): bool => array_filter($arrays, static fn (array $array): bool => !array_key_exists($name, $array['settings'] ?? []) || serialize($array['settings'][$name]) !== serialize($setting)) === [],
+      ARRAY_FILTER_USE_BOTH,
+    ));
+    $said = ['type', 'label', 'description', 'required', 'constraints', 'settings'];
+    $rest = array_diff_key($own, array_flip($said));
+    $kept = $shared($rest);
+    foreach (array_keys($rest) as $name) {
+      if (!array_key_exists($name, $kept)) {
+        $widest->offsetUnset($name);
+      }
+    }
+    $widest->setRequired(FALSE);
+    return $widest;
   }
 
   /**
@@ -1109,6 +1220,10 @@ final class Attaching {
       $bind = [];
       $locked = [];
       $reasons = [];
+      $widened = $laid['widened'] ?? [];
+      // Each member two variants declare unlike, as each variant built
+      // declares it, by value: what it is held to where that one is chosen.
+      $declaredAs = [];
       foreach ($laid['children'] as $value => $child) {
         $value = (string) $value;
         $structure = $this->registry->getDefinition($child);
@@ -1125,11 +1240,13 @@ final class Attaching {
         $built = $structure->isRead() && $access === NULL ? $this->buildRead($structure->name(), $child_context, []) : $this->buildResource($structure->name(), $child_context, []);
         $map = $built->getDefinitions();
         $present = [];
-        $children = [
+        // A child that is not alike in every variant is no child of the
+        // owner's: a plain member, held to this one's definition of it.
+        $children = array_diff([
           ...array_keys($blueprint->attachments()),
           ...array_keys($blueprint->lists()),
           ...array_keys($blueprint->variants()),
-        ];
+        ], $widened);
         if ($access !== NULL && $access->isLocked()) {
           $reasons[$value] = $access->getReason();
         }
@@ -1151,6 +1268,9 @@ final class Attaching {
             continue;
           }
           $present[] = $key;
+          if (in_array($key, $widened, TRUE)) {
+            $declaredAs[$key][$value] = $map->get($key);
+          }
           $locked[$value][$key] = ($access !== NULL && $access->isLocked()) || $map->isHeld($key);
           if ($runtime || $map->isRuntimeAccess($key)) {
             $builder->markRuntimeAccess($key);
@@ -1192,10 +1312,10 @@ final class Attaching {
         }
         $builder->hold($key);
       }
-      $builder->addMixinVariants(new MixinVariants($by, $variants, $table->labels, $withdrawn));
+      $builder->addMixinVariants(new MixinVariants($by, $variants, $table->labels, $withdrawn, array_values(array_intersect($widened, $present))));
       $mixed['variants'][] = [
         'by' => $by,
-        'rules' => $this->chosenRules($builder, $by, $table, $laid['required'], $mixed['ruling']),
+        'rules' => $this->chosenRules($builder, $by, $table, $laid['required'], $mixed['ruling'], $declaredAs),
         'bind' => array_merge(...array_values($bind)),
       ];
     }
@@ -1206,11 +1326,14 @@ final class Attaching {
    * Writes the rules that say where each member of variants mixed in applies.
    *
    * A member does not apply unless the deciding key holds a value whose
-   * variant brings it, and is required where the variant chosen requires
-   * it; nothing else is said of it here, since its own refiners and rules
-   * are its variant's. Each is a declared rule, so the pipeline, the form
-   * and the tool listing read it as any rule; the contract states the
-   * variants once, as conditionals naming their defs, in its place.
+   * variant brings it; one two variants declare unlike is held to the
+   * chosen variant's definition of it, one rule per definition, the
+   * values that declare it alike together; and it is required where the
+   * variant chosen requires it, in that order. Nothing else is said of it
+   * here, since its own refiners and rules are its variant's. Each is a
+   * declared rule, so the pipeline, the form and the tool listing read it
+   * as any rule; the contract states the variants once, as conditionals
+   * naming their defs, in its place.
    *
    * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The owner's builder, holding the deciding key.
@@ -1222,11 +1345,14 @@ final class Attaching {
    *   The values under which each member is required.
    * @param string[] $ruling
    *   The keys a coded refiner may rule out, which no rule requires.
+   * @param array<string, array<string, \Drupal\Core\TypedData\DataDefinitionInterface|null>> $declaredAs
+   *   Each member two variants declare unlike, with each variant's own
+   *   definition of it, by value.
    *
    * @return \Drupal\surface\Refinement\Rule[]
    *   The rules, in the members' order.
    */
-  protected function chosenRules(SurfaceBuilderInterface $builder, string $by, MixinVariants $table, array $required, array $ruling): array {
+  protected function chosenRules(SurfaceBuilderInterface $builder, string $by, MixinVariants $table, array $required, array $ruling, array $declaredAs = []): array {
     $type = $builder->getDefinition($by)?->getDataType();
     // A condition compares the key with values of its own type.
     $cast = static fn (string $value): int|float|string|bool => match ($type) {
@@ -1242,6 +1368,16 @@ final class Attaching {
     foreach ($table->members() as $key) {
       $values = $table->valuesOf($key);
       $rules[] = (new Rule($key))->when(Condition::not($chosen($values)))->doesNotApply();
+      // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+      $alike = [];
+      foreach (array_intersect_key($declaredAs[$key] ?? [], array_flip($values)) as $value => $own) {
+        if ($own !== NULL) {
+          $alike[serialize(static::withoutPresentation($own))][] = [(string) $value, $own];
+        }
+      }
+      foreach ($alike as $same) {
+        $rules[] = (new Rule($key))->when($chosen(array_column($same, 0)))->holdTo($same[0][1]);
+      }
       $requiring = array_values(array_intersect($required[$key] ?? [], $values));
       if ($requiring !== [] && !in_array($key, $ruling, TRUE)) {
         $rules[] = (new Rule($key))->when($chosen($requiring))->require();

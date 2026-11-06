@@ -463,6 +463,9 @@ final class Binding {
       if ($condition === NULL || !$rule->hasEffect()) {
         throw new \LogicException(sprintf('%s says %s. A rule is a condition and at least one effect: ->when(Condition::...) and what it does, such as ->constrain(), ->require(), ->doesNotApply() or ->describe().', $name, $condition === NULL ? 'no ->when()' : 'nothing it does'));
       }
+      if ($rule->heldTo() !== NULL && $chooses === NULL) {
+        throw new \LogicException(sprintf('%s holds "%s" to another definition. Only the build holds a key to a definition, a member of variants mixed in to its chosen variant\'s; a rule narrows the key as declared.', $name, $rule->key));
+      }
       $own = $module !== NULL && in_array($rule->key, $mounted, TRUE) && !in_array($rule->key, $input_keys, TRUE);
       $nested = !$own && in_array($rule->key, $attached, TRUE);
       $list = !$own && in_array($rule->key, $lists, TRUE);

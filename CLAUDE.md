@@ -196,7 +196,10 @@ the record of the rework that brought the module to the pattern.
   variant is chosen and required where it requires it (declared rules
   the build binds, `DeclaredRefiner::$chooses`); a member two variants
   declare alike is one key (the label and description aside, the first
-  variant's worn), one declared differently refused; a child a variant
+  variant's worn), one declared differently one key too, declared as
+  wide as both and held to the chosen variant's definition
+  (`Attaching::widest()`, `Rule::holdTo()`, `MixinVariants::$heldTo`);
+  a child a variant
   holds is the owner's child at that key, and variants it holds at a key
   the owner's variants there, chosen by its member and found as the
   variant finds them (`ResourceBlueprint::variantsDeclaredBy()`); emitted
@@ -660,7 +663,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1893, Assertions: 44896, Errors: 0, Failures: 0, Skipped: 3. Classes: 264 of 264, 8 at a time, browser classes 4.
+phpunit: Tests: 1905, Assertions: 45204, Errors: 0, Failures: 0, Skipped: 3. Classes: 264 of 264, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -680,7 +683,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1785, Assertions: 40747, Skipped: 3, Deprecations: 130. Classes:
+`Tests: 1797, Assertions: 41055, Skipped: 3, Deprecations: 130. Classes:
 215, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 

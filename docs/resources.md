@@ -1555,7 +1555,7 @@ Each refusal names the class and method at fault:
   keys from the site, wires a child's ports, stores itself, has outputs,
   is mixed in by an alter, or is wired wrong, and an owner naming what it
   may not of it ([Mixins](#mixins)); two variants mixed in that declare
-  a member unlike, or one that holds variants at a key
+  a member unlike where one holds variants at it
   ([Variants mixed in](#variants-mixed-in)).
 
 ## Children
@@ -2007,9 +2007,23 @@ class, after its properties and its `#[MixIn]`s
   the description are presentation: the owner's key wears the first
   variant's, and each variant's def its own (the test module's pack:
   the daypack's capacity is "Volume", the frame pack's "Capacity", one
-  key). One they declare differently is refused at build, naming the
-  owner, both variants and the key, as is a member that is a key the
-  owner, a structure mixed in or another call's variant declares.
+  key). A member that is a key the owner, a structure mixed in or
+  another call's variant declares is refused at build, naming the owner,
+  the variant and the key.
+- **Members declared unlike.** A member two variants declare
+  differently is one key too, declared as wide as both and held to the
+  chosen variant's own definition, its label the owner's key's. Of one
+  type, differing in constraints, settings or the default, the key keeps
+  the type and what every variant declares alike: the test module's
+  beacon's code is a string, at most five characters when flashing, and
+  its color has no default until a mode is chosen, then red or white.
+  Of different types, or a child against a value or another child, the
+  key holds any value: the beacon's pattern is a list of steps when
+  flashing, a map of on and off seconds when steady, and a word sent
+  where the steady beacon holds a map is refused ("This value must be
+  of type map, string given."). The chosen variant's default is laid in
+  where nothing is stored. Variants at a key that two variants declare
+  unlike are refused, since the owner's variants at a key are one set.
 - **Children.** A child a variant holds at a fixed key or in a
   collection, an anonymous map with a frame among them, is the owner's
   child at that key, among the members where the variant declares it,
@@ -2049,9 +2063,10 @@ class, after its properties and its `#[MixIn]`s
   the owner does not declare as a plain input, or one that holds a list
   or a map; a variant that is a resource, a shape, has outputs, reads a
   port, holds keys from the site or mixes variants in of its own, or
-  wires the ports of a child it holds; a `mixInVariants()` from an alter
-  or inside a structure mixed in; a key that both holds variants and
-  chooses variants mixed in. Why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key).
+  wires the ports of a child it holds; two variants that declare one key
+  unlike where one holds variants at it; a `mixInVariants()` from an
+  alter or inside a structure mixed in; a key that both holds variants
+  and chooses variants mixed in. Why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key).
 
 ### Reusing a structure from another module
 

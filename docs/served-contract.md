@@ -949,6 +949,15 @@ key. The test module's kit, in full:
   member: `false` unless the deciding key holds a value whose variant
   brings it, `required` where that variant requires it, each marked
   `declared` as the inline reading marks a rule's. The marker is spent.
+- **A member two variants declare unlike** (the test module's beacon:
+  its code a `maxLength` apart, its color a `default` apart, its pattern
+  a list in one def and an object in the other) is stated by each def as
+  its variant declares it, and in the full document nowhere else, as
+  every member is. Read flat, the frame's property is wider than the
+  defs, the keywords every def states alike (`{"title": "Pattern"}`,
+  no type, for the pattern), and one conditional per def holds the
+  member to that def's schema where its value is chosen, as the build
+  holds it to that variant's definition.
 - **Read back.** `SchemaReader` reads each such conditional, an `if` on
   one sibling's `const` and a `then` that is a reference to an object
   def, alone or the one entry of an `allOf`, as `mixInVariants()`, the

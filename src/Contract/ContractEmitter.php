@@ -1044,7 +1044,9 @@ final class ContractEmitter {
     $branches = [];
     $stated = [];
     $named = [];
+    $heldTo = [];
     foreach ($advertised->mixinVariants() as $mixed) {
+      $heldTo += array_fill_keys($mixed->heldTo, TRUE);
       $by = $mixed->by;
       $deciding = $advertised->get($by);
       foreach ($mixed->variants as $value => $variant) {
@@ -1093,6 +1095,14 @@ final class ContractEmitter {
       }
       if (($property[self::EXTENSION] ?? NULL) === []) {
         unset($property[self::EXTENSION]);
+      }
+      if (isset($heldTo[$name])) {
+        // Declared unlike by two variants: the owner's frame holds it as
+        // wide as both, which is nothing each def does not say, and lists
+        // it nowhere, so a value of it is evaluated only by the def its
+        // variant's conditional names, as every member's is. The inline
+        // reading lays the wide one into the flat frame.
+        continue;
       }
       if ($members[$name]['required']) {
         // Required where its variant is chosen, which the def says, and

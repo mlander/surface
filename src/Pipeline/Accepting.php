@@ -189,6 +189,11 @@ final class Accepting {
     $values = array_fill_keys($definitions->names(), NULL);
     $deferred = [];
     $computed = [];
+    $held = [];
+    $heldTo = [];
+    foreach ($definitions->mixinVariants() as $mixed) {
+      $heldTo += array_fill_keys($mixed->heldTo, TRUE);
+    }
     foreach ($definitions->entries() as $name => $entry) {
       if (!$entry->locked && Computed::of($entry->definition) !== NULL) {
         // Computed from the accepted values of the keys it names, so last.
@@ -197,11 +202,26 @@ final class Accepting {
         $computed[] = $entry;
         continue;
       }
+      if (isset($heldTo[$name])) {
+        // Read by the definition the chosen variant holds it to, once the
+        // key that chooses is accepted.
+        // Decision: see
+        // docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+        $held[] = $entry;
+        continue;
+      }
       if ($entry->variants !== NULL || ($entry->attachment !== NULL && $entry->attachment->reads !== [])) {
         $deferred[] = $entry;
         continue;
       }
       $values[$name] = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values);
+    }
+    if ($held !== []) {
+      $refined = $surface->refine($values);
+      foreach ($held as $entry) {
+        $chosen = $refined->getDefinition($entry->name);
+        $values[$entry->name] = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values, FALSE, $chosen === NULL || DoesNotApply::marks($chosen) ? NULL : $chosen);
+      }
     }
     foreach ($deferred as $entry) {
       $values[$entry->name] = $this->acceptKey($surface, $entry, $input, $current, $prefix, $values);
@@ -281,11 +301,15 @@ final class Accepting {
    *   TRUE to read the input as though the key were not locked: what a
    *   value sent for a locked key would have been, to tell whether it
    *   was taken.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $as
+   *   The definition a member of variants mixed in is held to for the
+   *   variant chosen, to read the value by in place of the key's own;
+   *   NULL for the key's own.
    *
    * @return mixed
    *   The accepted value.
    */
-  protected function acceptKey(SurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values, bool $open = FALSE): mixed {
+  protected function acceptKey(SurfaceInterface $surface, Entry $entry, array $input, array $current, string $prefix, array $values, bool $open = FALSE, ?DataDefinitionInterface $as = NULL): mixed {
     $name = $entry->name;
     $path = static::joinPath($prefix, $name);
     if ($entry->locked && !$open) {
@@ -313,6 +337,11 @@ final class Accepting {
     // NULL is a stored value, so array_key_exists rather than ??.
     $was_stored = array_key_exists($name, $current);
     $fallback = $was_stored ? $current[$name] : $surface->getDefault($name);
+    if (!$was_stored && $as !== NULL && DefinitionMetadata::hasDefaultValue($as)) {
+      // The chosen variant's default, which the owner's frame, declaring
+      // the member as wide as every variant, holds none of.
+      $fallback = DefinitionMetadata::getDefaultValue($as);
+    }
     if ($fallback === NULL && DefinitionMetadata::isGrouping($entry->definition)) {
       // The map each module's mounted keys sit in is a map, never null,
       // even when nothing is stored and no mounted key has a default.
@@ -355,7 +384,7 @@ final class Accepting {
     }
     return DefinitionMetadata::isSecret($entry->definition)
       ? $this->acceptSecret($entry->definition, $input[$name], $fallback, $path)
-      : $this->acceptValue($entry->definition, $input[$name], $fallback, $path);
+      : $this->acceptValue($as ?? $entry->definition, $input[$name], $fallback, $path);
   }
 
   /**

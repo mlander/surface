@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Form\FormState;
+use Drupal\Core\TypedData\ListDataDefinitionInterface;
+use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\ContractChange;
 use Drupal\surface\Contract\ContractDiff;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\VariantMismatchException;
@@ -19,13 +22,16 @@ use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\Resources;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface_resource_test\Resource\Beacon\BeaconResource;
 use Drupal\surface_resource_test\Resource\Kit\KitResource;
 use Drupal\surface_resource_test\Resource\Pack\PackResource;
 use Drupal\surface_resource_test\Resource\Shelter\ShelterResource;
+use Drupal\surface_resource_test\Structure\Beacon\BeaconPostStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitBothStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitByAlterStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitChildVariantStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitClashStructure;
+use Drupal\surface_resource_test\Structure\Broken\Kit\KitCoveringClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitListByStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitMixinClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\Kit\KitNestedMixinStructure;
@@ -146,6 +152,23 @@ class MixinVariantsTest extends SurfaceKernelTestBase {
     'roof' => 'thatch',
     'covering' => ['depth' => 30],
     'size' => NULL,
+    'notes' => '',
+  ];
+
+  /**
+   * The beacon's keys: its own, and the members both variants declare unlike.
+   */
+  protected const BEACON_KEYS = ['title', 'mode', 'code', 'color', 'pattern', 'notes'];
+
+  /**
+   * The beacon as installed.
+   */
+  protected const BEACON = [
+    'title' => 'Ridge beacon',
+    'mode' => 'flash',
+    'code' => 'SOS',
+    'color' => 'red',
+    'pattern' => ['long', 'short'],
     'notes' => '',
   ];
 
@@ -299,12 +322,10 @@ class MixinVariantsTest extends SurfaceKernelTestBase {
    */
   public function testCollisionsAreRefused(): void {
     $refusals = [
-      KitClashStructure::class => 'resource_test.broken.kit_clash mixes in the variants chosen by "kind": the variant for "count", resource_test.broken.kit.size_count, and the variant for "word", resource_test.broken.kit.size_word, both declare "size", and not alike. A member two variants share is one key of the owner\'s, so both declare it alike (its type, constraints, settings and default, and the child or the variants it holds; the label and the description aside): declare it alike, or rename one.',
       KitOwnerClashStructure::class => 'resource_test.broken.kit_owner_clash mixes in the variants chosen by "kind": the variant for "a", resource_test.broken.kit.weight_only, declares "weight", which resource_test.broken.kit_owner_clash declares too. A variant\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the variants under a key of their own with attachVariants().',
       KitMixinClashStructure::class => 'resource_test.broken.kit_mixin_clash mixes in the variants chosen by "kind": the variant for "a", resource_test.broken.created_only, declares "created", which resource_test.timestamps, mixed in, declares too. A variant\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the variants under a key of their own with attachVariants().',
       KitTwoCallsClashStructure::class => 'resource_test.broken.kit_two_calls_clash mixes in the variants chosen by "mode": the variant for "b", resource_test.broken.kit.weight_only, declares "weight", which the variant for "a", resource_test.broken.kit.weight_only, of the variants chosen by "kind", declares too. A variant\'s members are the owner\'s keys, so a name is declared once: rename one, or attach the variants under a key of their own with attachVariants().',
-      PackRangeClashStructure::class => 'resource_test.broken.pack_range_clash mixes in the variants chosen by "kind": the variant for "small", resource_test.broken.pack.small_capacity, and the variant for "large", resource_test.broken.pack.large_capacity, both declare "capacity", and not alike. A member two variants share is one key of the owner\'s, so both declare it alike (its type, constraints, settings and default, and the child or the variants it holds; the label and the description aside): declare it alike, or rename one.',
-      PackChildClashStructure::class => 'resource_test.broken.pack_child_clash mixes in the variants chosen by "kind": the variant for "belted", resource_test.broken.pack.belted, and the variant for "pocketed", resource_test.broken.pack.pocket_belt, both declare "belt", and not alike. A member two variants share is one key of the owner\'s, so both declare it alike (its type, constraints, settings and default, and the child or the variants it holds; the label and the description aside): declare it alike, or rename one.',
+      KitCoveringClashStructure::class => 'resource_test.broken.kit_covering_clash mixes in the variants chosen by "kind": the variant for "hut", resource_test.shelter.hut, and the variant for "flat", resource_test.broken.kit.covering_word, both declare "covering", and not alike, where one holds variants at it. Variants a variant mixed in holds at a key are the owner\'s variants there, so every variant that declares the key holds the same variants by the same deciding key: declare them alike, or rename one.',
     ];
     $this->assertRefused($refusals);
   }
@@ -590,7 +611,7 @@ class MixinVariantsTest extends SurfaceKernelTestBase {
    *
    * It wears the label and the description of the variant found first;
    * each variant's def keeps its own. One that differs by a constraint is
-   * refused (testCollisionsAreRefused()).
+   * declared as wide as both and held to each (testUnlikeMembersAreHeld()).
    */
   public function testLabelAloneIsNoDifference(): void {
     $pack = $this->pack();
@@ -1057,6 +1078,360 @@ class MixinVariantsTest extends SurfaceKernelTestBase {
     $this->assertSame($ids($this->shelter()), $ids($camp));
     $accepted = $this->pipeline()->accept($camp, ['site' => 'hut', 'roof' => 'slate', 'covering' => ['tiles' => 2]], []);
     $this->assertSame([], iterator_to_array($this->pipeline()->validate($camp, $accepted, [])));
+  }
+
+  /**
+   * Builds the beacon in its one operation.
+   *
+   * @return \Drupal\surface\SurfaceInterface
+   *   The built data surface.
+   */
+  protected function beacon(): SurfaceInterface {
+    $resources = $this->container->get('surface.resources');
+    return $resources->build(BeaconResource::class, $resources->operation(BeaconResource::class, 'configure'));
+  }
+
+  /**
+   * Emits the beacon's schema, decoded.
+   *
+   * @param array|null $values
+   *   The values for the schema for these answers; NULL for the full
+   *   schema.
+   *
+   * @return array
+   *   The schema.
+   */
+  protected function beaconSchema(?array $values = NULL): array {
+    $emitter = $this->container->get('surface.contract_emitter');
+    $served = $values === NULL
+      ? $emitter->emitFull($this->beacon(), 'resource_test.beacon', 'configure')
+      : $emitter->emit($this->beacon(), $values, 'resource_test.beacon', 'configure');
+    return json_decode((string) json_encode($served->document['schema']), TRUE);
+  }
+
+  /**
+   * Submits values to the beacon as a dry run, answering the messages by path.
+   *
+   * @param array $input
+   *   The input.
+   *
+   * @return array<string, string>
+   *   The refusals, by dotted path, a value its key cannot hold among them.
+   */
+  protected function beaconRefusals(array $input): array {
+    $resources = $this->container->get('surface.resources');
+    $beacon = $this->beacon();
+    $storage = $resources->storage(BeaconResource::class, $resources->operation(BeaconResource::class, 'configure'), $beacon);
+    $messages = [];
+    foreach ($this->pipeline()->submit($beacon, $input, $storage, TRUE)->violations as $violation) {
+      $messages[$violation->fullPath()] = strip_tags((string) $violation->message);
+    }
+    return $messages;
+  }
+
+  /**
+   * Tests members two variants declare unlike: one key, as wide as both.
+   *
+   * The code is a constraint apart, so the frame keeps the string and
+   * drops the constraint; the color a default apart, so the frame has no
+   * default; the pattern a kind apart, so the frame holds any value. Each
+   * is held to the chosen variant's own definition, its label the frame's.
+   */
+  public function testUnlikeMembersAreHeld(): void {
+    $beacon = $this->beacon();
+    $map = $beacon->getDefinitions();
+    $this->assertSame(self::BEACON_KEYS, $map->names());
+    [$mixed] = $map->mixinVariants();
+    $this->assertSame(['flash', 'steady'], $mixed->variantIds());
+    $this->assertSame(['code', 'color', 'pattern'], $mixed->heldTo, 'Each declared unlike.');
+    $code = $map->get('code');
+    $this->assertSame('string', $code->getDataType());
+    $this->assertArrayNotHasKey('Length', $code->getConstraints(), 'The constraint only one declares, left out.');
+    $this->assertSame('string', $map->get('color')->getDataType());
+    $this->assertNull($beacon->getDefault('color'), 'A default that differs is no default.');
+    $pattern = $map->get('pattern');
+    $this->assertSame('any', $pattern->getDataType(), 'A list in one, a map in the other: any value.');
+    $this->assertTrue(DefinitionMetadata::isHeldWhole($pattern));
+    $this->assertSame('Pattern', (string) $pattern->getLabel());
+
+    $flash = $beacon->refine(['mode' => 'flash']);
+    $this->assertSame(['max' => 5], $flash->getDefinition('code')->getConstraints()['Length']);
+    $this->assertInstanceOf(ListDataDefinitionInterface::class, $flash->getDefinition('pattern'));
+    $this->assertSame('string', $flash->getDefinition('pattern')->getItemDefinition()->getDataType());
+    $this->assertSame('red', DefinitionMetadata::getDefaultValue($flash->getDefinition('color')));
+    $steady = $beacon->refine(['mode' => 'steady']);
+    $this->assertArrayNotHasKey('Length', $steady->getDefinition('code')->getConstraints());
+    $this->assertInstanceOf(MapDataDefinition::class, $steady->getDefinition('pattern'));
+    $this->assertSame(['on', 'off'], array_keys($steady->getDefinition('pattern')->getPropertyDefinitions()));
+    $this->assertSame('Pattern', (string) $steady->getDefinition('pattern')->getLabel(), 'The frame\'s label.');
+    $this->assertSame('white', DefinitionMetadata::getDefaultValue($steady->getDefinition('color')));
+    $this->assertFalse($steady->getDefinition('pattern')->isRequired(), 'Required is the rule\'s to say, and none does.');
+    foreach (['code', 'color', 'pattern'] as $member) {
+      $this->assertTrue(DoesNotApply::marks($beacon->refine([])->getDefinition($member)), $member . ' applies to no variant chosen.');
+    }
+  }
+
+  /**
+   * Tests each value is accepted by the definition its variant holds it to.
+   */
+  public function testEachVariantHoldsItsOwn(): void {
+    $this->assertSame([], $this->beaconRefusals(['code' => 'SOS']));
+    $this->assertSame(['code' => 'This value is too long. It should have 5 characters or less. This applies when Mode is Flashing.'], $this->beaconRefusals(['code' => 'LONGER']), 'The flashing beacon\'s constraint, named as a rule\'s is.');
+    $steady = ['mode' => 'steady', 'pattern' => ['on' => 3, 'off' => 1]];
+    $this->assertSame([], $this->beaconRefusals($steady + ['code' => 'LONGER']), 'Not the steady one\'s.');
+    $this->assertSame([], $this->beaconRefusals(['pattern' => ['short', 'short', 'long']]), 'A list under the flashing beacon.');
+    $off = ['mode' => 'steady', 'pattern' => ['on' => 0]];
+    $this->assertSame(['pattern.on' => 'This value should be 1 or more.'], $this->beaconRefusals($off), 'A map under the steady one, its keys held.');
+    $word = ['mode' => 'steady', 'pattern' => 'long'];
+    $this->assertSame(['pattern' => 'This value must be of type map, string given.'], $this->beaconRefusals($word), 'A word where the steady beacon holds a map.');
+    $none = ['mode' => NULL, 'pattern' => ['long']];
+    $this->assertSame([
+      'mode' => 'Mode is required.',
+      'pattern' => 'Pattern does not apply when Mode is empty.',
+    ], $this->beaconRefusals($none), 'Nothing chosen.');
+    // What the flashing beacon left stored, a list, under the steady one:
+    // read by the map it is held to, which it does not fill.
+    $this->assertSame(['pattern.on' => 'On is required.'], $this->beaconRefusals(['mode' => 'steady']));
+    $listed = ['mode' => 'steady', 'pattern' => ['long']];
+    $this->assertSame(['pattern.0' => 'Unknown key pattern.0.'], $this->beaconRefusals($listed), 'A list sent where the steady beacon holds a map.');
+
+    // The chosen variant's default is laid in where nothing is stored.
+    $accepted = $this->pipeline()->accept($this->beacon(), ['title' => 'Fresh', 'mode' => 'steady'], []);
+    $this->assertSame([
+      'title' => 'Fresh',
+      'mode' => 'steady',
+      'code' => NULL,
+      'color' => 'white',
+      'pattern' => NULL,
+      'notes' => NULL,
+    ], $accepted);
+    $accepted = $this->pipeline()->accept($this->beacon(), ['title' => 'Fresh', 'mode' => 'flash'], []);
+    $this->assertSame('red', $accepted['color']);
+
+    // A write stores each shape flat beside the mode.
+    $resources = $this->container->get('surface.resources');
+    $beacon = $this->beacon();
+    $result = $this->pipeline()->submit($beacon, $steady, $resources->storage(BeaconResource::class, $resources->operation(BeaconResource::class, 'configure'), $beacon));
+    $this->assertTrue($result->isValid(), (string) json_encode(array_map(static fn ($violation): string => $violation->fullPath() . ': ' . strip_tags((string) $violation->message), iterator_to_array($result->violations))));
+    $stored = $this->config('surface_resource_test.beacon')->getRawData();
+    $this->assertSame(['steady', ['on' => 3, 'off' => 1]], [$stored['mode'], $stored['pattern']]);
+    $this->assertStaticRefinersAgree($beacon);
+  }
+
+  /**
+   * Tests the full document: the frame lists no member, each def strict.
+   */
+  public function testTheFullDocumentHoldsEachDefToItsOwn(): void {
+    $full = $this->beaconSchema();
+    $this->assertSame(['title', 'mode', 'notes'], array_keys($full['properties']), 'A member declared unlike is stated by each def, and nowhere else.');
+    $this->assertSame([
+      'flash' => '#/$defs/resource_test.beacon.flash',
+      'steady' => '#/$defs/resource_test.beacon.steady',
+    ], $full['x-surface']['variantsMixedIn']['mode']);
+    $flash = $full['$defs']['resource_test.beacon.flash']['properties'];
+    $steady = $full['$defs']['resource_test.beacon.steady']['properties'];
+    $this->assertSame(5, $flash['code']['maxLength']);
+    $this->assertArrayNotHasKey('maxLength', $steady['code']);
+    $this->assertSame(['red', 'white'], [$flash['color']['default'], $steady['color']['default']]);
+    $this->assertSame(['type' => 'string'], $flash['pattern']['items']);
+    $this->assertSame(['on', 'off'], array_keys($steady['pattern']['properties']));
+
+    $beacon = self::BEACON;
+    $this->assertTrue($this->validates($full, $beacon));
+    $this->assertFalse($this->validates($full, ['code' => 'LONGER'] + $beacon), 'The flashing beacon\'s def holds its code.');
+    $this->assertFalse($this->validates($full, ['pattern' => ['on' => 3]] + $beacon), 'A map under the flashing beacon.');
+    $steady_beacon = ['mode' => 'steady', 'code' => 'LONGER', 'pattern' => ['on' => 3, 'off' => 1]] + $beacon;
+    $this->assertTrue($this->validates($full, $steady_beacon));
+    $this->assertFalse($this->validates($full, ['pattern' => ['long']] + $steady_beacon), 'A list under the steady one.');
+    $this->assertFalse($this->validates($full, ['pattern' => ['on' => 0]] + $steady_beacon), 'Its keys held.');
+    $this->assertFalse($this->validates($full, ['mode' => NULL] + $beacon), 'Nothing chosen: no conditional evaluates a member.');
+  }
+
+  /**
+   * Tests the inline reading: the wide member in the frame, each def's held.
+   */
+  public function testInlineHoldsEachMemberToItsDef(): void {
+    $inline = SchemaResolver::inline($this->beaconSchema());
+    $this->assertSame(self::BEACON_KEYS, array_keys($inline['properties']));
+    $this->assertSame(['title' => 'Pattern'], $inline['properties']['pattern'], 'Open: what both defs say alike, which is nothing.');
+    $this->assertSame(['title' => 'Code', 'type' => ['string', 'null']], $inline['properties']['code'], 'A string, the length only one says left out.');
+    $this->assertArrayNotHasKey('default', $inline['properties']['color'], 'A default only each says.');
+    $held = array_values(array_filter($inline['allOf'], static fn (array $rule): bool => isset($rule['then']['properties']['pattern']) && $rule['then']['properties']['pattern'] !== FALSE));
+    $this->assertSame([
+      ['properties' => ['mode' => ['const' => 'flash']], 'required' => ['mode']],
+      ['properties' => ['mode' => ['const' => 'steady']], 'required' => ['mode']],
+    ], array_column($held, 'if'), 'One conditional per def, on the value that chooses it.');
+    $this->assertSame(['type' => ['array', 'null'], 'items' => ['type' => 'string']], $held[0]['then']['properties']['pattern']);
+    $this->assertSame(SchemaResolver::inline($inline), $inline, 'Read flat twice, the same.');
+    $beacon = self::BEACON;
+    $this->assertTrue($this->validates($inline, $beacon));
+    $this->assertFalse($this->validates($inline, ['code' => 'LONGER'] + $beacon));
+    $this->assertFalse($this->validates($inline, ['pattern' => ['on' => 3]] + $beacon));
+    $steady_beacon = ['mode' => 'steady', 'code' => 'LONGER', 'pattern' => ['on' => 3, 'off' => 1]] + $beacon;
+    $this->assertTrue($this->validates($inline, $steady_beacon));
+    $this->assertFalse($this->validates($inline, ['pattern' => ['long']] + $steady_beacon));
+  }
+
+  /**
+   * Tests the beacon's full schema reads back to itself.
+   */
+  public function testTheBeaconReadsBack(): void {
+    $full = $this->beaconSchema();
+    $read = $this->container->get('surface.schema_reader')->structure($full, 'resource_test.beacon', 'surface_resource_test');
+    $built = $this->container->get('surface.resources')->buildStatic($read, new OperationContext('configure'));
+    $this->assertSame(self::BEACON_KEYS, $built->getDefinitions()->names());
+    $this->assertSame(['code', 'color', 'pattern'], $built->getDefinitions()->mixinVariants()[0]->heldTo);
+    $again = $this->container->get('surface.contract_emitter')->emitFull($built, 'resource_test.beacon', 'configure')->document['schema'];
+    $this->assertSame(json_encode($full), json_encode($again));
+  }
+
+  /**
+   * Tests the contract diff judges a variant removed or added.
+   *
+   * The frame lists no member declared unlike, so nothing of the frame
+   * moves: the deciding key's choice and the def judge it, as for any
+   * variant mixed in.
+   */
+  public function testTheDiffJudgesVariantHeldApart(): void {
+    $baseline = ['schema' => $this->beaconSchema()];
+    $removed = $baseline;
+    $schema = &$removed['schema'];
+    unset($schema['$defs']['resource_test.beacon.steady'], $schema['x-surface']['variantsMixedIn']['mode']['steady']);
+    $schema['allOf'] = array_values(array_filter($schema['allOf'], static fn (array $branch): bool => ($branch['if']['properties']['mode']['const'] ?? NULL) !== 'steady'));
+    $schema['properties']['mode']['oneOf'] = array_values(array_filter($schema['properties']['mode']['oneOf'], static fn (array $choice): bool => $choice['const'] !== 'steady'));
+    unset($schema);
+    $judged = static fn (array $from, array $to): array => array_map(static fn (ContractChange $change): string => $change->status . ' ' . $change->change, (new ContractDiff())->compare($from, $to));
+    $this->assertSame([
+      'compatible variant mixed in removed',
+      'breaking choice "steady" removed',
+      'compatible rule removed',
+      'compatible def no longer used',
+    ], $judged($baseline, $removed));
+    $this->assertSame([
+      'compatible variant mixed in added',
+      'compatible choice "steady" added',
+      'compatible rule added for a value the baseline did not allow',
+      'compatible def added',
+    ], $judged($removed, $baseline));
+  }
+
+  /**
+   * Tests the form draws the chosen variant's definition of each member.
+   */
+  public function testTheFormDrawsTheHeldDefinition(): void {
+    $drawn = function (): array {
+      $route = new Route('/beacon', [
+        '_form' => SurfaceOperationForm::class,
+        OperationRoute::RESOURCE => 'resource_test.beacon',
+        OperationRoute::OPERATION => 'configure',
+      ]);
+      $stack = $this->container->get('request_stack');
+      $request = Request::create('/beacon', 'POST');
+      $request->setSession($stack->getSession());
+      $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_resource_test.beacon');
+      $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
+      $stack->push($request);
+      $state = new FormState();
+      return $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $state)[SurfaceOperationForm::SURFACE_KEY];
+    };
+    $flash = $drawn();
+    $this->assertSame('fieldset', $flash['pattern']['#type'] ?? NULL, 'The flashing beacon\'s list.');
+    $this->config('surface_resource_test.beacon')->set('mode', 'steady')->set('pattern', ['on' => 2, 'off' => 1])->set('color', NULL)->save();
+    $steady = $drawn();
+    $this->assertSame(2, $steady['pattern']['on']['#default_value'] ?? NULL, 'The steady beacon\'s map, its keys drawn.');
+    $this->assertSame('white', $steady['color']['#default_value'] ?? NULL, 'Its default, where nothing is stored.');
+  }
+
+  /**
+   * Tests the tool lists each member as the frame declares it.
+   */
+  public function testTheToolListsTheWideMembers(): void {
+    $manager = $this->container->get('plugin.manager.tool');
+    $values = $manager->getDefinition('surface:resource_test.beacon:configure')->getInputDefinition(OperationInputs::VALUES);
+    $properties = $values->getPropertyDefinitions();
+    $this->assertSame(self::BEACON_KEYS, array_keys($properties));
+    $this->assertSame('any', $properties['pattern']->getDataType());
+    $this->assertSame('Depends on mode.', (string) $properties['pattern']->getDescription(), 'Its shape too, which the open value does not say.');
+    $tool = $manager->createInstance('surface:resource_test.beacon:configure');
+    $tool->setInputValue(OperationInputs::VALUES, ['mode' => 'steady', 'pattern' => 'long'] + self::BEACON);
+    $tool->execute();
+    $this->assertFalse($tool->getResult()->isSuccess());
+    $this->assertSame("The values were refused:\n/pattern: This value must be of type map, string given.", strip_tags((string) $tool->getResult()->getMessage()), 'Read by the map the steady beacon holds it to.');
+  }
+
+  /**
+   * Tests the beacon's build is kept, and read back equal from the cache.
+   */
+  public function testTheBeaconReadsBackFromTheCache(): void {
+    $resources = $this->container->get('surface.resources');
+    assert($resources instanceof Resources);
+    $registry = $this->container->get('surface.resource_registry');
+    $emitter = $this->container->get('surface.contract_emitter');
+    $emitted = static fn (SurfaceInterface $built): string => (string) json_encode([
+      $emitter->emitFull($built, 'resource_test.beacon', 'configure')->document,
+      $emitter->emit($built, $built->getDefaultValues(), 'resource_test.beacon', 'configure')->document,
+    ]);
+    $context = $resources->operation(BeaconResource::class, 'configure');
+    $this->container->get('cache.surface_build')->deleteAll();
+    $resources->forgetBuilds();
+    $fresh = $resources->buildDeclared(BeaconResource::class, $context);
+    $document = $emitted($fresh);
+    $cached = $resources->buildCounts()['cached'];
+    $resources->forgetBuilds();
+    (new \ReflectionProperty(ResourceRegistry::class, 'read'))->setValue($registry, []);
+    $woken = $resources->buildDeclared(BeaconResource::class, $context);
+    $this->assertSame($cached + 1, $resources->buildCounts()['cached']);
+    $this->assertNotSame($fresh, $woken);
+    $this->assertSame($fresh->getDefinitions()->mixinVariants()[0]->heldTo, $woken->getDefinitions()->mixinVariants()[0]->heldTo);
+    $this->assertSame($document, $emitted($woken));
+    $steady = ['mode' => 'steady', 'pattern' => ['on' => 2]];
+    $this->assertSame($this->pipeline()->accept($fresh, $steady, []), $this->pipeline()->accept($woken, $steady, []));
+  }
+
+  /**
+   * Tests the same two variants mixed into a second owner are held there too.
+   */
+  public function testTwoOwnersHoldTheSameVariants(): void {
+    $resources = $this->container->get('surface.resources');
+    $post = $resources->build(BeaconPostStructure::class, new OperationContext('configure'));
+    $this->assertSame(['signal', 'code', 'color', 'pattern'], $post->getDefinitions()->names());
+    $this->assertSame(['code', 'color', 'pattern'], $post->getDefinitions()->mixinVariants()[0]->heldTo);
+    $judge = function (array $input) use ($post): array {
+      $messages = [];
+      foreach ($this->pipeline()->validate($post, $this->pipeline()->accept($post, $input, []), []) as $violation) {
+        $messages[$violation->fullPath()] = strip_tags((string) $violation->message);
+      }
+      return $messages;
+    };
+    $this->assertSame([], $judge(['signal' => 'steady', 'pattern' => ['on' => 2]]));
+    $this->assertSame([], $judge(['signal' => 'flash', 'pattern' => ['long']]));
+    $long = 'This value is too long. It should have 5 characters or less. This applies when Signal is flash.';
+    $this->assertSame(['code' => $long], $judge(['signal' => 'flash', 'code' => 'LONGER']));
+  }
+
+  /**
+   * Tests the pairs step 2 refused now build, each member held apart.
+   *
+   * A size an integer in one and a word in the other; a capacity a
+   * constraint apart; a belt two children of different structures, which
+   * is no child of the owner's: a value of any shape, held to each
+   * variant's child as its map.
+   */
+  public function testUnlikePairsOnceRefusedBuild(): void {
+    $resources = $this->container->get('surface.resources');
+    $kit = $resources->build(KitClashStructure::class, new OperationContext('configure'));
+    $this->assertSame(['size'], $kit->getDefinitions()->mixinVariants()[0]->heldTo);
+    $this->assertSame('any', $kit->getDefinition('size')->getDataType());
+    $this->assertSame('integer', $kit->refine(['kind' => 'count'])->getDefinition('size')->getDataType());
+    $this->assertSame('string', $kit->refine(['kind' => 'word'])->getDefinition('size')->getDataType());
+    $range = $resources->build(PackRangeClashStructure::class, new OperationContext('configure'));
+    $this->assertSame(['PrimitiveType'], array_keys($range->getDefinition('capacity')->getConstraints()), 'The frame: an integer, either bound left out.');
+    $belt = $resources->build(PackChildClashStructure::class, new OperationContext('configure'));
+    $this->assertNull($belt->getDefinitions()->entry('belt')->attachment, 'No child of the owner\'s.');
+    $this->assertSame(['padded', 'width'], array_keys($belt->refine(['kind' => 'belted'])->getDefinition('belt')->getPropertyDefinitions()));
+    $this->assertSame(['name'], array_keys($belt->refine(['kind' => 'pocketed'])->getDefinition('belt')->getPropertyDefinitions()));
+    $accepted = $this->pipeline()->accept($belt, ['kind' => 'pocketed', 'belt' => ['name' => 'Hip']], []);
+    $this->assertSame([], iterator_to_array($this->pipeline()->validate($belt, $accepted, [])));
   }
 
 }

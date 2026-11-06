@@ -193,6 +193,10 @@ final class Validating {
   protected function validateLevel(SurfaceInterface $surface, array $values, array $current): array {
     $refined = $surface->refine($values);
     $errors = [];
+    $heldTo = [];
+    foreach ($surface->getDefinitions()->mixinVariants() as $mixed) {
+      $heldTo += array_fill_keys($mixed->heldTo, TRUE);
+    }
     foreach ($refined->getDefinitions()->entries() as $name => $entry) {
       $name = (string) $name;
       $definition = $entry->definition;
@@ -284,6 +288,18 @@ final class Validating {
         // value, above.
         // Decision: see docs/decisions.md#required-means-must-hold-a-value.
         $definition = (clone $definition)->setRequired(FALSE);
+      }
+      if (isset($heldTo[$name]) && ($definition instanceof ListDataDefinitionInterface || $definition instanceof ComplexDataDefinitionInterface) && !is_array($value)) {
+        // A member of variants mixed in held to the chosen variant's list
+        // or map, holding a value of another shape: what another variant
+        // left stored, which the chosen one cannot read.
+        // Decision: see
+        // docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+        $errors[] = new Violation($name, '', $this->t('This value must be of type @expected, @actual given.', [
+          '@expected' => $definition instanceof ListDataDefinitionInterface ? 'list' : 'map',
+          '@actual' => get_debug_type($value),
+        ]), Violation::TYPE_MISMATCH);
+        continue;
       }
       $typed_data = DefinitionTypedData::create($this->typedDataManager, $definition, $value, $name);
       $refusals = [];
