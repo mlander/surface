@@ -15,6 +15,8 @@ use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
+use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Storage\StageStorage;
 use Drupal\Tests\surface\Traits\DoorAgreementTrait;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -119,8 +121,14 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
         'surface_paths_test',
         'surface_gate_test',
       ],
+      'holds' => ['surface'],
     ],
   ];
+
+  /**
+   * The stage the fixtures' site opens, by a fixed id.
+   */
+  protected const STAGE = '5a9e2c1d-7b3f-4c8e-9d2a-6f1b0e4c3a7d';
 
   /**
    * The subject each operation that needs one is asked about, by name.
@@ -139,6 +147,10 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
     'gate_test.note:update' => ['node' => 1],
     'gate_test.note:annotate' => ['node' => 1],
     'gate_test.relay:update' => ['node' => 1],
+    'surface.stage:update' => ['id' => self::STAGE],
+    'surface.stage:changes' => ['id' => self::STAGE],
+    'surface.stage:apply' => ['id' => self::STAGE],
+    'surface.stage:delete' => ['id' => self::STAGE],
   ];
 
   /**
@@ -240,6 +252,21 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
     if ($site === 'the fixtures') {
       // The page the gate test module's notes are about.
       Node::create(['type' => 'page', 'title' => 'A page'])->save();
+      // A stage, empty, the account's, under an id the subjects name.
+      $now = $this->container->get('datetime.time')->getRequestTime();
+      $this->container->get('surface.stages')->write([
+        'version' => StageStore::VERSION,
+        'id' => self::STAGE,
+        'owner' => (int) $this->container->get('current_user')->id(),
+        'label' => 'Every door',
+        'status' => StageStorage::OPEN,
+        'opened' => $now,
+        'updated' => $now,
+        'applied_at' => NULL,
+        'applied' => NULL,
+        'next' => 1,
+        'writes' => [],
+      ]);
     }
   }
 

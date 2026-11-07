@@ -8,7 +8,11 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\TypedDataInterface;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\PrimitiveTypeConstraint;
+use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
+use Drupal\surface\Pipeline\ViolationSummary;
+use Drupal\surface\Resource\StageResource;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
@@ -380,6 +384,9 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       $result->prepared !== NULL => $storage->outputs($built, $result->values, $result->prepared),
       default => [],
     };
+    if ($resource->id === StageResource::ID) {
+      $outputs = $this->conformed($built, $outputs);
+    }
     $answer += $outputs;
     // Decision: see docs/decisions.md#locked-at-the-top.
     return ExecutableResult::success(
@@ -395,6 +402,33 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       }, $result->notes),
       $answer,
     );
+  }
+
+  /**
+   * Holds the stage's own outputs to what its structures declare.
+   *
+   * The stage's `changes` and `apply` answer lists of maps, and a dry run
+   * of apply marks the id it cannot know NotEmitted: what the declaration
+   * does not hold is a fault of the stage, and what is not emitted is left
+   * out, before the Tool API checks them.
+   *
+   * @param \Drupal\surface\SurfaceInterface $built
+   *   The operation's data surface.
+   * @param array $outputs
+   *   The outputs the storage read back.
+   *
+   * @return array
+   *   The outputs, every key not emitted left out.
+   *
+   * @throws \LogicException
+   *   When they do not hold to the declaration.
+   */
+  protected function conformed(SurfaceInterface $built, array $outputs): array {
+    $violations = $this->pipeline->conformOutput($built, $outputs);
+    if (!$violations->isEmpty()) {
+      throw new \LogicException('The stage answered outputs its structure does not declare: ' . ViolationSummary::fromViolations($violations));
+    }
+    return NotEmitted::strip($outputs);
   }
 
 }

@@ -27,6 +27,9 @@ use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
+use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\StagedStorage;
+use Drupal\surface\Staging\StageStore;
 use Drupal\surface\Storage\ConfigEntityStorage;
 use Drupal\surface\Storage\ConfigObjectStorage;
 
@@ -1316,7 +1319,7 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL): SurfaceStorageInterface {
+  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL, ?Stage $stage = NULL): SurfaceStorageInterface {
     $definition = $this->registry->getDefinition($resource);
     if ($definition->storage === NULL) {
       throw new \LogicException(sprintf(
@@ -1326,7 +1329,13 @@ final class Resources implements ResourcesInterface {
         $definition->id,
       ));
     }
-    return $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context), $account ?? $this->currentUser, $this->gating->itemGates($definition, $context));
+    $adapter = $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context), $account ?? $this->currentUser, $this->gating->itemGates($definition, $context));
+    if ($stage === NULL) {
+      return $adapter;
+    }
+    // Decision: see
+    // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+    return new StagedStorage($adapter, $stage, $this->classResolver->getInstanceFromDefinition(StageStore::class), $definition->id, $context, get_class($this->storageInstance($definition->name())), $definition->identity);
   }
 
   /**

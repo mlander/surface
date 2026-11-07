@@ -107,6 +107,12 @@ class OperationToolsTest extends SurfaceKernelTestBase {
       'surface:node.type:create',
       'surface:node.type:read',
       'surface:node.type:update',
+      'surface:surface.stage:apply',
+      'surface:surface.stage:changes',
+      'surface:surface.stage:create',
+      'surface:surface.stage:delete',
+      'surface:surface.stage:read',
+      'surface:surface.stage:update',
     ], $ids);
     // The address settings name storage and have no operation of their
     // own: they are only ever a field's.

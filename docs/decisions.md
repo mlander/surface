@@ -4335,6 +4335,157 @@ entity is on the site yet.
 `surface_store_references_by_uuid()`, `ReferenceStorageTest`,
 `ReferenceStoredByUuidTest`)
 
+### A stage is a resource of the base module, kept in an expirable key-value collection
+
+Decided 2026-11-07. A set of writes kept until they are applied
+together, or discarded, is a resource with identity and storage of its
+own, `surface.stage`: the one thing that outlives a request is a
+resource, so a stage has a contract, an access class and the six tools
+the build derives (`create`, `read`, `update`, `changes`, `apply`,
+`delete`) and the HTTP paths of each. Its id is a UUID storage gives it;
+`handle` is the Tool API's word for a stored object on the same calls.
+Its record is one row of the expirable key-value collection
+`surface.stage`, a PHP array with no objects, written with the temp store
+expiry (`tempstore.expire`), which every write resets; the record names
+its owner, and only the owner may use the stage, which the access class
+answers from the record, never cached. An anonymous account may not open
+one: it keeps nothing between requests but a session cookie.
+
+- **Not the private temp store.** It reads the owner from the current
+  user and the session, which nothing an operation runs may read
+  ([Nothing an operation runs reads the request](#nothing-an-operation-runs-reads-the-request)).
+- **What a stage can hold for now.** Updates to a resource whose
+  storage commits a database write a transaction rolls back whole: a
+  content entity, a row of a key-value collection in the database.
+  Refused at prepare, each a violation of the whole call, code
+  `does_not_apply`: a create, a delete, the stage itself, a resource
+  that holds a secret (a stage keeps values in the clear), and a storage
+  extending `ConfigObjectStorage` or `ConfigEntityStorage` (config
+  writes its caches beside the database, and a rollback leaves them
+  stale). One stored thing reached through two
+  resources is refused, code `conflict`, and a thing is written through
+  one operation per stage. Those classes are the only check of storage:
+  a storage of another class whose own code saves config or writes
+  State (State keeps a cache a rollback leaves stale), or changes a
+  table's schema (which MySQL commits at once), is not detected, so a
+  stage takes its writes and apply makes them inside the transaction.
+  Such a storage must not be staged. Refusing every storage not known
+  to roll back whole is open, to settle before a door takes a stage
+  input.
+- **One entry per thing.** The thing is the resource and the identity its
+  context knows. Its entry holds the whole document the pipeline merged,
+  the top level keys the stage moved (what apply sends), the arguments
+  that built the operation and a token of what storage held at the
+  first read (`Fingerprint::of()`). The last of two writes to one thing
+  wins whole, under the stage's lock, as two writes without `If-Match`
+  do.
+- **How a stage and a workspace compose.** The active workspace is the
+  request's, so neither the stage nor its access asks it. A staged
+  write reads and a staged apply writes the workspace's view, as any
+  save does: applied in the workspace it was staged in, it is a pending
+  revision there; staged in a workspace whose view of the thing differs
+  from Live's and applied in Live, its token does not match and it is
+  refused, code `conflict`; staged in a workspace whose view of the
+  thing matches Live's and applied in Live, it writes Live.
+
+(`Resource\StageResource`, `Structure\StageChangesStructure`,
+`Structure\StageAppliedStructure`, `Storage\StageStorage`,
+`Access\StageAccess`, `Staging\StageStore`, `Staging\StagedStorage`,
+`StageStoreTest`, `StageOwnershipTest`, `StageInWorkspaceTest`,
+`StagedUpdateTest`)
+
+### A staged write validates as a real write
+
+Decided 2026-11-07. A write into a stage runs what a write to storage
+runs, and nothing less: access at the door, the keys locked whole,
+accept, every constraint and rule between keys with the required ones
+among them, on the document merged over what the stage holds, and the
+storage's own prepare as a rehearsal, an entity's validation included.
+Only commit differs: it writes the stage's record and never storage. At
+apply each write is checked again against what is stored then.
+
+Why: required is unconditional in validation and an entity validates in
+prepare, so a partial mode would change the pipeline for every door. For
+an update the merged document is whole, so nothing is lost. The cost:
+a create whose required keys are drawn over several steps of a flow
+cannot be staged until its first write is whole; whether to add a
+partial mode is decided with staged creates.
+
+(`Staging\StagedStorage::prepare()`, `StagedUpdateTest`)
+
+### A stage input is a door argument handed to storage, never context
+
+Decided 2026-11-07. A stage reaches a write as `dry_run` does, an
+argument the door hands down, never a fact of the operation's context:
+`ResourcesInterface::storage()` takes a `Staging\Stage` as its fifth
+parameter and wraps the storage it builds otherwise in a
+`StagedStorage`, whose `load()` answers what the stage holds before what
+is stored, whose `prepare()` is the storage's, and whose `commit()`
+writes the stage's record. The pipeline runs unchanged. A stage on the
+context would key every build kept for the request by stage, for
+values that do not depend on it.
+
+A door asks the stage's own access for the account before it hands a
+stage on; the stage carries its id, its owner and the operation's
+arguments, which apply builds the operation again from. No door takes a
+stage input yet; the input, the header and the documents' parameter
+come with the doors.
+
+(`ResourcesInterface::storage()`, `Resources::storage()`,
+`Staging\Stage`, `Staging\StagedStorage`, `StagedUpdateTest`)
+
+### Apply builds for the current user and writes as the owner
+
+Decided 2026-11-07. `apply` rehearses every staged write in its
+storage's `prepare()`, with no lock and no side effect: the operation
+built again from its arguments, its access asked again for the account,
+the token compared with what is stored now, and the pipeline run dry
+over the keys the stage moved, every refusal filed under
+`/writes/<position>` and all of them answered together. Its `commit()`
+takes the stage's lock, checks the record's writes and every token
+again, commits each rehearsed write in staging order in one database
+transaction (`commitDryRun()`, one prepare per write), and marks the
+record applied. A write that throws rolls every write back and the stage
+stays open. A dry run of `apply` is the check; a second `apply` is
+refused, code `does_not_apply`.
+
+- **A narrowing of
+  [Nothing an operation runs reads the request](#nothing-an-operation-runs-reads-the-request).**
+  `Resources::build()` takes no account and builds for the current user,
+  so apply builds each write's data surface for the current user while
+  it writes as the account it is handed. The two agree because the
+  stage's access refuses every account but the owner. Code that applies
+  a stage for its owner from elsewhere (a queue worker) sets the owner
+  as the current user first. Whether `build()` should take an account is
+  open.
+- **A refinement of [One result at every door](#one-result-at-every-door)
+  and [Absent keeps, null clears](#absent-keeps-null-clears).** A staged
+  write answers `committed: true`: the call went through and the storage
+  it was handed, the stage, holds the values. Its `changes` are against
+  what `load()` returned, the stage's view under a stage.
+- **A data surface with no keys writes whole.** `apply` takes a
+  structure that declares no keys, so it has no document to compare; as a
+  delete removes the whole thing, the pipeline answers its one change
+  as the empty pointer, `changes: ['']`, and a committed run as
+  `changed: true`. `changesNothing()` is true for a read-only operation
+  alone, which answers no changes. The rule reads the data surface as
+  built, so it also holds where access or an alter omits every key for
+  the account: such a write answered `changed: false` before, though its
+  storage was committed.
+- **The record is kept after apply.** Marked `applied`, its writes
+  emptied and what apply made recorded, until it expires or is deleted:
+  the HTTP door builds the operation again after a committed write, and
+  a record deleted in commit would answer that 404 after writing.
+- **A race is a runtime failure.** A record written, a token moved
+  between the two passes, or a lock not had after one wait, throws
+  `StageRaceException`; every refusal a rehearsal can see is a
+  violation from prepare. The record's writes, not its time, tell a
+  race: the time is the request's, which two writes in one second share.
+
+(`Storage\StageStorage`, `SurfacePipeline::submit()`,
+`Staging\StageRaceException`, `EmptyStructureTest`, `StageApplyTest`,
+`PipelineGuardTest`)
+
 ## Access
 
 ### Access has three answers
