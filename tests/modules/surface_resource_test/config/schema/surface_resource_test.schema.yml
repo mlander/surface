@@ -943,3 +943,62 @@ surface_resource_test.beacon:
       type: string
       label: 'Notes'
       nullable: true
+
+# The campsite fixture: each pitch typed by its own kind, the keys of the
+# gear its kind chooses beside the kind.
+# Generated from the resource_test.campsite resource by drush surface:config-schema.
+surface_resource_test.campsite:
+  type: config_object
+  label: 'Campsite'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    pitches:
+      type: sequence
+      label: 'Pitches'
+      nullable: true
+      sequence:
+        type: 'surface_resource_test.campsite.pitches.[kind]'
+        label: 'Pitches'
+
+# Generated from the resource_test.campsite resource by drush surface:config-schema.
+surface_resource_test.campsite.pitches:
+  type: mapping
+  label: 'Pitches'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    name:
+      type: string
+      label: 'Name'
+    kind:
+      type: string
+      label: 'Kind'
+
+# Generated from the resource_test.campsite resource by drush surface:config-schema.
+surface_resource_test.campsite.pitches.hammock:
+  type: surface_resource_test.campsite.pitches
+  label: 'Hammock'
+  mapping:
+    straps:
+      type: integer
+      label: 'Straps'
+      constraints:
+        Range:
+          min: 1
+
+# Generated from the resource_test.campsite resource by drush surface:config-schema.
+surface_resource_test.campsite.pitches.cot:
+  type: surface_resource_test.campsite.pitches
+  label: 'Cot'
+  mapping:
+    length:
+      type: integer
+      label: 'Length'
+      nullable: true
+      constraints:
+        Range:
+          min: 0

@@ -13,14 +13,14 @@ use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Resource\Kit\KitResource;
 
 /**
- * A tent: the kit's variant for "tent", its members the kit's own keys.
+ * A tent: the kit's variant for "tent", at its gear.
  *
- * It declares the weight as the stove does, so the two share one key.
- * Its poles are required wherever it is chosen; with the rain fly up, a
- * rule of its own, bound in the kit's frame, asks for two at least.
+ * It declares the weight as the stove does, which the kit stores as one
+ * key beside its kind. Its poles are required wherever it is chosen; with
+ * the rain fly up, a rule of its own asks for two at least.
  */
 #[Structure('resource_test.kit.tent', label: new TranslatableMarkup('Tent kit'))]
-#[Variant(of: KitResource::class, at: 'kind', for: 'tent', label: new TranslatableMarkup('Tent'))]
+#[Variant(of: KitResource::class, at: 'gear', for: 'tent', label: new TranslatableMarkup('Tent'))]
 final class TentKitStructure implements StructureInterface {
 
   /**

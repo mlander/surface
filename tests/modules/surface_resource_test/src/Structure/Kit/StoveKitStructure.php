@@ -13,14 +13,14 @@ use Drupal\surface_resource_test\Access\StoveAccess;
 use Drupal\surface_resource_test\Resource\Kit\KitResource;
 
 /**
- * A stove: the kit's variant for "stove", its members the kit's own keys.
+ * A stove: the kit's variant for "stove", at its gear.
  *
- * It declares the weight as the tent does, so the two share one key. Its
- * fuel is required wherever it is chosen and starts from gas. Its access
- * class locks or omits it, by permission.
+ * It declares the weight as the tent does, which the kit stores as one
+ * key beside its kind. Its fuel is required wherever it is chosen and
+ * starts from gas. Its access class locks or omits it, by permission.
  */
 #[Structure('resource_test.kit.stove', access: StoveAccess::class)]
-#[Variant(of: KitResource::class, at: 'kind', for: 'stove', label: new TranslatableMarkup('Stove'))]
+#[Variant(of: KitResource::class, at: 'gear', for: 'stove', label: new TranslatableMarkup('Stove'))]
 final class StoveKitStructure implements StructureInterface {
 
   /**

@@ -265,6 +265,13 @@ final class SurfaceBuilder implements SurfaceBuilderInterface {
   /**
    * {@inheritdoc}
    */
+  public function getDefinitionNames(): array {
+    return array_map('strval', array_keys($this->definitions));
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function setDefinition(string $name, DataDefinitionInterface $definition): static {
     $this->assertMutable();
     $this->definitions[$name] = $definition;

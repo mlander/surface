@@ -29,6 +29,9 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Attachment;
 use Drupal\surface\Collection;
 use Drupal\surface\Port;
+use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Variants;
 
 /**
  * The attach phase of the build: children, collections, variants, mounts.
@@ -1110,6 +1113,7 @@ final class Attaching {
     $definition = $build->definition;
     $ancestry = $build->ancestry;
     $frame = $build->frame;
+    $this->assertOneFlatKey($build, array_map('strval', array_keys($variantKeys)));
     foreach ($variantKeys as $key => ['by' => $by, 'children' => $children, 'site' => $site]) {
       if ($builder->getDefinition((string) $key) === NULL) {
         // Brought by a variant mixed in that its access left out, with its
@@ -1157,10 +1161,110 @@ final class Attaching {
       }
       $declared = [...array_map('strval', array_keys($variants)), ...$withheld];
       static::assertListNarrowsVariants($builder, $definition, sprintf('at "%s"', $key), $by, $declared);
+      if (static::storedFlat($builder, (string) $key)) {
+        $this->assertFlatFits($build, (string) $key, $variants);
+      }
       $builder->attachVariants($key, $by, $variants, $variantKeys[$key]['labels'] + $this->variantLabels($children));
       if ($runtime_variant) {
         $builder->markRuntimeAccess($key);
       }
+    }
+  }
+
+  /**
+   * Answers whether the variants at a key are stored flat.
+   *
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   *   The owner's builder, which holds the key's map.
+   * @param string $key
+   *   The key.
+   *
+   * @return bool
+   *   TRUE when its map says Variants::STORED_AS FLAT.
+   */
+  protected static function storedFlat(SurfaceBuilderInterface $builder, string $key): bool {
+    return $builder->getDefinition($key)?->getSetting(Variants::STORED_AS) === Variants::FLAT;
+  }
+
+  /**
+   * Refuses two keys whose variants are stored flat at one level.
+   *
+   * Read back, every stored key that is not the owner's is gathered under
+   * the flat key (FlatVariantsLayout::fromStorage()), so with two of them
+   * nothing could tell which keys each left behind.
+   *
+   * @param \Drupal\surface\ResourceBuild\Build $build
+   *   The owner's build.
+   * @param string[] $keys
+   *   The keys with variants.
+   *
+   * @throws \LogicException
+   *   Naming both.
+   */
+  protected function assertOneFlatKey(Build $build, array $keys): void {
+    $flat = array_values(array_filter($keys, static fn (string $key): bool => static::storedFlat($build->builder, $key)));
+    if (count($flat) > 1) {
+      throw new \LogicException(sprintf('%s stores the variants at "%s" and at "%s" flat at one level (Variants::STORED_AS). Read back, every key that is not its own is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.', $build->definition->id, $flat[0], $flat[1]));
+    }
+  }
+
+  /**
+   * Refuses variants stored flat that cannot be stored beside the owner.
+   *
+   * The variants' keys are stored among the owner's at its level, so a
+   * variant may declare no key the owner holds there, a member a structure
+   * it mixes in brought among them, and hold no variants stored flat of
+   * its own, which would land at the same level too; and the layout that
+   * stores them so is a config storage's (StorageAdapter), so the storage
+   * that stores the owner is one. That storage is the owner's own, or that
+   * of the nearest parent with one; a structure built on its own names
+   * none, and its host's storage says what it does with the key.
+   *
+   * @param \Drupal\surface\ResourceBuild\Build $build
+   *   The owner's build.
+   * @param string $key
+   *   The flat key.
+   * @param array<string, \Drupal\surface\Attachment> $variants
+   *   The variants built at it, by value; one the site lists and nothing
+   *   has read is checked once it is.
+   *
+   * @throws \LogicException
+   *   Naming what does not fit.
+   */
+  protected function assertFlatFits(Build $build, string $key, array $variants): void {
+    $id = $build->definition->id;
+    // Every key the builder holds by now: the inputs, the members a
+    // structure mixed in brought, the children, the maps and the mounts.
+    // The collections are attached after the variants.
+    $own = array_values(array_diff(
+      array_unique([...$build->builder->getDefinitionNames(), ...$build->lists]),
+      [$key],
+    ));
+    foreach ($variants as $value => $variant) {
+      $child = $variant->settledChild();
+      if ($child === NULL) {
+        continue;
+      }
+      $names = $child->getDefinitions()->names();
+      $shared = array_values(array_intersect($names, $own));
+      if ($shared !== []) {
+        throw new \LogicException(sprintf('%s stores the variants at "%s" flat beside its own keys (Variants::STORED_AS), and the variant for "%s", %s, declares "%s", which %s declares too. Stored flat, the two would be one key: rename one, or store the variants under "%s".', $id, $key, $value, $variant->id ?? $value, $shared[0], $id, $key));
+      }
+      foreach ($child->getDefinitions()->entries() as $name => $entry) {
+        if ($entry->variants?->storedFlat()) {
+          throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and the variant for "%s", %s, stores the variants at "%s" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.', $id, $key, $value, $variant->id ?? $value, $name));
+        }
+      }
+    }
+    $storage = $build->definition->storage;
+    foreach (array_reverse($build->ancestry) as $parent) {
+      if ($storage !== NULL) {
+        break;
+      }
+      $storage = $this->registry->hasDefinition($parent['class']) ? $this->registry->getDefinition($parent['class'])->storage : NULL;
+    }
+    if ($storage !== NULL && !is_a($storage, ConfigObjectStorage::class, TRUE) && !is_a($storage, ConfigEntityStorage::class, TRUE)) {
+      throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and %s, which stores it, is no config storage: the layout that stores them beside their deciding key is applied to ConfigObjectStorage and ConfigEntityStorage alone. Store them under the key, or lay them out in the storage itself.', $id, $key, $storage));
     }
   }
 

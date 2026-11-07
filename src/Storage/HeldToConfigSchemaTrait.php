@@ -330,6 +330,13 @@ trait HeldToConfigSchemaTrait {
    *   Where the resource is wider, added to.
    */
   protected function mapWider(DefinitionMap $map, array $schema, string $path, bool $strict, array &$wider): void {
+    if (str_contains((string) ($schema['type'] ?? ''), ']') && static::holdsFlatKey($map)) {
+      // A level holding a key whose variants are stored flat, typed by its
+      // own deciding key, core's own-key form: not read, as entryWider()
+      // reads no type its data names. Any other level is compared with a
+      // mapping, whatever names its type.
+      return;
+    }
     if (!$this->isA($schema, Mapping::class)) {
       $wider[$path] = sprintf('it is a group of keys, which the schema types %s', $schema['type'] ?? 'undefined');
       return;
@@ -337,6 +344,24 @@ trait HeldToConfigSchemaTrait {
     foreach ($map->entries() as $name => $entry) {
       $this->entryWider($entry, $schema['mapping'][$name] ?? NULL, $path . '.' . $name, $strict, $wider);
     }
+  }
+
+  /**
+   * Answers whether a map holds a key whose variants are stored flat.
+   *
+   * @param \Drupal\surface\DefinitionMap $map
+   *   The keys of one level.
+   *
+   * @return bool
+   *   TRUE when one of its keys' maps says Variants::STORED_AS FLAT.
+   */
+  protected static function holdsFlatKey(DefinitionMap $map): bool {
+    foreach ($map->entries() as $entry) {
+      if ($entry->variants?->storedFlat()) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
   /**
