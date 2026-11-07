@@ -3428,6 +3428,17 @@ binds the key the schema names. A list by position is refused, the
 message showing the keyed spelling. Other providers read their
 arguments as they did. (`ConfigSchemaTypes::listFor()`)
 
+*Amended 2026-11-06, later:* the reader no longer mixes an own-key
+type in. `ConfigSchemaReader` reads `prefix.[<key>]` as the fallback's
+keys and the variants the key chooses at `configuration`
+(`ConfigSchemaReader::CHOSEN`), marked `Variants::STORED_AS`
+`Variants::FLAT`, so a door asks for the chosen type's keys under
+`configuration` and config stores them flat beside the deciding key, as
+before. Each variant is whole in its own frame, so no wall is needed:
+`ownKeyWall()` and the keys it declared open are gone, and a fallback
+that declares `configuration` itself is refused.
+(`ConfigSchemaReader::ownKey()`, `FlatVariantsLayout`)
+
 ### An anonymous map
 
 Decided 2026-11-01. `addMap($key, $label, $define)` declares an object

@@ -1981,7 +1981,9 @@ class, after its properties and its `#[MixIn]`s
   them in where the stored shape is flat and the deciding key sits
   beside the members: a config schema type chosen by a key inside its
   own value, `views.sort.[plugin_id]`, or an OpenAPI schema with an
-  inline discriminator.
+  inline discriminator. As of 2026-11-06 `ConfigSchemaReader` reads the
+  config schema form as variants at `configuration`, stored flat,
+  instead ([Config schema](reading-a-schema.md#config-schema)).
 - **Found as variants are found.** Every `#[Variant(of:, at:)]` whose
   `at` is the deciding key, and what a provider lists,
   `mixInVariants('plugin_id', from: ConfigSchemaTypes::class,

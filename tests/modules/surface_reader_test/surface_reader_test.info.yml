@@ -1,6 +1,6 @@
 name: 'Surface API reader test'
 type: module
-description: 'Structures that attach the same settings twice, once through the JSON Schema route and once straight from config schema, which ConfigSchemaReaderTest compares.'
+description: 'Structures that attach the same settings twice, once through the JSON Schema route and once straight from config schema, which ConfigSchemaReaderTest compares, and a condition read from config schema and stored as core stores it.'
 package: Testing
 hidden: true
 version: VERSION

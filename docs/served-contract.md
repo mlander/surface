@@ -533,10 +533,14 @@ key declared with it refers to.
    a promise about the def: it holds the type's keys less those of its
    frame type, the type itself or a type it extends, matched by keys
    (`config_schema:condition.plugin.request_path:own` holds the keys
-   `condition.plugin` does not). Two reads of one type under one id with
-   different content, such as two plugins of one type with different
-   defaults, keep one def each, filed apart as `<id>@<n>`. The same
-   class at two keys, or in two frames, is one def. A def may refer to
+   `condition.plugin` does not). An own-key expression's def holds its
+   fallback's keys and `configuration`, the variants its own key
+   chooses, each one of those `:own` defs
+   ([variants are conditionals](#variants-are-conditionals)). Two reads
+   of one type under one id with different content, such as two plugins
+   of one type with different defaults, keep one def each, filed apart
+   as `<id>@<n>`. The same class at two keys, or in two frames, is one
+   def. A def may refer to
    other defs (a child inside a variant). Two children claiming one id
    with declarations that are not the same, which only a hand-sealed
    data surface or two different contexts can produce, keep one def

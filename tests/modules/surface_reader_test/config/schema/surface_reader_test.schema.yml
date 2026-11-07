@@ -144,3 +144,13 @@ surface_reader_test.signal.timed:
         off:
           type: integer
           label: 'Off'
+
+# The condition host: one condition typed by its own id, as a block's
+# visibility types each, the chosen condition's keys beside the id.
+surface_reader_test.condition_host:
+  type: config_object
+  label: 'Condition host'
+  mapping:
+    condition:
+      type: condition.plugin.[id]
+      label: 'Condition'
