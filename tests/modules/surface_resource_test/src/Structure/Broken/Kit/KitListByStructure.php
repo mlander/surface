@@ -21,7 +21,7 @@ final class KitListByStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addList('kind', 'string', 'Kinds');
     $weight = ['a', WeightOnlyStructure::class];
-    $inputs->attachVariants('gear', 'kind', 'Gear', from: KitVariants::class, arguments: $weight);
+    $inputs->attachVariants('gear', by: 'kind', label: 'Gear', from: KitVariants::class, arguments: $weight);
   }
 
 }

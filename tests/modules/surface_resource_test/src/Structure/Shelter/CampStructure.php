@@ -25,7 +25,10 @@ final class CampStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('site', 'string', t('Site'))
       ->setRequired(TRUE);
-    $inputs->attachVariants('camp', 'site', t('Camp'), from: KitVariants::class, arguments: ['hut', HutStructure::class]);
+    $inputs->attachVariants('camp', by: 'site', label: t('Camp'), from: KitVariants::class, arguments: [
+      'hut',
+      HutStructure::class,
+    ]);
   }
 
 }

@@ -22,7 +22,7 @@ final class FlatMixinClashStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('kind', 'string', 'Kind');
     $inputs->mixIn(WeightOnlyStructure::class);
-    $inputs->attachVariants('gear', 'kind', 'Gear')
+    $inputs->attachVariants('gear', by: 'kind', label: 'Gear')
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
   }
 
