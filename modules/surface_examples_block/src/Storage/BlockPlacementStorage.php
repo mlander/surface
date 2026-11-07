@@ -33,7 +33,9 @@ use Drupal\Core\Session\AccountInterface;
  *   of them, its defaults filled, as a save would store it.
  * - **The visibility.** A list of conditions on the resource, a map by
  *   condition id on the block: each condition's id and negation, with
- *   its settings flat beside them. A condition twice is refused.
+ *   its settings flat beside them, which the engine lays out and gathers
+ *   back, since the condition's settings say Variants::STORED_AS FLAT
+ *   (FlatVariantsLayout). A condition twice is refused.
  * - **The dependencies.** prepare() calculates what the block depends on,
  *   as its save does (its theme, its plugin's provider, what the plugin
  *   names), so a dry run shows them.
@@ -147,16 +149,16 @@ final class BlockPlacementStorage extends ConfigEntityStorage {
     $values['settings'] = array_diff_key($settings, array_flip(BlockPluginStructures::BASE));
     $values['visibility'] = [];
     foreach ((array) $entity->get('visibility') as $id => $condition) {
-      $condition = (array) $condition;
-      $settings = array_map(self::listOf(...), array_diff_key($condition, array_flip(['id', 'negate', 'uuid'])));
-      if (($settings['context_mapping'] ?? NULL) === []) {
-        unset($settings['context_mapping']);
+      // As stored, the settings beside the id: the engine gathers them
+      // under `settings` (FlatVariantsLayout).
+      $condition = array_map(self::listOf(...), array_diff_key((array) $condition, ['uuid' => TRUE]));
+      if (($condition['context_mapping'] ?? NULL) === []) {
+        unset($condition['context_mapping']);
       }
       $values['visibility'][] = [
         'id' => (string) $id,
         'negate' => (bool) ($condition['negate'] ?? FALSE),
-        'settings' => $settings,
-      ];
+      ] + $condition;
     }
     // In the order the resource declares its keys, as every door reads
     // them.
@@ -188,6 +190,8 @@ final class BlockPlacementStorage extends ConfigEntityStorage {
     $entity->set('settings', $entity->getPlugin()->getConfiguration());
     if (array_key_exists('visibility', $values)) {
       $visibility = [];
+      // Each condition's settings arrive beside its id, laid out by the
+      // engine (FlatVariantsLayout); core keys the conditions by id.
       foreach (is_array($values['visibility']) ? $values['visibility'] : [] as $condition) {
         if (!is_array($condition) || !is_string($condition['id'] ?? NULL)) {
           continue;
@@ -195,7 +199,7 @@ final class BlockPlacementStorage extends ConfigEntityStorage {
         $visibility[$condition['id']] = [
           'id' => $condition['id'],
           'negate' => (bool) ($condition['negate'] ?? FALSE),
-        ] + array_map(self::keyedByValue(...), is_array($condition['settings'] ?? NULL) ? $condition['settings'] : []);
+        ] + array_map(self::keyedByValue(...), $condition);
       }
       $entity->set('visibility', $visibility);
       $entity->set('visibility', $entity->getVisibilityConditions()->getConfiguration());

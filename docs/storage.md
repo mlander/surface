@@ -201,8 +201,11 @@ resource the command writes:
   or `[]` for a list) for one with neither.
 
 The other entries in the file, and the comments above an entry, are
-kept as they are; each entry written says so on the line above it. A
-test holds the shipped ones to it, `ConfigSchemaDriftTest`, which also
+kept as they are; each entry written says so on the line above it, and
+an entry that says so but whose resource, still declared, no longer
+writes it is dropped with the comments above it (an entry of a resource
+no longer declared is kept, and deleted by hand). A test holds the
+shipped ones to it, `ConfigSchemaDriftTest`, which also
 writes the test modules' files (they are never installed on a site) when
 run with `SURFACE_CONFIG_SCHEMA_WRITE=1`.
 

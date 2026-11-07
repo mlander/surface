@@ -25,6 +25,9 @@ use PHPUnit\Framework\Attributes\Group;
  * - "Transformations" quotes the coercion rule, the layouts, the tool
  *   door's entity parameter, the commit and the computed values it
  *   puts in their places.
+ * - "Reading a schema" quotes the reader test module's block and
+ *   condition structures, and the condition host's install file, stored
+ *   flat.
  */
 #[Group('surface')]
 class QuotedCodeDocsTest extends UnitTestCase {
@@ -37,7 +40,13 @@ class QuotedCodeDocsTest extends UnitTestCase {
   /**
    * The pages, relative to the module root.
    */
-  public const PAGES = [self::RECIPES, 'docs/resources.md', 'docs/storage.md', 'docs/transformations.md'];
+  public const PAGES = [
+    self::RECIPES,
+    'docs/resources.md',
+    'docs/storage.md',
+    'docs/transformations.md',
+    'docs/reading-a-schema.md',
+  ];
 
   /**
    * Provides each marked block of the pages.

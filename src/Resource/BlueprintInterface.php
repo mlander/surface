@@ -49,6 +49,12 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * whichever entity type) is handed the arguments that say which list,
    * `arguments:`, and implements BoundSiteListInterface.
    *
+   * `->setSetting(Variants::STORED_AS, Variants::FLAT)` on the map this
+   * returns has a config storage keep the chosen variant's keys beside $by
+   * and nothing at $key, while every door asks for them under $key
+   * (FlatVariantsLayout), as the test module's kit does
+   * (tests/modules/surface_resource_test/src/Resource/Kit/KitResource.php).
+   *
    * @code
    * $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
    * $inputs->attachVariants('fields', by: 'bundle', from: BundleFields::class, arguments: ['node']);

@@ -24,6 +24,7 @@ use Drupal\surface_resource_test\Resource\Broken\FlatStateResource;
 use Drupal\surface_resource_test\Resource\Campsite\CampsiteResource;
 use Drupal\surface_resource_test\Resource\Kit\KitResource;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatListedClashStructure;
+use Drupal\surface_resource_test\Structure\Broken\Flat\FlatListedNestedStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatMixinClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatNestedStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatOwnerClashStructure;
@@ -53,7 +54,7 @@ use Symfony\Component\Routing\Route;
  * cannot take, since core types a config object's root by its name alone.
  *
  * @see \Drupal\surface\Storage\FlatVariantsLayout
- * @see docs/resources.md#variants
+ * @see docs/resources.md#stored-flat
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -637,6 +638,53 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $this->assertFalse($variant->isSettled(), 'Held unsettled until a door reads it.');
     $this->expectException(\LogicException::class);
     $this->expectExceptionMessage('resource_test.broken.flat_listed_clash stores the variants at "gear" flat beside its own keys (Variants::STORED_AS), and the variant for "a", resource_test.broken.kit.weight_only, declares "weight", which resource_test.broken.flat_listed_clash declares too. Stored flat, the two would be one key: rename one, or store the variants under "gear".');
+    $variant->child->getDefinitions();
+  }
+
+  /**
+   * Tests a listed variant storing variants flat itself is refused when read.
+   *
+   * Its variants would land at its owner's level, beside the owner's flat
+   * key, which the owner's build cannot see: the variant is built when a
+   * door reads it.
+   */
+  public function testListedVariantStoringFlatIsRefusedWhenSettled(): void {
+    $built = $this->container->get('surface.resources')->build(FlatListedNestedStructure::class, new OperationContext('configure'));
+    $variant = $built->getDefinitions()->entry('gear')->variants->variant('a');
+    $this->assertFalse($variant->isSettled(), 'Held unsettled until a door reads it.');
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('resource_test.broken.flat_listed_nested stores the variants at "gear" flat (Variants::STORED_AS), and the variant for "a", resource_test.broken.flat.listed_inner, stores the variants at "inner" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.');
+    $variant->child->getDefinitions();
+  }
+
+  /**
+   * Tests a listed variant is refused when settled from a build in the cache.
+   *
+   * The owner's keys at the level are stored with the build
+   * (VariantsToSettle), and the variant is stored as what builds it, so the
+   * request that reads the build back settles it. The refusal fires only
+   * when those keys came back with it: the variant, a weight alone,
+   * builds on its own.
+   */
+  public function testListedVariantIsRefusedWhenSettledFromTheCache(): void {
+    $resources = $this->container->get('surface.resources');
+    assert($resources instanceof Resources);
+    $registry = $this->container->get('surface.resource_registry');
+    $context = new OperationContext('configure');
+    $this->container->get('cache.surface_build')->deleteAll();
+    $resources->forgetBuilds();
+    $fresh = $resources->buildDeclared(FlatListedClashStructure::class, $context);
+    $this->assertFalse($fresh->getDefinitions()->entry('gear')->variants->variant('a')->isSettled());
+    $cached = $resources->buildCounts()['cached'];
+    $resources->forgetBuilds();
+    (new \ReflectionProperty(ResourceRegistry::class, 'read'))->setValue($registry, []);
+    $woken = $resources->buildDeclared(FlatListedClashStructure::class, $context);
+    $this->assertSame($cached + 1, $resources->buildCounts()['cached'], 'Read back from the build cache.');
+    $this->assertNotSame($fresh, $woken);
+    $variant = $woken->getDefinitions()->entry('gear')->variants->variant('a');
+    $this->assertFalse($variant->isSettled(), 'Stored as what builds it.');
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('resource_test.broken.flat_listed_clash stores the variants at "gear" flat beside its own keys (Variants::STORED_AS), and the variant for "a", resource_test.broken.kit.weight_only, declares "weight", which resource_test.broken.flat_listed_clash declares too.');
     $variant->child->getDefinitions();
   }
 

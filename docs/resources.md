@@ -1807,8 +1807,10 @@ asked, and a setting on the map `attachVariants()` returns,
 kept. `Storage\FlatVariantsLayout` applies it for the config storages,
 `ConfigObjectStorage` and `ConfigEntityStorage`, beside the layout that
 stores a reference by uuid. It is the shape core gives a condition's
-settings and a views handler's options. The test module's kit stores
-its gear so:
+settings and a views handler's options, and the block example stores
+each visibility condition's settings so, in the block's config entity
+(`VisibilityConditionStructure`). The test module's kit stores its gear
+so:
 
 <!-- code: tests/modules/surface_resource_test/src/Resource/Kit/KitResource.php -->
 
@@ -1839,7 +1841,7 @@ use Drupal\surface_resource_test\Storage\KitStorage;
  * declare the weight; the fuel is the stove's, the poles and the fly the
  * tent's.
  *
- * @see docs/resources.md#variants
+ * @see docs/resources.md#stored-flat
  */
 #[Resource('resource_test.kit', storage: KitStorage::class, label: new TranslatableMarkup('Camping kit'))]
 final class KitResource implements ResourceInterface {

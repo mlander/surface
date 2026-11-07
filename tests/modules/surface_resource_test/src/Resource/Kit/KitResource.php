@@ -24,7 +24,7 @@ use Drupal\surface_resource_test\Storage\KitStorage;
  * declare the weight; the fuel is the stove's, the poles and the fly the
  * tent's.
  *
- * @see docs/resources.md#variants
+ * @see docs/resources.md#stored-flat
  */
 #[Resource('resource_test.kit', storage: KitStorage::class, label: new TranslatableMarkup('Camping kit'))]
 final class KitResource implements ResourceInterface {
