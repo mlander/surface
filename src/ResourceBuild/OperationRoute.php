@@ -120,7 +120,9 @@ final class OperationRoute {
    * What Drupal and this module read for themselves on a form page: where
    * to go after the save, the CSRF token, the format and the wrapper
    * format, the AJAX form's marker, the pager, the path of a URL that is
-   * not clean, and a dry run.
+   * not clean, and a dry run. And `stage`, which nothing reads yet: the
+   * form will read it as the stage a flow's steps are written to, so no
+   * link may start a key from it first.
    */
   public const RESERVED_QUERY = [
     'destination',
@@ -131,6 +133,7 @@ final class OperationRoute {
     'page',
     'q',
     'dryRun',
+    'stage',
   ];
 
   /**
@@ -673,7 +676,7 @@ final class OperationRoute {
       $why = match (TRUE) {
         str_contains($query, '{') || str_contains($query, '}') => 'a query name is a plain name, never a reference, since what a link sends is input',
         !preg_match(self::QUERY_NAME, $query) => 'PHP renames a "." or a space in a query parameter\'s name to "_" and reads "[" as the start of an array before the form reads it, so no link could start the key; a query name holds letters, digits, "_" and "-" alone',
-        in_array($query, self::RESERVED_QUERY, TRUE) => 'Drupal or this module reads that parameter for itself on a form page',
+        in_array($query, self::RESERVED_QUERY, TRUE) => 'Drupal or this module reserves that parameter for itself on a form page',
         in_array($query, $variables, TRUE) => 'that is a variable of the route\'s path too, and a link built for the route leaves it out of the query',
         $route->hasDefault($query) => 'that is a default of the route too, and a link built for the route leaves it out of the query',
         default => NULL,

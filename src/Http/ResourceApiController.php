@@ -21,7 +21,7 @@ use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
-use Drupal\surface\ResourceBuild\StorageAdapter;
+use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -241,7 +241,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     if (!$result->isValid()) {
       throw $this->refused($result->document($this->values($served, $result->held()), machine: FALSE));
     }
-    $outputs = $served->storage instanceof StorageAdapter && $result->prepared !== NULL
+    $outputs = $served->storage instanceof OutputsStorageInterface && $result->prepared !== NULL
       ? $served->storage->outputs($served->surface, $result->values, $result->prepared)
       : [];
     $response = $this->respond($outputs);
@@ -504,7 +504,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       throw $this->refused($answer);
     }
     $answer += ['outputs' => new \stdClass(), 'contract' => NULL, 'created' => NULL];
-    if (($dry || $served->surface->changesNothing()) && $served->storage instanceof StorageAdapter && $result->prepared !== NULL) {
+    if (($dry || $served->surface->changesNothing()) && $served->storage instanceof OutputsStorageInterface && $result->prepared !== NULL) {
       // A read, and a dry run, answer what its prepare answered.
       // Decision: see docs/decisions.md#who-produces-outputs.
       $answer['outputs'] = (object) $served->storage->outputs($served->surface, $result->values, $result->prepared);
@@ -518,7 +518,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
       return $this->respond($answer);
     }
-    $outputs = $served->storage instanceof StorageAdapter
+    $outputs = $served->storage instanceof OutputsStorageInterface
       ? $served->storage->outputs($served->surface, $result->values)
       : [];
     // Built afresh: what was written is what the resource now refines

@@ -280,7 +280,7 @@ final class CatalogController extends ControllerBase {
     $rows = [];
     foreach ($refused as $refusal) {
       $rows[] = [
-        $refusal['resource'] ?? $refusal['stage'],
+        $refusal['resource'] ?? $refusal['phase'],
         $refusal['operation'] ?? 'the whole',
         $refusal['message'],
         $refusal['file'] ?? 'none',

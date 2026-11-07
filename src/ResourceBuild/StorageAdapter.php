@@ -70,7 +70,7 @@ use Drupal\surface\Entry;
  *
  * @internal
  */
-final class StorageAdapter implements CreatingStorageInterface, DeletingStorageInterface {
+final class StorageAdapter implements CreatingStorageInterface, DeletingStorageInterface, OutputsStorageInterface {
 
   use DependencySerializationTrait;
 

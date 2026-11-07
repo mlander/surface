@@ -94,6 +94,11 @@ final class RefusedRoutes {
         new Route('/surface-test/card/query-reserved', [OperationRoute::QUERY => ['title' => 'destination']] + $card),
         [],
       ],
+      // Reserved before the form reads it, as a flow's stage.
+      'surface_route_test.query_staged' => [
+        new Route('/surface-test/card/query-staged', [OperationRoute::QUERY => ['title' => 'stage']] + $card),
+        [],
+      ],
       'surface_route_test.query_variable' => [
         new Route('/surface-test/card/query-variable/{color}', [
           OperationRoute::FIXED => ['envelope.color' => '{color}'],

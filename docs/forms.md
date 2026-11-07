@@ -1328,11 +1328,12 @@ form draws, so no prefill starts it."), and the catalog lists it before
 a visitor meets it. A query name no link can use fails the router
 rebuild: an empty one, one in braces (what a link sends is input, never
 a reference), one holding anything but letters, digits, `_` and `-`
-(PHP renames or splits it), one Drupal or this module reads for itself
-on a form page (`destination`, `token`, `_format`, `_wrapper_format`,
-`ajax_form`, `page`, `q`, `dryRun`), and one that is a variable or a
-default of the route, which a link built with `Url::fromRoute()` leaves
-out of its query.
+(PHP renames or splits it), one Drupal or this module reserves for
+itself on a form page (`destination`, `token`, `_format`,
+`_wrapper_format`, `ajax_form`, `page`, `q`, `dryRun`, and `stage`,
+reserved for a later use of the form), and one that is a variable
+or a default of the route, which a link built with `Url::fromRoute()`
+leaves out of its query.
 
 The code that builds the form may hand it values the same way, for a
 value only the request can give, such as today's date. The route keeps

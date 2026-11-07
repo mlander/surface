@@ -23,8 +23,8 @@ use PHPUnit\Framework\Attributes\Group;
  * - "Storage" quotes the opening hours' fully validatable schema, which
  *   RecipesTest holds to what the page says it asks.
  * - "Transformations" quotes the coercion rule, the layouts, the tool
- *   door's entity parameter, the commit and the computed values it
- *   puts in their places.
+ *   door's parameter typed as its key, the id an entity is handed over
+ *   as, the commit and the computed values it puts in their places.
  * - "Reading a schema" quotes the reader test module's block and
  *   condition structures, and the condition host's install file, stored
  *   flat.

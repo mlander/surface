@@ -272,7 +272,7 @@ final class Resources implements ResourcesInterface {
    *   The account an access question is about when none is named.
    * @param \Drupal\surface\ResourceBuild\OperationArguments $operationArguments
    *   What turns a route's or a tool's values into an operation's
-   *   arguments, an entity's id into the entity among them.
+   *   arguments, an entity into its id among them.
    * @param \Drupal\surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it, sealed
    *   into every data surface and every child this step builds.
