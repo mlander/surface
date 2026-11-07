@@ -689,7 +689,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1912, Assertions: 45268, Errors: 0, Failures: 0, Skipped: 3. Classes: 265 of 265, 8 at a time, browser classes 4.
+phpunit: Tests: 1917, Assertions: 45341, Errors: 0, Failures: 0, Skipped: 3. Classes: 266 of 266, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -709,8 +709,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1804, Assertions: 41119, Skipped: 3, Deprecations: 130. Classes:
-216, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1809, Assertions: 41192, Skipped: 3, Deprecations: 130. Classes:
+217, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the

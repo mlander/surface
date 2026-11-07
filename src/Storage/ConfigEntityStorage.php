@@ -217,11 +217,12 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
   /**
    * {@inheritdoc}
    *
-   * What each alter's layout says of the keys at its mount, and each
-   * reference to a content entity, stored by uuid.
+   * What each alter's layout says of the keys at its mount, each
+   * reference to a content entity, stored by uuid, and each key whose
+   * variants are stored flat.
    */
   public function translatedKeys(SurfaceInterface $built): array {
-    return static::mountedLayouts($built) + ReferenceStorageLayout::storedSchemaOf($built);
+    return static::mountedLayouts($built) + ReferenceStorageLayout::storedSchemaOf($built) + FlatVariantsLayout::storedSchemaOf($built);
   }
 
   /**

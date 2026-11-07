@@ -63,7 +63,11 @@ use Symfony\Component\Yaml\Yaml;
  *   than refusing the object), a map as a `mapping`, a
  *   list as a `sequence`, keys from the site as a `sequence` of what each
  *   entry is, and variants as a type their deciding key names, each
- *   variant's mapping written in the module declaring it.
+ *   variant's mapping written in the module declaring it. Variants stored
+ *   flat (Variants::STORED_AS) type their level by its own deciding key,
+ *   `<type>.[<key>]`, each variant's type extending `<type>`; at the root,
+ *   which core types by its name alone, every variant's keys are listed
+ *   flat beside the owner's, each nullable.
  * - Keys another module mounts are the owner's `third_party_settings`, a
  *   sequence typed `<config>.third_party.[%key]`, and the mounting
  *   module's own `<config>.third_party.<module>` entry, every key of it
@@ -449,7 +453,7 @@ final class ConfigSchemaGenerator {
    *   The keys its storage keeps otherwise than asked for, each with its
    *   config schema as stored, by dotted path (translatedKeys()); NULL for
    *   a storage with no layout of its own, whose references to content
-   *   entities alone are.
+   *   entities and keys whose variants are stored flat alone are.
    *
    * @return array{config: string, entries: list<array{module: string, name: string, resource: string, schema: array}>, install: array}
    *   The object's name, each schema entry with the module it is written
@@ -457,7 +461,7 @@ final class ConfigSchemaGenerator {
    */
   public function describeBuilt(SurfaceInterface $built, ResourceDefinition $owner, string $config, array $always_held, array $schema, array $install, ?array $translated = NULL): array {
     $this->alwaysHeld = $always_held;
-    $this->translated = $translated ?? ReferenceStorageLayout::storedSchemaOf($built);
+    $this->translated = $translated ?? ReferenceStorageLayout::storedSchemaOf($built) + FlatVariantsLayout::storedSchemaOf($built);
     $entries = [];
     $installed = $this->install($built, $install);
     $mapping = $this->mapping($built->getDefinitions(), $config, $owner, $entries, $schema, TRUE, installed: $installed);
@@ -592,16 +596,36 @@ final class ConfigSchemaGenerator {
    * @param string $at
    *   Where the map is stored in the object, a dotted path and a dot;
    *   empty at the top.
+   * @param bool $ownKeyed
+   *   TRUE for the keys of a level typed by its own deciding key
+   *   (ownKeyed()), which writes its flat key's variants itself.
    *
    * @return array
    *   The mapping.
+   *
+   * @throws \LogicException
+   *   For a key whose variants are stored flat at a level this writes no
+   *   own-key type for: inside variants at a key, or in a mount.
    */
-  protected function mapping(DefinitionMap $map, string $prefix, ResourceDefinition $owner, array &$entries, array $existing, bool $top = FALSE, bool $absent = FALSE, ?array $installed = NULL, array $ruledOut = [], string $at = ''): array {
+  protected function mapping(DefinitionMap $map, string $prefix, ResourceDefinition $owner, array &$entries, array $existing, bool $top = FALSE, bool $absent = FALSE, ?array $installed = NULL, array $ruledOut = [], string $at = '', bool $ownKeyed = FALSE): array {
     $mapping = [];
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
       if ($top && $name === ConfigObjectStorage::THIRD_PARTY) {
         $mapping[$name] = $this->thirdParty($entry, $prefix, $owner, $entries, $existing);
+        continue;
+      }
+      if ($this->spreads($at . $name)) {
+        if ($at === '') {
+          // At the root, which core types by its name alone, with no own
+          // key: every variant's keys, flat beside the owner's.
+          $mapping += $this->union($entry, $prefix, $owner, $entries, $existing);
+          continue;
+        }
+        if (!$ownKeyed) {
+          throw new \LogicException(sprintf('The %s resource stores the variants at "%s" flat, inside variants at a key or a mount, where this writes no type named by the deciding key. Write that schema by hand; the build holds the resource to it.', $owner->id, $at . $name));
+        }
+        // Written by the level's own-key type and its variants'.
         continue;
       }
       $property = $this->entry($entry, $prefix . '.' . $name, $owner, $entries, $existing, $entry->variants === NULL ? NULL : $map->get($entry->variants->by), $installed, $at . $name);
@@ -660,51 +684,15 @@ final class ConfigSchemaGenerator {
       return ['type' => 'ignore', 'label' => $label];
     }
     if ($entry->variants !== NULL) {
-      $by = $entry->variants->by;
-      $labels = [];
-      foreach ($deciding === NULL ? [] : (ChoiceSet::of($deciding)->labels ?? []) as $value => $choice) {
-        $labels[(string) $value] = $choice instanceof TranslatableMarkup ? strtr($choice->getUntranslatedString(), array_map('strval', $choice->getArguments())) : (string) $choice;
-      }
-      $variants = [];
-      if ($from !== NULL) {
-        // A closed provider: every structure it may list, whichever this
-        // site offers now.
-        // Decision: see
-        // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
-        foreach ($from::structures() as $value => $class) {
-          $source = $this->registry->getDefinition($class);
-          $declared = $this->resources->declaration($source->name(), $this->context($owner));
-          $variants[(string) $value] = [$declared->getDefinitions(), $source];
-        }
-      }
-      else {
-        foreach ($entry->variants->variants as $value => $variant) {
-          $source = $variant->source !== NULL && $this->registry->hasDefinition($variant->source) ? $this->registry->getDefinition($variant->source) : NULL;
-          $variants[(string) $value] = [$variant->child->getDefinitions(), $source];
-        }
-      }
-      foreach ($variants as $value => [$map, $source]) {
-        $name = $path . '.' . $value;
-        $entries[] = [
-          'module' => $source->module ?? $owner->module,
-          'name' => $name,
-          'resource' => $owner->id,
-          'schema' => [
-            'type' => 'mapping',
-            'label' => $labels[$value] ?? $existing[$name]['label'] ?? $value,
-            'constraints' => ['FullyValidatable' => NULL],
-            'mapping' => $this->mapping($map, $name, $owner, $entries, $existing, installed: is_array($held) && $entry->variants->chosen($installed[$by] ?? NULL) === $value ? $held : NULL, at: $at . '.') + $this->keptSecrets($value, $variants),
-          ],
-        ];
-      }
-      return ['type' => $path . '.[%parent.' . $by . ']', 'label' => $label];
+      $this->variantEntries($entry, $path, $owner, $entries, $existing, $deciding, $held, $installed[$entry->variants->by] ?? NULL, $at . '.');
+      return ['type' => $path . '.[%parent.' . $entry->variants->by . ']', 'label' => $label];
     }
     if ($entry->list !== NULL) {
       return [
         'type' => 'sequence',
         'label' => $label,
       ] + ($this->clearable($definition, $at) ? ['nullable' => TRUE] : []) + static::constraints($definition) + [
-        'sequence' => [
+        'sequence' => $this->ownKeyed($entry->list->child()->getDefinitions(), $path, $label, $owner, $entries, $existing, $at . '.') ?? [
           'type' => 'mapping',
           'label' => $label,
           'mapping' => $this->mapping($entry->list->child()->getDefinitions(), $path, $owner, $entries, $existing, at: $at . '.'),
@@ -718,12 +706,12 @@ final class ConfigSchemaGenerator {
         return [
           'type' => 'sequence',
           'label' => $label,
-          'sequence' => [
+          // An entry is stored as it was accepted, so a key of it may be
+          // absent. Which entries there are is the site's: a key the
+          // storage keeps otherwise is named under `*`.
+          'sequence' => $this->ownKeyed($child->getDefinitions(), $path, $label, $owner, $entries, $existing, $at . '.*.', absent: TRUE) ?? [
             'type' => 'mapping',
             'label' => $label,
-            // An entry is stored as it was accepted, so a key of it may be
-            // absent. Which entries there are is the site's: a key the
-            // storage keeps otherwise is named under `*`.
             'mapping' => $this->mapping($child->getDefinitions(), $path, $owner, $entries, $existing, absent: TRUE, at: $at . '.*.'),
           ],
         ];
@@ -739,13 +727,236 @@ final class ConfigSchemaGenerator {
             : $this->definition($each, $label),
         ];
       }
-      return [
+      return $this->ownKeyed($entry->attachment->child->getDefinitions(), $path, $label, $owner, $entries, $existing, $at . '.', installed: is_array($held) ? $held : NULL) ?? [
         'type' => 'mapping',
         'label' => $label,
         'mapping' => $this->mapping($entry->attachment->child->getDefinitions(), $path, $owner, $entries, $existing, installed: is_array($held) ? $held : NULL, at: $at . '.'),
       ];
     }
     return $this->definition($definition, $label, installedEmpty: $installed !== NULL && $held === NULL, at: $at);
+  }
+
+  /**
+   * Answers whether the storage keeps a key's variants flat at its level.
+   *
+   * @param string $at
+   *   The key's dotted path in the asked layout.
+   *
+   * @return bool
+   *   TRUE when translatedKeys() names it StoredSchemaInterface::SPREAD.
+   */
+  protected function spreads(string $at): bool {
+    return ($this->translated[$at] ?? NULL) === StoredSchemaInterface::SPREAD;
+  }
+
+  /**
+   * Gives every variant's keys at a key, with the class each is from.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The key with variants.
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   *   The resource.
+   *
+   * @return array<string, array{0: \Drupal\surface\DefinitionMap, 1: \Drupal\surface\ResourceBuild\ResourceDefinition|null}>
+   *   Each variant's keys and its definition, by value, in the variants'
+   *   order.
+   */
+  protected function variantMaps(Entry $entry, ResourceDefinition $owner): array {
+    $variants = [];
+    $from = DefinitionMetadata::variantsFrom($entry->variants->shell);
+    if ($from !== NULL) {
+      // A closed provider: every structure it may list, whichever this
+      // site offers now.
+      // Decision: see
+      // docs/decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter.
+      foreach ($from::structures() as $value => $class) {
+        $source = $this->registry->getDefinition($class);
+        $declared = $this->resources->declaration($source->name(), $this->context($owner));
+        $variants[(string) $value] = [$declared->getDefinitions(), $source];
+      }
+      return $variants;
+    }
+    foreach ($entry->variants->variants as $value => $variant) {
+      $source = $variant->source !== NULL && $this->registry->hasDefinition($variant->source) ? $this->registry->getDefinition($variant->source) : NULL;
+      $variants[(string) $value] = [$variant->child->getDefinitions(), $source];
+    }
+    return $variants;
+  }
+
+  /**
+   * Writes each variant's named type, in the module declaring it.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The key with variants.
+   * @param string $base
+   *   What each variant's type is named after: `<base>.<value>`.
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   *   The resource.
+   * @param array $entries
+   *   The named types written for other parts, added to.
+   * @param array $existing
+   *   The entries the files already hold, by name.
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $deciding
+   *   The deciding key, whose labels name the variants.
+   * @param mixed $held
+   *   What the object is installed with at the chosen variant's keys.
+   * @param mixed $decided
+   *   What it is installed with at the deciding key.
+   * @param string $at
+   *   Where a variant's keys are, in the asked layout: the key's dotted
+   *   path and a dot.
+   * @param string|null $extends
+   *   The type each variant's extends, for a level typed by its own
+   *   deciding key; NULL for variants under a key, each a mapping.
+   * @param bool $absent
+   *   TRUE where each key may be absent, as in an entry from the site.
+   */
+  protected function variantEntries(Entry $entry, string $base, ResourceDefinition $owner, array &$entries, array $existing, ?DataDefinitionInterface $deciding, mixed $held, mixed $decided, string $at, ?string $extends = NULL, bool $absent = FALSE): void {
+    $labels = [];
+    foreach ($deciding === NULL ? [] : (ChoiceSet::of($deciding)->labels ?? []) as $value => $choice) {
+      $labels[(string) $value] = $choice instanceof TranslatableMarkup ? strtr($choice->getUntranslatedString(), array_map('strval', $choice->getArguments())) : (string) $choice;
+    }
+    $variants = $this->variantMaps($entry, $owner);
+    foreach ($variants as $value => [$map, $source]) {
+      $name = $base . '.' . $value;
+      $mapping = $this->mapping($map, $name, $owner, $entries, $existing, absent: $absent, installed: is_array($held) && $entry->variants->chosen($decided) === $value ? $held : NULL, at: $at) + $this->keptSecrets($value, $variants);
+      $entries[] = [
+        'module' => $source->module ?? $owner->module,
+        'name' => $name,
+        'resource' => $owner->id,
+        'schema' => $extends === NULL ? [
+          'type' => 'mapping',
+          'label' => $labels[$value] ?? $existing[$name]['label'] ?? $value,
+          'constraints' => ['FullyValidatable' => NULL],
+          'mapping' => $mapping,
+        ] : [
+          'type' => $extends,
+          'label' => $labels[$value] ?? $existing[$name]['label'] ?? $value,
+          'mapping' => $mapping,
+        ],
+      ];
+    }
+  }
+
+  /**
+   * Writes a flat key's variants at the root, every one's keys flat.
+   *
+   * Core types a config object's root by its name alone: a `[<key>]` in
+   * the root's type is never resolved (TypedConfigManager merges the root
+   * with no replacements). So the root lists every variant's keys beside
+   * the owner's, in the variants' order, a key two declare once, each
+   * nullable and with no constraint, since it may belong to a variant not
+   * chosen, which keeps what it holds.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The flat key.
+   * @param string $prefix
+   *   The schema type every named type below starts with.
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   *   The resource.
+   * @param array $entries
+   *   The named types written for other parts, added to.
+   * @param array $existing
+   *   The entries the files already hold, by name.
+   *
+   * @return array
+   *   The variants' keys, as the root's mapping writes them.
+   */
+  protected function union(Entry $entry, string $prefix, ResourceDefinition $owner, array &$entries, array $existing): array {
+    $this->assertClosed($entry, $owner);
+    $union = [];
+    foreach ($this->variantMaps($entry, $owner) as [$map]) {
+      foreach ($map->entries() as $name => $one) {
+        $name = (string) $name;
+        if (isset($union[$name])) {
+          continue;
+        }
+        $property = $this->entry($one, $prefix . '.' . $name, $owner, $entries, $existing, $one->variants === NULL ? NULL : $map->get($one->variants->by), at: $entry->name . '.' . $name);
+        unset($property['constraints']);
+        $union[$name] = isset($property['nullable']) ? $property : static::after($property, 'label', ['nullable' => TRUE]);
+      }
+    }
+    return $union;
+  }
+
+  /**
+   * Types a level holding a flat key by its own deciding key.
+   *
+   * Core's own form for keys a sibling chooses stored beside it
+   * (`condition.plugin.[id]`): the level is `<path>.[<deciding key>]`,
+   * `<path>` holding the owner's own keys there and `<path>.<value>` each
+   * variant's, extending it, written in the module declaring the variant
+   * with the secrets the other variants keep, as variants under a key are.
+   *
+   * @param \Drupal\surface\DefinitionMap $map
+   *   The level's keys.
+   * @param string $path
+   *   The level's type.
+   * @param string $label
+   *   Its label.
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   *   The resource.
+   * @param array $entries
+   *   The named types written for other parts, added to.
+   * @param array $existing
+   *   The entries the files already hold, by name.
+   * @param string $at
+   *   Where the level is, a dotted path and a dot.
+   * @param bool $absent
+   *   TRUE where each key may be absent, as in an entry from the site.
+   * @param array|null $installed
+   *   What the object is installed with at the level, or NULL.
+   *
+   * @return array|null
+   *   The level's schema, its type named by its deciding key; NULL when
+   *   no key of it is stored flat.
+   */
+  protected function ownKeyed(DefinitionMap $map, string $path, string $label, ResourceDefinition $owner, array &$entries, array $existing, string $at, bool $absent = FALSE, ?array $installed = NULL): ?array {
+    $flat = NULL;
+    foreach ($map->entries() as $name => $one) {
+      if ($this->spreads($at . $name)) {
+        $flat = $one;
+        break;
+      }
+    }
+    if ($flat === NULL || $flat->variants === NULL) {
+      return NULL;
+    }
+    $this->assertClosed($flat, $owner);
+    $by = $flat->variants->by;
+    $entries[] = [
+      'module' => $owner->module,
+      'name' => $path,
+      'resource' => $owner->id,
+      'schema' => [
+        'type' => 'mapping',
+        'label' => $label,
+        'constraints' => ['FullyValidatable' => NULL],
+        'mapping' => $this->mapping($map, $path, $owner, $entries, $existing, absent: $absent, installed: $installed, at: $at, ownKeyed: TRUE),
+      ],
+    ];
+    $this->variantEntries($flat, $path, $owner, $entries, $existing, $map->get($by), $installed, $installed[$by] ?? NULL, $at . $flat->name . '.', $path, $absent);
+    return ['type' => $path . '.[' . $by . ']', 'label' => $label];
+  }
+
+  /**
+   * Refuses a flat key whose variants the site lists from no closed list.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The flat key.
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $owner
+   *   The resource.
+   *
+   * @throws \LogicException
+   *   For variants from the site whose provider is not closed: their keys
+   *   are the site's, and a key stored flat is no key of its own that a
+   *   schema could leave open.
+   */
+  protected function assertClosed(Entry $entry, ResourceDefinition $owner): void {
+    $from = DefinitionMetadata::variantsFrom($entry->variants->shell);
+    if ($from !== NULL && !is_subclass_of($from, ClosedSiteListInterface::class)) {
+      throw new \LogicException(sprintf('The %s resource stores the variants at "%s" flat, and %s lists them from the site: which keys they have is the site\'s, so no schema written once names them, and stored flat they have no key of their own to leave open. Write that schema by hand; the build holds the resource to it.', $owner->id, $entry->name, $from));
+    }
   }
 
   /**
@@ -1079,6 +1290,12 @@ final class ConfigSchemaGenerator {
     $values = [];
     foreach ($map->entries() as $name => $entry) {
       $name = (string) $name;
+      if ($this->spreads($at . $name)) {
+        // Stored beside the deciding key: where the key stands, what the
+        // file gives the level that is none of the owner's keys.
+        $values += $this->installSpread($entry, $map, $existing, $values[$entry->variants->by] ?? $surface->getDefault($entry->variants->by), $at . $name . '.');
+        continue;
+      }
       if (isset($this->translated[$at . $name])) {
         // Stored otherwise than asked for: what the file gives, else
         // nothing, since a declared default is in the asked layout.
@@ -1115,6 +1332,50 @@ final class ConfigSchemaGenerator {
       }
       else {
         $values[$name] = NULL;
+      }
+    }
+    return $values;
+  }
+
+  /**
+   * Writes the values a flat key's variants start from, stored flat.
+   *
+   * The chosen variant's keys as installMap() writes them, from what the
+   * file gives the level, and what it gives for another variant's keys,
+   * which a variant not chosen keeps: each in the order the variants list
+   * their keys, a key two declare once. A key no variant declares is not
+   * written, as installMap() writes none the owner does not declare.
+   *
+   * @param \Drupal\surface\Entry $entry
+   *   The flat key.
+   * @param \Drupal\surface\DefinitionMap $map
+   *   The level's keys.
+   * @param array $existing
+   *   What the file holds at the level now.
+   * @param mixed $decided
+   *   What the deciding key is installed with.
+   * @param string $at
+   *   Where the variant's keys are, in the asked layout: the key's dotted
+   *   path and a dot.
+   *
+   * @return array
+   *   The values, by the variants' keys.
+   */
+  protected function installSpread(Entry $entry, DefinitionMap $map, array $existing, mixed $decided, string $at): array {
+    $variants = $entry->variants;
+    $leftover = array_diff_key($existing, $map->toArray());
+    $chosen = $variants->chosen($decided);
+    $child = $chosen === NULL ? NULL : $variants->variant($chosen)->settledChild();
+    $written = $child === NULL ? [] : $this->installMap($child->getDefinitions(), $child, $leftover, $at);
+    $values = [];
+    foreach ($variants->variants as $variant) {
+      foreach ($variant->settledChild()?->getDefinitions()->names() ?? [] as $key) {
+        if (array_key_exists($key, $written)) {
+          $values[$key] = $written[$key];
+        }
+        elseif (array_key_exists($key, $leftover)) {
+          $values[$key] = $leftover[$key];
+        }
       }
     }
     return $values;

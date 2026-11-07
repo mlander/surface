@@ -30,6 +30,20 @@ namespace Drupal\surface\Storage;
 interface StoredSchemaInterface extends StorageLayoutInterface {
 
   /**
+   * The stored schema of a key whose variants are stored beside it.
+   *
+   * A key with variants whose keys are stored beside its siblings, and
+   * nothing at its own name, has no schema of its own: its keys are the
+   * level's. The check skips a key given it, and the config schema
+   * generator writes the variants' keys at the level the key stands in,
+   * the level's whole mapping and not one property
+   * (ConfigSchemaGenerator).
+   *
+   * @see \Drupal\surface\Storage\FlatVariantsLayout
+   */
+  public const SPREAD = ['spread' => TRUE];
+
+  /**
    * Gives the config schema of each key this layout stores otherwise.
    *
    * @return array<string, array>
@@ -37,7 +51,9 @@ interface StoredSchemaInterface extends StorageLayoutInterface {
    *   property (`['type' => 'sequence', 'sequence' => ['type' =>
    *   'string']]`), by the key's dotted path in the asked layout. A
    *   label left out is the key's own; `nullable` left out follows the
-   *   generator's rule for the key.
+   *   generator's rule for the key. A key with variants whose keys are
+   *   stored beside its siblings, and nothing at its own name, is given
+   *   SPREAD.
    */
   public function storedSchema(): array;
 

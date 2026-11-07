@@ -23,7 +23,6 @@ use Drupal\surface\ResourceBuild\Resources;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_resource_test\Resource\Beacon\BeaconResource;
-use Drupal\surface_resource_test\Resource\Kit\KitResource;
 use Drupal\surface_resource_test\Resource\Pack\PackResource;
 use Drupal\surface_resource_test\Resource\Shelter\ShelterResource;
 use Drupal\surface_resource_test\Structure\Beacon\BeaconPostStructure;
@@ -55,14 +54,6 @@ use Symfony\Component\Routing\Route;
 
 /**
  * Variants mixed in: the structure a sibling key chooses, its keys flat.
- *
- * The kit mixes in the variant its kind chooses: the stove (its fuel,
- * required, and an access class that locks or omits it) and the tent
- * (its poles, required, and its rain fly, with a rule of its own); both
- * declare the weight alike, which is one key of the kit's. Every member
- * is the kit's own key, stored flat beside the kind, where
- * mixInVariants() stands; a member of a variant not chosen does not
- * apply.
  *
  * The pack mixes in the variant its carry chooses, each holding children:
  * the frame pack its hip belt (a child at a fixed key) and its pockets (a
@@ -100,24 +91,6 @@ class MixinVariantsTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_resource_test',
-  ];
-
-  /**
-   * The kit's keys: its own, and every variant's members where the call stands.
-   */
-  protected const KEYS = ['title', 'kind', 'weight', 'fuel', 'poles', 'fly', 'notes'];
-
-  /**
-   * The kit as installed.
-   */
-  protected const KIT = [
-    'title' => 'Weekend kit',
-    'kind' => 'tent',
-    'weight' => 2300,
-    'fuel' => 'gas',
-    'poles' => 2,
-    'fly' => TRUE,
-    'notes' => '',
   ];
 
   /**
@@ -182,138 +155,25 @@ class MixinVariantsTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Builds the kit in its one operation.
-   *
-   * @return \Drupal\surface\SurfaceInterface
-   *   The built data surface.
-   */
-  protected function kit(): SurfaceInterface {
-    $resources = $this->container->get('surface.resources');
-    return $resources->build(KitResource::class, $resources->operation(KitResource::class, 'configure'));
-  }
-
-  /**
-   * Emits the kit's schema, decoded.
-   *
-   * @param array|null $values
-   *   The values for the schema for these answers; NULL for the full
-   *   schema.
-   *
-   * @return array
-   *   The schema.
-   */
-  protected function schema(?array $values = NULL): array {
-    $emitter = $this->container->get('surface.contract_emitter');
-    $served = $values === NULL
-      ? $emitter->emitFull($this->kit(), 'resource_test.kit', 'configure')
-      : $emitter->emit($this->kit(), $values, 'resource_test.kit', 'configure');
-    return json_decode((string) json_encode($served->document['schema']), TRUE);
-  }
-
-  /**
    * Accepts and validates values, answering the messages by path.
    *
    * @param array $input
    *   The input.
    * @param array $stored
    *   What is stored.
-   * @param \Drupal\surface\SurfaceInterface|null $built
-   *   The data surface; NULL for the kit.
+   * @param \Drupal\surface\SurfaceInterface $built
+   *   The data surface.
    *
    * @return array<string, string>
    *   The refusals, by dotted path.
    */
-  protected function refusals(array $input, array $stored = self::KIT, ?SurfaceInterface $built = NULL): array {
-    $kit = $built ?? $this->kit();
-    $accepted = $this->pipeline()->accept($kit, $input, $stored);
+  protected function refusals(array $input, array $stored, SurfaceInterface $built): array {
+    $accepted = $this->pipeline()->accept($built, $input, $stored);
     $messages = [];
-    foreach ($this->pipeline()->validate($kit, $accepted, $stored) as $violation) {
+    foreach ($this->pipeline()->validate($built, $accepted, $stored) as $violation) {
       $messages[$violation->fullPath()] = strip_tags((string) $violation->message);
     }
     return $messages;
-  }
-
-  /**
-   * Tests the members land where the call stands, in variant then key order.
-   */
-  public function testMembersLandWhereTheCallStands(): void {
-    $map = $this->kit()->getDefinitions();
-    $this->assertSame(self::KEYS, $map->names(), 'Before the notes: the stove\'s, then the tent\'s, the weight they share once.');
-    [$mixed] = $map->mixinVariants();
-    $this->assertSame('kind', $mixed->by);
-    $this->assertSame(['stove', 'tent'], $mixed->variantIds(), 'In the order discovery found them.');
-    $this->assertSame(['weight', 'fuel'], $mixed->variants['stove']->keys);
-    $this->assertSame(['weight', 'poles', 'fly'], $mixed->variants['tent']->keys);
-    $this->assertSame(['resource_test.kit.stove', 'resource_test.kit.tent'], array_map(static fn ($variant) => $variant->structure->id, array_values($mixed->variants)));
-    $this->assertSame(['stove', 'tent'], $mixed->valuesOf('weight'));
-    $this->assertSame([], $map->mixins(), 'No structure is mixed in: variants are.');
-    foreach (['weight', 'fuel', 'poles', 'fly'] as $member) {
-      $this->assertFalse($map->get($member)->isRequired(), $member . ' is required only where its variant is chosen.');
-    }
-    $defaults = ['fuel' => 'gas', 'poles' => 2, 'fly' => FALSE];
-    $this->assertSame(array_replace(array_fill_keys(self::KEYS, NULL), $defaults), $this->kit()->getDefaultValues());
-  }
-
-  /**
-   * Tests the deciding key is offered the variants' values, by their labels.
-   */
-  public function testTheDecidingKeyOffersTheVariants(): void {
-    $kind = $this->kit()->getDefinition('kind');
-    $offered = $kind->getConstraints()['LabeledChoice'];
-    $this->assertSame(['stove', 'tent'], $offered['choices']);
-    $this->assertSame(['stove' => 'Stove', 'tent' => 'Tent'], array_map('strval', $offered['labels']));
-    $this->assertSame([['const' => 'stove', 'title' => 'Stove'], ['const' => 'tent', 'title' => 'Tent']], $this->schema()['properties']['kind']['oneOf']);
-  }
-
-  /**
-   * Tests what applies, and what is required, for each value chosen.
-   */
-  public function testEachValueChoosesWhatApplies(): void {
-    $kit = $this->kit();
-    $tent = $kit->refine(['kind' => 'tent']);
-    $this->assertTrue(DoesNotApply::marks($tent->getDefinition('fuel')));
-    $this->assertTrue($tent->getDefinition('poles')->isRequired());
-    $this->assertFalse(DoesNotApply::marks($tent->getDefinition('weight')));
-    $this->assertFalse($tent->getDefinition('weight')->isRequired());
-    $stove = $kit->refine(['kind' => 'stove']);
-    $this->assertTrue(DoesNotApply::marks($stove->getDefinition('poles')));
-    $this->assertTrue(DoesNotApply::marks($stove->getDefinition('fly')));
-    $this->assertTrue($stove->getDefinition('fuel')->isRequired());
-    $none = $kit->refine([]);
-    foreach (['weight', 'fuel', 'poles', 'fly'] as $member) {
-      $this->assertTrue(DoesNotApply::marks($none->getDefinition($member)), $member . ' applies to no variant chosen.');
-    }
-    // The tent's own rule, bound in the kit's frame, on its member.
-    $this->assertSame(2, $kit->refine(['kind' => 'tent', 'fly' => TRUE])->getDefinition('poles')->getConstraints()['Range']['min']);
-
-    $this->assertSame([], $this->refusals([]));
-    $this->assertSame(['fuel' => 'Fuel does not apply when Kind is Tent.'], $this->refusals(['fuel' => 'spirit']), 'A member of a variant not chosen, sent, is refused naming the deciding value.');
-    $this->assertSame(['poles' => 'Poles is required when Kind is Tent and Rain fly is on.'], $this->refusals(['poles' => NULL]));
-    $stove = ['kind' => 'stove', 'fuel' => NULL];
-    $this->assertSame(['fuel' => 'Fuel is required when Kind is Stove.'], $this->refusals($stove));
-    $this->assertSame([
-      'kind' => 'Kind is required.',
-      'weight' => 'Weight does not apply when Kind is empty.',
-    ], $this->refusals(['kind' => NULL, 'weight' => 9]));
-    // The weight they share is accepted under either.
-    $this->assertSame([], $this->refusals(['kind' => 'stove', 'weight' => 900]));
-    $this->assertSame([], $this->refusals(['kind' => 'tent', 'weight' => 900]));
-
-    // The chosen variant's defaults are laid in, and what does not apply
-    // is left out of what is accepted.
-    $accepted = $this->pipeline()->accept($kit, ['title' => 'Stove kit', 'kind' => 'stove'], []);
-    $this->assertSame(['title' => 'Stove kit', 'kind' => 'stove', 'weight' => NULL, 'fuel' => 'gas', 'notes' => NULL], $accepted);
-
-    // A write stores the members flat beside the kind.
-    $resources = $this->container->get('surface.resources');
-    $context = $resources->operation(KitResource::class, 'configure');
-    $result = $this->pipeline()->submit($kit, ['kind' => 'stove', 'fuel' => 'spirit', 'weight' => 640], $resources->storage(KitResource::class, $context, $kit));
-    $this->assertTrue($result->isValid(), (string) json_encode(array_map(static fn ($violation): string => $violation->fullPath() . ': ' . strip_tags((string) $violation->message), iterator_to_array($result->violations))));
-    $stored = $this->config('surface_resource_test.kit')->getRawData();
-    $written = ['kind' => 'stove', 'weight' => 640, 'fuel' => 'spirit'];
-    $this->assertSame($written, array_intersect_key($stored, $written));
-    $this->assertSame(2, $stored['poles'], 'A member that does not apply keeps what is stored.');
-    $this->assertStaticRefinersAgree($kit);
   }
 
   /**
@@ -362,234 +222,6 @@ class MixinVariantsTest extends SurfaceKernelTestBase {
       catch (\LogicException $e) {
         $this->assertSame($message, $e->getMessage(), $class);
       }
-    }
-  }
-
-  /**
-   * Tests a variant's access omits or locks it, the others standing.
-   */
-  public function testAccessOmitsOrLocksOneVariant(): void {
-    $this->setUpCurrentUser([], ['administer site configuration', 'hide stove']);
-    $kit = $this->kit();
-    $this->assertSame(['title', 'kind', 'weight', 'poles', 'fly', 'notes'], $kit->getDefinitions()->names(), 'The stove\'s own member is gone; the weight the tent brings stays.');
-    $this->assertSame(['tent'], $kit->getDefinition('kind')->getConstraints()['LabeledChoice']['choices'], 'Its value is not offered.');
-    [$mixed] = $kit->getDefinitions()->mixinVariants();
-    $this->assertSame(['tent'], $mixed->variantIds());
-    $this->assertSame(['fuel'], $mixed->withdrawn);
-    $resources = $this->container->get('surface.resources');
-    $context = $resources->operation(KitResource::class, 'configure');
-    $result = $this->pipeline()->submit($kit, ['title' => 'Kept apart'], $resources->storage(KitResource::class, $context, $kit));
-    $this->assertTrue($result->isValid());
-    $stored = $this->config('surface_resource_test.kit')->getRawData();
-    $this->assertSame(['Kept apart', 'gas'], [$stored['title'], $stored['fuel']], 'What the access took away, storage keeps.');
-    $full = $this->schema();
-    $this->assertArrayNotHasKey('resource_test.kit.stove', $full['$defs'], 'Omitted: no def, no conditional.');
-    $this->assertSame(['tent'], array_keys($full['x-surface']['variantsMixedIn']['kind']));
-
-    $this->setUpCurrentUser([], ['administer site configuration', 'inspect stove']);
-    $map = $this->kit()->getDefinitions();
-    $this->assertTrue($map->isLocked('fuel') && $map->isHeld('fuel'), 'Locked: the stove\'s own member holds what is stored.');
-    $this->assertFalse($map->isLocked('weight'), 'The weight the open tent brings too is not held.');
-    $this->assertSame(['stove', 'tent'], $map->mixinVariants()[0]->variantIds(), 'A locked variant is offered.');
-  }
-
-  /**
-   * Tests the full document: one conditional per variant, its def open.
-   */
-  public function testTheFullDocumentStatesEachVariantOnce(): void {
-    $full = $this->schema();
-    $keys = ['$schema', 'x-surface', 'type', 'properties', 'unevaluatedProperties', 'required', 'allOf', '$defs'];
-    $this->assertSame($keys, array_keys($full));
-    $this->assertSame([
-      'contract' => 4,
-      'version' => 1,
-      'variantsMixedIn' => [
-        'kind' => [
-          'stove' => '#/$defs/resource_test.kit.stove',
-          'tent' => '#/$defs/resource_test.kit.tent',
-        ],
-      ],
-    ], $full['x-surface']);
-    $this->assertSame(['title', 'kind', 'notes'], array_keys($full['properties']), 'A member is stated by its variant\'s def, and nowhere else.');
-    $this->assertFalse($full['unevaluatedProperties']);
-    $this->assertSame(['title', 'kind'], $full['required']);
-    $expected = json_decode(<<<'JSON'
-      [
-        {"if": {"properties": {"kind": {"const": "stove"}}, "required": ["kind"]},
-         "then": {"allOf": [{"$ref": "#/$defs/resource_test.kit.stove"}]}},
-        {"if": {"properties": {"kind": {"const": "tent"}}, "required": ["kind"]},
-         "then": {"allOf": [{"$ref": "#/$defs/resource_test.kit.tent"}]}}
-      ]
-      JSON, TRUE);
-    $this->assertSame($expected, $full['allOf']);
-    $stove = json_decode(<<<'JSON'
-      {
-        "title": "resource_test.kit.stove",
-        "type": "object",
-        "properties": {
-          "weight": {"title": "Weight", "type": ["integer", "null"], "minimum": 0},
-          "fuel": {"title": "Fuel", "type": "string", "oneOf": [{"const": "gas", "title": "Gas"}, {"const": "spirit", "title": "Spirit"}], "default": "gas"}
-        },
-        "required": ["fuel"]
-      }
-      JSON, TRUE);
-    $this->assertSame($stove, $full['$defs']['resource_test.kit.stove'], 'Open: the kit composes it with keys of its own.');
-    $this->assertArrayNotHasKey('additionalProperties', $full['$defs']['resource_test.kit.tent']);
-    $this->assertSame(['poles'], $full['$defs']['resource_test.kit.tent']['required']);
-    $this->assertSame([0], $full['$defs']['resource_test.kit.tent']['x-surface']['rules'], 'The tent\'s own rule, in its def.');
-
-    // A standard validator holds the document as the pipeline holds values.
-    $tent = array_diff_key(self::KIT, ['fuel' => 0]);
-    $this->assertTrue($this->validates($full, $tent));
-    $this->assertFalse($this->validates($full, self::KIT), 'The stove\'s fuel under the tent: no conditional evaluates it.');
-    $this->assertFalse($this->validates($full, ['poles' => NULL] + $tent), 'The tent\'s poles are required.');
-    $this->assertFalse($this->validates($full, ['fly' => TRUE, 'poles' => 1] + $tent), 'The tent\'s rule holds.');
-    $stove_kit = ['title' => 'Stove kit', 'kind' => 'stove', 'weight' => 640, 'fuel' => 'spirit', 'notes' => ''];
-    $this->assertTrue($this->validates($full, $stove_kit));
-    $this->assertFalse($this->validates($full, ['poles' => 2] + $stove_kit), 'A tent\'s member under the stove: no conditional evaluates it.');
-    $this->assertFalse($this->validates($full, ['fuel' => NULL] + $stove_kit), 'The stove\'s fuel is required.');
-    $this->assertFalse($this->validates($full, ['fax' => 1] + $stove_kit), 'The composition is closed.');
-
-    // The schema for these answers composes the same way, and names no
-    // member the choice alone moved.
-    $these = $this->schema($stove_kit);
-    $this->assertSame(['title', 'kind', 'notes'], array_keys($these['properties']));
-    $this->assertSame($expected, $these['allOf']);
-    $this->assertArrayNotHasKey('doesNotApply', $these['x-surface'] ?? [], 'What the choice rules out, the conditionals say.');
-    $this->assertTrue($this->validates($these, $stove_kit));
-  }
-
-  /**
-   * Tests the inline reading lays each variant over the frame, flat.
-   */
-  public function testInlineReadsTheFrameFlat(): void {
-    $inline = SchemaResolver::inline($this->schema());
-    $this->assertSame(self::KEYS, array_keys($inline['properties']), 'Every member after the key that chooses it.');
-    $this->assertFalse($inline['additionalProperties']);
-    $this->assertArrayNotHasKey('unevaluatedProperties', $inline);
-    $this->assertArrayNotHasKey('variantsMixedIn', $inline['x-surface'] ?? [], 'Spent: the frame reads flat.');
-    $rules = json_decode(<<<'JSON'
-      [
-        {"if": {"not": {"properties": {"kind": {"enum": ["stove", "tent"]}}, "required": ["kind"]}},
-         "then": {"properties": {"weight": false}}, "x-surface": {"declared": true}},
-        {"if": {"not": {"properties": {"kind": {"const": "stove"}}, "required": ["kind"]}},
-         "then": {"properties": {"fuel": false}}, "x-surface": {"declared": true}},
-        {"if": {"properties": {"kind": {"const": "stove"}}, "required": ["kind"]},
-         "then": {"properties": {"fuel": {"type": "string", "oneOf": [{"const": "gas", "title": "Gas"}, {"const": "spirit", "title": "Spirit"}]}}, "required": ["fuel"]}, "x-surface": {"declared": true}},
-        {"if": {"not": {"properties": {"kind": {"const": "tent"}}, "required": ["kind"]}},
-         "then": {"properties": {"poles": false}}, "x-surface": {"declared": true}},
-        {"if": {"properties": {"kind": {"const": "tent"}}, "required": ["kind"]},
-         "then": {"properties": {"poles": {"type": "integer"}}, "required": ["poles"]}, "x-surface": {"declared": true}},
-        {"if": {"not": {"properties": {"kind": {"const": "tent"}}, "required": ["kind"]}},
-         "then": {"properties": {"fly": false}}, "x-surface": {"declared": true}}
-      ]
-      JSON, TRUE);
-    $this->assertSame($rules, array_slice($inline['allOf'], 1), 'Where each member applies and is required: the rules the build bound for the choice.');
-    $this->assertSame(['fly'], array_keys($inline['allOf'][0]['if']['properties']), 'First, the tent\'s own rule, from its def.');
-    $this->assertSame(SchemaResolver::inline($inline), $inline, 'Read flat twice, the same.');
-    $tent = array_diff_key(self::KIT, ['fuel' => 0]);
-    $this->assertTrue($this->validates($inline, $tent));
-    $this->assertFalse($this->validates($inline, self::KIT));
-    $this->assertFalse($this->validates($inline, ['kind' => 'stove'] + $tent));
-    $stove_kit = ['title' => 'Stove kit', 'kind' => 'stove', 'weight' => 640, 'fuel' => 'spirit', 'notes' => ''];
-    $this->assertTrue($this->validates($inline, $stove_kit));
-  }
-
-  /**
-   * Tests the full schema reads back to itself through the schema reader.
-   */
-  public function testTheDocumentReadsBack(): void {
-    $full = $this->schema();
-    $read = $this->container->get('surface.schema_reader')->structure($full, 'resource_test.kit', 'surface_resource_test');
-    $built = $this->container->get('surface.resources')->buildStatic($read, new OperationContext('configure'));
-    $this->assertSame(self::KEYS, $built->getDefinitions()->names(), 'The members after the key that chooses them.');
-    $this->assertSame(['stove', 'tent'], $built->getDefinitions()->mixinVariants()[0]->variantIds());
-    $again = $this->container->get('surface.contract_emitter')->emitFull($built, 'resource_test.kit', 'configure')->document['schema'];
-    $this->assertSame(json_encode($full), json_encode($again));
-  }
-
-  /**
-   * Tests the form draws the chosen variant's members, redrawn by the kind.
-   */
-  public function testTheFormDrawsTheChosenVariant(): void {
-    $route = new Route('/kit', [
-      '_form' => SurfaceOperationForm::class,
-      OperationRoute::RESOURCE => 'resource_test.kit',
-      OperationRoute::OPERATION => 'configure',
-    ]);
-    $stack = $this->container->get('request_stack');
-    $request = Request::create('/kit', 'POST');
-    $request->setSession($stack->getSession());
-    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_resource_test.kit');
-    $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
-    $stack->push($request);
-    $state = new FormState();
-    $container = $this->container->get('form_builder')->buildForm(SurfaceOperationForm::class, $state)[SurfaceOperationForm::SURFACE_KEY];
-    $drawn = array_values(array_filter(self::KEYS, static fn (string $key): bool => isset($container[$key]) && empty($container[$key][SurfaceFormBuilderInterface::RULED_OUT_KEY])));
-    $this->assertSame(['title', 'kind', 'weight', 'poles', 'fly', 'notes'], $drawn, 'The tent is chosen: the stove\'s fuel is not drawn.');
-    $this->assertTrue($container['fuel'][SurfaceFormBuilderInterface::RULED_OUT_KEY], 'Its wrapper alone, for the rebuild that makes it apply.');
-    $this->assertSame(2, $container['poles']['#default_value']);
-    $replaces = $container['kind'][SurfaceFormBuilderInterface::TRIGGER_KEY]['replaces'] ?? [];
-    foreach (['weight', 'fuel', 'poles', 'fly'] as $member) {
-      $this->assertContains($member, $replaces, 'Choosing another kind redraws ' . $member . '.');
-    }
-  }
-
-  /**
-   * Tests the tool lists every member, each with where it applies.
-   */
-  public function testTheToolListsEveryMember(): void {
-    $manager = $this->container->get('plugin.manager.tool');
-    $values = $manager->getDefinition('surface:resource_test.kit:configure')->getInputDefinition(OperationInputs::VALUES);
-    $properties = $values->getPropertyDefinitions();
-    $this->assertSame(self::KEYS, array_keys($properties));
-    $this->assertStringEndsWith('Depends on kind.', (string) $properties['fuel']->getDescription(), 'Where it applies is said as a rule is.');
-    $tool = $manager->createInstance('surface:resource_test.kit:configure');
-    $tool->setInputValue(OperationInputs::VALUES, ['fuel' => 'spirit'] + self::KIT);
-    $tool->execute();
-    $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertSame("The values were refused:\n/fuel: Fuel does not apply when Kind is tent (Tent).", strip_tags((string) $tool->getResult()->getMessage()), 'The tool names the value as sent, and its label.');
-  }
-
-  /**
-   * Tests the build is kept, and read back equal from the build cache.
-   */
-  public function testTheBuildReadsBackFromTheCache(): void {
-    $resources = $this->container->get('surface.resources');
-    assert($resources instanceof Resources);
-    $registry = $this->container->get('surface.resource_registry');
-    $emitter = $this->container->get('surface.contract_emitter');
-    $emitted = static fn (SurfaceInterface $built): string => (string) json_encode([
-      $emitter->emitFull($built, 'resource_test.kit', 'configure')->document,
-      $emitter->emit($built, $built->getDefaultValues(), 'resource_test.kit', 'configure')->document,
-    ]);
-    $context = $resources->operation(KitResource::class, 'configure');
-    $this->container->get('cache.surface_build')->deleteAll();
-    $resources->forgetBuilds();
-    $fresh = $resources->buildDeclared(KitResource::class, $context);
-    $document = $emitted($fresh);
-    $cached = $resources->buildCounts()['cached'];
-    $resources->forgetBuilds();
-    (new \ReflectionProperty(ResourceRegistry::class, 'read'))->setValue($registry, []);
-    $woken = $resources->buildDeclared(KitResource::class, $context);
-    $this->assertSame($cached + 1, $resources->buildCounts()['cached']);
-    $this->assertNotSame($fresh, $woken);
-    $this->assertSame($fresh->getDefinitions()->mixinVariants()[0]->variantIds(), $woken->getDefinitions()->mixinVariants()[0]->variantIds());
-    $this->assertSame($document, $emitted($woken));
-  }
-
-  /**
-   * Tests the config schema written from the kit lists every member.
-   *
-   * ConfigSchemaDriftTest holds the file to what the generator writes;
-   * this reads what it says.
-   */
-  public function testTheConfigSchemaListsEveryMember(): void {
-    $schema = $this->container->get('config.typed')->getDefinition('surface_resource_test.kit');
-    $mapping = array_diff_key($schema['mapping'], array_flip(['_core', 'langcode']));
-    $this->assertSame(self::KEYS, array_keys($mapping), 'Flat, in the kit\'s order, after what every config object holds.');
-    foreach (['weight', 'fuel', 'poles', 'fly'] as $member) {
-      $this->assertTrue($mapping[$member]['nullable'] ?? FALSE, $member . ' is optional: it may not apply.');
     }
   }
 

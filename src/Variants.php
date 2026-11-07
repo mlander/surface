@@ -38,6 +38,28 @@ use Drupal\surface\Pipeline\ValueState;
 final class Variants {
 
   /**
+   * The setting with which an author stores the chosen keys flat.
+   *
+   * How variants at a key are stored is a layout, the storage's fact,
+   * said on the map attachVariants() returns:
+   * `->setSetting(Variants::STORED_AS, Variants::FLAT)`, or
+   * `#[Setting(Variants::STORED_AS, Variants::FLAT)]` beside
+   * #[AttachVariants]. Absent, a config storage stores the chosen keys
+   * under the key; FLAT, it stores them beside the deciding key, and the
+   * key itself is not stored (FlatVariantsLayout). The contract, the
+   * form, the tool and the pipeline do not read it: what is asked is the
+   * same either way.
+   *
+   * @see \Drupal\surface\Storage\FlatVariantsLayout
+   */
+  public const STORED_AS = 'variants_stored_as';
+
+  /**
+   * The value of STORED_AS that stores the chosen keys beside the deciding key.
+   */
+  public const FLAT = 'flat';
+
+  /**
    * Constructs a Variants.
    *
    * @param string $by
@@ -55,6 +77,16 @@ final class Variants {
     public readonly MapDataDefinition $shell,
     public readonly array $variants,
   ) {
+  }
+
+  /**
+   * Answers whether the chosen keys are stored beside the deciding key.
+   *
+   * @return bool
+   *   TRUE when the key's map says STORED_AS FLAT.
+   */
+  public function storedFlat(): bool {
+    return $this->shell->getSetting(self::STORED_AS) === self::FLAT;
   }
 
   /**

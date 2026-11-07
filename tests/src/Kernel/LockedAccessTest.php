@@ -310,10 +310,10 @@ class LockedAccessTest extends SurfaceKernelTestBase {
     $this->assertTrue($may->invoke($gating->getValue($resources), $registry->getDefinition(CabinetResource::class)));
 
     // Without this module, the access classes left are a variant's only
-    // where the kit's stove and the pack's frame pack, mixed in, have one,
-    // and the one variant at a
-    // key answered for is the gallery's oil finish, by an alter: it alone
-    // could refuse, so nothing else is built for it.
+    // where the kit's stove, at its gear, and the pack's frame pack, mixed
+    // in, have one, and the one variant at a key answered for by an alter
+    // is the gallery's oil finish: it alone could refuse, so nothing else
+    // is built for it.
     $this->installSchema('user', ['users_data']);
     $this->container->get('module_installer')->uninstall(['surface_tool_test']);
     $this->container->get('module_installer')->install(['surface_resource_test']);

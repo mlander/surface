@@ -20,6 +20,7 @@ use Drupal\surface\Resource\DeletableStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
 use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\FlatVariantsLayout;
 use Drupal\surface\Entry;
 
 /**
@@ -51,7 +52,9 @@ use Drupal\surface\Entry;
  * reference to a content entity by its uuid: ReferenceStorageLayout is
  * applied here, outside every other layout, in the layout values are
  * asked for, and the dependencies of what a config entity's keys refer to
- * are added to what its storage rehearsed.
+ * are added to what its storage rehearsed. Where a key's variants are
+ * stored flat (Variants::STORED_AS), FlatVariantsLayout lays the chosen
+ * keys beside the deciding key the same way, in the asked layout too.
  *
  * A storage layout an alter hands the build for the keys it mounts
  * (AltersStorageLayoutInterface) is applied here, to that module's namespace
@@ -150,7 +153,10 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    * {@inheritdoc}
    */
   public function load(SurfaceInterface $surface): array {
-    $values = self::applyThirdPartyLayouts($surface, array_intersect_key($this->loaded($this->context), $surface->getDefinitions()->toArray()), FALSE);
+    // Read back before anything is narrowed to the data surface's keys: a
+    // variant's keys stored flat are none of them until they are gathered.
+    $loaded = self::asked($surface, $this->loaded($this->context), $this->flatLayout($surface));
+    $values = array_intersect_key($loaded, $surface->getDefinitions()->toArray());
     $values = $this->referenceLayout($surface)?->fromStorage($values) ?? $values;
     foreach ($this->routes as $key => $routes) {
       $entry = $surface->getDefinitions()->entry($key);
@@ -200,18 +206,26 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
       throw new StorageViolationsException(new ViolationSet($gated));
     }
     $references = $this->referenceLayout($surface);
+    $flat = $this->flatLayout($surface);
     $own = $references?->toStorage($values) ?? $values;
-    if ($references !== NULL) {
-      // Decision: see
-      // docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
-      $own = $references->keepUnresolved($own, self::applyThirdPartyLayouts($surface, $this->loaded($this->context), FALSE));
+    if ($references !== NULL || $flat !== NULL) {
+      $stored = $this->loaded($this->context);
+      if ($references !== NULL) {
+        // Decision: see
+        // docs/decisions.md#a-config-object-stores-a-reference-by-uuid.
+        $own = $references->keepUnresolved($own, self::asked($surface, $stored, $flat));
+      }
+      if ($flat !== NULL) {
+        $own = $flat->keepOnWrite($flat->toStorage($own), $stored);
+      }
     }
     $own = self::applyThirdPartyLayouts($surface, $own, TRUE);
     if ($this->omitted !== []) {
       // Decision: see docs/decisions.md#omitted-is-omitted-both-ways.
       $stored = $this->loaded($this->context);
       foreach ($this->omitted as $path) {
-        $parents = explode('.', $path);
+        // Below a flat key, at the level the key's own keys are stored at.
+        $parents = explode('.', $flat?->storedPath($path) ?? $path);
         $inside = count($parents) === 1 || is_array(NestedArray::getValue($own, array_slice($parents, 0, -1)));
         if ($inside && NestedArray::keyExists($stored, $parents)) {
           NestedArray::setValue($own, $parents, NestedArray::getValue($stored, $parents), TRUE);
@@ -547,6 +561,49 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
    */
   protected function referenceLayout(SurfaceInterface $surface): ?ReferenceStorageLayout {
     return $this->references === NULL ? NULL : ReferenceStorageLayout::forSurface($surface, $this->references, array_map('strval', array_keys($this->routes)));
+  }
+
+  /**
+   * Gives the layout that stores variants' keys beside their deciding key.
+   *
+   * For a config storage alone, as referenceLayout() is, and for the keys
+   * this level stores. Applied in the layout values are asked for:
+   * gathered before the references are read, laid out after they are
+   * written.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface.
+   *
+   * @return \Drupal\surface\Storage\FlatVariantsLayout|null
+   *   The layout, or NULL when no key's variants are stored flat.
+   *
+   * @see \Drupal\surface\Variants::STORED_AS
+   */
+  protected function flatLayout(SurfaceInterface $surface): ?FlatVariantsLayout {
+    return $this->references === NULL ? NULL : FlatVariantsLayout::forSurface($surface, array_map('strval', array_keys($this->routes)));
+  }
+
+  /**
+   * Reads what a config storage holds back into the asked layout.
+   *
+   * The inverse of what prepare() lays out, in the reverse order: the
+   * layouts alters give their mounts first, then the variants stored
+   * flat. The references are read after, from the keys of the data
+   * surface alone.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface.
+   * @param array $stored
+   *   What the storage holds, as loaded.
+   * @param \Drupal\surface\Storage\FlatVariantsLayout|null $flat
+   *   The layout of its variants stored flat; NULL for none.
+   *
+   * @return array
+   *   What it holds, every key it holds kept.
+   */
+  protected static function asked(SurfaceInterface $surface, array $stored, ?FlatVariantsLayout $flat): array {
+    $stored = self::applyThirdPartyLayouts($surface, $stored, FALSE);
+    return $flat?->fromStorage($stored) ?? $stored;
   }
 
   /**

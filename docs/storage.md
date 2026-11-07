@@ -671,6 +671,14 @@ one may not apply to the variant stored. A member of a variant not
 chosen keeps what is stored, and a variant's own member its access
 omits is kept as stored too.
 
+As of 2026-11-06, the variants at a key whose map carries
+`->setSetting(Variants::STORED_AS, Variants::FLAT)` are stored flat
+beside the deciding key, with nothing at the key, while every door still
+asks for them under the key (`Storage\FlatVariantsLayout`). At a config
+object's root the schema is the shape the paragraph above describes;
+inside a mapping it is core's own-key form, `<type>.[<key>]`, the
+deciding key naming the type of the level that holds it.
+
 ### The site's defaults are not stored values
 
 A site's own defaults live in their own config object,
