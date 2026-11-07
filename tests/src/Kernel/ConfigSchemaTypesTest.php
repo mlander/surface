@@ -23,8 +23,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * sticky note block is its own structure, and its threshold condition
  * names one: each is listed by ConfigSchemaTypes through core's schema,
  * `block.block.*` at `settings` (variants at a key) and
- * `condition.plugin.[id]` (variants mixed in), and each is built as
- * declared.
+ * `condition.plugin.[id]` (variants at `configuration`), and each is
+ * built as declared.
  *
  * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
  */
@@ -74,7 +74,7 @@ class ConfigSchemaTypesTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a condition's declared structure is its variant mixed in.
+   * Tests a condition's declared structure is its variant at configuration.
    */
   public function testConditionNamesTheDeclaredStructure(): void {
     $entries = $this->container->get(ConfigSchemaTypes::class)->listFor([
@@ -85,7 +85,7 @@ class ConfigSchemaTypesTest extends SurfaceKernelTestBase {
     $this->assertSame(ConfigSchemaReader::id('condition.plugin.request_path', '', 'condition.plugin'), $this->registry()->getDefinition($entries['request_path']['structure'])->id);
 
     $full = $this->full($this->container->get(ConfigSchemaReader::class)->structure('condition.plugin.[id]'));
-    $chosen = $full['x-surface']['variantsMixedIn']['id'];
+    $chosen = $full['properties'][ConfigSchemaReader::CHOSEN]['x-surface']['variants'];
     $this->assertSame('test.threshold', SchemaResolver::defName($chosen['surface_resource_test_threshold']));
     $def = $full['$defs']['test.threshold'];
     $this->assertSame(['mode', 'threshold', 'reading'], array_keys($def['properties']));

@@ -18,6 +18,7 @@ use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
+use Drupal\surface\Variants;
 use Drupal\surface\Variants\ConfigSchemaTypes;
 
 /**
@@ -40,8 +41,9 @@ use Drupal\surface\Variants\ConfigSchemaTypes;
  *   `[%parent.<key>]` is variants a sibling chooses, listed by
  *   ConfigSchemaTypes; `[<key>]`, chosen by a key inside the value, is a
  *   structure of its own for the expression, the fallback type's keys
- *   and the variants that key chooses mixed in flat beside them
- *   (mixInVariants()), listed by ConfigSchemaTypes too;
+ *   and the variants that key chooses at `configuration` (CHOSEN),
+ *   stored flat beside them as config stores them, listed by
+ *   ConfigSchemaTypes too;
  *   `[%parent.%parent...]` and `[%key]` are declared open (open()), the
  *   note giving the spelling the blueprint would need.
  *
@@ -72,11 +74,17 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
   public const OWNED = ['_core'];
 
   /**
-   * Why each own-key expression cannot be mixed in, once asked.
+   * The key the type an own key chooses is asked for under.
    *
-   * @var array<string, string|null>
+   * A door asks under it for the keys the type chosen by a key inside its
+   * own value declares beside its fallback's (`condition.plugin.[id]`):
+   * core's word for a plugin's own settings
+   * (ConfigurableInterface::getConfiguration(), and the key
+   * layout_builder.component and system.action.* nest them under). Here
+   * they are stored flat beside the deciding key, as core stores a
+   * condition's or a views handler's (Variants::STORED_AS).
    */
-  protected array $walls = [];
+  public const CHOSEN = 'configuration';
 
   /**
    * Constructs a ConfigSchemaReader.
@@ -141,18 +149,21 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
   }
 
   /**
-   * Reads a type chosen by a key inside its own value, flat.
+   * Reads a type chosen by a key inside its own value.
    *
-   * The fallback's keys, then the variants mixed in.
+   * The fallback's keys, then the variants at CHOSEN, stored flat.
    *
    * `views.field.[plugin_id]` is one structure, whatever key holds it: the
-   * keys every value holds (the fallback type's), then, where the call
-   * stands, the type the deciding key chooses less those keys, mixed in
-   * flat, as config stores it. The variants are listed by
-   * ConfigSchemaTypes, bound to the expression itself. Where the build
-   * would refuse to mix them in (ownKeyWall()), every key a type the
-   * expression names declares beside the fallback's is declared open in
-   * their place (open()), so the frame holds what is stored.
+   * keys every value holds (the fallback type's), then, at
+   * `configuration`, the variants the deciding key chooses, each the type
+   * it names less those keys (its `:own` structure), listed by
+   * ConfigSchemaTypes bound to the expression itself. Each variant is
+   * whole in its own frame, so two types that declare one key unlike each
+   * keep their own definition of it. The map at `configuration` carries
+   * no label, since the schema names none for it. The variants' keys are
+   * stored flat beside the deciding key, as config stores them
+   * (Variants::STORED_AS, FlatVariantsLayout), and asked for under the
+   * key.
    *
    * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
    *
@@ -162,6 +173,10 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
    *   The structure's blueprint.
    * @param \Drupal\surface\Reader\Reading $reading
    *   The notes.
+   *
+   * @throws \LogicException
+   *   When the fallback declares CHOSEN itself: stored flat, the variants'
+   *   keys and the fallback's would share it.
    */
   protected function ownKey(string $named, BlueprintInterface $inputs, Reading $reading): void {
     $expression = static::expression($named);
@@ -170,21 +185,15 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
       $reading->leave('', sprintf('%s is no type chosen by a key inside its value with a type every value holds.', $named));
       return;
     }
-    $strict = array_key_exists('FullyValidatable', (array) ($this->typedConfig->getDefinition($fallback)['constraints'] ?? []));
-    $this->mapping($inputs, $this->keysOf($fallback), $fallback, '', $strict, $reading);
     $by = (string) $expression['by'];
-    $wall = $this->ownKeyWall($expression, $fallback);
-    if ($wall === NULL) {
-      $inputs->mixInVariants($by, from: ConfigSchemaTypes::class, arguments: ['type' => $named]);
-      return;
+    $keys = $this->keysOf($fallback);
+    if (array_key_exists(self::CHOSEN, $keys)) {
+      throw new \LogicException(sprintf('ConfigSchemaReader reads %s as the keys of %s and, at "%s", the type its "%s" key chooses, stored flat beside them, and %s declares "%s" itself: stored flat, the two would be one key.', $named, $fallback, self::CHOSEN, $by, $fallback, self::CHOSEN));
     }
-    // What the build would refuse to mix in: every key a type it chooses
-    // declares beside the fallback's, open, so what is stored is held.
-    $why = sprintf('Declared open, holding any value: a key of a type "%s" chooses, which is not mixed in, since mixInVariants(\'%s\') would be refused: %s.', $by, $by, $wall);
-    foreach ($this->chosenKeys($expression, $fallback) as $key => $property) {
-      $label = isset($property['label']) && (string) $property['label'] !== '' ? LeafRules::label((string) $property['label']) : NULL;
-      $this->open($inputs, $key, $label, FALSE, $reading, $key, $why);
-    }
+    $strict = array_key_exists('FullyValidatable', (array) ($this->typedConfig->getDefinition($fallback)['constraints'] ?? []));
+    $this->mapping($inputs, $keys, $fallback, '', $strict, $reading);
+    $inputs->attachVariants(self::CHOSEN, $by, NULL, from: ConfigSchemaTypes::class, arguments: ['type' => $named])
+      ->setSetting(Variants::STORED_AS, Variants::FLAT);
   }
 
   /**
@@ -225,43 +234,6 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
     }
     $inputs->addDefinition($key, $definition);
     return $definition;
-  }
-
-  /**
-   * Gives the keys the types an own-key expression names declare.
-   *
-   * Each type's keys less its fallback's, in the order the schema lists
-   * the types, the first type's for a key two declare.
-   *
-   * @param array{prefix: string, suffix: string, by: string|null} $expression
-   *   What expression() read.
-   * @param string $fallback
-   *   The type whose keys every value holds.
-   *
-   * @return array<string, array>
-   *   Each key as the first type to declare it writes it, by key.
-   */
-  protected function chosenKeys(array $expression, string $fallback): array {
-    $keys = [];
-    foreach ($this->namedTypes($expression, $fallback) as $name) {
-      $keys += $this->keysOf($name, '', $fallback);
-    }
-    return array_filter($keys, 'is_array');
-  }
-
-  /**
-   * Lists the types an own-key expression names, its fallback aside.
-   *
-   * @param array{prefix: string, suffix: string, by: string|null} $expression
-   *   What expression() read.
-   * @param string $fallback
-   *   The type whose keys every value holds.
-   *
-   * @return string[]
-   *   The types, in the order the schema lists them.
-   */
-  protected function namedTypes(array $expression, string $fallback): array {
-    return array_values(array_diff($this->typesNamed($expression), [$fallback]));
   }
 
   /**
@@ -780,22 +752,15 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
       case 'own key':
         // Decision: see
         // docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-        $fallback = $this->fallbackOf($expression);
-        if ($fallback === NULL) {
+        if ($this->fallbackOf($expression) === NULL) {
           $reading->expression($here, $named, 'own key', $by, 'open');
-          return $this->open($inputs, $key, $label, $required, $reading, $here, sprintf('Its type is chosen by its own "%s" key, and no type says what every one holds, so "%s" itself has no type: mixInVariants(\'%s\') mixes the chosen type in flat once a type every one extends declares it. Until then the key is declared open, holding any value.', $by, $by, $by));
+          return $this->open($inputs, $key, $label, $required, $reading, $here, sprintf('Its type is chosen by its own "%s" key, and no type says what every one holds, so "%s" itself has no type: attachVariants(ConfigSchemaReader::CHOSEN), which reads the chosen type at "%s", stored flat, needs a type every value holds that declares "%s". Until one does, the key is declared open, holding any value.', $by, $by, self::CHOSEN, $by));
         }
-        // Walled or not, one structure for the expression (ownKey()):
-        // walled, the fallback's keys and every other key declared open.
-        $wall = $this->ownKeyWall($expression, $fallback);
+        // One structure for the expression (ownKey()): the fallback's keys
+        // and the variants at CHOSEN.
         $structure = $this->structure($named);
         $declared = $item ? $inputs->attachList($key, $structure, $label) : $inputs->attach($key, $structure, $label);
         $reading->structure($here, static::id($named));
-        if ($wall !== NULL) {
-          $reading->expression($here, $named, 'own key', $by, 'fallback ' . $fallback);
-          $reading->leave($here, sprintf('Its type is chosen by its own "%s" key: declared as %s, the keys every one holds, and each key a type it chooses declares beside them open, holding any value, since mixInVariants(\'%s\') would be refused: %s.', $by, $fallback, $by, $wall));
-          return $declared;
-        }
         $reading->expression($here, $named, 'own key', $by, 'variants');
         return $declared;
 
@@ -807,188 +772,6 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
         $reading->expression($here, $named, 'ancestor', $by, 'open');
         return $this->open($inputs, $key, $label, $required, $reading, $here, sprintf('Its type is chosen by "%s", a key outside this frame (%s). A structure reads its container only through a port, and variants are chosen by a plain key of the frame: this would be $inputs->reads(\'%s\', \'string\') and attachVariants(\'%s\', by: \'%s\'), a port deciding variants, which the build refuses today, so the key is declared open, holding any value.', $by ?? '?', $named, str_replace('.', '_', (string) $by), $key, str_replace('.', '_', (string) $by)));
     }
-  }
-
-  /**
-   * Says why the types an own-key expression names cannot be mixed in.
-   *
-   * Two variants that declare one key unlike are no wall: the build
-   * declares the key as wide as both and holds it to the chosen type's
-   * own definition (mixInVariants()), since config schema has one type
-   * per value and no frame its types share. A child at a fixed key or a
-   * collection is the owner's child at its key, and variants at a key the
-   * owner's variants there. The build refuses one thing of these: a key
-   * two variants declare unlike where one holds variants at it, since the
-   * owner's variants at a key are one set of variants. Each type the
-   * expression names is read here, less the fallback's keys, as the
-   * variant it would be.
-   *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-   *
-   * @param array{prefix: string, suffix: string, by: string|null} $expression
-   *   What expression() read.
-   * @param string $fallback
-   *   The type whose keys every value holds.
-   *
-   * @return string|null
-   *   Why, naming the types and the key; NULL when nothing stands in the
-   *   way.
-   */
-  public function ownKeyWall(array $expression, string $fallback): ?string {
-    // Asked at every frame that holds the expression: answered once.
-    $asked = implode("\0", [$expression['prefix'], $expression['suffix'], (string) $expression['by'], $fallback]);
-    if (array_key_exists($asked, $this->walls)) {
-      return $this->walls[$asked];
-    }
-    return $this->walls[$asked] = $this->wallOf($expression, $fallback);
-  }
-
-  /**
-   * Finds why the types an own-key expression names cannot be mixed in.
-   *
-   * @param array{prefix: string, suffix: string, by: string|null} $expression
-   *   What expression() read.
-   * @param string $fallback
-   *   The type whose keys every value holds.
-   *
-   * @return string|null
-   *   Why; NULL when nothing stands in the way.
-   */
-  protected function wallOf(array $expression, string $fallback): ?string {
-    $declared = [];
-    foreach ($this->namedTypes($expression, $fallback) as $name) {
-      $keys = $this->keysOf($name, '', $fallback);
-      foreach ($keys as $key => $property) {
-        $key = (string) $key;
-        if (!is_array($property)) {
-          continue;
-        }
-        $signature = $this->signature($property, $name, $key);
-        if ($signature === NULL) {
-          continue;
-        }
-        if (isset($declared[$key]) && $declared[$key][1] !== $signature && (str_starts_with($declared[$key][1], 'variants ') || str_starts_with($signature, 'variants '))) {
-          return sprintf('the types %s and %s both declare "%s", and not alike, where one holds variants at it', $declared[$key][0], $name, $key);
-        }
-        $declared[$key] ??= [$name, $signature];
-      }
-    }
-    return NULL;
-  }
-
-  /**
-   * Gives what a key declares, to tell two variants' alike.
-   *
-   * The label and the description aside, as the build compares them. A
-   * key holding a child is the child it holds: a mapping type, or a
-   * collection of one, by the type, and a mapping or a collection of
-   * mappings declared inline by where it is declared, since the reader
-   * reads that as a structure of its own (a map with a frame, or an item
-   * structure at the path), which no two types share.
-   *
-   * @param array $property
-   *   The key, as the schema writes it.
-   * @param string $type
-   *   The type that declares it.
-   * @param string $key
-   *   The key.
-   *
-   * @return string|null
-   *   Its signature; NULL for a key nothing declares.
-   */
-  protected function signature(array $property, string $type, string $key): ?string {
-    $named = (string) ($property['type'] ?? '');
-    if (str_contains($named, '[')) {
-      // Its own key's types, a structure of the expression; a sibling's,
-      // variants the expression names, which the sibling, a key of its
-      // own, decides; any other form open.
-      return match (static::expression($named)['form']) {
-        'own key' => 'attach ' . $named,
-        'parent' => 'variants ' . $named,
-        default => NULL,
-      };
-    }
-    $merged = $this->merged($property);
-    if ($this->isA($merged, Ignore::class) || $this->isA($merged, Undefined::class)) {
-      return NULL;
-    }
-    $constraints = serialize((array) ($merged['constraints'] ?? []));
-    if ($this->isA($merged, Mapping::class)) {
-      return match (TRUE) {
-        $this->isNamedMapping($named, $property) => 'attach ' . ($this->determine($named) ?? $named) . ' ' . $constraints,
-        $this->childIn($property) !== NULL => 'map ' . $type . ':' . $key,
-        default => serialize(static::withoutPresentation($merged)),
-      };
-    }
-    if ($this->isA($merged, Sequence::class)) {
-      $item = is_array($merged['sequence'] ?? NULL) ? $merged['sequence'] : [];
-      $item_named = (string) ($item['type'] ?? '');
-      if (str_contains($item_named, '[')) {
-        return static::expression($item_named, TRUE)['form'] === 'own key' ? 'list ' . $item_named . ' ' . $constraints : NULL;
-      }
-      if ($this->isA($this->merged($item), Mapping::class)) {
-        return $this->isNamedMapping($item_named, $item)
-          ? 'list ' . ($this->determine($item_named) ?? $item_named) . ' ' . $constraints
-          : 'list ' . $type . ':' . $key;
-      }
-      return serialize(static::withoutPresentation($merged));
-    }
-    $unlabeled = static::withoutPresentation($merged);
-    $definition = $this->value($unlabeled, NULL, new Reading(), '', $named);
-    return $definition === NULL ? NULL : serialize($definition);
-  }
-
-  /**
-   * Takes the label and the description off a schema, at any depth.
-   *
-   * @param array $merged
-   *   A key's schema, merged.
-   *
-   * @return array
-   *   The same, less what presents it.
-   */
-  protected static function withoutPresentation(array $merged): array {
-    unset($merged['label'], $merged['description']);
-    if (is_array($merged['mapping'] ?? NULL)) {
-      $merged['mapping'] = array_map(static fn (mixed $inner): mixed => is_array($inner) ? static::withoutPresentation($inner) : $inner, $merged['mapping']);
-    }
-    if (is_array($merged['sequence'] ?? NULL)) {
-      $merged['sequence'] = static::withoutPresentation($merged['sequence']);
-    }
-    return $merged;
-  }
-
-  /**
-   * Names the child a key's type would be read as, if any.
-   *
-   * @param array $property
-   *   The key, as the schema writes it.
-   *
-   * @return string|null
-   *   What it would be read as, in words; NULL for keys and maps of keys.
-   */
-  protected function childIn(array $property): ?string {
-    $named = (string) ($property['type'] ?? '');
-    if (str_contains($named, '[')) {
-      return 'a type named through another key';
-    }
-    $merged = $this->merged($property);
-    if ($this->isA($merged, Mapping::class)) {
-      if ($this->isNamedMapping($named, $property)) {
-        return 'a mapping type, attached';
-      }
-      foreach ((array) ($merged['mapping'] ?? []) as $inner) {
-        if (is_array($inner) && $this->childIn($inner) !== NULL) {
-          return 'a mapping holding a child';
-        }
-      }
-      return NULL;
-    }
-    if ($this->isA($merged, Sequence::class)) {
-      $item = is_array($merged['sequence'] ?? NULL) ? $merged['sequence'] : [];
-      return str_contains((string) ($item['type'] ?? ''), '[') || $this->isA($this->merged($item), Mapping::class) ? 'a sequence of mappings' : NULL;
-    }
-    return NULL;
   }
 
   /**

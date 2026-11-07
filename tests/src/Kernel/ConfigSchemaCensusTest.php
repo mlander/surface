@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\surface\Reader\ConfigSchemaReader;
 use Drupal\surface\Reader\LeafRules;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Variants\ConfigSchemaTypes;
 use Drupal\Tests\surface\Kernel\Reader\RecordingBlueprint;
 use PHPUnit\Framework\Attributes\Group;
@@ -178,13 +179,12 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
             $queue[] = [...$arguments, $depth + 1, $from];
           }
         }
+        // Variants at a key, and at ConfigSchemaReader::CHOSEN for a type
+        // chosen by its own key, stored flat beside the keys every value
+        // holds.
         if ($record['verb'] === 'attachVariants') {
           $variants($id . ' ' . $at, $record['arguments'], $depth, $from);
         }
-      }
-      // Variants mixed in flat, beside the keys every value holds.
-      foreach ($inputs->mixedInVariants as $mixed) {
-        $variants($id . ' (mixed in by ' . $mixed['by'] . ')', $mixed['arguments'], $depth, $from);
       }
       foreach ($reading->leaves() as $leaf) {
         $tally['leaves'][$leaf] = ($tally['leaves'][$leaf] ?? 0) + 1;
@@ -192,7 +192,7 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
       foreach ($reading->expressions() as $at => $expression) {
         $form = $expression['form'];
         $tally['forms'][$form] = ($tally['forms'][$form] ?? 0) + 1;
-        $outcome = $expression['became'] === 'variants' ? 'variants' : (str_starts_with($expression['became'], 'fallback') ? 'fallback' : 'open');
+        $outcome = $expression['became'] === 'variants' ? 'variants' : 'open';
         $tally['resolved'][$form][$outcome] = ($tally['resolved'][$form][$outcome] ?? 0) + 1;
         if ($from === 'views.view.*' && $expression['became'] !== 'variants') {
           $views['expressions'][] = [$id . ' ' . $at, $expression['expression'], $expression['became'], '', 0, 0];
@@ -225,15 +225,19 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
     }
 
     // Each structure read for a type chosen by a key inside its own value,
-    // built for real: its variants are mixed in, every one built now.
+    // built for real: its variants at ConfigSchemaReader::CHOSEN, which the
+    // site lists, every one settled now.
     $tally['own_ms'] = [];
+    $tally['own_variants'] = [];
     foreach (array_keys($tally['structures']) as $structure) {
       if (!str_contains($structure, '[')) {
         continue;
       }
       $start = hrtime(TRUE);
       try {
-        $resources->buildStatic($reader->structure(substr($structure, strlen(ConfigSchemaReader::PREFIX))), new OperationContext('configure'));
+        $definitions = $resources->buildStatic($reader->structure(substr($structure, strlen(ConfigSchemaReader::PREFIX))), new OperationContext('configure'))->getDefinitions();
+        $chosen = $definitions->entry(ConfigSchemaReader::CHOSEN)?->variants;
+        $tally['own_variants'][$structure] = count(array_map(static fn (string $value): SurfaceInterface => $chosen->variant($value)->child, $chosen?->variantIds() ?? []));
       }
       catch (\Throwable $e) {
         $tally['refused'][$structure] = get_class($e) . ': ' . mb_substr($e->getMessage(), 0, 300);
@@ -296,8 +300,6 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
       str_contains($why, 'Its storage owns it') => '_core, which the storage owns',
       str_contains($why, 'a key outside this frame') => 'type chosen by a key outside the frame',
       str_contains($why, 'typed by its own key') => 'each entry typed by its own key ([%key])',
-      str_contains($why, 'Its type is chosen by its own') && str_contains($why, 'declared as') => 'type chosen by its own key, fallback declared',
-      str_starts_with($why, 'Declared open, holding any value: a key of a type') => 'a key of a type chosen by its own key, beside the fallback, declared open',
       str_contains($why, 'Its type is chosen by its own') => 'type chosen by its own key, no fallback',
       str_contains($why, 'which this mapping holds as no value') => 'deciding sibling is no value',
       str_contains($why, 'sequences of groups') => 'a sequence of sequences of mappings',
@@ -348,8 +350,9 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
     $lines[] = sprintf('| Build time per root, first build: median %.1f ms, largest %.1f ms (%s) | |', static::median($tally['build_ms']), max($tally['build_ms']), array_search(max($tally['build_ms']), $tally['build_ms'], TRUE));
     if ($tally['own_ms'] !== []) {
       $own_built = count(array_diff_key($tally['own_ms'], $tally['refused']));
-      $lines[] = sprintf('| Structures for a type chosen by its own key that build, every variant mixed in | %d of %d |', $own_built, count($tally['own_ms']));
-      $lines[] = sprintf('| Build time per such structure, first build: median %.1f ms, largest %.1f ms (%s) | |', static::median($tally['own_ms']), max($tally['own_ms']), array_search(max($tally['own_ms']), $tally['own_ms'], TRUE));
+      $lines[] = sprintf('| Structures for a type chosen by its own key that build, every variant at configuration settled | %d of %d |', $own_built, count($tally['own_ms']));
+      $lines[] = sprintf('| Variants at configuration settled, in all | %d |', array_sum($tally['own_variants']));
+      $lines[] = sprintf('| Build time per such structure, first build and every variant settled: median %.1f ms, largest %.1f ms (%s) | |', static::median($tally['own_ms']), max($tally['own_ms']), array_search(max($tally['own_ms']), $tally['own_ms'], TRUE));
     }
     $sources = [];
     foreach ($tally['sources'] as [, , $source]) {
@@ -381,11 +384,11 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
     $lines[] = '';
     $lines[] = '**Types named through another key, by form**';
     $lines[] = '';
-    $lines[] = '| Form | Met | Variants | Fallback | Open |';
-    $lines[] = '|---|---|---|---|---|';
+    $lines[] = '| Form | Met | Variants | Open |';
+    $lines[] = '|---|---|---|---|';
     foreach ($tally['forms'] as $form => $count) {
       $outcome = $tally['resolved'][$form] ?? [];
-      $lines[] = sprintf('| %s | %d | %d | %d | %d |', $form, $count, $outcome['variants'] ?? 0, $outcome['fallback'] ?? 0, $outcome['open'] ?? 0);
+      $lines[] = sprintf('| %s | %d | %d | %d |', $form, $count, $outcome['variants'] ?? 0, $outcome['open'] ?? 0);
     }
     $lines[] = '';
     $lines[] = '**Candidate values per variants expression**';

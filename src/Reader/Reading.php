@@ -96,8 +96,8 @@ final class Reading {
    * @param string|null $by
    *   The key that decides it, by name; NULL when none can be read.
    * @param string $became
-   *   What the reader declared for it: `variants`, `fallback <type>`, or
-   *   `open`, a value of any shape (LeafRules::open()).
+   *   What the reader declared for it: `variants`, or `open`, a value of
+   *   any shape (LeafRules::open()).
    *
    * @return $this
    */

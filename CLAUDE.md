@@ -207,9 +207,11 @@ the record of the rework that brought the module to the pattern.
   reference to its open def, the frame closed with
   `unevaluatedProperties`, `x-surface.variantsMixedIn` naming the defs;
   the table on the frame is `MixinVariants`. Config schema's own-key
-  form, `views.sort.[plugin_id]`, is read into it, and a key the reader
-  derives no shape for is declared open (`LeafRules::open()`)
-  (`docs/resources.md#variants-mixed-in`,
+  form, `views.sort.[plugin_id]`, is not read into it: as of 2026-11-06
+  `ConfigSchemaReader` reads it as variants at `configuration`
+  (`ConfigSchemaReader::CHOSEN`), stored flat
+  (`docs/reading-a-schema.md#config-schema`,
+  `docs/resources.md#variants-mixed-in`,
   `docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key`).
 - **Variant**: one structure (or resource) among the variants, for one
   value of the deciding key, `#[Variant(of:, at:, for:)]`; `at` is the
@@ -267,8 +269,11 @@ the record of the rework that brought the module to the pattern.
   JSON Schema between (registered as `config_schema:<type>`, `:own` for
   its keys less those of its frame type, the type itself or one it
   extends, matched by keys; a caller's defaults laid over as a second
-  source), and `TypedDataReader`, a typed data definition; `LeafRules`
-  holds what both share and `Reading` what no verb took, by path. A key
+  source; a type chosen by its own key, `condition.plugin.[id]`, the
+  fallback's keys and the chosen type's at `configuration`, stored flat
+  beside the own key), and `TypedDataReader`, a typed data definition;
+  `LeafRules` holds what both share and `Reading` what no verb took, by
+  path. A key
   either reads no shape for is declared **open**, `any` held whole to
   nothing (`LeafRules::open()`), since a derived structure is closed.
   `Variants\ConfigSchemaTypes` lists the variants a type named through
@@ -689,7 +694,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1917, Assertions: 45341, Errors: 0, Failures: 0, Skipped: 3. Classes: 266 of 266, 8 at a time, browser classes 4.
+phpunit: Tests: 1918, Assertions: 45370, Errors: 0, Failures: 0, Skipped: 3. Classes: 266 of 266, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -709,7 +714,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1809, Assertions: 41192, Skipped: 3, Deprecations: 130. Classes:
+`Tests: 1810, Assertions: 41221, Skipped: 3, Deprecations: 130. Classes:
 217, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 

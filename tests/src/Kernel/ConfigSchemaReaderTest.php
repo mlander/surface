@@ -11,12 +11,18 @@ use Drupal\surface\Pipeline\UnknownKeysException;
 use Drupal\surface\Pipeline\VariantMismatchException;
 use Drupal\surface\Reader\ConfigSchemaReader;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Storage\FlatVariantsLayout;
 use Drupal\surface\Storage\HeldToConfigSchemaTrait;
+use Drupal\surface\Storage\StoredSchemaInterface;
 use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Variants;
 use Drupal\surface\Variants\ConfigSchemaTypes;
+use Drupal\surface_reader_test\Resource\ConditionHostResource;
+use Drupal\surface_reader_test\Storage\ConditionHostStorage;
 use Drupal\Tests\surface\Kernel\Reader\RecordingBlueprint;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\surface\Traits\SchemaRoundTripTrait;
+use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
@@ -43,6 +49,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
 
   use ContractValidationTrait;
   use SchemaRoundTripTrait;
+  use UserCreationTrait;
 
   /**
    * {@inheritdoc}
@@ -294,48 +301,52 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a type chosen by its own key: the fallback's keys, the rest mixed in.
+   * Tests a type chosen by its own key: the fallback's keys, then the rest.
    *
    * `condition.plugin.[id]` is one structure: the keys of
-   * `condition.plugin`, which every condition holds, then the condition
-   * the id chooses, less those keys, mixed in flat beside them.
+   * `condition.plugin`, which every condition holds, then, at
+   * `configuration`, the variants the id chooses, each the condition less
+   * those keys, stored flat beside them.
    *
    * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
    */
-  public function testOwnKeyTypeMixesItsVariantsIn(): void {
+  public function testOwnKeyTypeHoldsItsVariantsAtConfiguration(): void {
     $reader = $this->container->get(ConfigSchemaReader::class);
     $inputs = new RecordingBlueprint();
     $reader->read('condition.plugin.[id]', $inputs);
     $fallback = array_keys($reader->keysOf('condition.plugin'));
-    $this->assertSame($fallback, array_keys($inputs->keys), 'The keys every condition holds.');
-    $this->assertSame([
-      [
-        'by' => 'id',
-        'from' => ConfigSchemaTypes::class,
-        'arguments' => ['type' => 'condition.plugin.[id]'],
-        'after' => end($fallback),
-      ],
-    ], $inputs->mixedInVariants, 'Then the variants the id chooses, bound to the expression.');
+    $this->assertSame([...$fallback, ConfigSchemaReader::CHOSEN], array_keys($inputs->keys), 'The keys every condition holds, then the key the chosen one is asked under.');
+    $chosen = $inputs->keys[ConfigSchemaReader::CHOSEN];
+    $this->assertSame('attachVariants', $chosen['verb']);
+    $this->assertSame(['id', ConfigSchemaTypes::class], [$chosen['by'], $chosen['from']], 'The variants the id chooses.');
+    $this->assertSame(['type' => 'condition.plugin.[id]'], $chosen['arguments'], 'Bound to the expression.');
+    $this->assertSame(Variants::FLAT, $chosen['definition']->getSetting(Variants::STORED_AS), 'Stored flat beside the id.');
+    $this->assertSame([], $inputs->mixedInVariants, 'Nothing mixed in.');
 
     $name = $reader->structure('condition.plugin.[id]');
     $this->assertSame('config_schema:condition.plugin.[id]', $this->container->get('surface.resource_registry')->getDefinition($name)->id);
     $full = $this->full($name);
-    $this->assertSame($fallback, array_keys($full['properties']), 'The fallback\'s keys alone: a member is stated by its variant\'s def.');
-    $this->assertFalse($full['unevaluatedProperties']);
+    $this->assertSame([...$fallback, ConfigSchemaReader::CHOSEN], array_keys($full['properties']));
+    $this->assertArrayNotHasKey('variantsMixedIn', $full['x-surface'] ?? []);
     $listed = $this->container->get(ConfigSchemaTypes::class)->listFor(['type' => 'condition.plugin.[id]', 'by' => 'id'])->entries();
     $this->assertNotEmpty($listed);
+    $variants = $full['properties'][ConfigSchemaReader::CHOSEN]['x-surface']['variants'];
+    $this->assertSame(array_keys($listed), array_map('strval', array_keys($variants)));
     $branches = [];
     foreach ($full['allOf'] as $conditional) {
-      $branches[$conditional['if']['properties']['id']['const']] = SchemaResolver::defName($conditional['then']['allOf'][0]['$ref']);
+      $branches[$conditional['if']['properties']['id']['const']] = SchemaResolver::defName($conditional['then']['properties'][ConfigSchemaReader::CHOSEN]['$ref']);
     }
+    $this->assertCount(count($listed), $branches, 'One conditional per variant, on the id.');
     foreach (array_keys($listed) as $id) {
       $type = $reader->determine('condition.plugin.' . $id);
-      $this->assertSame(ConfigSchemaReader::id((string) $type, '', 'condition.plugin'), $branches[(string) $id] ?? NULL, $id . ' is one conditional, its def the type less the fallback\'s keys.');
+      $def = ConfigSchemaReader::id((string) $type, '', 'condition.plugin');
+      $this->assertSame($def, $branches[(string) $id] ?? NULL, $id . ' is one conditional, its def the type less the fallback\'s keys.');
+      $this->assertSame($def, SchemaResolver::defName($variants[$id]));
     }
-    $this->assertSame(array_keys($listed), array_map('strval', array_keys($full['x-surface']['variantsMixedIn']['id'])));
 
-    // A plugin's own key under it, accepted; under another, refused.
+    // A condition's own key under the key, accepted; under another, refused.
     $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
+    $this->assertTrue($built->getDefinitions()->entry(ConfigSchemaReader::CHOSEN)->variants->storedFlat());
     $refusals = function (array $value) use ($built): array {
       $accepted = $this->pipeline()->accept($built, $value, []);
       $messages = [];
@@ -344,11 +355,18 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
       }
       return $messages;
     };
-    $this->assertSame([], $refusals(['id' => 'request_path', 'negate' => FALSE, 'pages' => '/node']));
-    $refused = $refusals(['id' => 'user_role', 'negate' => FALSE, 'pages' => '/node']);
-    $this->assertSame(['pages' => 'pages does not apply when ID is User Role.'], $refused);
-    $this->assertTrue($this->validates($full, ['id' => 'request_path', 'negate' => FALSE, 'pages' => '/node']));
-    $this->assertFalse($this->validates($full, ['id' => 'user_role', 'negate' => FALSE, 'pages' => '/node']), 'A validator refuses it too: no conditional evaluates it.');
+    $path = ['id' => 'request_path', 'negate' => FALSE, ConfigSchemaReader::CHOSEN => ['pages' => '/node']];
+    $this->assertSame([], $refusals($path));
+    $role = ['id' => 'user_role'] + $path;
+    try {
+      $refusals($role);
+      $this->fail('Another condition\'s keys are accepted.');
+    }
+    catch (VariantMismatchException $e) {
+      $this->assertSame('The value at configuration is shaped for another variant than "user_role", which id chose: pages.', $e->getMessage());
+    }
+    $this->assertTrue($this->validates($full, $path));
+    $this->assertFalse($this->validates($full, $role), 'A validator refuses it too: the user role\'s def is closed.');
   }
 
   /**
@@ -356,21 +374,26 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
    *
    * The test module's formatted handler holds `settings`, typed by its own
    * `format` (`[%parent.format]`), as views.field.field holds its
-   * formatter's settings: mixed in, the format is the handler's key and
-   * the settings the handler's variants at that key, settled when read.
+   * formatter's settings: the format and the settings are the formatted
+   * variant's keys at `configuration`, the settings that variant's
+   * variants at a key, settled when read.
    *
    * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
    */
   public function testOwnKeyTypeHoldsVariants(): void {
     $reader = $this->container->get(ConfigSchemaReader::class);
-    $expression = ConfigSchemaReader::expression('surface_reader_test.handler.[plugin_id]');
-    $this->assertNull($reader->ownKeyWall($expression, (string) $reader->fallbackOf($expression)), 'Variants at a key are no wall.');
     $name = $reader->structure('surface_reader_test.handler.[plugin_id]');
     $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
     $map = $built->getDefinitions();
-    $this->assertSame(['plugin_id', 'format', 'settings', 'size'], $map->names());
-    $this->assertSame('format', $map->entry('settings')->variants?->by);
-    $this->assertSame(['bold', 'italic'], array_map('strval', array_keys($map->entry('settings')->variants->variants)));
+    $this->assertSame(['plugin_id', ConfigSchemaReader::CHOSEN], $map->names());
+    $handlers = $map->entry(ConfigSchemaReader::CHOSEN)->variants;
+    $this->assertSame('plugin_id', $handlers?->by);
+    $this->assertSame(['formatted', 'plain'], $handlers->variantIds());
+    $formatted = $handlers->variant('formatted')->child->getDefinitions();
+    $this->assertSame(['format', 'settings'], $formatted->names());
+    $this->assertSame('format', $formatted->entry('settings')->variants?->by);
+    $this->assertSame(['bold', 'italic'], $formatted->entry('settings')->variants->variantIds());
+    $this->assertSame(['size'], $handlers->variant('plain')->child->getDefinitions()->names());
     $refusals = function (array $value) use ($built): array {
       $accepted = $this->pipeline()->accept($built, $value, []);
       $messages = [];
@@ -379,40 +402,69 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
       }
       return $messages;
     };
-    $this->assertSame([], $refusals(['plugin_id' => 'formatted', 'format' => 'bold', 'settings' => ['weight' => 700]]), 'A stored handler, its settings nested.');
-    $this->assertSame([], $refusals(['plugin_id' => 'formatted', 'format' => 'italic', 'settings' => ['slant' => 12]]));
-    $this->assertSame([], $refusals(['plugin_id' => 'plain', 'size' => 3]));
-    $plain = ['plugin_id' => 'plain', 'settings' => ['weight' => 700]];
-    $this->assertSame(['settings' => 'Settings does not apply when Plugin is Plain.'], $refusals($plain));
-    try {
-      $refusals(['plugin_id' => 'formatted', 'format' => 'italic', 'settings' => ['weight' => 700]]);
-      $this->fail('Another format\'s settings are accepted.');
-    }
-    catch (VariantMismatchException $e) {
-      $this->assertSame('The value at settings is shaped for another variant than "italic", which format chose: weight.', $e->getMessage());
+    $handler = static fn (string $plugin_id, array $chosen): array => [
+      'plugin_id' => $plugin_id,
+      ConfigSchemaReader::CHOSEN => $chosen,
+    ];
+    $bold = ['format' => 'bold', 'settings' => ['weight' => 700]];
+    $this->assertSame([], $refusals($handler('formatted', $bold)), 'A handler, its settings nested in its variant.');
+    $this->assertSame([], $refusals($handler('formatted', ['format' => 'italic', 'settings' => ['slant' => 12]])));
+    $this->assertSame([], $refusals($handler('plain', ['size' => 3])));
+    $mismatches = [
+      [
+        'plain',
+        ['settings' => ['weight' => 700]],
+        'The value at configuration is shaped for another variant than "plain", which plugin_id chose: settings.',
+      ],
+      [
+        'formatted',
+        ['format' => 'italic'] + $bold,
+        'The value at configuration.settings is shaped for another variant than "italic", which format chose: weight.',
+      ],
+    ];
+    foreach ($mismatches as [$plugin_id, $chosen, $message]) {
+      try {
+        $refusals($handler($plugin_id, $chosen));
+        $this->fail('Another variant\'s keys are accepted.');
+      }
+      catch (VariantMismatchException $e) {
+        $this->assertSame($message, $e->getMessage());
+      }
     }
   }
 
   /**
-   * Tests two types declaring one key unlike are mixed in, the key held apart.
+   * Tests two types declaring one key unlike each keep their own definition.
    *
-   * The test module's signal declares its pattern a string in one type and
-   * a mapping in the other, as views.area.text and views.area.text_custom
-   * declare their content: one key of the structure's, any value, held to
-   * the type its kind chooses.
+   * Each variant is whole in its own frame, so nothing holds the two
+   * definitions together. views.field.field's `separator` is a `label`,
+   * with core's Regex, and views.field.user_roles' (from
+   * views.field.prerender_list) a plain `string`; the test module's signal
+   * declares its pattern a string in one type and a mapping in the other,
+   * as views.area.text and views.area.text_custom declare their content.
    *
    * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
    */
-  public function testOwnKeyTypesDeclaringKeyUnlikeAreMixedIn(): void {
+  public function testOwnKeyTypesDeclaringKeyUnlikeKeepTheirOwn(): void {
+    $this->enableModules(['views']);
+    $this->container->get('config.typed')->clearCachedDefinitions();
     $reader = $this->container->get(ConfigSchemaReader::class);
-    $expression = ConfigSchemaReader::expression('surface_reader_test.signal.[kind]');
-    $this->assertNull($reader->ownKeyWall($expression, (string) $reader->fallbackOf($expression)), 'A key two types declare unlike is no wall.');
+    $resources = $this->container->get('surface.resources');
+    $fields = $resources->buildStatic($reader->structure('views.field.[plugin_id]'), new OperationContext('configure'))
+      ->getDefinitions()->entry(ConfigSchemaReader::CHOSEN)->variants;
+    $field = $fields->variant('field')->child->getDefinition('separator');
+    $roles = $fields->variant('user_roles')->child->getDefinition('separator');
+    $this->assertSame(['string', 'string'], [$field->getDataType(), $roles->getDataType()]);
+    $this->assertArrayHasKey('Regex', $field->getConstraints(), 'The field\'s separator is a label, held to its Regex.');
+    $this->assertArrayNotHasKey('Regex', $roles->getConstraints(), 'The roles\' separator is a plain string.');
+
     $name = $reader->structure('surface_reader_test.signal.[kind]');
-    $built = $this->container->get('surface.resources')->buildStatic($name, new OperationContext('configure'));
+    $built = $resources->buildStatic($name, new OperationContext('configure'));
     $map = $built->getDefinitions();
-    $this->assertSame(['kind', 'pattern'], $map->names());
-    $this->assertSame(['pattern'], $map->mixinVariants()[0]->heldTo);
-    $this->assertSame('any', $map->get('pattern')->getDataType());
+    $this->assertSame(['kind', ConfigSchemaReader::CHOSEN], $map->names());
+    $signals = $map->entry(ConfigSchemaReader::CHOSEN)->variants;
+    $this->assertSame('string', $signals->variant('word')->child->getDefinition('pattern')->getDataType());
+    $this->assertSame('map', $signals->variant('timed')->child->getDefinition('pattern')->getDataType(), 'A mapping in the timed signal.');
     $refusals = function (array $value) use ($built): array {
       try {
         $accepted = $this->pipeline()->accept($built, $value, []);
@@ -426,10 +478,43 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
       }
       return $messages;
     };
-    $this->assertSame([], $refusals(['kind' => 'word', 'pattern' => 'dot dash']), 'Each stored shape, under its kind.');
-    $this->assertSame([], $refusals(['kind' => 'timed', 'pattern' => ['on' => 2, 'off' => 1]]));
-    $mismatch = ['pattern' => 'The value at "pattern" must be of type map, string given.'];
-    $this->assertSame($mismatch, $refusals(['kind' => 'timed', 'pattern' => 'dot dash']), 'The string under the mapping\'s kind.');
+    $this->assertSame([], $refusals(['kind' => 'word', ConfigSchemaReader::CHOSEN => ['pattern' => 'dot dash']]), 'Each shape, under its kind.');
+    $timed = ['pattern' => ['on' => 2, 'off' => 1]];
+    $this->assertSame([], $refusals(['kind' => 'timed', ConfigSchemaReader::CHOSEN => $timed]));
+    $mismatch = ['configuration.pattern' => 'The value at "configuration.pattern" must be of type map, string given.'];
+    $this->assertSame($mismatch, $refusals(['kind' => 'timed', ConfigSchemaReader::CHOSEN => ['pattern' => 'dot dash']]), 'The string under the mapping\'s kind.');
+  }
+
+  /**
+   * Tests an own-key structure's values are stored flat, as core stores them.
+   *
+   * The test module's condition host attaches `condition.plugin.[id]` at
+   * `condition`, in a config object typed by core's own-key form: the
+   * request path's pages are stored beside its id, read under
+   * `configuration`, and written back beside the id.
+   *
+   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   */
+  public function testOwnKeyStructureIsStoredFlat(): void {
+    $this->installConfig(['surface_reader_test']);
+    $this->setUpCurrentUser([], ['administer site configuration']);
+    $config = ConditionHostStorage::CONFIG;
+    $this->assertSame(['id' => 'request_path', 'negate' => FALSE, 'pages' => '/node/*'], $this->config($config)->get('condition'), 'As installed: the pages beside the id.');
+
+    $resources = $this->container->get('surface.resources');
+    $context = $resources->operation(ConditionHostResource::class, 'configure');
+    $built = $resources->build(ConditionHostResource::class, $context);
+    $this->assertSame(['condition.' . ConfigSchemaReader::CHOSEN => StoredSchemaInterface::SPREAD], FlatVariantsLayout::storedSchemaOf($built));
+    $storage = $resources->storage(ConditionHostResource::class, $context, $built);
+    $this->assertSame(['id' => 'request_path', 'negate' => FALSE, ConfigSchemaReader::CHOSEN => ['pages' => '/node/*']], $storage->load($built)['condition'], 'Read: the pages under configuration.');
+
+    $condition = ['id' => 'request_path', 'negate' => TRUE, ConfigSchemaReader::CHOSEN => ['pages' => '/user/*']];
+    $result = $this->pipeline()->submit($built, ['condition' => $condition], $storage);
+    $this->assertTrue($result->isValid(), (string) json_encode(array_map(static fn ($violation): string => $violation->fullPath() . ': ' . strip_tags((string) $violation->message), iterator_to_array($result->violations))));
+    $this->assertSame(['id' => 'request_path', 'negate' => TRUE, 'pages' => '/user/*'], $this->config($config)->get('condition'), 'Written beside the id, nothing at configuration.');
+    $this->assertSame($condition, $resources->storage(ConditionHostResource::class, $context, $built)->load($built)['condition']);
+    $typed = $this->container->get('config.typed');
+    $this->assertCount(0, $typed->createFromNameAndData($config, $this->config($config)->getRawData())->validate(), 'Core reads it through the request path\'s own type.');
   }
 
   /**

@@ -23,7 +23,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * @code
  * $inputs->attachVariants('settings', by: 'type', from: ConfigSchemaTypes::class, arguments: ['type' => 'field.storage.*.*', 'path' => 'settings', 'by' => 'type']);
- * $inputs->mixInVariants('plugin_id', from: ConfigSchemaTypes::class, arguments: ['type' => 'views.field.[plugin_id]']);
+ * $inputs->attachVariants(ConfigSchemaReader::CHOSEN, by: 'plugin_id', from: ConfigSchemaTypes::class, arguments: ['type' => 'views.field.[plugin_id]'])
+ *   ->setSetting(Variants::STORED_AS, Variants::FLAT);
  * @endcode
  *
  * It resolves the expression as core's TypeResolver does, each value's
@@ -40,7 +41,8 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * For `[<key>]`, a type chosen by a key inside the value, each variant is
  * the type less the keys of its fallback, which the frame declares:
- * ConfigSchemaReader mixes them in flat beside those keys.
+ * ConfigSchemaReader attaches them at `configuration`, stored flat beside
+ * those keys.
  *
  * Where the values are a plugin manager's, a plugin whose class names its
  * settings with #[UsesStructure] is that structure, built as declared, and

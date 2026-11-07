@@ -247,8 +247,10 @@ the same way, with no JSON Schema between: a mapping is a map or an
 attached structure, a sequence a list or a collection, a type named
 through a sibling (`[%parent.<key>]`) variants at the key, and a type
 chosen by a key inside its own value (`views.sort.[plugin_id]`) the
-fallback's keys with the chosen type's mixed in flat beside them
-(`mixInVariants()`).
+fallback's keys plus `configuration` (`ConfigSchemaReader::CHOSEN`):
+the variants the own key chooses, asked for under `configuration` and
+stored flat beside the own key, as core stores them
+(`attachVariants(ConfigSchemaReader::CHOSEN, ...)->setSetting(Variants::STORED_AS, Variants::FLAT)`).
 
 **A key the schema declares is always declared.** A derived structure
 is closed, so a key left out would refuse the stored value that holds
@@ -261,20 +263,13 @@ both documents write it with its title and no type. The reason is still
 noted at the key's path (`Reading::left()`)
 (why: [decision](decisions.md#a-schema-can-be-read-back-into-a-structure)).
 
-**When the variants are not mixed in.** A type chosen by its own key
-mixes its variants in unless the build would refuse them
-(`ConfigSchemaReader::ownKeyWall()`): two types that declare one key
-unlike where one holds variants at it. A variant may hold children,
-maps and variants at a key, and two may declare one key unlike: the
-structure declares it as wide as both, and holds it to the chosen type's
-own definition. Where the build would refuse, the frame holds the
-fallback's keys, and every key a chosen type declares beside them open.
-In core every one mixes them in: `views.field.[plugin_id]` holds `separator`
-to a `label`, with its `Regex`, under `views.field.field` and to a
-plain `string` under `views.field.prerender_list`, `views.cache.[type]`
-holds `options` to any value under `none` and `tag` and to a mapping
-under `time`, and `views.area.[plugin_id]` holds `content` to a
-`text_format` mapping under `text` and to a `text` under `text_custom`
+**Each variant in its own frame.** Under `configuration` each variant is
+its type whole, less the fallback's keys, so two types that declare one
+key unlike each keep their own definition: `views.field.field` holds
+`separator` to a `label`, with its `Regex`, and `views.field.user_roles`
+(from `views.field.prerender_list`) to a plain `string`. A variant may
+hold children, maps and variants at a key of its own, as
+`views.field.field` holds its formatter's `settings`
 (why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key)).
 
 **Which structure each value is.** `Variants\ConfigSchemaTypes` lists the
