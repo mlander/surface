@@ -6,13 +6,18 @@ namespace Drupal\surface_stage_test\Storage;
 
 use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
  * Keeps the vault note in a key-value collection, secret and all.
+ *
+ * It declares a transaction rolls its writes back whole, so a stage
+ * refuses it for its secret and nothing before.
  */
-final class VaultNoteStorage implements ResourceStorageInterface {
+final class VaultNoteStorage implements ResourceStorageInterface, TransactionalStorageInterface {
 
   /**
    * The key-value collection and key the note is kept under.
@@ -23,9 +28,12 @@ final class VaultNoteStorage implements ResourceStorageInterface {
    * Constructs a VaultNoteStorage.
    *
    * @param \Drupal\Core\KeyValueStore\KeyValueFactoryInterface $keyValue
-   *   The key-value factory, autowired.
+   *   The database's key-value factory, whatever the site's default is.
    */
-  public function __construct(protected readonly KeyValueFactoryInterface $keyValue) {}
+  public function __construct(
+    #[Autowire(service: 'keyvalue.database')]
+    protected readonly KeyValueFactoryInterface $keyValue,
+  ) {}
 
   /**
    * {@inheritdoc}
@@ -47,6 +55,13 @@ final class VaultNoteStorage implements ResourceStorageInterface {
    */
   public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     $this->keyValue->get(self::COLLECTION)->set('note', $prepared);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function rolledBack(): void {
+    // The database's key-value collection keeps no cache to drop.
   }
 
 }

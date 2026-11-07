@@ -13,6 +13,7 @@ use Drupal\surface\Pipeline\DeletingStorageInterface;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Drupal\surface\Pipeline\PreparedValues;
 use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Reference\ReferenceStorageLayout;
 use Drupal\surface\Reference\References;
@@ -322,6 +323,26 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
     $this->written('commit', $own);
     foreach ($after as [$route, $child_prepared]) {
       $route->withParentIdentity($known)->commit($child_prepared);
+    }
+  }
+
+  /**
+   * Tells the storage, and each routed child's, of a rollback.
+   *
+   * For an apply whose transaction was rolled back after this adapter
+   * committed into it: each storage that implements
+   * TransactionalStorageInterface drops what it cached beside the
+   * database. The instance told is the one that wrote, which a storage
+   * that is no service shares with no other adapter.
+   */
+  public function rolledBack(): void {
+    if ($this->storage instanceof TransactionalStorageInterface) {
+      $this->storage->rolledBack();
+    }
+    foreach ($this->routes as $variants) {
+      foreach ($variants as $route) {
+        $route->rolledBack();
+      }
     }
   }
 

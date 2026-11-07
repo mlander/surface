@@ -22,9 +22,12 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\ResourceBuild\StorageAdapter;
 use Drupal\surface\Staging\StageRaceException;
 use Drupal\surface\Staging\StageStore;
 use Drupal\surface\SurfaceAccess;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -34,8 +37,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * context's id:
  *
  * - create rehearses a new record, open and empty, owned by the account
- *   it is written as, and commit writes it; a load after it, in a context
- *   that knows no id, reads the stage just opened, so `id` answers.
+ *   it is written as, and commit writes it under the new id's lock; a load
+ *   after it, in a context that knows no id, reads the stage just opened,
+ *   so `id` answers.
  * - update changes the label, under the stage's lock.
  * - changes lists the staged writes, from prepare, writing nothing.
  * - apply rehearses every staged write in prepare, with no lock and no
@@ -46,8 +50,16 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   together. Commit takes the lock, checks the record and the tokens
  *   again, commits each rehearsed write in staging order in one database
  *   transaction, and marks the record applied, which it keeps until it
- *   expires so the stage still answers after an apply.
- * - delete removes the record, open or applied.
+ *   expires so the stage still answers after an apply. A write that
+ *   throws rolls the transaction back, and the storage of each write
+ *   whose commit had started is told (TransactionalStorageInterface).
+ * - delete removes the record, open or applied, under the stage's lock.
+ *
+ * Every write of a record takes the stage's lock, so two writes of one
+ * record never interleave while the lock lasts (core's 30 seconds). The
+ * writes that change a record already there, a staged write's commit,
+ * update and apply, read it again under the lock; a create writes a new
+ * id no other request names, and a delete of a record gone is done.
  *
  * The context methods of the stage's operations call named(), so an id
  * that names no stage names nothing at every door.
@@ -91,6 +103,8 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    *   The database, whose transaction holds an apply's writes.
    * @param \Drupal\Component\Uuid\UuidInterface $uuid
    *   What gives a new stage its id.
+   * @param \Psr\Log\LoggerInterface $logger
+   *   The module's log, for a storage that fails to hear of a rollback.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
@@ -100,6 +114,8 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
     protected readonly SurfacePipelineInterface $pipeline,
     protected readonly Connection $database,
     protected readonly UuidInterface $uuid,
+    #[Autowire(service: 'logger.channel.surface')]
+    protected readonly LoggerInterface $logger,
     TranslationInterface $string_translation,
   ) {
     $this->stringTranslation = $string_translation;
@@ -115,6 +131,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
       $container->get('surface.pipeline'),
       $container->get('database'),
       $container->get('uuid'),
+      $container->get('logger.channel.surface'),
       $container->get('string_translation'),
     );
   }
@@ -192,8 +209,17 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    */
   public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
     if ($context->creates) {
-      $this->stages->write($prepared);
-      $this->committed = (string) $prepared['id'];
+      $id = (string) $prepared['id'];
+      if (!$this->stages->lock($id)) {
+        throw new StageRaceException(sprintf('The stage "%s" is being written by another request.', $id));
+      }
+      try {
+        $this->stages->write($prepared);
+      }
+      finally {
+        $this->stages->release($id);
+      }
+      $this->committed = $id;
       return;
     }
     if ($context->id === 'apply') {
@@ -217,9 +243,22 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
 
   /**
    * {@inheritdoc}
+   *
+   * Under the stage's lock, so a delete never lands while an apply holds
+   * the record, which would write it back as applied. A record gone by
+   * then is gone: a delete is idempotent.
    */
   public function delete(OperationContext $context, array $prepared, AccountInterface $account): void {
-    $this->stages->delete((string) $prepared['id']);
+    $id = (string) $prepared['id'];
+    if (!$this->stages->lock($id)) {
+      throw new StageRaceException(sprintf('The stage "%s" is being written by another request.', $id));
+    }
+    try {
+      $this->stages->delete($id);
+    }
+    finally {
+      $this->stages->release($id);
+    }
   }
 
   /**
@@ -317,6 +356,16 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
         $refused[] = new Violation('writes', $at, $this->t('@thing names nothing now.', ['@thing' => $thing]), Violation::NOT_FOUND);
         continue;
       }
+      // The arguments the stage recorded build no operation: a parameter
+      // missing, or an operation the resource no longer has.
+      catch (\InvalidArgumentException $e) {
+        $why = $this->t('@thing cannot be built from what the stage recorded: @why', [
+          '@thing' => $thing,
+          '@why' => $e->getMessage(),
+        ]);
+        $refused[] = new Violation('writes', $at, $why, Violation::DOES_NOT_APPLY);
+        continue;
+      }
       $access = $this->resources->access($resource, $context, $account);
       if (!$access->isAllowed()) {
         $permission = $this->resources->permissionAccess($resource, (string) $write['operation'], $account, $context);
@@ -365,12 +414,20 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
   /**
    * Makes every rehearsed write, in order, in one transaction.
    *
+   * Under the stage's lock, the record read again by locked(): a stage
+   * deleted before the lock was had is a race, and none is deleted while
+   * it is held, so a deleted stage is never written back as applied
+   * unless the apply outlasts the lock (core's 30 seconds). A write that
+   * throws rolls the transaction back, and then the storage of each write
+   * whose commit had started, the last first, drops what it cached beside
+   * the database.
+   *
    * @param array $prepared
    *   What rehearse() returned.
    *
    * @throws \Drupal\surface\Staging\StageRaceException
-   *   When the lock cannot be had, or the record or what a write was
-   *   staged against moved since the rehearsal.
+   *   When the lock cannot be had, or the record is gone, or the record or
+   *   what a write was staged against moved since the rehearsal.
    * @throws \Throwable
    *   What a write threw, after every write was rolled back.
    */
@@ -386,8 +443,10 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
       }
       $transaction = $this->database->startTransaction();
       $applied = [];
+      $started = [];
       try {
         foreach ($prepared['plan'] as $index => $entry) {
+          $started[] = $entry;
           $result = $entry['result'];
           assert($result instanceof SurfaceResult);
           $committed = $this->pipeline->commitDryRun($result, $entry['storage']);
@@ -400,6 +459,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
       }
       catch (\Throwable $e) {
         $transaction->rollBack();
+        $this->tellRolledBack($started, (string) $record['id']);
         throw $e;
       }
       $transaction->commitOrRelease();
@@ -411,6 +471,37 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
       $record['writes'] = [];
       $this->stages->write($record);
     });
+  }
+
+  /**
+   * Tells the storage of each write whose commit had started of a rollback.
+   *
+   * The last first, each through the adapter that committed it, which
+   * holds the storage instance that wrote (StorageAdapter::rolledBack()).
+   * What one throws is logged and the others are still told: the
+   * throwable the apply rethrows is the write's.
+   *
+   * @param list<array> $entries
+   *   The plan entries whose commit had started, in order.
+   * @param string $id
+   *   The stage's id, for the log.
+   */
+  protected function tellRolledBack(array $entries, string $id): void {
+    foreach (array_reverse($entries) as $entry) {
+      if (!$entry['storage'] instanceof StorageAdapter) {
+        continue;
+      }
+      try {
+        $entry['storage']->rolledBack();
+      }
+      catch (\Throwable $e) {
+        $this->logger->error('Applying the stage @id was rolled back, and the storage of @resource failed to drop what it cached: @message', [
+          '@id' => $id,
+          '@resource' => $entry['resource'],
+          '@message' => $e->getMessage(),
+        ]);
+      }
+    }
   }
 
   /**

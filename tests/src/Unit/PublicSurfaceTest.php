@@ -72,6 +72,16 @@ use PHPUnit\Framework\Attributes\Group;
  * chosen keys beside the deciding key is a setting on that key,
  * Variants::STORED_AS, which the engine's layout reads: 17 methods, 27
  * attributes, 110 arguments.
+ * Grown on 2026-11-07 by one interface outside `src/Resource/`,
+ * TransactionalStorageInterface in `src/Pipeline/`, with its one method,
+ * rolledBack(): a storage declares that a database transaction undoes
+ * its writes whole, and only such a storage may be staged; a class list
+ * of what to refuse could not hold, since any storage may save config or
+ * write State in its own code
+ * (docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection).
+ * The four counts above are unchanged; the storage interfaces of
+ * `src/Pipeline/` are pinned beside them, by name and method, from this
+ * date.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -96,6 +106,16 @@ class PublicSurfaceTest extends UnitTestCase {
     'attribute arguments' => 110,
     'blueprint methods' => 17,
     'interfaces' => 22,
+  ];
+
+  /**
+   * The interfaces a storage implements in `src/Pipeline/`, with their methods.
+   */
+  protected const PIPELINE_STORAGE = [
+    'CreatingStorageInterface' => ['creates'],
+    'DeletingStorageInterface' => ['deletes'],
+    'SurfaceStorageInterface' => ['commit', 'load', 'prepare'],
+    'TransactionalStorageInterface' => ['rolledBack'],
   ];
 
   /**
@@ -139,6 +159,30 @@ class PublicSurfaceTest extends UnitTestCase {
         implode(', ', $counted[$kind]),
       ));
     }
+  }
+
+  /**
+   * Tests the storage interfaces of the pipeline are the ones pinned.
+   *
+   * Each is a promise a storage class makes, and each method its own:
+   * one added or removed fails here until this test says why.
+   */
+  public function testThePipelineStorageInterfacesArePinned(): void {
+    $found = [];
+    foreach (glob(__DIR__ . '/../../../src/Pipeline/*StorageInterface.php') ?: [] as $file) {
+      $name = basename($file, '.php');
+      $reflection = new \ReflectionClass('Drupal\\surface\\Pipeline\\' . $name);
+      $methods = [];
+      foreach ($reflection->getMethods() as $method) {
+        if ($method->getDeclaringClass()->getName() === $reflection->getName()) {
+          $methods[] = $method->getName();
+        }
+      }
+      sort($methods);
+      $found[$name] = $methods;
+    }
+    ksort($found);
+    $this->assertSame(self::PIPELINE_STORAGE, $found, 'Say why a storage interface of the pipeline changed, and pin it here and in docs/decisions.md#the-surface-was-counted-and-cut.');
   }
 
 }

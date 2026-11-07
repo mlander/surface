@@ -30,9 +30,11 @@ use Symfony\Component\DependencyInjection\Reference;
  * each is filed under `/writes/<position>` and nothing is written. Then
  * it writes them all in order and marks the stage applied, keeping its
  * record. A dry run writes nothing and holds no lock; a record that moved
- * between the rehearsal and the writes is a race; a write that fails
- * rolls back every write before it; only the keys the stage moved are
- * sent, so a key it never moved keeps what is stored then.
+ * or was deleted between the rehearsal and the writes is a race; a write
+ * that fails rolls back every write before it, and each storage drops
+ * what it cached of them; arguments that build no operation are a
+ * violation of their write; only the keys the stage moved are sent, so a
+ * key it never moved keeps what is stored then.
  *
  * @see docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner
  */
@@ -232,6 +234,33 @@ class StageApplyTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests a stage deleted between the rehearsal and the writes is a race.
+   *
+   * The delete takes the stage's lock, so it lands before the apply has
+   * the lock or after it released it; before, the apply finds no record
+   * under the lock and writes nothing, the record never written back.
+   */
+  public function testStageDeletedBetweenPassesIsRace(): void {
+    $id = $this->open();
+    $this->retitle($id, 0, 'One, moved');
+    [$built, $storage] = $this->permanent('surface.stage', 'apply', ['id' => $id]);
+    $dry = $this->pipeline()->submit($built, [], $storage, TRUE);
+    $this->assertTrue($dry->isValid(), $this->said($dry));
+    $deleted = $this->runTool('surface:surface.stage:delete', ['id' => $id]);
+    $this->assertTrue($deleted['success'], $deleted['message']);
+    $this->assertNull($this->stages()->read($id));
+    try {
+      $this->pipeline()->commitDryRun($dry, $storage);
+      $this->fail('The stage was deleted between the passes.');
+    }
+    catch (StageRaceException $e) {
+      $this->assertStringContainsString($id, $e->getMessage());
+    }
+    $this->assertSame('One', $this->stored(0)->label(), 'Nothing was written.');
+    $this->assertNull($this->stages()->read($id), 'The deleted stage was not written back.');
+  }
+
+  /**
    * Tests a write whose thing changed refuses the whole apply, by position.
    */
   public function testConflictRefusesTheWholeApplyAndNamesTheWrite(): void {
@@ -315,6 +344,56 @@ class StageApplyTest extends SurfaceKernelTestBase {
     $this->assertSame(['a', 'b'], array_column($applied['outputs']['applied'], 'id'));
     $this->assertSame(['Alpha moved', 'alpha-moved'], [$this->row('a')['title'], $this->row('a')['slug']]);
     $this->assertSame(['Bravo moved', 'bravo-moved'], [$this->row('b')['title'], $this->row('b')['slug']]);
+  }
+
+  /**
+   * Tests a rolled back apply leaves no entity cached as it was written.
+   *
+   * The page's write commits, its outputs load the page into the entity
+   * storage's cache, and the ledger row after it throws: the transaction
+   * rolls the save back, and the content entity storage, told of the
+   * rollback, drops its cache of the page, so a load in the same request
+   * reads the stored title and not the staged one.
+   */
+  public function testRollbackDropsWhatWasCachedBesideTheDatabase(): void {
+    $this->ledger('a', 'Alpha');
+    $id = $this->open();
+    $this->retitle($id, 0, 'One, moved');
+    $result = $this->stage($id, 'stage_test.ledger', ['id' => 'a'], ['title' => 'Alpha moved']);
+    $this->assertTrue($result->committed, $this->said($result));
+    $this->container->get('state')->set(LedgerStorage::FAIL, 'a');
+    [$built, $storage] = $this->permanent('surface.stage', 'apply', ['id' => $id]);
+    try {
+      $this->pipeline()->submit($built, [], $storage);
+      $this->fail('The second write fails.');
+    }
+    catch (\RuntimeException $e) {
+      $this->assertSame('The ledger row "a" could not be written.', $e->getMessage());
+    }
+    $node = Node::load($this->nodes[0]->id());
+    $this->assertInstanceOf(NodeInterface::class, $node);
+    $this->assertSame('One', $node->getTitle(), 'The cache holds what the database holds.');
+    $this->assertSame('One', $this->stored(0)->label());
+    $this->assertSame('Alpha', $this->row('a')['title']);
+    $this->assertSame('open', $this->stages()->read($id)['status']);
+  }
+
+  /**
+   * Tests arguments that build no operation are a violation of their write.
+   */
+  public function testArgumentsThatBuildNothingAreViolation(): void {
+    $id = $this->open();
+    $this->retitle($id, 0, 'One, moved');
+    $record = $this->stages()->read($id);
+    $record['writes'][0]['arguments'] = ['nid' => $this->nodes[0]->id()];
+    $this->stages()->write($record);
+
+    $applied = $this->stageTool('apply', $id);
+    $this->assertFalse($applied['success']);
+    $this->assertSame(FailureCategory::Input, $applied['category']);
+    $this->assertSame(['/writes/1' => Violation::DOES_NOT_APPLY], static::toolCodes($applied));
+    $this->assertSame('One', $this->stored(0)->label(), 'Nothing was written.');
+    $this->assertSame($record, $this->stages()->read($id), 'The stage is open and intact.');
   }
 
   /**

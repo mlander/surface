@@ -17,6 +17,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Pipeline\ViolationMessage;
 use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
@@ -61,9 +62,14 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * add the bundle is the value the caller chose. A violation about a field
  * is then filed under that key.
  *
+ * A save is a write through the database connection alone, so a stage
+ * may hold this storage's writes: when an apply that saved an entity is
+ * rolled back, rolledBack() drops the entity storage's cache of it, so a
+ * load after it reads what the database holds.
+ *
  * Decision: see docs/decisions.md#the-content-entity-storage.
  */
-final class ContentEntityStorage implements ResourceStorageInterface, ContainerInjectionInterface {
+final class ContentEntityStorage implements ResourceStorageInterface, TransactionalStorageInterface, ContainerInjectionInterface {
 
   use DependencySerializationTrait;
   use StringTranslationTrait;
@@ -84,6 +90,13 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
    * @var array{0: string, 1: string, 2: int|string}|null
    */
   protected ?array $committed = NULL;
+
+  /**
+   * The entities a commit wrote since the last rollback, by entity type.
+   *
+   * @var array<string, array<int|string, int|string>>
+   */
+  protected array $written = [];
 
   /**
    * Constructs a ContentEntityStorage.
@@ -264,9 +277,28 @@ final class ContentEntityStorage implements ResourceStorageInterface, ContainerI
    * {@inheritdoc}
    */
   public function commit(OperationContext $context, array $prepared, AccountInterface $account): void {
+    $type = (string) $prepared['entity_type'];
+    // Before the save, so a save that throws after writing is reset too.
+    if ($prepared['id'] !== NULL) {
+      $this->written[$type][$prepared['id']] = $prepared['id'];
+    }
     $entity = $this->apply($prepared, $account);
     $entity->save();
+    $this->written[$type][$entity->id()] = $entity->id();
     $this->committed = [$prepared['entity_type'], $prepared['bundle'], $entity->id()];
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The entity storage's caches, static and persistent, of every entity a
+   * commit wrote since the last rollback.
+   */
+  public function rolledBack(): void {
+    foreach ($this->written as $type => $ids) {
+      $this->entityTypeManager->getStorage($type)->resetCache(array_values($ids));
+    }
+    $this->written = [];
   }
 
   /**
