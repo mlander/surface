@@ -305,6 +305,41 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests a chosen variant of which nothing is stored reads as an empty map.
+   *
+   * As variants under a key do: the pipeline writes a chosen variant as
+   * its defaults (Variants::defaultsOf()), an empty map for one that
+   * declares no keys, and a nested storage reads that map back. Stored
+   * flat, an empty map writes no key, so the layout reads the chosen
+   * variant as an empty map where the level holds the deciding key and
+   * the owner's keys alone (FlatVariantsLayout::gather()). With nothing
+   * chosen, nothing is read under the key.
+   */
+  public function testNothingOfTheChosenVariantReadsAsAnEmptyMap(): void {
+    $layout = FlatVariantsLayout::forSurface($this->kit());
+    $this->assertInstanceOf(FlatVariantsLayout::class, $layout);
+    $stored = ['title' => 'Bare kit', 'kind' => 'tent', 'notes' => ''];
+    $read = ['title' => 'Bare kit', 'kind' => 'tent', 'gear' => [], 'notes' => ''];
+    $this->assertSame($read, $layout->fromStorage($stored), 'Where the kit declares the gear, after the kind.');
+    $this->assertSame($stored, $layout->toStorage($read), 'An empty map writes no key.');
+    $no_notes = ['title' => 'Bare kit', 'kind' => 'tent'];
+    $this->assertSame($no_notes + ['gear' => []], $layout->fromStorage($no_notes), 'At the end, with no own key after it.');
+    $stale = ['title' => 'Bare kit', 'kind' => 'tent', 'stale' => 'x', 'notes' => ''];
+    $this->assertSame($read, $layout->fromStorage($stale), 'A key no variant declares is not read.');
+    $none = ['title' => 'Bare kit', 'notes' => ''];
+    $this->assertSame($none, $layout->fromStorage($none), 'Nothing chosen: no gear.');
+    $canoe = ['title' => 'Bare kit', 'kind' => 'canoe', 'notes' => ''];
+    $this->assertSame($canoe, $layout->fromStorage($canoe), 'No variant for the value: no gear.');
+
+    // In a collection's item the same.
+    $resources = $this->container->get('surface.resources');
+    $campsite = FlatVariantsLayout::forSurface($resources->build(CampsiteResource::class, $resources->operation(CampsiteResource::class, 'configure')));
+    $this->assertInstanceOf(FlatVariantsLayout::class, $campsite);
+    $read = $campsite->fromStorage(['title' => 'Lakeside', 'pitches' => [['name' => 'North', 'kind' => 'cot']]]);
+    $this->assertSame([['name' => 'North', 'kind' => 'cot', 'gear' => []]], $read['pitches']);
+  }
+
+  /**
    * Tests a leftover is kept, and a switch back writes defaults, not it.
    */
   public function testLeftoverIsKeptAndSwitchBackWritesDefaults(): void {

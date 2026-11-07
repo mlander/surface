@@ -22,7 +22,7 @@ final class FlatInnerStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('mode', 'string', 'Mode');
-    $inputs->attachVariants('inner', 'mode', 'Inner')
+    $inputs->attachVariants('inner', by: 'mode', label: 'Inner')
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
   }
 

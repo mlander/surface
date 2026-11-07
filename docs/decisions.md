@@ -3380,7 +3380,13 @@ core's own-key form into it. Each choice, and why:
   as `BlockPlacementStorage::fromEntity()` gathered a condition's
   settings by hand until the block example took the setting. Of what is
   gathered, the chosen variant's keys and the secrets the other variants
-  keep (`Variants::keptSecrets()`) are read under the key. A plain
+  keep (`Variants::keptSecrets()`) are read under the key; naming the
+  chosen keys settles the chosen variant, one the site lists included
+  (2026-11-07: until then a listed variant no door had settled read
+  every gathered key back, a block condition's stale key among them). A
+  chosen variant of which nothing is stored reads back as an empty map,
+  as an empty variant under a key does
+  ([An empty variant is an empty map](#an-empty-variant-is-an-empty-map)). A plain
   leftover of a variant not chosen stays in
   storage, unread: under the key, the pipeline would read the value as
   written for that other variant (`Variants::held()`), and a plain value

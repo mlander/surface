@@ -37,7 +37,7 @@ pages the third column names.
 | Is this group of keys mine alone, with no class of its own? | `addMap($key, $label, fn (BlueprintInterface $map) => ...)`: an anonymous map, the owner's own keys under the key, stored as a map; the schema is an inline object, with no def. | The desk's location, `/surface-examples/8/desk` | [An anonymous map](declaring-a-resource.md#an-anonymous-map) |
 | Are these keys shared members that are part of this thing? | `mixIn(Structure::class)`: a mixin, its members the owner's own keys, stored flat beside them; the schema is `allOf` of the structure's def and the owner's properties. | The review, `/surface-examples/8` | [Mixins](#mixins) |
 | Does a structure need a value its container holds? | `reads($port, $type)` in the structure, wired by `attach(..., reads: [$port => $key])`: a port, the value kept at the container's key and stored by nothing in the structure; the def lists its ports, and what depends on one is stated on the container's `allOf`. | The person's `listed`, `/surface-examples/8` and `/surface-examples/8/desk` | [Ports](#ports) |
-| Does one key's value choose which further keys apply? | `attachVariants($key, $sibling, $label)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. Stored flat beside the deciding key where the storage keeps it so, `->setSetting(Variants::STORED_AS, Variants::FLAT)`; the contract does not change ([Stored flat](#stored-flat)). | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
+| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling, label: $label)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. Stored flat beside the deciding key where the storage keeps it so, `->setSetting(Variants::STORED_AS, Variants::FLAT)`; the contract does not change ([Stored flat](#stored-flat)). | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
 | Does a group of keys repeat? | `attachList($key, Child::class, $label, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
 | Is there one key per thing the site has? | `addEach()` or `attachEach()` with a provider: keys from the site, a map under the key with one entry per thing the provider lists at every build; the schema states every entry, the map a def of the owner's. | The ticket types, `/surface-examples/9` | [Keys that come from the site](#keys-that-come-from-the-site) |
 
@@ -1577,7 +1577,7 @@ The compliance structure's license is one; a shape handed to `attach()`
 is refused.
 
 - `attach('key', Child::class, t('Label'))` is a fixed child.
-- `attachVariants('key', 'sibling', t('Label'))` attaches
+- `attachVariants('key', by: 'sibling', label: t('Label'))` attaches
   **variants**: children the sibling's value chooses between, one per
   value ([Variants](#variants)).
 
@@ -1650,7 +1650,7 @@ output attaches nothing; both are refused by name otherwise.
 ### Variants
 
 Variants are a tagged union whose tag is a sibling key.
-`attachVariants('key', 'sibling', t('Label'))` attaches them at the key,
+`attachVariants('key', by: 'sibling', label: t('Label'))` attaches them at the key,
 and the sibling, the deciding key, chooses one. They are always open.
 The parent never names them: every class marked
 `#[Variant(of: Parent::class, at: 'key', for: '...', label: ...)]` is the
@@ -1862,7 +1862,7 @@ final class KitResource implements ResourceInterface {
       ->setRequired(TRUE);
     $inputs->add('kind', 'string', t('Kind'))
       ->setRequired(TRUE);
-    $inputs->attachVariants('gear', 'kind', t('Gear'))
+    $inputs->attachVariants('gear', by: 'kind', label: t('Gear'))
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
     $inputs->add('notes', 'string', t('Notes'));
   }
@@ -1960,9 +1960,12 @@ variant's keys and the secrets the other variants keep
 (`Variants::keptSecrets()`). A plain leftover of a variant not chosen
 stays in storage, unread: the kit above reads back with no fuel, since
 the pipeline would read a value holding another variant's key as
-written for that variant. On write, the chosen keys are laid out beside
-the deciding key, the key itself is not stored, and at the top level
-what the read left out is kept. A switch back writes the variant whole
+written for that variant. A variant the site lists is settled to name
+its keys. A chosen variant of which nothing is stored reads back as an
+empty map, as variants under a key read back the empty map the
+pipeline writes for a variant with no keys. On write, the chosen keys
+are laid out beside the deciding key, the key itself is not stored, and
+at the top level what the read left out is kept. A switch back writes the variant whole
 from its defaults beneath what is sent, as variants at a key are
 written once the deciding key moves on, and as core writes a plugin's
 settings when its id changes: the tent's poles kept in storage are not
@@ -2342,7 +2345,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   that structure, by class or by id.
 - **Bound to its owner.** A provider that lists for several owners
   implements `BoundSiteListInterface`, whose `listFor($arguments)` the
-  build asks with what the owner bound, `attachVariants('fields',
+  build asks with what the owner bound, `attachVariants('fields', by:
   'bundle', from: BundleFieldStructures::class, arguments: ['node'])`:
   one provider lists every entity type's bundles, each owner its own
   (why: [decision](decisions.md#two-entity-resources-from-one-deriver-static-per-bundle-runtime-per-entity-type)).
@@ -2411,7 +2414,7 @@ manages, the second only while the module that manages keys is on
 
 A placed block is the case at scale. `surface_examples_block`'s
 `block.placement` attaches its `settings` with
-`attachVariants('settings', 'plugin', from:
+`attachVariants('settings', by: 'plugin', label: t('Settings'), from:
 BlockPluginStructures::class)`: one variant per block plugin the block
 layout offers. A plugin whose class names its settings with
 `#[UsesStructure]` is that structure, built as declared, which a
@@ -2427,7 +2430,7 @@ its visibility a collection of conditions chosen the same way
 
 A field type's settings are the case again, in `surface_examples_field`.
 `FieldInstanceResource` attaches its `settings` with
-`attachVariants('settings', 'field_type', from:
+`attachVariants('settings', by: 'field_type', label: t('Field settings'), from:
 FieldSettingsSchemaVariants::class)`, and `FieldStorageResource` its own
 from `FieldStorageSettingsSchemaVariants`: one entry per field type
 offered in the UI, labeled with the field type's label, its schema
@@ -2685,7 +2688,7 @@ sites. Keys that only one resource asks for, one per thing, are this
 (why: [decision](decisions.md#keys-that-come-from-the-site)). Where each
 thing chooses a group of keys of its own, a schema per thing, the
 spelling is [variants from the site](#variants-from-the-site):
-`attachVariants($key, $sibling, $label, from: Provider::class)`.
+`attachVariants($key, by: $sibling, label: $label, from: Provider::class)`.
 
 ### Ports on an entry
 

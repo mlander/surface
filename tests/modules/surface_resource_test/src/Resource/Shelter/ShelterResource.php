@@ -41,7 +41,7 @@ final class ShelterResource implements ResourceInterface {
       ->setRequired(TRUE);
     $inputs->add('kind', 'string', t('Kind'))
       ->setRequired(TRUE);
-    $inputs->attachVariants('shelter', 'kind', t('Shelter'));
+    $inputs->attachVariants('shelter', by: 'kind', label: t('Shelter'));
     $inputs->add('notes', 'string', t('Notes'));
   }
 

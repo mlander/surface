@@ -45,7 +45,7 @@ final class KitResource implements ResourceInterface {
       ->setRequired(TRUE);
     $inputs->add('kind', 'string', t('Kind'))
       ->setRequired(TRUE);
-    $inputs->attachVariants('gear', 'kind', t('Gear'))
+    $inputs->attachVariants('gear', by: 'kind', label: t('Gear'))
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
     $inputs->add('notes', 'string', t('Notes'));
   }

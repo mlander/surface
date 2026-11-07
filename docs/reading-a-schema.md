@@ -295,7 +295,7 @@ or `views.sort.[plugin_id]`, is one structure wherever it is used,
 variants the own key chooses at `configuration`
 (`ConfigSchemaReader::CHOSEN`), stored flat beside the own key, as core
 stores them. The reader declares them with
-`attachVariants(ConfigSchemaReader::CHOSEN, $by, NULL, from: ConfigSchemaTypes::class, arguments: ['type' => $named])`
+`attachVariants(ConfigSchemaReader::CHOSEN, by: $by, from: ConfigSchemaTypes::class, arguments: ['type' => $named])`
 and `Variants::STORED_AS` `Variants::FLAT` on the map it returns
 ([Stored flat](resources.md#stored-flat)). `configuration` is core's
 word for a plugin's own settings

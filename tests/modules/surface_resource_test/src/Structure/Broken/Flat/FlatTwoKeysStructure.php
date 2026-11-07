@@ -20,9 +20,9 @@ final class FlatTwoKeysStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('kind', 'string', 'Kind');
-    $inputs->attachVariants('gear', 'kind', 'Gear')
+    $inputs->attachVariants('gear', by: 'kind', label: 'Gear')
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
-    $inputs->attachVariants('spare', 'kind', 'Spare')
+    $inputs->attachVariants('spare', by: 'kind', label: 'Spare')
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
   }
 

@@ -27,7 +27,7 @@ final class FlatListedClashStructure implements StructureInterface {
     $inputs->add('kind', 'string', 'Kind');
     $inputs->add('weight', 'integer', 'Weight');
     $weight = ['a', WeightOnlyStructure::class];
-    $inputs->attachVariants('gear', 'kind', 'Gear', from: KitVariants::class, arguments: $weight)
+    $inputs->attachVariants('gear', by: 'kind', label: 'Gear', from: KitVariants::class, arguments: $weight)
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
   }
 

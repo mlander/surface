@@ -33,12 +33,15 @@ use Drupal\surface\Variants;
  * - fromStorage(): at each such level, every stored key that is not one
  *   of the owner's own keys there is gathered under the key, by exclusion,
  *   which needs no settled variant and no schema.
- *   Of what is gathered, the chosen variant's keys and the secrets the
- *   other variants keep (Variants::keptSecrets()) are read under the key;
+ *   Of what is gathered, the chosen variant's keys, the variant settled
+ *   to read them where the site lists it, and the secrets the other
+ *   variants keep (Variants::keptSecrets()) are read under the key;
  *   the rest was written for a variant not chosen, and is left out of
  *   what is read: the pipeline reads a value holding another variant's
  *   key as written for that variant, and would start the chosen one from
- *   its defaults (Variants::held()).
+ *   its defaults (Variants::held()). A chosen variant of which nothing
+ *   is stored is read as an empty map, as variants under a key read back
+ *   what the pipeline wrote for an empty one.
  * - keepOnWrite(): at the top level, what fromStorage() left out is kept:
  *   a variant not chosen keeps its keys in storage. A switch back writes
  *   that variant whole, from its defaults beneath what is sent, as the
@@ -62,9 +65,10 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
   /**
    * Constructs a FlatVariantsLayout.
    *
-   * @param list<array{steps: list<array{key: string, each: bool, variants: \Drupal\surface\Variants|null, variant: string|null}>, key: string, own: string[], variants: \Drupal\surface\Variants}> $marks
+   * @param list<array{steps: list<array{key: string, each: bool, variants: \Drupal\surface\Variants|null, variant: string|null}>, key: string, own: string[], before: string[], variants: \Drupal\surface\Variants}> $marks
    *   Each flat key, outermost first: the steps from the top to its level,
-   *   its name, the owner's own keys at that level, and its variants.
+   *   its name, the owner's own keys at that level, those declared before
+   *   it, and its variants.
    * @param array<string, array> $schema
    *   StoredSchemaInterface::SPREAD, by each flat key's dotted path.
    */
@@ -281,6 +285,7 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
             'steps' => $steps,
             'key' => $name,
             'own' => array_values(array_diff($names, [$name])),
+            'before' => array_slice($names, 0, (int) array_search($name, $names, TRUE)),
             'variants' => $entry->variants,
           ];
           $schema[$at] = StoredSchemaInterface::SPREAD;
@@ -394,9 +399,15 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
   /**
    * Gathers a level's keys that are not the owner's under its flat key.
    *
+   * A chosen variant is read as an empty map when nothing of it is
+   * stored, as variants under a key are: the pipeline writes a chosen
+   * variant as its defaults (Variants::defaultsOf()), an empty map for one
+   * that declares no keys, and a variant stored flat writes no key for an
+   * empty map. With nothing chosen, nothing is read under the key.
+   *
    * @param array $level
    *   The level's values, as stored.
-   * @param array{steps: array, key: string, own: string[], variants: \Drupal\surface\Variants} $mark
+   * @param array{steps: array, key: string, own: string[], before: string[], variants: \Drupal\surface\Variants} $mark
    *   The flat key.
    *
    * @return array
@@ -405,24 +416,32 @@ final class FlatVariantsLayout implements StoredSchemaInterface {
    */
   protected static function gather(array $level, array $mark): array {
     $gathered = array_diff_key($level, array_flip($mark['own']));
-    if ($gathered === []) {
-      return $level;
-    }
     $variants = $mark['variants'];
     $chosen = $variants->chosen($level[$variants->by] ?? NULL);
-    $child = $chosen === NULL ? NULL : $variants->variant($chosen)->settledChild();
+    if ($gathered === [] && $chosen === NULL) {
+      return $level;
+    }
+    // The chosen variant is settled to read its keys, one the site lists
+    // included: a door reading the level settles it as well.
+    $child = $chosen === NULL || $gathered === [] ? NULL : $variants->variant($chosen)->child;
     // What another variant wrote is left out, but for the secrets the
     // pipeline keeps beside the chosen keys.
     $held = $child === NULL ? $gathered : array_intersect_key($gathered, $child->getDefinitions()->toArray() + $variants->keptSecrets((string) $chosen, $gathered));
-    // The key stands where the first key gathered under it stood.
+    // The key stands where the first key gathered under it stood, or,
+    // with nothing of it stored, after the owner's keys declared before
+    // it.
     $asked = [];
+    $before = array_flip($mark['before']);
     foreach ($level as $name => $value) {
+      if (!array_key_exists($mark['key'], $asked) && ($held === [] ? !isset($before[$name]) && !array_key_exists($name, $gathered) : array_key_exists($name, $gathered))) {
+        $asked[$mark['key']] = $held;
+      }
       if (!array_key_exists($name, $gathered)) {
         $asked[$name] = $value;
       }
-      elseif ($held !== [] && !array_key_exists($mark['key'], $asked)) {
-        $asked[$mark['key']] = $held;
-      }
+    }
+    if (!array_key_exists($mark['key'], $asked)) {
+      $asked[$mark['key']] = $held;
     }
     return $asked;
   }

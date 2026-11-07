@@ -266,7 +266,7 @@ final class PropertyDeclaration {
       return $definition;
     }
     if ($variants = self::attribute($property, AttachVariants::class)) {
-      $definition = $blueprint->attachVariants($key, $variants->by, self::text($variants->label), $variants->from, $variants->arguments);
+      $definition = $blueprint->attachVariants($key, by: $variants->by, label: self::text($variants->label), from: $variants->from, arguments: $variants->arguments);
       self::word($definition, $variants->description);
       return $definition;
     }

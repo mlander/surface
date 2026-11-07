@@ -192,7 +192,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
     }
     $strict = array_key_exists('FullyValidatable', (array) ($this->typedConfig->getDefinition($fallback)['constraints'] ?? []));
     $this->mapping($inputs, $keys, $fallback, '', $strict, $reading);
-    $inputs->attachVariants(self::CHOSEN, $by, NULL, from: ConfigSchemaTypes::class, arguments: ['type' => $named])
+    $inputs->attachVariants(self::CHOSEN, by: $by, from: ConfigSchemaTypes::class, arguments: ['type' => $named])
       ->setSetting(Variants::STORED_AS, Variants::FLAT);
   }
 

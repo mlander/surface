@@ -43,7 +43,7 @@ final class PackResource implements ResourceInterface {
       ->setRequired(TRUE);
     $inputs->add('carry', 'string', t('Carry'))
       ->setRequired(TRUE);
-    $inputs->attachVariants('load', 'carry', t('Load'));
+    $inputs->attachVariants('load', by: 'carry', label: t('Load'));
     $inputs->add('notes', 'string', t('Notes'));
   }
 
