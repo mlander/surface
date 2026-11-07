@@ -17,7 +17,10 @@ use Drupal\surface\Contract\UnknownChoiceException;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Reference\References;
+use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
+use Drupal\surface\Pipeline\ViolationSummary;
+use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
@@ -507,7 +510,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     if (($dry || $served->surface->changesNothing()) && $served->storage instanceof OutputsStorageInterface && $result->prepared !== NULL) {
       // A read, and a dry run, answer what its prepare answered.
       // Decision: see docs/decisions.md#who-produces-outputs.
-      $answer['outputs'] = (object) $served->storage->outputs($served->surface, $result->values, $result->prepared);
+      $answer['outputs'] = (object) $this->conformed($served, $served->storage->outputs($served->surface, $result->values, $result->prepared));
     }
     if ($dry) {
       return $this->respond($answer + [self::DRY_RUN => TRUE]);
@@ -519,7 +522,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       return $this->respond($answer);
     }
     $outputs = $served->storage instanceof OutputsStorageInterface
-      ? $served->storage->outputs($served->surface, $result->values)
+      ? $this->conformed($served, $served->storage->outputs($served->surface, $result->values))
       : [];
     // Built afresh: what was written is what the resource now refines
     // against and what the storage now loads.
@@ -539,6 +542,36 @@ final class ResourceApiController implements ContainerInjectionInterface {
     $response = $this->respond($answer);
     $this->tag($response, $fresh);
     return $response;
+  }
+
+  /**
+   * Holds the stage's own outputs to what its structures declare.
+   *
+   * The stage's `changes` and `apply` answer lists of maps, and a dry run
+   * of apply marks the id it cannot know NotEmitted: what the declaration
+   * does not hold is a fault of the stage, and what is not emitted is left
+   * out. Any other resource's outputs are answered as read.
+   *
+   * @param \Drupal\surface\Http\ServedOperation $served
+   *   The operation.
+   * @param array $outputs
+   *   The outputs the storage read back.
+   *
+   * @return array
+   *   The outputs, every key not emitted left out.
+   *
+   * @throws \LogicException
+   *   When the stage's do not hold to the declaration.
+   */
+  protected function conformed(ServedOperation $served, array $outputs): array {
+    if ($served->definition->id !== StageResource::ID) {
+      return $outputs;
+    }
+    $violations = $this->pipeline->conformOutput($served->surface, $outputs);
+    if (!$violations->isEmpty()) {
+      throw new \LogicException('The stage answered outputs its structure does not declare: ' . ViolationSummary::fromViolations($violations));
+    }
+    return NotEmitted::strip($outputs);
   }
 
   /**

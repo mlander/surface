@@ -348,6 +348,21 @@ the record of the rework that brought the module to the pattern.
   structure's own applied wherever a resource holds it, by the
   structure's own paths (example 14's webhook and `WebhookSigner`,
   `docs/decisions.md#a-key-may-stand-for-another-at-use`).
+- **Stage**: a set of writes kept until they are applied together, or
+  discarded: the base module's one resource, `surface.stage`
+  (`Resource\StageResource`), its id a UUID, its record one row of the
+  expirable key-value collection `surface.stage` (`Staging\StageStore`,
+  `surface.stages`), its owner the only account its access lets in
+  (`Access\StageAccess`). Code writes into one by handing a
+  `Staging\Stage` to `ResourcesInterface::storage()`, which wraps the
+  storage in a `Staging\StagedStorage`: load answers the stage first,
+  prepare is the storage's, commit writes the record. `changes` lists
+  the writes; `apply` (`Storage\StageStorage`) rehearses them all in
+  prepare and makes them in commit, in order, in one transaction, and
+  keeps the record marked applied. For now a stage takes updates of
+  storages a transaction rolls back whole; no door takes a stage input yet
+  (`docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection`,
+  `docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
@@ -672,7 +687,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1927, Assertions: 45067, Errors: 0, Failures: 0, Skipped: 3. Classes: 268 of 268, 8 at a time, browser classes 4.
+phpunit: Tests: 1956, Assertions: 46341, Errors: 0, Failures: 0, Skipped: 3. Classes: 276 of 276, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -692,8 +707,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1819, Assertions: 40918, Skipped: 3, Deprecations: 130. Classes:
-219, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1848, Assertions: 42192, Skipped: 3, Deprecations: 130. Classes:
+227, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -941,19 +956,26 @@ src/Reader/              Readers into the blueprint: ConfigSchemaReader,
 src/Resource/            The authoring API and attributes (Attribute/), the
                          property attributes among them, and
                          DeclaresByProperties, which reads them
-                         (ResourceBuild/PropertyDeclaration.php).
+                         (ResourceBuild/PropertyDeclaration.php); also the
+                         base module's one resource, StageResource.
+src/Structure/           The base module's two structures, the stage's:
+                         StageChangesStructure and StageAppliedStructure.
 src/ResourceBuild/       Discovery pass, registry, build step, adapters,
                          derived variants, catalog, operation routes.
                          The build step is Resources.php, the order and
                          the caches, over its five phases: Declaring.php,
                          Mixing.php, Attaching.php, Binding.php, Gating.php.
-src/Access/              The operation route's access check.
+src/Access/              The operation route's access check; StageAccess,
+                         the stage's.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
                          SurfacePipeline.php keeps the write path and
                          the document, over its three verbs: Accepting.php,
                          Validating.php, Conforming.php.
 src/Storage/             Where accepted values are written; settings layouts.
+src/Staging/             The stage's record store (StageStore), the
+                         staged-storage wrapper (StagedStorage) and the
+                         Stage it is handed.
 src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
                          walks the frames, PropertySchema writes each key,
                          Conditionals the if/then, DocumentHead the top;

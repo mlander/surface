@@ -64,6 +64,13 @@ services:
     factory: ['@cache_factory', 'get']
     arguments: [surface_build]
   Drupal\surface\ResourceBuild\ResourcesInterface: '@surface.resources'
+  # The stages: one record per stage in the expirable key-value collection
+  # surface.stage, each write under a lock named for the stage, kept for the
+  # temp store expiry after the last.
+  surface.stages:
+    class: Drupal\surface\Staging\StageStore
+    arguments: ['@keyvalue.expirable', '@lock', '@datetime.time', '%tempstore.expire%']
+  Drupal\surface\Staging\StageStore: '@surface.stages'
   # Reads one entry of a provider's variants when a door builds it, named
   # by class in the read definitions the build registers.
   Drupal\surface\ResourceBuild\SiteEntries:

@@ -481,7 +481,17 @@ final class SurfacePipeline implements SurfacePipelineInterface {
     // Decision: see docs/decisions.md#absent-keeps-null-clears.
     $creates = $storage instanceof CreatingStorageInterface && $storage->creates();
     $write = $this->kept($surface, $values, $current, $creates ? NULL : $input);
-    $changes = $surface->changesNothing() ? [] : static::changes($write, $current);
+    // A data surface with no keys, whether it declares none or access
+    // omits every one, has no document to compare: the call is the whole
+    // write, as a delete removes the whole thing, so its one change is the
+    // empty pointer.
+    // Decision: see
+    // docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner.
+    $changes = match (TRUE) {
+      $surface->changesNothing() => [],
+      count($surface->getDefinitions()) === 0 => [''],
+      default => static::changes($write, $current),
+    };
     try {
       $prepared = $this->prepare($surface, $write, $storage);
     }

@@ -70,6 +70,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
     'surface:registration.step1:read' => 'surface:registration.step1:configure',
     'surface:registration.step2:read' => 'surface:registration.step2:configure',
     'surface:registration.step3:read' => 'surface:registration.step3:configure',
+    'surface:surface.stage:read' => 'surface:surface.stage:update',
     'surface:tool_test.cabinet:read' => 'surface:tool_test.cabinet:update',
     'surface:tool_test.logbook:read' => 'surface:tool_test.logbook:configure',
     'surface:tool_test.specimen:read' => 'surface:tool_test.specimen:configure',

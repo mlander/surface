@@ -132,6 +132,9 @@ class ResourceCatalogTest extends SurfaceKernelTestBase {
       'registration.step3',
       'registration.step3.ticket.free',
       'registration.step3.ticket.paid',
+      'surface.stage',
+      'surface.stage.applied',
+      'surface.stage.changes',
       'system.performance',
     ], array_keys($catalog));
 

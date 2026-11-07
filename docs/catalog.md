@@ -74,6 +74,9 @@ Refused. `docs/resources.md` says how each part works.
 | [`registration.step3`](#registrationstep3) |  | `RegistrationStep3Resource` | none | `configure`, `read` |
 | [`registration.step3.ticket.free`](#registrationstep3ticketfree) | Free ticket | `FreeTicketStructure` | none | none |
 | [`registration.step3.ticket.paid`](#registrationstep3ticketpaid) | Paid ticket | `PaidTicketStructure` | none | none |
+| [`surface.stage`](#surfacestage) | Stage | `StageResource` | `id` | `create`, `update`, `changes`, `apply`, `delete`, `read` |
+| [`surface.stage.applied`](#surfacestageapplied) | Applied writes | `StageAppliedStructure` | none | none |
+| [`surface.stage.changes`](#surfacestagechanges) | Staged writes | `StageChangesStructure` | none | none |
 | [`system.performance`](#systemperformance) | Performance settings | `PerformanceResource` | none | `configure`, `read` |
 
 ## block.placement
@@ -683,6 +686,55 @@ Refused. `docs/resources.md` says how each part works.
 
 - Label: Paid ticket
 - Description: The ticket when registration costs money: its price and currency.
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## surface.stage
+
+`Drupal\surface\Resource\StageResource`, in `surface`.
+
+- Label: Stage
+- Description: A set of writes kept until they are applied together, or discarded.
+- Kind: resource
+- Identity: `id`
+- Storage: `Drupal\surface\Storage\StageStorage`
+- Access: `Drupal\surface\Access\StageAccess`
+
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `create` | Open a stage | nothing | yes | none | yes | `StageResource::create()` (`surface`) |
+| `update` | Rename a stage | `string $id` | no | none | yes | `StageResource::update()` (`surface`) |
+| `changes` | List the staged writes | `string $id` | no | none | yes | `StageResource::changes()` (`surface`) |
+| `apply` | Apply the stage | `string $id` | no | none | yes | `StageResource::apply()` (`surface`) |
+| `delete` | Discard the stage | `string $id` | no | none | yes | `StageResource::delete()` (`surface`) |
+| `read` | Current values: Rename a stage | `string $id` | no | none | yes | default read of `update` (`surface`) |
+
+- `create` reaches http `POST /surface-api/surface.stage`, tool `surface:surface.stage:create`, openapi `surface.stage:create:write`, react `/surface-react/surface.stage/create`.
+- `update` reaches http `PATCH /surface-api/surface.stage/{id}`, tool `surface:surface.stage:update`, openapi `surface.stage:update:write`, react `/surface-react/surface.stage/update`.
+- `changes` reaches http `POST /surface-api/surface.stage/{id}:changes`, tool `surface:surface.stage:changes`, openapi `surface.stage:changes:write`, react `/surface-react/surface.stage/changes`.
+- `apply` reaches http `PATCH /surface-api/surface.stage/{id}:apply`, tool `surface:surface.stage:apply`, openapi `surface.stage:apply:write`, react `/surface-react/surface.stage/apply`.
+- `delete` reaches http `DELETE /surface-api/surface.stage/{id}`, tool `surface:surface.stage:delete`, openapi `surface.stage:delete:write`, react `/surface-react/surface.stage/delete`.
+- `read` reaches http `GET /surface-api/surface.stage/{id}`, tool `surface:surface.stage:read`, openapi `surface.stage:read:read`.
+
+## surface.stage.applied
+
+`Drupal\surface\Structure\StageAppliedStructure`, in `surface`.
+
+- Label: Applied writes
+- Description: The writes an apply made, in order.
+- Kind: structure
+- Identity: none
+- Storage: none; its host or its parent stores it
+- Access: the operation's permission alone
+
+## surface.stage.changes
+
+`Drupal\surface\Structure\StageChangesStructure`, in `surface`.
+
+- Label: Staged writes
+- Description: The writes a stage holds, in the order apply makes them.
 - Kind: structure
 - Identity: none
 - Storage: none; its host or its parent stores it

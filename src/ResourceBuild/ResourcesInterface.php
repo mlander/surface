@@ -9,6 +9,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Staging\Stage;
 
 /**
  * The build step: a class and a context in, a sealed data surface out.
@@ -299,6 +300,16 @@ interface ResourcesInterface {
    *   The account the write is made as, handed to each write verb of
    *   each level's storage, or NULL for the current user: a storage
    *   never reads the current user itself.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the call writes into, its arguments the operation's
+   *   parameters by name, or NULL for storage itself. With one, a load
+   *   answers what the stage holds for the thing before what is stored, a
+   *   prepare rehearses the write as a real one, and a commit writes the
+   *   stage's record and never storage, until the stage is applied. Who
+   *   may use the stage is its own access's answer (`surface.stage`'s
+   *   update), which the caller asks first for the account. A commit
+   *   into it throws a \RuntimeException when the stage expired, was
+   *   discarded or applied, or is held by another request meanwhile.
    *
    * @return \Drupal\surface\Pipeline\SurfaceStorageInterface
    *   The storage, for the pipeline's submit(). Composed along the tree
@@ -309,7 +320,7 @@ interface ResourcesInterface {
    * @throws \LogicException
    *   When it names no storage: its host supplies it.
    */
-  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL): SurfaceStorageInterface;
+  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL, ?Stage $stage = NULL): SurfaceStorageInterface;
 
   /**
    * Reads what a resource holds, as the code that uses it needs it.

@@ -61,8 +61,8 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
    * context, and a read an owner declares (the content entity
    * resources') builds its own. And one more for the outputs of each
    * operation that needs nothing and creates, built in the bare context:
-   * the two bundles' `create` and the entity type's. Before the derivation
-   * memo it was about 1.6 per tool, read tools included.
+   * the two bundles' `create`, the entity type's and the stage's. Before
+   * the derivation memo it was about 1.6 per tool, read tools included.
    */
   public function testDerivingEveryToolBuildsEachOperationOnce(): void {
     $this->resources()->forgetBuilds();
@@ -75,9 +75,9 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
       $separator = (int) strrpos($id, ':');
       return !$registry->getOperation(substr($id, strlen('surface:'), $separator - strlen('surface:')), substr($id, $separator + 1))->isDefaultRead();
     });
-    $this->assertCount(15, $operations);
-    $this->assertCount(13, $own, 'Ten writes and the three reads the content entity resources declare.');
-    $this->assertLessThanOrEqual(count($own) + 3, $built);
+    $this->assertCount(21, $operations);
+    $this->assertCount(18, $own, 'Ten writes and the three reads the content entity resources declare, and the stage\'s five declared operations; its one read is the one the build adds.');
+    $this->assertLessThanOrEqual(count($own) + 4, $built);
   }
 
   /**
