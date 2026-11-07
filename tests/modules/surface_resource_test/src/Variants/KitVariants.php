@@ -11,7 +11,7 @@ use Drupal\surface\Resource\SiteList;
  * Lists the structures its owner names, one variant per value.
  *
  * Bound to pairs, each a value and the structure class it chooses, so a
- * fixture names the variants it mixes in without a #[Variant] of its own.
+ * fixture names its variants without a #[Variant] of its own.
  */
 final class KitVariants implements BoundSiteListInterface {
 

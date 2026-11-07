@@ -275,12 +275,10 @@ class MixinsTest extends SurfaceKernelTestBase {
         $this->assertSame($message, $e->getMessage(), $class);
       }
     }
-    // Only an owner mixes in: an alter's blueprint has neither verb, so an
+    // Only an owner mixes in: an alter's blueprint has no mixIn(), so an
     // alter's call fails where it is written, before any build.
-    foreach (['mixIn', 'mixInVariants'] as $verb) {
-      $this->assertTrue((new \ReflectionClass(BlueprintInterface::class))->hasMethod($verb), $verb);
-      $this->assertFalse((new \ReflectionClass(BlueprintAdditionsInterface::class))->hasMethod($verb), $verb);
-    }
+    $this->assertTrue((new \ReflectionClass(BlueprintInterface::class))->hasMethod('mixIn'));
+    $this->assertFalse((new \ReflectionClass(BlueprintAdditionsInterface::class))->hasMethod('mixIn'));
   }
 
   /**

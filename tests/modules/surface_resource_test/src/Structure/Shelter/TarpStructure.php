@@ -15,7 +15,7 @@ use Drupal\surface_resource_test\Resource\Shelter\ShelterResource;
  * A tarp: the shelter's variant for "tarp", one key.
  */
 #[Structure('resource_test.shelter.tarp')]
-#[Variant(of: ShelterResource::class, at: 'kind', for: 'tarp', label: new TranslatableMarkup('Tarp'))]
+#[Variant(of: ShelterResource::class, at: 'shelter', for: 'tarp', label: new TranslatableMarkup('Tarp'))]
 final class TarpStructure implements StructureInterface {
 
   /**

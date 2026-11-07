@@ -17,8 +17,7 @@ use Drupal\surface\Variants;
  * frame. Where the key's map says `Variants::STORED_AS` `Variants::FLAT`,
  * a config storage keeps the chosen keys beside the deciding key instead,
  * and nothing at the key's own name: the shape core's own-key schemas
- * describe (`condition.plugin.[id]`, a views handler), and the one
- * variants mixed in beside their deciding key are stored in.
+ * describe (`condition.plugin.[id]`, a views handler).
  *
  * The engine applies this layout to every resource stored in a config
  * storage, ConfigObjectStorage or ConfigEntityStorage (StorageAdapter),

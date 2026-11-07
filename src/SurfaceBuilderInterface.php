@@ -284,66 +284,6 @@ interface SurfaceBuilderInterface {
   public function addMixin(Mixin $mixin): static;
 
   /**
-   * Records variants mixed in: which value chooses which members.
-   *
-   * Every member of every variant is declared as the owner's key already,
-   * where mixInVariants() stands (fillPlace()); this offers the values on
-   * the deciding key, as attachVariants() does, and keeps what the
-   * contract needs to state each variant once, as a def under a
-   * conditional on the deciding key.
-   *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-   *
-   * @param \Drupal\surface\MixinVariants $mixed
-   *   The deciding key, each variant built in its own frame with the keys
-   *   it brought, and their labels.
-   *
-   * @return $this
-   *
-   * @throws \InvalidArgumentException
-   *   When the deciding key is not declared, or holds a list or a map.
-   * @throws \LogicException
-   *   When the builder is already sealed.
-   */
-  public function addMixinVariants(MixinVariants $mixed): static;
-
-  /**
-   * Holds a place in the declaration order for keys declared later.
-   *
-   * The variants mixInVariants() mixes in are found when the owner is
-   * built, after its declaration ran, and their members land where the
-   * call stands: the place keeps that point in the order until
-   * fillPlace() puts them there. A place left unfilled holds no key when
-   * the builder is sealed: a declaration read for what it says alone, as
-   * for its static defaults, has no variant found for it.
-   *
-   * @param string $place
-   *   The place's name, which no key can have.
-   *
-   * @return $this
-   *
-   * @throws \LogicException
-   *   When the place is held already, or the builder is already sealed.
-   */
-  public function reservePlace(string $place): static;
-
-  /**
-   * Declares keys at a place held for them, in order.
-   *
-   * @param string $place
-   *   The place reservePlace() held.
-   * @param array<string, \Drupal\Core\TypedData\DataDefinitionInterface> $definitions
-   *   The keys' definitions, by key, in order.
-   *
-   * @return $this
-   *
-   * @throws \LogicException
-   *   When no such place is held, a key is declared already, or the
-   *   builder is already sealed.
-   */
-  public function fillPlace(string $place, array $definitions): static;
-
-  /**
    * Holds the frame as a whole to a JSON Schema its keys cannot say.
    *
    * What a schema document read into the frame says of the object rather

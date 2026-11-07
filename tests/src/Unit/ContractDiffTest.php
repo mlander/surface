@@ -418,64 +418,6 @@ class ContractDiffTest extends UnitTestCase {
   }
 
   /**
-   * Tests variants mixed in are judged as nested variants are.
-   *
-   * A variant added is a value the deciding key offers more, and a
-   * conditional for a value the baseline did not allow: compatible. One
-   * removed is a choice removed: breaking. A member changed in a variant's
-   * def is that change in the def.
-   *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-   */
-  public function testVariantsMixedInAreJudgedAsNestedVariants(): void {
-    $baseline = self::BASELINE;
-    $mixed = static fn (string $venue, string $def): array => [
-      'if' => ['properties' => ['venue' => ['const' => $venue]], 'required' => ['venue']],
-      'then' => ['allOf' => [['$ref' => '#/$defs/' . $def]]],
-    ];
-    unset($baseline['schema']['additionalProperties']);
-    $baseline['schema']['unevaluatedProperties'] = FALSE;
-    $baseline['schema']['allOf'][] = $mixed('hall', 'event.hall');
-    $baseline['schema']['$defs']['event.hall'] = [
-      'type' => 'object',
-      'properties' => ['stage' => ['title' => 'Stage', 'type' => ['string', 'null']]],
-    ];
-    $baseline['schema']['x-surface']['variantsMixedIn'] = ['venue' => ['hall' => '#/$defs/event.hall']];
-    $judged = static function (array $current) use ($baseline): array {
-      $changes = (new ContractDiff())->compare($baseline, $current);
-      return [
-        array_values(array_unique(array_map(static fn (ContractChange $change): string => $change->status, $changes))),
-        array_map(static fn (ContractChange $change): string => $change->change, $changes),
-      ];
-    };
-
-    $added = $baseline;
-    $added['schema']['properties']['venue']['oneOf'][] = ['const' => 'tent', 'title' => 'Tent'];
-    $added['schema']['allOf'][] = $mixed('tent', 'event.tent');
-    $added['schema']['$defs']['event.tent'] = [
-      'type' => 'object',
-      'properties' => ['pegs' => ['title' => 'Pegs', 'type' => ['integer', 'null']]],
-    ];
-    $added['schema']['x-surface']['variantsMixedIn']['venue']['tent'] = '#/$defs/event.tent';
-    [$statuses, $said] = $judged($added);
-    $this->assertSame([ContractChange::COMPATIBLE], $statuses, implode("\n", $said));
-    $this->assertContains('variant mixed in added', $said);
-
-    $removed = $baseline;
-    array_pop($removed['schema']['allOf']);
-    unset($removed['schema']['properties']['venue']['oneOf'][0], $removed['schema']['$defs']['event.hall'], $removed['schema']['x-surface']['variantsMixedIn']['venue']['hall']);
-    $removed['schema']['properties']['venue']['oneOf'] = array_values($removed['schema']['properties']['venue']['oneOf']);
-    [$statuses, $said] = $judged($removed);
-    $this->assertContains(ContractChange::BREAKING, $statuses, implode("\n", $said));
-    $this->assertContains('variant mixed in removed', $said);
-
-    $changed = $baseline;
-    $changed['schema']['$defs']['event.hall']['properties']['stage']['type'] = ['integer', 'null'];
-    [$statuses] = $judged($changed);
-    $this->assertSame([ContractChange::BREAKING], $statuses, 'A member\'s type changed in its variant\'s def.');
-  }
-
-  /**
    * Tests a label, a description and a default only note.
    */
   public function testWordsAndDefaultsOnlyNote(): void {

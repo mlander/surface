@@ -44,10 +44,7 @@ use Drupal\surface\Variants;
  * A child is built through the whole sequence again, in its own frame, so
  * this holds the build step and the two of its steps a child re-enters by,
  * buildResource() and buildRead(), handed in as closures since neither is
- * public; the mixing phase builds through them too. It is handed the
- * mixing phase's layVariantMixins() as a closure as well, for
- * registerVariantsOf(), since the mixing phase is constructed over this
- * one.
+ * public; the mixing phase builds through them too.
  *
  * Decision: see docs/decisions.md#the-build-is-read-by-phase.
  *
@@ -95,9 +92,6 @@ final class Attaching {
    *   Resources::buildResource(), which builds a child.
    * @param \Closure $buildsRead
    *   Resources::buildRead(), which builds a structure read from a schema.
-   * @param \Closure $laysVariantMixins
-   *   Mixing::layVariantMixins(), which declares the members of each
-   *   call's variants mixed in.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -109,7 +103,6 @@ final class Attaching {
     protected readonly Resources $resources,
     protected readonly \Closure $buildsResource,
     protected readonly \Closure $buildsRead,
-    protected readonly \Closure $laysVariantMixins,
   ) {
   }
 
@@ -253,8 +246,8 @@ final class Attaching {
     // nothing at all, however it was invoked.
     foreach ($inputs->attachments() as $key => $child) {
       if ($builder->getDefinition((string) $key) === NULL) {
-        // Brought by a structure or a variant mixed in that its access
-        // left out, with its members.
+        // Brought by a structure mixed in that its access left out, with
+        // its members.
         continue;
       }
       // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
@@ -308,8 +301,6 @@ final class Attaching {
     $builder = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $inputs = $this->declaring->blueprint($builder, $definition);
     $this->declaring->fillBlueprints($definition, $inputs);
-    // Variants a variant mixed in holds at a key are the owner's there.
-    ($this->laysVariantMixins)($definition, $inputs, $builder);
     $this->variantKeysOf($definition, $inputs, $inputs->keys(), $builder);
   }
 
@@ -992,10 +983,7 @@ final class Attaching {
           $by,
         ));
       }
-      // Those a variant mixed in holds are found as that variant finds them.
-      // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-      $declarer = isset($inputs->variantsDeclaredBy()[$key]) ? $this->registry->getDefinition($inputs->variantsDeclaredBy()[$key]) : $definition;
-      ['children' => $children, 'labels' => $labels, 'site' => $site] = $this->findVariants($declarer, $inputs, $builder, (string) $key, $inputs->readVariants()[$key] ?? [], $inputs->variantsFrom()[$key] ?? NULL, $inputs->variantsArguments()[$key] ?? []);
+      ['children' => $children, 'labels' => $labels, 'site' => $site] = $this->findVariants($definition, $inputs, $builder, (string) $key, $inputs->readVariants()[$key] ?? [], $inputs->variantsFrom()[$key] ?? NULL, $inputs->variantsArguments()[$key] ?? []);
       $variantKeys[$key] = [
         'by' => $by,
         'children' => $children,
@@ -1007,7 +995,7 @@ final class Attaching {
   }
 
   /**
-   * Finds the variants at one key, or chosen by one key mixed in.
+   * Finds the variants at one key.
    *
    * Discovery's #[Variant] classes for the owner and the key, then what a
    * schema read into the blueprint states, then what a provider of
@@ -1016,16 +1004,14 @@ final class Attaching {
    * Decision: see docs/decisions.md#variants-nothing-declares.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner; or, for variants a variant mixed in holds at a key, that
-   *   variant, whose #[Variant] classes they are and whose id a listed
-   *   one's starts with, in every owner it is mixed into.
+   *   The owner, whose #[Variant] classes they are and whose id a listed
+   *   one's starts with.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's input blueprint, which registers what is read.
    * @param \Drupal\surface\SurfaceBuilderInterface $builder
    *   The owner's builder, which what a provider read reaches.
    * @param string $key
-   *   The key a #[Variant] names with `at`: where nested variants sit, or
-   *   the deciding key of variants mixed in.
+   *   The key the variants sit at, which a #[Variant] names with `at`.
    * @param array<string, array{name: string, label: string|null}> $read
    *   The variants a schema read into the blueprint states there.
    * @param class-string<\Drupal\surface\Resource\SiteListInterface>|null $from
@@ -1116,14 +1102,15 @@ final class Attaching {
     $this->assertOneFlatKey($build, array_map('strval', array_keys($variantKeys)));
     foreach ($variantKeys as $key => ['by' => $by, 'children' => $children, 'site' => $site]) {
       if ($builder->getDefinition((string) $key) === NULL) {
-        // Brought by a variant mixed in that its access left out, with its
-        // members.
+        // Brought by a structure mixed in that its access left out, with
+        // its members.
         continue;
       }
       $variants = [];
       $withheld = [];
       $runtime_variant = FALSE;
-      // What every variant the site lists at the key is built in when read.
+      // What every variant the site lists at the key is built in when read,
+      // and, stored flat, what it is checked against then.
       $at = $site === [] ? NULL : new VariantsToSettle(
         $this->resources,
         [...$ancestry, array_replace($frame, ['key' => $key])],
@@ -1132,6 +1119,10 @@ final class Attaching {
         $this->gating->forNoAccount,
         $this->declaring->holdsToSchema,
         $this->gating->forNoAccount ? NULL : $this->gating->underlyingAccount(),
+        static::storedFlat($builder, (string) $key) ? [
+          'own' => static::ownBesideFlat($build, (string) $key),
+          'values' => array_map('strval', array_flip(array_map('strval', array_intersect_key($children, $site)))),
+        ] : NULL,
       );
       foreach ($children as $value => $child) {
         // A variant the site lists is built when read, its wiring checked
@@ -1225,35 +1216,19 @@ final class Attaching {
    * @param string $key
    *   The flat key.
    * @param array<string, \Drupal\surface\Attachment> $variants
-   *   The variants built at it, by value; one the site lists and nothing
-   *   has read is checked once it is.
+   *   The variants built at it, by value; one the site lists is checked
+   *   when a door reads it (Resources::settleVariant()).
    *
    * @throws \LogicException
    *   Naming what does not fit.
    */
   protected function assertFlatFits(Build $build, string $key, array $variants): void {
     $id = $build->definition->id;
-    // Every key the builder holds by now: the inputs, the members a
-    // structure mixed in brought, the children, the maps and the mounts.
-    // The collections are attached after the variants.
-    $own = array_values(array_diff(
-      array_unique([...$build->builder->getDefinitionNames(), ...$build->lists]),
-      [$key],
-    ));
+    $own = static::ownBesideFlat($build, $key);
     foreach ($variants as $value => $variant) {
       $child = $variant->settledChild();
-      if ($child === NULL) {
-        continue;
-      }
-      $names = $child->getDefinitions()->names();
-      $shared = array_values(array_intersect($names, $own));
-      if ($shared !== []) {
-        throw new \LogicException(sprintf('%s stores the variants at "%s" flat beside its own keys (Variants::STORED_AS), and the variant for "%s", %s, declares "%s", which %s declares too. Stored flat, the two would be one key: rename one, or store the variants under "%s".', $id, $key, $value, $variant->id ?? $value, $shared[0], $id, $key));
-      }
-      foreach ($child->getDefinitions()->entries() as $name => $entry) {
-        if ($entry->variants?->storedFlat()) {
-          throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and the variant for "%s", %s, stores the variants at "%s" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.', $id, $key, $value, $variant->id ?? $value, $name));
-        }
+      if ($child !== NULL) {
+        static::assertFlatVariantFits($id, $key, (string) $value, $variant->id ?? (string) $value, $child, $own);
       }
     }
     $storage = $build->definition->storage;
@@ -1265,6 +1240,62 @@ final class Attaching {
     }
     if ($storage !== NULL && !is_a($storage, ConfigObjectStorage::class, TRUE) && !is_a($storage, ConfigEntityStorage::class, TRUE)) {
       throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and %s, which stores it, is no config storage: the layout that stores them beside their deciding key is applied to ConfigObjectStorage and ConfigEntityStorage alone. Store them under the key, or lay them out in the storage itself.', $id, $key, $storage));
+    }
+  }
+
+  /**
+   * Lists the owner's keys a variant stored flat beside them may not declare.
+   *
+   * @param \Drupal\surface\ResourceBuild\Build $build
+   *   The owner's build.
+   * @param string $key
+   *   The flat key.
+   *
+   * @return string[]
+   *   Every key the builder holds by now (the inputs, the members a
+   *   structure mixed in brought, the children, the maps and the mounts)
+   *   and the collections, attached after the variants; the flat key
+   *   aside.
+   */
+  protected static function ownBesideFlat(Build $build, string $key): array {
+    return array_values(array_diff(
+      array_unique([...$build->builder->getDefinitionNames(), ...$build->lists]),
+      [$key],
+    ));
+  }
+
+  /**
+   * Refuses one variant stored flat that cannot be stored beside the owner.
+   *
+   * A variant the build holds is checked when the owner is built
+   * (assertFlatFits()); one the site lists, when a door reads it
+   * (Resources::settleVariant()).
+   *
+   * @param string $owner
+   *   The owner's id.
+   * @param string $key
+   *   The flat key.
+   * @param string $value
+   *   The value the variant is for.
+   * @param string $variant
+   *   The variant's id.
+   * @param \Drupal\surface\SurfaceInterface $child
+   *   The variant, built.
+   * @param string[] $own
+   *   The owner's keys at the level (ownBesideFlat()).
+   *
+   * @throws \LogicException
+   *   For a key the owner holds there, or variants stored flat of its own.
+   */
+  public static function assertFlatVariantFits(string $owner, string $key, string $value, string $variant, SurfaceInterface $child, array $own): void {
+    $shared = array_values(array_intersect($child->getDefinitions()->names(), $own));
+    if ($shared !== []) {
+      throw new \LogicException(sprintf('%s stores the variants at "%s" flat beside its own keys (Variants::STORED_AS), and the variant for "%s", %s, declares "%s", which %s declares too. Stored flat, the two would be one key: rename one, or store the variants under "%s".', $owner, $key, $value, $variant, $shared[0], $owner, $key));
+    }
+    foreach ($child->getDefinitions()->entries() as $name => $entry) {
+      if ($entry->variants?->storedFlat()) {
+        throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and the variant for "%s", %s, stores the variants at "%s" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.', $owner, $key, $value, $variant, $name));
+      }
     }
   }
 
@@ -1288,8 +1319,8 @@ final class Attaching {
     // Decision: see docs/decisions.md#access-once-per-list.
     foreach ($inputs->lists() as $key => $child) {
       if ($builder->getDefinition((string) $key) === NULL) {
-        // Brought by a structure or a variant mixed in that its access
-        // left out, with its members.
+        // Brought by a structure mixed in that its access left out, with
+        // its members.
         continue;
       }
       // Nothing wires an item's ports yet.
@@ -1389,8 +1420,7 @@ final class Attaching {
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure being built.
    * @param string $where
-   *   Where the variants are, in words: `at "<key>"`, or `mixed in by
-   *   "<key>"`.
+   *   Where the variants are, in words: `at "<key>"`.
    * @param string $by
    *   The deciding key.
    * @param string[] $values

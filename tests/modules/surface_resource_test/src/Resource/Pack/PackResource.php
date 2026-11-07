@@ -13,18 +13,16 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\PackStorage;
 
 /**
- * A backpack: the variant its carry chooses mixed in flat, children too.
+ * A backpack: the variant its carry chooses at its load, children inside.
  *
- * The frame pack and the daypack are variants of the carry, each a
- * #[Variant] of this class at "carry". The frame pack brings a hip belt,
- * a child at a fixed key, and its pockets, a collection; the daypack
- * brings a rain cover, a map holding a pouch, which makes it a structure
- * with no id. Each child is the pack's own child at its key,
- * applying only where its variant is chosen. Both declare the capacity
- * alike but for the label and the description, so it is one key, which
- * wears the daypack's, the variant discovery found first.
+ * The frame pack and the daypack are variants at "load", each a
+ * #[Variant] of this class there. The frame pack holds a hip belt, a
+ * child at a fixed key, and its pockets, a collection; the daypack holds
+ * a rain cover, a map holding a pouch, which makes it a structure with
+ * no id. Each child is the variant's own, in the variant's frame under
+ * the load, and both declare a capacity, each its own.
  *
- * @see docs/resources.md#variants-mixed-in
+ * @see docs/resources.md#variants
  */
 #[Resource('resource_test.pack', storage: PackStorage::class, label: new TranslatableMarkup('Backpack'))]
 final class PackResource implements ResourceInterface {
@@ -45,7 +43,7 @@ final class PackResource implements ResourceInterface {
       ->setRequired(TRUE);
     $inputs->add('carry', 'string', t('Carry'))
       ->setRequired(TRUE);
-    $inputs->mixInVariants('carry');
+    $inputs->attachVariants('load', 'carry', t('Load'));
     $inputs->add('notes', 'string', t('Notes'));
   }
 

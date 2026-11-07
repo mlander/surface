@@ -276,6 +276,14 @@ the reference constraint, `#[Constraint(..., item: TRUE)]` beside
 The pins are 28 attributes, 113 arguments and 18 blueprint methods
 since.
 
+*Shrunk 2026-11-06,* by one blueprint method, `mixInVariants()`, and
+its attribute, `#[MixInVariants]`, with its three arguments: a tagged
+union has one blueprint form, `attachVariants()` at a key, and keeping
+the chosen keys beside the deciding key is the setting
+`Variants::STORED_AS` on that key, which the engine's layout reads.
+The pins are 27 attributes, 110 arguments and 17 blueprint methods
+since.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -2119,6 +2127,10 @@ constructed over `Attaching`, which builds each structure and variant
 mixed in by itself and finds a call's variants; `Attaching` reaches
 `Mixing::layVariantMixins()` through a closure `Resources` hands it.
 (`Resources`, `Declaring`, `Mixing`, `Attaching`, `Binding`, `Gating`)
+
+*Cut 2026-11-06:* the variants half of the mixing phase went with
+`mixInVariants()`, and with it the closure; `Mixing` mixes in structures
+alone.
 
 ## Refinement
 

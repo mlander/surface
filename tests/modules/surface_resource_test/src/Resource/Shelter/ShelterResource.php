@@ -13,16 +13,14 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_resource_test\Storage\ShelterStorage;
 
 /**
- * A shelter: the variant its kind chooses mixed in flat, variants inside.
+ * A shelter: the variant its kind chooses at its shelter, variants inside.
  *
- * The hut and the tarp are variants of the kind, each a #[Variant] of
- * this class at "kind". The hut brings its roof and the covering its
- * roof chooses: variants at a key, each a #[Variant] of the hut at
- * "covering". Both are the shelter's own keys, the roof stored flat
- * beside the kind and the covering under its key, applying only where
- * the hut is chosen.
+ * The hut and the tarp are variants at "shelter", each a #[Variant] of
+ * this class there. The hut holds its roof and the covering its roof
+ * chooses: variants at a key inside the hut's frame, each a #[Variant] of
+ * the hut at "covering".
  *
- * @see docs/resources.md#variants-mixed-in
+ * @see docs/resources.md#variants
  */
 #[Resource('resource_test.shelter', storage: ShelterStorage::class, label: new TranslatableMarkup('Shelter'))]
 final class ShelterResource implements ResourceInterface {
@@ -43,7 +41,7 @@ final class ShelterResource implements ResourceInterface {
       ->setRequired(TRUE);
     $inputs->add('kind', 'string', t('Kind'))
       ->setRequired(TRUE);
-    $inputs->mixInVariants('kind');
+    $inputs->attachVariants('shelter', 'kind', t('Shelter'));
     $inputs->add('notes', 'string', t('Notes'));
   }
 

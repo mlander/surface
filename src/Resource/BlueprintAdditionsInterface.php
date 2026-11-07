@@ -14,8 +14,8 @@ use Drupal\surface\Refinement\Rule;
  * What anyone may do to a blueprint: add to it.
  *
  * Handed to alterInputs(). The owner gets BlueprintInterface, which adds
- * attachVariants(), addEach(), attachEach(), mixIn(), mixInVariants(),
- * reads(), compute() and addCacheableDependency().
+ * attachVariants(), addEach(), attachEach(), mixIn(), reads(), compute()
+ * and addCacheableDependency().
  *
  * Neither the owner nor an alter may add a key twice: adding is never
  * replacing, so nothing an owner declared can be changed by adding. The

@@ -7,7 +7,7 @@ namespace Drupal\surface_resource_test\Storage;
 use Drupal\surface\Storage\ConfigObjectStorage;
 
 /**
- * Stores the shelter fixture, its variants' members flat beside its kind.
+ * Stores the shelter fixture, the chosen variant's keys under its shelter.
  */
 final class ShelterStorage extends ConfigObjectStorage {
 

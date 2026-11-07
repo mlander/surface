@@ -576,6 +576,10 @@ Reference: [Mixins](resources.md#mixins).
 
 ### Variants mixed in
 
+Removed on 2026-11-06: variants are attached at a key with
+`attachVariants()`, and stored beside the deciding key by the setting
+`Variants::STORED_AS`.
+
 Variants mixed in are structures a sibling key chooses between, whose
 keys are added to the owner's own keys, not held under a key.
 
@@ -588,6 +592,9 @@ Not in the introduction. Reference: [Variants mixed in](resources.md#variants-mi
 
 ### Widest
 
+Removed on 2026-11-06 with variants mixed in: each variant states its
+own members in its own frame.
+
 The widest definition is the one every variant's definition of a
 member fits.
 
@@ -598,6 +605,9 @@ variant declares alike; otherwise an open value (`Mixing::widest()`).
 Not in the introduction. Reference: [Variants mixed in](resources.md#variants-mixed-in).
 
 ### Held to
+
+Removed on 2026-11-06 with variants mixed in: each variant states its
+own members in its own frame.
 
 A member held to a definition is read by that definition in place of
 its own while a condition holds.

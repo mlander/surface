@@ -120,10 +120,8 @@ final class Binding {
    *
    * Step 6 of the build. The keys a coded or runtime refiner may rule
    * out, which a declared rule may then not require; each structure mixed
-   * in, in the owner's frame; each variant mixed in, where its members
-   * apply first, then as a structure mixed in; then each contributor's
-   * coded refiners and the rules it declared, the owner's before any
-   * alter's.
+   * in, in the owner's frame; then each contributor's coded refiners and
+   * the rules it declared, the owner's before any alter's.
    *
    * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build, its frame and its input keys resolved.
@@ -133,10 +131,8 @@ final class Binding {
    *   The refiner links, as declareShape() answered them.
    * @param array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions> $additions
    *   Each alter's additions, by module.
-   * @param array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached: string[], lists: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[], variants?: list<array{by: string, rules: \Drupal\surface\Refinement\Rule[], bind: list<array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached: string[], lists: string[]}>}>} $mixins
-   *   What mixIn() answered, and mixInVariants() added: each call's
-   *   deciding key, the rules saying where its members apply, and its
-   *   variants to bind as structures mixed in.
+   * @param array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached: string[], lists: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]} $mixins
+   *   What mixIn() answered.
    * @param array<string, string[]> $readable
    *   The keys of the structure each module attached at its mount.
    * @param array<string, string[]> $mounted_by
@@ -165,16 +161,6 @@ final class Binding {
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
     foreach ($mixins['bind'] as $mixin) {
       $this->bindMixin($build, $mixin);
-    }
-    // Each variant mixed in: first where each of its members applies,
-    // in the owner's frame, then the variant's own refiners and rules, as a
-    // structure mixed in binds them.
-    // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-    foreach ($mixins['variants'] ?? [] as ['by' => $by, 'rules' => $rules, 'bind' => $variants]) {
-      $this->bindRules($build, $rules, $by);
-      foreach ($variants as $variant) {
-        $this->bindMixin($build, $variant);
-      }
     }
     // Each contributor's coded refiners, then the rules it declared, the
     // owner's before any alter's.
@@ -430,14 +416,11 @@ final class Binding {
    *     reads.
    * @param \Drupal\surface\Refinement\Rule[] $rules
    *   The rules the contributor declared, in order.
-   * @param string|null $chooses
-   *   For the rules saying where the members of variants mixed in apply,
-   *   their deciding key; NULL for rules a contributor declared.
    *
    * @throws \LogicException
    *   Naming the rule and what is wrong with it.
    */
-  protected function bindRules(Build $build, array $rules, ?string $chooses = NULL): void {
+  protected function bindRules(Build $build, array $rules): void {
     $builder = $build->builder;
     $definition = $build->definition;
     $module = $build->module;
@@ -462,9 +445,6 @@ final class Binding {
       $condition = $rule->condition();
       if ($condition === NULL || !$rule->hasEffect()) {
         throw new \LogicException(sprintf('%s says %s. A rule is a condition and at least one effect: ->when(Condition::...) and what it does, such as ->constrain(), ->require(), ->doesNotApply() or ->describe().', $name, $condition === NULL ? 'no ->when()' : 'nothing it does'));
-      }
-      if ($rule->heldTo() !== NULL && $chooses === NULL) {
-        throw new \LogicException(sprintf('%s holds "%s" to another definition. Only the build holds a key to a definition, a member of variants mixed in to its chosen variant\'s; a rule narrows the key as declared.', $name, $rule->key));
       }
       $own = $module !== NULL && in_array($rule->key, $mounted, TRUE) && !in_array($rule->key, $input_keys, TRUE);
       $nested = !$own && in_array($rule->key, $attached, TRUE);
@@ -541,7 +521,7 @@ final class Binding {
       $builder->addRefinement($own ? RefinesInputRefiner::path((string) $module, $rule->key) : $rule->key, $watched, FALSE, TRUE);
       $bound[$own ? RefinesInputRefiner::MOUNT : $rule->key][] = $rule;
     }
-    $link = new DeclaredRefiner($bound, $module, $paths, chooses: $chooses);
+    $link = new DeclaredRefiner($bound, $module, $paths);
     foreach (array_keys($bound) as $key) {
       $builder->addRefiner((string) $key, $link);
     }

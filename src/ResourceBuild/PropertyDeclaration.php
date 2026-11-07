@@ -27,7 +27,6 @@ use Drupal\surface\Resource\Attribute\Group;
 use Drupal\surface\Resource\Attribute\Input;
 use Drupal\surface\Resource\Attribute\Map;
 use Drupal\surface\Resource\Attribute\MixIn;
-use Drupal\surface\Resource\Attribute\MixInVariants;
 use Drupal\surface\Resource\Attribute\Output;
 use Drupal\surface\Resource\Attribute\Port;
 use Drupal\surface\Resource\Attribute\Rule;
@@ -59,9 +58,8 @@ use Drupal\surface\Resource\ShapeInterface;
  * carry an attribute of the Attribute namespace, so a plugin class that
  * is its own structure keeps its protected properties to itself. The
  * order is: every property in declaration order, each one's describe()
- * right after it, then each #[MixIn] on the class, then each
- * #[MixInVariants], then each #[Rule], in the order of the properties
- * carrying them.
+ * right after it, then each #[MixIn] on the class, then each #[Rule],
+ * in the order of the properties carrying them.
  *
  * Decision: see docs/decisions.md#a-class-may-declare-its-keys-as-properties.
  *
@@ -172,10 +170,6 @@ final class PropertyDeclaration {
     foreach ($reflection->getAttributes(MixIn::class) as $attribute) {
       $mixin = $attribute->newInstance();
       $blueprint->mixIn($mixin->structure, $mixin->reads);
-    }
-    foreach ($reflection->getAttributes(MixInVariants::class) as $attribute) {
-      $mixed = $attribute->newInstance();
-      $blueprint->mixInVariants($mixed->by, $mixed->from, $mixed->arguments);
     }
     foreach ($rules as [$key, $rule]) {
       self::rule($blueprint->narrow($key), $rule);

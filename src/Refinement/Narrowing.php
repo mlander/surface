@@ -54,16 +54,13 @@ use Drupal\surface\DefinitionMetadata;
  * every type is narrower than it: it resolves to the map of the variant
  * its deciding key chose, the one way a shape may appear during
  * refinement. An open value, `any` held whole (LeafRules::open()), accepts
- * every value, so every type is narrower than it too: it is what the owner's
- * frame declares for a member two variants mixed in declare unlike, held to
- * the chosen variant's own definition where that variant is chosen. Its own
- * flag and constraints are compared, as from the placeholder. Any other
- * `any` is held to its type like every type: a blueprint declares none
- * (add() refuses it). A key whose shape depends on another key's value is
- * variants, or a member of variants mixed in, never a refiner returning a
- * map.
- * Decision: see docs/decisions.md#variants-not-slots and
- * docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+ * every value, so every type is narrower than it too: it is what a reader
+ * declares for a key its schema says nothing of. Its own flag and
+ * constraints are compared, as from the placeholder. Any other `any` is
+ * held to its type like every type: a blueprint declares none (add()
+ * refuses it). A key whose shape depends on another key's value is
+ * variants, never a refiner returning a map.
+ * Decision: see docs/decisions.md#variants-not-slots.
  *
  * A derivative is the other narrower type: `entity:node` is typed data's
  * `entity` restricted to nodes, and `entity:node:article` that restricted

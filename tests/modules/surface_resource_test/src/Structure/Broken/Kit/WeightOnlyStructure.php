@@ -9,7 +9,7 @@ use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 
 /**
- * A variant with a weight alone, which the refusals mix in.
+ * A weight alone, which the refusals list as a variant and mix in.
  */
 #[Structure('resource_test.broken.kit.weight_only')]
 final class WeightOnlyStructure implements StructureInterface {

@@ -244,11 +244,7 @@ final class Conditionals {
     $ruling = [];
     foreach ($entry->refiners as $chain) {
       foreach ($chain as $link) {
-        // The rules saying where a member of variants mixed in applies are
-        // the construct the frame states, not rules of their own.
-        // Decision: see
-        // docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-        if (!$link instanceof DeclaredRefiner || $link->chooses !== NULL) {
+        if (!$link instanceof DeclaredRefiner) {
           continue;
         }
         foreach ($link->rulesFor($name) as [$below, $rule]) {
