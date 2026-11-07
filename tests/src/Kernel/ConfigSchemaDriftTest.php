@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Storage\ConfigSchemaGenerator;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -99,6 +100,36 @@ class ConfigSchemaDriftTest extends SurfaceKernelTestBase {
       $this->assertFileExists($root . '/' . $path);
       $this->assertSame($contents, file_get_contents($root . '/' . $path), sprintf('%s is not what its resources declare. Run drush surface:config-schema --write (for a test module, this test with SURFACE_CONFIG_SCHEMA_WRITE=1), and commit what it writes.', $path));
     }
+  }
+
+  /**
+   * Tests an entry its resource no longer writes goes, one by hand stays.
+   *
+   * So a shipped file holding an entry its resource stopped writing is not
+   * what the generator writes, and the test above fails on it. An entry
+   * of a resource not described in the run is kept, as when drush
+   * generate adds one resource's entries to a file.
+   */
+  public function testAnEntryItsResourceNoLongerWritesIsDropped(): void {
+    $generator = $this->container->get('surface.config_schema');
+    $path = $this->container->get('extension.list.module')->getPath('surface_resource_test') . '/config/schema/surface_resource_test.schema.yml';
+    $shipped = rtrim((string) file_get_contents($this->container->getParameter('app.root') . '/' . $path), "\n");
+    $entries = [];
+    $described = [];
+    foreach ($generator->resources() as $definition) {
+      $described[] = $definition->id;
+      foreach ($generator->describe($definition)['entries'] as $entry) {
+        if ($entry['module'] === 'surface_resource_test') {
+          $entries[$entry['name']] = $entry;
+        }
+      }
+    }
+    $orphan = sprintf(ConfigSchemaGenerator::GENERATED, 'resource_test.kit') . "\nsurface_resource_test.gone:\n  type: config_object\n  label: 'Gone'";
+    $by_hand = "surface_resource_test.by_hand:\n  type: mapping\n  label: 'By hand'";
+    $file = $shipped . "\n\n" . $orphan . "\n\n" . $by_hand . "\n";
+    $this->assertSame($shipped . "\n\n" . $by_hand . "\n", ConfigSchemaGenerator::merge($file, $entries, $described), 'The kit writes no such entry: it goes; the entry written by hand stays.');
+    $this->assertSame($file, ConfigSchemaGenerator::merge($file, $entries), 'Added to, the file keeps it.');
+    $this->assertSame($file, ConfigSchemaGenerator::merge($file, $entries, ['resource_test.campsite']), 'The kit not described, its entry is kept.');
   }
 
   /**

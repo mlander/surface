@@ -63,6 +63,10 @@ $inputs->attachList('visibility', VisibilityConditionStructure::class, t('Visibi
   and read by the schema reader, since its settings add a
   `context_mapping` of the contexts the site has, its default the
   context the block layout assigns: site state, which no schema says.
+  The settings are asked for under `settings` and stored flat beside the
+  condition's id, as core keeps them, by a setting on the map:
+  `->setSetting(Variants::STORED_AS, Variants::FLAT)`
+  ([Stored flat](../../docs/resources.md#stored-flat)).
 - **Three operations.** `create` places a block under a machine name the
   caller types, refused when it is in use; `update` changes one, its theme
   held to the one it is in; `delete` removes it, taking no values

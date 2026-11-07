@@ -102,11 +102,14 @@ use Symfony\Component\Yaml\Yaml;
  * its own name; see docs/storage.md#a-key-stored-under-a-path.
  *
  * A file's entries the resource does not describe are kept as they are,
- * and so are the comments above an entry; each written entry says it was
- * generated on the line above it. What the resource does not say, the
- * object's own label and a variant's when it declares none, is kept from
- * the file too. Writing nothing itself: files() answers what each file
- * would hold, and the Drush command and the drift test compare or write.
+ * and so are the comments above an entry, but for an entry that says it
+ * was generated from a resource still declared that no longer writes it,
+ * which goes with the comments above it; each written entry says it was
+ * generated on the line above it. What the resource
+ * does not say, the object's own label and a variant's when it declares
+ * none, is kept from the file too. Writing nothing itself: files()
+ * answers what each file would hold, and the Drush command and the drift
+ * test compare or write.
  *
  * @see \Drupal\surface\Drush\Commands\ConfigSchemaCommand
  * @see docs/storage.md#a-schema-generated-from-the-resource
@@ -351,7 +354,9 @@ final class ConfigSchemaGenerator {
   public function files(array $modules): array {
     $schemas = [];
     $installs = [];
+    $described_ids = [];
     foreach ($this->resources() as $definition) {
+      $described_ids[] = $definition->id;
       $described = $this->describe($definition);
       foreach ($described['entries'] as $entry) {
         if (in_array($entry['module'], $modules, TRUE)) {
@@ -365,7 +370,7 @@ final class ConfigSchemaGenerator {
     $files = [];
     foreach ($schemas as $module => $entries) {
       $path = $this->path($module, 'config/schema/' . $module . '.schema.yml');
-      $files[$path] = static::merge($this->read($path), $entries);
+      $files[$path] = static::merge($this->read($path), $entries, $described_ids);
     }
     foreach ($installs as $path => $values) {
       $files[$path] = static::installFile($values);
@@ -1450,17 +1455,22 @@ final class ConfigSchemaGenerator {
    * A file is a header, then entries, each its comment lines and its
    * top-level key's lines. An entry generated now replaces the one of its
    * name, under that one's comments, the generated line among them
-   * written once; a new one is added at the end; every other is kept.
+   * written once; a new one is added at the end; every other is kept,
+   * but for one generated from a resource described now that no longer
+   * writes it.
    *
    * @param string $file
    *   The file as it is; empty for none.
    * @param array<string, array{module: string, name: string, resource: string, schema: array}> $entries
    *   The entries, by name.
+   * @param string[] $described
+   *   The resources described now, by id, every entry each writes among
+   *   $entries; none when the entries are added to the file alone.
    *
    * @return string
    *   The file as it would be written.
    */
-  public static function merge(string $file, array $entries): string {
+  public static function merge(string $file, array $entries, array $described = []): string {
     $header = [];
     $blocks = [];
     $comments = [];
@@ -1496,8 +1506,17 @@ final class ConfigSchemaGenerator {
       $blocks[$current]['lines'] = [...$blocks[$current]['lines'], ...$comments, $line];
       $comments = [];
     }
+    $generated = '/^# Generated from the (\S+) resource by drush surface:config-schema\.$/';
+    foreach ($blocks as $name => $block) {
+      foreach ($block['comments'] as $line) {
+        if (!isset($entries[$name]) && preg_match($generated, $line, $match) && in_array($match[1], $described, TRUE)) {
+          // Its resource writes no entry of that name any more.
+          unset($blocks[$name]);
+        }
+      }
+    }
     foreach ($entries as $name => $entry) {
-      $kept = array_values(array_filter($blocks[$name]['comments'] ?? [], static fn (string $line): bool => !preg_match('/^# Generated from the \S+ resource by drush surface:config-schema\.$/', $line)));
+      $kept = array_values(array_filter($blocks[$name]['comments'] ?? [], static fn (string $line): bool => !preg_match($generated, $line)));
       $blocks[$name] = [
         'comments' => [...$kept, sprintf(self::GENERATED, $entry['resource'])],
         'lines' => explode("\n", rtrim(static::dumpEntry($name, $entry['schema']), "\n")),

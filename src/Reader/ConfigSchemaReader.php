@@ -165,7 +165,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
    * (Variants::STORED_AS, FlatVariantsLayout), and asked for under the
    * key.
    *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   * Decision: see docs/decisions.md#variants-stored-flat-are-a-layout.
    *
    * @param string $named
    *   The expression as written: `views.field.[plugin_id]`.
@@ -751,7 +751,7 @@ final class ConfigSchemaReader implements DeclarationReaderInterface {
 
       case 'own key':
         // Decision: see
-        // docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+        // docs/decisions.md#variants-stored-flat-are-a-layout.
         if ($this->fallbackOf($expression) === NULL) {
           $reading->expression($here, $named, 'own key', $by, 'open');
           return $this->open($inputs, $key, $label, $required, $reading, $here, sprintf('Its type is chosen by its own "%s" key, and no type says what every one holds, so "%s" itself has no type: attachVariants(ConfigSchemaReader::CHOSEN), which reads the chosen type at "%s", stored flat, needs a type every value holds that declares "%s". Until one does, the key is declared open, holding any value.', $by, $by, self::CHOSEN, $by));

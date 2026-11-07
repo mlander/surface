@@ -308,7 +308,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
    * `configuration`, the variants the id chooses, each the condition less
    * those keys, stored flat beside them.
    *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   * Decision: see docs/decisions.md#variants-stored-flat-are-a-layout.
    */
   public function testOwnKeyTypeHoldsItsVariantsAtConfiguration(): void {
     $reader = $this->container->get(ConfigSchemaReader::class);
@@ -376,7 +376,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
    * variant's keys at `configuration`, the settings that variant's
    * variants at a key, settled when read.
    *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   * Decision: see docs/decisions.md#variants-stored-flat-are-a-layout.
    */
   public function testOwnKeyTypeHoldsVariants(): void {
     $reader = $this->container->get(ConfigSchemaReader::class);
@@ -441,7 +441,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
    * declares its pattern a string in one type and a mapping in the other,
    * as views.area.text and views.area.text_custom declare their content.
    *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   * Decision: see docs/decisions.md#variants-stored-flat-are-a-layout.
    */
   public function testOwnKeyTypesDeclaringKeyUnlikeKeepTheirOwn(): void {
     $this->enableModules(['views']);
@@ -491,7 +491,7 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
    * request path's pages are stored beside its id, read under
    * `configuration`, and written back beside the id.
    *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
+   * Decision: see docs/decisions.md#variants-stored-flat-are-a-layout.
    */
   public function testOwnKeyStructureIsStoredFlat(): void {
     $this->installConfig(['surface_reader_test']);

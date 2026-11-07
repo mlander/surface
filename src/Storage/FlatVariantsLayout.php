@@ -32,7 +32,7 @@ use Drupal\surface\Variants;
  *   the site.
  * - fromStorage(): at each such level, every stored key that is not one
  *   of the owner's own keys there is gathered under the key, by exclusion,
- *   as BlockPlacementStorage::fromEntity() gathers a condition's settings.
+ *   which needs no settled variant and no schema.
  *   Of what is gathered, the chosen variant's keys and the secrets the
  *   other variants keep (Variants::keptSecrets()) are read under the key;
  *   the rest was written for a variant not chosen, and is left out of

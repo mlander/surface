@@ -3369,18 +3369,19 @@ core's own-key form into it. Each choice, and why:
   form, the tool and the pipeline do not read it.
 - **The wire trade, accepted.** The contract asks for the chosen keys
   one level under the key where the YAML holds them flat beside the
-  deciding key. The block example's visibility conditions already did
-  this by hand, in both directions, in `BlockPlacementStorage`
+  deciding key. The block example's visibility conditions did this by
+  hand, in both directions, in `BlockPlacementStorage` until 2026-11-06
   ([A placed block is a resource](#a-placed-block-is-a-resource)); the
   layout does it for every config storage, at any depth the sealed
   surface holds, with no transform an owner writes.
 - **Read back by exclusion, the chosen variant alone.** On read, every
   stored key at the level that is not one of the owner's own there is
   gathered under the key, which needs no settled variant and no schema,
-  as `BlockPlacementStorage::fromEntity()` gathers a condition's
-  settings. Of what is gathered, the chosen variant's keys and the
-  secrets the other variants keep (`Variants::keptSecrets()`) are read
-  under the key. A plain leftover of a variant not chosen stays in
+  as `BlockPlacementStorage::fromEntity()` gathered a condition's
+  settings by hand until the block example took the setting. Of what is
+  gathered, the chosen variant's keys and the secrets the other variants
+  keep (`Variants::keptSecrets()`) are read under the key. A plain
+  leftover of a variant not chosen stays in
   storage, unread: under the key, the pipeline would read the value as
   written for that other variant (`Variants::held()`), and a plain value
   of a variant not chosen goes, as for any variants at a key
@@ -7711,6 +7712,13 @@ Two reads of one type under one id with different content are filed
 apart as `<id>@<n>`, as for defaults.
 (`ConfigSchemaReader::structure()`,
 `ConfigSchemaReaderTest::testOwnIsTheTypeLessItsFrameType()`)
+
+*Changed 2026-11-06:* `VisibilityConditionStructure` stores its
+`settings` flat (`Variants::STORED_AS`), so what `BlockPlacementStorage`'s
+two visibility loops did to lay a condition's settings beside its id and
+gather them back went with the layout, the loops keeping the conditions
+keyed by id and a list of strings as core's map of each value to itself
+([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
 
 ### A listing is a read-only operation with outputs; a reorder is an update over the collection
 
