@@ -186,12 +186,13 @@ the record of the rework that brought the module to the pattern.
   that key chooses between, attached at one key,
   `attachVariants($key, by: $sibling)`. Always open: the parent names
   none, any module may declare one.
-- **Variants mixed in**: removed on 2026-11-06 with `mixInVariants()`:
-  variants kept beside their deciding key are `attachVariants()` with
-  `Variants::STORED_AS` `FLAT` (`Storage\FlatVariantsLayout`), and config
-  schema's own-key form, `views.sort.[plugin_id]`, is read as variants at
-  `configuration` (`ConfigSchemaReader::CHOSEN`), stored flat
-  (`docs/reading-a-schema.md#config-schema`).
+- **Stored flat**: variants whose chosen keys the storage keeps flat
+  beside the deciding key, `->setSetting(Variants::STORED_AS,
+  Variants::FLAT)` on the map `attachVariants()` returns (`#[Setting]`
+  beside `#[AttachVariants]`), applied by `Storage\FlatVariantsLayout`
+  for the config storages; the contract is unchanged
+  (`docs/resources.md#stored-flat`,
+  `docs/decisions.md#variants-stored-flat-are-a-layout`).
 - **Variant**: one structure (or resource) among the variants, for one
   value of the deciding key, `#[Variant(of:, at:, for:)]`; `at` is the
   key the variants sit at.
@@ -671,7 +672,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1908, Assertions: 44956, Errors: 0, Failures: 0, Skipped: 3. Classes: 266 of 266, 8 at a time, browser classes 4.
+phpunit: Tests: 1916, Assertions: 44972, Errors: 0, Failures: 0, Skipped: 3. Classes: 266 of 266, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -691,7 +692,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1800, Assertions: 40807, Skipped: 3, Deprecations: 130. Classes:
+`Tests: 1808, Assertions: 40823, Skipped: 3, Deprecations: 130. Classes:
 217, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 

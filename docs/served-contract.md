@@ -491,8 +491,8 @@ refused and a renderer offers none; why:
 and `list` (`collection`).
 
 Removed on 2026-11-06, within contract 4, with `mixInVariants()`:
-`variantsMixedIn` (variants sit at a key, which says `by` and
-`variants`; no client read it).
+`variantsMixedIn` (variants sit at a key, whose `by` and `variants` say
+which def each value chooses, stored flat or not; no client read it).
 
 A document is read as well as written. `Contract\SchemaReader` reads a
 JSON Schema into a structure by this page's table run backwards, and the
@@ -926,13 +926,6 @@ schema, abbreviated:
   when every member is gone. A member whose structure's answer waits for
   the subject is marked `x-surface.live` in the full schema, beside the
   def.
-
-### Variants mixed in are conditionals
-
-Removed on 2026-11-06 with `mixInVariants()`: variants are attached at
-a key ([Variants are conditionals](#variants-are-conditionals)), and
-keeping their keys beside the deciding key is the storage's layout,
-which the contract does not state.
 
 ### A shape is one def
 

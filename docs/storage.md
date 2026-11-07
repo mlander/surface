@@ -664,20 +664,123 @@ repeats the members.
 A member the structure's access omits for the account writing is kept
 as stored, at the owner's level or inside a child the owner stores.
 
-The members of [variants mixed in](resources.md#variants-mixed-in) are
-the owner's keys the same way: the schema lists every variant's members
-flat beside the deciding key, each optional (`nullable: true`), since
-one may not apply to the variant stored. A member of a variant not
-chosen keeps what is stored, and a variant's own member its access
-omits is kept as stored too.
+### Variants stored flat
 
-As of 2026-11-06, the variants at a key whose map carries
-`->setSetting(Variants::STORED_AS, Variants::FLAT)` are stored flat
-beside the deciding key, with nothing at the key, while every door still
-asks for them under the key (`Storage\FlatVariantsLayout`). At a config
-object's root the schema is the shape the paragraph above describes;
-inside a mapping it is core's own-key form, `<type>.[<key>]`, the
-deciding key naming the type of the level that holds it.
+Variants at a key whose map says
+`->setSetting(Variants::STORED_AS, Variants::FLAT)` are stored with the
+chosen variant's keys beside the deciding key and nothing at the key,
+while every door asks for them under the key
+([Stored flat](resources.md#stored-flat)). The layout
+(`Storage\FlatVariantsLayout`) tells the generator to write every
+variant's keys at that level (`StoredSchemaInterface::SPREAD`), and what
+that writes depends on where the level is.
+
+At a config object's root the schema is the union. Core types a root by
+its name alone: `TypedConfigManager` merges the root's definition with
+no replacements, so a `[<key>]` in a root's `type:` never resolves. The
+root lists every variant's keys beside the deciding key, each nullable,
+since a key may belong to a variant not chosen. The test module's kit:
+
+<!-- yaml: tests/modules/surface_resource_test/config/schema/surface_resource_test.schema.yml#surface_resource_test.kit -->
+
+```yaml
+surface_resource_test.kit:
+  type: config_object
+  label: 'Camping kit'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    kind:
+      type: string
+      label: 'Kind'
+    weight:
+      type: integer
+      label: 'Weight'
+      nullable: true
+    fuel:
+      type: string
+      label: 'Fuel'
+      nullable: true
+    poles:
+      type: integer
+      label: 'Poles'
+      nullable: true
+    fly:
+      type: boolean
+      label: 'Rain fly'
+      nullable: true
+    notes:
+      type: string
+      label: 'Notes'
+      nullable: true
+```
+
+Inside a mapping (an item of a collection, a child at a key, an entry
+of keys from the site), the generator writes core's own-key form,
+`<type>.[<key>]`: the level is typed by the deciding key it holds, the
+owner's keys at that level are a mapping type of their own, and each
+variant's type extends it with the variant's keys. The test module's
+campsite types each pitch by its kind:
+
+<!-- yaml: tests/modules/surface_resource_test/config/schema/surface_resource_test.schema.yml#surface_resource_test.campsite -->
+
+```yaml
+surface_resource_test.campsite:
+  type: config_object
+  label: 'Campsite'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    pitches:
+      type: sequence
+      label: 'Pitches'
+      nullable: true
+      sequence:
+        type: 'surface_resource_test.campsite.pitches.[kind]'
+        label: 'Pitches'
+```
+
+<!-- yaml: tests/modules/surface_resource_test/config/schema/surface_resource_test.schema.yml#surface_resource_test.campsite.pitches -->
+
+```yaml
+surface_resource_test.campsite.pitches:
+  type: mapping
+  label: 'Pitches'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    name:
+      type: string
+      label: 'Name'
+    kind:
+      type: string
+      label: 'Kind'
+```
+
+<!-- yaml: tests/modules/surface_resource_test/config/schema/surface_resource_test.schema.yml#surface_resource_test.campsite.pitches.hammock -->
+
+```yaml
+surface_resource_test.campsite.pitches.hammock:
+  type: surface_resource_test.campsite.pitches
+  label: 'Hammock'
+  mapping:
+    straps:
+      type: integer
+      label: 'Straps'
+      constraints:
+        Range:
+          min: 1
+```
+
+Below the top level the layout keeps nothing of a variant not chosen:
+an item's position may hold another item on the next write, and the
+chosen variant's type declares none of the other variants' keys.
 
 ### The site's defaults are not stored values
 

@@ -59,8 +59,8 @@ install; read it first.
   class, adopting it [on a plugin](declaring-a-resource.md#on-a-plugin),
   defaults, locking, secrets, required.
 - [Resources and structures](resources.md): [which way to compose](resources.md#which-way-to-compose), operations, alters,
-  attached structures and variants, variants from the site, ports,
-  mixins, variants mixed in, collections, keys from the site, access,
+  attached structures and variants, variants stored flat, variants from
+  the site, ports, mixins, collections, keys from the site, access,
   storage, tools, the catalog.
 - [Reading a schema](reading-a-schema.md): a JSON Schema read into a
   structure: the mapping, what is kept and checked on the server, what

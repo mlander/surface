@@ -197,7 +197,6 @@ one JSON Schema construct:
 | `addMap()` | an inline `type: object` with its properties |
 | `mixIn()` | `allOf` of the structure's def and the owner's properties |
 | `attachVariants()` | `allOf` of `if`/`then`, one per value of the deciding key |
-| `mixInVariants()` | `allOf` of `if`/`then`, one per value of the deciding key, each `then` a reference to the variant's def |
 | `addEach()`, `attachEach()` | an object with one property per thing the site has |
 | `addList()` | `type: array` of one value's items |
 
@@ -452,7 +451,6 @@ whether it must be given. The attributes say the rest:
 | `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
 | `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['Range', ['max' => 5]])]` on `$items` |
 | `mixIn(ReviewStructure::class, reads: [...])` | `#[MixIn(ReviewStructure::class, reads: [...])]` on the class |
-| `mixInVariants('kind', from:, arguments:)` | `#[MixInVariants(by: 'kind', from:, arguments:)]` on the class; each variant still carries `#[Variant(of:, at:)]`, `at` the deciding key |
 | `defineOutputs()` | `#[Output(...)]`, which says what `#[Input]` says, on the class implementing `DefinesOutputsInterface` |
 
 An attribute for the owner's own keys names the kind of member
@@ -480,11 +478,11 @@ a composition restates the verb (`Attach`, `AttachList`, `AttachEach`,
   string extraction does not find it; `new TranslatableMarkup('...')` is
   found.
 - **Order.** The properties, in the order written, each one's
-  `#[Describe]` right after it; then each `#[MixIn]`, its members after
-  every property; then each `#[MixInVariants]`, its variants' members
-  after those; then each `#[Rule]`, in the order of the properties
-  carrying them. A class that mixes in before its own keys keeps
-  `defineInputs()`.
+  `#[Describe]` right after it, an `#[AttachVariants]` property's key
+  and its `#[Setting]` among them where the property stands; then each
+  `#[MixIn]`, its members after every property; then each `#[Rule]`, in
+  the order of the properties carrying them. A class that mixes in
+  before its own keys keeps `defineInputs()`.
 - **What stays a method.** What an attribute argument cannot hold: a list
   computed by a call (`Venues::rooms()`), a key declared in a loop, a
   condition `#[Rule]` does not spell (it spells `whenEquals:`,

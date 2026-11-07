@@ -20,7 +20,7 @@ and shows variants on the placed block.
 
 The module has four more ways: a collection (a list), a mixin, a port
 and keys from the site. [Which way to compose](../resources.md#which-way-to-compose)
-puts all six side by side, with the question each one answers.
+puts all seven side by side, with the question each one answers.
 
 ## Variants: a placed block's settings
 
