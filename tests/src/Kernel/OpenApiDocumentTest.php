@@ -789,6 +789,59 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests the stage header is offered where a resource's storage is staged.
+   *
+   * A shared header parameter, `SurfaceStage`, referenced from the
+   * envelope, the narrowing and every write of a resource whose storage
+   * implements TransactionalStorageInterface, never from its full schema,
+   * which reads nothing stored, nor from any call of the stage itself, of
+   * a config resource or of a State one.
+   */
+  public function testTheStageHeaderIsOfferedWhereStorageCanBeStaged(): void {
+    $this->enableModules(array_diff(self::ENTITY_MODULES, static::$modules));
+    $this->installEntityFixture();
+    $this->container->get('router.builder')->rebuild();
+    $document = $this->decoded();
+    $this->assertSame([], $document['x-surface']['unavailable']);
+    $this->assertSame([
+      'name' => 'X-Surface-Stage',
+      'in' => 'header',
+      'required' => FALSE,
+      'description' => 'The id of a stage, from POST /surface-api/surface.stage: a write is kept in the stage until it is applied, and an envelope or a narrowing answers the thing as it stands there.',
+      'schema' => ['type' => 'string', 'format' => 'uuid'],
+    ], $document['components']['parameters']['SurfaceStage']);
+    $staged = [];
+    foreach ($document['paths'] as $path => $item) {
+      foreach ($item as $verb => $call) {
+        if (in_array(['$ref' => '#/components/parameters/SurfaceStage'], $call['parameters'] ?? [], TRUE)) {
+          $staged[] = strtoupper($verb) . ' ' . $path;
+        }
+      }
+    }
+    foreach (['entity.content:node.page', 'entity.content:node'] as $resource) {
+      $base = '/surface-api/' . $resource;
+      $calls = [
+        'GET ' . $base,
+        'POST ' . $base,
+        'POST ' . $base . '/schema',
+        'GET ' . $base . '/{id}',
+        'PATCH ' . $base . '/{id}',
+        'POST ' . $base . '/{id}/schema',
+      ];
+      foreach ($calls as $call) {
+        $this->assertContains($call, $staged, $call . ': the envelope, the narrowing and the write.');
+      }
+      $this->assertNotContains('GET ' . $base . '/schema', $staged, 'The full schema reads nothing stored.');
+      $this->assertNotContains('GET ' . $base . '/{id}/schema', $staged, 'The full schema reads nothing stored.');
+    }
+    $other = array_filter($staged, static fn (string $call): bool => !str_contains($call, ' /surface-api/entity.content:'));
+    $this->assertSame([], array_values($other), 'No call of the stage, a config resource or a State one takes the header.');
+    $this->assertArrayHasKey('/surface-api/surface.stage/{id}', $document['paths']);
+    $this->assertArrayHasKey('/surface-api/first.newsletter', $document['paths']);
+    $this->assertArrayHasKey('/surface-api/tool_test.logbook', $document['paths']);
+  }
+
+  /**
    * Tests the security requirement names the permission.
    */
   public function testTheSecurityRequirementNamesThePermission(): void {

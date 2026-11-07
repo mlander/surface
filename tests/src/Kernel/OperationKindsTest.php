@@ -56,6 +56,11 @@ class OperationKindsTest extends SurfaceKernelTestBase {
   ];
 
   /**
+   * The line an update over a structure with no keys ends with instead.
+   */
+  protected const NO_KEYS = 'Takes no values: send values {}.';
+
+  /**
    * {@inheritdoc}
    */
   protected static $modules = [
@@ -121,7 +126,10 @@ class OperationKindsTest extends SurfaceKernelTestBase {
       $description = (string) $definition->getDescription();
       // The vault says none, and is described by its label.
       $this->assertSame($operation->description === NULL, $id === 'surface:tool_test.vault:configure', $id . ': every shipped operation says what it does.');
-      $this->assertSame((string) ($operation->description ?? $operation->label . '.') . ' ' . self::RULES[$kind], $description, $id . ': its own description, then its kind\'s call rules.');
+      // An update whose data surface declares no keys, the stage's apply,
+      // says it takes none instead.
+      $rules = $kind === OperationDefinition::UPDATE && $resources->buildDeclared($resource->name(), $operation->needsNothing() ? $resources->operation($resource->name(), $operation->id) : new OperationContext($operation->contextId()))->getDefinitions()->toArray() === [] ? self::NO_KEYS : self::RULES[$kind];
+      $this->assertSame((string) ($operation->description ?? $operation->label . '.') . ' ' . $rules, $description, $id . ': its own description, then its kind\'s call rules.');
       $this->assertStringNotContainsString('"', $description, $id . ': no literal quotes, which a bridge escapes.');
 
       $context = $operation->needsNothing() ? $resources->operation($resource->name(), $operation->id) : new OperationContext($operation->id);

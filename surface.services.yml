@@ -213,7 +213,7 @@ services:
   # context, the built resource and its storage, and answers access.
   surface.served_operations:
     class: Drupal\surface\Http\ServedOperations
-    arguments: ['@surface.resource_registry', '@surface.resources']
+    arguments: ['@surface.resource_registry', '@surface.resources', '@surface.stages']
   # Reads which operation a path and a method name, and writes the path of
   # an operation: contract 3's paths.
   surface.served_paths:

@@ -32,7 +32,10 @@ and field storage settings as resources
   are the operation's parameters (each a value; one named for a
   resource key described as that key), the
   resource's keys the operation does not know as `values`, and
-  `dry_run`; see [Tools](resources.md#tools). Two rules leave an operation
+  `dry_run`; see [Tools](resources.md#tools). A resource whose storage
+  can be staged adds `stage`, last, on its write, read and narrowing
+  tools: the id of a stage the write is kept in, or the read and the
+  narrowing answer through ([Staging](staging.md#the-stage-input)). Two rules leave an operation
   out: `field.storage`'s `create` asks `administer %entity_type fields`
   and no parameter supplies the entity type, so it could never be
   allowed and is only ever a field's; and a structure a plugin names
@@ -61,9 +64,9 @@ description, and always present:
 | Key | Holds |
 | --- | --- |
 | `ok` | Whether nothing was refused. |
-| `committed` | Whether the values were written; false for a dry run, a refusal and a read only operation. |
+| `committed` | Whether the values were written: to storage, or to the stage when one is named; false for a dry run, a refusal and a read only operation. |
 | `changed` | Whether the write moved a stored value; false when the values were what is stored, and then nothing was saved. |
-| `changes` | The JSON Pointer of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing (why: [decision](decisions.md#absent-keeps-null-clears)). |
+| `changes` | The JSON Pointer of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing (why: [decision](decisions.md#absent-keeps-null-clears)). Against the view of the stage when one is named: what this call moved since the last staged write. |
 | `values` | The accepted values, as the read tool would answer them after the write: no secret, no key this account may not see, and no key never stored that the write left at its default (a mounted key not sent). |
 | `violations` | Each refusal, `{path, code, message}`; a refusal of the whole call has an empty path. |
 | `notes` | Each value sent for a locked key and not taken, `{path, code, message}`, code `locked`. |
@@ -217,8 +220,9 @@ operation of its own, `read`, whose tool is `surface:<resource>:read`
   field's asks `view` field access, so a field the account may not see
   is left out and one it may see and not edit is read
   ([docs/entities.md](entities.md)).
-- **Inputs.** The operation's parameters, and nothing else: no `values`,
-  no `dry_run`. It has no narrowing tool: it takes no values to narrow.
+- **Inputs.** The operation's parameters, and `stage` where the storage
+  can be staged ([Staging](staging.md#the-stage-input)): no `values`, no
+  `dry_run`. It has no narrowing tool: it takes no values to narrow.
 - **Output.** `values`: what the resource's composed storage loads, in
   the shape the update's `values` input takes (the resource's keys
   less the identity keys the operation knows, keys other modules mount

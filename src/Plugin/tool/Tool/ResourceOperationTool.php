@@ -42,7 +42,8 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  *
  * - **Inputs**: the operation's parameters, by name, each a value the
  *   operation is handed raw and its storage loads by; `values`, the
- *   resource's keys the operation does not already know; `dry_run`. The
+ *   resource's keys the operation does not already know; `dry_run`;
+ *   `stage`, where the resource's storage can be staged. The
  *   definition is static, which operations are what make possible: an
  *   operation that needs nothing is the resource's exact contract before
  *   anyone calls, and one that needs a subject is refined to it as soon
@@ -56,7 +57,8 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  *   built in it, and the pipeline submits `values` to the resource's
  *   composed storage, or stops after prepare for a dry run. Prepare is
  *   where storage's own checks run, so a dry run is refused for what a
- *   write would be refused for.
+ *   write would be refused for. With a stage, the storage is handed it,
+ *   and the write is kept in the stage.
  * - **Outputs**: the accepted values, projected as the read tool
  *   projects them (no key left out for the caller, no secret), whether
  *   they were written, and the resource's own outputs as its storage
@@ -173,8 +175,10 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * the settings variant, the settings are that variant, and exactly the
    * identity keys the operation knows are left out, and, for an operation
    * that changes a thing that exists, each property defaults to what is
-   * stored for it now. Parameters that name nothing leave the declared
-   * definition standing; executing refuses them.
+   * stored for it now, or, with a stage, to what the stage holds for it.
+   * Parameters that name nothing, and a stage that names nothing or is
+   * another account's, leave the declared definition standing; executing
+   * refuses them.
    */
   public function refineInputDefinition(string $name, InputDefinitionInterface $definition, array $values): InputDefinitionInterface {
     if ($name !== OperationInputs::VALUES) {
@@ -189,11 +193,15 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       return $definition;
     }
     try {
-      [$resource, , $context] = $this->operation($values);
+      [$resource, $operation, $context] = $this->operation($values);
       if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
         return $definition;
       }
-      return $this->operationInputs->values($resource, $this->resources->build($resource->name(), $context), $context);
+      $stage = $this->stage($values, $this->arguments($values, $operation));
+      if ($stage !== NULL && $this->stageRefused($stage) !== NULL) {
+        return $definition;
+      }
+      return $this->operationInputs->values($resource, $this->resources->build($resource->name(), $context), $context, $stage);
     }
     catch (\InvalidArgumentException) {
       return $definition;
@@ -339,6 +347,8 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
   protected function doExecute(array $values): ExecutableResult {
     try {
       [$resource, $operation, $context] = $this->operation($values);
+      $stage = $this->stage($values, $this->arguments($values, $operation));
+      $refused = $stage === NULL ? NULL : $this->stageRefused($stage);
     }
     catch (\InvalidArgumentException $e) {
       return $this->notFound($e);
@@ -351,8 +361,13 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     if (!$access->isAllowed()) {
       return $this->accessRefused($resource, $operation, $context);
     }
+    // A stage is its owner's: another account's is refused before
+    // anything is built.
+    if ($refused !== NULL) {
+      return $refused;
+    }
     $built = $this->resources->build($resource->name(), $context);
-    $storage = $this->resources->storage($resource->name(), $context, $built);
+    $storage = $this->resources->storage($resource->name(), $context, $built, stage: $stage);
     $input = $values[OperationInputs::VALUES] ?? [];
     $result = $this->pipeline->submit(
       $built,
@@ -395,6 +410,10 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
         $operation->kind() === OperationDefinition::DELETE && $result->committed => $this->t('@label: removed. The values it held are answered.', ['@label' => (string) $operation->label]),
         $operation->kind() === OperationDefinition::DELETE => $this->t('Dry run of @label: the removal was rehearsed, and nothing was removed. The values it holds are answered.', ['@label' => (string) $operation->label]),
         $result->committed && !$result->changed() => $this->t('@label: the values were accepted, and they are what is stored, so nothing was written.', ['@label' => (string) $operation->label]),
+        $result->committed && $stage !== NULL => $this->t('@label: the values were accepted and staged in @stage.', [
+          '@label' => (string) $operation->label,
+          '@stage' => $stage->id,
+        ]),
         $result->committed => $this->t('@label: the values were accepted and written.', ['@label' => (string) $operation->label]),
         // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
         $built->changesNothing() => $this->t('@label changes nothing: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),

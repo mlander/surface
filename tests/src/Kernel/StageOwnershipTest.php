@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Access\AccessResultReasonInterface;
+use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AnonymousUserSession;
+use Drupal\surface\Http\ServedOperationAccessCheck;
+use Drupal\surface\Http\ServedPaths;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
@@ -13,13 +16,16 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\FailureCategory;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\Routing\Route;
 
 /**
  * Tests a stage is its owner's, at the tool and over HTTP.
  *
- * Another account is refused every operation on a stage it did not open;
- * an id that names no stage names nothing; an anonymous account may not
- * open one.
+ * Another account is refused every operation on a stage it did not open,
+ * and writing into it or reading through it from another resource's tools
+ * and paths alike; an id that names no stage names nothing; an anonymous
+ * account may not open one.
  *
  * @see \Drupal\surface\Access\StageAccess
  */
@@ -48,7 +54,37 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->setUpCurrentUser(admin: TRUE);
-    $this->setUpCurrentUser();
+    $this->setUpCurrentUser([], ['keep the ledger']);
+  }
+
+  /**
+   * Answers the API route's access check for a request.
+   *
+   * @param string $method
+   *   The method.
+   * @param string $path
+   *   The path after `/surface-api/`, split into its segments.
+   * @param array<string, string> $headers
+   *   More headers, by name.
+   *
+   * @return bool
+   *   Whether the route lets the current account in.
+   */
+  protected function routeAllows(string $method, string $path, array $headers = []): bool {
+    $check = $this->container->get('surface.served_access');
+    assert($check instanceof ServedOperationAccessCheck);
+    $segments = explode('/', $path);
+    $ids = ['resource' => array_shift($segments)];
+    foreach (ServedPaths::SEGMENTS as $index => $name) {
+      $ids[$name] = $segments[$index] ?? '';
+    }
+    $route_match = new RouteMatch('surface.api', new Route('/surface-api/{resource}/{s1}/{s2}/{s3}/{s4}/{s5}'), $ids, $ids);
+    $server = [];
+    foreach ($headers as $name => $value) {
+      $server['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
+    }
+    $request = Request::create('/surface-api/' . $path, $method, [], [], [], $server);
+    return $check->access($route_match, $this->container->get('current_user'), $request)->isAllowed();
   }
 
   /**
@@ -85,6 +121,55 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
     $this->assertSame(403, $this->served('PATCH', '/surface-api/surface.stage/' . $id . ':apply', [])->getStatusCode());
     $this->assertSame(403, $this->served('DELETE', '/surface-api/surface.stage/' . $id)->getStatusCode());
     $this->assertNotNull($this->stages()->read($id));
+  }
+
+  /**
+   * Tests another account's stage is refused through the stage input.
+   *
+   * At the tool, a refusal of access naming the stage, not a not found;
+   * over HTTP, the header is refused by the route's access check, 403,
+   * while the same request without it is let in. A stage that names
+   * nothing is not found at both: the tool's input to correct, and the
+   * controller's 404. So is a stage input that is not a string, which
+   * the Tool API lets through for a string input: never a write to
+   * storage.
+   */
+  public function testTheStageInputIsTheOwnersOnly(): void {
+    $this->ledger('a', 'Alpha');
+    $id = $this->open('Mine');
+    $this->setUpCurrentUser([], ['keep the ledger']);
+    $tool = 'surface:stage_test.ledger:update';
+    $theirs = [OperationInputs::VALUES => ['title' => 'Theirs']];
+    $answer = $this->runTool($tool, ['id' => 'a', OperationInputs::STAGE => $id] + $theirs);
+    $this->assertFalse($answer['success']);
+    $this->assertSame(FailureCategory::Access, $answer['category']);
+    $this->assertSame(['' => Violation::ACCESS], static::toolCodes($answer));
+    $this->assertSame('You do not have permission to use the stage ' . $id . '.', $answer['message']);
+    $read = $this->runTool('surface:stage_test.ledger:read', ['id' => 'a', OperationInputs::STAGE => $id]);
+    $this->assertFalse($read['success']);
+    $this->assertSame(['' => Violation::ACCESS], static::toolCodes($read));
+    $this->assertSame([], $this->stages()->read($id)['writes'], 'Nothing was staged.');
+    $this->assertSame('Alpha', $this->row('a')['title']);
+
+    $missing = $this->runTool($tool, ['id' => 'a', OperationInputs::STAGE => self::NONE] + $theirs);
+    $this->assertFalse($missing['success']);
+    $this->assertSame(FailureCategory::Input, $missing['category']);
+    $this->assertSame(['' => Violation::NOT_FOUND], static::toolCodes($missing));
+    $number = $this->runTool($tool, ['id' => 'a', OperationInputs::STAGE => 123] + $theirs);
+    $this->assertFalse($number['success']);
+    $this->assertSame(['' => Violation::NOT_FOUND], static::toolCodes($number));
+    $this->assertSame('Alpha', $this->row('a')['title']);
+
+    // Over HTTP: the header with another account's stage is refused before
+    // anything is built; one that names nothing is let through, and the
+    // controller answers 404.
+    $this->assertTrue($this->routeAllows('PATCH', 'stage_test.ledger/a'));
+    $this->assertFalse($this->routeAllows('PATCH', 'stage_test.ledger/a', [ServedPaths::STAGE_HEADER => $id]));
+    $this->assertFalse($this->routeAllows('GET', 'stage_test.ledger/a', [ServedPaths::STAGE_HEADER => $id]));
+    $this->assertTrue($this->routeAllows('PATCH', 'stage_test.ledger/a', [ServedPaths::STAGE_HEADER => self::NONE]));
+    $this->assertSame(404, $this->served('PATCH', '/surface-api/stage_test.ledger/a', ['title' => 'Theirs'], [ServedPaths::STAGE_HEADER => self::NONE])->getStatusCode());
+    $this->assertSame(404, $this->served('GET', '/surface-api/stage_test.ledger/a', NULL, [ServedPaths::STAGE_HEADER => self::NONE])->getStatusCode());
+    $this->assertSame('Alpha', $this->row('a')['title']);
   }
 
   /**

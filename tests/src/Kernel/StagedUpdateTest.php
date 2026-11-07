@@ -11,6 +11,7 @@ use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\Staging\StagedStorage;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples\Storage\VenueStorage;
 use Drupal\surface_tool_test\Storage\VaultStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -26,7 +27,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the stage's view. A second write builds on the first; null clears and a
  * key left out keeps; two writes to one thing end last wins. A staged
  * write validates as a real write. A stage handed no arguments records
- * the operation's parameters. What a stage cannot hold yet is refused at
+ * the operation's parameters. The write and read tools take the stage
+ * as their `stage` input. What a stage cannot hold yet is refused at
  * prepare, as a violation of the whole call: a storage class that does
  * not implement TransactionalStorageInterface and a resource that holds
  * a secret among them.
@@ -160,6 +162,43 @@ class StagedUpdateTest extends SurfaceKernelTestBase {
     $this->assertSame([['name' => 'id', 'value' => (string) $this->node->id()]], $item['parameters']);
     $this->assertSame(['/title', '/field_description'], $item['changed']);
     $this->assertIsInt($item['staged']);
+  }
+
+  /**
+   * Tests the tools stage an update and read the staged view.
+   *
+   * The write tool with `stage` keeps the write in the stage and says so;
+   * a second staged write answers what it moved since the first; the read
+   * tool with `stage` answers the staged view, and without it the stored
+   * values.
+   */
+  public function testTheToolsStageAnUpdateAndReadTheStagedView(): void {
+    $id = $this->open();
+    $tool = 'surface:' . self::PAGE;
+    $node = (int) $this->node->id();
+    $named = ['id' => $node, OperationInputs::STAGE => $id];
+    $first = $this->runTool($tool . ':update', $named + [OperationInputs::VALUES => ['title' => ['value' => 'Spring meetup, moved']]]);
+    $this->assertTrue($first['success'], $first['message']);
+    $this->assertSame('Edit Basic page: the values were accepted and staged in ' . $id . '.', $first['message']);
+    $this->assertTrue($first['outputs'][OperationInputs::COMMITTED]);
+    $this->assertTrue($first['outputs'][OperationInputs::CHANGED]);
+    $this->assertSame(['/title/value'], $first['outputs'][OperationInputs::CHANGES]);
+    $this->assertSame($node, $first['outputs']['id'], 'The permanent id.');
+    $this->assertSame('Spring meetup', $this->stored()->label(), 'The node is as it was.');
+
+    $second = $this->runTool($tool . ':update', $named + [OperationInputs::VALUES => ['field_description' => ['value' => 'By the river.']]]);
+    $this->assertTrue($second['success'], $second['message']);
+    $this->assertStringEndsWith('staged in ' . $id . '.', $second['message']);
+    $this->assertSame(['/field_description/value'], $second['outputs'][OperationInputs::CHANGES], 'Against the stage: the title it moved before is no change now.');
+
+    $staged = $this->runTool($tool . ':read', ['id' => $node, OperationInputs::STAGE => $id]);
+    $this->assertTrue($staged['success'], $staged['message']);
+    $this->assertSame(['value' => 'Spring meetup, moved'], $staged['outputs'][OperationInputs::VALUES]['title']);
+    $this->assertSame(['value' => 'By the river.'], $staged['outputs'][OperationInputs::VALUES]['field_description']);
+    $stored = $this->runTool($tool . ':read', ['id' => $node]);
+    $this->assertTrue($stored['success'], $stored['message']);
+    $this->assertSame(['value' => 'Spring meetup'], $stored['outputs'][OperationInputs::VALUES]['title']);
+    $this->assertSame(['value' => 'In the park.'], $stored['outputs'][OperationInputs::VALUES]['field_description']);
   }
 
   /**

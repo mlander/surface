@@ -11,6 +11,7 @@ use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Access\OperationGate;
+use Drupal\surface\Resource\StageResource;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -41,6 +42,13 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * a page that names nothing is let through only in the request's own
  * dispatch, so no link to it is drawn. Both answers are the operation
  * form's route's too (OperationGate).
+ *
+ * An API request whose `X-Surface-Stage` header names a stage is asked
+ * the stage's own `update` access too, once the thing's allows it, so
+ * another account's stage is refused before anything is built. A header
+ * that names no stage is let through for the controller's 404, as a
+ * parameter that names nothing is; on a path of the stage itself the
+ * header is the controller's to refuse.
  *
  * Decision: see
  * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
@@ -112,6 +120,7 @@ final class ServedOperationAccessCheck implements AccessInterface {
     // The page names the operation in its path; the API, by the method.
     $api = $operation === NULL;
     $parameters = NULL;
+    $stage = NULL;
     if ($api) {
       // The API: the operation is what the path and the method name.
       $segments = array_map(static fn (string $name): string => (string) $route_match->getRawParameter($name), ServedPaths::SEGMENTS);
@@ -126,6 +135,7 @@ final class ServedOperationAccessCheck implements AccessInterface {
       $resource = $target->definition->id;
       $operation = $target->operation->id;
       $parameters = $target->parameters;
+      $stage = $target->definition->id === StageResource::ID ? NULL : $target->stage;
       // A client calls the API; no link the site draws points at it. What
       // its path names, or does not, is its controller's to answer, as
       // it answers a path that names nothing above.
@@ -173,6 +183,21 @@ final class ServedOperationAccessCheck implements AccessInterface {
       return $this->refused($e->getMessage());
     }
     $access = $this->servedOperations->contextAccess($resource, $context, $account);
+    if ($access->isAllowed() && $stage !== NULL) {
+      // Decision: see
+      // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+      try {
+        $staged = $this->servedOperations->contextAccess(StageResource::ID, $this->servedOperations->context(StageResource::ID, 'update', ['id' => $stage]), $account);
+      }
+      catch (\InvalidArgumentException) {
+        // The header names no stage: the controller answers 404.
+        return AccessResult::allowed()->addCacheableDependency($access)->setCacheMaxAge(0);
+      }
+      if (!$staged->isAllowed()) {
+        return $this->refused($staged instanceof AccessResultReasonInterface ? (string) $staged->getReason() : '')->addCacheableDependency($staged);
+      }
+      $access = $access->andIf($staged);
+    }
     // An account that holds the operation's permission for what the
     // parameters name may hear why the rest refused; any other learns
     // nothing of what they name.

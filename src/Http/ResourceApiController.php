@@ -61,6 +61,11 @@ use Symfony\Component\HttpFoundation\Response;
  *   is problem details (422), each error's path a JSON Pointer; a create
  *   answers 201 with the created thing's `Location`.
  *
+ * A request whose `X-Surface-Stage` header names a stage is served as
+ * the thing stands in that stage, every answer but the full schema: the
+ * envelope and its `ETag`, a narrowing, and a write, which is kept in the
+ * stage until it is applied. The answer names no stage: the caller did.
+ *
  * Access is the route's requirement, the operation's permission then the
  * resource's access class; the pipeline is handed the same answer, as the
  * operation form hands it to its submit. Every answer carries the
@@ -584,11 +589,19 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The operation.
    *
    * @throws \Drupal\surface\Http\ProblemException
-   *   404 when a parameter names nothing. The access check lets such a
-   *   request through only for an account holding the operation's
-   *   permission.
+   *   404 when a parameter, or the `X-Surface-Stage` header, names
+   *   nothing. The access check lets such a request through only for an
+   *   account holding the operation's permission. 400 for the header on
+   *   a path of the stage itself.
    */
   protected function served(ServedTarget $target): ServedOperation {
+    // Refused here and not in the access check, which can only allow or
+    // forbid: a stage is never written into a stage, and the caller needs
+    // the reason to drop the header.
+    if ($target->stage !== NULL && $target->definition->id === StageResource::ID) {
+      $detail = (string) $this->t('The @header header names a stage to write into or read through, and a stage is not staged: send this request without it.', ['@header' => ServedPaths::STAGE_HEADER]);
+      throw new ProblemException(400, $detail);
+    }
     try {
       return $this->servedOperations->fromTarget($target);
     }

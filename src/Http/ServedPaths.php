@@ -96,6 +96,19 @@ final class ServedPaths {
    */
   public const STALE_HEADER = 'X-Surface-Stale';
 
+  /**
+   * The request header naming the stage a request writes into or reads.
+   *
+   * A stage's id, from `POST /surface-api/surface.stage`: a write is kept
+   * in the stage until it is applied, and an envelope or a narrowing is
+   * of the thing as it stands there. Not a query parameter, which a
+   * listing reads as a value and which would split the full schema's
+   * cache, nor a path segment, which is the thing's identity.
+   *
+   * Decision: see
+   * docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+   */
+  public const STAGE_HEADER = 'X-Surface-Stage';
 
   /**
    * The custom read method every resource path answers: a reference's lookup.
@@ -265,7 +278,11 @@ final class ServedPaths {
       }
       $operation = $operations[$id];
     }
-    return new ServedTarget($definition, $operation, $this->parameters($request, $definition, $operation, $segments), $action, $named !== NULL);
+    // Read here, where the access check builds its target too, so the
+    // stage reaches every action and the check alike; the full schema
+    // reads nothing stored, so it ignores the stage.
+    $stage = $action === ServedTarget::SCHEMA ? '' : trim((string) $request->headers->get(self::STAGE_HEADER, ''));
+    return new ServedTarget($definition, $operation, $this->parameters($request, $definition, $operation, $segments), $action, $named !== NULL, $stage === '' ? NULL : $stage);
   }
 
   /**

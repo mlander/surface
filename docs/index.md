@@ -98,6 +98,9 @@ install; read it first.
   rendered from it.
 - [The pipeline](pipeline.md): access, accept, validate, prepare,
   commit; dry runs; exceptions.
+- [Staging](staging.md): a stage keeps writes until they are applied
+  together, or discarded: its six operations, the `stage` input and the
+  `X-Surface-Stage` header, apply, and how a storage opts in.
 - [Value semantics](semantics.md): configured or not, the coercion
   table (the Tool API's), secrets, stale values, type mismatches,
   required, locked keys.

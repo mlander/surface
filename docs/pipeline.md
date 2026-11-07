@@ -34,6 +34,9 @@ to do.
 
 ## The stages
 
+These are the steps of one call. A stage of [Staging](staging.md), a
+set of writes kept until they are applied, is another thing.
+
 ### access
 
 ```php

@@ -887,7 +887,8 @@ own is a tool, `surface:<resource id>:<operation id>`, derived by
   parameter named for one of the resource's keys described as that key,
   with its label, meaning and allowed values), then `values`, the
   resource's keys less the identity keys the operation knows, then
-  `dry_run`. What `values` requires follows the operation's kind
+  `dry_run`, then `stage` where the resource's storage can be staged
+  ([Staging](staging.md#the-stage-input)). What `values` requires follows the operation's kind
   (`create`, `update` or `read`, read off its attribute and stated in
   both documents). An operation that creates requires what the
   resource requires and lists the declared defaults. One that changes a

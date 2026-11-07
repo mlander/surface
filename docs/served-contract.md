@@ -1547,6 +1547,7 @@ refused.
 | `?dryRun=true` | Run through prepare and stop before commit: nothing is written, and the answer is the one a write would give, with `x-surface-dry-run: true`. Always 200, never a `Location`. It was `/validate`. |
 | `If-Match: "<ETag>"` | Write only if what is stored is still what that `ETag` named; 412 otherwise, nothing written. `*` matches whatever is stored. Opt-in: with none, the last write wins ([below](#if-match)). Checked on a dry run too. |
 | `X-Surface-Stale: /room, /ticket/price` | The stale paths the envelope named that the body sends empty: each stands for the stored value. |
+| `X-Surface-Stage: <id>` | The stage the write is kept in until the stage is applied, on a resource whose storage can be staged; `contract` and the `ETag` are then the staged view's, and `If-Match` is held to it. The envelope and the narrowing take it too ([Staging](staging.md#the-x-surface-stage-header)). |
 | `X-CSRF-Token` | The session's token, with the session cookie. |
 
 It answers the one result shape every door answers a run in
@@ -1556,9 +1557,9 @@ present, then three keys of its own:
 | Key | Holds |
 | --- | --- |
 | `ok` | Whether nothing was refused; `true` on every 2xx. |
-| `committed` | Whether the values were written; `false` on a dry run and for a read-only operation. |
+| `committed` | Whether the values were written: to storage, or to the stage when one is named; `false` on a dry run and for a read-only operation. |
 | `changed` | Whether the write moved a stored value; `false` unless committed. |
-| `changes` | The JSON Pointer of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored (why: [decision](decisions.md#absent-keeps-null-clears)). |
+| `changes` | The JSON Pointer of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored (why: [decision](decisions.md#absent-keeps-null-clears)). Against the view of the stage when one is named: what this call moved since the last staged write. |
 | `values` | What `accept()` made of the input, as the read tool would answer it once written: no key the build left out for this account, no secret, no key that does not apply, and no key never stored that the run left at its default. |
 | `violations` | Empty on a 2xx; a refusal is [problem details](#problem-details). |
 | `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused (why: [decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
@@ -1849,7 +1850,9 @@ so a site grants them to the roles it chooses. The document is open.
   behaves is `x-surface-kind` on every call, and on its run
   `x-surface-idempotent`, `x-surface-destructive` and
   `x-surface-creates`. `dryRun` is a query parameter; `If-Match`,
-  `X-Surface-Stale` and `X-CSRF-Token` header parameters; the read
+  `X-Surface-Stale` and `X-CSRF-Token` header parameters, and
+  `X-Surface-Stage` (`SurfaceStage`) on a resource whose storage can be
+  staged; the read
   answers `ETag` and `Link`, a written create `Location`. Every answer
   carries the `Contract-Version` header; every error is `ProblemDetails`.
 - **Components.** Each operation's full schema, as `emitFull()` writes

@@ -22,7 +22,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * an empty one, its HTTP path runs it with an empty body, and a committed
  * run answers `changed: true` with the one change the empty pointer,
  * since a data surface with no keys has no document to compare and the
- * call is the whole write. The stage's `apply` is such an operation.
+ * call is the whole write; its tool's description says it takes no
+ * values. The stage's `apply` is such an operation.
  *
  * @see docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner
  */
@@ -89,6 +90,9 @@ class EmptyStructureTest extends SurfaceKernelTestBase {
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $this->assertTrue($values->isRequired());
     $this->assertSame([], $values->getPropertyDefinitions());
+    // Its description says it takes no values, not to send the keys to
+    // change, which it has none of.
+    $this->assertSame('Marks a row touched: an update that takes no keys. Takes no values: send values {}.', (string) $definition->getDescription());
     $tool = $this->container->get('plugin.manager.tool')->createInstance($id);
     assert($tool instanceof ToolInterface);
     $tool->setInputValue('id', 'a');

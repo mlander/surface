@@ -363,9 +363,22 @@ the record of the rework that brought the module to the pattern.
   resource whose storage class implements
   `Pipeline\TransactionalStorageInterface` (a transaction undoes its
   writes whole; `rolledBack()` drops what it cached after an apply rolls
-  back), any other refused at prepare; no door takes a stage input yet
+  back), any other refused at prepare
   (`docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection`,
   `docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner`).
+  The doors name one only for such a resource: the **stage input**,
+  `stage` (`OperationInputs::STAGE`), last on every write tool (after
+  `dry_run`), read tool and narrowing tool, default `''` so the `values`
+  refiner still fires, resolved by `ResourceOperationToolBase::stage()`
+  (a missing id `notFound()`, another account's `accessRefused()`); and
+  the **stage header**, `X-Surface-Stage` (`ServedPaths::STAGE_HEADER`),
+  read in `target()` into `ServedTarget::$stage`, resolved in
+  `ServedOperations::fromTarget()` (404 naming nothing), another
+  account's 403 at `ServedOperationAccessCheck`, 400 on the stage's own
+  paths, ignored by `GET .../schema`, OpenAPI's `SurfaceStage`; a read,
+  a narrowing and a write's `contract` and `ETag` are the staged view
+  (`docs/staging.md`,
+  `docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
@@ -690,7 +703,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1962, Assertions: 46487, Errors: 0, Failures: 0, Skipped: 3. Classes: 276 of 276, 8 at a time, browser classes 4.
+phpunit: Tests: 1970, Assertions: 46967, Errors: 0, Failures: 0, Skipped: 3. Classes: 277 of 277, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -710,7 +723,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1854, Assertions: 42338, Skipped: 3, Deprecations: 130. Classes:
+`Tests: 1860, Assertions: 42624, Skipped: 3, Deprecations: 130. Classes:
 227, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 

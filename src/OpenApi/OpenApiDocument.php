@@ -19,6 +19,7 @@ use Drupal\surface\Contract\Choices;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
+use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Reference\References;
@@ -417,6 +418,14 @@ final class OpenApiDocument {
     $contractValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a key that holds nothing is null.'));
     $resultValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a run answers what it accepted.'));
     $tagged = $creates ? [] : ['ETag' => ['$ref' => '#/components/headers/ETag']];
+    // The stage header, where the resource's storage can be staged: on the
+    // envelope, the narrowing and the run, never on the full schema, which
+    // reads nothing stored.
+    // Decision: see
+    // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+    $staged = $definition->storage !== NULL && is_a($definition->storage, TransactionalStorageInterface::class, TRUE)
+      ? [['$ref' => '#/components/parameters/SurfaceStage']]
+      : [];
 
     $read = [
       'get' => $common + [
@@ -436,6 +445,9 @@ final class OpenApiDocument {
         'x-surface-schema' => $declared,
       ],
     ];
+    if ($staged !== []) {
+      $read['get']['parameters'] = $staged;
+    }
     $schemaItem = [
       'get' => $common + [
         'operationId' => $id . ':schema',
@@ -487,6 +499,7 @@ final class OpenApiDocument {
         'parameters' => [
           ['$ref' => '#/components/parameters/CsrfToken'],
           ['$ref' => '#/components/parameters/SurfaceStale'],
+          ...$staged,
         ],
         'requestBody' => [
           'required' => FALSE,
@@ -549,6 +562,7 @@ final class OpenApiDocument {
     if (!$creates) {
       $parameters[] = ['$ref' => '#/components/parameters/IfMatch'];
     }
+    $parameters = [...$parameters, ...$staged];
     $run = [
       strtolower($method) => $common + [
         'operationId' => $id . ':write',
@@ -1117,6 +1131,13 @@ final class OpenApiDocument {
         'required' => FALSE,
         'description' => (string) $this->t('The stale paths the envelope named, as JSON Pointers separated by commas: a path sent empty stands for the stored value.'),
         'schema' => ['type' => 'string'],
+      ],
+      'SurfaceStage' => [
+        'name' => ServedPaths::STAGE_HEADER,
+        'in' => 'header',
+        'required' => FALSE,
+        'description' => (string) $this->t('The id of a stage, from POST /surface-api/surface.stage: a write is kept in the stage until it is applied, and an envelope or a narrowing answers the thing as it stands there.'),
+        'schema' => ['type' => 'string', 'format' => 'uuid'],
       ],
     ];
   }
