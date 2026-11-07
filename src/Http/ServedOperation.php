@@ -18,6 +18,8 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
  * the parameters the request carried, the resource built in that context
  * and the storage composed for it. Asked afresh on every request, as the
  * operation form asks afresh at every stage.
+ *
+ * @internal
  */
 final class ServedOperation {
 

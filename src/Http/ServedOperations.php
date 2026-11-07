@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Http;
 
-use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\Site\Settings;
 use Drupal\surface\SurfaceAccess;
 use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\Fingerprint;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Resource\OperationContext;
@@ -30,6 +29,8 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  * route: the operation builds the context, the resource is built in it,
  * its storage composed for it, and the current values are what the
  * storage loads over the built resource's defaults.
+ *
+ * @internal
  */
 final class ServedOperations {
 
@@ -191,8 +192,8 @@ final class ServedOperations {
    * @param string $operation
    *   The operation id.
    * @param array $parameters
-   *   The operation's parameters, by name, as raw values: an entity
-   *   parameter takes the entity's id.
+   *   The operation's parameters, by name, as raw values, never objects:
+   *   the operation's storage loads what they name.
    *
    * @return \Drupal\surface\Http\ServedOperation
    *   The operation, built. The read the build adds is served as the
@@ -317,11 +318,10 @@ final class ServedOperations {
   /**
    * Fingerprints what the storage holds now, for a write to be checked by.
    *
-   * A keyed hash of the stored values the envelope was built from, read
-   * by load(): served as its `ETag`, sent back in a write's `If-Match`,
-   * and compared with what storage holds when the write arrives. Keyed by
-   * the site's hash salt, so it says nothing that could be guessed back
-   * from it, a secret included.
+   * A keyed hash (Fingerprint::of()) of the stored values the envelope
+   * was built from, read by load(): served as its `ETag`, sent back in a
+   * write's `If-Match`, and compared with what storage holds when the
+   * write arrives.
    *
    * @param \Drupal\surface\Http\ServedOperation $served
    *   The operation.
@@ -334,7 +334,7 @@ final class ServedOperations {
     if ($served->storage === NULL) {
       return NULL;
     }
-    return Crypt::hmacBase64(serialize([$served->definition->id, $this->stored($served)]), Settings::getHashSalt());
+    return Fingerprint::of($served->definition->id, $this->stored($served));
   }
 
   /**

@@ -8,7 +8,7 @@ use Drupal\Component\Render\PlainTextOutput;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\ResourceBuild\StorageAdapter;
+use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface_examples_entity\Storage\ContentEntityStorage;
 use Drupal\surface\Tool\OperationInputs;
@@ -163,7 +163,7 @@ class ContentEntityStorageTest extends SurfaceKernelTestBase {
     // since the storage was asked for none.
     $this->assertSame((int) $this->container->get('current_user')->id(), (int) $node->getOwnerId());
     // The storage describes what it saved, so the id output answers.
-    $this->assertInstanceOf(StorageAdapter::class, $storage);
+    $this->assertInstanceOf(OutputsStorageInterface::class, $storage);
     $outputs = $storage->outputs($surface, ['entity_type' => 'node', 'bundle' => 'page', 'id' => NULL]);
     $this->assertSame((int) $node->id(), $outputs['id']);
 
@@ -320,7 +320,7 @@ class ContentEntityStorageTest extends SurfaceKernelTestBase {
     $values = ['title' => ['value' => 'Served'], 'field_description' => ['value' => 'x']];
     $result = $this->pipeline()->submit($operation->surface, $values, $operation->storage);
     $this->assertTrue($result->isValid());
-    $this->assertInstanceOf(StorageAdapter::class, $operation->storage);
+    $this->assertInstanceOf(OutputsStorageInterface::class, $operation->storage);
     $outputs = $operation->storage->outputs($operation->surface, $result->values);
     $node = $this->newest();
     $this->assertSame(

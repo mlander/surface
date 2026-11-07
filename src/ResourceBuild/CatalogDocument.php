@@ -374,7 +374,7 @@ final class CatalogDocument {
     foreach ($refused as $refusal) {
       $document .= sprintf(
         "| %s | %s | %s | %s |\n",
-        $refusal['resource'] === NULL ? $refusal['stage'] : '`' . $refusal['resource'] . '`',
+        $refusal['resource'] === NULL ? $refusal['phase'] : '`' . $refusal['resource'] . '`',
         $refusal['operation'] === NULL ? 'the whole' : '`' . $refusal['operation'] . '`',
         self::cell($refusal['message']),
         $refusal['file'] === NULL ? 'none' : '`' . $refusal['file'] . '`',

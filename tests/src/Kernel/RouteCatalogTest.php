@@ -111,7 +111,7 @@ class RouteCatalogTest extends SurfaceKernelTestBase {
   public function testTheRefusedTableListsWhatEachRouteGetsWrong(): void {
     $refused = [];
     foreach ($this->catalog()->refused() as $refusal) {
-      if ($refusal['stage'] === SiteCatalog::ROUTE) {
+      if ($refusal['phase'] === SiteCatalog::ROUTE) {
         $refused[(string) $refusal['operation']][] = $refusal['message'];
       }
     }

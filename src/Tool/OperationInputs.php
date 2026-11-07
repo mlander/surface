@@ -33,11 +33,11 @@ use Drupal\tool\TypedData\OutputDefinition;
  *
  * The whole of a generated tool's contract, from the static layer:
  *
- * - **One input per operation parameter**, named as the parameter is. A
- *   scalar parameter is an input of its type; a parameter typed with an
- *   entity class or interface is the entity's id, as a string, resolved
- *   to the entity when the tool runs, because a tool's caller sends ids
- *   and an operation takes the thing.
+ * - **One input per operation parameter**, named as the parameter is.
+ *   Every parameter is a value: one named for a plain key of the
+ *   resource is an input of that key's definition, any other an input of
+ *   its scalar type. The tool hands the raw value to the operation, and
+ *   the resource's storage loads what it names.
  * - **`values`**, a map: the resource's keys, as InputDefinitions
  *   converts them, less the identity keys the operation knows, which
  *   are locked and so are not inputs at all.
@@ -109,6 +109,17 @@ final class OperationInputs {
    * The input asking for a dry run.
    */
   public const DRY_RUN = 'dry_run';
+
+  /**
+   * The name a stage will be asked by, which no operation parameter takes.
+   *
+   * No tool has the input yet: the name is reserved first, so no resource
+   * declares a parameter that the stage's input would collide with.
+   *
+   * @internal
+   *   Until a tool takes the input.
+   */
+  public const STAGE = 'stage';
 
   /**
    * The output saying whether nothing was refused.
@@ -213,9 +224,9 @@ final class OperationInputs {
    *   The parameters' inputs, then `values` and `dry_run`.
    *
    * @throws \LogicException
-   *   When a parameter cannot be an input (it takes an object that is
-   *   no single entity type's, or has the name of one of the tool's own
-   *   inputs) or the resource cannot be built.
+   *   When a parameter cannot be an input (it has a name the resource
+   *   tools reserve for inputs of their own) or the resource cannot be
+   *   built.
    */
   public function inputs(ResourceDefinition $resource, OperationDefinition $operation): array {
     $neutral = $this->neutral($resource, $operation, TRUE);
@@ -692,8 +703,8 @@ final class OperationInputs {
   protected function parameterInputs(ResourceDefinition $resource, OperationDefinition $operation, ?SurfaceInterface $neutral): array {
     $inputs = [];
     foreach ($operation->parameters as $parameter) {
-      if (in_array($parameter->name, [self::VALUES, self::DRY_RUN], TRUE)) {
-        throw new \LogicException(sprintf('The "%s" operation of the %s resource takes $%s, which is the name of an input every resource tool has.', $operation->id, $resource->id, $parameter->name));
+      if (in_array($parameter->name, [self::VALUES, self::DRY_RUN, self::STAGE], TRUE)) {
+        throw new \LogicException(sprintf('The "%s" operation of the %s resource takes $%s, which is a name the resource tools reserve for an input of their own.', $operation->id, $resource->id, $parameter->name));
       }
       $inputs[$parameter->name] = $this->parameterInput($parameter, $resource, $operation, $neutral);
     }

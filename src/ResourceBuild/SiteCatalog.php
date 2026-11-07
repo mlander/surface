@@ -104,7 +104,7 @@ final class SiteCatalog {
   /**
    * The refusals, once read.
    *
-   * @var list<array{resource: string|null, operation: string|null, stage: string, message: string, file: string|null}>|null
+   * @var list<array{resource: string|null, operation: string|null, phase: string, message: string, file: string|null}>|null
    */
   protected ?array $refusals = NULL;
 
@@ -234,9 +234,9 @@ final class SiteCatalog {
    * an operation that builds, a form's or a React page's, is judged beside
    * it (routeRefusals()).
    *
-   * @return list<array{resource: string|null, operation: string|null, stage: string, message: string, file: string|null}>
+   * @return list<array{resource: string|null, operation: string|null, phase: string, message: string, file: string|null}>
    *   Each refusal: the resource or structure and the operation it was
-   *   raised for (NULL where it was the whole, or discovery), the stage
+   *   raised for (NULL where it was the whole, or discovery), the phase
    *   (DISCOVERY, BUILD or ROUTE), the message, which names the route for
    *   a route's, and the file it points at, from the Drupal root: the
    *   first class the message names, else the resource's own class.
@@ -576,15 +576,15 @@ final class SiteCatalog {
    *   What it was raised for, or NULL for discovery.
    * @param string|null $operation
    *   The operation, or NULL for the whole.
-   * @param string $stage
+   * @param string $phase
    *   DISCOVERY, BUILD or ROUTE.
    * @param \Throwable $e
    *   What was raised.
    *
-   * @return array{resource: string|null, operation: string|null, stage: string, message: string, file: string|null}
+   * @return array{resource: string|null, operation: string|null, phase: string, message: string, file: string|null}
    *   The refusal.
    */
-  protected function refusal(?ResourceDefinition $definition, ?string $operation, string $stage, \Throwable $e): array {
+  protected function refusal(?ResourceDefinition $definition, ?string $operation, string $phase, \Throwable $e): array {
     $message = $e->getMessage();
     $file = NULL;
     if (preg_match_all('/(?<![\w\\\\])(?:[A-Z]\w*\\\\)+[A-Z]\w*/', $message, $matches)) {
@@ -605,7 +605,7 @@ final class SiteCatalog {
     return [
       'resource' => $definition?->id,
       'operation' => $operation,
-      'stage' => $stage,
+      'phase' => $phase,
       'message' => $message,
       'file' => $file,
     ];

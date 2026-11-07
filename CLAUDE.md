@@ -535,7 +535,7 @@ hand-written `field_add` / `field_update` are gone.
 that opens one names it, a `CatalogDoorsInterface` service tagged
 `surface.catalog_doors`; a route's `form` or `react` line says
 what it pins, fixes, fills and starts) and every build refusal and
-route written wrong (stage `route`), which `drush
+route written wrong (phase `route`), which `drush
 surface:catalog` prints and the page `/admin/config/development/surfaces`
 shows, its doors linked (`Controller\CatalogController`,
 `docs/catalog-command.md`); `docs/catalog.md`
@@ -672,7 +672,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1922, Assertions: 45010, Errors: 0, Failures: 0, Skipped: 3. Classes: 266 of 266, 8 at a time, browser classes 4.
+phpunit: Tests: 1927, Assertions: 45067, Errors: 0, Failures: 0, Skipped: 3. Classes: 268 of 268, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -692,8 +692,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1814, Assertions: 40861, Skipped: 3, Deprecations: 130. Classes:
-217, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1819, Assertions: 40918, Skipped: 3, Deprecations: 130. Classes:
+219, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the

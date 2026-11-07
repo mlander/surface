@@ -13,7 +13,7 @@ use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
-use Drupal\surface\ResourceBuild\StorageAdapter;
+use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\surface\Tool\InputDefinitions;
 use Drupal\surface\Tool\OperationInputs;
@@ -36,13 +36,14 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  * Nothing here names a resource, a key or an operation; all of it is read
  * from the derivative id and the static layer.
  *
- * - **Inputs**: the operation method's parameters, by name (an entity
- *   parameter is the entity's id); `values`, the resource's keys the
- *   operation does not already know; `dry_run`. The definition is
- *   static, which operations are what make possible: an operation that
- *   needs nothing is the resource's exact contract before anyone calls,
- *   and one that needs a subject is refined to it as soon as the subject
- *   arrives, through the Tool API's own input_definition_refiners.
+ * - **Inputs**: the operation's parameters, by name, each a value the
+ *   operation is handed raw and its storage loads by; `values`, the
+ *   resource's keys the operation does not already know; `dry_run`. The
+ *   definition is static, which operations are what make possible: an
+ *   operation that needs nothing is the resource's exact contract before
+ *   anyone calls, and one that needs a subject is refined to it as soon
+ *   as the subject arrives, through the Tool API's own
+ *   input_definition_refiners.
  * - **Access**: the operation's permission, then the resource's access
  *   class, for the context the parameters build: the answer a route
  *   served by the same operation gives. No host stands behind the
@@ -374,7 +375,7 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     // dry run, what its prepare answered.
     // Decision: see docs/decisions.md#who-produces-outputs.
     $outputs = match (TRUE) {
-      !$storage instanceof StorageAdapter => [],
+      !$storage instanceof OutputsStorageInterface => [],
       $result->committed => $storage->outputs($built, $result->values),
       $result->prepared !== NULL => $storage->outputs($built, $result->values, $result->prepared),
       default => [],

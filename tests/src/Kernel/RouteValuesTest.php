@@ -647,7 +647,8 @@ class RouteValuesTest extends SurfaceKernelTestBase {
     foreach ([
       'query_braced' => 'The surface_route_test.query_braced route starts "title" from the query parameter "{subject}": a query name is a plain name, never a reference, since what a link sends is input. Name another query parameter.',
       'query_empty' => 'The surface_route_test.query_empty route\'s "_surface_query" is a map of key paths to query names, as { subject: subject }.',
-      'query_reserved' => 'The surface_route_test.query_reserved route starts "title" from the query parameter "destination": Drupal or this module reads that parameter for itself on a form page. Name another query parameter.',
+      'query_reserved' => 'The surface_route_test.query_reserved route starts "title" from the query parameter "destination": Drupal or this module reserves that parameter for itself on a form page. Name another query parameter.',
+      'query_staged' => 'The surface_route_test.query_staged route starts "title" from the query parameter "stage": Drupal or this module reserves that parameter for itself on a form page. Name another query parameter.',
       'query_variable' => 'The surface_route_test.query_variable route starts "title" from the query parameter "color": that is a variable of the route\'s path too, and a link built for the route leaves it out of the query. Name another query parameter.',
       'query_default' => 'The surface_route_test.query_default route starts "title" from the query parameter "to": that is a default of the route too, and a link built for the route leaves it out of the query. Name another query parameter.',
     ] as $route => $refusal) {
