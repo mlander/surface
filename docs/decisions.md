@@ -4461,12 +4461,50 @@ values that do not depend on it.
 
 A door asks the stage's own access for the account before it hands a
 stage on; the stage carries its id, its owner and the operation's
-arguments, which apply builds the operation again from. No door takes a
-stage input yet; the input, the header and the documents' parameter
-come with the doors.
+arguments, which apply builds the operation again from.
+
+*Built 2026-11-07, with the doors.* Two doors take a stage, and only
+for a resource whose declared storage class implements
+`Pipeline\TransactionalStorageInterface`, so a stage is offered where it
+can hold the write:
+
+- **The tool door.** The input `stage` (`OperationInputs::STAGE`), a
+  string, optional, last on every write tool (right after `dry_run`),
+  read tool and narrowing tool. Its default is the empty string and not
+  NULL: the `values` refiner depends on it, and the Tool API fires a
+  refiner only when every input it depends on is non-NULL. The tool
+  base resolves it (`ResourceOperationToolBase::stage()`): empty names
+  none; an id that names no stage is the caller's input to correct,
+  `not_found`; another account's stage is refused by the stage's own
+  `update` access, code `access`, the message naming the stage. The
+  refined `values` and the read are the staged view, and a staged
+  write's message says "staged in" the stage.
+- **The HTTP door.** The request header `X-Surface-Stage`
+  (`ServedPaths::STAGE_HEADER`), read in `ServedPaths::target()` into
+  `ServedTarget::$stage` so the route's access check sees it too; the
+  check asks the stage's `update` access once the thing's allows, so
+  another account's stage is 403 before anything is built, and lets a
+  header that names nothing through for the controller's 404
+  (`ServedOperations::fromTarget()`). The full schema ignores it, since
+  it reads nothing stored; on a path of the stage itself it is 400,
+  answered by the controller, since an access check can only allow or
+  forbid and the caller needs the reason. The answer names no stage,
+  and after a staged write its `contract` and `ETag` are the staged
+  view's. The OpenAPI document references one shared header parameter,
+  `SurfaceStage`.
+
+An id that names no stage on the stage's own tools and paths, whose
+operations declare no permission, gets the door's fixed refusal at
+both access checks, as for any operation that declares none, and not
+the `not_found` this entry's draft expected; only a tool called from
+PHP, which runs no access check, answers `not_found` there.
 
 (`ResourcesInterface::storage()`, `Resources::storage()`,
-`Staging\Stage`, `Staging\StagedStorage`, `StagedUpdateTest`)
+`Staging\Stage`, `Staging\StagedStorage`, `Tool\OperationInputs`,
+`ResourceOperationToolBase::stage()`, `Http\ServedPaths`,
+`Http\ServedOperations`, `Http\ServedOperationAccessCheck`,
+`StagedUpdateTest`, `StageToolsTest`, `StageOwnershipTest`,
+`StageApiTest`)
 
 ### Apply builds for the current user and writes as the owner
 

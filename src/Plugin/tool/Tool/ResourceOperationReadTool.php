@@ -21,15 +21,17 @@ use Drupal\tool\FailureCategory;
  * base plugin id and names this class on the derivative, so one deriver
  * says which operations have tools.
  *
- * - **Inputs**: the operation's parameters, and nothing else.
+ * - **Inputs**: the operation's parameters, and `stage` where the
+ *   resource's storage can be staged.
  * - **Access**: the operation's, for its context: its permission, then
  *   the resource's access class. The read the build adds is asked in its
  *   update's context, so a caller who may not change the thing may not
  *   read it either; an owner that declares its read answers access for
  *   reading (the content entity example asks core's view access).
  * - **Execution**: the operation builds the context, the resource is
- *   built in it, and its composed storage loads. A context that turns
- *   out to create is refused: nothing is stored yet.
+ *   built in it, and its composed storage loads, through the stage when
+ *   one is named, which answers what it holds for the thing first. A
+ *   context that turns out to create is refused: nothing is stored yet.
  * - **Output**: `values`, what the storage loads, in the shape the
  *   update's `values` input takes, less the identity keys the operation
  *   knows, every secret and every key the account may not see.
@@ -47,6 +49,8 @@ final class ResourceOperationReadTool extends ResourceOperationToolBase {
   protected function doExecute(array $values): ExecutableResult {
     try {
       [$resource, $operation, $context] = $this->operation($values);
+      $stage = $this->stage($values, $this->arguments($values, $operation));
+      $refused = $stage === NULL ? NULL : $this->stageRefused($stage);
     }
     catch (\InvalidArgumentException $e) {
       return $this->notFound($e);
@@ -56,6 +60,9 @@ final class ResourceOperationReadTool extends ResourceOperationToolBase {
     if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
       return $this->accessRefused($resource, $operation, $context);
     }
+    if ($refused !== NULL) {
+      return $refused;
+    }
     // The read the build adds speaks of the update it reads.
     $label = (string) ($operation->reads === NULL ? $operation->label : $this->resourceRegistry->getOperation($resource->name(), $operation->reads)->label);
     if ($context->creates) {
@@ -64,7 +71,7 @@ final class ResourceOperationReadTool extends ResourceOperationToolBase {
     $built = $this->resources->build($resource->name(), $context);
     return ExecutableResult::success(
       $this->t('@label: the stored values were read, and nothing was written.', ['@label' => $label]),
-      [OperationInputs::VALUES => $this->operationInputs->stored($resource, $built, $context)],
+      [OperationInputs::VALUES => $this->operationInputs->stored($resource, $built, $context, $stage)],
     );
   }
 

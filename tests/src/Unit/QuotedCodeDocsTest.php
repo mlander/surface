@@ -28,6 +28,8 @@ use PHPUnit\Framework\Attributes\Group;
  * - "Reading a schema" quotes the reader test module's block and
  *   condition structures, and the condition host's install file, stored
  *   flat.
+ * - "Staging" quotes the two rolledBack() bodies, the entity example's and
+ *   the ledger fixture's.
  */
 #[Group('surface')]
 class QuotedCodeDocsTest extends UnitTestCase {
@@ -46,6 +48,7 @@ class QuotedCodeDocsTest extends UnitTestCase {
     'docs/storage.md',
     'docs/transformations.md',
     'docs/reading-a-schema.md',
+    'docs/staging.md',
   ];
 
   /**

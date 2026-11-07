@@ -15,6 +15,8 @@ use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\StageStore;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
@@ -28,7 +30,9 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  * Everything after that is what SurfaceOperationForm does for a
  * route: the operation builds the context, the resource is built in it,
  * its storage composed for it, and the current values are what the
- * storage loads over the built resource's defaults.
+ * storage loads over the built resource's defaults. A request that names
+ * a stage has the storage handed it, so the values are the thing as it
+ * stands in the stage, and a write is kept there.
  *
  * @internal
  */
@@ -41,10 +45,13 @@ final class ServedOperations {
    *   What discovery found.
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which also resolves the operation's arguments.
+   * @param \Drupal\surface\Staging\StageStore $stages
+   *   Where the stages are kept, which a request's stage is read from.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly ResourcesInterface $resources,
+    protected readonly StageStore $stages,
   ) {}
 
   /**
@@ -72,16 +79,21 @@ final class ServedOperations {
    * Builds the operation an API request names.
    *
    * @param \Drupal\surface\Http\ServedTarget $target
-   *   What the path and the method named.
+   *   What the path and the method named, and the stage its header named.
    *
    * @return \Drupal\surface\Http\ServedOperation
-   *   The operation, built.
+   *   The operation, built; its storage handed the stage, when one is
+   *   named.
    *
    * @throws \InvalidArgumentException
-   *   When a parameter names nothing.
+   *   When a parameter names nothing, or the header names no stage
+   *   (NamesNothingException).
    */
   public function fromTarget(ServedTarget $target): ServedOperation {
-    return $this->resolve($target->definition->name(), $target->operation->id, $target->parameters);
+    // Decision: see
+    // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+    $stage = $target->stage === NULL ? NULL : $this->stages->named($target->stage)->withArguments($target->parameters);
+    return $this->resolve($target->definition->name(), $target->operation->id, $target->parameters, $stage);
   }
 
   /**
@@ -194,6 +206,8 @@ final class ServedOperations {
    * @param array $parameters
    *   The operation's parameters, by name, as raw values, never objects:
    *   the operation's storage loads what they name.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the storage is handed, or NULL for permanent storage.
    *
    * @return \Drupal\surface\Http\ServedOperation
    *   The operation, built. The read the build adds is served as the
@@ -203,7 +217,7 @@ final class ServedOperations {
    *   When the resource or operation is not discovered, or a parameter
    *   the operation needs is missing or names nothing.
    */
-  public function resolve(string $resource, string $operation, array $parameters): ServedOperation {
+  public function resolve(string $resource, string $operation, array $parameters, ?Stage $stage = NULL): ServedOperation {
     $definition = $this->registry->getDefinition($resource);
     $found = $this->registry->getOperation($definition->name(), $operation);
     // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
@@ -213,7 +227,7 @@ final class ServedOperations {
     }
     $context = $this->resources->operation($definition->name(), $operation, $parameters);
     $built = $this->resources->build($definition->name(), $context);
-    $storage = $definition->storage === NULL ? NULL : $this->resources->storage($definition->name(), $context, $built);
+    $storage = $definition->storage === NULL ? NULL : $this->resources->storage($definition->name(), $context, $built, stage: $stage);
     return new ServedOperation($definition, $found, $parameters, $context, $built, $storage);
   }
 

@@ -25,12 +25,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * derivative.
  *
  * - **Inputs**: the operation's parameters, exactly as the write tool
- *   declares them, and `values`, optional and open: what the caller has
- *   so far.
+ *   declares them, `values`, optional and open: what the caller has so
+ *   far, and `stage` where the resource's storage can be staged.
  * - **Access**: the write tool's, for the same context.
  * - **Execution**: as the HTTP narrowing runs it. The resource is built
  *   for the calling account; the values sent, narrowed to its keys, are
- *   laid over what it opens with (its defaults, and what is stored); an
+ *   laid over what it opens with (its defaults, and what is stored, or
+ *   what the stage named holds); an
  *   answer the new choices orphan is dropped as the form drops it
  *   (refinementOverlay()); and the schema for these answers is emitted
  *   from that, with no widget hints.
@@ -75,6 +76,8 @@ final class ResourceOperationSchemaTool extends ResourceOperationToolBase {
   protected function doExecute(array $values): ExecutableResult {
     try {
       [$resource, $operation, $context] = $this->operation($values);
+      $stage = $this->stage($values, $this->arguments($values, $operation));
+      $refused = $stage === NULL ? NULL : $this->stageRefused($stage);
     }
     catch (\InvalidArgumentException $e) {
       return $this->notFound($e);
@@ -84,9 +87,12 @@ final class ResourceOperationSchemaTool extends ResourceOperationToolBase {
     if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
       return $this->accessRefused($resource, $operation, $context);
     }
+    if ($refused !== NULL) {
+      return $refused;
+    }
     $built = $this->resources->build($resource->name(), $context);
     $keys = $built->getDefinitions()->toArray();
-    $stored = $resource->storage === NULL ? [] : array_intersect_key($this->resources->storage($resource->name(), $context, $built)->load($built), $keys);
+    $stored = $resource->storage === NULL ? [] : array_intersect_key($this->resources->storage($resource->name(), $context, $built, stage: $stage)->load($built), $keys);
     $current = $built->withDefaults($stored);
     $sent = $values[OperationInputs::VALUES] ?? NULL;
     // Keys the resource does not declare are no edit of it, left out as

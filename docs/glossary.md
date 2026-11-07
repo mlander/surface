@@ -773,3 +773,32 @@ the wire format both documents are written in.
 Not in the introduction. Reference:
 [The version](evolution.md#the-version),
 [The contract's own version](evolution.md#the-contracts-own-version).
+
+### Stage
+
+A stage keeps writes until they are applied together, or discarded.
+
+Precisely: the base module's resource `surface.stage`, its id a UUID,
+its record one row of the expirable key-value collection
+`surface.stage`, its owner the only account that may use it. `changes`
+lists its writes; `apply` checks them all, then makes them in one
+database transaction; `delete` discards them. A tool names one in its
+`stage` input, an HTTP request in its `X-Surface-Stage` header. Not the
+pipeline's stages, the steps of one call, nor core's Package Manager
+stage, a directory of files.
+
+Not in the introduction. Reference: [Staging](staging.md).
+
+### Staged write
+
+A staged write is a write kept in a stage instead of storage.
+
+Precisely: a write through a resource's own operation with a stage
+named, for a resource whose storage implements
+`TransactionalStorageInterface`. The pipeline runs as for a real write,
+the storage's own `prepare()` included; `commit()` writes the stage's
+record, one entry per thing, and a read through the stage answers that
+entry first. It answers `committed: true`.
+
+Not in the introduction. Reference:
+[Staging: the model](staging.md#the-model).

@@ -47,7 +47,7 @@ final class StageResource implements ResourceInterface, DefinesOutputsInterface 
    */
   #[Operation('create',
     label: new TranslatableMarkup('Open a stage'),
-    description: new TranslatableMarkup('Opens an empty stage owned by the account.'),
+    description: new TranslatableMarkup('Opens an empty stage owned by the account. Other operations name it in their stage input to write into it.'),
     creates: TRUE,
   )]
   public static function create(): OperationContext {

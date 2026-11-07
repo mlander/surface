@@ -884,7 +884,9 @@ $storage = $resources->storage(NodeTypeResource::class, $context);
 pipeline's interface and composes it along the tree of its children: a
 child whose class names storage of its own (an attached resource) has
 its values routed there, and a child without any (a structure, usually)
-is stored by its parent under its key.
+is stored by its parent under its key. Handed a stage as its fifth
+argument, it wraps that storage so a write is kept in the stage until
+the stage is applied ([Staging](staging.md#from-php)).
 
 A structure a plugin uses names no storage, because only the plugin's
 host holds the instance its values belong to. The host supplies it:

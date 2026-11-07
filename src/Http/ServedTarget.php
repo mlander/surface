@@ -14,7 +14,8 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
  * anything is built: the resource the first segment names, the operation
  * the method and the operation's kind imply (or a custom method,
  * `:{operation}`, names), the operation's parameters from the path's
- * identity segments and the query string, and what is asked of it.
+ * identity segments and the query string, and what is asked of it; and
+ * the stage its `X-Surface-Stage` header names, if any.
  *
  * Decision: see docs/decisions.md#contract-3-the-operation-is-the-method.
  */
@@ -67,6 +68,10 @@ final class ServedTarget {
    * @param bool $custom
    *   Whether the path names the operation, `:{operation}`, rather than
    *   the method implying it.
+   * @param string|null $stage
+   *   The id of the stage the request's `X-Surface-Stage` header names,
+   *   trimmed; NULL when it names none, or the action reads nothing
+   *   stored (SCHEMA, LOOKUP).
    */
   public function __construct(
     public readonly ResourceDefinition $definition,
@@ -74,6 +79,7 @@ final class ServedTarget {
     public readonly array $parameters,
     public readonly string $action,
     public readonly bool $custom,
+    public readonly ?string $stage = NULL,
   ) {}
 
 }
