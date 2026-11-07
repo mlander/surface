@@ -116,11 +116,11 @@ method.
   static, so the language holds them to that: the build step calls them
   on the class and never makes an instance. The owner gets
   `BlueprintInterface`; an alter gets `BlueprintAdditionsInterface`, which
-  the owner's extends with eight methods an alter does not have
+  the owner's extends with seven methods an alter does not have
   (`attachVariants()`, `addEach()`, `attachEach()`, `mixIn()`,
-  `mixInVariants()`, `reads()`, `compute()` and
-  `addCacheableDependency()`), and whose `attach()` places a
-  structure at the alter's own mount and nowhere else, while
+  `reads()`, `compute()` and `addCacheableDependency()`), and whose
+  `attach()` places a structure at the alter's own mount and nowhere
+  else, while
   `attachList()` refuses by name for now: an alter's keys are mounted
   under its module, and a collection inside a mount is not built
   (why: [decision](decisions.md#an-alter-attaches-at-its-own-mount)). An alter can add keys, reword a label or

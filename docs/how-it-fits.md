@@ -61,7 +61,8 @@ order, or fixes the group once they have written
 SurfaceInterface`, in `Resources::buildResource()`, which calls its
 phases in order: `Declaring` for steps 1 to 4, `Mixing` for the
 structures mixed in, `Attaching` and `Binding` for the mounts, the
-refiners and the children, and `Gating` for every access answer (why: [decision](decisions.md#the-build-is-read-by-phase)). On
+refiners and the children, and `Gating` for every access answer
+(why: [decision](decisions.md#the-build-is-read-by-phase)). On
 2026-11-05 the mixing phase split out of attaching once variants mixed
 in made it the larger half; same behavior. On 2026-11-06 the variants
 half of the phase went with `mixInVariants()`, and `Mixing` mixes in

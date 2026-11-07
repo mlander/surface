@@ -574,49 +574,36 @@ members that are part of this thing.
 Named in [Resources made of structures](introduction/11-resources-made-of-structures.md).
 Reference: [Mixins](resources.md#mixins).
 
+### Stored flat
+
+Variants stored flat keep the chosen variant's keys beside the key that
+chooses it, in storage only.
+
+Precisely: variants at a key whose map says
+`->setSetting(Variants::STORED_AS, Variants::FLAT)`: a config storage
+keeps the chosen variant's keys beside the deciding key and nothing at
+the key (`Storage\FlatVariantsLayout`), while every door asks for them
+under the key, and the contract does not change. A storage layout, not
+a way to compose.
+
+Not in the introduction. Reference: [Stored flat](resources.md#stored-flat).
+
 ### Variants mixed in
 
-Removed on 2026-11-06: variants are attached at a key with
-`attachVariants()`, and stored beside the deciding key by the setting
-`Variants::STORED_AS`.
-
-Variants mixed in are structures a sibling key chooses between, whose
-keys are added to the owner's own keys, not held under a key.
-
-Precisely: `$inputs->mixInVariants($by, from:, arguments:)`, every
-variant's members declared into the owner's frame when it is built,
-stored flat beside the deciding key, each applying only where its
-variant is chosen.
-
-Not in the introduction. Reference: [Variants mixed in](resources.md#variants-mixed-in).
+Removed 2026-11-06: variants kept beside their deciding key are
+[stored flat](resources.md#stored-flat)
+([decision](decisions.md#variants-stored-flat-are-a-layout)).
 
 ### Widest
 
-Removed on 2026-11-06 with variants mixed in: each variant states its
-own members in its own frame.
-
-The widest definition is the one every variant's definition of a
-member fits.
-
-Precisely: what the owner's frame declares for a member two variants
-mixed in declare unlike: of one data type, that type with what every
-variant declares alike; otherwise an open value (`Mixing::widest()`).
-
-Not in the introduction. Reference: [Variants mixed in](resources.md#variants-mixed-in).
+Removed 2026-11-06 with variants mixed in: each variant states its own
+keys in its own frame ([Stored flat](resources.md#stored-flat),
+[decision](decisions.md#variants-stored-flat-are-a-layout)).
 
 ### Held to
 
-Removed on 2026-11-06 with variants mixed in: each variant states its
-own members in its own frame.
-
-A member held to a definition is read by that definition in place of
-its own while a condition holds.
-
-Precisely: the declared rule the build binds, `Rule::holdTo()`, that
-puts the chosen variant's own definition in the place of a member
-declared widest, the member's label and description kept.
-
-Not in the introduction. Reference: [Variants mixed in](resources.md#variants-mixed-in).
+Removed 2026-11-06 with variants mixed in, for the reason Widest gives
+([decision](decisions.md#variants-stored-flat-are-a-layout)).
 
 ### Reader
 

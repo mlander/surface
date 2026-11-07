@@ -77,7 +77,7 @@ the emitter wrote reads back as what it was written from
 | an array of objects, or of references to one | a collection, its Count from `minItems` and `maxItems`, `UniqueItems` from `uniqueItems: true` |
 | a property that is a `oneOf` or `anyOf` of objects, each chosen by a conditional `if` naming a sibling's `const` | variants that sibling chooses, each the object its conditional names; the conditionals are the variants' |
 | an `allOf` holding a reference to an object def, beside the frame's own properties | that structure mixed in, at its first member's place |
-| a conditional whose `if` names one sibling's `const` and whose `then` is a reference to an object def, alone or the one entry of an `allOf` | the variants that sibling chooses, mixed in (`mixInVariants()`): each value's def read as a structure, its members after the deciding key; a member the frame narrows is not read (why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key)) |
+| a conditional whose `if` names one sibling's `const` and whose `then` is a reference to an object def, alone or the one entry of an `allOf` | kept, a `JsonSchema` constraint on the frame, and noted: a `then` that refers to a def is no effect a declared rule has, and variants are read where a property holds them (the `oneOf`/`anyOf` row) |
 | a conditional whose `if` is a condition of the vocabulary and whose `then` only narrows | a declared rule ([Declaring a rule](refinement.md#declaring-a-rule)): `{"properties": {k: false}}` `doesNotApply()`, `required` `require()`, a bound, a list or a pattern `constrain()`, a `description` `because()` |
 | a conditional on a key a child's port is wired to, reaching into the child | the child's rule, on the port |
 | `additionalProperties: false`, `unevaluatedProperties: false` | closed, as every structure is |
@@ -96,7 +96,6 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | --- | --- |
 | `ports` | `reads()`, each port's type, or its shape where the site has one |
 | `reads` | the wiring of a child's ports, where the wired key is a key of the object holding the child |
-| `variantsMixedIn` | dropped: each conditional says the def its value chooses, and is read as variants mixed in |
 | `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
 | `collection` | a collection (`list` in contract 3) |
 | `patternMessage` | the `Regex`'s message |
@@ -244,13 +243,129 @@ says; what it loses is a marker or the code that would compute it.
 
 `Reader\ConfigSchemaReader` reads a config schema type into a blueprint
 the same way, with no JSON Schema between: a mapping is a map or an
-attached structure, a sequence a list or a collection, a type named
-through a sibling (`[%parent.<key>]`) variants at the key, and a type
-chosen by a key inside its own value (`views.sort.[plugin_id]`) the
-fallback's keys plus `configuration` (`ConfigSchemaReader::CHOSEN`):
-the variants the own key chooses, asked for under `configuration` and
-stored flat beside the own key, as core stores them
-(`attachVariants(ConfigSchemaReader::CHOSEN, ...)->setSetting(Variants::STORED_AS, Variants::FLAT)`).
+attached structure, a sequence a list or a collection, and a type named
+through another key is variants, which `Variants\ConfigSchemaTypes`
+lists, in one of two forms.
+
+**A type named through a sibling,** `[%parent.<key>]`, is variants at
+the key, chosen by the sibling and stored under the key, as core stores
+a block's settings beside its plugin id. A binding written by hand
+names the schema type and the path of the value:
+
+<!-- code: tests/modules/surface_reader_test/src/Structure/BlockDirectStructure.php -->
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\surface_reader_test\Structure;
+
+use Drupal\surface\Variants\ConfigSchemaTypes;
+use Drupal\surface\Resource\Attribute\Structure;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\StructureInterface;
+
+/**
+ * Three block plugins' settings, straight from config schema.
+ */
+#[Structure('reader_test.block_direct')]
+final class BlockDirectStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('plugin', 'string', t('Plugin'))
+      ->addConstraint('Choice', ['choices' => ['page_title_block', 'system_branding_block', 'system_menu_block:main']]);
+
+    $inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [
+      'type' => 'block.block.*',
+      'path' => 'settings',
+      'by' => 'plugin',
+    ]);
+  }
+
+}
+```
+
+**A type chosen by a key inside its own value,** `condition.plugin.[id]`
+or `views.sort.[plugin_id]`, is one structure wherever it is used,
+`config_schema:<expression>`: the fallback type's keys, then the
+variants the own key chooses at `configuration`
+(`ConfigSchemaReader::CHOSEN`), stored flat beside the own key, as core
+stores them. The reader declares them with
+`attachVariants(ConfigSchemaReader::CHOSEN, $by, NULL, from: ConfigSchemaTypes::class, arguments: ['type' => $named])`
+and `Variants::STORED_AS` `Variants::FLAT` on the map it returns
+([Stored flat](resources.md#stored-flat)). `configuration` is core's
+word for a plugin's own settings
+(`ConfigurableInterface::getConfiguration()`, and the key
+`layout_builder.component` and `system.action.*` nest them under); the
+map at it carries no label, since the schema names none. A fallback
+that declares `configuration` itself is refused when the structure is
+built: stored flat, its key and the chosen type's would be one key.
+
+So the contract nests the chosen keys one level under `configuration`
+where the YAML is flat. The test module's condition host keeps one
+condition as a block's visibility keeps each, the request path's pages
+beside its id:
+
+<!-- yaml: tests/modules/surface_reader_test/config/install/surface_reader_test.condition_host.yml#condition -->
+
+```yaml
+condition:
+  id: request_path
+  negate: false
+  pages: '/node/*'
+```
+
+Every door reads it as `id`, `negate` and `configuration`, the pages
+under `configuration`, and writes it back beside the id.
+
+A binding written by hand may hold the same variants under a key of its
+own, stored under it: the test module's conditions bind
+`condition.plugin.[id]` through the block's `visibility.*`, at
+`settings`, each variant the condition's keys less those every
+condition has:
+
+<!-- code: tests/modules/surface_reader_test/src/Structure/ConditionDirectStructure.php -->
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\surface_reader_test\Structure;
+
+use Drupal\surface\Variants\ConfigSchemaTypes;
+use Drupal\surface\Resource\Attribute\Structure;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\StructureInterface;
+
+/**
+ * Three conditions' settings, straight from config schema.
+ *
+ * Each less the keys every condition has, which its frame holds.
+ */
+#[Structure('reader_test.condition_direct')]
+final class ConditionDirectStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('id', 'string', t('Plugin'))
+      ->addConstraint('Choice', ['choices' => ['request_path', 'response_status', 'user_role']]);
+
+    $inputs->attachVariants('settings', by: 'id', label: t('Settings'), from: ConfigSchemaTypes::class, arguments: [
+      'type' => 'block.block.*',
+      'path' => 'visibility.*',
+      'by' => 'id',
+    ]);
+  }
+
+}
+```
 
 **A key the schema declares is always declared.** A derived structure
 is closed, so a key left out would refuse the stored value that holds
@@ -270,7 +385,7 @@ key unlike each keep their own definition: `views.field.field` holds
 (from `views.field.prerender_list`) to a plain `string`. A variant may
 hold children, maps and variants at a key of its own, as
 `views.field.field` holds its formatter's `settings`
-(why: [decision](decisions.md#a-mixin-may-be-chosen-by-a-sibling-key)).
+(why: [decision](decisions.md#variants-stored-flat-are-a-layout)).
 
 **Which structure each value is.** `Variants\ConfigSchemaTypes` lists the
 variants of both forms, bound by name to the type and the path of the
@@ -285,14 +400,13 @@ manager, a plugin whose class names its settings with
 children and defaults with it, and its schema is not read;
 every other value is the structure its schema type is. For an own-key
 expression that structure is the type's `:own` form,
-`config_schema:<type>:own`: its keys less those of the fallback, which
-is the type itself or has the keys of a type it extends at any
-distance. So `views.argument.date_day` (`type: views.argument.date`,
-which is `type: views_argument`, as `views.argument.*` is) holds
-`views.argument.date`'s keys and its own, less those of
-`views.argument.*`. The fallback is matched by keys, not by name, and a
-type left out whose keys are those of no type in the chosen type's
-ancestry is refused (`ConfigSchemaReader::structure()`). A `#[Variant]`
+`config_schema:<type>:own`: the type's keys less those of its frame
+type, the type itself or any type it extends, matched by keys, not by
+name; a type that matches none is refused
+(`ConfigSchemaReader::structure()`). So `views.argument.date_day`
+(`type: views.argument.date`, which is `type: views_argument`, as
+`views.argument.*` is) holds `views.argument.date`'s keys and its own,
+less those of `views.argument.*`. A `#[Variant]`
 declared for the owner at the key wins over both, as for any provider
 (why: [decision](decisions.md#a-placed-block-is-a-resource)).
 
