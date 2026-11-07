@@ -987,6 +987,14 @@ accepted values instead (why: [decision](decisions.md#every-door-projects-what-t
 | `PluginConfigurationStorage` | A plugin's configuration array. | The complete configuration. | the plugin hosts |
 | `CompositeStorage` | Several of the above, in order. | One prepared set per child. | no shipped resource yet |
 
+None of them implements `TransactionalStorageInterface`
+([Opting into staging](#opting-into-staging)). A stage refuses a write
+to a resource stored by `ConfigObjectStorage` or `ConfigEntityStorage`:
+saving config writes caches beside the database, which a rolled back
+apply would leave wrong. The five in `Pipeline\Storage\` are a host's, which a
+stage never wraps. The entity example's `ContentEntityStorage`
+implements it.
+
 `ConfigObjectStorage` came back once every settings resource had
 written the same class: the examples' three, and the one the first
 fresh-eyes reader had to write ([the log](fresh-eyes-2026-10-18.md)).
@@ -1286,6 +1294,8 @@ A resource's storage class, a `ResourceStorageInterface` named by
 4. It is an autowired service, so it takes services in its constructor;
    container-built, it translates with `$this->t()`.
 5. Compose `DependencySerializationTrait`, and hold no closures.
+6. To let a stage hold its writes, implement
+   `TransactionalStorageInterface` ([below](#opting-into-staging)).
 
 An engine storage class, a `SurfaceStorageInterface` the pipeline
 writes to directly:
@@ -1300,3 +1310,30 @@ writes to directly:
 4. Declare any dependencies the artifact carries in the `PreparedValues`,
    in the shape `calculateDependencies()` collects them.
 5. Compose `DependencySerializationTrait`, and hold no closures.
+
+### Opting into staging
+
+A stage keeps writes until they are applied together, and apply makes
+them in one database transaction. A stage takes a write only for a
+resource whose storage class implements
+`Drupal\surface\Pipeline\TransactionalStorageInterface`; any other is
+refused at prepare, code `does_not_apply`, naming the class. Only the
+resource's own storage class is checked, not the storage a variant or
+an attachment is routed to.
+
+Implementing it is a promise: `commit()` writes through the database
+connection alone, so rolling the transaction back undoes the write
+whole. A storage that saves config, writes State or changes a table's
+schema does not make it: config and State keep caches beside the
+database, and MySQL commits a schema change at once.
+
+Its one method, `rolledBack()`, is called after apply rolls back, on the
+storage of every write whose commit had started, the last first, and on
+each storage routed under it, whether its route wrote or not. Drop
+there what the storage cached beside the database for what it wrote: the
+entity example resets the entity storage's cache of each entity it saved
+(`resetCache([$id])`), so a load later in the request reads what the
+database holds. A storage that caches nothing, such as one over the
+database's key-value collection, leaves the body empty. What hooks do
+beside the database during a save (a mail sent, a remote call) is not
+undone by the rollback and is not the storage's to undo.

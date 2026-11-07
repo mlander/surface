@@ -1333,9 +1333,13 @@ final class Resources implements ResourcesInterface {
     if ($stage === NULL) {
       return $adapter;
     }
+    // The operation's parameter names, what a write records as its
+    // arguments when the stage was handed none.
+    $operation = $this->registry->getOperations($definition->id)[$context->id] ?? NULL;
+    $parameters = $operation === NULL ? [] : array_map(static fn (OperationParameter $parameter): string => $parameter->name, $operation->parameters);
     // Decision: see
     // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
-    return new StagedStorage($adapter, $stage, $this->classResolver->getInstanceFromDefinition(StageStore::class), $definition->id, $context, get_class($this->storageInstance($definition->name())), $definition->identity);
+    return new StagedStorage($adapter, $stage, $this->classResolver->getInstanceFromDefinition(StageStore::class), $definition->id, $context, get_class($this->storageInstance($definition->name())), $definition->identity, $parameters);
   }
 
   /**

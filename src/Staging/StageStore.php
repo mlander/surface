@@ -22,7 +22,8 @@ use Drupal\surface\ResourceBuild\NamesNothingException;
  * takes no account and reads none.
  *
  * Writes to one record are serialized by a lock named for the stage,
- * taken and released inside one commit.
+ * taken and released inside each write: a staged write's commit, and
+ * the stage's own create, update, apply and delete.
  *
  * Decision: see
  * docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection.

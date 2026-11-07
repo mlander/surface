@@ -9,6 +9,7 @@ use Drupal\Core\Lock\DatabaseLockBackend;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\Staging\StageRaceException;
 use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Storage\StageStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -21,7 +22,7 @@ use Symfony\Component\DependencyInjection\Reference;
  * missing or expired names nothing, and every write resets the expiry. A
  * staged commit waits once for a lock another request holds and then
  * gives up, a runtime failure; the lock this request holds already lets
- * it through.
+ * it through. Opening a stage and deleting one take its lock too.
  *
  * @see docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection
  */
@@ -148,6 +149,47 @@ class StageStoreTest extends SurfaceKernelTestBase {
     $this->assertTrue($result->committed, $this->said($result));
     $this->assertCount(1, $this->stages()->read($id)['writes']);
     $this->assertTrue($other->lockMayBeAvailable(StageStore::COLLECTION . ':' . $id), 'The commit released the lock.');
+  }
+
+  /**
+   * Tests opening and deleting a stage take the stage's lock.
+   *
+   * Every write of a record is under its lock, so a delete never lands
+   * while an apply holds the record.
+   */
+  public function testOpenAndDeleteTakeTheLock(): void {
+    $lock = new RecordingLock();
+    $store = new StageStore($this->container->get('keyvalue.expirable'), $lock, $this->container->get('datetime.time'), 3600);
+    $storage = new StageStorage(
+      $store,
+      $this->resources(),
+      $this->container->get('surface.pipeline'),
+      $this->container->get('database'),
+      $this->container->get('uuid'),
+      $this->container->get('logger.channel.surface'),
+      $this->container->get('string_translation'),
+    );
+    $account = $this->container->get('current_user');
+
+    $create = $this->resources()->operation('surface.stage', 'create');
+    $prepared = $storage->prepare($create, ['label' => 'Locked'], $account);
+    $id = (string) $prepared['id'];
+    $this->assertSame([], $lock->asked, 'A rehearsal takes no lock.');
+    $storage->commit($create, $prepared, $account);
+    $name = StageStore::COLLECTION . ':' . $id;
+    $this->assertSame([['acquire', $name], ['release', $name]], $lock->asked);
+    $this->assertNotNull($store->read($id));
+
+    $lock->asked = [];
+    $delete = $this->resources()->operation('surface.stage', 'delete', ['id' => $id]);
+    $storage->delete($delete, $storage->prepareDelete($delete, $account), $account);
+    $this->assertSame([['acquire', $name], ['release', $name]], $lock->asked);
+    $this->assertNull($store->read($id));
+
+    // A record gone by the time the lock is had is gone: delete again.
+    $lock->asked = [];
+    $storage->delete($delete, ['id' => $id], $account);
+    $this->assertSame([['acquire', $name], ['release', $name]], $lock->asked);
   }
 
   /**

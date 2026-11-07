@@ -11,13 +11,12 @@ use Drupal\surface\Pipeline\Fingerprint;
 use Drupal\surface\Pipeline\Outbound;
 use Drupal\surface\Pipeline\PreparedValues;
 use Drupal\surface\Pipeline\StorageViolationsException;
+use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\ResourceBuild\StorageAdapter;
-use Drupal\surface\Storage\ConfigEntityStorage;
-use Drupal\surface\Storage\ConfigObjectStorage;
 use Drupal\surface\Storage\StageStorage;
 use Drupal\surface\SurfaceInterface;
 
@@ -33,8 +32,10 @@ use Drupal\surface\SurfaceInterface;
  *   first load from storage is fingerprinted (Fingerprint::of()), the
  *   token apply checks what is stored then against.
  * - prepare() refuses what a stage cannot hold yet, each a violation of
- *   the whole call, then rehearses the write as a real one: the adapter's
- *   prepare(), with every check the storage makes.
+ *   the whole call, a storage class that does not implement
+ *   TransactionalStorageInterface among them, then rehearses the write as
+ *   a real one: the adapter's prepare(), with every check the storage
+ *   makes.
  * - commit() writes the stage's record, never storage: the merged
  *   document the pipeline accepted replaces the stage's entry for the
  *   thing whole, the last of two writes winning, and the top level keys
@@ -55,24 +56,6 @@ use Drupal\surface\SurfaceInterface;
 final class StagedStorage implements CreatingStorageInterface, DeletingStorageInterface, OutputsStorageInterface {
 
   use StringTranslationTrait;
-
-  /**
-   * The storage classes a stage cannot hold yet, by why.
-   *
-   * A stage holds a storage whose commit is a database write a
-   * transaction rolls back whole. A config storage writes through
-   * caches a rollback would leave wrong. Only these classes are checked:
-   * a storage of another class that saves config or writes State in its
-   * own code is not detected.
-   *
-   * Decision: see
-   * docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection.
-   */
-  protected const REFUSED = [
-    ConfigObjectStorage::class => 'config',
-    ConfigEntityStorage::class => 'config',
-    StageStorage::class => 'stage',
-  ];
 
   /**
    * What load() answered last, for the keys a commit moved.
@@ -106,6 +89,9 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    *   The class of the resource's storage.
    * @param string[] $identity
    *   The resource's identity keys.
+   * @param string[] $parameters
+   *   The names of the operation's parameters, what a write records as
+   *   its arguments when the stage was handed none.
    */
   public function __construct(
     protected readonly StorageAdapter $adapter,
@@ -115,6 +101,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
     protected readonly OperationContext $context,
     protected readonly string $storageClass,
     protected readonly array $identity,
+    protected readonly array $parameters,
   ) {}
 
   /**
@@ -157,9 +144,10 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    *
    * Refused whole, each refusal a violation of the whole call, for a
    * stage that is gone or applied, a thing the stage removed, a create or
-   * a delete, a storage a stage cannot hold yet, a resource that holds a
-   * secret, and a thing the stage holds through another resource or
-   * another operation; else the adapter's own prepare().
+   * a delete, a storage class that does not declare a transaction rolls
+   * its writes back whole, a resource that holds a secret, and a thing
+   * the stage holds through another resource or another operation; else
+   * the adapter's own prepare().
    */
   public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
     $record = $this->stages->read($this->stage->id);
@@ -179,12 +167,14 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
     if ($this->deletes()) {
       throw self::refusal($this->t('A delete cannot be staged yet; remove it for real, or stage updates.'), Violation::DOES_NOT_APPLY);
     }
-    foreach (self::REFUSED as $class => $why) {
-      if (is_a($this->storageClass, $class, TRUE)) {
-        throw self::refusal($why === 'stage'
-          ? $this->t('A stage cannot be staged.')
-          : $this->t('Configuration cannot be staged yet: its caches are written beside the database, and an apply rolled back would leave them wrong.'), Violation::DOES_NOT_APPLY);
-      }
+    // Decision: see
+    // docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection.
+    if (!is_a($this->storageClass, TransactionalStorageInterface::class, TRUE)) {
+      throw self::refusal($this->t('@resource cannot be staged: its storage, @class, does not declare that a database transaction rolls its writes back whole (@interface).', [
+        '@resource' => $this->resource,
+        '@class' => $this->storageClass,
+        '@interface' => TransactionalStorageInterface::class,
+      ]), Violation::DOES_NOT_APPLY);
     }
     if (Outbound::secrets($surface) !== []) {
       throw self::refusal($this->t('A stage keeps values in the clear until secrets are sealed, so a resource that holds a secret cannot be staged yet.'), Violation::DOES_NOT_APPLY);
@@ -251,7 +241,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
           'operation' => $this->context->id,
           'kind' => $this->deletes() ? 'delete' : ($this->creates() ? 'create' : 'update'),
           'storage' => $this->storageClass,
-          'arguments' => $this->stage->arguments === [] ? $this->identityKnown() : $this->stage->arguments,
+          'arguments' => $this->stage->arguments === [] ? $this->parametersKnown() : $this->stage->arguments,
           'known' => array_filter($this->context->known, static fn (mixed $value): bool => $value === NULL || is_scalar($value)),
           'values' => $values,
           'changed' => $moved,
@@ -314,6 +304,20 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    */
   protected function identityKnown(): array {
     return array_intersect_key($this->context->known, array_flip($this->identity));
+  }
+
+  /**
+   * Gets the operation's parameters out of what the context knows.
+   *
+   * What a write records as its arguments when the stage was handed none:
+   * the parameters by name, never the whole identity, which for a derived
+   * resource names keys the operation does not take.
+   *
+   * @return array<string, mixed>
+   *   The known value of each parameter the context knows, by name.
+   */
+  protected function parametersKnown(): array {
+    return array_intersect_key($this->context->known, array_flip($this->parameters));
   }
 
   /**

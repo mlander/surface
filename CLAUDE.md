@@ -359,8 +359,11 @@ the record of the rework that brought the module to the pattern.
   prepare is the storage's, commit writes the record. `changes` lists
   the writes; `apply` (`Storage\StageStorage`) rehearses them all in
   prepare and makes them in commit, in order, in one transaction, and
-  keeps the record marked applied. For now a stage takes updates of
-  storages a transaction rolls back whole; no door takes a stage input yet
+  keeps the record marked applied. For now a stage takes updates of a
+  resource whose storage class implements
+  `Pipeline\TransactionalStorageInterface` (a transaction undoes its
+  writes whole; `rolledBack()` drops what it cached after an apply rolls
+  back), any other refused at prepare; no door takes a stage input yet
   (`docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection`,
   `docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner`).
 - **Contract**: the JSON Schema a built resource or structure emits.
@@ -687,7 +690,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1956, Assertions: 46341, Errors: 0, Failures: 0, Skipped: 3. Classes: 276 of 276, 8 at a time, browser classes 4.
+phpunit: Tests: 1962, Assertions: 46487, Errors: 0, Failures: 0, Skipped: 3. Classes: 276 of 276, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -707,7 +710,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1848, Assertions: 42192, Skipped: 3, Deprecations: 130. Classes:
+`Tests: 1854, Assertions: 42338, Skipped: 3, Deprecations: 130. Classes:
 227, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
@@ -971,7 +974,9 @@ src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
                          SurfacePipeline.php keeps the write path and
                          the document, over its three verbs: Accepting.php,
-                         Validating.php, Conforming.php.
+                         Validating.php, Conforming.php. The storage
+                         interfaces; TransactionalStorageInterface is
+                         what a storage implements to be staged.
 src/Storage/             Where accepted values are written; settings layouts.
 src/Staging/             The stage's record store (StageStore), the
                          staged-storage wrapper (StagedStorage) and the

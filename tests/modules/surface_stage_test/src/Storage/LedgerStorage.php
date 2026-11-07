@@ -8,6 +8,7 @@ use Drupal\Core\KeyValueStore\KeyValueFactoryInterface;
 use Drupal\Core\KeyValueStore\KeyValueStoreInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\State\StateInterface;
+use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
 use Drupal\surface\ResourceBuild\NamesNothingException;
@@ -22,7 +23,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * fails, as a runtime failure would, while the State key FAIL names the
  * row's id: how a test makes an apply roll back.
  */
-final class LedgerStorage implements ResourceStorageInterface {
+final class LedgerStorage implements ResourceStorageInterface, TransactionalStorageInterface {
 
   /**
    * The key-value collection the rows are kept in.
@@ -111,6 +112,13 @@ final class LedgerStorage implements ResourceStorageInterface {
       return;
     }
     $this->rows()->set($id, $prepared + ['touched' => $touched]);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function rolledBack(): void {
+    // The database's key-value collection keeps no cache to drop.
   }
 
   /**

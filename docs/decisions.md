@@ -284,6 +284,15 @@ the chosen keys beside the deciding key is the setting
 The pins are 27 attributes, 110 arguments and 17 blueprint methods
 since.
 
+*Grown 2026-11-07,* by one interface a storage implements,
+`Pipeline\TransactionalStorageInterface`, and its one method,
+`rolledBack()`: only a storage that declares a transaction undoes its
+writes whole may be staged
+([A stage is a resource of the base module, kept in an expirable key-value collection](#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection)).
+It is in `src/Pipeline/`, which the four pins do not count, so they are
+unchanged; `PublicSurfaceTest` pins the storage interfaces of
+`src/Pipeline/` by name and method from this date.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -4355,23 +4364,47 @@ one: it keeps nothing between requests but a session cookie.
   user and the session, which nothing an operation runs may read
   ([Nothing an operation runs reads the request](#nothing-an-operation-runs-reads-the-request)).
 - **What a stage can hold for now.** Updates to a resource whose
-  storage commits a database write a transaction rolls back whole: a
-  content entity, a row of a key-value collection in the database.
-  Refused at prepare, each a violation of the whole call, code
-  `does_not_apply`: a create, a delete, the stage itself, a resource
-  that holds a secret (a stage keeps values in the clear), and a storage
-  extending `ConfigObjectStorage` or `ConfigEntityStorage` (config
-  writes its caches beside the database, and a rollback leaves them
-  stale). One stored thing reached through two
-  resources is refused, code `conflict`, and a thing is written through
-  one operation per stage. Those classes are the only check of storage:
-  a storage of another class whose own code saves config or writes
-  State (State keeps a cache a rollback leaves stale), or changes a
-  table's schema (which MySQL commits at once), is not detected, so a
-  stage takes its writes and apply makes them inside the transaction.
-  Such a storage must not be staged. Refusing every storage not known
-  to roll back whole is open, to settle before a door takes a stage
-  input.
+  storage class implements `Pipeline\TransactionalStorageInterface`,
+  the storage's promise that its commit writes through the database
+  connection alone, so the transaction apply opens undoes it whole: the
+  entity example's content entity storage, the stage fixture's row of a
+  key-value collection in the database. A storage is refused by what its
+  class does not declare, never by a list of classes (the resource's own
+  storage class; a routed child's is not checked yet): a list of what to
+  refuse could not hold, since any storage may save config or write
+  State in its own code (State keeps a cache a rollback leaves stale), or
+  change a table's schema (which MySQL commits at once). Refused at
+  prepare, each a violation of the whole call, code `does_not_apply`: a
+  create, a delete, a storage class that does not implement the
+  interface (the stage's own, the config storages until config staging,
+  a storage in State), and a resource that holds a secret (a stage keeps
+  values in the clear). One stored thing reached through two resources
+  is refused, code `conflict`, and a thing is written through one
+  operation per stage. When apply rolls back, it calls `rolledBack()` on
+  the storage of every write whose commit had started, the last first,
+  so each drops what it cached beside the database (the entity
+  storage's cache of what it saved); what hooks did beside the database
+  is theirs. *Closed 2026-11-07:* the allow-list to settle before a door
+  takes a stage input is this interface.
+- **Every write of a record takes the stage's lock.** A staged write's
+  commit, and the stage's create, update, apply and delete, each take
+  the lock named for the stage. The writes that change a record already
+  there, a staged write's commit, update and apply, read it again under
+  the lock, so a delete never lands while an apply holds the record and
+  a deleted stage is never written back as applied. A create writes a
+  new UUID no other request names, and a delete that finds the record
+  gone is done. A write waits two seconds (`StageStore::WAIT`) for a
+  lock another request holds, then fails as a race, a delete too. The
+  lock lasts core's default of 30 seconds: an apply that runs longer, or
+  a record that expires while it runs, lets the apply write the record
+  back as applied.
+- **The arguments are the operation's.** A write records the arguments
+  it was handed; handed none, it records the operation's parameters out
+  of what the context knows, never the whole identity, which for a
+  derived entity resource names its entity type and bundle beside the
+  id. At apply, arguments that build no operation are a violation of
+  their write, code `does_not_apply`, as one that names nothing now is
+  code `not_found`.
 - **One entry per thing.** The thing is the resource and the identity its
   context knows. Its entry holds the whole document the pipeline merged,
   the top level keys the stage moved (what apply sends), the arguments
@@ -4391,8 +4424,9 @@ one: it keeps nothing between requests but a session cookie.
 (`Resource\StageResource`, `Structure\StageChangesStructure`,
 `Structure\StageAppliedStructure`, `Storage\StageStorage`,
 `Access\StageAccess`, `Staging\StageStore`, `Staging\StagedStorage`,
+`Pipeline\TransactionalStorageInterface`, `StorageAdapter::rolledBack()`,
 `StageStoreTest`, `StageOwnershipTest`, `StageInWorkspaceTest`,
-`StagedUpdateTest`)
+`StagedUpdateTest`, `StageApplyTest`)
 
 ### A staged write validates as a real write
 
@@ -4445,7 +4479,8 @@ over the keys the stage moved, every refusal filed under
 takes the stage's lock, checks the record's writes and every token
 again, commits each rehearsed write in staging order in one database
 transaction (`commitDryRun()`, one prepare per write), and marks the
-record applied. A write that throws rolls every write back and the stage
+record applied. A write that throws rolls every write back, each
+storage whose write had started is told (`rolledBack()`), and the stage
 stays open. A dry run of `apply` is the check; a second `apply` is
 refused, code `does_not_apply`.
 
@@ -4476,8 +4511,8 @@ refused, code `does_not_apply`.
   emptied and what apply made recorded, until it expires or is deleted:
   the HTTP door builds the operation again after a committed write, and
   a record deleted in commit would answer that 404 after writing.
-- **A race is a runtime failure.** A record written, a token moved
-  between the two passes, or a lock not had after one wait, throws
+- **A race is a runtime failure.** A record written or deleted, a token
+  moved between the two passes, or a lock not had after one wait, throws
   `StageRaceException`; every refusal a rehearsal can see is a
   violation from prepare. The record's writes, not its time, tell a
   race: the time is the request's, which two writes in one second share.
