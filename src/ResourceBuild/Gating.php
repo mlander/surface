@@ -1225,7 +1225,7 @@ final class Gating {
       $attachment = $entry->attachment ?? $entry->list?->item;
       if ($attachment === NULL && $entry->variants !== NULL && $built->isLocked($entry->variants->by)) {
         $value = $built->getDefault($entry->variants->by);
-        $class = is_string($value) || is_int($value) ? ($this->registry->getVariants($this->declarerOf($parent, $built, $key), $key)[$value] ?? NULL) : NULL;
+        $class = is_string($value) || is_int($value) ? ($this->registry->getVariants($parent->name(), $key)[$value] ?? NULL) : NULL;
         if ($class === NULL) {
           continue;
         }
@@ -1253,36 +1253,6 @@ final class Gating {
       array_push($answers, ...$this->childAnswers($child, $child_context, $account, $attachment->child));
     }
     return $answers;
-  }
-
-  /**
-   * Names what declared the variants at a key: the parent, or its variant.
-   *
-   * Variants a variant mixed in holds at a key are the #[Variant] classes
-   * of that variant, which the first variant offered that brings the key
-   * names.
-   *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-   *
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $parent
-   *   The parent.
-   * @param \Drupal\surface\SurfaceInterface $built
-   *   The parent, built.
-   * @param string $key
-   *   The key the variants sit at.
-   *
-   * @return string
-   *   The name the variants are found by.
-   */
-  protected function declarerOf(ResourceDefinition $parent, SurfaceInterface $built, string $key): string {
-    foreach ($built->getDefinitions()->mixinVariants() as $mixed) {
-      foreach ($mixed->variants as $variant) {
-        if (in_array($key, $variant->keys, TRUE) && $variant->structure->source !== NULL) {
-          return $variant->structure->source;
-        }
-      }
-    }
-    return $parent->name();
   }
 
   /**

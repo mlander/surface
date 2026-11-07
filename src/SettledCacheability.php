@@ -61,11 +61,6 @@ final class SettledCacheability {
     foreach ($surface->getDefinitions()->mixins() as $mixin) {
       $children[] = $mixin->structure;
     }
-    foreach ($surface->getDefinitions()->mixinVariants() as $mixed) {
-      foreach ($mixed->variants as $variant) {
-        $children[] = $variant->structure;
-      }
-    }
     foreach ($children as $attachment) {
       $child = $attachment->settledChild();
       if ($child === NULL || isset($seen[spl_object_id($child)])) {

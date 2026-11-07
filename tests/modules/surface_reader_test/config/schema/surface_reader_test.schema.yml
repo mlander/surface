@@ -145,6 +145,23 @@ surface_reader_test.signal.timed:
           type: integer
           label: 'Off'
 
+# A setting typed by its own key whose every value holds a key named
+# configuration, where the chosen type's keys would be asked for.
+surface_reader_test_setting:
+  type: mapping
+  label: 'Setting'
+  mapping:
+    kind:
+      type: string
+      label: 'Kind'
+    configuration:
+      type: string
+      label: 'Configuration'
+
+surface_reader_test.setting.*:
+  type: surface_reader_test_setting
+  label: 'Any setting'
+
 # The condition host: one condition typed by its own id, as a block's
 # visibility types each, the chosen condition's keys beside the id.
 surface_reader_test.condition_host:

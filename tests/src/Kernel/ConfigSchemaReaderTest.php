@@ -321,13 +321,11 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame(['id', ConfigSchemaTypes::class], [$chosen['by'], $chosen['from']], 'The variants the id chooses.');
     $this->assertSame(['type' => 'condition.plugin.[id]'], $chosen['arguments'], 'Bound to the expression.');
     $this->assertSame(Variants::FLAT, $chosen['definition']->getSetting(Variants::STORED_AS), 'Stored flat beside the id.');
-    $this->assertSame([], $inputs->mixedInVariants, 'Nothing mixed in.');
 
     $name = $reader->structure('condition.plugin.[id]');
     $this->assertSame('config_schema:condition.plugin.[id]', $this->container->get('surface.resource_registry')->getDefinition($name)->id);
     $full = $this->full($name);
     $this->assertSame([...$fallback, ConfigSchemaReader::CHOSEN], array_keys($full['properties']));
-    $this->assertArrayNotHasKey('variantsMixedIn', $full['x-surface'] ?? []);
     $listed = $this->container->get(ConfigSchemaTypes::class)->listFor(['type' => 'condition.plugin.[id]', 'by' => 'id'])->entries();
     $this->assertNotEmpty($listed);
     $variants = $full['properties'][ConfigSchemaReader::CHOSEN]['x-surface']['variants'];
@@ -515,6 +513,23 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame($condition, $resources->storage(ConditionHostResource::class, $context, $built)->load($built)['condition']);
     $typed = $this->container->get('config.typed');
     $this->assertCount(0, $typed->createFromNameAndData($config, $this->config($config)->getRawData())->validate(), 'Core reads it through the request path\'s own type.');
+  }
+
+  /**
+   * Tests an own-key type whose fallback declares `configuration` is refused.
+   *
+   * Stored flat, the chosen type's keys asked for under `configuration`
+   * and the fallback's own key of that name would be one key.
+   */
+  public function testOwnKeyFallbackDeclaringConfigurationIsRefused(): void {
+    $reader = $this->container->get(ConfigSchemaReader::class);
+    try {
+      $this->container->get('surface.resources')->buildStatic($reader->structure('surface_reader_test.setting.[kind]'), new OperationContext('configure'));
+      $this->fail('The setting was read.');
+    }
+    catch (\LogicException $e) {
+      $this->assertSame('ConfigSchemaReader reads surface_reader_test.setting.[kind] as the keys of surface_reader_test.setting.* and, at "configuration", the type its "kind" key chooses, stored flat beside them, and surface_reader_test.setting.* declares "configuration" itself: stored flat, the two would be one key.', $e->getMessage());
+    }
   }
 
   /**

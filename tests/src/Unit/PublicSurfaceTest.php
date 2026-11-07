@@ -66,6 +66,12 @@ use PHPUnit\Framework\Attributes\Group;
  * #[Constraint(..., item: TRUE)] beside #[Each]
  * (docs/decisions.md#a-reference-is-a-constraint-on-a-value): 113
  * arguments.
+ * Cut on 2026-11-06 by the blueprint method `mixInVariants()` and its
+ * attribute, #[MixInVariants], with its three arguments: a tagged union
+ * has one blueprint form, attachVariants() at a key, and storing the
+ * chosen keys beside the deciding key is a setting on that key,
+ * Variants::STORED_AS, which the engine's layout reads: 17 methods, 27
+ * attributes, 110 arguments.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -86,9 +92,9 @@ class PublicSurfaceTest extends UnitTestCase {
    * What the surface holds, by kind.
    */
   protected const PINNED = [
-    'attributes' => 28,
-    'attribute arguments' => 113,
-    'blueprint methods' => 18,
+    'attributes' => 27,
+    'attribute arguments' => 110,
+    'blueprint methods' => 17,
     'interfaces' => 22,
   ];
 

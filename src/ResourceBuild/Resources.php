@@ -19,7 +19,6 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Resolve;
 use Drupal\surface\SettledCacheability;
@@ -61,11 +60,7 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  *    the engine's lock: the value fixed to the declared default.
  * 5. Each structure mixed in (Mixing::mixIn()): its ports' wiring
  *    checked, built by itself for its def and its access, which holds its
- *    members to what is stored or takes them back out; then each variant
- *    mixed in the same way (Mixing::mixInVariants()), its value offered
- *    on the deciding key, whose members were declared where the call
- *    stands once the owner's declaration ran
- *    (Mixing::layVariantMixins(), from step 1); then what of the
+ *    members to what is stored or takes them back out; then what of the
  *    owner's names its members is checked
  *    (Mixing::assertMixinsUnnamed()), and its refiners, rules and
  *    alters are bound in the owner's frame first (Binding::bindMixin()).
@@ -125,9 +120,8 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * - Declaring: steps 1 to 4, the blueprint filled from the class, its
  *   alters, the site's defaults and the context, and the context a child
  *   is invoked in.
- * - Mixing: step 5, each structure and each variant mixed in, built by
- *   itself, its members settled, and what of the owner's names them
- *   checked.
+ * - Mixing: step 5, each structure mixed in, built by itself, its
+ *   members settled, and what of the owner's names them checked.
  * - Attaching: steps 2 and 7, each child, collection, variant, map of keys
  *   from the site and structure at an alter's mount, each built through
  *   this class again in its own frame.
@@ -168,7 +162,7 @@ final class Resources implements ResourcesInterface {
   protected Attaching $attaching;
 
   /**
-   * The structures and the variants mixed in.
+   * The structures mixed in.
    */
   protected Mixing $mixing;
 
@@ -322,8 +316,8 @@ final class Resources implements ResourcesInterface {
     $this->declaring = new Declaring($this->registry, $this->typedDataManager, $this->classResolver, $this->watchedValueCheck, $this->siteDefaults, $this->heldReferences, $this, $this->typedConfig);
     $this->binding = new Binding($this->typedDataManager, $this->declaring);
     $this->gating = new Gating($this->registry, $this->typedDataManager, $this->classResolver, $this->currentUser, $this->permissionsHashGenerator, $this->declaring, $this);
-    $this->attaching = new Attaching($this->registry, $this->typedDataManager, $this->watchedValueCheck, $this->declaring, $this->binding, $this->gating, $this, $this->buildResource(...), $this->buildRead(...), fn (ResourceDefinition $definition, ResourceBlueprint $inputs, SurfaceBuilderInterface $builder) => $this->mixing->layVariantMixins($definition, $inputs, $builder));
-    $this->mixing = new Mixing($this->registry, $this->declaring, $this->gating, $this->attaching);
+    $this->attaching = new Attaching($this->registry, $this->typedDataManager, $this->watchedValueCheck, $this->declaring, $this->binding, $this->gating, $this, $this->buildResource(...), $this->buildRead(...));
+    $this->mixing = new Mixing($this->registry, $this->gating, $this->attaching);
   }
 
   /**
@@ -684,11 +678,7 @@ final class Resources implements ResourcesInterface {
         }
       }
     }
-    $mixins = $surface->getDefinitions()->mixins();
-    foreach ($surface->getDefinitions()->mixinVariants() as $mixed) {
-      array_push($mixins, ...array_values($mixed->variants));
-    }
-    foreach ($mixins as $mixin) {
+    foreach ($surface->getDefinitions()->mixins() as $mixin) {
       $child = $mixin->structure->settledChild();
       if ($mixin->structure->source !== NULL && ($definition = $this->registry->readDefinition($mixin->structure->source)) !== NULL) {
         $read[$mixin->structure->source] = $definition;
@@ -920,11 +910,7 @@ final class Resources implements ResourcesInterface {
       }
     }
 
-    // The members of the variants mixed in are declared where each call
-    // stands, once its declaration is done.
-    // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-    $lay = fn (ResourceBlueprint $inputs, SurfaceBuilderInterface $builder) => $this->mixing->layVariantMixins($definition, $inputs, $builder);
-    [$builder, $inputs, $outputs, $links, $additions] = $this->declaring->declareShape($definition, $context, $lay);
+    [$builder, $inputs, $outputs, $links, $additions] = $this->declaring->declareShape($definition, $context);
 
     $input_keys = $inputs->keys();
     $attached = array_merge(array_keys($inputs->attachments()), array_keys($inputs->variants()), array_keys($inputs->fromSite()));
@@ -985,10 +971,6 @@ final class Resources implements ResourcesInterface {
     // out.
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
     $mixins = $this->mixing->mixIn($build, $inputs);
-    // Then each variant mixed in, the same way, and where each member
-    // applies.
-    // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-    $mixins = $this->mixing->mixInVariants($build, $inputs, $mixins);
     $owned_rules = [$inputs->rules()];
     $wirings = [];
     foreach (array_keys($inputs->attachments()) as $key) {
@@ -1091,7 +1073,9 @@ final class Resources implements ResourcesInterface {
    * In the build it was held in: for no account, for the account alone
    * or with every answer, for the account that build was for, and held to
    * its config schema as that build was; what the variant's own build
-   * refuses is refused here, its wiring among it.
+   * refuses is refused here, its wiring among it, and, for variants
+   * stored flat, a key the owner holds at their level or variants stored
+   * flat of its own (Attaching::assertFlatVariantFits()).
    *
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
@@ -1144,6 +1128,9 @@ final class Resources implements ResourcesInterface {
       $built = $read
         ? $this->buildRead($name, $context, $ancestry)
         : $this->buildResource($name, $context, $ancestry, $locked);
+      if ($at->flat !== NULL) {
+        Attaching::assertFlatVariantFits($this->registry->getDefinition($parent['class'])->id, $at->key, $at->flat['values'][$name] ?? $name, $this->registry->getDefinition($name)->id, $built, $at->flat['own']);
+      }
     }
     finally {
       [

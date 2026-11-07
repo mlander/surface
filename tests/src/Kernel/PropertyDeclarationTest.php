@@ -55,10 +55,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * SiteListInterface provider, wired with `reads:`, and #[Each] of a
  * reference, its constraint on each entry, `item: TRUE`; #[Port] typed and of
  * `any`, required and not; #[Computed] with `when:`, never required by
- * inference; #[MixIn] with `reads:`; #[MixInVariants] from a provider;
- * #[Output] of a value and of a list whose item is a plain class; a
- * #[RefinesInput] method beside the properties; and a block that is its own
- * structure, #[UsesStructure] with no argument.
+ * inference; #[MixIn] with `reads:`; #[Output] of a value and of a list
+ * whose item is a plain class; a #[RefinesInput] method beside the
+ * properties; and a block that is its own structure, #[UsesStructure]
+ * with no argument.
  *
  * The reader refuses what the verbs cannot know, each naming the class,
  * the property and the fix; what a verb refuses, the verb refuses.
@@ -93,7 +93,6 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     'property_test.ticket.paid',
     'property_test.maps',
     'property_test.mixin',
-    'property_test.mixin_variants',
     'property_test.computed',
     'property_test.refined',
     'property_test.note',

@@ -10,7 +10,7 @@ use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Variants\KitVariants;
 
 /**
- * Mixes in variants chosen by a list.
+ * Attaches variants chosen by a list.
  */
 #[Structure('resource_test.broken.kit_list_by')]
 final class KitListByStructure implements StructureInterface {
@@ -20,7 +20,8 @@ final class KitListByStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->addList('kind', 'string', 'Kinds');
-    $inputs->mixInVariants('kind', from: KitVariants::class, arguments: ['a', WeightOnlyStructure::class]);
+    $weight = ['a', WeightOnlyStructure::class];
+    $inputs->attachVariants('gear', 'kind', 'Gear', from: KitVariants::class, arguments: $weight);
   }
 
 }

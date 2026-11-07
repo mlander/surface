@@ -405,12 +405,6 @@ final class Declaring {
     foreach ($blueprint->mixins() as ['blueprint' => $mixin]) {
       array_push($mixed, ...$mixin->keys());
     }
-    // And the members of variants mixed in that access took back out with
-    // the variants it left out.
-    // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-    foreach ($built->getDefinitions()->mixinVariants() as $variants) {
-      array_push($mixed, ...$variants->withdrawn);
-    }
     $omitted = [];
     $children = [
       ...array_keys($blueprint->attachments()),
@@ -874,11 +868,6 @@ final class Declaring {
    *   The resource or structure.
    * @param \Drupal\surface\Resource\OperationContext $context
    *   The context it is built in, which decides the alters that apply.
-   * @param \Closure|null $afterDeclaring
-   *   What runs once the owner has declared, before its alters: handed
-   *   the inputs blueprint and the builder, it declares the members of
-   *   the variants mixed in where each call stands
-   *   (Mixing::layVariantMixins()).
    *
    * @return array{0: \Drupal\surface\SurfaceBuilder, 1: \Drupal\surface\ResourceBuild\ResourceBlueprint, 2: \Drupal\surface\ResourceBuild\ResourceBlueprint, 3: array<int, array{0: object|string, 1: \Drupal\surface\ResourceBuild\RefinerDefinition[], 2: string|null}>, 4: array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions>}
    *   The builder; the inputs and the outputs blueprints; the refiner
@@ -886,15 +875,11 @@ final class Declaring {
    *   its module (NULL for the owner); and each alter's additions, by
    *   module.
    */
-  public function declareShape(ResourceDefinition $definition, OperationContext $context, ?\Closure $afterDeclaring = NULL): array {
+  public function declareShape(ResourceDefinition $definition, OperationContext $context): array {
     $builder = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
     $inputs = $this->blueprint($builder, $definition);
     $outputs = $this->blueprint($builder, $definition, TRUE);
     $this->fillBlueprints($definition, $inputs, $outputs);
-    if ($afterDeclaring !== NULL) {
-      // Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-      $afterDeclaring($inputs, $builder);
-    }
 
     // The owner's own refiners first, one link per class they are on:
     // the owner's class itself, or the classes a deriver named.

@@ -13,15 +13,14 @@ use Drupal\surface_resource_test\Access\FramePackAccess;
 use Drupal\surface_resource_test\Resource\Pack\PackResource;
 
 /**
- * A frame pack: the pack's variant for "frame", holding two children.
+ * A frame pack: the pack's load for "frame", holding two children.
  *
  * Its hip belt is a child at a fixed key, its pockets a collection of at
- * most three; both are the pack's own children at those keys. It declares
- * the capacity as the daypack does but for the label. Its access class
- * omits it, by permission, and its children with it.
+ * most three. Its access class omits it, by permission, and its children
+ * with it.
  */
 #[Structure('resource_test.pack.frame', access: FramePackAccess::class)]
-#[Variant(of: PackResource::class, at: 'carry', for: 'frame', label: new TranslatableMarkup('Frame pack'))]
+#[Variant(of: PackResource::class, at: 'load', for: 'frame', label: new TranslatableMarkup('Frame pack'))]
 final class FramePackStructure implements StructureInterface {
 
   /**

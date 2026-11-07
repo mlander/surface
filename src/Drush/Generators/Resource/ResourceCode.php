@@ -183,10 +183,6 @@ final class ResourceCode {
       $top[] = sprintf('From the schema, written as keys of this class: %s, a structure mixed in. Mix it in with mixIn() once it is a class.', implode(', ', array_map($this->named(...), array_map('strval', $mixin->keys))));
       $this->comments++;
     }
-    foreach ($map->mixinVariants() as $mixed) {
-      $top[] = sprintf('From the schema, written as keys of this class: %s, the members of the variants %s chooses, mixed in. Mix them in with mixInVariants(\'%s\') once each is a #[Variant] class.', implode(', ', array_map($this->named(...), $mixed->members())), $this->named($mixed->by), $mixed->by);
-      $this->comments++;
-    }
     foreach ($map->ports() as $port) {
       $top[] = sprintf('From the schema, not written here: the port %s, a value read from the container. Declare it with reads().', $port->name);
       $this->comments++;
@@ -201,7 +197,7 @@ final class ResourceCode {
     foreach ($map->entries() as $name => $entry) {
       $keys[] = $this->key($surface, $entry, $path);
       foreach ($entry->refiners[SurfaceInterface::OWNER] ?? [] as $refiner) {
-        if ($refiner instanceof DeclaredRefiner && $refiner->module === NULL && $refiner->at === NULL && $refiner->chooses === NULL) {
+        if ($refiner instanceof DeclaredRefiner && $refiner->module === NULL && $refiner->at === NULL) {
           foreach ($refiner->rules[(string) $name] ?? [] as $rule) {
             $rules[spl_object_id($rule)] = $rule;
           }
@@ -642,8 +638,6 @@ final class ResourceCode {
    *   The statement.
    */
   protected function rule(Rule $rule): string {
-    // A rule holding a key to a definition is the build's, never declared.
-    assert($rule->heldTo() === NULL);
     $this->uses[Condition::class] = TRUE;
     $calls = [];
     $condition = $rule->condition();

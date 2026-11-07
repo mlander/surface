@@ -10,7 +10,7 @@ use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Variants\KitVariants;
 
 /**
- * Mixes in variants chosen by a key it never declares.
+ * Attaches variants chosen by a key it never declares.
  */
 #[Structure('resource_test.broken.kit_undeclared_by')]
 final class KitUndeclaredByStructure implements StructureInterface {
@@ -19,7 +19,8 @@ final class KitUndeclaredByStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->mixInVariants('kind', from: KitVariants::class, arguments: ['a', WeightOnlyStructure::class]);
+    $weight = ['a', WeightOnlyStructure::class];
+    $inputs->attachVariants('gear', 'kind', 'Gear', from: KitVariants::class, arguments: $weight);
   }
 
 }

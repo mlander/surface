@@ -31,13 +31,6 @@ final class RecordingBlueprint implements BlueprintInterface {
   public array $keys = [];
 
   /**
-   * Each mixInVariants() call, in order, after the key it follows.
-   *
-   * @var list<array{by: string, from: string|null, arguments: array, after: string|null}>
-   */
-  public array $mixedInVariants = [];
-
-  /**
    * Records a key.
    *
    * @param string $key
@@ -198,19 +191,6 @@ final class RecordingBlueprint implements BlueprintInterface {
    * {@inheritdoc}
    */
   public function mixIn(string $structure, array $reads = []): static {
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function mixInVariants(string $by, ?string $from = NULL, array $arguments = []): static {
-    $this->mixedInVariants[] = [
-      'by' => $by,
-      'from' => $from,
-      'arguments' => $arguments,
-      'after' => array_key_last($this->keys),
-    ];
     return $this;
   }
 

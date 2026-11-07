@@ -10,10 +10,11 @@ use Drupal\surface\Resource\StructureInterface;
 use Drupal\surface_resource_test\Variants\KitVariants;
 
 /**
- * A camp: a second owner mixing in the hut, its covering's variants too.
+ * A camp: a second owner of the hut, its covering's variants too.
  *
- * The hut's covering holds the same variants here as in the shelter: the
- * #[Variant] classes of the hut, whichever owner mixes it in.
+ * The camp's site chooses the hut, listed by KitVariants, at "camp". The
+ * hut's covering holds the same variants here as in the shelter: the
+ * #[Variant] classes of the hut, whichever owner holds it.
  */
 #[Structure('resource_test.camp')]
 final class CampStructure implements StructureInterface {
@@ -24,7 +25,7 @@ final class CampStructure implements StructureInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('site', 'string', t('Site'))
       ->setRequired(TRUE);
-    $inputs->mixInVariants('site', from: KitVariants::class, arguments: ['hut', HutStructure::class]);
+    $inputs->attachVariants('camp', 'site', t('Camp'), from: KitVariants::class, arguments: ['hut', HutStructure::class]);
   }
 
 }

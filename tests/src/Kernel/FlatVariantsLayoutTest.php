@@ -23,6 +23,7 @@ use Drupal\surface\Variants;
 use Drupal\surface_resource_test\Resource\Broken\FlatStateResource;
 use Drupal\surface_resource_test\Resource\Campsite\CampsiteResource;
 use Drupal\surface_resource_test\Resource\Kit\KitResource;
+use Drupal\surface_resource_test\Structure\Broken\Flat\FlatListedClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatMixinClashStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatNestedStructure;
 use Drupal\surface_resource_test\Structure\Broken\Flat\FlatOwnerClashStructure;
@@ -216,7 +217,6 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
     $this->assertSame(['weight', 'fuel'], $variants->variant('stove')->child->getDefinitions()->names());
     $this->assertSame(['weight', 'poles', 'fly'], $variants->variant('tent')->child->getDefinitions()->names());
     $this->assertSame(['resource_test.kit.stove', 'resource_test.kit.tent'], array_map(static fn ($variant) => $variant->id, array_values($variants->variants)));
-    $this->assertSame([], $map->mixinVariants(), 'No variants are mixed in.');
     $this->assertSame(array_fill_keys(self::KEYS, NULL), $this->kit()->getDefaultValues());
 
     // As properties, #[Setting] beside #[AttachVariants] says the same.
@@ -366,7 +366,7 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
    */
   public function testTheFullDocumentStatesEachVariantOnce(): void {
     $full = $this->schema();
-    $this->assertSame(['contract' => 4, 'version' => 1], $full['x-surface'], 'No variants mixed in.');
+    $this->assertSame(['contract' => 4, 'version' => 1], $full['x-surface']);
     $this->assertSame(self::KEYS, array_keys($full['properties']));
     $this->assertFalse($full['additionalProperties']);
     $this->assertSame(['title', 'kind'], $full['required']);
@@ -623,6 +623,21 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
       }
     }
     $this->assertSame($refusals, $refused);
+  }
+
+  /**
+   * Tests a variant the site lists is refused stored flat when a door reads it.
+   *
+   * It is built when read, not with its owner, so the owner builds; the
+   * key it shares with the owner is refused when it is settled.
+   */
+  public function testListedVariantIsRefusedWhenSettled(): void {
+    $built = $this->container->get('surface.resources')->build(FlatListedClashStructure::class, new OperationContext('configure'));
+    $variant = $built->getDefinitions()->entry('gear')->variants->variant('a');
+    $this->assertFalse($variant->isSettled(), 'Held unsettled until a door reads it.');
+    $this->expectException(\LogicException::class);
+    $this->expectExceptionMessage('resource_test.broken.flat_listed_clash stores the variants at "gear" flat beside its own keys (Variants::STORED_AS), and the variant for "a", resource_test.broken.kit.weight_only, declares "weight", which resource_test.broken.flat_listed_clash declares too. Stored flat, the two would be one key: rename one, or store the variants under "gear".');
+    $variant->child->getDefinitions();
   }
 
 }

@@ -60,19 +60,12 @@ final class DeclaredRefiner implements SurfaceRefinerInterface, ApplicabilityInt
    *   For rules stated at a site, the dotted path below the key they are
    *   bound at of the key they narrow; NULL for rules bound where they
    *   were declared.
-   * @param string|null $chooses
-   *   For the rules the build writes to say where the members of variants
-   *   mixed in apply, the key that chooses them: the contract states the
-   *   variants in their place, as conditionals naming each variant's def
-   *   (ContractEmitter::composedVariants()). NULL for rules an author
-   *   declared.
    */
   public function __construct(
     public readonly array $rules,
     public readonly ?string $module = NULL,
     public readonly array $paths = [],
     public readonly ?string $at = NULL,
-    public readonly ?string $chooses = NULL,
   ) {
   }
 

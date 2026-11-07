@@ -8,7 +8,6 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\ConstraintMessages;
 use Drupal\surface\Contract\PatternTranslation;
-use Drupal\surface\Surface;
 
 /**
  * A rule between keys, declared as data: a condition and its effects.
@@ -42,10 +41,6 @@ use Drupal\surface\Surface;
  * - require(): the key must hold a value; `required`, and its type
  *   without `null`.
  * - doesNotApply(): the key does not apply; the key `false`.
- * - holdTo($definition): the key is held to this definition, in its place,
- *   its label and description kept: the build's, for a member of variants
- *   mixed in that two variants declare unlike, held to the chosen
- *   variant's own; the conditional naming that variant's def states it.
  * - because($text): says why, under the field; `description`. Only
  *   where the rule did something for these values: a constraint the key
  *   already held at or inside the rule's leaves the key's own words.
@@ -114,11 +109,6 @@ final class Rule {
    * What the rule says under the field, if anything.
    */
   protected string|\Stringable|null $description = NULL;
-
-  /**
-   * The definition the rule holds the key to, if any.
-   */
-  protected ?DataDefinitionInterface $heldTo = NULL;
 
   /**
    * Constructs a rule for one key; a blueprint's narrow() does.
@@ -257,38 +247,10 @@ final class Rule {
    *   that does not apply.
    */
   public function doesNotApply(): static {
-    if ($this->constraints !== [] || $this->requires || $this->description !== NULL || $this->heldTo !== NULL) {
+    if ($this->constraints !== [] || $this->requires || $this->description !== NULL) {
       throw new \LogicException(sprintf('narrow("%s")->doesNotApply() was declared beside another effect. Nothing more can be said of a key that does not apply: declare the other effects in a rule of their own.', $this->key));
     }
     $this->rulesOut = TRUE;
-    return $this;
-  }
-
-  /**
-   * Holds the key to a definition while the condition holds.
-   *
-   * The definition takes the key's place, the key's label and description
-   * and whether it is required kept: what the build says of a member of
-   * variants mixed in that two variants declare unlike, which the owner's
-   * frame declares as wide as both and each variant holds to its own
-   * where it is chosen. It is narrower than the key by construction,
-   * which the build checks as it checks every rule.
-   *
-   * Decision: see docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The definition.
-   *
-   * @return $this
-   *
-   * @internal
-   *   The build's: the contract states it by the conditional that names
-   *   the chosen variant's def, and a rule an author declares holds no
-   *   key to a definition (Binding::bindRules() refuses it).
-   */
-  public function holdTo(DataDefinitionInterface $definition): static {
-    $this->assertApplies('holdTo');
-    $this->heldTo = $definition;
     return $this;
   }
 
@@ -321,21 +283,10 @@ final class Rule {
    * Returns whether the rule has an effect at all.
    *
    * @return bool
-   *   TRUE when it constrains, requires, rules out, holds the key to a
-   *   definition or describes.
+   *   TRUE when it constrains, requires, rules out or describes.
    */
   public function hasEffect(): bool {
-    return $this->constraints !== [] || $this->requires || $this->rulesOut || $this->heldTo !== NULL || $this->description !== NULL;
-  }
-
-  /**
-   * Gets the definition the rule holds the key to, if any.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinitionInterface|null
-   *   The definition; NULL when the rule holds the key to none.
-   */
-  public function heldTo(): ?DataDefinitionInterface {
-    return $this->heldTo;
+    return $this->constraints !== [] || $this->requires || $this->rulesOut || $this->description !== NULL;
   }
 
   /**
@@ -428,16 +379,6 @@ final class Rule {
   protected function narrow(DataDefinitionInterface $definition, bool $written): DataDefinitionInterface {
     if ($this->rulesOut) {
       return DoesNotApply::marked($definition);
-    }
-    if ($this->heldTo !== NULL) {
-      // In the key's place, as the key presents it.
-      $held = Surface::deepClone($this->heldTo);
-      if ($held instanceof DataDefinition) {
-        $held->setLabel($definition->getLabel());
-        $held->setDescription($definition->getDescription());
-        $held->setRequired($definition->isRequired());
-      }
-      $definition = $held;
     }
     $constraints = $definition->getConstraints();
     $before = serialize($constraints);
