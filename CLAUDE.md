@@ -416,7 +416,10 @@ the record of the rework that brought the module to the pattern.
   context, 400 on the stage's own
   paths, 422 on a call a stage does not apply to, ignored by `GET
   .../schema`, OpenAPI's `SurfaceStage`; a read,
-  a narrowing and a write's `contract` and `ETag` are the staged view
+  a narrowing and a write's `contract` and `ETag` are the staged view;
+  the `ETag` of the stage's own `apply` also covers its writes
+  (`StageStorage::listed()`, the confirm page's fingerprint), so `PATCH
+  :apply` with a stale `If-Match` is 412
   (`docs/staging.md`,
   `docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context`).
   What a run reports (a stage's id after `create`, `items`, `applied`)
@@ -443,8 +446,9 @@ the record of the rework that brought the module to the pattern.
   required key with no default after the first step. A flow over a
   create writes each later step into its first step's create
   (`Stage::creating()`, internal).
-  The form door reads `?stage` on every operation form page, and any
-  other page served by an operation refuses it
+  The form door reads `?stage` on every operation form page, the React
+  page reads it too (its app sends the header), and any other page
+  served by an operation refuses it
   (`OperationRoute::stageRequested()`: the stageable rule, the stage,
   its access, then the thing's), says what was staged as the tool door
   does, skips the cosmetics' message and redirect, and varies by
@@ -456,6 +460,12 @@ the record of the rework that brought the module to the pattern.
   and a confirm page over the stage that applies it, since it spans many
   things (`docs/staging.md#a-flow-by-hand-bulk-delete-from-the-content-list`,
   `docs/decisions.md#a-destructive-bulk-operation-stages-then-confirms-over-the-stage`).
+  The examples around a stage: the entity example's preview of one
+  staged node (`/surface-entity/stage/{stage}/preview/{id}`,
+  `ContentEntityStorage::preview()`, `docs/staging.md#preview`), an ECA
+  model as optional config in `surface_examples`, shipped disabled
+  (`eca.eca.surface_stage_walkthrough`, `docs/staging.md#eca`), and a
+  drush walk-through (`docs/staging.md#walk-through-with-drush`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
@@ -783,7 +793,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2081, Assertions: 51077, Errors: 0, Failures: 0, Skipped: 3. Classes: 290 of 290, 8 at a time, browser classes 4.
+phpunit: Tests: 2097, Assertions: 51641, Errors: 0, Failures: 0, Skipped: 3. Classes: 294 of 294, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -803,8 +813,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1969, Assertions: 46696, Deprecations: 130, Skipped: 3. Classes:
-238, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1984, Assertions: 47242, Deprecations: 134, Skipped: 3. Classes:
+241, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -909,7 +919,13 @@ which answers a URL that names nothing as the form's route does; a
 module's own route serves the same page with `ResourceReactPage::served()`
 and `servedTitle()`, handing the app `seeds.defaults` and `prefill`, the
 values the app starts from over the stored ones, and fixing nothing
-(`modules/surface_examples_react/README.md`).
+(`modules/surface_examples_react/README.md`). Either page reads
+`?stage=<id>`, gated as the form door gates it, and hands the app
+`stage` and `stageLabel`; the app then sends `X-Surface-Stage` on every
+API request (never on the token's fetch), says a write was staged, keeps
+the stage in the page a staged create moves to, links the stage's own
+`changes` and `apply` pages, and draws any run's `outputs`, a list of
+maps as a table.
 `docs/served-contract.md` has the format, with children and variants
 as `$defs` that the properties reference; `docs/decisions.md` (Served
 contract) has the points it settled.

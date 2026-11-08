@@ -25,16 +25,23 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
  * A read-only operation other than the read of one thing writes nothing
  * and reads no one thing, so a stage does not apply to it either.
  *
- * The rule decides the four doors and prepare: the tool door offers the
- * `stage` input, the OpenAPI document references the `SurfaceStage`
- * header, the HTTP door honors the header and the operation form honors
- * `?stage` in its query (OperationRoute::stageRequested()) where this
- * answers TRUE; the form's route forbids a `?stage` saying
- * `does_not_apply`, and the staged storage's prepare refuses a write
- * `does_not_apply`, where it answers FALSE. Prepare alone also checks
- * that the storage of each routed child is transactional, and refuses
- * the write `does_not_apply` where one is not: the doors still offer the
- * stage to such a resource.
+ * The rule is asked at each of these places, each of which takes a
+ * stage where it answers TRUE, and where it answers FALSE offers none
+ * or refuses one (`does_not_apply` at the doors and prepare; the flow
+ * refuses its route):
+ *
+ * - the tool's input, `stage` (OperationInputs);
+ * - the OpenAPI document, which references the `SurfaceStage` header;
+ * - the HTTP door, which honors the header (ResourceApiController);
+ * - the operation form and a React page served at a module's route,
+ *   which read `?stage` in their query (OperationRoute::stageRequested());
+ * - the React page's access check (ServedOperations::stageable());
+ * - the flow's own check (Flow::refusal());
+ * - the staged storage's prepare, through storage() and namesThing().
+ *
+ * Prepare alone also checks that the storage of each routed child is
+ * transactional, and refuses the write `does_not_apply` where one is not:
+ * the other places still offer the stage to such a resource.
  *
  * Decision: see
  * docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.

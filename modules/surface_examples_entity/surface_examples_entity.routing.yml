@@ -67,3 +67,23 @@ surface_examples_entity.stage_delete_confirm:
     _permission: 'access content overview'
   options:
     no_cache: TRUE
+
+# One node as a stage holds it, rendered in its full view mode the way
+# core's node preview renders an unsaved node: {node_id} is a stored
+# node's id or a local id the stage gave a create (-1). The stage is
+# converted for its owner alone; the page asks the stage's access and the
+# node's update access, or the bundle's create access for a local id, as
+# core's NodePreviewAccessCheck does. Never cached.
+surface_examples_entity.stage_preview:
+  path: '/surface-entity/stage/{surface_stage}/preview/{node_id}'
+  defaults:
+    _controller: '\Drupal\surface_examples_entity\Controller\StagePreviewController::view'
+    _title: 'Preview a staged node'
+  requirements:
+    _custom_access: '\Drupal\surface_examples_entity\Controller\StagePreviewController::access'
+    node_id: '-?\d+'
+  options:
+    no_cache: TRUE
+    parameters:
+      surface_stage:
+        type: surface_stage

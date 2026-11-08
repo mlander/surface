@@ -10,6 +10,7 @@ use Drupal\Core\Config\Development\ConfigSchemaChecker;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Config\Schema\SchemaIncompleteException;
 use Drupal\Core\Routing\RouteMatch;
+use Drupal\surface\Form\Flow;
 use Drupal\surface\Http\ServedOperationAccessCheck;
 use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Pipeline\TransactionalStorageInterface;
@@ -33,6 +34,7 @@ use Drupal\tool\FailureCategory;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Route;
 
 /**
@@ -175,6 +177,42 @@ class StagedConfigTest extends SurfaceKernelTestBase {
     $this->assertSame([], $applied['outputs']['applied'][0]['parameters']);
     $this->assertTrue($applied['outputs']['applied'][0]['changed']);
     $this->assertArrayNotHasKey('id', $applied['outputs']['applied'][0], 'A thing with no id is answered with none.');
+  }
+
+  /**
+   * Tests the apply's ETag carries the stage's writes over HTTP.
+   *
+   * The confirm page's fingerprint, over HTTP: the envelope of `apply` is
+   * tagged with what the stage holds, so a write staged after it was read
+   * moves the tag, and `PATCH :apply` with the old `If-Match` is 412,
+   * nothing written; with the new one it applies.
+   */
+  public function testApplyEtagCarriesTheStagedWrites(): void {
+    $this->entity('kept', 'Kept');
+    $id = $this->open();
+    $this->assertTrue($this->stage($id, 'my_module.settings', [], ['title' => 'Staged title'], 'configure')->committed);
+    $apply = '/surface-api/surface.stage/' . $id . ':apply';
+    $read = $this->served('GET', $apply);
+    $this->assertSame(200, $read->getStatusCode(), (string) $read->getContent());
+    $drawn = (string) $read->getEtag();
+    $this->assertNotSame('', $drawn);
+    $this->assertSame($drawn, (string) $this->served('GET', $apply)->getEtag(), 'Nothing staged since: the same tag.');
+
+    $this->assertTrue($this->stage($id, self::ENTITY, ['id' => 'kept'], ['label' => 'Renamed'], 'update')->committed);
+    $moved = (string) $this->served('GET', $apply)->getEtag();
+    $this->assertNotSame($drawn, $moved, 'A write staged since moves the tag.');
+
+    $stale = $this->served('PATCH', $apply, [], ['If-Match' => $drawn]);
+    $this->assertSame(412, $stale->getStatusCode(), (string) $stale->getContent());
+    $this->assertSame(Violation::CONFLICT, json_decode((string) $stale->getContent(), TRUE)['errors'][0]['code']);
+    $this->assertSame('Latest content', $this->config('my_module.settings')->get('title'), 'Nothing is written.');
+    $this->assertSame('Kept', $this->load('kept')?->label());
+
+    $applied = $this->served('PATCH', $apply, [], ['If-Match' => $moved]);
+    $this->assertSame(200, $applied->getStatusCode(), (string) $applied->getContent());
+    $this->assertCount(2, json_decode((string) $applied->getContent(), TRUE)['outputs']['applied']);
+    $this->assertSame('Staged title', $this->config('my_module.settings')->get('title'));
+    $this->assertSame('Renamed', $this->load('kept')?->label());
   }
 
   /**
@@ -628,8 +666,15 @@ class StagedConfigTest extends SurfaceKernelTestBase {
   /**
    * Tests the doors agree on where a stage applies, for every operation.
    *
-   * For each operation of the site with a tool, Stageable::operation()
-   * is the rule, and each door is asked on its own terms:
+   * Stageable::operation() is the rule, asked at each place that takes a
+   * stage: the tool's input (OperationInputs), the OpenAPI document, the
+   * HTTP door (ResourceApiController), the operation form and a React
+   * page served at a module's route (OperationRoute::stageRequested()),
+   * the React page's access check (ServedOperations::stageable()), the
+   * flow's own check (Flow::refusal()) and the staged storage's prepare
+   * (Stageable::storage(), Stageable::namesThing()). For each operation
+   * of the site with a tool, each is asked on its own terms but the flow,
+   * which FlowFormTest covers:
    *
    * - the tool, and its schema tool, take `stage` exactly where the rule
    *   says;
@@ -644,15 +689,22 @@ class StagedConfigTest extends SurfaceKernelTestBase {
    *   build stamps with the operation's id and its creates, which is all
    *   prepare reads of it;
    * - for each OpenAPI call but the full schema, which reads nothing
-   *   stored and ignores the header, a request with the stage header is
-   *   refused with the stage refusal exactly where the rule says no;
-   *   where it says yes, any other answer stands (a path parameter of 1
-   *   may name nothing, a body of `{}` may be refused). The stage's own
-   *   calls answer with their own problem, never the stage refusal.
+   *   stored and ignores the header at a stored id, a request with the
+   *   stage header is refused with the stage refusal exactly where the
+   *   rule says no; where it says yes, any other answer stands (a path
+   *   parameter of 1 may name nothing, a body of `{}` may be refused).
+   *   The stage's own calls answer with their own problem, never the
+   *   stage refusal;
+   * - the React page, `surface_examples_react.page`, asked with the stage
+   *   in its query, is forbidden `does_not_apply` by its access check
+   *   exactly where the rule says no.
    *
-   * - for each operation form route of the site, a request with the
-   *   stage in its query is refused `does_not_apply` by the route's access
-   *   check exactly where the rule says no.
+   * - for each operation form route of the site, and a React page served
+   *   at a module's route, a request with the stage in its query is
+   *   refused `does_not_apply` by the route's access check exactly where
+   *   the rule says no; any other route an operation serves refuses any
+   *   stage, a controller of another module named
+   *   ResourceReactPage::served among them.
    *
    * Every operation with a tool has an OpenAPI call but those listed in
    * NOT_SERVED, and every write reaches prepare but those in UNREACHED;
@@ -690,6 +742,7 @@ class StagedConfigTest extends SurfaceKernelTestBase {
     $staged = 0;
     $prepared = 0;
     $requested = 0;
+    $reacted = 0;
     $unserved = [];
     $unreached = [];
     foreach ($registry->getDefinitions() as $definition) {
@@ -709,6 +762,9 @@ class StagedConfigTest extends SurfaceKernelTestBase {
         if ($tools->hasDefinition($tool . ':schema')) {
           $this->assertSame($rule, array_key_exists(OperationInputs::STAGE, $tools->getDefinition($tool . ':schema')->getInputDefinitions(TRUE)), $tool . ':schema');
         }
+
+        $this->assertSame(!$rule, $this->reactPageRefuses($definition->id, $operation->id, $headed), $key . ': the React page refuses the stage query exactly where the rule says no.');
+        $reacted++;
 
         if (!$operation->readOnly) {
           $refused = $this->refusedByTheRule($definition->name(), $operation->id, $operation->creates, $stage);
@@ -749,14 +805,17 @@ class StagedConfigTest extends SurfaceKernelTestBase {
     }
     // The form door: each operation form route, asked with the stage in
     // its query, refuses it `does_not_apply` exactly where the rule says
-    // no, before anything of its path is read. Every other route served
-    // by an operation refuses any stage: only the operation form reads
-    // the query. A React page and a controller are added, built by hand,
-    // to the routes the site serves.
+    // no, before anything of its path is read, and so does a React page
+    // served at a module's route. Every other route served by an
+    // operation refuses any stage: only the operation form and the React
+    // page read the query. A React page and a controller are added, built
+    // by hand, to the routes the site serves.
     $check = $this->container->get('surface.operation_access');
     $forms = 0;
     $formsStaged = 0;
     $others = 0;
+    $reactStaged = FALSE;
+    $otherReactRefused = FALSE;
     $routes = iterator_to_array($this->container->get('router.route_provider')->getAllRoutes());
     $by = [
       OperationRoute::RESOURCE => 'Drupal\\surface_examples\\Resource\\RegistrationStep1Resource',
@@ -764,15 +823,19 @@ class StagedConfigTest extends SurfaceKernelTestBase {
     ];
     $routes['test.react_page'] = new Route('/test/react', $by + ['_controller' => '\Drupal\surface_examples_react\Controller\ResourceReactPage::served']);
     $routes['test.controller'] = new Route('/test/controller', $by + ['_controller' => '\Drupal\surface_examples\Controller\ExamplesController::index']);
+    // A controller of another module with the React page's short name is
+    // not the React page.
+    $routes['test.other_react_page'] = new Route('/test/other-react', $by + ['_controller' => '\Drupal\other\Controller\ResourceReactPage::served']);
     foreach ($routes as $name => $route) {
       if (!OperationRoute::serves($route)) {
         continue;
       }
-      if (!OperationRoute::operationForm($route)) {
+      if (!OperationRoute::operationForm($route) && !OperationRoute::reactPage($route)) {
         $answer = $check->access(new RouteMatch((string) $name, $route), $this->container->get('current_user'), Request::create('/', 'GET', ['stage' => $headed]));
         $this->assertTrue($answer->isForbidden(), $name);
-        $this->assertSame('A stage does not apply to this page: only an operation form reads the "stage" query.', $answer instanceof AccessResultReasonInterface ? $answer->getReason() : NULL, $name);
+        $this->assertSame('A stage does not apply to this page: only an operation form or a React page reads the "stage" query.', $answer instanceof AccessResultReasonInterface ? $answer->getReason() : NULL, $name);
         $others++;
+        $otherReactRefused = $otherReactRefused || $name === 'test.other_react_page';
         continue;
       }
       $resource = (string) $route->getDefault(OperationRoute::RESOURCE);
@@ -789,7 +852,12 @@ class StagedConfigTest extends SurfaceKernelTestBase {
       $this->assertSame(!$rule, $answer->isForbidden() && str_contains($reason, '(' . Violation::DOES_NOT_APPLY . ')'), $name . ': the form door refuses the stage exactly where the rule says no.');
       $forms++;
       $formsStaged += (int) $rule;
+      if ($name === 'test.react_page') {
+        $reactStaged = $answer->isAllowed();
+      }
     }
+    $this->assertTrue($reactStaged, 'The React page takes a stage where the rule says yes.');
+    $this->assertTrue($otherReactRefused, 'A controller of another module named ResourceReactPage::served is refused the stage.');
     $this->assertGreaterThanOrEqual(2, $others);
     $this->assertGreaterThan(10, $forms);
     $this->assertGreaterThan(5, $formsStaged);
@@ -804,6 +872,41 @@ class StagedConfigTest extends SurfaceKernelTestBase {
     $this->assertLessThan($compared, $staged);
     $this->assertGreaterThan(10, $prepared);
     $this->assertGreaterThan(20, $requested);
+    $this->assertSame($compared, $reacted);
+  }
+
+  /**
+   * Answers whether the React page refuses a stage by the rule.
+   *
+   * Asks the access check of surface_examples_react.page,
+   * `/surface-react/{resource}/{operation}`, for a GET with the stage in
+   * its query and no other parameter.
+   *
+   * @param string $resource
+   *   The resource id.
+   * @param string $operation
+   *   The operation id.
+   * @param string $stage
+   *   The stage's id.
+   *
+   * @return bool
+   *   TRUE when the check forbids the page `does_not_apply`; FALSE for
+   *   any other answer, a page not found among them.
+   */
+  protected function reactPageRefuses(string $resource, string $operation, string $stage): bool {
+    $check = $this->container->get('surface.served_access');
+    assert($check instanceof ServedOperationAccessCheck);
+    $raw = ['resource' => $resource, 'operation' => $operation];
+    $route_match = new RouteMatch('surface_examples_react.page', new Route('/surface-react/{resource}/{operation}'), $raw, $raw);
+    $request = Request::create('/surface-react/' . $resource . '/' . $operation, 'GET', [Flow::STAGE => $stage]);
+    try {
+      $answer = $check->access($route_match, $this->container->get('current_user'), $request);
+    }
+    catch (NotFoundHttpException) {
+      return FALSE;
+    }
+    $reason = $answer instanceof AccessResultReasonInterface ? (string) $answer->getReason() : '';
+    return $answer->isForbidden() && str_contains($reason, '(' . Violation::DOES_NOT_APPLY . ')');
   }
 
   /**

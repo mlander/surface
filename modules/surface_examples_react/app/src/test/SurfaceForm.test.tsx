@@ -1,9 +1,9 @@
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createApi, dottedToPointer, lookupOf, pageOf, pointerToDotted, startedPaths, startingValues, type Endpoints, type Settings } from '../api';
+import { createApi, dottedToPointer, lookupOf, pageOf, pointerToDotted, STAGE_HEADER, startedPaths, startingValues, type Endpoints, type Settings } from '../api';
 import type { Contract, Schema } from '../contract';
 import { ContractRefused, getAt } from '../contract';
-import { SurfaceForm } from '../SurfaceForm';
+import { outputText, SurfaceForm } from '../SurfaceForm';
 import example2 from './fixtures/example2.json';
 import library from './fixtures/example2-library.json';
 import example3 from './fixtures/example3.json';
@@ -1082,5 +1082,179 @@ describe('a page served at a module\'s route', () => {
     await waitFor(() => expect(writes(calls)).toHaveLength(1));
     expect(headersOf(writes(calls)[0])).not.toHaveProperty('X-Surface-Stale');
     expect(bodyOf(writes(calls)[0]).room).toBe('riverside_east');
+  });
+});
+
+describe('a page under a stage', () => {
+  const STAGE = '9033e1a6-0000-4000-8000-000000000001';
+  const staged: Settings = { ...settings, pageBase: '/surface-react', stage: STAGE, stageLabel: 'Spring edits' };
+
+  /** A contract of one of the stage's own operations, which take no keys. */
+  function stageContract(operation: 'changes' | 'apply', kind: 'read' | 'update'): Contract {
+    return {
+      ...(example2 as unknown as Contract),
+      resource: 'surface.stage',
+      operation,
+      values: {},
+      stale: [],
+      notes: [],
+      schema: {
+        ...(example2.schema as unknown as Schema),
+        title: operation,
+        'x-surface': { ...example2.schema['x-surface'], operation: { ...example2.schema['x-surface'].operation, id: operation, kind } },
+        properties: {},
+        required: [],
+      } as unknown as Schema,
+    };
+  }
+
+  /** The settings of a page of the stage's own operations, which names no stage. */
+  function stagePage(operation: 'changes' | 'apply', method: 'POST' | 'PATCH'): Settings {
+    const path = `/surface-api/surface.stage/${STAGE}:${operation}`;
+    return { ...settings, pageBase: '/surface-react', resource: 'surface.stage', operation, parameters: { id: STAGE }, endpoints: { read: path, schema: `${path}/schema`, write: { method, url: path } } };
+  }
+
+  it('names the stage on every request to the API, and not on the token fetch', async () => {
+    const { calls, fetcher } = server({
+      [step2.read]: () => json(example2, { headers: { ETag: '"staged-1"' } }),
+      [step2.schema]: () => example2.schema,
+      [step2.narrow]: () => example2,
+      [step2.write]: () => json({ ...nothing, committed: true, changed: true, contract: example2 }, { headers: { ETag: '"staged-2"' } }),
+      'GET /surface-api/registration.step2:lookup': () => ({ items: [] }),
+    });
+    const api = createApi({ ...staged, endpoints: { ...staged.endpoints, lookup: '/surface-api/registration.step2:lookup' } }, fetcher);
+    const loaded = await api.contract();
+    await api.schema();
+    await api.chosen('/surface-api/registration.step2/schema?choose=%2Fvenue');
+    await api.narrow(loaded.document.values, []);
+    await api.validate(loaded.document.values, [], loaded.etag);
+    await api.submit(loaded.document.values, [], loaded.etag);
+    await api.lookup('venue', 'riv');
+    const token = calls.filter((call) => call.url === '/session/token');
+    const others = calls.filter((call) => call.url !== '/session/token');
+    expect(token).toHaveLength(1);
+    expect(token[0].init?.headers).toBeUndefined();
+    expect(others.map((call) => `${methodOf(call)} ${pathOf(call)}`)).toEqual([
+      'GET /surface-api/registration.step2',
+      'GET /surface-api/registration.step2/schema',
+      'GET /surface-api/registration.step2/schema',
+      'POST /surface-api/registration.step2/schema',
+      'PATCH /surface-api/registration.step2',
+      'PATCH /surface-api/registration.step2',
+      'GET /surface-api/registration.step2:lookup',
+    ]);
+    for (const call of others) {
+      expect(headersOf(call)[STAGE_HEADER]).toBe(STAGE);
+    }
+    // The staged view's ETag is sent back, as the envelope gave it.
+    expect(headersOf(writes(calls)[1])['If-Match']).toBe('"staged-1"');
+
+    // Without a stage, no request names one.
+    const plain = server({ [step2.read]: () => example2 });
+    await createApi(settings, plain.fetcher).contract();
+    expect(headersOf(plain.calls[0])).not.toHaveProperty(STAGE_HEADER);
+  });
+
+  it('keeps the stage in the page a staged create moves to', () => {
+    const created = { resource: 'entity.content:node.page', operation: 'update', parameters: { id: -1 } };
+    expect(pageOf(staged, created)).toBe(`/surface-react/entity.content%3Anode.page/update?id=-1&stage=${STAGE}`);
+    expect(pageOf(settings, created)).toBe('/surface-react/entity.content%3Anode.page/update?id=-1');
+  });
+
+  it('says a write was staged, and draws the stage bar with its two pages', async () => {
+    const { fetcher } = server({
+      [step2.read]: () => example2,
+      [step2.write]: () => json({ ...nothing, committed: true, changed: true, changes: ['/title'], contract: example2 }),
+    });
+    render(<SurfaceForm settings={staged} fetcher={fetcher} refineDelay={0} />);
+    const bar = await screen.findByRole('note');
+    expect(bar).toHaveTextContent('Stage Spring edits. Writes here go to the stage.');
+    expect(within(bar).getByRole('link', { name: 'List the staged writes' })).toHaveAttribute('href', `/surface-react/surface.stage/changes?id=${STAGE}`);
+    expect(within(bar).getByRole('link', { name: 'Apply the stage' })).toHaveAttribute('href', `/surface-react/surface.stage/apply?id=${STAGE}`);
+    await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Staged: the values are kept in the stage until it is applied.');
+  });
+
+  it('names the stage by its id when it has no label', async () => {
+    const { stageLabel: _label, ...unlabeled } = staged;
+    const { fetcher } = server({ [step2.read]: () => example2 });
+    render(<SurfaceForm settings={unlabeled} fetcher={fetcher} refineDelay={0} />);
+    expect(await screen.findByRole('note')).toHaveTextContent(`Stage ${STAGE}. Writes here go to the stage.`);
+  });
+
+  it('says a staged create names its thing by its local id, and moves to it in the stage', async () => {
+    const add: Settings = {
+      ...staged,
+      resource: 'entity.content:node.page',
+      operation: 'create',
+      endpoints: { read: '/surface-api/entity.content:node.page', schema: '/surface-api/entity.content:node.page/schema', write: { method: 'POST', url: '/surface-api/entity.content:node.page' } },
+    };
+    const { fetcher } = server({
+      'GET /surface-api/entity.content:node.page': () => example2,
+      // A staged create: 200, no Location, no ETag, its local id.
+      'POST /surface-api/entity.content:node.page': () => ({
+        ...nothing,
+        committed: true,
+        changed: true,
+        outputs: { id: -1 },
+        contract: example2,
+        created: { resource: 'entity.content:node.page', operation: 'update', parameters: { id: -1 } },
+      }),
+    });
+    const navigate = vi.fn();
+    render(<SurfaceForm settings={add} fetcher={fetcher} refineDelay={0} navigate={navigate} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith(`/surface-react/entity.content%3Anode.page/update?id=-1&stage=${STAGE}`));
+    expect(screen.getByRole('status')).toHaveTextContent('Staged: nothing is created until the stage is applied; the stage names it by -1.');
+  });
+
+  it('lists the staged writes on the changes page as a table', async () => {
+    const changes = stagePage('changes', 'POST');
+    const items = [
+      { position: 1, resource: 'entity.content:node.page', operation: 'update', kind: 'update', parameters: [{ name: 'id', value: '21' }], changed: ['/title', '/body'], staged: '2026-11-08T13:12:27+00:00' },
+      { position: 2, resource: 'registration.step3', operation: 'configure', kind: 'update', parameters: [], changed: ['/pricing'], staged: '2026-11-08T13:13:00+00:00' },
+    ];
+    const { calls, fetcher } = server({
+      [`GET ${changes.endpoints.read}`]: () => stageContract('changes', 'read'),
+      // A read: accepted, nothing committed, the list in its outputs.
+      [`POST ${changes.endpoints.write.url}`]: () => ({ ...nothing, outputs: { items, total: 2 } }),
+    });
+    render(<SurfaceForm settings={changes} fetcher={fetcher} refineDelay={0} />);
+    expect(screen.queryByRole('note')).toBeNull();
+    await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Listed.');
+    const table = screen.getByRole('table', { name: 'items' });
+    expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['position', 'resource', 'operation', 'kind', 'parameters', 'changed', 'staged']);
+    const rows = within(table).getAllByRole('row').slice(1).map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent));
+    expect(rows).toEqual([
+      ['1', 'entity.content:node.page', 'update', 'update', 'id: 21', '/title, /body', '2026-11-08T13:12:27+00:00'],
+      ['2', 'registration.step3', 'configure', 'update', '', '/pricing', '2026-11-08T13:13:00+00:00'],
+    ]);
+    expect(screen.getByText('total').nextSibling).toHaveTextContent('2');
+    expect(bodyOf(writes(calls)[0])).toEqual({});
+    expect(headersOf(writes(calls)[0])).not.toHaveProperty(STAGE_HEADER);
+  });
+
+  it('applies on the apply page with the If-Match its envelope was served with, and lists what it applied', async () => {
+    const apply = stagePage('apply', 'PATCH');
+    const applied = [{ position: 1, resource: 'entity.content:node.page', operation: 'update', kind: 'update', parameters: [{ name: 'id', value: '21' }], changed: true, id: '21', staged: '2026-11-08T13:12:27+00:00' }];
+    const { calls, fetcher } = server({
+      [`GET ${apply.endpoints.read}`]: () => json(stageContract('apply', 'update'), { headers: { ETag: '"listed-1"' } }),
+      [`PATCH ${apply.endpoints.write.url}`]: () => json({ ...nothing, committed: true, changed: true, changes: [''], outputs: { applied }, contract: stageContract('apply', 'update') }, { headers: { ETag: '"listed-2"' } }),
+    });
+    render(<SurfaceForm settings={apply} fetcher={fetcher} refineDelay={0} />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
+    expect(await screen.findByRole('status')).toHaveTextContent('Saved: the values were written.');
+    const [write] = writes(calls);
+    expect(headersOf(write)['If-Match']).toBe('"listed-1"');
+    expect(bodyOf(write)).toEqual({});
+    const cells = within(screen.getByRole('table', { name: 'applied' })).getAllByRole('cell').map((cell) => cell.textContent);
+    expect(cells).toEqual(['1', 'entity.content:node.page', 'update', 'update', 'id: 21', 'true', '21', '2026-11-08T13:12:27+00:00']);
+  });
+
+  it('writes an output value as text', () => {
+    expect(outputText([{ name: 'id', value: '-1' }, { name: 'type', value: 'page' }])).toBe('id: -1, type: page');
+    expect(outputText({ a: 1, b: [true, false] })).toBe('a: 1; b: true, false');
+    expect(outputText(null)).toBe('');
   });
 });

@@ -169,6 +169,30 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
   }
 
   /**
+   * Fingerprints a stage's writes, as a list of them shows them.
+   *
+   * An xxh128 hash of the writes and the position the next one takes, so
+   * it moves with every write staged, changed or taken out. The confirm
+   * page posts it back with Apply, and the HTTP door's `ETag` of `apply`
+   * carries it (ServedOperations::fingerprint()), so an Apply sent after
+   * the stage changed is refused at both doors.
+   *
+   * Decision: see
+   * docs/decisions.md#a-flow-ends-in-a-confirmation-page-that-shows-the-stages-changes-and-applies-it.
+   *
+   * @param array $record
+   *   The stage's record.
+   *
+   * @return string
+   *   The hash.
+   *
+   * @internal
+   */
+  public static function listed(array $record): string {
+    return hash('xxh128', serialize([$record['next'] ?? NULL, $record['writes'] ?? []]));
+  }
+
+  /**
    * Reads the record a stage operation's id names, for its context.
    *
    * @param string $id
@@ -463,7 +487,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
     if ($refused !== []) {
       throw new StorageViolationsException(new ViolationSet($refused));
     }
-    return ['id' => $record['id'], 'writes' => self::writesHash($record), 'applied' => $applied, 'plan' => $plan];
+    return ['id' => $record['id'], 'writes' => self::listed($record), 'applied' => $applied, 'plan' => $plan];
   }
 
   /**
@@ -506,7 +530,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    */
   protected function replay(array $prepared): void {
     $this->locked((string) $prepared['id'], function (array $record) use ($prepared): void {
-      if ($record['status'] !== self::OPEN || self::writesHash($record) !== $prepared['writes']) {
+      if ($record['status'] !== self::OPEN || self::listed($record) !== $prepared['writes']) {
         throw new StageRaceException(sprintf('The stage "%s" was written or applied after its apply was rehearsed.', $record['id']));
       }
       foreach ($prepared['plan'] as $entry) {
@@ -669,23 +693,6 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
         ]);
       }
     }
-  }
-
-  /**
-   * Fingerprints what a record holds to be applied.
-   *
-   * Its writes and its next position, which every staged write changes:
-   * the time of the last write is the request's, which two writes in one
-   * second share.
-   *
-   * @param array $record
-   *   The record.
-   *
-   * @return string
-   *   The hash.
-   */
-  protected static function writesHash(array $record): string {
-    return hash('xxh128', serialize([$record['next'], $record['writes']]));
   }
 
   /**

@@ -96,7 +96,7 @@ class ComponentBlockAjaxTest extends WebDriverTestBase {
     $page->fillField('settings[props][link][url]', 'https://example.com/tickets');
     $page->selectFieldOption('region', 'content');
     $page->pressButton('Save block');
-    $this->assertNotNull($assert->waitForText('The block configuration has been saved.'));
+    $this->assertTrue($assert->waitForText('The block configuration has been saved.'));
 
     $block = Block::load($id);
     $this->assertInstanceOf(Block::class, $block);

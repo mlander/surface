@@ -13,10 +13,13 @@ use Drupal\surface\Pipeline\Fingerprint;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\StageResource;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\Stageable;
 use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Storage\StageStorage;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
@@ -113,6 +116,28 @@ final class ServedOperations {
    */
   public function stage(?string $id, array $parameters = []): ?Stage {
     return $id === NULL ? NULL : $this->stages->named($id)->withArguments($parameters);
+  }
+
+  /**
+   * Answers whether a stage applies to an operation, by its ids.
+   *
+   * Decision: see
+   * docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+   *
+   * @param string $resource
+   *   The resource's `#[Resource]` id, or its class.
+   * @param string $operation
+   *   The operation id.
+   *
+   * @return bool
+   *   As Stageable::operation() answers.
+   *
+   * @throws \InvalidArgumentException
+   *   When the resource or the operation is not discovered.
+   */
+  public function stageable(string $resource, string $operation): bool {
+    $definition = $this->registry->getDefinition($resource);
+    return Stageable::operation($definition, $this->registry->getOperation($definition->name(), $operation));
   }
 
   /**
@@ -360,6 +385,15 @@ final class ServedOperations {
    * write's `If-Match`, and compared with what storage holds when the
    * write arrives.
    *
+   * A stage's `apply` has no keys, so its stored values never move; its
+   * fingerprint also covers the stage's writes (StageStorage::listed()),
+   * so an `If-Match` read before another write was staged is refused,
+   * 412, as the confirm page refuses an Apply of a list it no longer
+   * shows.
+   *
+   * Decision: see
+   * docs/decisions.md#a-flow-ends-in-a-confirmation-page-that-shows-the-stages-changes-and-applies-it.
+   *
    * @param \Drupal\surface\Http\ServedOperation $served
    *   The operation.
    *
@@ -371,7 +405,12 @@ final class ServedOperations {
     if ($served->storage === NULL) {
       return NULL;
     }
-    return Fingerprint::of($served->definition->id, $this->stored($served));
+    $stored = $this->stored($served);
+    $id = $served->context->known['id'] ?? NULL;
+    if ($served->definition->id === StageResource::ID && $served->operation->id === 'apply' && is_string($id) && ($record = $this->stages->read($id)) !== NULL) {
+      $stored = ['listed' => StageStorage::listed($record)] + $stored;
+    }
+    return Fingerprint::of($served->definition->id, $stored);
   }
 
   /**

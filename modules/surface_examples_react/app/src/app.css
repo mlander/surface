@@ -219,3 +219,57 @@
   font-size: 0.8125em;
   white-space: pre;
 }
+
+.dsr-stage {
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px dashed currentColor;
+  border-radius: 0.25rem;
+}
+
+.dsr-stage p,
+.dsr-stage ul {
+  margin: 0;
+}
+
+.dsr-stage ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.dsr-outputs {
+  margin: 0 0 1rem;
+}
+
+.dsr-outputs__terms > div {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dsr-outputs__terms dt {
+  font-weight: bold;
+}
+
+.dsr-outputs__terms dd {
+  margin: 0;
+}
+
+.dsr-outputs__table {
+  border-collapse: collapse;
+}
+
+.dsr-outputs__table caption {
+  font-weight: bold;
+  text-align: start;
+}
+
+.dsr-outputs__table th,
+.dsr-outputs__table td {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #ccc;
+  text-align: start;
+  vertical-align: top;
+}

@@ -11,6 +11,8 @@ use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Access\OperationGate;
+use Drupal\surface\Form\Flow;
+use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Psr\Log\LoggerInterface;
@@ -51,6 +53,14 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * parameter that names nothing is: the controller answers 422 on a call
  * a stage does not apply to and 404 on one it applies to. On a path of
  * the stage itself the header is the controller's to refuse.
+ *
+ * A page reads the stage from its query, `?stage=<id>`, as the operation
+ * form does (OperationRoute::stageRequested()), and asks the same three
+ * things in the same order: whether a stage applies to the operation,
+ * refused naming `does_not_apply`; whether the stage exists, a page not
+ * found when it does not; and the stage's own `update` access. The
+ * context is then built through the stage, so `?id=-1&stage=<id>` names
+ * what the stage creates. A page's answer varies by the query's `stage`.
  *
  * Decision: see
  * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
@@ -158,6 +168,19 @@ final class ServedOperationAccessCheck implements AccessInterface {
       // parameter, so saying it says nothing of what one names.
       return $permission;
     }
+    // A page names its stage in its query, as the operation form does.
+    $queried = $api ? NULL : ($request->query->all()[Flow::STAGE] ?? NULL);
+    if ($queried !== NULL && $queried !== '') {
+      if (!is_string($queried)) {
+        return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
+      }
+      if (!$this->servedOperations->stageable($resource, $operation)) {
+        $refusal = sprintf('A stage does not apply to the "%s" operation of %s (%s), so this page takes no "%s" in its query.', $operation, $resource, Violation::DOES_NOT_APPLY, Flow::STAGE);
+        return AccessResult::forbidden($refusal)->addCacheContexts(['url.query_args:' . Flow::STAGE])->setCacheMaxAge(0);
+      }
+      $stage = $queried;
+      $parameters = $this->servedOperations->parameters($resource, $operation, $request);
+    }
     // The stage the header names is asked for before the thing: another
     // account's is refused whatever the parameters name, on any call,
     // and one that names nothing is the controller's to answer, 422 on a
@@ -175,8 +198,11 @@ final class ServedOperationAccessCheck implements AccessInterface {
       }
       catch (\InvalidArgumentException) {
         // The header names no stage: the controller answers 422 where a
-        // stage does not apply, else 404.
-        return AccessResult::allowed()->addCacheableDependency($permission)->setCacheMaxAge(0);
+        // stage does not apply, else 404. A page's query names none: a
+        // page not found.
+        return $api
+          ? AccessResult::allowed()->addCacheableDependency($permission)->setCacheMaxAge(0)
+          : $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
       }
       if (!$staged->isAllowed()) {
         return $this->refused($staged instanceof AccessResultReasonInterface ? (string) $staged->getReason() : '')->addCacheableDependency($staged);
@@ -213,6 +239,9 @@ final class ServedOperationAccessCheck implements AccessInterface {
       // Decision: see
       // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
       $access = $access->andIf($staged);
+    }
+    if (!$api && $access->isAllowed()) {
+      $access = $access->andIf(AccessResult::allowed()->addCacheContexts(['url.query_args:' . Flow::STAGE]));
     }
     // An account that holds the operation's permission for what the
     // parameters name may hear why the rest refused; any other learns

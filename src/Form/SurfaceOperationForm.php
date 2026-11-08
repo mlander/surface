@@ -1026,10 +1026,11 @@ class SurfaceOperationForm extends FormBase {
    *   The stage's record.
    *
    * @return string
-   *   A hash of its writes and the position the next one takes.
+   *   As StageStorage::listed() answers, which the HTTP door's `ETag` of
+   *   `apply` carries too.
    */
   protected static function listed(array $record): string {
-    return hash('xxh128', serialize([$record['next'] ?? NULL, $record['writes'] ?? []]));
+    return StageStorage::listed($record);
   }
 
   /**

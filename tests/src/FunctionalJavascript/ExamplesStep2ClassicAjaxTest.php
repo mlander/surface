@@ -78,7 +78,7 @@ class ExamplesStep2ClassicAjaxTest extends ExamplesWebDriverTestBase {
     $assert->assertWaitOnAjaxRequest();
     $page->fillField('capacity', '150');
     $page->pressButton('Save configuration');
-    $this->assertNotNull($assert->waitForText('The configuration options have been saved.'));
+    $this->assertTrue($assert->waitForText('The configuration options have been saved.'));
     $this->container->get('config.factory')->reset('surface_examples.registration_step2');
     $stored = $this->config('surface_examples.registration_step2');
     $this->assertSame('harbour', $stored->get('venue'));

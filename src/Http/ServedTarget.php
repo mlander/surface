@@ -71,7 +71,7 @@ final class ServedTarget {
    * @param string|null $stage
    *   The id of the stage the request's `X-Surface-Stage` header names,
    *   trimmed; NULL when it names none, or the action reads nothing
-   *   stored (SCHEMA, LOOKUP).
+   *   stored (SCHEMA, LOOKUP) and the path's identity holds no local id.
    */
   public function __construct(
     public readonly ResourceDefinition $definition,

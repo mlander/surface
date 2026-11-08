@@ -6,9 +6,11 @@ check them first, a change reviewed before it goes live, a set of edits
 that must land in one transaction. A stage holds those writes; `apply`
 makes them; `delete` discards them.
 
-A stage is not a second copy of the site. Nothing renders from it: only
-the doors of this module read through it, and only when the caller
-names it.
+A stage is not a second copy of the site. Only the doors of this module
+read through it, and only when the caller names it. One page renders
+from it: the entity example's preview, which renders one staged node on
+its own page the way node preview does ([Preview](#preview)). Listings,
+Views and queries never see a stage.
 
 ## The model
 
@@ -164,8 +166,16 @@ X-Surface-Stage: 90330186-6d51-43bf-a4cd-d7f144e63c1e
   what is stored and its `ETag`.
 - `If-Match` is held to the view the header names: with the staged
   `ETag` a staged write passes, with the stored one it is 412.
+- On the stage's own `apply`, the `ETag` of `GET` and `PATCH
+  .../{id}:apply` also covers the hash of the record's `next` and
+  `writes`, so it changes with every write staged; `PATCH :apply` with
+  an `If-Match` read before another write was staged is 412
+  ([Apply](#apply)).
 - `POST .../schema` narrows over the staged view. `GET .../schema`
-  ignores the header: the full schema reads nothing stored.
+  ignores the header at a stored id: the full schema reads nothing
+  stored. At a local id (`-1`) it reads the header, since only the
+  stage names that id, and answers the create's full schema; without
+  the header it is 404. A lookup (`:lookup`) does the same.
 - Every answer stays `Cache-Control: no-store, private`.
 
 The route's access check (`ServedOperationAccessCheck`) reads the
@@ -185,12 +195,32 @@ The OpenAPI document describes the header once, as the parameter
 `SurfaceStage`, and references it from the envelope, the narrowing and
 every write of each operation a stage applies to.
 
-### The `stage` query on a form page
+### The `stage` query on a page
 
 An operation form page reads `?stage=<id>` from its query and writes
 into that stage instead of storage, by the same rule as the tool and
 the header. [The form door](#the-form-door) says what the page does
 with it.
+
+The React example's page reads it too, at
+`/surface-react/{resource}/{operation}` and at a module's route served
+by `ResourceReactPage::served()`. Its access check asks what the form
+door asks, in the same order: whether a stage applies to the operation,
+refused naming `does_not_apply`; whether the stage exists, a page not
+found when it does not; and the stage's own access. The page builds the
+operation through the stage, so `?id=-1&stage=<id>` names the staged
+create, and hands the app the stage's id and label in
+`drupalSettings.surfaceReact` (`stage`, `stageLabel`). The app sends
+`X-Surface-Stage` on every request to the API, reads and the narrowing
+included, never on the CSRF token's fetch; it says "Staged: the values
+are kept in the stage until it is applied." after a write, and moves to
+`?id=-1&stage=<id>` after a staged create. A bar above the form names
+the stage and links the stage's own React pages,
+`/surface-react/surface.stage/changes?id=<id>`, which lists the writes,
+and `/surface-react/surface.stage/apply?id=<id>`, which applies them;
+the app draws a run's `outputs` as a table. The page varies by the
+query's `stage` and has max-age 0 under one
+([the React example](https://github.com/mlander/surface/blob/main/modules/surface_examples_react/README.md)).
 
 ### From PHP
 
@@ -267,12 +297,111 @@ opened the stage deletes that stage, so no empty one is left.
 
 (why: [decision](decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context))
 
+## Walk-through with drush
+
+The tool door from open to apply, as uid 1, on two basic pages. Nodes
+21 and 22 are this site's; use two of yours. Each answer is shortened
+to what the next step reads.
+
+1. Open a stage; its id is the `id` output:
+
+   ```
+   ddev drush tool:run surface:surface.stage:create --uid=1 --json \
+     --input='{"values":{"label":"Walk-through"}}'
+   ```
+
+   `{"success":true,"message":"Open a stage: the values were accepted and
+   written.","outputs":{"committed":true,…,"id":"33effc2b-…"}}`
+
+2. Stage a title change on one page and a content change on the other:
+
+   ```
+   ddev drush tool:run surface:entity.content:node.page:update --uid=1 --json \
+     --input='{"id":"21","stage":"33effc2b-…","values":{"title":{"value":"Walk-through title"}}}'
+   ddev drush tool:run surface:entity.content:node.page:update --uid=1 --json \
+     --input='{"id":"22","stage":"33effc2b-…","values":{"field_content":{"value":"<p>Walk-through content.</p>","format":"content_format"}}}'
+   ```
+
+   Each answers `committed: true`, `changes` the keys it moved
+   (`["/title/value"]`, `["/field_content"]`), and "Edit Basic page: the
+   values were accepted and staged in 33effc2b-…." Nothing is saved.
+
+3. Read a page through the stage, and without it:
+
+   ```
+   ddev drush tool:run surface:entity.content:node.page:read --uid=1 --json \
+     --input='{"id":"21","stage":"33effc2b-…"}'
+   ```
+
+   Through the stage, `title.value` is "Walk-through title" and the
+   message says "the values staged in 33effc2b-… were read"; without
+   `stage`, the stored title and "the stored values were read".
+
+4. List the staged writes:
+
+   ```
+   ddev drush tool:run surface:surface.stage:changes --uid=1 --json \
+     --input='{"id":"33effc2b-…","values":{}}'
+   ```
+
+   `"total":2,"items":[{"position":1,"resource":"entity.content:node.page",
+   "operation":"update","kind":"update","parameters":[{"name":"id","value":"21"}],
+   "changed":["/title"],"staged":"…"},{"position":2,…,"changed":["/field_content"]}]`
+
+5. Rehearse the apply; nothing is written:
+
+   ```
+   ddev drush tool:run surface:surface.stage:apply --uid=1 --json \
+     --input='{"id":"33effc2b-…","values":{},"dry_run":true}'
+   ```
+
+   "Dry run of Apply the stage: the values were accepted and prepared,
+   and nothing was written.", with `applied` listing both writes,
+   `changed: true` and no `id`.
+
+6. Apply it:
+
+   ```
+   ddev drush tool:run surface:surface.stage:apply --uid=1 --json \
+     --input='{"id":"33effc2b-…","values":{}}'
+   ```
+
+   `{"success":true,"message":"Apply the stage: the values were accepted
+   and written.","outputs":{"committed":true,"changed":true,"changes":[""],
+   "applied":[{"position":1,…,"id":"21","changed":true},{"position":2,…,
+   "id":"22","changed":true}]}}`. Both pages now hold the staged values.
+
+   Apply's answer is the one tool answer that holds `applied`; the
+   stage's `read` tool answers its id and label alone. The record is
+   kept, marked applied, and what apply recorded is read again from the
+   apply's envelope over HTTP, `GET /surface-api/surface.stage/33effc2b-…:apply`,
+   its `values.applied` the same list. `changes` then answers
+   `total: 0`, and a second apply is refused, code `does_not_apply`:
+   "The stage was applied; nothing is pending." To drop the stage
+   instead of applying it, run `surface:surface.stage:delete` with its
+   `id`.
+
+   This step was not run on this site, whose content stays as it is;
+   the answer's shape is the one `StageApplyTest` asserts.
+
 ## Where a stage applies
 
-One rule, `Staging\Stageable`, says where a stage applies. It decides
-the four doors and prepare: the tool's `stage` input, the OpenAPI
-`SurfaceStage` header, the HTTP door's header, the operation form's
-`?stage` query and the staged storage's prepare. Prepare alone also checks that the storage of each routed child
+One rule, `Staging\Stageable`, says where a stage applies. It is asked
+at each of these places, each of which takes a stage where it says yes,
+and where it says no offers none or refuses one (code `does_not_apply`
+at the doors and prepare; the flow refuses its route):
+
+- the tool's `stage` input (`OperationInputs`);
+- the OpenAPI document's `SurfaceStage` header;
+- the HTTP door's header (`ResourceApiController`);
+- the `?stage` query of the operation form and of a React page served
+  at a module's route (`OperationRoute::stageRequested()`);
+- the React page's access check (`ServedOperations::stageable()`);
+- the flow's own check (`Flow::refusal()`);
+- the staged storage's prepare (`Stageable::storage()`,
+  `Stageable::namesThing()`).
+
+Prepare alone also checks that the storage of each routed child
 is transactional, and refuses the write, code `does_not_apply`, where
 one is not. A resource that routes a child to such a storage still
 offers the stage input and the header, and is refused at the write. A
@@ -641,11 +770,13 @@ query. With one, the page writes into the stage: the operation's
 context is built through it, its storage is the staged storage, and
 the pipeline runs unchanged over it. Nothing is written to storage.
 
-- **Only the operation form.** A page served by an operation through
-  anything else, a React page or a controller, refuses a stage in its
-  query: "A stage does not apply to this page: only an operation form
-  reads the "stage" query." So no page writes to storage while its URL
-  names a stage.
+- **Only the operation form and the React page.** A page served by an
+  operation through anything else, a controller of a module's own,
+  refuses a stage in its query: "A stage does not apply to this page:
+  only an operation form or a React page reads the "stage" query." So
+  no page writes to storage while its URL names a stage. The React page
+  hands the stage to its app, which names it in the header
+  ([above](#the-stage-query-on-a-page)).
 - **Who may.** The route's access check asks the operation's permission
   first. Then it and the form ask the same three things, in this order:
   whether a stage applies to the route's operation
@@ -903,6 +1034,16 @@ Apply runs in two passes, as every write does: `prepare()` rehearses,
    before it permanent: the stage is marked `voided` instead
    ([Config in a stage](#config-in-a-stage)).
 
+**What was listed is what is applied.** The confirm page posts back a
+fingerprint of the stage's writes as it listed them
+(`StageStorage::listed()`), and the HTTP door serves the same
+fingerprint in the `ETag` of `GET` and `PATCH .../{id}:apply`: a client
+that reads the envelope, lists `changes` and sends `PATCH :apply` with
+that `If-Match` is answered 412, code `conflict`, and nothing is written,
+when another write was staged in between. Read the envelope again and
+list again. The tool door takes no `If-Match`: a tool's apply makes
+what the stage holds when it runs.
+
 **Conflict is what the `ETag` is.** Any change to the thing's carried
 keys since it was staged refuses that write, code `conflict`, "what is
 stored changed since it was staged", even a change to a key the stage
@@ -922,6 +1063,120 @@ applies a stage for its owner from elsewhere, a queue worker, sets the
 owner as the current user first, with core's account switcher, and
 switches back after
 (why: [decision](decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner)).
+
+## Preview
+
+The entity example renders one node as a stage holds it, the way core's
+node preview renders an unsaved node:
+`/surface-entity/stage/{stage}/preview/{id}`, `{id}` a stored node's id
+or a staged create's local id (`-1`).
+
+- **What it renders.** The node is built by the content entity
+  storage's `preview()`, from the stored node, or a new one for a local
+  id, with the stage's values for it set on it and nothing saved, then
+  rendered in its full view mode by the node's view builder, titled
+  "Preview: <title> (staged in <stage>)". It is marked `in_preview`, so
+  core's node view builder caches nothing of it and draws no links; the
+  page also drops the render cache keys of the node's build whatever
+  view builder the site sets, so a preview is never cached under the
+  node's own keys. The route is `no_cache`.
+- **Which write.** The page reads the stage's `changes` and finds the
+  write of that node through `entity.content:node` or a bundle's
+  resource; a node the stage holds no write of is a page not found, and
+  so is a write the storage cannot build a node from ("cannot be
+  built"), and a staged update of a node deleted since.
+- **A staged delete** is a page saying the node is removed when the stage
+  is applied.
+- **What validation refuses.** The node's own validation runs as at
+  apply; what it refuses is listed above the node, "Apply would refuse
+  these staged values:", rather than thrown.
+- **Access.** The stage in the path is converted for its owner alone
+  (the `surface_stage` parameter type): another account's stage, and an
+  id that names none, is a page not found. Then, as core's
+  `NodePreviewAccessCheck` asks, the access of the staged write: the
+  node's update access, its delete access for a staged delete, or the
+  bundle's create access for a staged create.
+
+The form door and the confirm page do not link to it: they are the base
+module's, and the route is the example's.
+
+## ECA
+
+The examples ship one ECA model as optional config,
+`eca.eca.surface_stage_walkthrough`
+(`modules/surface_examples/config/optional/`), disabled. Nothing becomes
+a dependency of `surface_examples`.
+
+- **When it is installed.** The module installer installs optional
+  config whose dependencies are met, both when `surface_examples` is
+  installed and when a module it waits on is installed later. The model
+  needs `eca`, `eca_base`, `eca_user`, `eca_tool`, `modeler_api`,
+  `surface_examples_entity` and the `page` node type; once all are on
+  the site, it is installed. On a site where they were all there before
+  the model was added to the code base, it is not: import it with a
+  partial config import from `config/optional`
+  (`drush config:import --partial --source=…`), or reinstall
+  `surface_examples`.
+- **Why it ships disabled.** It switches to uid 1 and writes nodes 1 and
+  2. On a site where that is meant, set its tokens (below), then enable
+  it from the ECA models list, `/admin/config/workflow/eca`
+  (`/admin/config/workflow/eca/surface_stage_walkthrough/enable`).
+
+Triggered by its custom event, it runs one surface tool per step through
+`eca_tool`:
+
+```
+ddev drush eca:trigger:custom_event surface_stage_walkthrough
+```
+
+1. Its first three actions set three tokens: `walkthrough_uid`, the
+   account to run as (1), and `walkthrough_first` and
+   `walkthrough_second`, the ids of the two nodes it edits (1 and 2).
+   They are a demo's: change them in those actions for your site.
+2. Switches to the account `walkthrough_uid` names (`eca_switch_account`):
+   drush triggers the event as the anonymous user, and a stage refuses
+   anonymous. Everything after the switch runs as that account.
+3. Opens a stage (`surface:surface.stage:create`), its id in the token
+   `stage_id`.
+4. Stages a title on each page (`surface:entity.content:node.page:update`
+   with `stage: [stage_id]`).
+5. Lists the stage (`surface:surface.stage:changes`, `values: {}` in
+   YAML mode, since an empty input is not sent), and says "The stage
+   … holds 2 writes." with the tool's message.
+6. Applies it (`surface:surface.stage:apply`) and says apply's message.
+
+Each staged write, the listing, and the message after the listing and
+after the apply run only when the tool before them succeeded, read from
+its result token (`[open_result:success]`, `[first_result:success]`,
+`[second_result:success]`, `[changes_result:success]`,
+`[apply_result:success]`). The switch and the stage's open run whatever
+came before, and the apply follows the listing's message. When a staged
+write, the listing or the apply fails, the model says which step failed
+with that tool's message (`[second_result:message]`, for example) and
+discards the stage (`surface:surface.stage:delete` on `[stage_id]`).
+
+The switch does nothing when no account has the id in
+`walkthrough_uid`: the chain then runs as the anonymous user, the
+stage's open is refused, and the model stops with no message. ECA does
+not check whether the account is blocked, so a blocked account is
+switched to all the same. To run as another account, set
+`walkthrough_uid` to its id; it needs the permissions the two page
+edits need.
+
+The stage holds only what the surface tools wrote into it, and the
+module cannot know what a model's other actions did: an action that
+saves an entity directly, or sends a mail, is no write of the stage, is
+made at once, and is not in `changes`.
+
+The model's tool actions have no config schema. `eca_tool` declares
+`action.configuration.eca_tool:*`, and core's fallback for a schema
+name (`TypedConfigManager::getFallbackName()`) replaces the last
+segment split by `.` or `:` with `*`, so only a tool id of one segment,
+with no dot and no colon, reaches it; a strict schema check reports
+every surface tool action. `EcaStageWalkthroughTest` checks the rest
+of the model against its schema and runs it, a failing write included;
+it is skipped where the code base has no `eca`, `modeler_api` or
+`eca_tool`.
 
 ## Stages and Workspaces
 
@@ -955,8 +1210,9 @@ access meets core's own refusal, an exception from its predelete hook,
 ## Limits
 
 - **Invisible to render, Views and queries.** A staged value is read
-  only through the doors that name the stage. A page, a listing, a View
-  or an entity query reads permanent storage.
+  only through the doors that name the stage, and the one preview page
+  ([Preview](#preview)). A page, a listing, a View or an entity query
+  reads permanent storage.
 - **One translation.** The entity example writes the default
   translation, and a stage inherits that; a config object's translations
   are not staged.
@@ -968,6 +1224,15 @@ access meets core's own refusal, an exception from its predelete hook,
 - **A local id names a thing only with its stage**: no `Location` is
   sent for it, it cannot be referenced, and `-1` without the header is
   refused.
+- **A lookup reads no stage.** At a local id it reads the header only to
+  name the staged create; the candidates it answers are what is stored,
+  so a thing staged in the same stage is not among them. At a stored id
+  it ignores the header.
+- **`If-Match` on `apply` is checked before the apply's rehearsal.** The
+  HTTP door compares the `ETag` before the apply reads the record again
+  to rehearse it, so a write staged between the two is applied with the
+  rest; the check between the rehearsal and the commit (a stage written
+  after it was rehearsed refuses the apply) closes the rest.
 - **An id that names nothing on the stage's own paths.** The stage's
   operations declare no permission, so at the tool door's access check
   (`drush tool:run`, MCP) and the HTTP route's, an id that names no
