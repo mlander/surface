@@ -8,14 +8,17 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Form\Flow;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationArguments;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Staging\StageStore;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Route;
 
 /**
@@ -40,17 +43,34 @@ use Symfony\Component\Routing\Route;
  *   - the operation's permission, from those two ids alone, so an account
  *     without it hears the permission's reason and nothing of what the
  *     URL names or whether it exists;
+ *   - the stage the query names, `?stage=<id>`
+ *     (OperationRoute::stageRequested()): refused on a page that is no
+ *     operation form, refused saying `does_not_apply` where a stage does
+ *     not apply to the operation (Stageable), a page not found as below
+ *     for an id that names no stage, and the stage's own access, which
+ *     only its owner holds. Access asked about a link reads the current
+ *     request's query only for a link to the current route; a link to
+ *     another route is judged with no stage, at its first step, so a
+ *     link carrying another account's stage is drawn, and answers 403
+ *     when followed;
  *   - the context the route's parameters and values build
- *     (OperationRoute::fromRouteMatch()): a value of the URL that names
- *     nothing (NamesNothingException) is a page not found for an account
- *     the operation's permission lets in for what the parameters name, the
- *     permission's refusal for one it refuses, and a refusal saying
- *     nothing for one no permission sorts, since the operation declares
- *     none; any other refusal is the route's, saying why;
- *   - the access class, for that context.
- * A URL that names nothing is let through in the request's own dispatch,
- * for the form to answer with a 404, and refused when access is asked
- * about a link, so no link to a page not found is drawn
+ *     (OperationRoute::fromRouteMatch()), through that stage, so a local
+ *     id in the path names what the stage creates: a value of the URL
+ *     that names nothing (NamesNothingException) is a page not found for
+ *     an account the operation's permission lets in for what the
+ *     parameters name, the permission's refusal for one it refuses, and a
+ *     refusal saying nothing for one no permission sorts, since the
+ *     operation declares none; any other refusal is the route's, saying
+ *     why;
+ *   - on a route that declares a flow (Flow), what the flow needs of the
+ *     built resource (Flow::refusal()), refused saying why; a step the
+ *     flow does not have, a page not found; a step after the first with
+ *     no stage, refused;
+ *   - the access class, for that context, and with the stage's answer.
+ * The answer varies by `stage` and `step` in the query. A URL that
+ * names nothing is let through in the request's own dispatch, for the
+ * form to answer with a 404, and refused when access is asked about a
+ * link, so no link to a page not found is drawn
  * (OperationGate::namesNothing()). It is let through only to a route
  * whose controller answers it so (answersNotFound()): one served by any
  * other controller is refused with no reason, since that controller may
@@ -76,12 +96,19 @@ final class OperationAccessCheck implements AccessInterface {
    *   What maps the route's parameters onto the operation's.
    * @param \Drupal\surface\Access\OperationGate $gate
    *   The answers every door serving an operation gives alike.
+   * @param \Drupal\surface\Staging\StageStore $stages
+   *   The stages, which name the stage a page's query names.
+   * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
+   *   The request stack, whose current request stands in for the one
+   *   core hands in no request for: access asked about a link.
    */
   public function __construct(
     protected readonly ResourcesInterface $resources,
     protected readonly ResourceRegistry $registry,
     protected readonly OperationArguments $arguments,
     protected readonly OperationGate $gate,
+    protected readonly StageStore $stages,
+    protected readonly RequestStack $requestStack,
   ) {}
 
   /**
@@ -125,8 +152,28 @@ final class OperationAccessCheck implements AccessInterface {
     if ($permission->isForbidden()) {
       return $permission;
     }
+    // The stage before the thing, as the HTTP door asks its header: a
+    // link is asked about with no request, so the current one is read
+    // when the link is to the page itself, and the link and the page
+    // agree. A link to any other route is judged as with no stage, at
+    // its first step: the current page's query is not the link's.
+    // Decision: see
+    // docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+    $query = $request ?? $this->linkQuery($route_match);
     try {
-      $served = OperationRoute::fromRouteMatch($route_match, $this->registry, $this->arguments, $this->resources);
+      $staged = $query === NULL ? NULL : OperationRoute::stageRequested($route_match, $query, $this->stages, $this->resources, $this->registry, $account);
+    }
+    catch (NamesNothingException) {
+      return $this->gate->namesNothing($request, answersNotFound: static::answersNotFound($route));
+    }
+    catch (\InvalidArgumentException $e) {
+      return AccessResult::forbidden($e->getMessage())->setCacheMaxAge(0);
+    }
+    if ($staged !== NULL && !$staged[1]->isAllowed()) {
+      return $staged[1];
+    }
+    try {
+      $served = OperationRoute::fromRouteMatch($route_match, $this->registry, $this->arguments, $this->resources, $staged[0] ?? NULL);
     }
     catch (NamesNothingException) {
       // A permission with a `%key` the ids could not fill is asked of the
@@ -154,7 +201,41 @@ final class OperationAccessCheck implements AccessInterface {
     catch (\InvalidArgumentException $e) {
       return AccessResult::forbidden($e->getMessage());
     }
-    return $this->resources->access($served->resource, $served->context, $account);
+    $flow = Flow::onRoute($route, (string) $route_match->getRouteName());
+    if ($flow !== NULL) {
+      $refusal = $flow->refusedAt($served, $this->resources, $this->registry, (string) $route_match->getRouteName(), $query, $staged !== NULL);
+      if ($refusal === FALSE) {
+        return $this->gate->namesNothing($request, answersNotFound: static::answersNotFound($route));
+      }
+      if ($refusal !== NULL) {
+        return AccessResult::forbidden($refusal)->setCacheMaxAge(0);
+      }
+    }
+    $access = AccessResult::allowed()
+      ->addCacheContexts(['url.query_args:' . Flow::STAGE, 'url.query_args:' . Flow::STEP])
+      ->andIf($this->resources->access($served->resource, $served->context, $account));
+    // Decision: see
+    // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+    return $staged === NULL ? $access : $access->andIf($staged[1]);
+  }
+
+  /**
+   * Gets the request whose query a link to a route is judged by.
+   *
+   * The current request, when the link is to the current route: a page
+   * that names a stage draws its own links under that stage. NULL for a
+   * link to any other route.
+   *
+   * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
+   *   The link's route match.
+   *
+   * @return \Symfony\Component\HttpFoundation\Request|null
+   *   The request, or NULL.
+   */
+  protected function linkQuery(RouteMatchInterface $route_match): ?Request {
+    $current = $this->requestStack->getCurrentRequest();
+    $name = $current?->attributes->get(RouteObjectInterface::ROUTE_NAME);
+    return $name !== NULL && $name === $route_match->getRouteName() ? $current : NULL;
   }
 
   /**
@@ -174,8 +255,7 @@ final class OperationAccessCheck implements AccessInterface {
    *   TRUE when its controller is one of those.
    */
   protected static function answersNotFound(?Route $route): bool {
-    $form = $route?->getDefault('_form');
-    return (is_string($form) && is_a(ltrim($form, '\\'), SurfaceOperationForm::class, TRUE)) || OperationRoute::reactPage($route);
+    return OperationRoute::operationForm($route) || OperationRoute::reactPage($route);
   }
 
   /**

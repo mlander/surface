@@ -157,6 +157,35 @@ final class StageStore {
   }
 
   /**
+   * Finds the create a stage holds of a resource, by its position.
+   *
+   * @param \Drupal\surface\Staging\Stage $stage
+   *   The stage.
+   * @param string $resource
+   *   The resource's id.
+   * @param int $position
+   *   The create's position.
+   *
+   * @return array|null
+   *   The entry, or NULL when the stage is gone, applied or voided, or
+   *   holds no create of the resource at the position.
+   *
+   * @internal
+   */
+  public function createdAt(Stage $stage, string $resource, int $position): ?array {
+    $record = $this->read($stage->id);
+    if ($record === NULL || $record['status'] !== StageStorage::OPEN) {
+      return NULL;
+    }
+    foreach ((array) $record['writes'] as $write) {
+      if ($write['kind'] === 'create' && $write['resource'] === $resource && (int) $write['position'] === $position) {
+        return $write;
+      }
+    }
+    return NULL;
+  }
+
+  /**
    * Reads the address a create entry was given, by identity key.
    *
    * Written once, at the create's first commit: `-position` for each

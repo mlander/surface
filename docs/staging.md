@@ -185,6 +185,13 @@ The OpenAPI document describes the header once, as the parameter
 `SurfaceStage`, and references it from the envelope, the narrowing and
 every write of each operation a stage applies to.
 
+### The `stage` query on a form page
+
+An operation form page reads `?stage=<id>` from its query and writes
+into that stage instead of storage, by the same rule as the tool and
+the header. [The form door](#the-form-door) says what the page does
+with it.
+
 ### From PHP
 
 A stage is opened as any thing is created, and its id is what the
@@ -250,18 +257,22 @@ lock was not had, or its record moved under the operation (applied,
 expired or discarded, a write the rehearsal did not see, or a staged
 thing changed since its token was taken; [Apply](#apply)). PHP code
 that applies or writes into a stage catches it and tells the person to
-try again, as the entity example's confirm page does. The module's own
-doors do not catch it: the tool door answers it as a runtime failure
-naming the class, and the HTTP door as a server error.
+try again, as the entity example's confirm page does. The tool door
+answers it as a runtime failure naming the class, and the HTTP door as
+a server error. The form door catches it where it writes into a stage,
+opens one for a flow's first step, applies one and discards one: the
+page says the stage changed and to try again, as an error, and is built
+again. A flow's first step whose write is refused or races after it
+opened the stage deletes that stage, so no empty one is left.
 
 (why: [decision](decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context))
 
 ## Where a stage applies
 
 One rule, `Staging\Stageable`, says where a stage applies. It decides
-the three doors and prepare: the tool's `stage` input, the OpenAPI
-`SurfaceStage` header, the HTTP door's header and the staged storage's
-prepare. Prepare alone also checks that the storage of each routed child
+the four doors and prepare: the tool's `stage` input, the OpenAPI
+`SurfaceStage` header, the HTTP door's header, the operation form's
+`?stage` query and the staged storage's prepare. Prepare alone also checks that the storage of each routed child
 is transactional, and refuses the write, code `does_not_apply`, where
 one is not. A resource that routes a child to such a storage still
 offers the stage input and the header, and is refused at the write. A
@@ -622,12 +633,169 @@ drush tool:run surface:entity.content:node.page:delete --uid=1 --json \
   "delete"` and `id`, the thing's id as a string. A rollback leaves it
   in place.
 
+## The form door
+
+Every operation form page (`SurfaceOperationForm`,
+[Forms](forms.md#the-operation-form)) reads `?stage=<id>` from its
+query. With one, the page writes into the stage: the operation's
+context is built through it, its storage is the staged storage, and
+the pipeline runs unchanged over it. Nothing is written to storage.
+
+- **Only the operation form.** A page served by an operation through
+  anything else, a React page or a controller, refuses a stage in its
+  query: "A stage does not apply to this page: only an operation form
+  reads the "stage" query." So no page writes to storage while its URL
+  names a stage.
+- **Who may.** The route's access check asks the operation's permission
+  first. Then it and the form ask the same three things, in this order:
+  whether a stage applies to the route's operation
+  ([above](#where-a-stage-applies)), refused "A stage does not apply to
+  the "create" operation of route_test.card (does_not_apply), so this
+  page takes no "stage" in its query."; whether the stage exists, a page
+  not found when it does not; and the stage's own access, which only
+  its owner holds, refused "The stage is another account's.". Then the
+  thing's access, as without a stage; both have to allow. Nothing the
+  stage holds is read for an account its access refuses.
+- **Links.** Access asked about a link reads the current request's
+  query only for a link to the current route, so the page's own links
+  agree with it. A link to any other route is judged with no stage, at
+  its first step: a link to a flow page that carries another account's
+  stage is drawn, and answers 403 when followed.
+- **A local id.** The context is built through the stage, so a path
+  that carries a staged create's local id (`/surface-entity/node/-1/edit`)
+  names what the stage creates, where the route's requirement admits a
+  negative id.
+- **The messages.** The page says what was staged, as the tool door
+  does, and names the stage by its label, or its id when it has none:
+  "Configure registration (step 1): the values were accepted and staged
+  in Registration; nothing is written until it is applied."; values that
+  are what the stage holds already, "... they are what is staged in
+  Registration, so nothing was written."; a create, "... nothing is
+  created until it is applied, and a write in the stage names it by -1.";
+  a delete, "... the removal was accepted and staged in Cancel; nothing
+  is removed until it is applied."; a delete of a staged create, "...
+  the create staged in Cancel was taken out of it; nothing was created
+  or removed."
+- **No cosmetic message or redirect.** Under a stage the cosmetic
+  layer's message and redirect are not asked: they say a thing was
+  saved and go to pages that drop the query. The page stays where it
+  is, the stage still in its query. The cosmetic layer still arranges
+  the form. Submit or validate handlers a cosmetic layer adds to the
+  form still run under a stage, so they must not write to storage.
+- **A delete's confirmation** says "... trip is removed when the stage
+  is applied; nothing is removed now." instead of "this cannot be
+  undone".
+- **Caching.** Every operation form page varies by `stage` and `step`
+  in its query (`url.query_args:stage`, `url.query_args:step`); one that
+  names a stage has max-age 0.
+
+(why: [decision](decisions.md#one-rule-says-where-a-stage-applies-at-every-door))
+
+## Flows
+
+A flow draws one operation's form over several steps into one stage,
+one group a step, and ends in a confirm page that applies the stage. It
+is declared on the operation form route, never on the resource: the
+build, the tools and the HTTP door do not see it.
+
+```yaml
+surface_examples_node_type.flow:
+  path: '/admin/structure/types/manage/{type}/surface-flow'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit content type, step by step (resource)'
+    _surface_resource: 'Drupal\surface_examples_node_type\Resource\NodeTypeResource'
+    _surface_operation: 'update'
+    _surface_cosmetics: 'surface_examples_node_type.form_cosmetics'
+    _surface_flow: { steps: [submission, workflow, display], redirect: entity.node_type.collection }
+```
+
+- **Steps.** `steps` lists group ids of the route's operation, the
+  order they are drawn in. `label`, optional, is the stage's label, the
+  operation's label by default. `redirect`, optional, is the route the
+  page goes to once the stage is applied, handed the flow route's own
+  parameters its path takes; without it the page stays on the confirm
+  page. The first step also draws every key in no group (here the name,
+  the machine name and the description). A key in a group no step names
+  is never drawn and keeps what it holds.
+  Every step writes through the route's one operation: a stage refuses
+  a second operation on one thing.
+- **The query.** `?step=N` names the step, from 1, and `?stage=<id>`
+  the stage. The first step needs no stage: its submit opens one as the
+  current user and stages the step's keys into it. Every later step
+  needs the stage; without one it is refused, and a step the flow does
+  not have is a page not found.
+- **Next and Back.** Next stages the step's keys through the pipeline
+  and goes to the next step, with the stage kept, or to the confirm page
+  after the last. Back goes to the step before and stages nothing. A
+  `destination` in the query is ignored: Next, Back, Discard and Apply
+  go where the flow says. A key the step does not draw says nothing,
+  and the staged load overlays what earlier steps staged, so a later
+  step sees earlier values, and apply sends only the keys that moved.
+- **A flow over a create.** The first step stages the create; each
+  later step writes into it, as the one create of the resource the stage
+  holds through the operation. A later step whose create was taken out
+  of the stage is refused, "... its create was taken out of the stage;
+  start the flow again.": a fresh create there would stage a second
+  thing. The confirm page needs no create, so it still applies or
+  discards the stage.
+- **The confirm page**, `?step=confirm`, lists the stage's `changes` as
+  a table: each write's position, resource, operation, kind, parameters
+  and the keys it moved. It says "Each is checked again when it is
+  made. They are made together or not at all." When a write is a delete,
+  or its operation is destructive, it says "One of these cannot be undone
+  once applied." and Apply is a danger button. Back goes to the last
+  step. "Discard the stage" deletes the stage through its `delete` and
+  goes back to the first step with no stage; it is a button, since a
+  link may not delete. "Apply the stage" applies what the page listed:
+  the page posts back a fingerprint of the stage's writes as it drew
+  them, and when the stage holds other writes by then, written from
+  another tab or another door, Apply is refused, "The stage changed
+  since this page was drawn; it is listed again below.", and the page
+  lists them. Otherwise it rehearses the apply when the page is
+  submitted, each refusal said on the page and nothing written, then
+  applies it through the stage's `apply`: "Applied 2 writes.", and the
+  page goes to the flow's `redirect`, or stays and shows the stage
+  applied. The cosmetic layer's redirect is not asked: it is handed an
+  operation's result, not the stage's apply. An applied or voided stage
+  shows its status and what apply made, and no Apply. This page is how a form door shows a run's outputs:
+  `changes` before the apply, `applied` after.
+- **What a flow can stage.** Updates, and creates whose required keys
+  with no default are all drawn at the first step: each step is
+  validated as the whole write, as every staged write is
+  ([A staged create](#a-staged-create)).
+
+What is refused, and where:
+
+- **When the router is rebuilt**, what the route alone shows: a
+  `_surface_flow` that is no map of `steps`, `label` and `redirect`, a
+  `label` or `redirect` that is no non-empty string, steps that are no
+  list of distinct group ids, a flow on a route that names no operation,
+  and a flow on a route whose `_form` is not the operation form. The
+  rebuild stops, naming the route.
+- **When the route is matched**, by its access check and by the form,
+  what needs the resource built, each refused saying why: an operation a
+  flow cannot stage, a delete, a read-only operation, or one a stage
+  does not apply to; a step that names a group the operation does not
+  have; a key drawn before a key
+  its refinement depends on, "... draws "guide" at step 1, before
+  "region" at step 2, and "guide" is refined by the value of "region"
+  ..."; and for a create, a required key with no default drawn after the
+  first step, naming the key. A key a rule requires only for some values
+  cannot be seen before values exist, so it is not checked there: the
+  pipeline refuses the step that leaves it empty.
+
+(why: [decision](decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource),
+[decision](decisions.md#a-step-order-is-checked-against-the-refiner-graph-and-a-creates-required-keys-at-match-time),
+[decision](decisions.md#a-flow-ends-in-a-confirmation-page-that-shows-the-stages-changes-and-applies-it))
+
 ## A flow by hand: bulk delete from the content list
 
-The entity example builds the first flow by hand, over core's content
-list (`modules/surface_examples_entity`): a bulk delete that stages,
-then confirms over the stage. Flows are not declared yet; this one is
-code.
+The entity example builds a flow by hand, over core's content list
+(`modules/surface_examples_entity`): a bulk delete that stages, then
+confirms over the stage. Declared flows ([above](#flows)) draw one
+operation over one thing; this one stays code, since it stages a
+delete of many things, chosen on a listing.
 
 - **The action.** The example ships a `system.action` config entity,
   "Delete content through a stage" (plugin
@@ -704,8 +872,9 @@ code.
   replaces this one in the temp store.
 
 The page reads the stage's `changes` for its `total` alone and lists
-none of its items: how a form door shows a run's outputs is decided with
-declared flows.
+the nodes as they are stored. A declared flow's confirm page lists the
+items of `changes` before the apply and `applied` after
+([Flows](#flows)), which is how a form door shows a run's outputs.
 (why: [decision](decisions.md#a-destructive-bulk-operation-stages-then-confirms-over-the-stage))
 
 ## Apply
@@ -814,6 +983,18 @@ access meets core's own refusal, an exception from its predelete hook,
   that leaves out a required key is refused for the key, code
   `required`, before it can be refused as removed in the stage; one
   that sends every required key is refused `not_found`.
+- **A flow over a create** writes each later step into the one create
+  of the resource the stage holds through the operation. A stage that
+  holds two, one staged through another door, is refused at the flow's
+  steps, naming both positions: open the flow without a stage. Its
+  confirm page still applies or discards it.
+- **A stage gone before Apply or Discard.** A stage that expired or was
+  discarded before its confirm page is posted is a page not found, as
+  the page is when it is drawn: the stage is read before any button's
+  handler runs.
+- **A local id in a form page's path** needs a route requirement that
+  admits a negative id; the entity example's `\d+` admits none, so its
+  staged creates are edited through the tool and the HTTP door.
 - **A delete in a workspace** is refused, code `access`
   ([above](#stages-and-workspaces)).
 - **Revisions at apply time.** An entity apply saves a new revision

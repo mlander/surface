@@ -42,12 +42,22 @@ final readonly class Stage {
    * @param array<string, mixed> $arguments
    *   The operation's parameters by name, raw, for the call it is handed
    *   to; empty when none was said.
+   * @param int|null $creating
+   *   The position of the create the call writes into, for a create
+   *   asked again through the stage; NULL for none. Internal: a flow
+   *   sets it (creating()), and code outside this module leaves it NULL.
    */
   public function __construct(
     public string $id,
     public int $owner,
     public ?string $label = NULL,
     public array $arguments = [],
+    /**
+     * The position of the create the call writes into, set by a flow.
+     *
+     * @internal
+     */
+    public ?int $creating = NULL,
   ) {}
 
   /**
@@ -61,7 +71,29 @@ final readonly class Stage {
    *   The stage, the arguments its own.
    */
   public function withArguments(array $arguments): self {
-    return new self($this->id, $this->owner, $this->label, $arguments);
+    return new self($this->id, $this->owner, $this->label, $arguments, $this->creating);
+  }
+
+  /**
+   * Gets the same stage for a create that writes into one it holds.
+   *
+   * A create names no thing, so a second create through the stage adds a
+   * second thing. A flow's later steps over a create write into the one
+   * its first step staged: ResourcesInterface::operation() builds that
+   * create's context again when the stage says its position here.
+   *
+   * @param int $position
+   *   The create's position in the stage.
+   *
+   * @return self
+   *   The stage, writing into that create.
+   *
+   * @internal
+   *   A flow sets it (OperationRoute::stageRequested()); code outside
+   *   this module does not call it.
+   */
+  public function creating(int $position): self {
+    return new self($this->id, $this->owner, $this->label, $this->arguments, $position);
   }
 
 }

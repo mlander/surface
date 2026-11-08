@@ -591,7 +591,7 @@ Refused. `docs/resources.md` says how each part works.
 | `read` | Current values: Edit a content type | `string $type` | no | `administer surface examples content types` | yes | default read of `update` (`surface_examples_node_type`) |
 
 - `create` reaches form `/admin/structure/types/surface-add (surface_examples_node_type.create)`, http `POST /surface-api/node.type`, tool `surface:node.type:create`, openapi `node.type:create:write`, react `/surface-react/node.type/create`.
-- `update` reaches form `/admin/structure/types/manage/{type}/surface-edit (surface_examples_node_type.update)`, http `PATCH /surface-api/node.type/{type}`, tool `surface:node.type:update`, openapi `node.type:update:write`, react `/surface-react/node.type/update`.
+- `update` reaches form `/admin/structure/types/manage/{type}/surface-flow (surface_examples_node_type.flow), /admin/structure/types/manage/{type}/surface-edit (surface_examples_node_type.update)`, http `PATCH /surface-api/node.type/{type}`, tool `surface:node.type:update`, openapi `node.type:update:write`, react `/surface-react/node.type/update`.
 - `read` reaches http `GET /surface-api/node.type/{type}`, tool `surface:node.type:read`, openapi `node.type:read:read`.
 
 - Altered by `Drupal\surface_examples_extras\Alter\NodeTypeAlter` (`surface_examples_extras`), in every operation.

@@ -1,0 +1,83 @@
+# The itinerary drawn over steps, one group a step, into a stage: what a
+# flow is checked against. Two flows hold and three are refused when the
+# route is matched, each saying why.
+
+# An update over its three groups in order.
+surface_stage_test.itinerary_flow:
+  path: '/surface-test/itinerary/{id}/flow'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'update'
+    _surface_flow: { steps: [where, when, who], label: 'Edit a trip' }
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# Refused: "guide" is drawn at the first step, before the "region" it is
+# refined by.
+surface_stage_test.itinerary_flow_reordered:
+  path: '/surface-test/itinerary/{id}/flow-reordered'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'update'
+    _surface_flow: { steps: [who, where, when] }
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# Refused: the create's required "day" has no default and is drawn at the
+# second step, and each step is validated as the whole create.
+surface_stage_test.itinerary_create_flow_split:
+  path: '/surface-test/itinerary/plan-split'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Plan a trip'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'create'
+    _surface_flow: { steps: [where, when, who] }
+
+# Refused: a flow over a delete, which takes no values over steps.
+surface_stage_test.itinerary_delete_flow:
+  path: '/surface-test/itinerary/{id}/cancel-flow'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Cancel a trip'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'delete'
+    _surface_flow: { steps: [where] }
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# A create whose first step draws every required key with no default.
+surface_stage_test.itinerary_create_flow:
+  path: '/surface-test/itinerary/plan'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Plan a trip'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'create'
+    _surface_flow: { steps: [when, where, who] }
+
+# The trip's own pages, with no flow: an edit and a cancel, which a stage
+# in the query writes into.
+surface_stage_test.itinerary_update:
+  path: '/surface-test/itinerary/{id}/edit'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'update'
+  requirements:
+    id: '[a-z0-9_-]+'
+
+surface_stage_test.itinerary_delete:
+  path: '/surface-test/itinerary/{id}/cancel'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Cancel a trip'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'delete'
+  requirements:
+    id: '[a-z0-9_-]+'

@@ -25,14 +25,16 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
  * A read-only operation other than the read of one thing writes nothing
  * and reads no one thing, so a stage does not apply to it either.
  *
- * The rule decides the three doors and prepare: the tool door offers the
+ * The rule decides the four doors and prepare: the tool door offers the
  * `stage` input, the OpenAPI document references the `SurfaceStage`
- * header and the HTTP door honors the header where this answers TRUE,
- * and the staged storage's prepare refuses a write `does_not_apply`
- * where it answers FALSE. Prepare alone also checks that the storage of
- * each routed child is transactional, and refuses the write
- * `does_not_apply` where one is not: the doors still offer the stage to
- * such a resource.
+ * header, the HTTP door honors the header and the operation form honors
+ * `?stage` in its query (OperationRoute::stageRequested()) where this
+ * answers TRUE; the form's route forbids a `?stage` saying
+ * `does_not_apply`, and the staged storage's prepare refuses a write
+ * `does_not_apply`, where it answers FALSE. Prepare alone also checks
+ * that the storage of each routed child is transactional, and refuses
+ * the write `does_not_apply` where one is not: the doors still offer the
+ * stage to such a resource.
  *
  * Decision: see
  * docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
