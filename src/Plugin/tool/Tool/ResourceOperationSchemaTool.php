@@ -75,20 +75,19 @@ final class ResourceOperationSchemaTool extends ResourceOperationToolBase {
    */
   protected function doExecute(array $values): ExecutableResult {
     try {
-      [$resource, $operation, $context] = $this->operation($values);
-      $stage = $this->stage($values, $this->arguments($values, $operation));
-      $refused = $stage === NULL ? NULL : $this->stageRefused($stage);
+      $staged = $this->staged($values);
     }
     catch (\InvalidArgumentException $e) {
       return $this->notFound($e);
     }
+    if ($staged instanceof ExecutableResult) {
+      return $staged;
+    }
+    [$resource, $operation, $context, $stage] = $staged;
     // Asked again here, as the write tool does: execute() is callable from
     // PHP without an access check.
     if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
       return $this->accessRefused($resource, $operation, $context);
-    }
-    if ($refused !== NULL) {
-      return $refused;
     }
     $built = $this->resources->build($resource->name(), $context);
     $keys = $built->getDefinitions()->toArray();

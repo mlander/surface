@@ -12,6 +12,7 @@ use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\ViolationSummary;
 use Drupal\surface\Resource\StageResource;
+use Drupal\surface\Staging\StagedStorage;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
@@ -192,12 +193,12 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
       return $definition;
     }
     try {
-      [$resource, $operation, $context] = $this->operation($values);
-      if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
+      $staged = $this->staged($values);
+      if ($staged instanceof ExecutableResult) {
         return $definition;
       }
-      $stage = $this->stage($values, $this->arguments($values, $operation));
-      if ($stage !== NULL && $this->stageRefused($stage) !== NULL) {
+      [$resource, , $context, $stage] = $staged;
+      if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
         return $definition;
       }
       return $this->operationInputs->values($resource, $this->resources->build($resource->name(), $context), $context, $stage);
@@ -344,14 +345,18 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * {@inheritdoc}
    */
   protected function doExecute(array $values): ExecutableResult {
+    // A stage is its owner's: another account's is refused before the
+    // thing is asked about, or anything is built.
     try {
-      [$resource, $operation, $context] = $this->operation($values);
-      $stage = $this->stage($values, $this->arguments($values, $operation));
-      $refused = $stage === NULL ? NULL : $this->stageRefused($stage);
+      $staged = $this->staged($values);
     }
     catch (\InvalidArgumentException $e) {
       return $this->notFound($e);
     }
+    if ($staged instanceof ExecutableResult) {
+      return $staged;
+    }
+    [$resource, $operation, $context, $stage] = $staged;
     // Asked again here, not only in checkAccess(): execute() is callable
     // from PHP without an access check, and this is the method that
     // writes. The same answer travels into the pipeline, which stops
@@ -359,11 +364,6 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     $access = $this->operationAccess($resource, $context, $this->currentUser);
     if (!$access->isAllowed()) {
       return $this->accessRefused($resource, $operation, $context);
-    }
-    // A stage is its owner's: another account's is refused before
-    // anything is built.
-    if ($refused !== NULL) {
-      return $refused;
     }
     $built = $this->resources->build($resource->name(), $context);
     $storage = $this->resources->storage($resource->name(), $context, $built, stage: $stage);
@@ -400,6 +400,12 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     // Decision: see docs/decisions.md#locked-at-the-top.
     return ExecutableResult::success(
       $this->withNotes(match (TRUE) {
+        // A thing the stage creates and the call removes was never stored:
+        // its create is gone from the stage, and nothing else is.
+        $operation->kind() === OperationDefinition::DELETE && $result->committed && $stage !== NULL && array_key_exists(StagedStorage::POSITION, $context->known) => $this->t('@label: the create staged in @stage was taken out of it; nothing was created or removed.', [
+          '@label' => (string) $operation->label,
+          '@stage' => $stage->id,
+        ]),
         // A staged removal is no removal: the stage holds it until apply.
         $operation->kind() === OperationDefinition::DELETE && $result->committed && $stage !== NULL => $this->t('@label: the removal was accepted and staged in @stage; nothing was removed.', [
           '@label' => (string) $operation->label,
@@ -409,8 +415,14 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
         $operation->kind() === OperationDefinition::DELETE && $result->committed => $this->t('@label: removed. The values it held are answered.', ['@label' => (string) $operation->label]),
         $operation->kind() === OperationDefinition::DELETE => $this->t('Dry run of @label: the removal was rehearsed, and nothing was removed. The values it holds are answered.', ['@label' => (string) $operation->label]),
         // A staged create is no create: the stage holds it until apply,
-        // which answers its id.
-        $operation->creates && $result->committed && $stage !== NULL => $this->t('@label: the values were accepted and staged in @stage; nothing is created until the stage is applied, which answers the new id.', [
+        // and a write in the stage names it by its address.
+        $operation->creates && $result->committed && $stage !== NULL && $storage instanceof StagedStorage => $this->t('@label: the values were accepted and staged in @stage; nothing is created until it is applied, and a write in the stage names it by @id.', [
+          '@label' => (string) $operation->label,
+          '@stage' => $stage->id,
+          '@id' => implode(' ', $storage->address()),
+        ]),
+        // Under a stage the values are compared with the staged view.
+        $result->committed && !$result->changed() && $stage !== NULL => $this->t('@label: the values were accepted, and they are what is staged in @stage, so nothing was written.', [
           '@label' => (string) $operation->label,
           '@stage' => $stage->id,
         ]),

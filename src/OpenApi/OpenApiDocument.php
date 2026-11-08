@@ -521,7 +521,7 @@ final class OpenApiDocument {
 
     [$method, $named] = $this->paths->writes($definition, $operation);
     $written = match (TRUE) {
-      $creates && $staged !== [] => (string) $this->t("The write: 201 with the created thing's Location, the envelope rebuilt and, under created, where it now lives; under the X-Surface-Stage header, the create is staged instead, 200, and nothing is created until the stage is applied: outputs hold no id and created is null. With dryRun, the same run stopped before anything is written, 200. A refusal is 422, nothing written."),
+      $creates && $staged !== [] => (string) $this->t("The write: 201 with the created thing's Location, the envelope rebuilt and, under created, where it now lives; under the X-Surface-Stage header, the create is staged instead, 200 with no Location, and nothing is created until the stage is applied: outputs.id is a negative local id, or the name the caller gave, which names the thing only with that stage, and created names the update that reaches it there. With dryRun, the same run stopped before anything is written, 200. A refusal is 422, nothing written."),
       $creates => (string) $this->t("The write: 201 with the created thing's Location, the envelope rebuilt and, under created, where it now lives. With dryRun, the same run stopped before anything is written, 200. A refusal is 422, nothing written."),
       $kind === OperationDefinition::READ => (string) $this->t('The run: the values checked, and nothing written at all. A refusal is 422.'),
       $kind === OperationDefinition::DELETE => (string) $this->t('The removal, with no body, held by If-Match to the stored values its ETag named (412 when they changed): 200 with the values the thing held, and no envelope: the thing is gone, or, under the X-Surface-Stage header, its removal is staged and nothing is removed until the stage is applied. With dryRun, the same run stopped before anything is removed. A refusal is 422, nothing removed.'),
@@ -530,7 +530,7 @@ final class OpenApiDocument {
     $answers = [
       '200' => $this->answer(
         match (TRUE) {
-          $creates && $staged !== [] => (string) $this->t('A dry run: the result, nothing written. A create staged under the X-Surface-Stage header: the result, then outputs, contract and created, which is null; nothing is created until the stage is applied.'),
+          $creates && $staged !== [] => (string) $this->t('A dry run: the result, nothing written. A create staged under the X-Surface-Stage header: the result, then outputs, its id the local id, contract and created, which names the thing by its local id in that stage; nothing is created until the stage is applied.'),
           $creates => (string) $this->t('A dry run: the result, nothing written.'),
           $kind === OperationDefinition::DELETE => (string) $this->t('The result, its values what the thing held; contract and created are null.'),
           default => (string) $this->t('The result, then outputs, contract and created.'),
@@ -624,8 +624,10 @@ final class OpenApiDocument {
       [$path, $names, $url] = $this->paths->template($definition, $operation, $custom, $isSchema);
       $cacheability->addCacheableDependency($url);
       foreach ($calls as $verb => $call) {
+        // A local id names a staged create only on a call that takes the
+        // stage header: never the full schema's.
         $call['parameters'] = [
-          ...$this->operationParameters($operation, $names, $built),
+          ...$this->operationParameters($operation, $names, $built, $staged !== [] && in_array($staged[0], $call['parameters'] ?? [], TRUE)),
           ...($call['parameters'] ?? []),
         ];
         if ($call['parameters'] === []) {
@@ -842,25 +844,34 @@ final class OpenApiDocument {
    * @param \Drupal\surface\SurfaceInterface $built
    *   The resource, built as the operation's tool listing is, whose keys a
    *   parameter of the same name is.
+   * @param bool $staged
+   *   Whether the call takes the stage header, so an identity in its path
+   *   may name a thing a stage creates.
    *
    * @return list<array>
    *   The parameter objects.
    */
-  protected function operationParameters(OperationDefinition $operation, array $inPath, SurfaceInterface $built): array {
+  protected function operationParameters(OperationDefinition $operation, array $inPath, SurfaceInterface $built, bool $staged = FALSE): array {
     $parameters = [];
     foreach ($operation->parameters as $parameter) {
       $path = in_array($parameter->name, $inPath, TRUE);
       $key = $built->getDefinition($parameter->name);
       $said = $key === NULL ? '' : (string) ($key->getDescription() ?? $key->getLabel() ?? '');
+      $description = match (TRUE) {
+        $said !== '' => $said,
+        $path => (string) $this->t('The identity of the thing: the @name the operation takes.', ['@name' => $parameter->name]),
+        default => (string) $this->t('The @name the operation takes.', ['@name' => $parameter->name]),
+      };
+      // Decision: see
+      // docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it.
+      if ($staged && $path && !$operation->creates) {
+        $description = $this->joined($description, (string) $this->t('With the X-Surface-Stage header, a negative integer names a thing that stage creates.'));
+      }
       $parameters[] = [
         'name' => $parameter->name,
         'in' => $path ? 'path' : 'query',
         'required' => $path || !$parameter->optional,
-        'description' => match (TRUE) {
-          $said !== '' => $said,
-          $path => (string) $this->t('The identity of the thing: the @name the operation takes.', ['@name' => $parameter->name]),
-          default => (string) $this->t('The @name the operation takes.', ['@name' => $parameter->name]),
-        },
+        'description' => $description,
         'schema' => ['type' => 'string'],
       ];
     }
@@ -1092,7 +1103,7 @@ final class OpenApiDocument {
         'schema' => ['type' => 'string'],
       ],
       'Location' => [
-        'description' => (string) $this->t('Where the created thing is now read; absent when no operation of the resource addresses it, and under the X-Surface-Stage header.'),
+        'description' => (string) $this->t('Where the created thing is now read; absent when no operation of the resource addresses it, and under the X-Surface-Stage header, since a staged create is read only with the header.'),
         'schema' => ['type' => 'string', 'format' => 'uri'],
       ],
     ];
@@ -1391,7 +1402,7 @@ final class OpenApiDocument {
             'properties' => [
               'outputs' => $object + $this->said($this->t('The declared outputs, as storage reads them back after the write.')),
               'contract' => $either('Contract') + $this->said($this->t('On a write, the envelope rebuilt from what is stored now.')),
-              'created' => $either('Created') + $this->said($this->t('On a create that was written, where the created thing now lives; null under the X-Surface-Stage header, which creates nothing until the stage is applied.')),
+              'created' => $either('Created') + $this->said($this->t('On a create that was written, where the created thing now lives; under the X-Surface-Stage header, where it lives in that stage, its parameters its local id, nothing being created until the stage is applied.')),
               ResourceApiController::DRY_RUN => ['type' => 'boolean', 'const' => TRUE] + $this->said($this->t('On a dry run only: nothing was written.')),
             ],
             'required' => ['outputs', 'contract', 'created'],

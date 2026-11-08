@@ -80,8 +80,8 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function operation(string $resource, string $operation, array $arguments = []): OperationContext {
-    return $this->inner->operation($resource, $operation, $arguments);
+  public function operation(string $resource, string $operation, array $arguments = [], ?Stage $stage = NULL): OperationContext {
+    return $this->inner->operation($resource, $operation, $arguments, $stage);
   }
 
   /**

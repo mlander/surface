@@ -63,14 +63,16 @@ is stored then; a difference refuses that write as a conflict.
 `changes` answers `items` and `total`. Each item is one write:
 `position` (the order apply makes it in), `resource`, `operation`,
 `kind`, `parameters` (a list of `{name, value}`, each value as a
-string), `changed` (the top-level keys moved, as JSON Pointers:
+string; for a create, its local id or the name its caller gave),
+`changed` (the top-level keys moved, as JSON Pointers:
 `/title`) and `staged` (when it was first staged). It lists no values: a
 value is read through the thing's own read tool or `GET`, with the
 stage named, which leaves out secrets and keys the account may not see
 as every read does.
 
 `apply` answers `applied`, the same list with `changed` a boolean and,
-once written, `id`, the id each write landed on as a string. Its
+once written, `id`, the id each write landed on as a string; a create's
+`parameters` still carry its local id beside it. Its
 `changes` is `['']`: a structure with no keys has no document to
 compare, so the pipeline answers the whole call as the one change, as a
 delete does. `apply` declares `destructive` and is not idempotent.
@@ -82,8 +84,8 @@ delete does. `apply` declares `destructive` and is not idempotent.
 Every write, read and narrowing tool of a resource whose storage can be
 staged ([below](#how-a-storage-opts-in)) takes one more input, `stage`,
 last (on a write tool, right after `dry_run`): the stage's id, from
-`surface:surface.stage:create`. Empty, its default, means permanent
-storage. The stage's own six tools take none, nor does the tool of a
+`surface:surface.stage:create`. Empty, its default, means no stage:
+permanent storage. The stage's own six tools take none, nor does the tool of a
 config resource or of a resource kept in State.
 
 ```
@@ -96,20 +98,29 @@ drush tool:run surface:entity.content:node.page:update --uid=1 --json \
   stage, holds them), `changes` against the stage's view (what this
   call moved since the last staged write), and the message "Edit Basic
   page: the values were accepted and staged in 9033…." A write that
-  moves nothing says nothing was written, as without a stage. A create
-  whose storage gives the id answers no `id`, and every create says
-  nothing is created until the stage is applied
+  moves nothing says the values are what is staged, so nothing was
+  written: "Edit Basic page: the values were accepted, and they are what
+  is staged in 9033…, so nothing was written." A create
+  whose storage gives the id answers a local id, `id: -1`, which names
+  the thing only with this stage, and every create says nothing is
+  created until it is applied
   ([A staged create](#a-staged-create)).
-- A read answers the thing as it stands in the stage, and without the
-  input what is stored.
+- A read answers the thing as it stands in the stage, and says the
+  values staged in the stage were read; without the input, what is
+  stored.
 - The refined `values` input defaults each key to the staged view, so
   a caller reading the listing after naming the stage sees what it
   staged.
 - A narrowing tool narrows over the staged view.
 
 An id that names no stage is the caller's input to correct, code
-`not_found`. Another account's stage is refused, code `access`, before
-anything is built, and the message names the stage.
+`not_found`. A call refuses another account's stage, code `access`,
+before the thing the parameters name is asked about or anything is
+built, and the message names the stage. The Tool API runner (`drush
+tool:run`, MCP) asks the tool's access check before the call, and that
+check builds without a stage the account may not use: where the thing
+would refuse without it, as `id: -1` does, the runner answers its fixed
+refusal, `access_denied`, which does not name the stage.
 
 ### The `X-Surface-Stage` header
 
@@ -133,9 +144,11 @@ X-Surface-Stage: 90330186-6d51-43bf-a4cd-d7f144e63c1e
   that view's fingerprint.
 - `POST` on the collection, a create, keeps the whole document in the
   stage ([A staged create](#a-staged-create)). The answer is 200, not
-  201: `committed: true`, `outputs` with no `id` storage gives,
-  `contract` the create's envelope, `created: null`, no `Location` and
-  no `ETag`. Nothing is created until the stage is applied.
+  201: `committed: true`, `outputs.id` the local id (`-1`), `contract`
+  the create's envelope, `created` naming where the thing lives in the
+  stage, `{resource, operation: "update", parameters: {id: -1}}`, no
+  `Location` and no `ETag`. Nothing is created until the stage is
+  applied.
 - `DELETE`, a delete, keeps the removal in the stage
   ([A staged delete](#a-staged-delete)). The answer is the one every
   delete answers: `committed: true`, `changes: [""]`, the values the
@@ -150,8 +163,9 @@ X-Surface-Stage: 90330186-6d51-43bf-a4cd-d7f144e63c1e
 - Every answer stays `Cache-Control: no-store, private`.
 
 A header that names no stage is 404. Another account's stage is 403,
-answered by the route's access check before anything is built. The
-header on a path of the stage itself is 400: a stage is not staged.
+answered by the route's access check before the thing the path names is
+asked about or anything is built. The header on a path of the stage
+itself is 400: a stage is not staged.
 
 The OpenAPI document describes the header once, as the parameter
 `SurfaceStage`, and references it from the envelope, the narrowing and
@@ -189,6 +203,20 @@ if ($resources->access('surface.stage', $update, $account)->isAllowed()) {
 
 `withArguments()` hands the operation's parameters by name, which the
 stage records beside the write so apply can build the operation again.
+
+To write to a thing the stage creates, hand the stage to `operation()`
+too, as the doors do: the local id then names the staged create, and
+the context is that create's
+([A staged create](#a-staged-create)):
+
+```php
+$context = $resources->operation('entity.content:node.page', 'update', ['id' => -1], $stage);
+$built = $resources->build('entity.content:node.page', $context);
+$storage = $resources->storage('entity.content:node.page', $context, $built, $account, $stage);
+$result = $pipeline->submit($built, ['title' => ['value' => 'Renamed']], $storage);
+```
+
+Without the stage, `-1` names nothing (`NamesNothingException`).
 
 A read is a run with no values: the stage's `read` resolves to the
 update's context, so the run writes nothing and answers what is stored
@@ -291,43 +319,101 @@ drush tool:run surface:entity.content:node.page:create --uid=1 --json \
 - **Whole.** A staged create is validated and rehearsed as a real
   create, at staging and again at apply: every required key, the
   entity's own validation and, for an id the caller names, the
-  storage's check that no stored thing has it. Its one write sends what
-  a create requires; there is no partial create to finish in a later
-  call
+  storage's check that no stored thing has it. Its first write sends
+  what a create requires; later writes in the stage change it
   (why: [decision](decisions.md#a-staged-write-validates-as-a-real-write)).
 - **The entry.** An entry of kind `create`, added at the stage's next
   position: no arguments (a create takes no parameters), no token
   (nothing is stored to compare), the whole document the pipeline
-  accepted, and every key changed. `changes` lists it with `kind:
-  "create"` and `parameters: []`.
-- **Not named again in its stage.** A create names no stored thing, so
-  it matches no entry and no later write matches it. Two creates are
-  two entries, through one resource or through `entity.content:node.page`
-  and `entity.content:node`, which are two new things, not one thing
-  through two resources.
+  accepted, every key changed, and its address.
+- **The address, its local id.** Written once, at the create's first
+  write: for an id storage gives on save, the negative of the entry's
+  position, `-1` for the first entry, `-3` for the third, an integer as
+  the `id` output is typed; for an id the caller names, that name.
+  Positions are never reused, so a local id is never reused in its
+  stage. It names the thing only together with its stage.
+- **The answer.** `committed: true` (the stage holds the create),
+  `changes` every key of the document, `outputs.id` the local id (or the
+  name the caller gave), and the message "Add Basic page: the values
+  were accepted and staged in 9033…; nothing is created until it is
+  applied, and a write in the stage names it by -1." A dry run of a
+  create has no address yet, and answers no `id`.
+- **Writing to it.** An update with the stage and `id: -1` is built as
+  the create's own context again, under the update's id, and merges into
+  the create: the entry keeps its position, kind and address, its values
+  become the merged document and its changed keys the union. The merged
+  document is validated and rehearsed whole, as a create, so an update
+  that clears a required key is refused `required`. A write that moves
+  nothing answers `changed: false` and `changes: []`, writes no record,
+  resets no expiry, and says the values are what is staged, so nothing
+  was written. A thing a stage creates computes its computed keys from
+  the merged sources on every write, as apply will; a key computed
+  unless sent keeps a value sent for it. The answer's
+  `outputs.id` is `-1`, for a dry run too.
+- **Reading it.** A read with the stage and `id: -1` answers the merged
+  values, its computed keys among them, and the refined `values` of the
+  update tool default to them.
+- **Dropping it.** A delete with the stage and `id: -1` takes the create
+  out of the stage: no entry, nothing in `changes`, nothing to undo, and
+  the next position unchanged, so the next create is still `-3` after
+  `-2`. Its message: "Delete Basic page: the create staged in 9033… was
+  taken out of it; nothing was created or removed." After that, `-1`
+  names nothing, as without the stage: the stage holds no create at it,
+  so its context is built as with no stage, and the owner finds no node
+  `-1`. The tool's call answers `not_found` ("Not found: …"); the Tool
+  API runner answers its fixed `access_denied` and HTTP its fixed 403,
+  since the entity resources declare no operation permission (an
+  account holding a resource's permission hears not found). Only a
+  write whose context was built before the drop and prepared after it
+  is refused by the stage, code `not_found`: "The stage no longer
+  creates this thing: its create was taken out of the stage."
+- **`changes` and `applied`.** `changes` lists the create with `kind:
+  "create"` and its address as its parameters, `[{name: "id", value:
+  "-1"}]`, or the name the caller gave. `applied` pairs the same
+  parameters with `id`, the id storage gave, as a string.
+- **Over HTTP**, `POST` with the header answers 200, not 201, since
+  nothing was created: `outputs.id` the local id, `contract` the
+  create's envelope, `created` `{resource, operation: "update",
+  parameters: {id: -1}}`, the update that reaches it in the stage, no
+  `Location` (a `Location` has to resolve without a header) and no
+  `ETag`. `GET` and `PATCH` at `/-1` with the header answer 200 with
+  the staged view's `ETag`, and `If-Match` compares staged with staged;
+  `POST .../schema` at `/-1` with the header answers 200 narrowed over
+  the staged view, with no `ETag`, as a narrowing has none without a
+  stage; `DELETE` at `/-1` with the header answers 200.
+  `/-1` without the header is the route's fixed refusal, 403.
+- **Access.** A write, a read and a delete of `-1` are asked as the
+  bundle's create access, the access of the thing they are about: an
+  account that may create pages but not edit them reads back and
+  changes its own staged create. (Node's create access asks `access
+  content` too, so the account holds it.) The stage's own access is asked
+  first.
 - **A name the caller gives.** Where the caller names the thing (an
-  entity type whose id is a string with no default), a second staged
+  entity type whose id is a string with no default), a later write in
+  the stage names it by that name, and the name is fixed: a write that
+  sends another is refused, code `no_such_choice`. A second staged
   create of the same name through any resource of the same storage
   class is refused at the name, code `taken`: "A … named first is
   created in this stage already, at position 1." A name already stored
   is refused by the storage, as without a stage; one stored by another
   path after staging is refused at apply, at `/writes/<position>/id`,
   code `taken`.
-- **The answer.** `committed: true` (the stage holds the create),
-  `changes` every key of the document, `outputs` with no `id` (storage
-  gives the id when it saves, so there is none until apply; a name the
-  caller gave is answered), and the message "Add Basic page: the values were
-  accepted and staged in 9033…; nothing is created until the stage is
-  applied, which answers the new id."
-- **Over HTTP**, `POST` with the header answers 200, not 201, since
-  nothing was created: `outputs` as the tool answers them, `contract`
-  the create's envelope, `created: null`, no `Location` and no `ETag`.
-- **Apply** rehearses the create as a real one, create access asked
-  again for the owner, and creates it in its place in position order.
-  `applied` lists it with `kind: "create"`, `parameters: []` and `id`,
-  the new id as a string. A rollback leaves nothing created.
+- **What is refused.** A reference to `-1` from another value, staged or
+  not, code `valid_reference`, "This entity (node: -1) cannot be
+  referenced.": the reference check reads permanent storage and sees no
+  stage. `-1` through another resource of the same entity type
+  (`entity.content:node` after a create through
+  `entity.content:node.page`) names nothing: the address belongs to the
+  resource the create was staged through. `-1` without the stage names
+  nothing. A rename of a caller-named create is refused, as above.
+- **Apply** rehearses each create as a real one from its whole merged
+  document, create access asked again for the owner, and creates it
+  once, in its place in position order. A rollback leaves nothing
+  created.
 
-(why: [decision](decisions.md#a-staged-create-is-whole-and-rehearsed-as-a-create))
+(why: [decision](decisions.md#a-staged-create-is-whole-and-rehearsed-as-a-create),
+[decision](decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it),
+[decision](decisions.md#a-stage-decides-the-context-of-a-thing-it-creates))
 
 ## A staged delete
 
@@ -469,7 +555,8 @@ Apply runs in two passes, as every write does: `prepare()` rehearses,
    position order: the operation is built again from its recorded
    arguments, its access is asked again for the owner, what is stored
    now is compared with the token, and the pipeline runs dry over the
-   keys the stage moved. Every refusal is filed under
+   keys the stage moved (a create, which has no token, over its whole
+   merged document). Every refusal is filed under
    `/writes/<position>` (a conflict or an access refusal at
    `/writes/<position>`, a value at `/writes/<position>/<key>`) and all
    of them are answered together, so one answer names every write that
@@ -536,10 +623,9 @@ access meets core's own refusal, an exception from its predelete hook,
   or an entity query reads permanent storage.
 - **One translation.** The entity example writes the default
   translation, and a stage inherits that.
-- **A staged create cannot be named again in its stage**: it has no
-  stored id until apply, so nothing in the stage can read, change or
-  remove it, and nothing can refer to it; discard the stage to change
-  it.
+- **A local id names a thing only with its stage**: no `Location` is
+  sent for it, it cannot be referenced, and `-1` without the header is
+  refused.
 - **An id that names nothing on the stage's own paths.** The stage's
   operations declare no permission, so at the tool door's access check
   (`drush tool:run`, MCP) and the HTTP route's, an id that names no

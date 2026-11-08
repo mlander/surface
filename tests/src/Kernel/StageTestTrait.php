@@ -89,6 +89,32 @@ trait StageTestTrait {
   }
 
   /**
+   * Builds an operation through a stage, and its storage in it.
+   *
+   * As a door builds one: the stage handed to the operation too, so an
+   * update, a read or a delete of a thing the stage creates is built as
+   * that create's context.
+   *
+   * @param string $stage
+   *   The stage's id.
+   * @param string $resource
+   *   The resource.
+   * @param string $operation
+   *   The operation.
+   * @param array $arguments
+   *   Its arguments, by name.
+   *
+   * @return array{0: \Drupal\surface\SurfaceInterface, 1: \Drupal\surface\Pipeline\SurfaceStorageInterface}
+   *   The built resource and the staged storage.
+   */
+  protected function through(string $stage, string $resource, string $operation, array $arguments = []): array {
+    $staged = $this->stages()->named($stage)->withArguments($arguments);
+    $context = $this->resources()->operation($resource, $operation, $arguments, $staged);
+    $built = $this->resources()->build($resource, $context);
+    return [$built, $this->resources()->storage($resource, $context, $built, NULL, $staged)];
+  }
+
+  /**
    * Writes values into a stage, through the pipeline.
    *
    * @param string $stage

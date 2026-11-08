@@ -22,7 +22,9 @@ use Drupal\surface_stage_test\Structure\LedgerTouchStructure;
  * database write with no cache, which a transaction rolls back whole. Its
  * slug is computed from its title on every write that changes the title,
  * so a write applied from a stage runs a compute guard inside the stage
- * storage's guard. `touch` is an update over a structure that declares no
+ * storage's guard; its handle from the title it is created with, and kept
+ * after, so a create the stage merges later writes into computes it from
+ * the merged title. `touch` is an update over a structure that declares no
  * keys: the call is the whole write.
  */
 #[Resource('stage_test.ledger',
@@ -80,6 +82,8 @@ final class LedgerResource implements ResourceInterface {
     $inputs->addList('tags', 'string', t('Tags'));
 
     $inputs->compute('slug', 'string', t('Slug'), from: ['title'], using: LedgerSlug::class, when: Compute::ON_CHANGE);
+
+    $inputs->compute('handle', 'string', t('Handle'), from: ['title'], using: LedgerSlug::class, when: Compute::ON_CREATE);
   }
 
 }

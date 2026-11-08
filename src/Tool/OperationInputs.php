@@ -310,7 +310,7 @@ final class OperationInputs {
       self::STAGE => new InputDefinition(
         data_type: 'string',
         label: $this->t('Stage'),
-        description: $this->t('The id of a stage, from surface:surface.stage:create. With it, the write is kept in the stage until the stage is applied, and a read or a schema answers the thing as it stands there. Empty: permanent storage.'),
+        description: $this->t('The id of a stage, from surface:surface.stage:create. With it, the write is kept in the stage until the stage is applied, and a read or a schema answers the thing as it stands there. A create staged with it answers a negative local id, which names the thing only with this stage. Empty: no stage, permanent storage.'),
         required: FALSE,
         default_value: '',
       ),
@@ -395,7 +395,9 @@ final class OperationInputs {
    * what its storage loads now and, as its listing does, requires none,
    * each key the resource requires saying so in its description; one that
    * creates has nothing stored, and keeps the declared defaults and the
-   * keys the resource requires.
+   * keys the resource requires. Which is read off the operation, so a
+   * write to a thing a stage creates, whose context creates, defaults to
+   * what the stage holds for it.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -416,7 +418,9 @@ final class OperationInputs {
     foreach ($resource->operations as $declared) {
       $operation = $declared->id === $context->id ? $declared : $operation;
     }
-    $stored = $context->creates ? NULL : $this->resources->storage($resource->name(), $context, $built, stage: $stage)->load($built);
+    // Decision: see
+    // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+    $stored = ($operation->creates ?? $context->creates) ? NULL : $this->resources->storage($resource->name(), $context, $built, stage: $stage)->load($built);
     $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context), $operation, stored: $stored), $built);
     if ($stored !== NULL) {
       // Decision: see
@@ -499,7 +503,7 @@ final class OperationInputs {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($resource->name(), $operation->id);
       $built = $this->listed($resource, $context, $declared);
-      $values = $stored && !$context->creates && $this->inputDefinitions->anyDeferred($built)
+      $values = $stored && !$operation->creates && $this->inputDefinitions->anyDeferred($built)
         ? $this->resources->storage($resource->name(), $context, $built)->load($built)
         : NULL;
       $map = $this->map($resource, $built, $this->knownIdentity($resource, $context), $operation, !$input, $values);

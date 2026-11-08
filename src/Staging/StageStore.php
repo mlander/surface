@@ -9,6 +9,7 @@ use Drupal\Core\KeyValueStore\KeyValueExpirableFactoryInterface;
 use Drupal\Core\KeyValueStore\KeyValueStoreExpirableInterface;
 use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\surface\ResourceBuild\NamesNothingException;
+use Drupal\surface\Storage\StageStorage;
 
 /**
  * Where the stages are kept: one record per stage, until it expires.
@@ -111,6 +112,73 @@ final class StageStore {
       return NULL;
     }
     return $record;
+  }
+
+  /**
+   * Finds the create a stage holds of a resource, by the address given it.
+   *
+   * The create entry of the resource in the stage's open record whose
+   * every address key is among the arguments and equal to it as text, so
+   * `-3`, `"-3"` and a caller's name `abc` each name what was staged under
+   * them. One record read.
+   *
+   * @param \Drupal\surface\Staging\Stage $stage
+   *   The stage.
+   * @param string $resource
+   *   The resource's id.
+   * @param array<string, mixed> $arguments
+   *   The operation's arguments, by name.
+   *
+   * @return array|null
+   *   The entry, or NULL when the stage is gone or applied, or creates no
+   *   thing of the resource under these arguments.
+   *
+   * @internal
+   */
+  public function created(Stage $stage, string $resource, array $arguments): ?array {
+    $record = $this->read($stage->id);
+    if ($record === NULL || $record['status'] !== StageStorage::OPEN) {
+      return NULL;
+    }
+    foreach ((array) $record['writes'] as $write) {
+      $address = $write['kind'] === 'create' && $write['resource'] === $resource ? self::address($write) : [];
+      if ($address === []) {
+        continue;
+      }
+      foreach ($address as $key => $value) {
+        $given = $arguments[$key] ?? NULL;
+        if (!is_scalar($given) || (string) $given !== (string) $value) {
+          continue 2;
+        }
+      }
+      return $write;
+    }
+    return NULL;
+  }
+
+  /**
+   * Reads the address a create entry was given, by identity key.
+   *
+   * Written once, at the create's first commit: `-position` for each
+   * identity key its context knew to be empty, the name the caller gave
+   * for each it did not know. An entry staged before addresses were
+   * written has none, and is read as `-position` for each key its context
+   * knew to be empty.
+   *
+   * @param array $write
+   *   A create entry.
+   *
+   * @return array<string, int|string>
+   *   The address.
+   *
+   * @internal
+   */
+  public static function address(array $write): array {
+    if (isset($write['address']) && is_array($write['address'])) {
+      return $write['address'];
+    }
+    $empty = array_filter((array) ($write['known'] ?? []), static fn (mixed $value): bool => $value === NULL);
+    return array_map(static fn (): int => -(int) $write['position'], $empty);
   }
 
   /**
