@@ -317,6 +317,18 @@ caller sends that.
             ],
             "description": "Accept, validate and prepare the values without writing anything.",
             "title": "Dry run"
+        },
+        "stage": {
+            "oneOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "description": "The id of a stage, from surface:surface.stage:create. With it, the write is kept in the stage until the stage is applied, and a read or a schema answers the thing as it stands there. A create staged with it answers a negative local id, which names the thing only with this stage. Empty: no stage, permanent storage.",
+            "title": "Stage"
         }
     },
     "additionalProperties": false,

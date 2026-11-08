@@ -72,8 +72,9 @@ as every read does.
 
 `apply` answers `applied`, the same list with `changed` a boolean and,
 once written, `id`, the id each write landed on as a string; a create's
-`parameters` still carry its local id beside it. Its
-`changes` is `['']`: a structure with no keys has no document to
+`parameters` still carry its local id beside it. A thing with no id, a
+settings object, has empty `parameters` in both lists and no `id`.
+Apply's own `changes` is `['']`: a structure with no keys has no document to
 compare, so the pipeline answers the whole call as the one change, as a
 delete does. `apply` declares `destructive` and is not idempotent.
 
@@ -81,12 +82,14 @@ delete does. `apply` declares `destructive` and is not idempotent.
 
 ### The `stage` input
 
-Every write, read and narrowing tool of a resource whose storage can be
-staged ([below](#how-a-storage-opts-in)) takes one more input, `stage`,
-last (on a write tool, right after `dry_run`): the stage's id, from
+Every write, read and narrowing tool of an operation a stage applies to
+([below](#where-a-stage-applies)) takes one more input, `stage`, last
+(on a write tool, right after `dry_run`): the stage's id, from
 `surface:surface.stage:create`. Empty, its default, means no stage:
-permanent storage. The stage's own six tools take none, nor does the tool of a
-config resource or of a resource kept in State.
+permanent storage. A content entity, a config object and a config
+entity can be staged. The stage's own six tools take none, nor does the
+tool of a resource kept in State, a listing, or an operation that names
+no one thing, such as the venues' reorder.
 
 ```
 drush tool:run surface:entity.content:node.page:update --uid=1 --json \
@@ -108,9 +111,12 @@ drush tool:run surface:entity.content:node.page:update --uid=1 --json \
 - A read answers the thing as it stands in the stage, and says the
   values staged in the stage were read; without the input, what is
   stored.
-- The refined `values` input defaults each key to the staged view, so
-  a caller reading the listing after naming the stage sees what it
-  staged.
+- For an operation with parameters, the refined `values` input defaults
+  each key to the staged view, so a caller reading the listing after
+  naming the stage sees what it staged. A settings object's `configure`
+  has no parameters and no refined input: its `values` input describes
+  what is stored, and the staged view is read through its read tool with
+  `stage`.
 - A narrowing tool narrows over the staged view.
 
 An id that names no stage is the caller's input to correct, code
@@ -125,8 +131,8 @@ refusal, `access_denied`, which does not name the stage.
 ### The `X-Surface-Stage` header
 
 The HTTP door takes the same id in a request header,
-`X-Surface-Stage` (`ServedPaths::STAGE_HEADER`), on every path of a
-resource that can be staged. Not a query parameter, which a listing
+`X-Surface-Stage` (`ServedPaths::STAGE_HEADER`), on every call a stage
+applies to. Not a query parameter, which a listing
 reads as a value, and not a path segment, which is the thing's
 identity.
 
@@ -162,14 +168,22 @@ X-Surface-Stage: 90330186-6d51-43bf-a4cd-d7f144e63c1e
   ignores the header: the full schema reads nothing stored.
 - Every answer stays `Cache-Control: no-store, private`.
 
-A header that names no stage is 404. Another account's stage is 403,
-answered by the route's access check before the thing the path names is
-asked about or anything is built. The header on a path of the stage
-itself is 400: a stage is not staged.
+The route's access check (`ServedOperationAccessCheck`) reads the
+header's stage before the controller runs, so the answers come in this
+order. Another account's stage is 403 on any call, answered before the
+thing the path names is asked about or anything is built. The header on
+a path of the stage itself is 400: a stage is not staged. The header on
+any other call a stage does not apply to, a read included (a resource
+kept in State, the venues' listing or reorder), is 422 with one
+violation at no path, code `does_not_apply`: "A stage does not apply to
+this operation.", whether or not the stage exists. The controller
+answers both (`ResourceApiController::served()`), before it reads the
+stage the header names. A header that names no stage is 404 only on a
+call a stage applies to.
 
 The OpenAPI document describes the header once, as the parameter
 `SurfaceStage`, and references it from the envelope, the narrowing and
-every write of each resource that can be staged.
+every write of each operation a stage applies to.
 
 ### From PHP
 
@@ -242,16 +256,42 @@ naming the class, and the HTTP door as a server error.
 
 (why: [decision](decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context))
 
+## Where a stage applies
+
+One rule, `Staging\Stageable`, says where a stage applies. It decides
+the three doors and prepare: the tool's `stage` input, the OpenAPI
+`SurfaceStage` header, the HTTP door's header and the staged storage's
+prepare. Prepare alone also checks that the storage of each routed child
+is transactional, and refuses the write, code `does_not_apply`, where
+one is not. A resource that routes a child to such a storage still
+offers the stage input and the header, and is refused at the write. A
+stage applies to a call when both hold:
+
+- **The storage opts in.** The resource's declared storage class
+  implements `Pipeline\TransactionalStorageInterface`
+  ([below](#how-a-storage-opts-in)).
+- **The call names a thing.** It creates, or its resource has no
+  identity keys (a settings object is one thing), or its parameters name
+  at least one of them. The venues' reorder writes several venues and
+  names none, so no stage applies to it. A read-only operation other
+  than the read of one thing, a listing, reads no one thing.
+
+(why: [decision](decisions.md#one-rule-says-where-a-stage-applies-at-every-door))
+
 ## How a storage opts in
 
 A stage takes a write only for a resource whose storage class
 implements `Pipeline\TransactionalStorageInterface`; for any other
-resource no tool takes the input, and a write named into a stage
-anyway (through the header, or from PHP) is refused at prepare, code
+resource no tool takes the input, the header is 422, and a write named
+into a stage anyway from PHP is refused at prepare, code
 `does_not_apply`, naming the class. The interface is a promise:
 `commit()`, and `delete()` where the storage also implements
-`DeletableStorageInterface`, write through the database connection
-alone, so the transaction apply opens undoes the write whole.
+`DeletableStorageInterface`, write their permanent state through the
+database connection alone, so the transaction apply opens undoes the
+write whole; what they put in caches or in memory is undone in
+`rolledBack()`. The content entity storage of the entity example
+implements it, and so do the two config storages, `ConfigObjectStorage`
+and `ConfigEntityStorage`, for every subclass.
 
 Its one method, `rolledBack()`, is called after an apply rolls back, on
 the storage of every write whose commit had started. A storage drops
@@ -269,8 +309,10 @@ public function rolledBack(): void {
 }
 ```
 
-A storage that caches nothing leaves the body empty, as the stage
-fixture's row in a database key-value collection does:
+A config storage leaves it empty: apply itself resets what config keeps
+beside the database ([Config in a stage](#config-in-a-stage)). A storage
+that caches nothing leaves the body empty too, as the stage fixture's
+row in a database key-value collection does:
 
 <!-- excerpt: tests/modules/surface_stage_test/src/Storage/LedgerStorage.php -->
 
@@ -283,20 +325,32 @@ public function rolledBack(): void {
 [Storage: Opting into staging](storage.md#opting-into-staging) says
 what the promise rules out.
 
-## What is refused for now
+## What is refused
 
 Each is refused at the staged write's prepare, a violation of the whole
 call:
 
-- **A resource that holds a secret**, code `does_not_apply`: a stage
-  keeps its values in the clear, so a secret would sit unsealed in the
-  record. Refused whether the secret is sent or not.
-- **Config**, and anything kept in State: their storages do not
-  implement `TransactionalStorageInterface`, since config and State keep
-  caches beside the database that a rollback leaves stale.
+- **Anything kept in State**, code `does_not_apply`: its storage does
+  not implement `TransactionalStorageInterface`, since State keeps a
+  cache beside the database that a rollback leaves stale. The message
+  names the storage class.
+- **A routed child a stage cannot hold**, code `does_not_apply`: a
+  resource whose child is routed to a storage that does not implement
+  `TransactionalStorageInterface`, since apply commits the child in the
+  same transaction. The message names the child's key and its storage
+  class. No shipped resource routes a child under a storage a stage
+  takes.
+- **An operation that names no thing**, code `does_not_apply`: one that
+  creates nothing, of a resource with identity keys, whose parameters
+  name none of them, such as `event.venue:reorder`. The message names
+  the operation and the identity keys.
 - **A second resource over one thing**, code `conflict`: a page staged
   through `entity.content:node.page` cannot be staged again through
-  `entity.content:node` in the same stage. One thing is also written
+  `entity.content:node` in the same stage, and the catering staged
+  through `event.catering` cannot be staged again through
+  `event.catering.method`, which keeps the same config object: two
+  resources of one storage class whose contexts know no identity are one
+  thing. One thing is also written
   through one operation per stage, except that a delete replaces what
   the stage holds for it ([A staged delete](#a-staged-delete)).
 - **A write to a thing the stage removed**, a second delete among them,
@@ -305,6 +359,114 @@ call:
 - **The stage's own storage**: a stage is not written into a stage.
 - **A write into a stage that was applied**, code `does_not_apply`, and
   one that expired or was discarded, code `not_found`.
+
+## Config in a stage
+
+A config object (`ConfigObjectStorage`) and a config entity
+(`ConfigEntityStorage`) are staged as any thing is: the write is
+validated against the config schema and rehearsed at staging and again
+at apply, a read through the stage answers the staged view, and apply
+saves the config in position order. A config object is one thing with
+no id: `changes` and `applied` list it with `parameters: []`, and
+`applied` gives it no `id`. A config entity is named by its id, and a
+staged create by the name its caller gave, or by the machine name
+computed from its label. A key the stored object leaves out and the
+write prepares empty, such as `third_party_settings` where no module's
+keys are stored yet, is not a key the stage moved, so apply does not
+send it. A settings object's `configure` tool has no refined `values`
+input, since the operation takes no parameters: the input describes
+what is stored, and the staged view is read through the read tool with
+`stage`.
+
+**What apply resets after a rollback.** A rollback undoes the config
+table's rows, but not what config keeps beside them in the running
+process and in the cache bin. While apply's transaction is open, an
+internal subscriber (`surface.config_writes`) records the name of every
+config that is saved, deleted or renamed, by a config storage, a
+subclass that saves more, a dependent core saves or deletes in a cascade,
+or a hook. After the rollback, apply releases the transaction, so the
+cache tags the writes invalidated are discarded, and then, for those
+names:
+
+- deletes each name's item from the `cache.config` bin, which also tells
+  every web server's fast cache (APCu) that its copy is out of date;
+- resets the config factory's objects of each name and the cached
+  storage's lists by prefix;
+- empties the entity memory cache, and clears the cached bundles and
+  field definitions, which a bundle entity's save rebuilt;
+- resets State's cache.
+
+Config objects other code already holds keep what they were handed.
+
+**The schema-change limit.** On a database without transactional
+schema changes, such as MySQL and MariaDB, a staged write whose commit
+changes the database's schema commits the transaction at once: a field
+storage created or deleted, or a bundle delete that removes the bundle's
+fields and with them a field storage. PostgreSQL and SQLite roll schema
+changes back. Where the database cannot, the writes at and before the
+failing one stand when a later write fails, and the write that changed
+the schema may itself stand in part. Apply still runs the resets, marks
+the stage `voided`, and answers the failure as a `RuntimeException`
+whose message starts "Writes at and before position N were made
+permanent by a schema change and could not be rolled back; the stage is
+voided. Discard it.", N the position that failed. A voided stage holds
+no writes; its `applied` lists the writes that completed and its
+`voided` the position. Apply and every staged write into it are refused,
+code `does_not_apply`, naming the position; only `delete` acts on it.
+When every write succeeds after such a change, the writes are permanent
+already and the stage is applied as usual. None of the shipped resources
+a stage takes makes such a write: the field resources keep their own
+storages, which a stage does not take.
+
+**The header on a call a stage does not apply to** is 422 at the HTTP
+door ([The `X-Surface-Stage` header](#the-x-surface-stage-header)).
+
+(why: [decision](decisions.md#config-is-staged-and-apply-resets-what-its-rollback-leaves-behind),
+[decision](decisions.md#two-identity-less-entries-of-one-storage-class-are-one-thing))
+
+## Secrets in a stage
+
+A resource that declares a secret can be staged (`event.webhook`'s
+`api_key`, `event.mailer`'s credential). The stage's record holds the
+whole document the pipeline merged, the secrets stored for the thing
+among them, so it seals them:
+
+- **Sealed with the site's codec.** Before the record is written, each
+  string at a secret path is encrypted with the `surface.secret_codec`
+  service, whose key the shipped codec derives from the site's hash
+  salt. The entry records the paths it sealed, under `sealed`, each a
+  list of segments: `[["token"]]`, a list's position as a string. NULL
+  and the empty string are kept as they are.
+- **Opened only by those paths.** A read through the stage by its owner
+  opens the recorded paths, so a later write that sends no secret keeps
+  the staged one; every door leaves the secret out of what it answers,
+  as every read does. Apply opens them before it sends the values. A
+  value that only looks sealed, at a key that is not secret, is never
+  opened.
+- **`changes` carries paths only.** A staged secret is listed as
+  `/token` in `changes` and in a dry run, never with its value.
+- **A cleared secret.** A write that sends the clear marker
+  (`SurfacePipelineInterface::CLEAR_SECRET`) leaves NULL at the path,
+  which at apply would mean "keep what is stored". The entry records the
+  path under `cleared`, and apply sends the clear marker there, so the
+  secret is removed. A later write that sets the secret again takes the
+  path out of `cleared`. Only a key the write holds is a clear: every
+  parent on the path is a map or list in the write's values and the key
+  is present with nothing in it. A secret removed with its parent, a map
+  set to NULL or a list that shrank, is no clear, and apply builds no
+  parent again.
+- **The hash salt.** A stage sealed under a hash salt the site no longer
+  has cannot be opened. A read through it leaves the sealed secret out,
+  as every read does; a staged write into it and its apply are refused,
+  code `does_not_apply`, "The stage … was sealed under another hash salt
+  and cannot be opened; discard it." Discard such a stage and stage the
+  writes again.
+
+Permanent storage is unchanged: a resource's storage keeps its secrets
+as it always did, in the clear unless its layout seals them
+([Storage: Secrets at the codec](storage.md#secrets-at-the-codec)).
+
+(why: [decision](decisions.md#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths))
 
 ## A staged create
 
@@ -564,8 +726,13 @@ Apply runs in two passes, as every write does: `prepare()` rehearses,
 2. **Commit.** Under the stage's lock, the record and every token are
    checked again; then each rehearsed write is committed in position
    order, in one database transaction. If one throws, the transaction
-   rolls back, each storage whose write had started is told
-   (`rolledBack()`), and the stage stays open.
+   rolls back, what config kept beside the database for the config the
+   writes touched is reset ([Config in a stage](#config-in-a-stage)),
+   each storage whose write had started is told (`rolledBack()`), and
+   the stage stays open. On a database without transactional schema
+   changes, a write that changed the schema made the writes at and
+   before it permanent: the stage is marked `voided` instead
+   ([Config in a stage](#config-in-a-stage)).
 
 **Conflict is what the `ETag` is.** Any change to the thing's carried
 keys since it was staged refuses that write, code `conflict`, "what is
@@ -622,7 +789,13 @@ access meets core's own refusal, an exception from its predelete hook,
   only through the doors that name the stage. A page, a listing, a View
   or an entity query reads permanent storage.
 - **One translation.** The entity example writes the default
-  translation, and a stage inherits that.
+  translation, and a stage inherits that; a config object's translations
+  are not staged.
+- **A schema change at apply**, on a database without transactional
+  schema changes, such as MySQL and MariaDB, makes the writes at and
+  before the failing one permanent and voids the stage; discard it
+  ([Config in a stage](#config-in-a-stage)). PostgreSQL and SQLite roll
+  schema changes back.
 - **A local id names a thing only with its stage**: no `Location` is
   sent for it, it cannot be referenced, and `-1` without the header is
   refused.
@@ -631,8 +804,10 @@ access meets core's own refusal, an exception from its predelete hook,
   (`drush tool:run`, MCP) and the HTTP route's, an id that names no
   stage gets the door's one fixed refusal, as for any operation that
   declares none; a tool called from PHP, which runs no access check,
-  answers `not_found`. A stage named through the `stage` input or the
-  header that names nothing is not found.
+  answers `not_found`. A stage named through the `stage` input that
+  names nothing is not found; one named through the header is 404 on a
+  call a stage applies to, and 422 on any other
+  ([The `X-Surface-Stage` header](#the-x-surface-stage-header)).
 - **A required key after a staged delete.** The pipeline validates a
   write before the storage sees it, and a load through the stage
   answers no values for a thing it removed. So an update of that thing

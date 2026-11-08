@@ -167,6 +167,8 @@ class StageStoreTest extends SurfaceKernelTestBase {
       $this->container->get('database'),
       $this->container->get('uuid'),
       $this->container->get('logger.channel.surface'),
+      $this->container->get('surface.config_writes'),
+      $this->container->get('surface.secret_codec'),
       $this->container->get('string_translation'),
     );
     $account = $this->container->get('current_user');

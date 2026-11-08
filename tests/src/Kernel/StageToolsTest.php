@@ -24,12 +24,14 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * destructive, and says so in both documents; discarding is destructive;
  * listing takes the stage's id and an empty map, and apply, over a
  * structure with no keys, says it takes no values. Every write, read and
- * narrowing tool of a resource whose storage implements
- * TransactionalStorageInterface takes `stage`, the write tools right
- * after `dry_run`, optional with the empty string as its default, which
- * the `values` refiner depends on; the stage's own tools, a config
- * resource's and a State fixture's take none. The stage a call names is
- * asked for before the thing its parameters name.
+ * narrowing tool of an operation a stage applies to (its storage
+ * implements TransactionalStorageInterface, a config object's and a
+ * config entity's among them, and it names one thing) takes `stage`, the
+ * write tools right after `dry_run`, optional with the empty string as
+ * its default, which the `values` refiner depends on; the stage's own
+ * tools, a State fixture's, the venues' listing and their reorder take
+ * none. The stage a call names is asked for before the thing its
+ * parameters name.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -149,7 +151,7 @@ class StageToolsTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests every tool of a staged storage takes `stage`, and no other does.
+   * Tests every tool a stage applies to takes `stage`, and no other does.
    */
   public function testEveryOtherToolTakesStageAfterDryRun(): void {
     $definitions = $this->container->get('plugin.manager.tool')->getDefinitions();
@@ -158,10 +160,16 @@ class StageToolsTest extends SurfaceKernelTestBase {
       'surface:entity.content:node:',
       'surface:stage_test.ledger:',
       'surface:stage_test.vault_note:',
+      'surface:my_module.settings:',
+      'surface:event.venue:create',
+      'surface:event.venue:update',
+      'surface:event.venue:delete',
+      'surface:event.venue:read',
     ];
     $unstaged = [
       'surface:surface.stage:',
-      'surface:event.venue:',
+      'surface:event.venue:list',
+      'surface:event.venue:reorder',
       'surface:tool_test.vault:',
       'surface:tool_test.logbook:',
     ];

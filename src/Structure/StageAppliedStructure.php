@@ -46,7 +46,7 @@ final class StageAppliedStructure implements StructureInterface, DefinesOutputsI
         ->setRequired(TRUE))
       ->setPropertyDefinition('id', DataDefinition::create('string')
         ->setLabel(t('Id'))
-        ->setDescription(t('The id of the thing written, as text; for a create, the id storage gave it when the stage was applied, where `parameters` carry the local id the stage named it by; absent for a dry run, which writes nothing.')));
+        ->setDescription(t('The id of the thing written, as text; for a create, the id storage gave it when the stage was applied, where `parameters` carry the local id the stage named it by; absent for a dry run, which writes nothing, and for a thing with no id, such as a settings object.')));
     $outputs->addList('applied', $item, t('Applied writes'))
       ->setDescription(t('Each staged write, in the order apply made them, or a dry run would.'))
       ->setRequired(TRUE);

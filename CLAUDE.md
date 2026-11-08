@@ -363,11 +363,31 @@ the record of the rework that brought the module to the pattern.
   prepare is the storage's, commit writes the record. `changes` lists
   the writes; `apply` (`Storage\StageStorage`) rehearses them all in
   prepare and makes them in commit, in order, in one transaction, and
-  keeps the record marked applied. For now a stage takes creates,
-  updates and deletes of a resource whose storage class implements
+  keeps the record marked applied. A stage takes creates, updates and
+  deletes where one rule, `Staging\Stageable`, says a stage applies,
+  asked at every door: the resource's storage class implements
   `Pipeline\TransactionalStorageInterface` (a transaction undoes its
   writes whole; `rolledBack()` drops what it cached after an apply rolls
-  back), any other refused at prepare; a create is an entry of kind
+  back), the content entity storage and both config storages among
+  them, every routed child's does too (prepare alone checks that), and
+  the operation names a thing
+  (it creates, the resource has no identity keys, or its parameters name
+  one; `event.venue:reorder` names none), any other refused at prepare,
+  the header on such a call 422 (`docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door`);
+  after a rolled back apply, `Staging\ConfigWrites`
+  (`surface.config_writes`) resets what config kept beside the database
+  for every config name the apply wrote, and on a database without
+  transactional schema changes (MySQL, MariaDB) a schema change makes
+  the writes at and before the failing one permanent: apply marks the
+  stage `voided` (`StageStorage::VOIDED`), which takes no write and no
+  apply, only a discard
+  (`docs/decisions.md#config-is-staged-and-apply-resets-what-its-rollback-leaves-behind`);
+  two identity-less entries of one storage class are one thing
+  (`docs/decisions.md#two-identity-less-entries-of-one-storage-class-are-one-thing`);
+  every secret in an entry is sealed with `surface.secret_codec`, its
+  path recorded under `sealed`, a cleared one under `cleared`, opened by
+  those paths alone at a staged read and at apply (`Staging\StagedSecrets`,
+  `docs/decisions.md#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths`); a create is an entry of kind
   `create`, always appended whole with no token, a caller-named name
   unique per storage class in the stage (`taken`), and named by a local
   id, its `address`: `-position` for an id storage gives (`id: -3` in
@@ -382,7 +402,7 @@ the record of the rework that brought the module to the pattern.
   `not_found` (`docs/staging.md#a-staged-delete`)
   (`docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection`,
   `docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner`).
-  The doors name one only for such a resource: the **stage input**,
+  The doors name one only where a stage applies: the **stage input**,
   `stage` (`OperationInputs::STAGE`), last on every write tool (after
   `dry_run`), read tool and narrowing tool, default `''` so the `values`
   refiner still fires, resolved by `ResourceOperationToolBase::stage()`
@@ -394,7 +414,8 @@ the record of the rework that brought the module to the pattern.
   `ServedOperations::fromTarget()` (404 naming nothing), another
   account's 403 at `ServedOperationAccessCheck`, before the thing's
   context, 400 on the stage's own
-  paths, ignored by `GET .../schema`, OpenAPI's `SurfaceStage`; a read,
+  paths, 422 on a call a stage does not apply to, ignored by `GET
+  .../schema`, OpenAPI's `SurfaceStage`; a read,
   a narrowing and a write's `contract` and `ETag` are the staged view
   (`docs/staging.md`,
   `docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context`).
@@ -737,7 +758,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2034, Assertions: 49052, Errors: 0, Failures: 0, Skipped: 3. Classes: 284 of 284, 8 at a time, browser classes 4.
+phpunit: Tests: 2053, Assertions: 50385, Errors: 0, Failures: 0, Skipped: 3. Classes: 286 of 286, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -757,8 +778,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1923, Assertions: 44696, Skipped: 3, Deprecations: 130. Classes:
-233, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1942, Assertions: 46029, Deprecations: 130, Skipped: 3. Classes:
+235, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1029,7 +1050,11 @@ src/Staging/             The stage's record store (StageStore), the
                          staged-storage wrapper (StagedStorage), the
                          Stage it is handed, and StageRaceException,
                          public, which a staged write, an apply or a
-                         stage operation throws on a race.
+                         stage operation throws on a race; the one
+                         rule of where a stage applies (Stageable),
+                         the sealing of a record's secrets
+                         (StagedSecrets) and what records and resets
+                         the config an apply wrote (ConfigWrites).
 src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
                          walks the frames, PropertySchema writes each key,
                          Conditionals the if/then, DocumentHead the top;

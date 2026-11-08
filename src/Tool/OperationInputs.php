@@ -15,7 +15,6 @@ use Drupal\surface\Contract\Choices;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SettledCacheability;
 use Drupal\surface\Pipeline\Outbound;
-use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\OperationParameter;
@@ -23,6 +22,7 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Http\ServedPaths;
 use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\Stageable;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\ListOutputDefinition;
@@ -44,8 +44,8 @@ use Drupal\tool\TypedData\OutputDefinition;
  *   converts them, less the identity keys the operation knows, which
  *   are locked and so are not inputs at all.
  * - **`dry_run`**, which stops the pipeline after prepare.
- * - **`stage`**, last, for a resource whose storage can be staged: the
- *   id of a stage the write is kept in until the stage is applied.
+ * - **`stage`**, last, for an operation a stage applies to: the id of a
+ *   stage the write is kept in until the stage is applied.
  * - Outputs: the accepted `values`, as the read tool would answer them,
  *   whether anything was `committed`, and the resource's own outputs,
  *   from defineOutputs().
@@ -117,9 +117,9 @@ final class OperationInputs {
   /**
    * The input naming a stage the call writes into or reads through.
    *
-   * Taken by every write, read and narrowing tool of a resource whose
-   * storage implements TransactionalStorageInterface, and reserved: no
-   * operation parameter takes the name.
+   * Taken by every write, read and narrowing tool of an operation a stage
+   * applies to (Stageable::operation()), and reserved: no operation
+   * parameter takes the name.
    *
    * Decision: see
    * docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
@@ -227,7 +227,7 @@ final class OperationInputs {
    *
    * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
    *   The parameters' inputs, then `values` and `dry_run`, then `stage`
-   *   for a resource whose storage can be staged.
+   *   for an operation a stage applies to.
    *
    * @throws \LogicException
    *   When a parameter cannot be an input (it has a name the resource
@@ -256,7 +256,7 @@ final class OperationInputs {
       required: FALSE,
       default_value: FALSE,
     );
-    return $inputs + $this->stageInput($resource);
+    return $inputs + $this->stageInput($resource, $operation);
   }
 
   /**
@@ -269,22 +269,24 @@ final class OperationInputs {
    *
    * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
    *   One input per parameter, exactly as the write tool declares it, then
-   *   `stage` for a resource whose storage can be staged.
+   *   `stage` for an operation a stage applies to.
    *
    * @throws \LogicException
    *   When a parameter cannot be an input, as inputs() says.
    */
   public function parameters(ResourceDefinition $resource, OperationDefinition $operation): array {
-    return $this->parameterInputs($resource, $operation, $this->neutral($resource, $operation, TRUE)) + $this->stageInput($resource);
+    return $this->parameterInputs($resource, $operation, $this->neutral($resource, $operation, TRUE)) + $this->stageInput($resource, $operation);
   }
 
   /**
-   * Gets the `stage` input, for a resource whose storage can be staged.
+   * Gets the `stage` input, for an operation a stage applies to.
    *
-   * Only where the resource's declared storage class implements
-   * TransactionalStorageInterface, so the input appears where a stage can
-   * hold the write: never on the stage's own tools, a config resource's
-   * or a State-backed one's.
+   * Only where Stageable::operation() says a stage applies: the
+   * resource's declared storage class implements
+   * TransactionalStorageInterface (a content entity, a config object, a
+   * config entity), and the operation names one thing. So the input is
+   * never on the stage's own tools, a State-backed resource's, or an
+   * operation over several things such as the venues' reorder.
    *
    * Its default is the empty string, not NULL: the Tool API fires a
    * refiner only when every input it depends on is non-NULL
@@ -293,17 +295,18 @@ final class OperationInputs {
    * `values` on every call without a stage.
    *
    * Decision: see
-   * docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+   * docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
    *
    * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
-   *   The input, by name; empty for a resource whose storage cannot be
-   *   staged.
+   *   The input, by name; empty where a stage does not apply.
    */
-  protected function stageInput(ResourceDefinition $resource): array {
-    if ($resource->storage === NULL || !is_a($resource->storage, TransactionalStorageInterface::class, TRUE)) {
+  protected function stageInput(ResourceDefinition $resource, OperationDefinition $operation): array {
+    if (!Stageable::operation($resource, $operation)) {
       return [];
     }
     return [
@@ -1122,7 +1125,7 @@ final class OperationInputs {
    *
    * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
    *   One input per parameter, exactly as the write tool declares it, then
-   *   `values`, then `stage` for a resource whose storage can be staged.
+   *   `values`, then `stage` for an operation a stage applies to.
    */
   public function schemaInputs(ResourceDefinition $resource, OperationDefinition $operation): array {
     return $this->parameterInputs($resource, $operation, $this->neutral($resource, $operation, TRUE)) + [
@@ -1132,7 +1135,7 @@ final class OperationInputs {
         required: FALSE,
         property_definitions: [],
       ),
-    ] + $this->stageInput($resource);
+    ] + $this->stageInput($resource, $operation);
   }
 
   /**

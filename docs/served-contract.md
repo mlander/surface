@@ -1547,7 +1547,7 @@ refused.
 | `?dryRun=true` | Run through prepare and stop before commit: nothing is written, and the answer is the one a write would give, with `x-surface-dry-run: true`. Always 200, never a `Location`. It was `/validate`. |
 | `If-Match: "<ETag>"` | Write only if what is stored is still what that `ETag` named; 412 otherwise, nothing written. `*` matches whatever is stored. Opt-in: with none, the last write wins ([below](#if-match)). Checked on a dry run too. |
 | `X-Surface-Stale: /room, /ticket/price` | The stale paths the envelope named that the body sends empty: each stands for the stored value. |
-| `X-Surface-Stage: <id>` | The stage the write is kept in until the stage is applied, on a resource whose storage can be staged; `contract` and the `ETag` are then the staged view's, and `If-Match` is held to it. The envelope and the narrowing take it too ([Staging](staging.md#the-x-surface-stage-header)). |
+| `X-Surface-Stage: <id>` | The stage the write is kept in until the stage is applied, on a call a stage applies to; `contract` and the `ETag` are then the staged view's, and `If-Match` is held to it. The envelope and the narrowing take it too. On any other call it is 422, `does_not_apply` ([Staging](staging.md#the-x-surface-stage-header)). |
 | `X-CSRF-Token` | The session's token, with the session cookie. |
 
 It answers the one result shape every door answers a run in
@@ -1589,7 +1589,7 @@ same at both doors, so a program calling the API branches on them
 | 410 | A contract 2 path ([gone](#gone)). |
 | 412 | `If-Match` no longer names what is stored ([conflict](#conflict)). |
 | 415 | A body of a media type the method does not take; a `PATCH`'s answer names them in `Accept-Patch`. |
-| 422 | The values were refused ([refused](#refused)). |
+| 422 | The values were refused ([refused](#refused)), or the call carries `X-Surface-Stage` and a stage does not apply to it. |
 
 What storage rehearsed is not served: it holds what the caller may not
 see, so a dry run answers the accepted document and its verdict
@@ -1645,7 +1645,7 @@ theme no longer has can still be removed.
 | `?dryRun=true` | Rehearse the removal and remove nothing; `x-surface-dry-run: true`. |
 | `If-Match: "<ETag>"` | Remove only if what is stored is still what that `ETag` named; 412 otherwise. |
 | `X-CSRF-Token` | The session's token, with the session cookie. |
-| `X-Surface-Stage` | Keep the removal in that stage, where the resource's storage can be staged; the thing is removed when the stage is applied ([Staging](staging.md#a-staged-delete)). |
+| `X-Surface-Stage` | Keep the removal in that stage, where a stage applies to the delete; the thing is removed when the stage is applied ([Staging](staging.md#a-staged-delete)). |
 
 It answers 200 with the one result: `values` the values the thing held,
 `changes` `[""]`, the empty pointer, the whole thing, `committed` and
@@ -1859,8 +1859,8 @@ so a site grants them to the roles it chooses. The document is open.
   `x-surface-idempotent`, `x-surface-destructive` and
   `x-surface-creates`. `dryRun` is a query parameter; `If-Match`,
   `X-Surface-Stale` and `X-CSRF-Token` header parameters, and
-  `X-Surface-Stage` (`SurfaceStage`) on a resource whose storage can be
-  staged; the read
+  `X-Surface-Stage` (`SurfaceStage`) on a call a stage applies to
+  ([Staging: Where a stage applies](staging.md#where-a-stage-applies)); the read
   answers `ETag` and `Link`, a written create `Location`. Every answer
   carries the `Contract-Version` header; every error is `ProblemDetails`.
 - **Components.** Each operation's full schema, as `emitFull()` writes

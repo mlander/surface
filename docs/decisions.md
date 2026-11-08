@@ -4400,29 +4400,36 @@ one: it keeps nothing between requests but a session cookie.
 - **Not the private temp store.** It reads the owner from the current
   user and the session, which nothing an operation runs may read
   ([Nothing an operation runs reads the request](#nothing-an-operation-runs-reads-the-request)).
-- **What a stage can hold for now.** Creates, updates and deletes to a
+- **What a stage can hold.** Creates, updates and deletes to a
   resource whose storage class implements `Pipeline\TransactionalStorageInterface`,
-  the storage's promise that its commit writes through the database
-  connection alone, so the transaction apply opens undoes it whole: the
-  entity example's content entity storage, the stage fixture's row of a
-  key-value collection in the database. A storage is refused by what its
-  class does not declare, never by a list of classes (the resource's own
-  storage class; a routed child's is not checked yet): a list of what to
-  refuse could not hold, since any storage may save config or write
-  State in its own code (State keeps a cache a rollback leaves stale), or
-  change a table's schema (which MySQL commits at once). Refused at
-  prepare, each a violation of the whole call, code `does_not_apply`: a
-  storage class that does not implement the
-  interface (the stage's own, the config storages until config staging,
-  a storage in State), and a resource that holds a secret (a stage keeps
-  values in the clear). One stored thing reached through two resources
+  the storage's promise that its commit writes its permanent state
+  through the database connection alone, so the transaction apply opens
+  undoes it whole, and that what it puts in caches or memory is undone
+  in `rolledBack()`: the entity example's content entity storage, the
+  config storages, the stage fixture's row of a key-value collection in
+  the database. A storage is refused by what its class does not declare,
+  never by a list of classes (the resource's own storage class and every
+  routed child's): a list of what to refuse could not hold, since any
+  storage may write State in its own code (State keeps a cache a
+  rollback leaves stale), or change a table's schema (which MySQL commits
+  at once). Refused at prepare, each a violation of the whole call, code
+  `does_not_apply`: a storage class that does not implement the
+  interface (the stage's own, a storage in State), a routed child's that
+  does not, and an operation that names no thing
+  ([One rule says where a stage applies, at every door](#one-rule-says-where-a-stage-applies-at-every-door)).
+  One stored thing reached through two resources
   is refused, code `conflict`, and a thing is written through one
-  operation per stage. When apply rolls back, it calls `rolledBack()` on
-  the storage of every write whose commit had started, the last first,
-  so each drops what it cached beside the database (the entity
+  operation per stage. When apply rolls back, it resets what config kept
+  beside the database for the config it wrote, then calls `rolledBack()`
+  on the storage of every write whose commit had started, the last
+  first, so each drops what it cached beside the database (the entity
   storage's cache of what it saved); what hooks did beside the database
   is theirs. *Closed 2026-11-07:* the allow-list to settle before a door
-  takes a stage input is this interface.
+  takes a stage input is this interface. *Amended 2026-11-08:* config is
+  staged
+  ([Config is staged, and apply resets what its rollback leaves behind](#config-is-staged-and-apply-resets-what-its-rollback-leaves-behind)),
+  and so is a resource that holds a secret, sealed in the record
+  ([A secret is sealed in the stage record by its recorded paths](#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths)).
 - **Every write of a record takes the stage's lock.** A staged write's
   commit, and the stage's create, update, apply and delete, each take
   the lock named for the stage. The writes that change a record already
@@ -4742,7 +4749,9 @@ arguments, which apply builds the operation again from.
 *Built 2026-11-07, with the doors.* Two doors take a stage, and only
 for a resource whose declared storage class implements
 `Pipeline\TransactionalStorageInterface`, so a stage is offered where it
-can hold the write:
+can hold the write (*amended 2026-11-08:* only where one rule says a
+stage applies, which also asks that the operation name a thing,
+[One rule says where a stage applies, at every door](#one-rule-says-where-a-stage-applies-at-every-door)):
 
 - **The tool door.** The input `stage` (`OperationInputs::STAGE`), a
   string, optional, last on every write tool (right after `dry_run`),
@@ -4852,6 +4861,179 @@ refused, code `does_not_apply`.
 (`Storage\StageStorage`, `SurfacePipeline::submit()`,
 `Staging\StageRaceException`, `EmptyStructureTest`, `StageApplyTest`,
 `PipelineGuardTest`)
+
+### Config is staged, and apply resets what its rollback leaves behind
+
+Decided 2026-11-08. `ConfigObjectStorage` and `ConfigEntityStorage`
+implement `Pipeline\TransactionalStorageInterface`, so a stage takes a
+write to a config object or a config entity, and every subclass's. The
+config table's rows go through the database connection apply's
+transaction holds, so a rollback undoes them. What it does not undo is
+what config keeps beside them: the config factory's objects, the cached
+storage's lists by prefix, the `cache.config` bin (a memory backend in a
+kernel test, a fast APCu layer over the database on a live site, Redis
+or Memcache where a site sets one), the entity memory cache, the bundle
+and field definitions a bundle entity's save rebuilt, and State's cache.
+
+- **Apply resets it, not the storage.** An internal subscriber,
+  `Staging\ConfigWrites` (`surface.config_writes`), records the name of
+  every config saved, deleted or renamed while apply's transaction is
+  open. After a rollback apply releases the transaction, so the cache tag
+  invalidations core held until it ended are discarded, then deletes
+  each name from `cache.config` (after forgetting the fast backend's
+  last write time, so the delete marks every APCu copy out of date),
+  resets each name in the config factory, empties the entity memory
+  cache, clears the cached bundles and field definitions, and resets
+  State's cache; then it tells each storage `rolledBack()`. The config
+  storages' `rolledBack()` is empty. Why: a storage knows only the name
+  it saved, while a commit also saves what a subclass adds (a content
+  type's base field overrides), what core saves or deletes in a cascade
+  on a delete, and what a hook saves; recording at the config layer
+  covers all of them, and adds no method to the interface.
+- **A schema change cannot be rolled back, and voids the stage.** On a
+  database without transactional schema changes, such as MySQL and
+  MariaDB, a write whose commit changes the database's schema (a field
+  storage created or deleted, a bundle delete that removes fields)
+  commits the transaction at once, and a later rollback only warns;
+  PostgreSQL and SQLite roll schema changes back. Apply checks the
+  connection is still in its transaction before it rolls back; when it
+  is not, it runs the same resets, marks the stage `voided` (its writes
+  cleared, `applied` the writes that completed, `voided` the position
+  that failed) and throws a `RuntimeException` that starts "Writes at
+  and before position N were made permanent by a schema change and
+  could not be rolled back; the stage is voided. Discard it.", the
+  write's throwable its previous. "At and before": the write at N may
+  itself have made part of its change. Why voided and not open: an
+  open stage would rehearse its creates again on a retry, which carry
+  no token, and make them twice. A voided stage refuses apply and every
+  staged write, code `does_not_apply`, naming the position; only a
+  discard acts on it. When every write succeeds after such a change, the
+  writes are permanent already: apply skips the commit, which would only
+  warn, resets nothing and marks the stage applied. No shipped resource
+  a stage takes makes such a write; the field resources keep their own
+  storages, which a stage does not take.
+- **Recorded before core's listeners.** `Config::save()` writes the
+  storage and the cache before it dispatches the save event, and a
+  listener may throw after that, as the schema checker does on a test
+  site at priority 255. The subscriber listens at 1024, so the name is
+  recorded first.
+- **An empty key the stored object leaves out did not move.** A config
+  storage prepares `third_party_settings: []` where nothing is mounted
+  yet; counted as moved, apply sent it, and an alter's mount under it
+  (the keys example's on the webhook) was refused as empty. A key one
+  side leaves out and the other holds as NULL or an empty map is not
+  among the keys a staged write moved.
+- **Not undone.** Config objects other code already holds, and what a
+  hook or a subscriber did outside the database. A config entity's uuid
+  lookup in a kernel test, which the kernel keeps in a memory key-value
+  store, stays as the rolled back write left it: no core API rebuilds it.
+
+(`Staging\ConfigWrites`, `Storage\StageStorage::replay()`,
+`Storage\ConfigObjectStorage::rolledBack()`,
+`Storage\ConfigEntityStorage::rolledBack()`, `StagedConfigTest`)
+
+### A secret is sealed in the stage record by its recorded paths
+
+Decided 2026-11-08. A resource that declares a secret can be staged.
+A stage entry holds the whole document the pipeline merged, the secrets
+stored for the thing among them, so before the record is written each
+string at a secret path (`Outbound::secrets()`, the deep tree, a list's
+items under `@each`) is encrypted with the `surface.secret_codec`
+service, an envelope a caller sent wrapped again, NULL and the empty
+string kept, and the entry records the paths it sealed under `sealed`,
+a list of paths, each a list of segments, a list position as a string.
+A read through the stage and apply open exactly those paths.
+
+- **Never by the look of a value.** Opening every string that looks like
+  an envelope would let a caller place one at a key that is not secret,
+  have apply open it and the storage keep the secret in the clear.
+- **Compared in the clear.** Encryption is not deterministic, so the keys
+  a write moved are compared before it seals, and a write that merges
+  into a staged create opens the entry first.
+- **A cleared secret is recorded.** A write that sends the clear marker
+  leaves NULL at the path, which apply would read as "keep what is
+  stored"; a secret path empty after the write where the view it merged
+  over held a value is recorded under `cleared`, joined across writes
+  and left by a write that sets it again, and apply sends the marker
+  there. Keep on empty never leaves a held secret empty otherwise. Only
+  a key the write holds is a clear: every parent on the path an array
+  in its values and the key present. A secret removed with its parent
+  (a map set to NULL, a list that shrank) is no clear, and apply builds
+  no parent again.
+- **The record's version stays 1.** An entry with no `sealed` has
+  nothing sealed, so a record written before this reads as it did.
+- **A codec that cannot open the record refuses.** A hash salt changed
+  since staging makes `decrypt()` throw `SecretCodecException`. A read
+  through the stage leaves the sealed paths out, as every read leaves a
+  secret out, and a staged write into it and apply are refused, code
+  `does_not_apply`: "The stage … was sealed under another hash salt and
+  cannot be opened; discard it." Why not throw: a 500 tells the caller
+  nothing it can act on, and the discard is the one remedy.
+- **The stage is the first sealed place.** A resource's own storage
+  keeps its secrets as it did: in the clear unless its layout seals them
+  ([Storage: Secrets at the codec](storage.md#secrets-at-the-codec)).
+
+(`Staging\StagedSecrets`, `Staging\StagedStorage`,
+`Storage\StageStorage::rehearse()`, `StagedSecretsTest`)
+
+### One rule says where a stage applies, at every door
+
+Decided 2026-11-08. `Staging\Stageable` answers whether a stage
+applies, and the tool door (`OperationInputs::stageInput()`), the
+OpenAPI document (`SurfaceStage`), the HTTP door and the staged
+storage's prepare ask it. A stage applies when the resource's declared
+storage class implements `TransactionalStorageInterface` and the call
+names a thing: it creates, or its resource declares no identity keys,
+or its parameters name at least one of them. A read-only operation other
+than the read of one thing, a listing, reads no one thing.
+
+- **An operation that names no thing.** The venues' reorder writes
+  several venues and its context knows no id: an entry for it would
+  match every entry of the resource and record no venue. Its tool takes
+  no `stage`, and a write named into a stage from PHP is refused at
+  prepare, code `does_not_apply`, naming the operation and the identity
+  keys. The rule reads the operation's parameter names, which the tool
+  door, the document and the staged storage all have, so the three doors
+  and prepare agree by construction; `StagedConfigTest` asks each door
+  for every operation of its site. Prepare alone also checks that each
+  routed child's storage is transactional (below), so a resource that
+  routes a child to one that is not still offers the stage at the doors
+  and is refused at the write.
+- **A header the call cannot honor is 422.** Before, the HTTP door read
+  the header on every path and answered a read through it. Now a request
+  with `X-Surface-Stage` on a call a stage does not apply to, a read
+  included, answers 422 with one violation at no path, code
+  `does_not_apply`, "A stage does not apply to this operation.", from
+  `ResourceApiController::served()`, beside the 400 on the stage's own
+  paths, before the stage is read.
+- **A routed child.** A child routed to a storage of its own commits with
+  its parent at apply, in the same transaction, so prepare refuses the
+  write when a routed child's storage class does not implement the
+  interface, naming the child (`StorageAdapter::routedStorageClasses()`).
+  No shipped resource routes a child under a storage a stage takes.
+
+(`Staging\Stageable`, `Tool\OperationInputs`, `OpenApi\OpenApiDocument`,
+`Http\ResourceApiController::served()`, `Staging\StagedStorage::prepare()`,
+`StagedConfigTest`, `StageToolsTest`, `OpenApiDocumentTest`)
+
+### Two identity-less entries of one storage class are one thing
+
+Decided 2026-11-08. A config object storage keeps one config object, so
+two resources that store through one such class are one thing:
+`event.catering` and `event.catering.method` keep
+`surface_examples.catering`. Neither context knows identity, so the
+check that refuses one stored thing staged through two resources found
+no key to compare and let both through, and the second write at apply
+would overwrite the first unchecked. Two entries of one storage class
+whose contexts both know no identity now name one thing: the second
+resource is refused, code `conflict`, naming the first.
+
+A thing with no id is named by its resource alone: `changes` and
+`applied` list it with `parameters: []`, `applied` gives it no `id`, and
+a message names it by the resource id.
+
+(`Staging\StagedStorage::sameThing()`, `Structure\StageAppliedStructure`,
+`StagedConfigTest`)
 
 ### A destructive bulk operation stages, then confirms over the stage
 

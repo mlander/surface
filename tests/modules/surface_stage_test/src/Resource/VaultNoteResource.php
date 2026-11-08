@@ -13,10 +13,11 @@ use Drupal\surface\Resource\ResourceInterface;
 use Drupal\surface_stage_test\Storage\VaultNoteStorage;
 
 /**
- * A note that holds a secret, which a stage refuses to keep.
+ * A note that holds a secret, which a stage keeps sealed.
  *
- * A stage keeps what it holds in the clear, so every write to a resource
- * that declares a secret is refused in a stage, the secret sent or not.
+ * A staged write seals the token in the stage's record with the site's
+ * codec and records its path; a read through the stage opens it and
+ * leaves it out of the answer, as every read does.
  */
 #[Resource('stage_test.vault_note', storage: VaultNoteStorage::class)]
 #[Operation('configure',

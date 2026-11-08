@@ -46,10 +46,11 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * An API request whose `X-Surface-Stage` header names a stage is asked
  * the stage's own `update` access after the permission and before the
  * thing's context, which is then built through the stage, so another
- * account's stage is refused whatever the parameters name. A header
- * that names no stage is let through for the controller's 404, as a
- * parameter that names nothing is; on a path of the stage itself the
- * header is the controller's to refuse.
+ * account's stage is refused, 403, on any call and whatever the
+ * parameters name. A header that names no stage is let through, as a
+ * parameter that names nothing is: the controller answers 422 on a call
+ * a stage does not apply to and 404 on one it applies to. On a path of
+ * the stage itself the header is the controller's to refuse.
  *
  * Decision: see
  * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
@@ -158,9 +159,11 @@ final class ServedOperationAccessCheck implements AccessInterface {
       return $permission;
     }
     // The stage the header names is asked for before the thing: another
-    // account's is refused whatever the parameters name, and one that
-    // names nothing is the controller's 404. A context is then built
-    // through it, so a local id names what the stage creates.
+    // account's is refused whatever the parameters name, on any call,
+    // and one that names nothing is the controller's to answer, 422 on a
+    // call a stage does not apply to and 404 on one it applies to. A
+    // context is then built through it, so a local id names what the
+    // stage creates.
     // Decision: see
     // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
     $staged = NULL;
@@ -171,7 +174,8 @@ final class ServedOperationAccessCheck implements AccessInterface {
         $through = $this->servedOperations->stage($stage, $parameters);
       }
       catch (\InvalidArgumentException) {
-        // The header names no stage: the controller answers 404.
+        // The header names no stage: the controller answers 422 where a
+        // stage does not apply, else 404.
         return AccessResult::allowed()->addCacheableDependency($permission)->setCacheMaxAge(0);
       }
       if (!$staged->isAllowed()) {

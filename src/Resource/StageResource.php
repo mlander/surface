@@ -17,7 +17,7 @@ use Drupal\surface\Structure\StageChangesStructure;
  *
  * The base module's one resource. A stage is opened empty by the account
  * that owns it, identified by a UUID storage gives it, and takes writes
- * through the storage of any resource that can be staged
+ * through the storage of any resource a stage applies to
  * (ResourcesInterface::storage() with a Stage), each kept in its record
  * until `apply` makes them all for real, in the order they were staged,
  * in one transaction, or `delete` discards them. `changes` lists them.

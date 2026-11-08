@@ -376,6 +376,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
       ['$ref' => '#/components/parameters/DryRun'],
       ['$ref' => '#/components/parameters/SurfaceStale'],
       ['$ref' => '#/components/parameters/IfMatch'],
+      ['$ref' => '#/components/parameters/SurfaceStage'],
     ], $patch['parameters']);
     foreach (['403', '404', '412', '422', '400', '415'] as $status) {
       $this->assertSame(SchemaComponents::POINTER . 'ProblemDetails', $patch['responses'][$status]['content']['application/problem+json']['schema']['$ref'], $status);
@@ -424,6 +425,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
       ['$ref' => '#/components/parameters/CsrfToken'],
       ['$ref' => '#/components/parameters/DryRun'],
       ['$ref' => '#/components/parameters/IfMatch'],
+      ['$ref' => '#/components/parameters/SurfaceStage'],
     ], array_map(static fn (array $parameter): array => array_intersect_key($parameter, array_flip([
       'name',
       'in',
@@ -792,10 +794,11 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
    * Tests the stage header is offered where a resource's storage is staged.
    *
    * A shared header parameter, `SurfaceStage`, referenced from the
-   * envelope, the narrowing and every write of a resource whose storage
-   * implements TransactionalStorageInterface, never from its full schema,
-   * which reads nothing stored, nor from any call of the stage itself, of
-   * a config resource or of a State one.
+   * envelope, the narrowing and every write of an operation a stage
+   * applies to (its storage implements TransactionalStorageInterface, a
+   * config object's among them, and it names one thing), never from its
+   * full schema, which reads nothing stored, nor from any call of the
+   * stage itself or of a State resource.
    */
   public function testTheStageHeaderIsOfferedWhereStorageCanBeStaged(): void {
     $this->enableModules(array_diff(self::ENTITY_MODULES, static::$modules));
@@ -851,8 +854,12 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
       $this->assertStringEndsWith('With the X-Surface-Stage header, a negative integer names a thing that stage creates.', $narrowed[0]['description']);
     }
     $this->assertStringEndsWith('and under the X-Surface-Stage header, since a staged create is read only with the header.', $document['components']['headers']['Location']['description']);
-    $other = array_filter($staged, static fn (string $call): bool => !str_contains($call, ' /surface-api/entity.content:'));
-    $this->assertSame([], array_values($other), 'No call of the stage, a config resource or a State one takes the header.');
+    // A config object's envelope and write take it; its full schema not.
+    $this->assertContains('GET /surface-api/first.newsletter', $staged, 'A config object can be staged.');
+    $this->assertContains('PATCH /surface-api/first.newsletter', $staged, 'A config object can be staged.');
+    $this->assertNotContains('GET /surface-api/first.newsletter/schema', $staged, 'The full schema reads nothing stored.');
+    $other = array_filter($staged, static fn (string $call): bool => str_contains($call, ' /surface-api/surface.stage') || str_contains($call, ' /surface-api/tool_test.'));
+    $this->assertSame([], array_values($other), 'No call of the stage or of a State resource takes the header.');
     $this->assertArrayHasKey('/surface-api/surface.stage/{id}', $document['paths']);
     $this->assertArrayHasKey('/surface-api/first.newsletter', $document['paths']);
     $this->assertArrayHasKey('/surface-api/tool_test.logbook', $document['paths']);

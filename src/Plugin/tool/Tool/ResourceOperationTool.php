@@ -43,7 +43,7 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  * - **Inputs**: the operation's parameters, by name, each a value the
  *   operation is handed raw and its storage loads by; `values`, the
  *   resource's keys the operation does not already know; `dry_run`;
- *   `stage`, where the resource's storage can be staged. The
+ *   `stage`, where a stage applies to the operation. The
  *   definition is static, which operations are what make possible: an
  *   operation that needs nothing is the resource's exact contract before
  *   anyone calls, and one that needs a subject is refined to it as soon

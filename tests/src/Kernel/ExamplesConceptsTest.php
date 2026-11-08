@@ -693,17 +693,17 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     // listing leaves out whatever their count, so each placement tool that
     // takes values has a narrowing tool beside it.
     $this->assertSame([
-      ['surface:block.placement:create', 'Place a block', 'write', 'values, dry_run'],
-      ['surface:block.placement:create:schema', 'Schema for these values: Place a block', 'read', 'values'],
-      ['surface:block.placement:update', 'Edit a placed block', 'write', 'id, values, dry_run'],
-      ['surface:block.placement:read', 'Current values: Edit a placed block', 'read', 'id'],
+      ['surface:block.placement:create', 'Place a block', 'write', 'values, dry_run, stage'],
+      ['surface:block.placement:create:schema', 'Schema for these values: Place a block', 'read', 'values, stage'],
+      ['surface:block.placement:update', 'Edit a placed block', 'write', 'id, values, dry_run, stage'],
+      ['surface:block.placement:read', 'Current values: Edit a placed block', 'read', 'id, stage'],
       [
         'surface:block.placement:update:schema',
         'Schema for these values: Edit a placed block',
         'read',
-        'id, values',
+        'id, values, stage',
       ],
-      ['surface:block.placement:delete', 'Remove a placed block', 'write', 'id, dry_run'],
+      ['surface:block.placement:delete', 'Remove a placed block', 'write', 'id, dry_run, stage'],
     ], $page['parts']['tools']['#rows']);
     $answer = static fn (string $call): string => (string) $page['calls']['block.placement:' . $call]['answer']['#code'];
     $this->assertStringStartsWith("Failed: The values were refused:\n/id: A block named surface_examples_spotlight already exists.", $answer('place'));
