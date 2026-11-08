@@ -18,3 +18,11 @@ services:
   surface_examples_entity.form_cosmetics:
     class: Drupal\surface_examples_entity\Form\EntityFormCosmetics
     arguments: ['@string_translation']
+
+  # Converts a stage's id in a path to the stage, for its owner alone: the
+  # preview page's {surface_stage}.
+  surface_examples_entity.stage_converter:
+    class: Drupal\surface_examples_entity\Routing\StageConverter
+    arguments: ['@surface.stages', '@surface.resources', '@current_user']
+    tags:
+      - { name: paramconverter }

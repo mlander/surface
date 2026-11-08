@@ -166,13 +166,13 @@ final class OperationRoute {
   public const PLACEHOLDER = '/\{([A-Za-z_][A-Za-z0-9_]*)\}/';
 
   /**
-   * What the controller of a React page served at a module's route ends in.
+   * The controller of a React page served at a module's route.
    *
-   * Compared as text, by the class's short name: the main module does not
+   * Compared as text, by the full class name: the main module does not
    * depend on the React example, surface_examples_react, whose
    * ResourceReactPage::served() it is.
    */
-  protected const REACT_PAGE = 'ResourceReactPage::served';
+  protected const REACT_PAGE = 'Drupal\\surface_examples_react\\Controller\\ResourceReactPage::served';
 
   /**
    * Constructs an OperationRoute.
@@ -236,7 +236,7 @@ final class OperationRoute {
    */
   public static function reactPage(?Route $route): bool {
     $controller = $route?->getDefault('_controller');
-    return is_string($controller) && str_ends_with($controller, self::REACT_PAGE);
+    return is_string($controller) && ltrim($controller, '\\') === self::REACT_PAGE;
   }
 
   /**
@@ -611,7 +611,7 @@ final class OperationRoute {
       'The %s route carries "%s", and %s serves it: the page writes through the operation\'s own API path, which holds a value to the operation\'s constraints alone, so a key the page stated fixed would take any value there. A React page starts keys and fixes none: start them under "%s", or serve the route with the operation form.',
       $name,
       self::FIXED,
-      self::REACT_PAGE,
+      substr(strrchr(self::REACT_PAGE, '\\'), 1),
       self::DEFAULTS,
     ));
   }
@@ -706,9 +706,12 @@ final class OperationRoute {
    * door asks its header: whether a stage applies to the route's operation
    * (Stageable::operation()), whether the stage exists, and the stage's
    * own `update` access for the account, which only its owner holds.
-   * Only an operation form reads the query: on any other page served by
-   * an operation, a React page or a controller, a stage is refused as
-   * not applying, so no page writes live while its URL names a stage.
+   * Only an operation form and a React page served at a module's route
+   * (reactPage()) read the query: on any other page served by an
+   * operation, a controller of a module's own, a stage is refused as not
+   * applying, so no page writes live while its URL names a stage. The
+   * React page hands the stage to its app, which names it in the
+   * `X-Surface-Stage` header of every request it sends.
    *
    * A flow over a create writes each step after its first into the
    * create its first step staged (Flow::creating()), so the stage is
@@ -737,11 +740,12 @@ final class OperationRoute {
    *
    * @return array{0: \Drupal\surface\Staging\Stage|null, 1: \Drupal\Core\Access\AccessResultInterface}|null
    *   NULL when the query names no stage. Otherwise the stage, and the
-   *   answer for it: forbidden with no stage on a page that is no
-   *   operation form, and forbidden saying `does_not_apply` where a stage
-   *   does not apply to the operation; else the stage's own access
-   *   (StageAccess), which is never cached, or a refusal of a later step
-   *   of a flow over a create whose create is gone from the stage.
+   *   answer for it: forbidden with no stage on a page that is neither an
+   *   operation form nor a React page, and forbidden saying
+   *   `does_not_apply` where a stage does not apply to the operation;
+   *   else the stage's own access (StageAccess), which is never cached,
+   *   or a refusal of a later step of a flow over a create whose create
+   *   is gone from the stage.
    *
    * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   At `stage`, when it names no stage; at `step`, when a flow over a
@@ -755,8 +759,8 @@ final class OperationRoute {
     if ($id === NULL || $id === '') {
       return NULL;
     }
-    if (!static::operationForm($route_match->getRouteObject())) {
-      $refusal = sprintf('A stage does not apply to this page: only an operation form reads the "%s" query.', Flow::STAGE);
+    if (!static::operationForm($route_match->getRouteObject()) && !static::reactPage($route_match->getRouteObject())) {
+      $refusal = sprintf('A stage does not apply to this page: only an operation form or a React page reads the "%s" query.', Flow::STAGE);
       return [NULL, AccessResult::forbidden($refusal)->setCacheMaxAge(0)];
     }
     if (!is_string($id)) {

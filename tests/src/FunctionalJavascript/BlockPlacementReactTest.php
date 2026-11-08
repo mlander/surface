@@ -68,7 +68,7 @@ class BlockPlacementReactTest extends WebDriverTestBase {
     $this->assertSame('Branding', $page->findField('dsr-label')->getValue());
     $page->fillField('dsr-weight', '4');
     $page->pressButton('Submit');
-    $this->assertNotNull($assert->waitForText('Saved: the values were written.'));
+    $this->assertTrue($assert->waitForText('Saved: the values were written.'));
     $this->container->get('entity_type.manager')->getStorage('block')->resetCache();
     $this->assertSame(4, Block::load('branding')->getWeight());
   }

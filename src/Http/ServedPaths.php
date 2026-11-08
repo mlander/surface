@@ -279,10 +279,54 @@ final class ServedPaths {
       $operation = $operations[$id];
     }
     // Read here, where the access check builds its target too, so the
-    // stage reaches every action and the check alike; the full schema
-    // reads nothing stored, so it ignores the stage.
-    $stage = $action === ServedTarget::SCHEMA ? '' : trim((string) $request->headers->get(self::STAGE_HEADER, ''));
-    return new ServedTarget($definition, $operation, $this->parameters($request, $definition, $operation, $segments), $action, $named !== NULL, $stage === '' ? NULL : $stage);
+    // stage reaches every action and the check alike. The full schema
+    // reads nothing stored, so it ignores the stage, but at a local id,
+    // which names nothing without the stage that gave it.
+    $parameters = $this->parameters($request, $definition, $operation, $segments);
+    $stage = $action === ServedTarget::SCHEMA ? $this->localStage($request, $definition, $parameters) : $this->stageHeader($request);
+    return new ServedTarget($definition, $operation, $parameters, $action, $named !== NULL, $stage);
+  }
+
+  /**
+   * Reads the stage the request's header names.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   *
+   * @return string|null
+   *   The header's value, trimmed, or NULL when it names none.
+   */
+  protected function stageHeader(Request $request): ?string {
+    $stage = trim((string) $request->headers->get(self::STAGE_HEADER, ''));
+    return $stage === '' ? NULL : $stage;
+  }
+
+  /**
+   * Reads the stage header for a call that reads nothing stored.
+   *
+   * The full schema and a lookup read nothing a stage holds, but their
+   * path must name something: at a local id (`-1`), a thing a stage
+   * creates, only the stage that gave the id names it, so the header is
+   * read there and nowhere else.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request.
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param array<string, string> $parameters
+   *   The operation's parameters, as raw values.
+   *
+   * @return string|null
+   *   The header's stage when an identity key of the path holds a local
+   *   id, else NULL.
+   */
+  protected function localStage(Request $request, ResourceDefinition $definition, array $parameters): ?string {
+    foreach ($definition->identity as $key) {
+      if (preg_match('/^-[1-9][0-9]*$/', (string) ($parameters[$key] ?? '')) === 1) {
+        return $this->stageHeader($request);
+      }
+    }
+    return NULL;
   }
 
   /**
@@ -319,7 +363,8 @@ final class ServedPaths {
     if ($id === NULL) {
       throw $this->notFound($this->t('No operation of @resource is served at this path, so it has no keys to look a value up for.', ['@resource' => $definition->id]));
     }
-    return new ServedTarget($definition, $operations[$id], $this->parameters($request, $definition, $operations[$id], $segments), ServedTarget::LOOKUP, TRUE);
+    $parameters = $this->parameters($request, $definition, $operations[$id], $segments);
+    return new ServedTarget($definition, $operations[$id], $parameters, ServedTarget::LOOKUP, TRUE, $this->localStage($request, $definition, $parameters));
   }
 
   /**

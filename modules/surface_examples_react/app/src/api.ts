@@ -71,6 +71,14 @@ export interface Settings {
    * key the module's route lists, held to its key by the server.
    */
   prefill?: Record<string, unknown>;
+  /**
+   * The stage the page's query names, by its id: every request to the API
+   * names it in the `X-Surface-Stage` header, so what the page writes is
+   * kept in the stage until it is applied. Absent for none.
+   */
+  stage?: string;
+  /** The stage's label, when it has one. */
+  stageLabel?: string;
 }
 
 /** Each value a page starts a key from, by key path: the route's defaults, then a link's prefill. */
@@ -144,11 +152,29 @@ export function lookupOf(endpoints: Endpoints): string | null {
   return `${colon === -1 ? path : path.slice(0, colon)}:lookup`;
 }
 
-/** The React page a created thing now lives at. */
+/** Where the React pages are: the page's base, or beside the API. */
+function pagesOf(settings: Pick<Settings, 'pageBase' | 'apiBase'>): string {
+  return settings.pageBase ?? settings.apiBase.replace(/\/surface-api$/, '/surface-react');
+}
+
+/**
+ * The React page a created thing now lives at.
+ *
+ * Under a stage, the page keeps it in its query: a thing the stage
+ * creates is named by its local id (`?id=-1`) in that stage alone.
+ */
 export function pageOf(settings: Settings, created: Created): string {
-  const base = settings.pageBase ?? settings.apiBase.replace(/\/surface-api$/, '/surface-react');
-  const query = new URLSearchParams(Object.entries(created.parameters).map(([key, value]) => [key, String(value)])).toString();
-  return `${base}/${encodeURIComponent(created.resource)}/${encodeURIComponent(created.operation)}${query === '' ? '' : `?${query}`}`;
+  const entries = Object.entries(created.parameters).map(([key, value]): [string, string] => [key, String(value)]);
+  if (settings.stage !== undefined) {
+    entries.push([STAGE, settings.stage]);
+  }
+  const query = new URLSearchParams(entries).toString();
+  return `${pagesOf(settings)}/${encodeURIComponent(created.resource)}/${encodeURIComponent(created.operation)}${query === '' ? '' : `?${query}`}`;
+}
+
+/** The React page of one of the stage's own operations: its `changes` or its `apply`. */
+export function stagePageOf(settings: Settings, operation: 'changes' | 'apply'): string | null {
+  return settings.stage === undefined ? null : `${pagesOf(settings)}/surface.stage/${operation}?id=${encodeURIComponent(settings.stage)}`;
 }
 
 /** The response header every answer of the API states its contract version in. */
@@ -156,6 +182,12 @@ export const CONTRACT_HEADER = 'Contract-Version';
 
 /** The request header naming the stale paths a request leaves empty. */
 export const STALE_HEADER = 'X-Surface-Stale';
+
+/** The request header naming the stage a request reads through and writes into. */
+export const STAGE_HEADER = 'X-Surface-Stage';
+
+/** The query member a React page names its stage by. */
+export const STAGE = 'stage';
 
 /** The query member that makes a write a dry run. */
 export const DRY_RUN = 'dryRun';
@@ -281,7 +313,9 @@ async function fail(response: Response): Promise<never> {
  * POST or PATCH carries the session's CSRF token, fetched once from
  * /session/token, and the stale paths it leaves empty in
  * `X-Surface-Stale`; a write carries the ETag the values were read with
- * as `If-Match`, when it is given one. The API writes every path as a
+ * as `If-Match`, when it is given one. Under a stage, every request to the
+ * API names it in `X-Surface-Stage`, reads included, so the envelope and
+ * its ETag are the staged view's; the CSRF token's fetch does not. The API writes every path as a
  * JSON Pointer, and the app holds them dotted: they are converted here,
  * both ways. A refusal of the values (422, 412, or a 403 that names
  * what was refused) is problem details, read back into the result shape
@@ -304,7 +338,10 @@ export function createApi(settings: Settings, fetcher: Fetcher): Api {
     return (await response.json()) as T;
   };
 
-  const get = (url: string, accept: string): Promise<Response> => fetcher(url, { credentials: 'same-origin', headers: { Accept: accept } });
+  // The stage, named on every request to the API.
+  const staged: Record<string, string> = settings.stage === undefined ? {} : { [STAGE_HEADER]: settings.stage };
+
+  const get = (url: string, accept: string): Promise<Response> => fetcher(url, { credentials: 'same-origin', headers: { Accept: accept, ...staged } });
 
   const send = async (method: string, url: string, type: string, values: Values, stale: string[], more: Record<string, string> = {}): Promise<Response> => {
     token ??= fetcher(settings.tokenUrl, { credentials: 'same-origin' }).then((response) => response.text());
@@ -312,6 +349,7 @@ export function createApi(settings: Settings, fetcher: Fetcher): Api {
       'Content-Type': type,
       Accept: 'application/json',
       'X-CSRF-Token': await token,
+      ...staged,
       ...more,
     };
     if (stale.length > 0) {

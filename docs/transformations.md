@@ -316,8 +316,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
 A reaction beyond the write, such as sending a mail when the
 registration settings change or configuring the registration when a page
-is saved, belongs to ECA. The module ships no ECA model and no ECA
-plugin; ECA meets a resource at two points that already exist:
+is saved, belongs to ECA. The module ships no ECA plugin, and one ECA
+model as an example, the staging walk-through in `surface_examples`
+([Staging: ECA](staging.md#eca)); ECA meets a resource at two points
+that already exist:
 
 - **As a reaction to the save.** ECA's "Save config" event
   (`config:save`) and its content entity events fire on the saves the
@@ -333,6 +335,11 @@ plugin; ECA meets a resource at two points that already exist:
 
 Either way the model is site configuration, built and exported on the
 site that wants the reaction, and the resource does not know it exists.
+The example model is optional config, shipped disabled: a site that has
+`eca`, `eca_base`, `eca_user`, `eca_tool`, `modeler_api`, the entity
+example (`surface_examples_entity`) and the `page` node type gets it,
+and the module depends on none of them
+([ECA](staging.md#eca)).
 
 ### What is absent on purpose
 

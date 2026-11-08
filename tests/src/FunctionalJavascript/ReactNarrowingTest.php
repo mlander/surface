@@ -210,7 +210,7 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
     $this->assertSame('Narrowed here: ticket.', $this->narrowing());
     $page->fillField('dsr-ticket-price', '12.5');
     $page->pressButton('Submit');
-    $this->assertNotNull($assert->waitForText('Saved: the values were written.'));
+    $this->assertTrue($assert->waitForText('Saved: the values were written.'));
     $stored = $this->config('surface_examples.registration_step3')->get();
     $this->assertSame('paid', $stored['pricing']);
     $this->assertEquals(12.5, $stored['ticket']['price']);

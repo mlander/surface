@@ -1,0 +1,312 @@
+langcode: en
+status: false
+dependencies:
+  config:
+    - node.type.page
+  module:
+    - eca
+    - eca_base
+    - eca_tool
+    - eca_user
+    - modeler_api
+    - surface
+    - surface_examples_entity
+third_party_settings:
+  modeler_api:
+    modeler_id: fallback
+    label: 'Surface API example: stage two page edits, list them, apply them'
+    documentation: 'Triggered by the custom event surface_stage_walkthrough (drush eca:trigger:custom_event surface_stage_walkthrough). Switches to the account in the walkthrough_uid token, 1 by default, since a stage refuses anonymous and drush triggers the event as anonymous; opens a stage; stages a title change on the pages walkthrough_first and walkthrough_second (node ids, 1 and 2 by default); lists the stage; applies it. When a staged write, the listing or the apply fails, it says why and discards the stage. Change the three tokens in the first three actions. Ships disabled: it switches to uid 1 and writes nodes 1 and 2, so enable it on a site where that is meant.'
+id: surface_stage_walkthrough
+weight: 0
+template: false
+events:
+  walkthrough:
+    plugin: 'eca_base:eca_custom'
+    label: 'The walk-through is triggered'
+    configuration:
+      event_id: surface_stage_walkthrough
+    successors:
+      -
+        id: set_uid
+        condition: ''
+conditions:
+  stage_opened:
+    plugin: eca_scalar
+    label: 'The stage was opened'
+    configuration:
+      negate: false
+      left: '[open_result:success]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
+  first_staged:
+    plugin: eca_scalar
+    label: 'The first page was staged'
+    configuration:
+      negate: false
+      left: '[first_result:success]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
+  second_staged:
+    plugin: eca_scalar
+    label: 'The second page was staged'
+    configuration:
+      negate: false
+      left: '[second_result:success]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
+  listed:
+    plugin: eca_scalar
+    label: 'The stage was listed'
+    configuration:
+      negate: false
+      left: '[changes_result:success]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
+  first_failed:
+    plugin: eca_scalar
+    label: 'The first page was not staged'
+    configuration:
+      negate: true
+      left: '[first_result:success]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
+  second_failed:
+    plugin: eca_scalar
+    label: 'The second page was not staged'
+    configuration:
+      negate: true
+      left: '[second_result:success]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
+  listing_failed:
+    plugin: eca_scalar
+    label: 'The stage was not listed'
+    configuration:
+      negate: true
+      left: '[changes_result:success]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
+  applied:
+    plugin: eca_scalar
+    label: 'The stage was applied'
+    configuration:
+      negate: false
+      left: '[apply_result:success]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
+  apply_failed:
+    plugin: eca_scalar
+    label: 'The stage was not applied'
+    configuration:
+      negate: true
+      left: '[apply_result:success]'
+      right: '1'
+      operator: equal
+      type: value
+      case: false
+gateways: {  }
+actions:
+  set_uid:
+    label: 'The account to run as'
+    plugin: eca_token_set_value
+    configuration:
+      token_name: walkthrough_uid
+      token_value: '1'
+      use_yaml: false
+      validate_yaml: false
+    successors:
+      -
+        id: set_first
+        condition: ''
+  set_first:
+    label: 'The first page'
+    plugin: eca_token_set_value
+    configuration:
+      token_name: walkthrough_first
+      token_value: '1'
+      use_yaml: false
+      validate_yaml: false
+    successors:
+      -
+        id: set_second
+        condition: ''
+  set_second:
+    label: 'The second page'
+    plugin: eca_token_set_value
+    configuration:
+      token_name: walkthrough_second
+      token_value: '2'
+      use_yaml: false
+      validate_yaml: false
+    successors:
+      -
+        id: switch_account
+        condition: ''
+  switch_account:
+    label: 'Run as the walk-through account'
+    plugin: eca_switch_account
+    configuration:
+      user_id: '[walkthrough_uid]'
+    successors:
+      -
+        id: open_stage
+        condition: ''
+  open_stage:
+    label: 'Open a stage'
+    plugin: 'eca_tool:surface:surface.stage:create'
+    configuration:
+      tool_input_values: "label: 'ECA walk-through'"
+      tool_input_values__mode: yaml
+      tool_output_id: stage_id
+      result_token_name: open_result
+    successors:
+      -
+        id: stage_first
+        condition: stage_opened
+  stage_first:
+    label: 'Stage a title on the first page'
+    plugin: 'eca_tool:surface:entity.content:node.page:update'
+    configuration:
+      tool_input_id: '[walkthrough_first]'
+      tool_input_id__mode: yaml
+      tool_input_stage: '[stage_id]'
+      tool_input_values: "title:\n  value: 'Staged by ECA (page [walkthrough_first])'"
+      tool_input_values__mode: yaml
+      result_token_name: first_result
+    successors:
+      -
+        id: stage_second
+        condition: first_staged
+      -
+        id: fail_first
+        condition: first_failed
+  stage_second:
+    label: 'Stage a title on the second page'
+    plugin: 'eca_tool:surface:entity.content:node.page:update'
+    configuration:
+      tool_input_id: '[walkthrough_second]'
+      tool_input_id__mode: yaml
+      tool_input_stage: '[stage_id]'
+      tool_input_values: "title:\n  value: 'Staged by ECA (page [walkthrough_second])'"
+      tool_input_values__mode: yaml
+      result_token_name: second_result
+    successors:
+      -
+        id: list_changes
+        condition: second_staged
+      -
+        id: fail_second
+        condition: second_failed
+  list_changes:
+    label: 'List the staged writes'
+    plugin: 'eca_tool:surface:surface.stage:changes'
+    configuration:
+      tool_input_id: '[stage_id]'
+      tool_input_values: '{}'
+      tool_input_values__mode: yaml
+      tool_output_items: staged_items
+      tool_output_total: staged_total
+      result_token_name: changes_result
+    successors:
+      -
+        id: say_listed
+        condition: listed
+      -
+        id: fail_listing
+        condition: listing_failed
+  say_listed:
+    label: 'Say what the stage holds'
+    plugin: action_message_action
+    configuration:
+      message: 'The stage [stage_id] holds [staged_total] writes. [changes_result:message]'
+      replace_tokens: true
+    successors:
+      -
+        id: apply_stage
+        condition: ''
+  apply_stage:
+    label: 'Apply the stage'
+    plugin: 'eca_tool:surface:surface.stage:apply'
+    configuration:
+      tool_input_id: '[stage_id]'
+      tool_input_values: '{}'
+      tool_input_values__mode: yaml
+      tool_output_applied: applied
+      result_token_name: apply_result
+    successors:
+      -
+        id: say_applied
+        condition: applied
+      -
+        id: fail_apply
+        condition: apply_failed
+  say_applied:
+    label: 'Say what apply answered'
+    plugin: action_message_action
+    configuration:
+      message: '[apply_result:message]'
+      replace_tokens: true
+    successors: {  }
+  fail_first:
+    label: 'Say why the first page was not staged'
+    plugin: action_message_action
+    configuration:
+      message: 'The first page was not staged, so the stage [stage_id] is discarded: [first_result:message]'
+      replace_tokens: true
+    successors:
+      -
+        id: discard_stage
+        condition: ''
+  fail_second:
+    label: 'Say why the second page was not staged'
+    plugin: action_message_action
+    configuration:
+      message: 'The second page was not staged, so the stage [stage_id] is discarded: [second_result:message]'
+      replace_tokens: true
+    successors:
+      -
+        id: discard_stage
+        condition: ''
+  fail_listing:
+    label: 'Say why the stage was not listed'
+    plugin: action_message_action
+    configuration:
+      message: 'The stage [stage_id] was not listed, so it is discarded: [changes_result:message]'
+      replace_tokens: true
+    successors:
+      -
+        id: discard_stage
+        condition: ''
+  fail_apply:
+    label: 'Say why the stage was not applied'
+    plugin: action_message_action
+    configuration:
+      message: 'The stage [stage_id] was not applied, so it is discarded: [apply_result:message]'
+      replace_tokens: true
+    successors:
+      -
+        id: discard_stage
+        condition: ''
+  discard_stage:
+    label: 'Discard the stage'
+    plugin: 'eca_tool:surface:surface.stage:delete'
+    configuration:
+      tool_input_id: '[stage_id]'
+      result_token_name: discard_result
+    successors: {  }

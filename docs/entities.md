@@ -386,6 +386,11 @@ holds once created; the field definition says both
 - **The React app**: `/surface-react/entity.content:node.page/create` and
   `/surface-react/entity.content:node.page/update?id=<nid>`. The derived id
   holds a colon, which a route parameter takes as it is.
+- **A staged node's preview**:
+  `/surface-entity/stage/{stage}/preview/{id}`, the node a stage writes
+  rendered in its full view mode as it will be once the stage is applied,
+  nothing saved; `{id}` is a stored node's id or a staged create's local
+  id, `-1` ([Staging: Preview](staging.md#preview)).
 - **The landing page**: `/surface-entity`.
 
 ## What it does not do

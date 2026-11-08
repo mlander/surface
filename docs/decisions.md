@@ -4780,8 +4780,9 @@ stage applies, which also asks that the operation name a thing,
   check asks the stage's `update` access once the thing's allows, so
   another account's stage is 403 before anything is built, and lets a
   header that names nothing through for the controller's 404
-  (`ServedOperations::fromTarget()`). The full schema ignores it, since
-  it reads nothing stored; on a path of the stage itself it is 400,
+  (`ServedOperations::fromTarget()`). The full schema and a lookup
+  ignore it, since they read nothing stored, but at a local id, which
+  only the stage names; on a path of the stage itself it is 400,
   answered by the controller, since an access check can only allow or
   forbid and the caller needs the reason. The answer names no stage,
   and after a staged write its `contract` and `ETag` are the staged
@@ -4992,11 +4993,16 @@ Decided 2026-11-08. `Staging\Stageable` answers whether a stage
 applies, and the tool door (`OperationInputs::stageInput()`), the
 OpenAPI document (`SurfaceStage`), the HTTP door, the operation form's
 `?stage` query (`OperationRoute::stageRequested()`) and the staged
-storage's prepare ask it. Only the operation form reads `?stage`: any
-other page served by an operation, a React page or a controller, refuses
-a stage in its query, so no page writes to storage while its URL names
-one. A stage applies when the resource's declared
-storage class implements `TransactionalStorageInterface` and the call
+storage's prepare ask it. The operation form and the React page read
+`?stage`, the React page at `/surface-react/{resource}/{operation}`
+through the HTTP door's access check and at a module's route through
+`stageRequested()`, and its app names the stage in the header of every
+request it sends. Any other page served by an operation, a controller
+of a module's own, refuses a stage in its query, so no page writes to
+storage while its URL names one (amended 2026-11-08, slice 6: the React
+page refused it before, or ignored it at its own path). A stage applies
+when the resource's declared storage class implements
+`TransactionalStorageInterface` and the call
 names a thing: it creates, or its resource declares no identity keys,
 or its parameters name at least one of them. A read-only operation other
 than the read of one thing, a listing, reads no one thing.
@@ -5006,10 +5012,11 @@ than the read of one thing, a listing, reads no one thing.
   match every entry of the resource and record no venue. Its tool takes
   no `stage`, and a write named into a stage from PHP is refused at
   prepare, code `does_not_apply`, naming the operation and the identity
-  keys. The rule reads the operation's parameter names, which the tool
-  door, the document, the form door and the staged storage all have, so
-  the four doors and prepare agree by construction; `StagedConfigTest`
-  asks each door for every operation of its site, and the form door for
+  keys. The rule reads the operation's parameter names, which every
+  place that asks it has (the list is in
+  [Where a stage applies](staging.md#where-a-stage-applies)), so they
+  agree by construction; `StagedConfigTest` asks each door and the
+  React page for every operation of its site, and the form door for
   every operation form route. Prepare alone also checks that each
   routed child's storage is transactional (below), so a resource that
   routes a child to one that is not still offers the stage at the doors
@@ -5192,6 +5199,13 @@ error, and the page is built again.
 - **What was listed, not what is there.** A write staged from another
   tab or another door after the page was drawn, a delete among them,
   would otherwise be applied unseen by the person who pressed Apply.
+- **The same fingerprint over HTTP.** `StageStorage::listed()`, an
+  xxh128 hash of the record's writes and next position, is the confirm
+  page's fingerprint and part of the `ETag` of `GET` and `PATCH
+  .../{id}:apply` (`ServedOperations::fingerprint()`), so `PATCH :apply`
+  with an `If-Match` read before another write was staged answers 412,
+  code `conflict`, and writes nothing. The tool door takes no `If-Match`,
+  so a tool's apply makes what the stage holds when it runs.
 - **The flow's redirect, not the cosmetic layer's.** The cosmetic
   layer's redirect is handed an operation's result; the stage's apply
   result is another resource's, so the flow names where to go
@@ -5208,7 +5222,7 @@ error, and the page is built again.
   ([A destructive bulk operation stages, then confirms over the stage](#a-destructive-bulk-operation-stages-then-confirms-over-the-stage)).
 
 (`Form\SurfaceOperationForm::confirmStep()`, `ConfirmStepTest`,
-`FlowRoundTripTest`)
+`FlowRoundTripTest`, `StagedConfigTest::testApplyEtagCarriesTheStagedWrites()`)
 
 ## Access
 

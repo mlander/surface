@@ -222,6 +222,66 @@ final class ContentEntityStorage implements DeletableStorageInterface, Transacti
    * {@inheritdoc}
    */
   public function prepare(OperationContext $context, array $values, AccountInterface $account): array {
+    [$prepared, $fields, $at] = $this->prepared($context, $values);
+    $entity = $this->apply($prepared, $account);
+    $refused = $this->refusals($entity, $fields, $account, $at);
+    if ($refused !== []) {
+      throw new StorageViolationsException(new ViolationSet($refused));
+    }
+    return $prepared;
+  }
+
+  /**
+   * Builds the entity a write would save, and saves nothing.
+   *
+   * What prepare() builds and validates, for a page that shows a write
+   * before it is made: the stored entity, never the object anyone else
+   * holds, or a new one of the bundle, with the values set on it, marked
+   * `in_preview` so core's view builders cache nothing of it and draw no
+   * links. The entity's own validation is answered beside it, as prepare()
+   * files it, rather than thrown.
+   *
+   * @param \Drupal\surface\Resource\OperationContext $context
+   *   The context, which names the entity type, the bundle and the id; a
+   *   create's knows no id.
+   * @param array $values
+   *   The values, in the resource's shape: the staged view of the thing.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the write would be made as.
+   *
+   * @return array{0: \Drupal\Core\Entity\ContentEntityInterface, 1: \Drupal\surface\Pipeline\Violation[]}
+   *   The entity, unsaved, and what its validation refused, by resource
+   *   key.
+   *
+   * @throws \Drupal\surface\Pipeline\StorageViolationsException
+   *   As prepare() refuses before it builds: a bundle that cannot be
+   *   created, or a name another entity has.
+   */
+  public function preview(OperationContext $context, array $values, AccountInterface $account): array {
+    [$prepared, $fields, $at] = $this->prepared($context, $values);
+    $entity = $this->apply($prepared, $account);
+    // A property of the entity object, not a field, as NodeForm sets it.
+    // @phpstan-ignore assign.propertyType
+    $entity->in_preview = TRUE;
+    return [$entity, $this->refusals($entity, $fields, $account, $at)];
+  }
+
+  /**
+   * Reads accepted values as what apply() puts on an entity.
+   *
+   * @param \Drupal\surface\Resource\OperationContext $context
+   *   The context.
+   * @param array $values
+   *   The accepted values.
+   *
+   * @return array{0: array, 1: array<string, \Drupal\Core\Field\FieldDefinitionInterface>, 2: string|null}
+   *   What apply() takes, the fields the resource carries, and the key
+   *   they sit under, or NULL for the root.
+   *
+   * @throws \Drupal\surface\Pipeline\StorageViolationsException
+   *   For a bundle that cannot be created, or a name another entity has.
+   */
+  protected function prepared(OperationContext $context, array $values): array {
     [$entity_type_id, $bundle, $id] = static::identity($context);
     $at = static::fieldsAt($context);
     if ($bundle === '' && $at !== NULL) {
@@ -270,7 +330,25 @@ final class ContentEntityStorage implements DeletableStorageInterface, Transacti
       'new_revision' => !$context->creates && isset($fields['revision_log']),
       'fields' => $items,
     ];
-    $entity = $this->apply($prepared, $account);
+    return [$prepared, $fields, $at];
+  }
+
+  /**
+   * Validates an entity as core's form does, by resource key.
+   *
+   * @param \Drupal\Core\Entity\ContentEntityInterface $entity
+   *   The entity, its values set.
+   * @param array<string, \Drupal\Core\Field\FieldDefinitionInterface> $fields
+   *   The fields the resource carries.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the write is made as.
+   * @param string|null $at
+   *   The key the fields sit under, or NULL for the root.
+   *
+   * @return \Drupal\surface\Pipeline\Violation[]
+   *   What the entity's validation refused.
+   */
+  protected function refusals(ContentEntityInterface $entity, array $fields, AccountInterface $account, ?string $at): array {
     $violations = $entity->validate();
     // As core's form: what the account may not edit, and what the form
     // does not show, is not this submission's to answer for.
@@ -280,10 +358,7 @@ final class ContentEntityStorage implements DeletableStorageInterface, Transacti
     foreach ($violations as $violation) {
       $refused[] = static::violation($violation->getPropertyPath(), ViolationMessage::of($violation), Violation::codeOf($violation), $at);
     }
-    if ($refused !== []) {
-      throw new StorageViolationsException(new ViolationSet($refused));
-    }
-    return $prepared;
+    return $refused;
   }
 
   /**

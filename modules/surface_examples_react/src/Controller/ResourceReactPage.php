@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_react\Controller;
 
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
-use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Form\Flow;
+use Drupal\surface\Http\ServedOperations;
+use Drupal\surface\Http\ServedPaths;
 use Drupal\surface\ResourceBuild\KeyPaths;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationArguments;
@@ -19,10 +22,12 @@ use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Http\ServedOperations;
-use Drupal\surface\Http\ServedPaths;
+use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\StageStore;
+use Drupal\surface\SurfaceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -55,6 +60,13 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *     _surface_defaults: { title: 'Dear you' }
  *     _surface_query: { occasion: occasion }
  * @endcode
+ *
+ * Either page takes a stage in its query, `?stage=<id>`, read and gated
+ * as the operation form reads it: the operation is built through the
+ * stage, so `?id=-1&stage=<id>` names what the stage creates, and the app
+ * is handed the stage's id (`stage`) and label (`stageLabel`), which it
+ * names in the `X-Surface-Stage` header of every API request it sends.
+ * Nothing it writes then reaches storage until the stage is applied.
  *
  * Both are starting values and nothing more. The app's documents are the
  * operation's, fetched from the API, which knows no route, so neither is
@@ -91,6 +103,8 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    *   and builds it.
    * @param \Drupal\surface\ResourceBuild\KeyPaths $keyPaths
    *   What holds a value a link sends to the key it starts.
+   * @param \Drupal\surface\Staging\StageStore $stages
+   *   The stages, one of which a page's query may name.
    */
   public function __construct(
     protected readonly ServedOperations $servedOperations,
@@ -99,6 +113,7 @@ final class ResourceReactPage implements ContainerInjectionInterface {
     protected readonly OperationArguments $arguments,
     protected readonly ResourcesInterface $resources,
     protected readonly KeyPaths $keyPaths,
+    protected readonly StageStore $stages,
   ) {}
 
   /**
@@ -112,6 +127,7 @@ final class ResourceReactPage implements ContainerInjectionInterface {
       $container->get('surface.operation_arguments'),
       $container->get('surface.resources'),
       $container->get('surface.key_paths'),
+      $container->get('surface.stages'),
     );
     $instance->setStringTranslation($container->get('string_translation'));
     return $instance;
@@ -121,7 +137,8 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    * Builds the page.
    *
    * @param \Symfony\Component\HttpFoundation\Request $request
-   *   The request, whose query string carries the operation's parameters.
+   *   The request, whose query string carries the operation's parameters,
+   *   and the stage its writes go to, when it names one.
    * @param string $resource
    *   The resource id, from the route's {resource} parameter.
    * @param string $operation
@@ -129,15 +146,31 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    *
    * @return array
    *   A render array.
+   *
+   * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+   *   When a value the URL carries, or the stage its query names, names
+   *   nothing.
+   * @throws \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
+   *   When the query names a stage for an operation a stage does not
+   *   apply to, which the route's access check refuses first.
    */
   public function page(Request $request, string $resource, string $operation): array {
+    $queried = $request->query->all()[Flow::STAGE] ?? NULL;
     try {
-      $served = $this->servedOperations->fromRequest($resource, $operation, $request);
+      $parameters = $this->servedOperations->parameters($resource, $operation, $request);
+      $stage = NULL;
+      if ($queried !== NULL && $queried !== '') {
+        if (!is_string($queried) || !$this->servedOperations->stageable($resource, $operation)) {
+          throw new AccessDeniedHttpException(sprintf('A stage does not apply to the "%s" operation of %s.', $operation, $resource));
+        }
+        $stage = $this->servedOperations->stage($queried, $parameters);
+      }
+      $served = $this->servedOperations->resolve($resource, $operation, $parameters, $stage);
     }
     catch (\InvalidArgumentException $e) {
       throw new NotFoundHttpException($e->getMessage(), $e);
     }
-    [$build, $cacheability] = $this->mounted($request, $served->definition, $served->operation, array_filter($served->parameters, 'is_scalar'));
+    [$build, $cacheability] = $this->mounted($request, $served->definition, $served->operation, array_filter($served->parameters, 'is_scalar'), [], $stage);
     // The operation's parameters are the page's query string.
     $cacheability->addCacheContexts(['url.query_args'])->applyTo($build);
     return $build;
@@ -158,7 +191,9 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    * route's `_surface_query` lists, held to its key and left out when
    * the key refuses it, as the operation form holds it. The app lays the
    * stored values, then the defaults, then the prefill, each over the
-   * last.
+   * last. A stage the query names is read as the route's access check
+   * read it (OperationRoute::stageRequested()), and the operation built
+   * through it.
    *
    * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
    *   The route match.
@@ -169,7 +204,12 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    *   A render array.
    *
    * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
-   *   When a value the URL carries names nothing.
+   *   When a value the URL carries, or the stage its query names, names
+   *   nothing.
+   * @throws \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
+   *   When the stage may not be written into by this account, or does
+   *   not apply to the operation, which the route's access check refuses
+   *   first.
    * @throws \LogicException
    *   When the route lists a key no link may start (a key it does not
    *   declare or does not reach, a whole structure or map, a secret, a
@@ -178,7 +218,14 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    */
   public function served(RouteMatchInterface $route_match, Request $request): array {
     try {
-      $served = OperationRoute::fromRouteMatch($route_match, $this->registry, $this->arguments, $this->resources);
+      $staged = OperationRoute::stageRequested($route_match, $request, $this->stages, $this->resources, $this->registry);
+      if ($staged !== NULL && !$staged[1]->isAllowed()) {
+        // The staged answer's own reason: another account's stage, or one
+        // that does not apply to the operation.
+        $reason = $staged[1] instanceof AccessResultReasonInterface ? $staged[1]->getReason() : NULL;
+        throw new AccessDeniedHttpException($reason ?: 'This stage may not be written into by this account.');
+      }
+      $served = OperationRoute::fromRouteMatch($route_match, $this->registry, $this->arguments, $this->resources, $staged[0] ?? NULL);
     }
     catch (NamesNothingException $e) {
       throw new NotFoundHttpException($e->getMessage(), $e);
@@ -202,7 +249,7 @@ final class ResourceReactPage implements ContainerInjectionInterface {
         'noun' => 'prefill',
         'verb' => 'starts',
       ], $identity),
-    ]);
+    ], $staged[0] ?? NULL);
     // What the values start from is the build's to say, and the page
     // varies by each query parameter a link may start a key from.
     $cacheability->addCacheableDependency($surface)
@@ -224,12 +271,16 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    *   The operation's parameters, as raw values, by name.
    * @param array<string, mixed> $more
    *   What the page hands the app beside the settings every page hands.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the page's query names, which the app's requests name in
+   *   their header; NULL for none.
    *
    * @return array{0: array, 1: \Drupal\Core\Cache\CacheableMetadata}
    *   The render array, and what it varies by so far, for the caller to
-   *   add to and apply.
+   *   add to and apply: the query's stage, and under a stage, nothing
+   *   cached.
    */
-  protected function mounted(Request $request, ResourceDefinition $definition, OperationDefinition $operation, array $parameters, array $more = []): array {
+  protected function mounted(Request $request, ResourceDefinition $definition, OperationDefinition $operation, array $parameters, array $more = [], ?Stage $stage = NULL): array {
     $token = Url::fromRoute('system.csrftoken')->toString(TRUE);
     $read = !$this->servedPaths->readsPlain($definition, $operation);
     [$method, $named] = $this->servedPaths->writes($definition, $operation);
@@ -271,13 +322,17 @@ final class ResourceReactPage implements ContainerInjectionInterface {
               'lookup' => $lookup,
             ],
             'tokenUrl' => $token->getGeneratedUrl(),
-          ] + $more,
+          ] + ($stage === NULL ? [] : array_filter(['stage' => $stage->id, 'stageLabel' => $stage->label], 'is_string')) + $more,
         ],
       ],
     ];
-    $cacheability = CacheableMetadata::createFromObject($token);
+    $cacheability = CacheableMetadata::createFromObject($token)->addCacheContexts(['url.query_args:' . Flow::STAGE]);
     foreach ($urls as $url) {
       $cacheability->addCacheableDependency($url);
+    }
+    // A stage is read for the owner alone, and changes with every write.
+    if ($stage !== NULL) {
+      $cacheability->setCacheMaxAge(0);
     }
     return [$build, $cacheability];
   }
