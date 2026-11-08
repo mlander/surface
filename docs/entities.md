@@ -250,8 +250,10 @@ item derivation's keys, which the engine does not own
   describes what it saved: a load that knows no id reads the entity it
   just created, so the `id` output answers with the new id, the derived
   tool returns it and the React app can open the page it made. A create
-  staged in a stage commits to the stage alone and answers no `id`
-  storage gives until the stage is applied ([Staging](staging.md#a-staged-create)).
+  staged in a stage commits to the stage alone and answers its local
+  id, `id: -1`, the negative of its position in the stage, which names
+  it there alone until the stage is applied and storage gives the id
+  ([Staging](staging.md#a-staged-create)).
 - **Revisions**: on an update, a resource that carries the revision log field
   makes a new revision, by the account the write is made as, at the
   request time, with the log the caller gave; one that does not leaves
@@ -307,7 +309,8 @@ base field definition (`FieldItemDerivation::callerNamesId()`):
 - **Computed**: an integer id, which core's SQL storage makes serial and
   assigns on save, or an id field with a default of its own. The create
   knows there is no id yet, and its `id` output answers the one storage
-  gave, which a staged create has only at apply, in `applied[].id`.
+  gave, which a staged create has only at apply, in `applied[].id`;
+  until then it answers its local id in the stage, `-1`.
   Every content entity type core and the common contributed modules ship
   is one: node, media, user, term, block content, file.
 - **Named by the caller**: any other id, a string with no default. The

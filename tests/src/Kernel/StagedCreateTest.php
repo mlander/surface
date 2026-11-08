@@ -22,15 +22,16 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * Tests a create written into a stage, and applied.
  *
  * A staged create writes the stage's record and no node: an entry of kind
- * `create`, appended whole, with no arguments, no token and every key
- * changed, and the tool says nothing is created until the stage is
- * applied and answers no id. It names no stored thing, so two creates are
- * two entries, through one resource or two, and `changes` lists each with
- * no parameters. It validates as a real create and asks create access.
- * Apply creates each in position order and answers its new id; a dry run
- * creates nothing, and a rollback leaves no node, in the database or the
- * entity cache. The HTTP door stages a `POST` with the stage header and
- * answers 200, `created` null and no `Location`.
+ * `create`, appended whole, with no arguments, no token, every key changed
+ * and its address, and the tool says nothing is created until it is
+ * applied and answers its local id. It names no stored thing, so two
+ * creates are two entries, through one resource or two, and `changes`
+ * lists each with its local id as its parameters. It validates as a real
+ * create and asks create access. Apply creates each in position order and
+ * answers its new id; a dry run creates nothing, and a rollback leaves no
+ * node, in the database or the entity cache. The HTTP door stages a `POST`
+ * with the stage header and answers 200, `created` naming the local id
+ * and no `Location`.
  *
  * @see docs/decisions.md#a-staged-create-is-whole-and-rehearsed-as-a-create
  */
@@ -143,10 +144,10 @@ class StagedCreateTest extends SurfaceKernelTestBase {
       OperationInputs::STAGE => $id,
     ]);
     $this->assertTrue($answer['success'], $answer['message']);
-    $this->assertSame('Add Basic page: the values were accepted and staged in ' . $id . '; nothing is created until the stage is applied, which answers the new id.', $answer['message']);
+    $this->assertSame('Add Basic page: the values were accepted and staged in ' . $id . '; nothing is created until it is applied, and a write in the stage names it by -1.', $answer['message']);
     $this->assertTrue($answer['outputs'][OperationInputs::COMMITTED]);
     $this->assertTrue($answer['outputs'][OperationInputs::CHANGED]);
-    $this->assertArrayNotHasKey('id', $answer['outputs'], 'No id until apply.');
+    $this->assertSame(-1, $answer['outputs']['id'], 'The local id until apply.');
     $this->assertSame(0, $this->nodes(), 'No node exists.');
 
     $record = $this->stages()->read($id);
@@ -170,6 +171,7 @@ class StagedCreateTest extends SurfaceKernelTestBase {
     ], 'The document is whole.');
     $this->assertSame(array_map('strval', array_keys($write['values'])), $write['changed'], 'Every key.');
     $this->assertSame(['entity_type' => 'node', 'bundle' => 'page', 'id' => NULL], $write['known']);
+    $this->assertSame(['id' => -1], $write['address']);
 
     $changes = $this->stageTool('changes', $id);
     $this->assertTrue($changes['success'], $changes['message']);
@@ -181,7 +183,7 @@ class StagedCreateTest extends SurfaceKernelTestBase {
       $item['operation'],
       $item['kind'],
     ]);
-    $this->assertSame([], $item['parameters'], 'A create names nothing until it is applied.');
+    $this->assertSame([['name' => 'id', 'value' => '-1']], $item['parameters'], 'A create is named by its local id until it is applied.');
     $this->assertContains('/title', $item['changed']);
     $this->assertContains('/field_description', $item['changed']);
   }
@@ -296,7 +298,7 @@ class StagedCreateTest extends SurfaceKernelTestBase {
     $this->assertTrue($applied['success'], $applied['message']);
     $this->assertSame([1, 2], array_column($applied['outputs']['applied'], 'position'));
     $this->assertSame(['create', 'create'], array_column($applied['outputs']['applied'], 'kind'));
-    $this->assertSame([[], []], array_column($applied['outputs']['applied'], 'parameters'));
+    $this->assertSame([[['name' => 'id', 'value' => '-1']], [['name' => 'id', 'value' => '-2']]], array_column($applied['outputs']['applied'], 'parameters'));
     $ids = array_column($applied['outputs']['applied'], 'id');
     $this->assertCount(2, $ids);
     $this->assertContainsOnlyString($ids, 'Each id as text.');
@@ -368,8 +370,8 @@ class StagedCreateTest extends SurfaceKernelTestBase {
     $this->assertFalse($response->headers->has('ETag'));
     $answer = json_decode((string) $response->getContent(), TRUE, 512, JSON_THROW_ON_ERROR);
     $this->assertTrue($answer[OperationInputs::COMMITTED]);
-    $this->assertNull($answer['created']);
-    $this->assertSame([], (array) $answer['outputs'], 'No id until apply.');
+    $this->assertSame(['resource' => self::PAGE, 'operation' => 'update', 'parameters' => ['id' => -1]], $answer['created'], 'Where it lives in the stage.');
+    $this->assertSame(['id' => -1], (array) $answer['outputs'], 'The local id until apply.');
     $this->assertIsArray($answer['contract'], 'The create envelope, rebuilt.');
     $this->assertSame(0, $this->nodes(), 'No node until apply.');
     $this->assertSame('create', $this->stages()->read($id)['writes'][0]['kind']);

@@ -62,7 +62,11 @@ the record of the rework that brought the module to the pattern.
   more (the default; no method); on a static method returning an
   `OperationContext` when it needs more, the attribute's id and
   `creates` stamped on it and a context saying otherwise refused
-  (`docs/decisions.md#an-operation-on-the-class`); only ever on its
+  (`docs/decisions.md#an-operation-on-the-class`), the one exception an
+  update, read or delete of a thing a stage creates, which
+  `ResourcesInterface::operation(..., $stage)` builds as the create's
+  context under the asked id, unstamped and still creating
+  (`docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates`); only ever on its
   resource's or structure's own class. Its parameters are values, never
   objects: a method's is typed with a scalar named for a key of its
   resource (`string $id`), a class type refused at discovery
@@ -365,9 +369,14 @@ the record of the rework that brought the module to the pattern.
   writes whole; `rolledBack()` drops what it cached after an apply rolls
   back), any other refused at prepare; a create is an entry of kind
   `create`, always appended whole with no token, a caller-named name
-  unique per storage class in the stage (`taken`), and it cannot be
-  named again in its stage, having no stored id until apply
-  (`docs/staging.md#a-staged-create`); a delete is an entry of kind
+  unique per storage class in the stage (`taken`), and named by a local
+  id, its `address`: `-position` for an id storage gives (`id: -3` in
+  every answer), the caller's name otherwise; an update, read or delete
+  handed the stage and naming it is built as the create's context,
+  knowing `StagedStorage::POSITION`, and merges into the entry or drops
+  it, so apply only sees whole creates; a local id names nothing
+  without its stage (`docs/staging.md#a-staged-create`,
+  `docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it`); a delete is an entry of kind
   `delete`, values `[]` and `changed: ['']`, replacing an update of the
   thing at its position, and a later write to the thing is refused
   `not_found` (`docs/staging.md#a-staged-delete`)
@@ -377,11 +386,14 @@ the record of the rework that brought the module to the pattern.
   `stage` (`OperationInputs::STAGE`), last on every write tool (after
   `dry_run`), read tool and narrowing tool, default `''` so the `values`
   refiner still fires, resolved by `ResourceOperationToolBase::stage()`
-  (a missing id `notFound()`, another account's `accessRefused()`); and
+  (a missing id `notFound()`, another account's `accessRefused()`),
+  asked before the thing's context, which is built through it
+  (`ResourceOperationToolBase::staged()`); and
   the **stage header**, `X-Surface-Stage` (`ServedPaths::STAGE_HEADER`),
   read in `target()` into `ServedTarget::$stage`, resolved in
   `ServedOperations::fromTarget()` (404 naming nothing), another
-  account's 403 at `ServedOperationAccessCheck`, 400 on the stage's own
+  account's 403 at `ServedOperationAccessCheck`, before the thing's
+  context, 400 on the stage's own
   paths, ignored by `GET .../schema`, OpenAPI's `SurfaceStage`; a read,
   a narrowing and a write's `contract` and `ETag` are the staged view
   (`docs/staging.md`,
@@ -725,7 +737,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2017, Assertions: 48452, Errors: 0, Failures: 0, Skipped: 3. Classes: 283 of 283, 8 at a time, browser classes 4.
+phpunit: Tests: 2034, Assertions: 49052, Errors: 0, Failures: 0, Skipped: 3. Classes: 284 of 284, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -745,8 +757,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1906, Assertions: 44096, Skipped: 3, Deprecations: 130. Classes:
-232, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1923, Assertions: 44696, Skipped: 3, Deprecations: 130. Classes:
+233, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the

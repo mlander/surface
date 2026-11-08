@@ -1373,7 +1373,11 @@ on another calls `withId()`. A context that was never stamped, an
 operation's method called directly and handed to `build()`, is refused
 there: ask for the operation through `operation()`.
 (`OperationDefinition::stamp()`, `ResourceRegistry::assertStamps()`,
-`Resources::operation()`)
+`Resources::operation()`) *Amended 2026-11-07:* one context is not
+stamped: an update, a read or a delete of a thing a stage creates is
+its create's context under the asked id, and creates though its
+operation does not
+([A stage decides the context of a thing it creates](#a-stage-decides-the-context-of-a-thing-it-creates)).
 
 ### Constraints and starting values for an attached key
 
@@ -1789,7 +1793,16 @@ type was known the same way; it became identity when it started
 choosing between the settings variants.) *Amended 2026-10-28:* the storage's entity type and field name are
 identity too, beside its field type ([A parameter is identity the caller
 knows](#a-parameter-is-identity-the-caller-knows)); a field's settings
-child still knows the field's bundle this way.
+child still knows the field's bundle this way. *Amended 2026-11-07:* the
+context of a thing a stage creates knows the create's position in the
+stage this way, `StagedStorage::POSITION` (`stage_position`): not
+locked, handed to children by `withKnown()` with the rest of what the
+parent knows, and read by the stage's storage, and by the read and write
+tools to tell a thing a stage creates from a create
+([A stage decides the context of a thing it creates](#a-stage-decides-the-context-of-a-thing-it-creates)).
+The key name is reserved for the stage: `Resources::operation()` throws a
+`LogicException` naming the resource and the key when an owner's
+context knows it.
 
 ### An entity parameter given as an id
 
@@ -4448,9 +4461,10 @@ one: it keeps nothing between requests but a session cookie.
   required key is refused `required` first. *Decided 2026-11-07*, with
   the content entity delete: a refusal before validation would need a
   seam for storage the pipeline does not have. A create is no stored
-  thing: it is always an entry of its own, which nothing in its stage
-  finds again
-  ([A staged create is whole and rehearsed as a create](#a-staged-create-is-whole-and-rehearsed-as-a-create)).
+  thing: it is always an entry of its own, which only a context of the
+  thing it creates finds again, by its position
+  ([A staged create is whole and rehearsed as a create](#a-staged-create-is-whole-and-rehearsed-as-a-create),
+  [A staged create is named by a local id, and a later write merges into it](#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it)).
 - **How a stage and a workspace compose.** The active workspace is the
   request's, so neither the stage nor its access asks it. A staged
   write reads and a staged apply writes the workspace's view, as any
@@ -4531,21 +4545,183 @@ to a new thing.
   name stored by another path since staging is refused at
   `/writes/<position>/<key>`, code `taken`. The commit reads the id
   storage gave and `applied` answers it as text.
-- **It cannot be named again in its stage.** It has no stored id until
+- **No later write in its stage reaches it.** It has no stored id until
   apply, so nothing in the stage can read, change or remove it, and nothing
   can refer to it; the staged answer holds no `id`, since an output of
   an id storage gives on save is answered only once there is one. To
-  change it, discard the stage.
+  change it, discard the stage. *Superseded 2026-11-07:* a staged create
+  is named by its address in its stage, and a later write merges into
+  it; nothing outside the stage can refer to it still
+  ([A staged create is named by a local id, and a later write merges into it](#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it)).
 - **200, not 201, over HTTP.** `POST` with the stage header created
   nothing, so it answers 200 as a staged `PATCH` and `DELETE` do, with
   `created` null and no `Location`: a `Location` must name where the
   thing is read without a request header, and there is none until
   apply. Where it lives is not resolved against what is stored, which
-  holds nothing of it.
+  holds nothing of it. *Amended 2026-11-07:* still 200 with no
+  `Location`, and `created` names the update that reaches it in the
+  stage, its local id as the parameter.
 
 (`Staging\StagedStorage`, `Storage\StageStorage::rehearse()`,
 `ResourceApiController::write()`, `StagedCreateTest`,
 `StagedCallerNamedCreateTest`)
+
+### A staged create is named by a local id, and a later write merges into it
+
+Decided 2026-11-07. A staged create can be read, changed and removed
+again in its stage, by an address the stage gives it; apply only ever
+sees whole creates, and never a write over an id that does not exist.
+
+- **The address.** A create entry gains one key, `address`, written once
+  at its first commit and never changed: for each identity key the
+  create's context knows to be empty, the negative of the entry's
+  position, an integer (`{id: -3}` for the third entry), its local id;
+  for each identity key the caller names, the name from the accepted
+  values (`{id: "abc"}`). Keys the context knows with a value, an
+  entity's type and bundle, are left out. The position is unique and
+  never reused, so no counter is added; `next` stays the only one, and
+  the record's version stays 1, since `StageStore::read()` refuses any
+  other. An entry written before addresses were written is read as
+  `-position` for each identity key its context knew to be empty
+  (`StageStore::address()`).
+- **Matching.** A context that knows `StagedStorage::POSITION` finds the
+  create entry of its own resource at that position, or nothing. A
+  context that creates and knows no position finds nothing, so every
+  create appends. Every other context matches as before, over entries
+  that are not creates. The check for one thing through two resources
+  and the check for another operation are skipped for a write that
+  knows a position, as for a create.
+- **The context.** `ResourcesInterface::operation()` builds it, handed
+  the stage
+  ([A stage decides the context of a thing it creates](#a-stage-decides-the-context-of-a-thing-it-creates)).
+- **A write merges into the create.** The stage's `load()` answers the
+  entry's values whole. The context creates, so the pipeline computes
+  each computed key that takes no sent value from the merged sources on
+  every write, as apply's rehearsal of the create will; a key computed on
+  create kept at its first value would be refused there, code
+  `computed`. Every other key not sent keeps the entry's value. A write
+  that moves nothing answers `changed: false` and `changes: []`, and a
+  read answers the computed keys. The pipeline merges unchanged
+  (accept keeps what was not sent, a create is written whole), and the
+  author's prepare rehearses the merged whole document as a create, the
+  entity's validation and the storage's own taken check included. The
+  entry's values are replaced whole and its changed keys joined; its
+  position, kind, operation, arguments, known, token and address are
+  kept. A write that moves no key writes no record: the tool's "nothing
+  was written" stays true and the expiry is not reset. A create whose
+  caller named it is fixed to its name, so a write that sends another is
+  refused at validation, code `no_such_choice`; the `taken` check runs
+  for it too, skipping its own entry.
+- **A delete drops the create.** It rehearses nothing (the storage's
+  `prepareDelete()` would refuse an empty id) and takes the entry out
+  of the record, `next` unchanged. Nothing of it is left in `changes`,
+  and there is nothing to undo. After that its address names nothing, as
+  without the stage: no create matches it, so its context is built as
+  with no stage and the owner refuses the id, the tool's call with
+  `not_found`, the Tool API runner and HTTP, for an account that holds
+  no operation permission (the entity resources declare none), with
+  their fixed refusals. A
+  write whose context was built before the drop and prepared after it
+  is refused by the stage, code `not_found`, "The stage no longer
+  creates this thing: its create was taken out of the stage."; a write
+  whose create went between its prepare and its commit is a race.
+- **The local id in every answer.** The stage's `outputs()` fills each
+  identity key the context knows to be empty from the address, typed as
+  the output declares, so a staged create and every write, read, delete
+  and dry run of it answer `id: -3` (an integer for a node); a dry run
+  of a create, which has no address yet, keeps the adapter's empty id.
+  `changes` and `applied` list a create's address as its parameters, so
+  `applied` pairs `{id: "-3"}` with the id storage gave.
+- **Apply.** A create entry's input is its values whole (which its
+  changed keys, every key, already gave); the rest is unchanged: built
+  with no stage from the create's own operation, create access asked,
+  no token compared.
+- **The doors.** The stage's own access is asked before the thing's
+  context is built, at the tool's call (the stage named, its access,
+  then the context through it, then the thing's access) and over HTTP
+  (the permission, the stage's access, the context through it, the
+  thing's access), so when both would refuse, the stage's refusal
+  answers. The Tool API runner (`drush tool:run`, MCP) asks the tool's
+  access check before the call, and that check builds without a stage
+  the account may not use: where the thing would refuse without it, as
+  a local id does, the runner answers its fixed refusal,
+  `access_denied`, which names no stage. A
+  named stage that names nothing is answered as not found, the tool's
+  `not_found` naming the stage and HTTP's 404, a local id included.
+  Door decisions read the served `OperationDefinition`'s `creates`, and
+  storage and access read the context's; outside a stage the two agree,
+  so each switch is unchanged there: HTTP's 201 and `Location`, its
+  `ETag`, `created`, the read tool's refusal of a context that creates
+  (now only one that knows no position), and the refined `values`.
+- **Over HTTP.** A staged `POST` create answers 200 with `outputs.id`
+  the local id, `created` `{resource, operation: update, parameters:
+  {id: -3}}` resolved through the stage, and no `Location` or `ETag`.
+  `GET` and `PATCH` at `/-3` with the header answer 200 with the staged
+  view's `ETag`, `If-Match` comparing staged with staged; `POST
+  .../schema` at `/-3` with the header answers 200 narrowed over the
+  staged view, with no `ETag`, as a narrowing has none without a stage;
+  `DELETE` at `/-3` with the header answers 200; `/-3` without
+  the header is the route's fixed refusal, 403.
+- **Access.** Read access of a staged create is its bundle's create
+  access, which the context that creates asks: an account that may
+  create a page but not edit one reads back and changes its own staged
+  create. (Node's create access asks `access content` too.)
+- **What stays refused.** A reference to a local id, code
+  `valid_reference`: the reference check asks the selection handler,
+  which reads permanent storage. The local id without the stage, or
+  through another resource than the create's. A rename of a create
+  whose caller named it.
+
+Rejected: rewriting later writes' arguments at apply (no entry ever
+names a local id: a write to one merges into its create); a public
+`Stage::POSITION` (an `@internal` constant of the `@internal` wrapper is
+enough); deriving the address instead of recording it (the listing has
+no identity keys to derive it from); a 201 with a `Location` that
+resolves only with the header.
+
+(`Staging\StagedStorage`, `Staging\StageStore::created()`,
+`Storage\StageStorage::described()`, `Resources::operation()`,
+`ResourceOperationToolBase::staged()`, `ServedOperationAccessCheck`,
+`ResourceApiController::write()`, `StagedLocalIdTest`,
+`StagedCallerNamedCreateTest`, `StageToolsTest`, `StageOwnershipTest`)
+
+### A stage decides the context of a thing it creates
+
+Decided 2026-11-07. Two rules bend for a thing a stage creates, and
+only for it.
+
+- **The stamp rule has one exception.** A context's `creates` is its
+  operation's, stamped from the attribute
+  ([A context's id is the operation id](#a-contexts-id-is-the-operation-id)).
+  The context `ResourcesInterface::operation()` builds, handed a stage,
+  for an update, a read or a delete (an operation that does not create
+  and takes no structure) whose arguments name a create the stage holds
+  is that create's own context again, from the operation and arguments
+  the stage recorded, so what the owner put on it stands (a known empty
+  id, `createAny()`'s `SurfaceCreatableBundle`); then `withId()` the
+  asked operation's id, `creates` still TRUE, `withKnown()` the
+  position, and for each name the caller gave a Choice of that one name
+  that fixes the key, as `existingAny()` fixes a bundle. It is not
+  stamped: `stamp()` would refuse `creates` under `update`. `creates`
+  stays TRUE because the storage has to rehearse a create and the access
+  class has to answer for one; the asked id stays because the adapter
+  deletes by the kind of the context's operation.
+- **The stage decides a context, and is still never on one.** "A stage
+  input is a door argument handed to storage, never context" holds for
+  the stage itself: no context carries it, and no build is keyed by
+  it. It now also decides which context `operation()` builds for a
+  thing it creates, and only the position rides on what the context
+  knows. Any other call, or one whose arguments name no create of the
+  stage, builds as with no stage, the owner's method answering a local
+  id with `NamesNothingException`.
+
+Why: a write to a new thing has to be rehearsed as a create, and the
+owner's create context is the one that says what a create of it is;
+building it anywhere but `operation()` would give every door its own
+copy.
+
+(`ResourcesInterface::operation()`, `Resources::stagedCreate()`,
+`OperationContext`, `StagedLocalIdTest`)
 
 ### A stage input is a door argument handed to storage, never context
 
@@ -4598,6 +4774,19 @@ operations declare no permission, gets the door's fixed refusal at
 both access checks, as for any operation that declares none, and not
 the `not_found` this entry's draft expected; only a tool called from
 PHP, which runs no access check, answers `not_found` there.
+
+*Amended 2026-11-07, with local ids:* the stage is never on the context,
+and it decides which context `operation()` builds for a thing it
+creates, the position alone riding on what the context knows
+([A stage decides the context of a thing it creates](#a-stage-decides-the-context-of-a-thing-it-creates)).
+Both doors now ask the stage's own access before the thing's context is
+built, and build it through the stage: the route's check asks the
+permission, then the stage's access, then the context, then the thing's
+access, so a header that names nothing is let through to the 404 before
+any thing is asked about; the tool's access check builds the context
+through the stage only when the stage exists and the account may use
+it, and lets a call through when the stage names nothing, for
+`not_found`.
 
 (`ResourcesInterface::storage()`, `Resources::storage()`,
 `Staging\Stage`, `Staging\StagedStorage`, `Tool\OperationInputs`,

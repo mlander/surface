@@ -63,9 +63,11 @@ use Symfony\Component\HttpFoundation\Response;
  * A request whose `X-Surface-Stage` header names a stage is served as
  * the thing stands in that stage, every answer but the full schema: the
  * envelope and its `ETag`, a narrowing, and a write, which is kept in the
- * stage until it is applied; a staged create answers 200, `created` null
- * and no `Location`, since nothing is created until then. The answer
- * names no stage: the caller did.
+ * stage until it is applied; a staged create answers 200, its local id
+ * in `outputs` and `created` naming it in the stage, and no `Location`,
+ * since nothing is created until then. A path whose id is the local id
+ * names the staged create with the header alone. The answer names no
+ * stage: the caller did.
  *
  * Access is the route's requirement, the operation's permission then the
  * resource's access class; the pipeline is handed the same answer, as the
@@ -467,9 +469,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   `contract`, the envelope rebuilt from what is stored now, and
    *   `created`, for an operation that creates, the operation the created
    *   thing now lives at; a dry run adds `x-surface-dry-run: true`. 200,
-   *   or 201 with `Location` for a written create (200 with `created` null
-   *   for a staged one); the `ETag` of what is now stored for a written
-   *   update.
+   *   or 201 with `Location` for a written create (200 and no `Location`
+   *   for a staged one, `created` naming its local id in the stage); the
+   *   `ETag` of what is now stored for a written update.
    *
    * @throws \Drupal\surface\Http\ProblemException
    *   412 when `If-Match` no longer names what is stored, 415 for a body
@@ -530,15 +532,16 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // Built afresh: what was written is what the resource now refines
     // against and what the storage now loads.
     $fresh = $this->served($target);
-    // A create staged under the stage header created nothing: nothing
-    // lives anywhere until the stage is applied, so it answers 200 with no
-    // Location, and no candidate is resolved against what is stored.
-    $staged = $target->stage !== NULL;
-    $created = $staged ? NULL : $this->servedOperations->created($served, $result->values, $outputs);
+    // A create staged under the stage header created nothing: it lives at
+    // its local id in the stage alone, which `created` names, and it
+    // answers 200 with no Location, which has to resolve without a header.
+    // Decision: see
+    // docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it.
+    $created = $this->servedOperations->created($served, $result->values, $outputs);
     $answer['outputs'] = (object) $outputs;
     $answer['contract'] = $this->envelope($this->emit($fresh, $this->servedOperations->current($fresh)));
     $answer['created'] = $created;
-    if ($served->context->creates && !$staged) {
+    if ($served->operation->creates && $served->stage === NULL) {
       $response = $this->respond($answer, 201);
       $location = $created === NULL ? NULL : $this->createdAt($created);
       if ($location !== NULL) {
@@ -706,10 +709,11 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * @param \Symfony\Component\HttpFoundation\Response $response
    *   The response.
    * @param \Drupal\surface\Http\ServedOperation $served
-   *   The operation; one that creates, or names no storage, has none.
+   *   The operation; one that creates, or names no storage, has none. A
+   *   thing a stage creates has the staged view's.
    */
   protected function tag(Response $response, ServedOperation $served): void {
-    $fingerprint = $served->context->creates ? NULL : $this->servedOperations->fingerprint($served);
+    $fingerprint = $served->operation->creates ? NULL : $this->servedOperations->fingerprint($served);
     if ($fingerprint !== NULL) {
       // Strong: the tag names the stored values, whatever the bytes of
       // the document they are served in.

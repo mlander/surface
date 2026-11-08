@@ -173,6 +173,29 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests the HTTP check asks for the stage before the thing it creates.
+   *
+   * The ledger row `x` exists only as a create in the owner's stage. For
+   * another account holding the ledger's permission, `x` with no header
+   * names nothing and is let through to the 404; with the owner's stage in
+   * the header it is refused before any context is built from it, so the
+   * stage's refusal answers rather than the row's.
+   */
+  public function testTheStageIsAskedBeforeTheThingItCreates(): void {
+    $id = $this->open('Mine');
+    $created = $this->stage($id, 'stage_test.ledger', [], ['id' => 'x', 'title' => 'Ex'], 'create');
+    $this->assertTrue($created->committed, $this->said($created));
+    $this->assertTrue($this->routeAllows('GET', 'stage_test.ledger/x', [ServedPaths::STAGE_HEADER => $id]), 'The owner reads it through the stage.');
+
+    $this->setUpCurrentUser([], ['keep the ledger']);
+    $this->assertTrue($this->routeAllows('GET', 'stage_test.ledger/x'), 'No header: x names nothing, a 404 the permission may hear.');
+    foreach (['GET', 'PATCH'] as $method) {
+      $this->assertFalse($this->routeAllows($method, 'stage_test.ledger/x', [ServedPaths::STAGE_HEADER => $id]), $method);
+    }
+    $this->assertNull($this->row('x'));
+  }
+
+  /**
    * Tests an id that names no stage names nothing, at both doors.
    */
   public function testMissingStageNamesNothing(): void {

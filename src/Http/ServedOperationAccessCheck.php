@@ -44,8 +44,9 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * form's route's too (OperationGate).
  *
  * An API request whose `X-Surface-Stage` header names a stage is asked
- * the stage's own `update` access too, once the thing's allows it, so
- * another account's stage is refused before anything is built. A header
+ * the stage's own `update` access after the permission and before the
+ * thing's context, which is then built through the stage, so another
+ * account's stage is refused whatever the parameters name. A header
  * that names no stage is let through for the controller's 404, as a
  * parameter that names nothing is; on a path of the stage itself the
  * header is the controller's to refuse.
@@ -156,13 +157,34 @@ final class ServedOperationAccessCheck implements AccessInterface {
       // parameter, so saying it says nothing of what one names.
       return $permission;
     }
+    // The stage the header names is asked for before the thing: another
+    // account's is refused whatever the parameters name, and one that
+    // names nothing is the controller's 404. A context is then built
+    // through it, so a local id names what the stage creates.
+    // Decision: see
+    // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+    $staged = NULL;
+    $through = NULL;
+    if ($stage !== NULL) {
+      try {
+        $staged = $this->servedOperations->contextAccess(StageResource::ID, $this->servedOperations->context(StageResource::ID, 'update', ['id' => $stage]), $account);
+        $through = $this->servedOperations->stage($stage, $parameters);
+      }
+      catch (\InvalidArgumentException) {
+        // The header names no stage: the controller answers 404.
+        return AccessResult::allowed()->addCacheableDependency($permission)->setCacheMaxAge(0);
+      }
+      if (!$staged->isAllowed()) {
+        return $this->refused($staged instanceof AccessResultReasonInterface ? (string) $staged->getReason() : '')->addCacheableDependency($staged);
+      }
+    }
     // The context alone, built from the parameters: access is answered
     // from it, and nothing is built for a response the page cache answers.
     // Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
     try {
       $context = $parameters === NULL
         ? $this->servedOperations->contextFromRequest($resource, $operation, $request)
-        : $this->servedOperations->context($resource, $operation, $parameters);
+        : $this->servedOperations->context($resource, $operation, $parameters, $through);
     }
     catch (\InvalidArgumentException $e) {
       // A permission that names a parameter (`administer %entity_type
@@ -183,19 +205,9 @@ final class ServedOperationAccessCheck implements AccessInterface {
       return $this->refused($e->getMessage());
     }
     $access = $this->servedOperations->contextAccess($resource, $context, $account);
-    if ($access->isAllowed() && $stage !== NULL) {
+    if ($access->isAllowed() && $staged !== NULL) {
       // Decision: see
       // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
-      try {
-        $staged = $this->servedOperations->contextAccess(StageResource::ID, $this->servedOperations->context(StageResource::ID, 'update', ['id' => $stage]), $account);
-      }
-      catch (\InvalidArgumentException) {
-        // The header names no stage: the controller answers 404.
-        return AccessResult::allowed()->addCacheableDependency($access)->setCacheMaxAge(0);
-      }
-      if (!$staged->isAllowed()) {
-        return $this->refused($staged instanceof AccessResultReasonInterface ? (string) $staged->getReason() : '')->addCacheableDependency($staged);
-      }
       $access = $access->andIf($staged);
     }
     // An account that holds the operation's permission for what the

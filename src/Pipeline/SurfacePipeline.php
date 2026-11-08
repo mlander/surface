@@ -448,8 +448,13 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       return $this->delete($surface, $input, $storage, $dry_run, $access);
     }
     $current = $storage->load($surface);
+    // A thing being created computes its computed keys from the merged
+    // sources, as a stage's apply computes them for a create it holds.
+    // Decision: see
+    // docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it.
+    $creates = $storage instanceof CreatingStorageInterface && $storage->creates();
     try {
-      $values = $this->accept($surface, $input, $current);
+      $values = $this->accepting->accept($surface, $input, $current, $creates);
     }
     catch (UnknownKeysException $e) {
       return new SurfaceResult($current, $this->accepting->unknownKeyViolations($e), access: $access);
@@ -473,7 +478,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
     if ($this->accepting->unmatched() !== []) {
       return new SurfaceResult($values, new ViolationSet(array_values($this->accepting->unmatched())), access: $access, notes: $notes);
     }
-    $violations = $this->validate($surface, $values, $current);
+    $violations = $this->validating->validate($surface, $values, $current, $creates);
     if (!$violations->isEmpty()) {
       return new SurfaceResult($values, $violations, access: $access, notes: $notes);
     }
@@ -481,7 +486,6 @@ final class SurfacePipeline implements SurfacePipelineInterface {
     // back where nothing was said or what was said is what it holds. A
     // thing being created is written whole.
     // Decision: see docs/decisions.md#absent-keeps-null-clears.
-    $creates = $storage instanceof CreatingStorageInterface && $storage->creates();
     $write = $this->kept($surface, $values, $current, $creates ? NULL : $input);
     // A data surface with no keys, whether it declares none or access
     // omits every one, has no document to compare: the call is the whole

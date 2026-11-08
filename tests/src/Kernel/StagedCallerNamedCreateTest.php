@@ -25,7 +25,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * staging is refused at `/writes/<n>.id` at apply, nothing written and the
  * stage kept. The ledger, whose storage refuses no taken name, has the
  * stage's check alone. Two creates of one name prepared at once race at
- * commit.
+ * commit. A later write in the stage names the create by its name and
+ * merges into it, the name fixed, and `changes` names it so.
  *
  * @see docs/decisions.md#a-staged-create-is-whole-and-rehearsed-as-a-create
  */
@@ -225,6 +226,78 @@ class StagedCallerNamedCreateTest extends SurfaceKernelTestBase {
     $this->assertSame('Ex', $this->row('x')['title']);
     $kinds = array_map(static fn (array $applied): array => [$applied['kind'], $applied['id']], $applied['outputs']['applied']);
     $this->assertSame([['create', 'x']], $kinds);
+  }
+
+  /**
+   * Tests a staged ledger create keeps its computed keys in step.
+   *
+   * Its slug and handle are computed from its title on every write in the
+   * stage: a write that sends the title it holds moves nothing, says so,
+   * and writes no record; a read answers both; a new title moves both;
+   * and apply refuses neither.
+   */
+  public function testTheLedgerCreateComputesItsKeysOnEveryWrite(): void {
+    $id = $this->open();
+    $this->assertTrue($this->stage($id, 'stage_test.ledger', [], ['id' => 'x', 'title' => 'Ex'], 'create')->committed);
+    $record = $this->stages()->read($id);
+    $update = 'surface:stage_test.ledger:update';
+
+    $in = ['id' => 'x', OperationInputs::STAGE => $id];
+    $same = $this->runTool($update, $in + [OperationInputs::VALUES => ['title' => 'Ex']]);
+    $this->assertTrue($same['success'], $same['message']);
+    $this->assertSame('Edit a ledger row: the values were accepted, and they are what is staged in ' . $id . ', so nothing was written.', $same['message']);
+    $this->assertFalse($same['outputs'][OperationInputs::CHANGED]);
+    $this->assertSame([], $same['outputs'][OperationInputs::CHANGES]);
+    $this->assertSame($record, $this->stages()->read($id), 'No record is written.');
+
+    $read = $this->runTool('surface:stage_test.ledger:read', $in);
+    $this->assertTrue($read['success'], $read['message']);
+    $values = $read['outputs'][OperationInputs::VALUES];
+    $this->assertSame(['Ex', 'ex', 'ex'], [$values['title'], $values['slug'], $values['handle']]);
+
+    $moved = $this->runTool($update, $in + [OperationInputs::VALUES => ['title' => 'Why']]);
+    $this->assertTrue($moved['success'], $moved['message']);
+    $this->assertTrue($moved['outputs'][OperationInputs::CHANGED]);
+    $this->assertSame(['/title', '/slug', '/handle'], $moved['outputs'][OperationInputs::CHANGES]);
+    $held = $this->stages()->read($id)['writes'][0]['values'];
+    $this->assertSame(['why', 'why'], [$held['slug'], $held['handle']]);
+
+    $applied = $this->stageTool('apply', $id);
+    $this->assertTrue($applied['success'], $applied['message']);
+    $this->assertSame([], $applied['outputs'][OperationInputs::VIOLATIONS] ?? []);
+    $row = $this->row('x');
+    $this->assertSame(['Why', 'why', 'why'], [$row['title'], $row['slug'], $row['handle']]);
+  }
+
+  /**
+   * Tests a later write names the create by its name, and cannot rename it.
+   */
+  public function testLaterWriteNamesTheCreateByItsName(): void {
+    $id = $this->open();
+    $first = $this->stageNamed($id, 'first', 'First');
+    $this->assertTrue($first->committed, $this->said($first));
+    $this->assertSame(['id' => 'first'], $this->stages()->read($id)['writes'][0]['address']);
+
+    [$built, $storage] = $this->through($id, self::OWN, 'update', ['id' => 'first']);
+    $renamed = $this->submitted($built, $storage, ['id' => 'second', 'name' => ['value' => 'Renamed']]);
+    $this->assertSame(['id' => 'no_such_choice'], static::codes($renamed), $this->said($renamed));
+    $merged = $this->submitted($built, $storage, ['name' => ['value' => 'First, again']]);
+    $this->assertTrue($merged->committed, $this->said($merged));
+    $this->assertSame(['id' => 'first'], $this->pipeline()->outputs($built, $storage, $merged));
+    $writes = $this->stages()->read($id)['writes'];
+    $this->assertCount(1, $writes, 'Merged into the create.');
+    $this->assertSame('create', $writes[0]['kind']);
+    $this->assertSame('first', $writes[0]['values']['id']);
+    $this->assertSame(['value' => 'First, again'], $writes[0]['values']['name']);
+
+    $changes = $this->stageTool('changes', $id);
+    $this->assertSame([['name' => 'id', 'value' => 'first']], $changes['outputs']['items'][0]['parameters']);
+    $applied = $this->stageTool('apply', $id);
+    $this->assertTrue($applied['success'], $applied['message']);
+    $this->assertSame('First, again', $this->stored('first'));
+    $item = $applied['outputs']['applied'][0];
+    $this->assertSame([['name' => 'id', 'value' => 'first']], $item['parameters']);
+    $this->assertSame('first', $item['id']);
   }
 
   /**

@@ -14,7 +14,11 @@ namespace Drupal\surface\Resource;
  * is the operation's id, and whether it creates is the operation's: an
  * #[Operation] method may leave both out, and the engine stamps the
  * attribute's on what it returns (stamped()), refusing one that says
- * otherwise. Neither defineInputs() nor defineOutputs() receives it.
+ * otherwise. One context is not stamped: an update, a read or a delete
+ * of a thing a stage creates is built as its create's context under the
+ * asked operation's id, and creates though its operation does not
+ * (ResourcesInterface::operation()). Neither defineInputs() nor
+ * defineOutputs() receives it.
  * The framework applies it, once, when the resource or structure is
  * built:
  *   - each identity key it knows is locked to that value, and a context

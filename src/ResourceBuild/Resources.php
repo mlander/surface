@@ -1246,15 +1246,19 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function operation(string $resource, string $operation, array $arguments = []): OperationContext {
+  public function operation(string $resource, string $operation, array $arguments = [], ?Stage $stage = NULL): OperationContext {
     $found = $this->registry->getOperation($resource, $operation);
     // The read the build adds is asked in the context of the update it
     // reads, so its access and its keys are the update's.
     // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
     if ($found->reads !== NULL) {
-      return $this->operation($resource, $found->reads, $arguments);
+      return $this->operation($resource, $found->reads, $arguments, $stage);
     }
     $resolved = $this->operationArguments->resolve($found, $arguments);
+    $created = $stage === NULL || $found->creates || $found->structure !== NULL ? NULL : $this->stagedCreate($resource, $found, $resolved, $stage);
+    if ($created !== NULL) {
+      return $created;
+    }
     // One on the class is its attribute's facts and nothing else.
     // Decision: see docs/decisions.md#an-operation-on-the-class.
     if ($found->isBare()) {
@@ -1274,8 +1278,63 @@ final class Resources implements ResourcesInterface {
         OperationContext::class,
       ));
     }
+    // The stage's storage reads this key to tell a thing a stage creates,
+    // so no owner's context may know it.
+    // Decision: see docs/decisions.md#known-keys-that-are-not-identity.
+    if (array_key_exists(StagedStorage::POSITION, $context->known)) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation of %s knows the key "%s", which is reserved for the stage: the stage\'s storage reads it to tell a thing a stage creates.',
+        $found->id,
+        $resource,
+        StagedStorage::POSITION,
+      ));
+    }
     // Decision: see docs/decisions.md#a-contexts-id-is-the-operation-id.
     return $found->stamp($context);
+  }
+
+  /**
+   * Builds the context of a thing a stage creates, for a later operation.
+   *
+   * The owner's own create context, from the operation and the arguments
+   * the stage recorded, so what it holds stands (a creatable bundle, a
+   * known empty id), under the asked operation's id and still creating,
+   * knowing the create's position, and fixing each name the caller gave.
+   * Not stamped: OperationDefinition::stamp() would refuse a context that
+   * creates under an operation that does not. The asked id stays, because
+   * the storage deletes by the kind of the context's operation
+   * (storageFor()).
+   *
+   * Decision: see
+   * docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+   *
+   * @param string $resource
+   *   The class, or its #[Resource] or #[Structure] id.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $found
+   *   The operation asked, which does not create.
+   * @param array<string, mixed> $arguments
+   *   Its arguments, by name.
+   * @param \Drupal\surface\Staging\Stage $stage
+   *   The stage.
+   *
+   * @return \Drupal\surface\Resource\OperationContext|null
+   *   The context, or NULL when the stage creates no thing of the resource
+   *   under the arguments.
+   */
+  protected function stagedCreate(string $resource, OperationDefinition $found, array $arguments, Stage $stage): ?OperationContext {
+    $definition = $this->registry->getDefinition($resource);
+    $entry = $this->classResolver->getInstanceFromDefinition(StageStore::class)->created($stage, $definition->id, $arguments);
+    if ($entry === NULL) {
+      return NULL;
+    }
+    $create = $this->operation($definition->name(), (string) $entry['operation'], (array) $entry['arguments']);
+    $context = $create->withId($found->id, TRUE)->withKnown([StagedStorage::POSITION => (int) $entry['position']]);
+    foreach (StageStore::address($entry) as $key => $name) {
+      if (!array_key_exists($key, $create->known)) {
+        $context = $context->withConstraint($key, 'Choice', ['choices' => [$name], 'surface_fixed' => TRUE]);
+      }
+    }
+    return $context;
   }
 
   /**

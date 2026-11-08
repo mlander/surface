@@ -82,18 +82,37 @@ final class ServedOperations {
    *   What the path and the method named, and the stage its header named.
    *
    * @return \Drupal\surface\Http\ServedOperation
-   *   The operation, built; its storage handed the stage, when one is
-   *   named.
+   *   The operation, built through the stage, when one is named, and its
+   *   storage handed it.
    *
    * @throws \InvalidArgumentException
    *   When a parameter names nothing, or the header names no stage
    *   (NamesNothingException).
    */
   public function fromTarget(ServedTarget $target): ServedOperation {
-    // Decision: see
-    // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
-    $stage = $target->stage === NULL ? NULL : $this->stages->named($target->stage)->withArguments($target->parameters);
-    return $this->resolve($target->definition->name(), $target->operation->id, $target->parameters, $stage);
+    return $this->resolve($target->definition->name(), $target->operation->id, $target->parameters, $this->stage($target->stage, $target->parameters));
+  }
+
+  /**
+   * Gets the stage a request's header names.
+   *
+   * Decision: see
+   * docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+   *
+   * @param string|null $id
+   *   The header's value, or NULL when it is not sent.
+   * @param array $parameters
+   *   The operation's parameters, by name, which the stage records beside
+   *   a write.
+   *
+   * @return \Drupal\surface\Staging\Stage|null
+   *   The stage, or NULL when none is named.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   When the header names no stage.
+   */
+  public function stage(?string $id, array $parameters = []): ?Stage {
+    return $id === NULL ? NULL : $this->stages->named($id)->withArguments($parameters);
   }
 
   /**
@@ -131,6 +150,9 @@ final class ServedOperations {
    *   The operation id.
    * @param array $parameters
    *   The operation's parameters, by name, as raw values.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the request goes through, whose creates its parameters may
+   *   name; NULL for none.
    *
    * @return \Drupal\surface\Resource\OperationContext
    *   The context.
@@ -138,9 +160,9 @@ final class ServedOperations {
    * @throws \InvalidArgumentException
    *   When a parameter the operation needs is missing or names nothing.
    */
-  public function context(string $resource, string $operation, array $parameters): OperationContext {
+  public function context(string $resource, string $operation, array $parameters, ?Stage $stage = NULL): OperationContext {
     $definition = $this->registry->getDefinition($resource);
-    return $this->resources->operation($definition->name(), $operation, $parameters);
+    return $this->resources->operation($definition->name(), $operation, $parameters, $stage);
   }
 
   /**
@@ -207,7 +229,8 @@ final class ServedOperations {
    *   The operation's parameters, by name, as raw values, never objects:
    *   the operation's storage loads what they name.
    * @param \Drupal\surface\Staging\Stage|null $stage
-   *   The stage the storage is handed, or NULL for permanent storage.
+   *   The stage the operation is built through and the storage is handed,
+   *   or NULL for permanent storage.
    *
    * @return \Drupal\surface\Http\ServedOperation
    *   The operation, built. The read the build adds is served as the
@@ -225,10 +248,10 @@ final class ServedOperations {
       $found = $this->registry->getOperation($definition->name(), $found->reads);
       $operation = $found->id;
     }
-    $context = $this->resources->operation($definition->name(), $operation, $parameters);
+    $context = $this->resources->operation($definition->name(), $operation, $parameters, $stage);
     $built = $this->resources->build($definition->name(), $context);
     $storage = $definition->storage === NULL ? NULL : $this->resources->storage($definition->name(), $context, $built, stage: $stage);
-    return new ServedOperation($definition, $found, $parameters, $context, $built, $storage);
+    return new ServedOperation($definition, $found, $parameters, $context, $built, $storage, $stage);
   }
 
   /**
@@ -365,7 +388,9 @@ final class ServedOperations {
    * its derived resource lives at `update` with `{id: <its new id>}`, which
    * its `id` output says, the create operation knowing only that it had
    * none; a field added to a bundle lives at `update` with the entity
-   * type, the bundle and the field name the write accepted.
+   * type, the bundle and the field name the write accepted. A create
+   * staged under the stage header lives at `update` with its local id,
+   * `{id: -3}`, in that stage alone: each candidate is built through it.
    *
    * @param \Drupal\surface\Http\ServedOperation $served
    *   The operation that wrote.
@@ -379,7 +404,9 @@ final class ServedOperations {
    *   or NULL when the operation does not create or nothing answers.
    */
   public function created(ServedOperation $served, array $values, array $outputs): ?array {
-    if (!$served->context->creates) {
+    // Decision: see
+    // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+    if (!$served->operation->creates) {
       return NULL;
     }
     // An identity key the write left empty (an id storage gives on save)
@@ -403,17 +430,15 @@ final class ServedOperations {
           continue 2;
         }
       }
-      if ($parameters === []) {
-        // An operation asked for with nothing is not where one thing lives.
+      if ($parameters === [] || $candidate->creates) {
+        // An operation asked for with nothing is not where one thing lives,
+        // nor is one that creates another.
         continue;
       }
       try {
-        $context = $this->resources->operation($served->definition->name(), (string) $id, $parameters);
+        $context = $this->resources->operation($served->definition->name(), (string) $id, $parameters, $served->stage);
       }
       catch (\InvalidArgumentException) {
-        continue;
-      }
-      if ($context->creates) {
         continue;
       }
       foreach (array_intersect_key($identity, $context->known) as $key => $value) {

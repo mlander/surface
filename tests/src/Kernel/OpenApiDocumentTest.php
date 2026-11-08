@@ -833,12 +833,24 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
       }
       $this->assertNotContains('GET ' . $base . '/schema', $staged, 'The full schema reads nothing stored.');
       $this->assertNotContains('GET ' . $base . '/{id}/schema', $staged, 'The full schema reads nothing stored.');
-      // A create under the header is staged: 200, created null, no id.
+      // A create under the header is staged: 200, its local id, created
+      // naming it in the stage, no Location.
       $create = $document['paths'][$base]['post'];
-      $this->assertStringContainsString('under the X-Surface-Stage header, the create is staged instead, 200, and nothing is created until the stage is applied: outputs hold no id and created is null.', $create['description']);
-      $this->assertStringContainsString('A create staged under the X-Surface-Stage header', $create['responses']['200']['description']);
+      $this->assertStringContainsString('under the X-Surface-Stage header, the create is staged instead, 200 with no Location, and nothing is created until the stage is applied: outputs.id is a negative local id, or the name the caller gave, which names the thing only with that stage, and created names the update that reaches it there.', $create['description']);
+      $this->assertStringContainsString('A create staged under the X-Surface-Stage header: the result, then outputs, its id the local id, contract and created, which names the thing by its local id in that stage', $create['responses']['200']['description']);
+      // A path's id may be a local id, with the header.
+      $id = array_values(array_filter($document['paths'][$base . '/{id}']['patch']['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
+      $this->assertStringEndsWith('With the X-Surface-Stage header, a negative integer names a thing that stage creates.', $id[0]['description']);
+      // The read takes the header too.
+      $read = array_values(array_filter($document['paths'][$base . '/{id}']['get']['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
+      $this->assertStringEndsWith('With the X-Surface-Stage header, a negative integer names a thing that stage creates.', $read[0]['description']);
+      // The full schema takes no header, so its id names no staged create.
+      $full = array_values(array_filter($document['paths'][$base . '/{id}/schema']['get']['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
+      $this->assertStringNotContainsString('X-Surface-Stage', $full[0]['description']);
+      $narrowed = array_values(array_filter($document['paths'][$base . '/{id}/schema']['post']['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
+      $this->assertStringEndsWith('With the X-Surface-Stage header, a negative integer names a thing that stage creates.', $narrowed[0]['description']);
     }
-    $this->assertStringEndsWith('and under the X-Surface-Stage header.', $document['components']['headers']['Location']['description']);
+    $this->assertStringEndsWith('and under the X-Surface-Stage header, since a staged create is read only with the header.', $document['components']['headers']['Location']['description']);
     $other = array_filter($staged, static fn (string $call): bool => !str_contains($call, ' /surface-api/entity.content:'));
     $this->assertSame([], array_values($other), 'No call of the stage, a config resource or a State one takes the header.');
     $this->assertArrayHasKey('/surface-api/surface.stage/{id}', $document['paths']);

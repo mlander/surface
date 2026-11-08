@@ -28,7 +28,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * TransactionalStorageInterface takes `stage`, the write tools right
  * after `dry_run`, optional with the empty string as its default, which
  * the `values` refiner depends on; the stage's own tools, a config
- * resource's and a State fixture's take none.
+ * resource's and a State fixture's take none. The stage a call names is
+ * asked for before the thing its parameters name.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -223,6 +224,43 @@ class StageToolsTest extends SurfaceKernelTestBase {
     $in_stage = $this->tool(['id' => $id, OperationInputs::STAGE => $stage]);
     $this->assertSame('Spring meetup, moved', $this->defaultTitle($in_stage), 'Refined to the staged view.');
     $this->assertNull($this->defaultTitle($this->tool(['id' => $id, OperationInputs::STAGE => self::NONE])), 'Declared: no default.');
+  }
+
+  /**
+   * Tests the stage is asked for before the thing a local id names.
+   *
+   * Another account's stage is refused naming the stage, and a stage that
+   * names nothing is not found, the input to correct, at the call and at
+   * the access check a runner asks first; neither says whether -1 names
+   * anything.
+   */
+  public function testTheStageIsAskedBeforeTheLocalId(): void {
+    $stage = $this->open();
+    $resources = $this->container->get('surface.resources');
+    $context = $resources->operation('entity.content:node.page', 'create');
+    $built = $resources->build('entity.content:node.page', $context);
+    $storage = $resources->storage('entity.content:node.page', $context, $built, NULL, $this->container->get('surface.stages')->named($stage));
+    $values = ['title' => ['value' => 'Mine'], 'field_description' => ['value' => 'Staged.']];
+    $staged = $this->pipeline()->submit($built, $values, $storage);
+    $this->assertTrue($staged->committed);
+    $edit = [OperationInputs::VALUES => ['title' => ['value' => 'Theirs']]];
+
+    $this->setUpCurrentUser([], ['access content', 'create page content', 'use text format basic']);
+    $theirs = $this->tool(['id' => -1, OperationInputs::STAGE => $stage] + $edit);
+    $theirs->execute();
+    $result = $theirs->getResult();
+    $this->assertFalse($result->isSuccess());
+    $this->assertSame('You do not have permission to use the stage ' . $stage . '.', (string) $result->getMessage());
+    $this->assertSame('access', $result->getContextValues()[OperationInputs::VIOLATIONS][0]['code']);
+
+    $missing = $this->tool(['id' => -1, OperationInputs::STAGE => self::NONE] + $edit);
+    $this->assertTrue($missing->access(NULL, TRUE)->isAllowed(), 'The runner lets it through to be answered.');
+    $missing->execute();
+    $result = $missing->getResult();
+    $this->assertFalse($result->isSuccess());
+    $this->assertStringContainsString('There is no stage "' . self::NONE . '"', (string) $result->getMessage());
+    $this->assertSame('not_found', $result->getContextValues()[OperationInputs::VIOLATIONS][0]['code']);
+    $this->assertFalse($this->tool(['id' => -1] + $edit)->access(), 'Without a stage, -1 names nothing for an account no permission lets hear it.');
   }
 
   /**

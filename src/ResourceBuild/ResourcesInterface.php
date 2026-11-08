@@ -172,12 +172,34 @@ interface ResourcesInterface {
   /**
    * Builds the context one operation describes.
    *
+   * With a stage, an operation that does not create and takes no
+   * structure (an update, a read or a delete) may name a thing the stage
+   * creates, by the address its create was given: a local id (`-3`) or
+   * the name its caller gave. Its context is then the owner's create
+   * context again, built from what the stage recorded, under this
+   * operation's id, with `creates` still TRUE, so storage rehearses a
+   * create and access answers for one, and knowing the create's position
+   * in the stage, which the stage's storage reads, and which the read and
+   * write tools read to tell a thing a stage creates from a create; a
+   * name its caller gave is fixed, so a write cannot rename the thing.
+   * The position's key is reserved for the stage: an owner's context that
+   * knows it is refused with a \LogicException. It is the one
+   * context whose `creates` differs from its operation's, and it is not
+   * stamped. Any other call, or one that names no create of the stage,
+   * builds as with no stage. The stage is never on the context.
+   *
+   * Decision: see
+   * docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+   *
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
    * @param string $operation
    *   The operation id.
    * @param array $arguments
    *   The operation method's arguments, positional or by parameter name.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the call goes through, or NULL for none. Who may use it is
+   *   its own access's answer, which the caller asks first.
    *
    * @return \Drupal\surface\Resource\OperationContext
    *   The context, whose id is the operation id; for the read the build
@@ -187,10 +209,11 @@ interface ResourcesInterface {
    * @throws \InvalidArgumentException
    *   When it has no such operation.
    * @throws \LogicException
-   *   When two providers declare the operation, or it returns something
-   *   other than a context for its own id.
+   *   When two providers declare the operation, it returns something
+   *   other than a context for its own id, or its context knows the key
+   *   reserved for the stage (StagedStorage::POSITION).
    */
-  public function operation(string $resource, string $operation, array $arguments = []): OperationContext;
+  public function operation(string $resource, string $operation, array $arguments = [], ?Stage $stage = NULL): OperationContext;
 
   /**
    * Builds a resource or structure in one of its operations.

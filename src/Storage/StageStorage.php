@@ -389,8 +389,14 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
         continue;
       }
       // The keys the stage moved, over what is stored now: a key it never
-      // moved keeps what is stored, whatever the stage last read of it.
-      $input = $write['kind'] === 'delete' ? [] : array_intersect_key((array) $write['values'], array_flip($write['changed']));
+      // moved keeps what is stored, whatever the stage last read of it. A
+      // create is sent whole, as every write to it merged it (its changed
+      // keys, every key, say the same).
+      $input = match ($write['kind']) {
+        'delete' => [],
+        'create' => (array) $write['values'],
+        default => array_intersect_key((array) $write['values'], array_flip($write['changed'])),
+      };
       $result = $this->pipeline->submit($built, $input, $storage, TRUE, SurfaceAccess::decisive($access));
       if (!$result->isValid()) {
         foreach ($result->violations as $violation) {
@@ -576,11 +582,14 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    *
    * @return array
    *   Its position, resource, operation, kind, and its parameters as
-   *   `{name, value}` pairs, each value as text.
+   *   `{name, value}` pairs, each value as text: for a create, the
+   *   address a write in the stage names it by, its local id or the name
+   *   its caller gave.
    */
   protected static function described(array $write): array {
     $parameters = [];
-    foreach ((array) $write['arguments'] as $name => $value) {
+    $named = $write['kind'] === 'create' ? StageStore::address($write) : (array) $write['arguments'];
+    foreach ($named as $name => $value) {
       $parameters[] = [
         'name' => (string) $name,
         'value' => is_scalar($value) || $value === NULL ? (string) $value : (string) json_encode($value),
@@ -602,7 +611,8 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    *   The write.
    *
    * @return string
-   *   The resource and its parameters' values: `entity.content:node.page 12`.
+   *   The resource and its parameters' values: `entity.content:node.page 12`,
+   *   or for a create its address, `entity.content:node.page -3`.
    */
   protected static function thing(array $write): string {
     $values = array_map(static fn (array $parameter): string => $parameter['value'], self::described($write)['parameters']);

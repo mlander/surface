@@ -18,8 +18,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * each conforms as the storage reads it back, a dry run's id marked not
  * emitted. An applied write's id is text whatever the resource types it
  * as; a staged update answers its own `id` as the resource types it, an
- * integer for a node, and a staged create answers none, its listing item
- * with no parameters.
+ * integer for a node, and a staged create and a write to it answer its
+ * local id, a negative integer, its listing item naming it as text.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -69,7 +69,8 @@ class StageOutputsConformTest extends SurfaceKernelTestBase {
     $this->assertTrue($this->pipeline()->conformOutput($built, $outputs)->isEmpty());
     $this->assertTrue($this->stage($id, 'stage_test.ledger', ['id' => 'a'], ['title' => 'Bravo'])->committed);
 
-    // A staged create answers no id: storage gives it at apply.
+    // A staged create answers its local id, the negative of its position,
+    // and so does a write to it: storage gives the id at apply.
     [$built, $storage] = $this->staged($id, 'entity.content:node.page', 'create');
     $result = $this->submitted($built, $storage, [
       'title' => ['value' => 'New'],
@@ -78,7 +79,13 @@ class StageOutputsConformTest extends SurfaceKernelTestBase {
     $this->assertTrue($result->committed, $this->said($result));
     $this->assertInstanceOf(OutputsStorageInterface::class, $storage);
     $outputs = $storage->outputs($built, $result->values);
-    $this->assertSame([], $outputs);
+    $this->assertSame(['id' => -3], $outputs);
+    $this->assertTrue($this->pipeline()->conformOutput($built, $outputs)->isEmpty());
+    [$built, $storage] = $this->through($id, 'entity.content:node.page', 'update', ['id' => -3]);
+    $result = $this->submitted($built, $storage, ['title' => ['value' => 'Newer']]);
+    $this->assertTrue($result->committed, $this->said($result));
+    $outputs = $this->pipeline()->outputs($built, $storage, $result);
+    $this->assertSame(['id' => -3], $outputs);
     $this->assertTrue($this->pipeline()->conformOutput($built, $outputs)->isEmpty());
 
     // What each of the stage's own operations answers.
@@ -94,7 +101,7 @@ class StageOutputsConformTest extends SurfaceKernelTestBase {
         $this->assertSame(3, $outputs['total']);
         $this->assertSame([1, 2, 3], array_column($outputs['items'], 'position'));
         $this->assertSame('create', $outputs['items'][2]['kind']);
-        $this->assertSame([], $outputs['items'][2]['parameters']);
+        $this->assertSame([['name' => 'id', 'value' => '-3']], $outputs['items'][2]['parameters']);
         continue;
       }
       $this->assertCount(3, $outputs['applied']);

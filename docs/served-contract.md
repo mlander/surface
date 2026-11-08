@@ -1566,7 +1566,7 @@ present, then three keys of its own:
 | `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |
 | `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; on a dry run, and for an operation that changes nothing, what its `prepare()` answered under an output's name; `{}` when none are declared or none was answered. |
 | `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. |
-| `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); otherwise `null`, a create staged under `X-Surface-Stage` included. |
+| `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); for a create staged under `X-Surface-Stage`, where it lives in that stage, its parameters its local id (`{id: -1}`); otherwise `null`. |
 | `x-surface-dry-run` | `true`, on a dry run only. |
 
 Every path is a JSON Pointer (RFC 6901): `/contact/email`, the whole
@@ -1580,8 +1580,8 @@ same at both doors, so a program calling the API branches on them
 
 | Status | When |
 | --- | --- |
-| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`. A create staged under `X-Surface-Stage`, with `created: null` and no `Location` ([Staging](staging.md#a-staged-create)). |
-| 201 | A create written, with `Location`, the created thing's read (`/surface-api/node.type/recipe`); no `Location` when no operation addresses it (a field added to a bundle). |
+| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`. A create staged under `X-Surface-Stage`, its `outputs.id` the local id, `created` naming it in the stage and no `Location` ([Staging](staging.md#a-staged-create)). |
+| 201 | A create written, with `Location`, the created thing's read (`/surface-api/node.type/recipe`); no `Location` when no operation addresses it (a field added to a bundle), and none under `X-Surface-Stage`, which answers 200. |
 | 400 | A body that is not a JSON object, or a parameter the operation needs given nowhere. |
 | 403 | Access refused, at the route or by the pipeline for the whole call (code `access` or `permission`); the session's token missing. |
 | 404 | A resource, an operation or an id that names nothing. |
@@ -1736,14 +1736,14 @@ path either.
 
 ### Where a created thing lives
 
-`ServedOperations::created()` answers only for an operation whose
-context `creates`. It takes the resource's operations in declaration
+`ServedOperations::created()` answers only for an operation that
+`creates`, as its attribute says. It takes the resource's operations in declaration
 order and picks the first that does not create and whose every required
 parameter is supplied, by name, from the outputs storage read back,
 then from the identity keys the write accepted, then from the identity
 the creating operation already knew. The answer is checked, not
 assumed: the operation is built from those parameters (its storage
-loads what each names), its context must not create, and every identity
+loads what each names), it must not create, and every identity
 key it knows must equal what was written. The content type's
 `update(string $type)` is answered by the `type` the write accepted,
 and its read is the `Location`. A field added at
@@ -1751,9 +1751,11 @@ and its read is the `Location`. A field added at
 $bundle, string $field_name)`, answered by the identity the write
 accepted: `Location: /surface-api/field.instance/node/article/field_x`.
 Example 2's `configure` creates nothing, so `null`. A create staged
-under `X-Surface-Stage` created nothing either: `created` is `null`, the
-answer 200 and no `Location`, and no candidate is built against what is
-stored ([Staging: A staged create](staging.md#a-staged-create)).
+under `X-Surface-Stage` created nothing yet: each candidate is built
+through the stage, so a page staged as `-1` lives at `update` with `{id:
+-1}` in that stage, which `created` answers; the answer is 200 with no
+`Location`, since a `Location` has to resolve without a request header
+([Staging: A staged create](staging.md#a-staged-create)).
 
 ### If-Match
 
