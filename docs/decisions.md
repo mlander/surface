@@ -4363,8 +4363,8 @@ one: it keeps nothing between requests but a session cookie.
 - **Not the private temp store.** It reads the owner from the current
   user and the session, which nothing an operation runs may read
   ([Nothing an operation runs reads the request](#nothing-an-operation-runs-reads-the-request)).
-- **What a stage can hold for now.** Updates to a resource whose
-  storage class implements `Pipeline\TransactionalStorageInterface`,
+- **What a stage can hold for now.** Updates and deletes to a resource
+  whose storage class implements `Pipeline\TransactionalStorageInterface`,
   the storage's promise that its commit writes through the database
   connection alone, so the transaction apply opens undoes it whole: the
   entity example's content entity storage, the stage fixture's row of a
@@ -4375,7 +4375,7 @@ one: it keeps nothing between requests but a session cookie.
   State in its own code (State keeps a cache a rollback leaves stale), or
   change a table's schema (which MySQL commits at once). Refused at
   prepare, each a violation of the whole call, code `does_not_apply`: a
-  create, a delete, a storage class that does not implement the
+  create, a storage class that does not implement the
   interface (the stage's own, the config storages until config staging,
   a storage in State), and a resource that holds a secret (a stage keeps
   values in the clear). One stored thing reached through two resources
@@ -4411,7 +4411,19 @@ one: it keeps nothing between requests but a session cookie.
   that built the operation and a token of what storage held at the
   first read (`Fingerprint::of()`). The last of two writes to one thing
   wins whole, under the stage's lock, as two writes without `If-Match`
-  do.
+  do. A delete is an entry of kind `delete`, its values `[]` (never
+  NULL: a load through the stage answers no values for it either way)
+  and its changed keys `['']`, the whole thing, as the pipeline answers
+  a delete's changes. A delete of a thing the stage holds an update of
+  replaces that entry where it stands, keeping its position, when it was
+  first staged and its token, and taking the delete's operation and
+  arguments; it is the one write that may name another operation than
+  the entry's. A write to a thing the stage removed, a second delete
+  included, is refused, code `not_found`; since the pipeline validates
+  before the storage sees a write, an update of it that leaves out a
+  required key is refused `required` first. *Decided 2026-11-07*, with
+  the content entity delete: a refusal before validation would need a
+  seam for storage the pipeline does not have.
 - **How a stage and a workspace compose.** The active workspace is the
   request's, so neither the stage nor its access asks it. A staged
   write reads and a staged apply writes the workspace's view, as any
@@ -4419,14 +4431,19 @@ one: it keeps nothing between requests but a session cookie.
   revision there; staged in a workspace whose view of the thing differs
   from Live's and applied in Live, its token does not match and it is
   refused, code `conflict`; staged in a workspace whose view of the
-  thing matches Live's and applied in Live, it writes Live.
+  thing matches Live's and applied in Live, it writes Live. A delete in
+  a workspace that is not Live is core's to refuse: Workspaces forbids
+  delete access there to an entity the workspace did not create
+  (`EntityAccess::entityAccess()`), which the entity example's access
+  asks, so it is refused `access`, at once or at apply; an entity the
+  workspace created may be deleted there.
 
 (`Resource\StageResource`, `Structure\StageChangesStructure`,
 `Structure\StageAppliedStructure`, `Storage\StageStorage`,
 `Access\StageAccess`, `Staging\StageStore`, `Staging\StagedStorage`,
 `Pipeline\TransactionalStorageInterface`, `StorageAdapter::rolledBack()`,
 `StageStoreTest`, `StageOwnershipTest`, `StageInWorkspaceTest`,
-`StagedUpdateTest`, `StageApplyTest`)
+`StagedUpdateTest`, `StagedDeleteTest`, `StageApplyTest`)
 
 ### A staged write validates as a real write
 
@@ -7220,9 +7237,10 @@ and access stay derived, because they are the field's, not its type's.
 ### Field access is child access
 
 Each field of a content entity resource is a child invoked through its
-own operation, `create` or `update` to match the parent's, so field
-access is the child's access, through the three answers access already
-had: edit allowed is open, view allowed is locked, neither is omitted.
+own operation, `create`, `update`, `read` or `delete` to match the
+parent's, so field access is the child's access, through the three
+answers access already had: edit allowed is open, view allowed is
+locked, neither is omitted.
 No mechanism of its own was needed, which is what the child operations
 were built for ([One invocation model for both
 levels](#one-invocation-model-for-both-levels)). Field access takes
@@ -7246,6 +7264,25 @@ the delta dropped, and one about the whole entity to `@entity`; it
 drops one about a field the resource does not carry, or one the account
 may not edit, as core's form does. (`ContentEntityStorage::prepare()`)
 
+*Added 2026-11-07:* it implements `DeletableStorageInterface`, so both
+entity resources have a `delete`. A delete removes the entity with every
+translation and every revision it has, core's storage rule, where
+core's delete form removes a translation that is not the default one
+alone; the example follows storage, since it writes the default
+translation only. The rule is the entity type's storage handler's, so
+a module that replaces the handler replaces it: the contrib trash
+module's keeps the entity marked deleted and restorable.
+`prepareDelete()` refuses an entity that is gone,
+code `not_found`, and asks neither access nor validation; the access
+class asks core's delete access, and each field child is invoked under
+a delete through its own `delete`, which field access asks as a write,
+as under an update. That decides which keys the delete answers, so a
+field the account may not see is not answered, and an update and a
+delete of one thing carry the same keys for one account, so a stage
+compares one token over both. (`ContentEntityStorage::prepareDelete()`,
+`ContentEntityAccess::access()`, `FieldItemStructures::delete()`,
+`ContentEntityDeleteTest`)
+
 ### Two entity resources from one deriver: static per bundle, runtime per entity type
 
 Decided 2026-10-31, from that day's design conversation.
@@ -7262,8 +7299,9 @@ the bundle's resource does, through the one method both call
 - **Why both.** A resource per bundle states its fields outright: no
   conditional, its refiners the fields' own, and a precise path per
   bundle, `/surface-api/entity.content:node.page`. A resource per entity
-  type keeps the tool list short as bundles grow (five tools per entity
-  type, where each bundle adds three) and has the shape agents expect
+  type keeps the tool list short as bundles grow (six tools per entity
+  type, where each bundle adds four, since the delete of 2026-11-07) and
+  has the shape agents expect
   from the services this module replaces: one create and one update per
   entity type, the bundle an input.
 - **One deriver, proven equal.** Both are derived from the same field

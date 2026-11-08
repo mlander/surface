@@ -60,7 +60,7 @@ final class EntityResourcesController extends ControllerBase {
   public function index(): array {
     $build = [
       'intro' => [
-        '#markup' => '<p>' . $this->t('Each bundle with a form display is a resource, derived from its fields\' typed data: one part per field the form shows, in the same order, each asking field access whether you may change it, only see it, or not see it at all. A basic page can be <a href=":add">added</a> and edited through it here, and every resource below is also a tool (<code>surface:&lt;resource&gt;:create</code>, <code>:update</code>, <code>:read</code>); its read asks view access, so an account that may view a page and not edit it reads it.', [
+        '#markup' => '<p>' . $this->t('Each bundle with a form display is a resource, derived from its fields\' typed data: one part per field the form shows, in the same order, each asking field access whether you may change it, only see it, or not see it at all. A basic page can be <a href=":add">added</a>, edited and deleted through it here, and every resource below is also a tool (<code>surface:&lt;resource&gt;:create</code>, <code>:update</code>, <code>:read</code>, <code>:delete</code>); its read asks view access, so an account that may view a page and not edit it reads it, and its delete asks delete access.', [
           ':add' => Url::fromRoute('surface_examples_entity.node_page_create')->toString(),
         ]) . '</p>',
       ],
@@ -134,7 +134,7 @@ final class EntityResourcesController extends ControllerBase {
   }
 
   /**
-   * Lists the newest basic pages, each linked to its resource edit form.
+   * Lists the newest basic pages, each linked to its edit and delete forms.
    *
    * @return array
    *   Render array items.
@@ -144,7 +144,10 @@ final class EntityResourcesController extends ControllerBase {
     $ids = $storage->getQuery()->accessCheck(TRUE)->condition('type', 'page')->sort('changed', 'DESC')->range(0, 5)->execute();
     $items = [];
     foreach ($storage->loadMultiple($ids) as $node) {
-      $items[] = Link::createFromRoute($node->label() ?? (string) $node->id(), 'surface_examples_entity.node_page_update', ['id' => $node->id()])->toRenderable();
+      $items[] = [
+        'edit' => Link::createFromRoute($node->label() ?? (string) $node->id(), 'surface_examples_entity.node_page_update', ['id' => $node->id()])->toRenderable(),
+        'delete' => ['#prefix' => ' (', '#suffix' => ')'] + Link::createFromRoute($this->t('delete'), 'surface_examples_entity.node_page_delete', ['id' => $node->id()])->toRenderable(),
+      ];
     }
     return $items;
   }

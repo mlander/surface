@@ -41,6 +41,13 @@ use Drupal\surface\SurfaceInterface;
  *   thing whole, the last of two writes winning, and the top level keys
  *   the write moved join the entry's, the keys apply sends.
  *
+ * A delete is staged as an entry of kind `delete`, its values empty and
+ * its one changed key the empty one, the whole thing, as the pipeline
+ * answers `changes: ['']` for a delete. It replaces the thing's entry at
+ * that entry's position, keeping the token taken when the thing was
+ * first staged; load() then answers nothing for the thing, and a later
+ * write to it, a second delete among them, is refused.
+ *
  * The pipeline merges a partial write over what load() answered, so a
  * second staged write to one thing builds on the first, and its changes
  * are against what the stage held. A thing is one resource and the
@@ -143,11 +150,13 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * {@inheritdoc}
    *
    * Refused whole, each refusal a violation of the whole call, for a
-   * stage that is gone or applied, a thing the stage removed, a create or
-   * a delete, a storage class that does not declare a transaction rolls
-   * its writes back whole, a resource that holds a secret, and a thing
-   * the stage holds through another resource or another operation; else
-   * the adapter's own prepare().
+   * stage that is gone or applied, a thing the stage removed (a second
+   * delete of it included), a create, a storage class that does not
+   * declare a transaction rolls its writes back whole, a resource that
+   * holds a secret, a thing the stage holds through another resource, and
+   * a write through another operation than the one the thing is staged
+   * through, unless the write deletes; else the adapter's own prepare().
+   * A delete is rehearsed as a real one: the storage's prepareDelete().
    */
   public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
     $record = $this->stages->read($this->stage->id);
@@ -159,13 +168,13 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
     }
     $entry = $this->entry($record);
     if ($entry !== NULL && $entry['kind'] === 'delete') {
-      throw self::refusal($this->t('This was removed in the stage; discard that write first.'), Violation::NOT_FOUND);
+      throw self::refusal(
+        $this->t('This was removed in the stage; the removal stands until the stage is applied or discarded.'),
+        Violation::NOT_FOUND,
+      );
     }
     if ($this->creates()) {
-      throw self::refusal($this->t('A create cannot be staged yet; apply creates for real and stage updates.'), Violation::DOES_NOT_APPLY);
-    }
-    if ($this->deletes()) {
-      throw self::refusal($this->t('A delete cannot be staged yet; remove it for real, or stage updates.'), Violation::DOES_NOT_APPLY);
+      throw self::refusal($this->t('A create cannot be staged yet; apply creates for real and stage updates and deletes.'), Violation::DOES_NOT_APPLY);
     }
     // Decision: see
     // docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection.
@@ -185,7 +194,9 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
         throw self::refusal($this->t('This is staged through @resource already; write it through that resource, or discard the stage.', ['@resource' => $write['resource']]), Violation::CONFLICT);
       }
     }
-    if ($entry !== NULL && $entry['operation'] !== $this->context->id) {
+    // A delete replaces what the stage holds for the thing, whatever it
+    // was staged through.
+    if ($entry !== NULL && $entry['operation'] !== $this->context->id && !$this->deletes()) {
       throw self::refusal($this->t('This is staged through the @operation operation already; write it through that operation, or discard the stage.', ['@operation' => $entry['operation']]), Violation::DOES_NOT_APPLY);
     }
     return $this->adapter->prepare($surface, $values);
@@ -195,8 +206,9 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * {@inheritdoc}
    *
    * Under the stage's lock: the entry for the thing replaced whole by the
-   * merged document, or added at the stage's next position. Storage is
-   * never written.
+   * merged document, or added at the stage's next position. A delete
+   * turns the thing's entry into a delete at its position, its staging
+   * time and token kept, or adds one. Storage is never written.
    *
    * @throws \Drupal\surface\Staging\StageRaceException
    *   When the lock cannot be had, or the stage is gone or applied.
@@ -227,7 +239,19 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
           break;
         }
       }
-      if ($found !== NULL) {
+      // Decision: see
+      // docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection.
+      if ($found !== NULL && $this->deletes()) {
+        $entry = $record['writes'][$found];
+        $entry['operation'] = $this->context->id;
+        $entry['kind'] = 'delete';
+        $entry['arguments'] = $this->arguments();
+        $entry['values'] = [];
+        $entry['changed'] = [''];
+        $entry['touched'] = $now;
+        $record['writes'][$found] = $entry;
+      }
+      elseif ($found !== NULL) {
         $entry = $record['writes'][$found];
         $entry['values'] = $values;
         $entry['changed'] = array_values(array_unique([...$entry['changed'], ...$moved]));
@@ -241,10 +265,10 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
           'operation' => $this->context->id,
           'kind' => $this->deletes() ? 'delete' : ($this->creates() ? 'create' : 'update'),
           'storage' => $this->storageClass,
-          'arguments' => $this->stage->arguments === [] ? $this->parametersKnown() : $this->stage->arguments,
+          'arguments' => $this->arguments(),
           'known' => array_filter($this->context->known, static fn (mixed $value): bool => $value === NULL || is_scalar($value)),
-          'values' => $values,
-          'changed' => $moved,
+          'values' => $this->deletes() ? [] : $values,
+          'changed' => $this->deletes() ? [''] : $moved,
           'token' => $this->token,
           'staged' => $now,
           'touched' => $now,
@@ -304,6 +328,17 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    */
   protected function identityKnown(): array {
     return array_intersect_key($this->context->known, array_flip($this->identity));
+  }
+
+  /**
+   * Gets what a write records as its arguments.
+   *
+   * @return array<string, mixed>
+   *   The arguments the stage was handed, else the operation's parameters
+   *   the context knows.
+   */
+  protected function arguments(): array {
+    return $this->stage->arguments === [] ? $this->parametersKnown() : $this->stage->arguments;
   }
 
   /**

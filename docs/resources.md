@@ -283,8 +283,9 @@ already known, and that is a **context**, an `OperationContext`:
   keeps its value. `deletes: TRUE`, beside `destructive: TRUE`, makes an
   operation a delete: it takes no values, its storage removes the thing
   its context names (`DeletableStorageInterface`), its tool takes the
-  parameters and a dry run, and HTTP serves it as `DELETE` (the
-  placement's `delete`; why:
+  parameters and a dry run, and `stage` where its resource's storage can
+  be staged ([Staging](staging.md#a-staged-delete)), and HTTP serves it
+  as `DELETE` (the placement's `delete`, a content entity's; why:
   [decision](decisions.md#a-placed-block-is-a-resource)).
 
 The content type resource is the worked example:

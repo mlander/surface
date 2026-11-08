@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\Entity\EntityStorageException;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
+use Drupal\tool\FailureCategory;
 use Drupal\workspaces\Entity\Workspace;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -23,6 +25,13 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * in a workspace whose view of the thing differs from Live's and applied
  * in Live finds Live's revision under a token of the workspace's, and is
  * refused as a conflict.
+ *
+ * A delete in a workspace is core's to refuse: Workspaces forbids delete
+ * access to an entity the workspace did not create, which the entity
+ * example's access asks, so a delete there is refused `access`, unstaged
+ * or at apply, and nothing is removed; a caller that asks no access gets
+ * the exception core's predelete hook throws. An entity created in the
+ * workspace may be deleted there.
  *
  * @see docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection
  */
@@ -61,6 +70,7 @@ class StageInWorkspaceTest extends SurfaceKernelTestBase {
     $this->setUpCurrentUser([], [
       'access content',
       'edit any page content',
+      'delete any page content',
       'administer nodes',
       'use text format basic',
       'view any workspace',
@@ -148,6 +158,71 @@ class StageInWorkspaceTest extends SurfaceKernelTestBase {
     $this->assertSame('Live title', $this->title());
     $this->workIn('draft');
     $this->assertSame('Workspace title', $this->title());
+  }
+
+  /**
+   * Tests a delete of a Live node in a workspace is refused, unstaged.
+   *
+   * Core forbids delete access in a workspace to an entity it did not
+   * create there (Workspaces' EntityAccess::entityAccess()); a caller that
+   * asks no access meets core's predelete hook, which throws.
+   */
+  public function testDeleteInWorkspaceIsRefusedByCore(): void {
+    $this->workIn('draft');
+    $tool = 'surface:' . self::PAGE . ':delete';
+    $refused = $this->runTool($tool, ['id' => (int) $this->node->id()]);
+    $this->assertFalse($refused['success']);
+    $this->assertSame(FailureCategory::Access, $refused['category']);
+    $this->assertSame(['' => Violation::ACCESS], array_column($refused['outputs'][OperationInputs::VIOLATIONS], 'code', 'path'));
+    $id = $this->open();
+    $staged = $this->runTool($tool, ['id' => (int) $this->node->id(), OperationInputs::STAGE => $id]);
+    $this->assertFalse($staged['success'], 'Staged, the same access is asked.');
+    $this->assertSame(FailureCategory::Access, $staged['category']);
+    $this->assertSame([], $this->stages()->read($id)['writes']);
+
+    [$built, $storage] = $this->permanent(self::PAGE, 'delete', ['id' => $this->node->id()]);
+    try {
+      $this->pipeline()->submit($built, [], $storage);
+      $this->fail('Core refuses the delete in a workspace.');
+    }
+    catch (EntityStorageException $e) {
+      $this->assertInstanceOf(\RuntimeException::class, $e->getPrevious());
+      $this->assertSame('This content item can only be deleted in the Live workspace.', $e->getMessage());
+    }
+    $this->workIn(NULL);
+    $this->assertSame('Live title', $this->title(), 'Nothing removed.');
+  }
+
+  /**
+   * Tests a delete staged in Live and applied in a workspace is refused.
+   */
+  public function testStagedDeleteAppliedInWorkspaceIsRefused(): void {
+    $id = $this->open();
+    $tool = 'surface:' . self::PAGE . ':delete';
+    $staged = $this->runTool($tool, ['id' => (int) $this->node->id(), OperationInputs::STAGE => $id]);
+    $this->assertTrue($staged['success'], $staged['message']);
+    $this->workIn('draft');
+    // The access handler keeps Live's answer for the rest of the request;
+    // an apply in the workspace is another request, which asks again.
+    $this->container->get('entity_type.manager')->getAccessControlHandler('node')->resetCache();
+    $applied = $this->stageTool('apply', $id);
+    $this->assertFalse($applied['success']);
+    $this->assertSame(['/writes/1' => Violation::ACCESS], array_column($applied['outputs'][OperationInputs::VIOLATIONS], 'code', 'path'));
+    $this->workIn(NULL);
+    $this->assertSame('Live title', $this->title(), 'Nothing removed.');
+    $this->assertSame('open', $this->stages()->read($id)['status']);
+  }
+
+  /**
+   * Tests a node created in a workspace may be deleted there.
+   */
+  public function testNodeCreatedInWorkspaceIsDeletedThere(): void {
+    $this->workIn('draft');
+    $node = Node::create(['type' => 'page', 'title' => 'Only here', 'field_description' => 'Described.']);
+    $node->save();
+    $removed = $this->runTool('surface:' . self::PAGE . ':delete', ['id' => (int) $node->id()]);
+    $this->assertTrue($removed['success'], $removed['message']);
+    $this->assertNull($this->container->get('entity_type.manager')->getStorage('node')->loadUnchanged($node->id()));
   }
 
 }

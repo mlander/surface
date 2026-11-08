@@ -144,6 +144,7 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
     'field.instance:update' => ['entity_type' => 'node', 'bundle' => 'page', 'field_name' => 'body'],
     'field.storage:update' => ['entity_type' => 'node', 'field_name' => 'body'],
     'entity.content:node.page:update' => ['id' => 1],
+    'entity.content:node.page:delete' => ['id' => 1],
     'gate_test.note:update' => ['node' => 1],
     'gate_test.note:annotate' => ['node' => 1],
     'gate_test.relay:update' => ['node' => 1],
