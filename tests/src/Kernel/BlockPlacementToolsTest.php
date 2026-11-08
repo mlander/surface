@@ -118,15 +118,25 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
     $this->assertFalse($tools->hasDefinition('surface:block.placed_component:configure'), 'The stop-gap resource is gone.');
     $this->assertFalse($tools->hasDefinition(self::TOOL . 'delete:read'), 'A delete has nothing to read before.');
     $expected = [
-      'create' => ['Place a block', ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
+      'create' => [
+        'Place a block',
+        ToolOperation::Write,
+        FALSE,
+        [OperationInputs::VALUES, OperationInputs::DRY_RUN, OperationInputs::STAGE],
+      ],
       'update' => [
         'Edit a placed block',
         ToolOperation::Write,
         FALSE,
-        ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN],
+        ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN, OperationInputs::STAGE],
       ],
-      'read' => ['Current values: Edit a placed block', ToolOperation::Read, FALSE, ['id']],
-      'delete' => ['Remove a placed block', ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN]],
+      'read' => ['Current values: Edit a placed block', ToolOperation::Read, FALSE, ['id', OperationInputs::STAGE]],
+      'delete' => [
+        'Remove a placed block',
+        ToolOperation::Write,
+        TRUE,
+        ['id', OperationInputs::DRY_RUN, OperationInputs::STAGE],
+      ],
     ];
     foreach ($expected as $operation => [$label, $kind, $destructive, $inputs]) {
       $definition = $tools->getDefinition(self::TOOL . $operation);

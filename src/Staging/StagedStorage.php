@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Staging;
 
+use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\surface\Pipeline\CreatingStorageInterface;
 use Drupal\surface\Pipeline\DeletingStorageInterface;
@@ -17,6 +18,8 @@ use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\ResourceBuild\StorageAdapter;
+use Drupal\surface\Storage\SecretCodecException;
+use Drupal\surface\Storage\SecretCodecInterface;
 use Drupal\surface\Storage\StageStorage;
 use Drupal\surface\SurfaceInterface;
 
@@ -31,15 +34,17 @@ use Drupal\surface\SurfaceInterface;
  *   data surface's keys, and what is stored when it holds nothing; the
  *   first load from storage is fingerprinted (Fingerprint::of()), the
  *   token apply checks what is stored then against.
- * - prepare() refuses what a stage cannot hold yet, each a violation of
- *   the whole call, a storage class that does not implement
- *   TransactionalStorageInterface among them, then rehearses the write as
- *   a real one: the adapter's prepare(), with every check the storage
- *   makes.
+ * - prepare() refuses what a stage cannot hold, each a violation of
+ *   the whole call, a call Stageable says a stage does not apply to
+ *   among them, then rehearses the write as a real one: the adapter's
+ *   prepare(), with every check the storage makes.
  * - commit() writes the stage's record, never storage: the merged
  *   document the pipeline accepted replaces the stage's entry for the
  *   thing whole, the last of two writes winning, and the top level keys
- *   the write moved join the entry's, the keys apply sends.
+ *   the write moved join the entry's, the keys apply sends. Every secret
+ *   in it is sealed with the site's codec, its path recorded under
+ *   `sealed`, and a secret the write cleared is recorded under `cleared`
+ *   (StagedSecrets); load() opens exactly the recorded paths.
  *
  * A create is staged as an entry of kind `create`, appended whole: it
  * names no stored thing, so it matches no entry and no entry matches it,
@@ -67,11 +72,14 @@ use Drupal\surface\SurfaceInterface;
  * second staged write to one thing builds on the first, and its changes
  * are against what the stage held. A thing is one resource and the
  * identity its context knows; one stored thing reached through two
- * resources is refused.
+ * resources is refused, and two resources of one storage class whose
+ * contexts know no identity (two over one config object) are one thing.
  *
  * Decision: see
  * docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
  * Decision: see docs/decisions.md#a-staged-write-validates-as-a-real-write.
+ * Decision: see
+ * docs/decisions.md#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths.
  *
  * @internal
  */
@@ -113,6 +121,16 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
   protected bool $committed = FALSE;
 
   /**
+   * The data surface's secrets, as Outbound::secrets() finds them.
+   *
+   * Captured at load() and prepare(), for commit(), which is handed no
+   * data surface.
+   *
+   * @var array<string, true|array>
+   */
+  protected array $secrets = [];
+
+  /**
    * Constructs a StagedStorage.
    *
    * @param \Drupal\surface\ResourceBuild\StorageAdapter $adapter
@@ -132,6 +150,8 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * @param string[] $parameters
    *   The names of the operation's parameters, what a write records as
    *   its arguments when the stage was handed none.
+   * @param \Drupal\surface\Storage\SecretCodecInterface $codec
+   *   The codec a secret is sealed with in the record.
    */
   public function __construct(
     protected readonly StorageAdapter $adapter,
@@ -142,6 +162,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
     protected readonly string $storageClass,
     protected readonly array $identity,
     protected readonly array $parameters,
+    protected readonly SecretCodecInterface $codec,
   ) {}
 
   /**
@@ -167,9 +188,14 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * token. A thing the stage creates is answered its entry's values; its
    * context creates, so the pipeline computes each computed key that takes
    * no sent value again from the merged sources, as apply's rehearsal of
-   * the create computes it from what was sent.
+   * the create computes it from what was sent. A secret the entry
+   * sealed is opened, by the paths it recorded, so keep on empty keeps
+   * it; every door projects it out of what it answers. A secret that
+   * cannot be opened, since the site's hash salt changed after it was
+   * staged, is left out, and prepare() refuses every write.
    */
   public function load(SurfaceInterface $surface): array {
+    $this->secrets = Outbound::secrets($surface);
     $record = $this->stages->read($this->stage->id);
     $entry = $record === NULL ? NULL : $this->entry($record);
     if ($this->position() !== NULL) {
@@ -177,11 +203,11 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
         return $this->current = [];
       }
       $this->address = StageStore::address($entry);
-      return $this->current = array_intersect_key((array) $entry['values'], $surface->getDefinitions()->toArray());
+      return $this->current = array_intersect_key($this->readable($entry), $surface->getDefinitions()->toArray());
     }
     if ($entry !== NULL) {
       $this->token ??= $entry['token'];
-      $values = $entry['kind'] === 'delete' ? [] : array_intersect_key((array) $entry['values'], $surface->getDefinitions()->toArray());
+      $values = $entry['kind'] === 'delete' ? [] : array_intersect_key($this->readable($entry), $surface->getDefinitions()->toArray());
       return $this->current = $values;
     }
     $loaded = $this->adapter->load($surface);
@@ -195,12 +221,14 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * {@inheritdoc}
    *
    * Refused whole, each refusal a violation of the whole call, for a
-   * stage that is gone or applied, a thing the stage removed (a second
+   * stage that is gone, applied or voided, a stage whose seals the codec
+   * cannot open (the hash salt changed), a thing the stage removed (a second
    * delete of it included), a storage class that does not declare a
-   * transaction rolls its writes back whole, a resource that holds a
-   * secret, a thing the stage holds through another resource, and a write
-   * through another operation than the one the thing is staged through,
-   * unless the write deletes; else the adapter's own prepare(). A create
+   * transaction rolls its writes back whole, the resource's own or a
+   * routed child's, an operation that names no thing (Stageable), a thing
+   * the stage holds through another resource, and a write through another
+   * operation than the one the thing is staged through, unless the write
+   * deletes; else the adapter's own prepare(). A create
    * is no thing reached twice, so the last two do not apply to it; one
    * whose caller names it is refused `taken` at the name while a create
    * of the same storage class in the stage holds it. A delete is rehearsed
@@ -212,14 +240,24 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * delete of one rehearses nothing, since nothing is stored to remove.
    */
   public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
+    $this->secrets = Outbound::secrets($surface);
     $record = $this->stages->read($this->stage->id);
     if ($record === NULL) {
       throw self::refusal($this->t('The stage expired or was discarded.'), Violation::NOT_FOUND);
+    }
+    $voided = StageStorage::voided($record);
+    if ($voided !== NULL) {
+      throw self::refusal($voided, Violation::DOES_NOT_APPLY);
     }
     if ($record['status'] !== StageStorage::OPEN) {
       throw self::refusal($this->t('The stage was applied; open a new one.'), Violation::DOES_NOT_APPLY);
     }
     $entry = $this->entry($record);
+    // Decision: see
+    // docs/decisions.md#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths.
+    if ($entry !== NULL && !$this->opens($entry)) {
+      throw self::refusal(StageStorage::unopened($this->stage->id), Violation::DOES_NOT_APPLY);
+    }
     if ($entry === NULL && $this->position() !== NULL) {
       throw self::refusal($this->t('The stage no longer creates this thing: its create was taken out of the stage.'), Violation::NOT_FOUND);
     }
@@ -230,16 +268,32 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
       );
     }
     // Decision: see
-    // docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection.
-    if (!is_a($this->storageClass, TransactionalStorageInterface::class, TRUE)) {
+    // docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+    if (!Stageable::storage($this->storageClass)) {
       throw self::refusal($this->t('@resource cannot be staged: its storage, @class, does not declare that a database transaction rolls its writes back whole (@interface).', [
         '@resource' => $this->resource,
         '@class' => $this->storageClass,
         '@interface' => TransactionalStorageInterface::class,
       ]), Violation::DOES_NOT_APPLY);
     }
-    if (Outbound::secrets($surface) !== []) {
-      throw self::refusal($this->t('A stage keeps values in the clear until secrets are sealed, so a resource that holds a secret cannot be staged yet.'), Violation::DOES_NOT_APPLY);
+    // A routed child is committed with its parent at apply, in the same
+    // transaction, so its storage makes the same promise.
+    foreach ($this->adapter->routedStorageClasses() as $at => $class) {
+      if (!Stageable::storage($class)) {
+        throw self::refusal($this->t('@resource cannot be staged: its child at @at is stored by @class, which does not declare that a database transaction rolls its writes back whole (@interface).', [
+          '@resource' => $this->resource,
+          '@at' => $at,
+          '@class' => $class,
+          '@interface' => TransactionalStorageInterface::class,
+        ]), Violation::DOES_NOT_APPLY);
+      }
+    }
+    if (!Stageable::namesThing($this->identity, $this->parameters, $this->creates())) {
+      throw self::refusal($this->t('@resource cannot be staged through the @operation operation: it names no thing, since it creates nothing and its parameters name none of the identity keys (@keys).', [
+        '@resource' => $this->resource,
+        '@operation' => $this->context->id,
+        '@keys' => implode(', ', $this->identity),
+      ]), Violation::DOES_NOT_APPLY);
     }
     // A new thing is no stored thing reached twice: two creates through
     // two resources are two things.
@@ -261,7 +315,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
     }
     $known = $this->identityKnown();
     foreach ($record['writes'] as $write) {
-      if ($write['kind'] !== 'create' && $write['storage'] === $this->storageClass && $write['resource'] !== $this->resource && self::sameThing($known, (array) $write['known'])) {
+      if ($write['kind'] !== 'create' && $write['storage'] === $this->storageClass && $write['resource'] !== $this->resource && self::sameThing($known, $this->identityOf((array) $write['known']))) {
         throw self::refusal($this->t('This is staged through @resource already; write it through that resource, or discard the stage.', ['@resource' => $write['resource']]), Violation::CONFLICT);
       }
     }
@@ -287,6 +341,14 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * nothing when it moved no key; a delete of one takes the entry out,
    * the next position unchanged. Storage is never written.
    *
+   * The keys moved are compared in the clear; then each secret in the
+   * values is sealed, its path recorded under `sealed`, and each secret
+   * path the write cleared joins the entry's `cleared`, which a path set
+   * again leaves. An entry with neither has neither key. A delete's entry
+   * holds no values, so neither.
+   *
+   * @throws \Drupal\surface\Storage\SecretCodecException
+   *   When a secret holds what is not a string, or the codec has no key.
    * @throws \Drupal\surface\Staging\StageRaceException
    *   When the lock cannot be had, or the stage is gone or applied, or a
    *   create of the same storage class took the name a create's caller
@@ -305,7 +367,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
       }
       $now = $this->stages->now();
       $values = $prepared->values;
-      $moved = self::moved($values, $this->current ?? []);
+      $moved = self::moved($values, $this->current ?? [], !$this->creates());
       $name = $this->creates() ? $this->name($values) : [];
       if ($name !== [] && $this->creating($record, $name) !== NULL) {
         throw new StageRaceException(sprintf('The stage "%s" took a create of the name "%s" while the write was prepared.', $id, implode(' ', array_map(self::scalar(...), $name))));
@@ -325,13 +387,16 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
           $record['writes'] = array_values($record['writes']);
         }
         else {
-          $moved = self::moved($values, (array) $entry['values']);
+          // Compared in the clear: sealing is not deterministic, so two
+          // seals of one secret always differ.
+          $held = $this->opened($entry);
+          $moved = self::moved($values, $held);
           if ($moved === []) {
             // Nothing moved: no record is written, and no expiry reset.
             $this->committed = TRUE;
             return;
           }
-          $entry['values'] = $values;
+          $entry = $this->sealed($entry, $values, $held);
           $entry['changed'] = array_values(array_unique([...$entry['changed'], ...$moved]));
           $entry['touched'] = $now;
           $record['writes'][$found] = $entry;
@@ -345,13 +410,13 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
         $entry['kind'] = 'delete';
         $entry['arguments'] = $this->arguments();
         $entry['values'] = [];
+        unset($entry['sealed'], $entry['cleared']);
         $entry['changed'] = [''];
         $entry['touched'] = $now;
         $record['writes'][$found] = $entry;
       }
       elseif ($found !== NULL) {
-        $entry = $record['writes'][$found];
-        $entry['values'] = $values;
+        $entry = $this->sealed($record['writes'][$found], $values, $this->current ?? []);
         $entry['changed'] = array_values(array_unique([...$entry['changed'], ...$moved]));
         $entry['touched'] = $now;
         $record['writes'][$found] = $entry;
@@ -361,7 +426,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
         if ($this->creates()) {
           $this->address = $this->addressFor($position, $name);
         }
-        $record['writes'][] = [
+        $entry = [
           'position' => $position,
           'resource' => $this->resource,
           'operation' => $this->context->id,
@@ -369,12 +434,13 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
           'storage' => $this->storageClass,
           'arguments' => $this->arguments(),
           'known' => array_filter($this->context->known, static fn (mixed $value): bool => $value === NULL || is_scalar($value)) + $name,
-          'values' => $this->deletes() ? [] : $values,
+          'values' => [],
           'changed' => $this->deletes() ? [''] : $moved,
           'token' => $this->creates() ? NULL : $this->token,
           'staged' => $now,
           'touched' => $now,
         ] + ($this->creates() ? ['address' => $this->address] : []);
+        $record['writes'][] = $this->deletes() ? $entry : $this->sealed($entry, $values, $this->current ?? []);
         $record['next'] = $position + 1;
       }
       $record['updated'] = $now;
@@ -419,6 +485,93 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
       }
     }
     return array_intersect_key(array_filter($answered, static fn (mixed $value): bool => $value !== NULL), $outputs);
+  }
+
+  /**
+   * Opens an entry's values: each secret it sealed, by its recorded path.
+   *
+   * @param array $entry
+   *   The entry.
+   *
+   * @return array
+   *   Its values in the clear.
+   *
+   * @throws \Drupal\surface\Storage\SecretCodecException
+   *   When the codec cannot open one.
+   */
+  protected function opened(array $entry): array {
+    return StagedSecrets::unseal($this->codec, (array) $entry['values'], (array) ($entry['sealed'] ?? []));
+  }
+
+  /**
+   * Opens an entry's values for a load, leaving out what cannot be opened.
+   *
+   * @param array $entry
+   *   The entry.
+   *
+   * @return array
+   *   Its values in the clear; when a seal cannot be opened, the values
+   *   less every sealed path, so no envelope is read as a value.
+   */
+  protected function readable(array $entry): array {
+    try {
+      return $this->opened($entry);
+    }
+    catch (SecretCodecException) {
+      $values = (array) $entry['values'];
+      foreach ((array) ($entry['sealed'] ?? []) as $path) {
+        NestedArray::unsetValue($values, array_map('strval', (array) $path));
+      }
+      return $values;
+    }
+  }
+
+  /**
+   * Answers whether every seal of an entry can be opened.
+   *
+   * @param array $entry
+   *   The entry.
+   *
+   * @return bool
+   *   FALSE when the codec cannot open one: the site's hash salt changed
+   *   since it was sealed.
+   */
+  protected function opens(array $entry): bool {
+    try {
+      $this->opened($entry);
+      return TRUE;
+    }
+    catch (SecretCodecException) {
+      return FALSE;
+    }
+  }
+
+  /**
+   * Gives an entry a write's values, every secret in them sealed.
+   *
+   * Decision: see
+   * docs/decisions.md#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths.
+   *
+   * @param array $entry
+   *   The entry.
+   * @param array $values
+   *   What the write prepared, in the clear.
+   * @param array $held
+   *   What the write was merged over, in the clear: what a secret path
+   *   held before it was cleared.
+   *
+   * @return array
+   *   The entry, its values sealed, `sealed` the paths sealed and
+   *   `cleared` the paths left cleared, each key only when it lists one.
+   *
+   * @throws \Drupal\surface\Storage\SecretCodecException
+   *   When a secret holds what is not a string, or the codec has no key.
+   */
+  protected function sealed(array $entry, array $values, array $held): array {
+    [$entry['values'], $sealed] = StagedSecrets::seal($this->codec, $values, $this->secrets);
+    $cleared = StagedSecrets::stillCleared((array) ($entry['cleared'] ?? []), StagedSecrets::cleared($values, $held, $this->secrets), $values);
+    unset($entry['sealed'], $entry['cleared']);
+    return $entry + ($sealed === [] ? [] : ['sealed' => $sealed]) + ($cleared === [] ? [] : ['cleared' => $cleared]);
   }
 
   /**
@@ -518,7 +671,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
   protected function creating(array $record, array $name): ?array {
     $identity = $this->identityKnown() + $name;
     foreach ($record['writes'] as $write) {
-      if ($write['kind'] === 'create' && (int) $write['position'] !== $this->position() && $write['storage'] === $this->storageClass && self::sameThing($identity, (array) $write['known'])) {
+      if ($write['kind'] === 'create' && (int) $write['position'] !== $this->position() && $write['storage'] === $this->storageClass && self::sameThing($identity, $this->identityOf((array) $write['known']))) {
         return $write;
       }
     }
@@ -566,18 +719,32 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
   /**
    * Lists the top level keys a write moved, compared whole.
    *
+   * For a write to a stored thing, a key one side leaves out and the
+   * other holds empty (NULL, or an empty map such as the
+   * `third_party_settings` a config storage prepares where nothing is
+   * mounted yet) did not move: sent at apply, the empty value would say
+   * the key holds nothing, where staging left it as stored. A create
+   * moves every key it holds.
+   *
    * @param array $values
    *   What the write prepared.
    * @param array $held
    *   What it is compared with.
+   * @param bool $stored
+   *   TRUE for a write to a stored thing, whose empty keys left out
+   *   elsewhere did not move.
    *
    * @return string[]
    *   The keys either holds and the other does not, or holds otherwise.
    */
-  protected static function moved(array $values, array $held): array {
+  protected static function moved(array $values, array $held, bool $stored = FALSE): array {
     $moved = [];
     foreach (array_keys($values + $held) as $key) {
-      if (!array_key_exists($key, $values) || !array_key_exists($key, $held) || $values[$key] !== $held[$key]) {
+      $here = array_key_exists($key, $values);
+      $there = array_key_exists($key, $held);
+      $only = $here ? ($values[$key] ?? NULL) : ($held[$key] ?? NULL);
+      $empty = $only === NULL || $only === [];
+      if ($here && $there ? $values[$key] !== $held[$key] : !$stored || !$empty) {
         $moved[] = (string) $key;
       }
     }
@@ -591,7 +758,25 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    *   The known values of the resource's identity keys.
    */
   protected function identityKnown(): array {
-    return array_intersect_key($this->context->known, array_flip($this->identity));
+    return $this->identityOf($this->context->known);
+  }
+
+  /**
+   * Keeps the identity keys of what a context knew.
+   *
+   * An entry records every scalar key its context knew; compared with
+   * this storage's identity, it is filtered the same way, so the compare
+   * answers the same whichever of two writes came first. Two entries of
+   * one storage class share its identity keys.
+   *
+   * @param array<string, mixed> $known
+   *   What a context knew.
+   *
+   * @return array<string, mixed>
+   *   Its values of the resource's identity keys.
+   */
+  protected function identityOf(array $known): array {
+    return array_intersect_key($known, array_flip($this->identity));
   }
 
   /**
@@ -629,13 +814,21 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * @param bool $whole
    *   TRUE to ask that the other knows every key this one knows, as for
    *   one resource; FALSE to ask that every key both know agrees, at
-   *   least one, as for two resources over one stored thing.
+   *   least one, as for two resources over one stored thing, or that
+   *   neither knows any: the caller compares the storage classes, and
+   *   one class whose contexts know no identity keeps one thing, as a
+   *   config object storage keeps one object.
    *
    * @return bool
    *   TRUE when they name one thing.
    */
   protected static function sameThing(array $known, array $other, bool $whole = FALSE): bool {
     $shared = array_intersect_key($known, $other);
+    // Decision: see
+    // docs/decisions.md#two-identity-less-entries-of-one-storage-class-are-one-thing.
+    if (!$whole && $known === [] && $other === []) {
+      return TRUE;
+    }
     if ($whole ? count($shared) !== count($known) : $shared === []) {
       return FALSE;
     }

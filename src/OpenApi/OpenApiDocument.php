@@ -19,7 +19,6 @@ use Drupal\surface\Contract\Choices;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
-use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Reference\References;
@@ -33,6 +32,7 @@ use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Http\ResourceApiController;
 use Drupal\surface\Http\ProblemDetails;
 use Drupal\surface\Http\ServedPaths;
+use Drupal\surface\Staging\Stageable;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -418,12 +418,12 @@ final class OpenApiDocument {
     $contractValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a key that holds nothing is null.'));
     $resultValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a run answers what it accepted.'));
     $tagged = $creates ? [] : ['ETag' => ['$ref' => '#/components/headers/ETag']];
-    // The stage header, where the resource's storage can be staged: on the
+    // The stage header, where a stage applies to the call: on the
     // envelope, the narrowing and the run, never on the full schema, which
     // reads nothing stored.
     // Decision: see
-    // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
-    $staged = $definition->storage !== NULL && is_a($definition->storage, TransactionalStorageInterface::class, TRUE)
+    // docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+    $staged = Stageable::operation($definition, $operation)
       ? [['$ref' => '#/components/parameters/SurfaceStage']]
       : [];
 

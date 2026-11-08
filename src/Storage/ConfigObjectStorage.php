@@ -16,6 +16,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Reference\ReferenceStorageLayout;
 use Drupal\surface\Resource\HeldToConfigSchemaInterface;
@@ -79,9 +80,22 @@ use Drupal\Core\Session\AccountInterface;
  * mayClear() read the schema with that, and the first commit() creates
  * the object.
  *
+ * A stage takes its writes (TransactionalStorageInterface): commit()
+ * saves config, whose rows are the database's, and a rolled back apply
+ * resets what config keeps beside them. A subclass whose commit writes
+ * State or changes a table's schema breaks that promise.
+ *
+ * A subclass whose commit() has effects outside the database, such as
+ * files written or deleted or a call to another service, is not undone
+ * when apply rolls back. Such a subclass should not rely on staging, or
+ * undoes those effects in rolledBack(). PerformanceStorage in
+ * surface_examples_performance is the shipped example: its commit()
+ * deletes the CSS and JavaScript aggregates, which a rollback leaves
+ * deleted, and which the next page that needs them builds again.
+ *
  * @see docs/storage.md#a-simple-config-object
  */
-abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface {
+abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface, TransactionalStorageInterface {
 
   use DependencySerializationTrait;
   use HeldToConfigSchemaTrait;
@@ -282,6 +296,22 @@ abstract class ConfigObjectStorage implements ResourceStorageInterface, KnowsCle
       return;
     }
     $config->save();
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Nothing to drop here: apply resets what config keeps beside the
+   * database (the config factory's objects, the `cache.config` bin, the
+   * entity memory cache) for every config name the apply saved, deleted
+   * or renamed, whoever wrote it, so a subclass that saves more config
+   * needs nothing either.
+   *
+   * Decision: see
+   * docs/decisions.md#config-is-staged-and-apply-resets-what-its-rollback-leaves-behind.
+   */
+  public function rolledBack(): void {
+    // Apply resets config's caches for every config name it wrote.
   }
 
   /**

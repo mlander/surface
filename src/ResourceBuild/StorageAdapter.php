@@ -327,6 +327,33 @@ final class StorageAdapter implements CreatingStorageInterface, DeletingStorageI
   }
 
   /**
+   * Lists the storage class of every child routed below this adapter.
+   *
+   * What a stage asks before it takes a write: a child is committed with
+   * its parent at apply, inside the same transaction.
+   *
+   * @return array<string, class-string>
+   *   Each routed child's storage class, by its key, and the variant id
+   *   after a slash where variants route; a grandchild's below its
+   *   parent's, the keys joined by dots.
+   *
+   * @internal
+   */
+  public function routedStorageClasses(): array {
+    $classes = [];
+    foreach ($this->routes as $key => $variants) {
+      foreach ($variants as $id => $route) {
+        $at = $id === self::ATTACHED ? (string) $key : $key . '/' . $id;
+        $classes[$at] = get_class($route->storage);
+        foreach ($route->routedStorageClasses() as $below => $class) {
+          $classes[$at . '.' . $below] = $class;
+        }
+      }
+    }
+    return $classes;
+  }
+
+  /**
    * Tells the storage, and each routed child's, of a rollback.
    *
    * For an apply whose transaction was rolled back after this adapter

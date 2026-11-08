@@ -130,8 +130,8 @@ final class StageStore {
    *   The operation's arguments, by name.
    *
    * @return array|null
-   *   The entry, or NULL when the stage is gone or applied, or creates no
-   *   thing of the resource under these arguments.
+   *   The entry, or NULL when the stage is gone, applied or voided, or
+   *   creates no thing of the resource under these arguments.
    *
    * @internal
    */

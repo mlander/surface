@@ -12,7 +12,6 @@ use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\Staging\StagedStorage;
 use Drupal\surface\Tool\OperationInputs;
-use Drupal\surface_examples\Storage\VenueStorage;
 use Drupal\surface_tool_test\Storage\VaultStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -29,10 +28,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * write validates as a real write. A stage handed no arguments records
  * the operation's parameters. A thing staged through one operation is
  * refused through another. The write and read tools take the stage
- * as their `stage` input. What a stage cannot hold yet is refused at
+ * as their `stage` input. What a stage cannot hold is refused at
  * prepare, as a violation of the whole call: a storage class that does
- * not implement TransactionalStorageInterface and a resource that holds
- * a secret among them.
+ * not implement TransactionalStorageInterface among them, a State one.
+ * A config object, a config entity and a resource that holds a secret
+ * are staged.
  *
  * @see docs/decisions.md#a-staged-write-validates-as-a-real-write
  */
@@ -314,11 +314,13 @@ class StagedUpdateTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests what a stage cannot hold yet is refused, at prepare, whole.
+   * Tests what a stage cannot hold is refused, at prepare, whole.
+   *
+   * Config and a secret are staged now; a storage in State is not.
    */
   public function testWhatCannotBeStagedIsRefusedAtPrepare(): void {
     $id = $this->open();
-    $refused = function (string $resource, string $operation, array $arguments, array $values, string $code = Violation::DOES_NOT_APPLY, ?string $storage = NULL, ?string $message = NULL) use ($id): void {
+    $refused = function (string $resource, string $operation, array $arguments, array $values, string $code = Violation::DOES_NOT_APPLY, ?string $storage = NULL, ?string $message = NULL) use (&$id): void {
       $result = $this->stage($id, $resource, $arguments, $values, $operation);
       $this->assertFalse($result->isValid(), $resource);
       $this->assertFalse($result->committed, $resource);
@@ -330,21 +332,27 @@ class StagedUpdateTest extends SurfaceKernelTestBase {
         $this->assertSame(sprintf(' (%s): %s', $code, $message), $this->said($result));
       }
     };
-    // A config object and a config entity.
-    $refused('my_module.settings', 'configure', [], []);
+    // A storage in State, which keeps a cache a rollback leaves stale.
+    $refused('tool_test.vault', 'configure', [], ['endpoint' => 'https://example.com'], storage: VaultStorage::class);
+    $this->assertSame([], $this->stages()->read($id)['writes']);
+
+    // A config object, a config entity and a resource holding a secret
+    // are staged.
+    $staged = function (string $resource, string $operation, array $arguments, array $values) use ($id): void {
+      $result = $this->stage($id, $resource, $arguments, $values, $operation);
+      $this->assertTrue($result->committed, $resource . ': ' . $this->said($result));
+    };
+    $staged('my_module.settings', 'configure', [], ['title' => 'Staged']);
     [$venue_built, $venue] = $this->permanent('event.venue', 'create');
     $venue_result = $this->pipeline()->submit($venue_built, ['label' => 'Riverside', 'capacity' => 40, 'rooms' => []], $venue);
     $this->assertTrue($venue_result->committed, $this->said($venue_result));
-    $refused('event.venue', 'update', ['id' => 'riverside'], ['capacity' => 50], storage: VenueStorage::class);
-    // A storage in State, which keeps a cache a rollback leaves stale.
-    $refused('tool_test.vault', 'configure', [], ['endpoint' => 'https://example.com'], storage: VaultStorage::class);
-    // A resource holding a secret, the secret sent or not.
-    $secret = 'A stage keeps values in the clear until secrets are sealed, so a resource that holds a secret cannot be staged yet.';
-    $refused('stage_test.vault_note', 'configure', [], ['token' => 'shh'], message: $secret);
-    $refused('stage_test.vault_note', 'configure', [], ['label' => 'Open'], message: $secret);
-    $this->assertSame([], $this->stages()->read($id)['writes']);
+    $staged('event.venue', 'update', ['id' => 'riverside'], ['capacity' => 50]);
+    $staged('stage_test.vault_note', 'configure', [], ['token' => 'shh']);
+    $this->assertSame(['my_module.settings', 'event.venue', 'stage_test.vault_note'], array_column($this->stages()->read($id)['writes'], 'resource'));
+    $this->assertSame('Latest content', $this->config('my_module.settings')->get('title'), 'Nothing is written.');
 
     // A stage applied.
+    $id = $this->open();
     $this->assertTrue($this->stage($id, self::PAGE, ['id' => $this->node->id()], ['title' => ['value' => 'Applied']])->committed);
     $applied = $this->stageTool('apply', $id);
     $this->assertTrue($applied['success'], $applied['message']);

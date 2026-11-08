@@ -71,6 +71,14 @@ services:
     class: Drupal\surface\Staging\StageStore
     arguments: ['@keyvalue.expirable', '@lock', '@datetime.time', '%tempstore.expire%']
   Drupal\surface\Staging\StageStore: '@surface.stages'
+  # Records the config an apply writes, so a rolled back apply resets what
+  # config kept beside the database for those names.
+  surface.config_writes:
+    class: Drupal\surface\Staging\ConfigWrites
+    arguments: ['@cache.config', '@config.factory', '@entity.memory_cache', '@entity_type.bundle.info', '@entity_field.manager', '@state']
+    tags:
+      - { name: event_subscriber }
+  Drupal\surface\Staging\ConfigWrites: '@surface.config_writes'
   # Reads one entry of a provider's variants when a door builds it, named
   # by class in the read definitions the build registers.
   Drupal\surface\ResourceBuild\SiteEntries:

@@ -33,10 +33,11 @@ and field storage settings as resources
   are the operation's parameters (each a value; one named for a
   resource key described as that key), the
   resource's keys the operation does not know as `values`, and
-  `dry_run`; see [Tools](resources.md#tools). A resource whose storage
-  can be staged adds `stage`, last, on its write, read and narrowing
-  tools: the id of a stage the write is kept in, or the read and the
-  narrowing answer through ([Staging](staging.md#the-stage-input)). A
+  `dry_run`; see [Tools](resources.md#tools). An operation a stage
+  applies to ([Staging](staging.md#where-a-stage-applies)) adds
+  `stage`, last, on its write, read and narrowing tools: the id of a
+  stage the write is kept in, or the read and the narrowing answer
+  through ([Staging](staging.md#the-stage-input)). A
   create staged so answers a local id, `id: -1`, when storage gives the
   id, since nothing is created until the stage is applied; a write, a
   read or a delete with the same stage names the staged create by it
@@ -225,8 +226,8 @@ operation of its own, `read`, whose tool is `surface:<resource>:read`
   field's asks `view` field access, so a field the account may not see
   is left out and one it may see and not edit is read
   ([docs/entities.md](entities.md)).
-- **Inputs.** The operation's parameters, and `stage` where the storage
-  can be staged ([Staging](staging.md#the-stage-input)): no `values`, no
+- **Inputs.** The operation's parameters, and `stage` where a stage
+  applies ([Staging](staging.md#the-stage-input)): no `values`, no
   `dry_run`. It has no narrowing tool: it takes no values to narrow.
 - **Output.** `values`: what the resource's composed storage loads, in
   the shape the update's `values` input takes (the resource's keys
@@ -393,7 +394,7 @@ destroys nothing, and the access answer has to be the real one, and the
 read the build adds asks the same question. A delete, such as
 `surface:block.placement:delete` from `surface_examples_block`, is a
 destructive `Write` whose inputs are its parameters and `dry_run`, with
-no `values`, then `stage` where its resource's storage can be staged,
+no `values`, then `stage` where a stage applies to it,
 as `surface:entity.content:node.page:delete`'s can
 ([Staging](staging.md#a-staged-delete)). A field tool's access is the operation's permission, `administer %entity_type
 fields`, named from the identity the operation's context knows (the

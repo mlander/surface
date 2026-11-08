@@ -26,7 +26,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * - **Inputs**: the operation's parameters, exactly as the write tool
  *   declares them, `values`, optional and open: what the caller has so
- *   far, and `stage` where the resource's storage can be staged.
+ *   far, and `stage` where a stage applies to the operation.
  * - **Access**: the write tool's, for the same context.
  * - **Execution**: as the HTTP narrowing runs it. The resource is built
  *   for the calling account; the values sent, narrowed to its keys, are

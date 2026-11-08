@@ -22,8 +22,8 @@ use Drupal\tool\FailureCategory;
  * base plugin id and names this class on the derivative, so one deriver
  * says which operations have tools.
  *
- * - **Inputs**: the operation's parameters, and `stage` where the
- *   resource's storage can be staged.
+ * - **Inputs**: the operation's parameters, and `stage` where a stage
+ *   applies to the operation (Stageable).
  * - **Access**: the operation's, for its context: its permission, then
  *   the resource's access class. The read the build adds is asked in its
  *   update's context, so a caller who may not change the thing may not

@@ -15,7 +15,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * Keeps the vault note in a key-value collection, secret and all.
  *
  * It declares a transaction rolls its writes back whole, so a stage
- * refuses it for its secret and nothing before.
+ * takes its writes, the secret sealed in the stage's record and stored
+ * in the clear here at apply, as the note always is.
  */
 final class VaultNoteStorage implements ResourceStorageInterface, TransactionalStorageInterface {
 

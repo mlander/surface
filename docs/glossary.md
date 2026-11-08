@@ -795,7 +795,8 @@ A staged write is a write kept in a stage instead of storage.
 
 Precisely: a write through a resource's own operation with a stage
 named, for a resource whose storage implements
-`TransactionalStorageInterface`. The pipeline runs as for a real write,
+`TransactionalStorageInterface`, and the operation names a thing
+(identity or create). The pipeline runs as for a real write,
 the storage's own `prepare()` included; `commit()` writes the stage's
 record, one entry per thing, and a read through the stage answers that
 entry first. It answers `committed: true`.

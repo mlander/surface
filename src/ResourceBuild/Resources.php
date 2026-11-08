@@ -30,6 +30,7 @@ use Drupal\surface\Resource\ResourceStorageInterface;
 use Drupal\surface\Staging\Stage;
 use Drupal\surface\Staging\StagedStorage;
 use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Storage\SecretCodecInterface;
 use Drupal\surface\Storage\ConfigEntityStorage;
 use Drupal\surface\Storage\ConfigObjectStorage;
 
@@ -1398,7 +1399,9 @@ final class Resources implements ResourcesInterface {
     $parameters = $operation === NULL ? [] : array_map(static fn (OperationParameter $parameter): string => $parameter->name, $operation->parameters);
     // Decision: see
     // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
-    return new StagedStorage($adapter, $stage, $this->classResolver->getInstanceFromDefinition(StageStore::class), $definition->id, $context, get_class($this->storageInstance($definition->name())), $definition->identity, $parameters);
+    $codec = $this->classResolver->getInstanceFromDefinition('surface.secret_codec');
+    assert($codec instanceof SecretCodecInterface);
+    return new StagedStorage($adapter, $stage, $this->classResolver->getInstanceFromDefinition(StageStore::class), $definition->id, $context, get_class($this->storageInstance($definition->name())), $definition->identity, $parameters, $codec);
   }
 
   /**

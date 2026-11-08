@@ -991,12 +991,13 @@ accepted values instead (why: [decision](decisions.md#every-door-projects-what-t
 | `PluginConfigurationStorage` | A plugin's configuration array. | The complete configuration. | the plugin hosts |
 | `CompositeStorage` | Several of the above, in order. | One prepared set per child. | no shipped resource yet |
 
-None of them implements `TransactionalStorageInterface`
-([Opting into staging](#opting-into-staging)). A stage refuses a write
-to a resource stored by `ConfigObjectStorage` or `ConfigEntityStorage`:
-saving config writes caches beside the database, which a rolled back
-apply would leave wrong. The five in `Pipeline\Storage\` are a host's, which a
-stage never wraps. The entity example's `ContentEntityStorage`
+`ConfigObjectStorage` and `ConfigEntityStorage` implement
+`TransactionalStorageInterface` ([Opting into staging](#opting-into-staging)),
+so a stage takes a write to a resource either stores, every subclass
+included: config rows are the database's, and a rolled back apply resets
+what config keeps beside them ([Staging: Config in a stage](staging.md#config-in-a-stage)).
+`StateStorage` does not. The five in `Pipeline\Storage\` are a host's,
+which a stage never wraps. The entity example's `ContentEntityStorage`
 implements it.
 
 `ConfigObjectStorage` came back once every settings resource had
@@ -1221,6 +1222,13 @@ structure declaring a secret against unwired storage still gets the form
 and `accept()` halves of the flag, which is to say the value is kept and
 never echoed, but stored in the clear.
 
+A stage is the first place that seals such a secret: its record holds a
+staged write's whole document, and every string at a secret path is
+sealed there with the codec, by the paths the entry records, and opened
+only at a read through the stage and at apply. Apply then hands the
+secret to the resource's own storage, which keeps it as it always does
+([Staging: Secrets in a stage](staging.md#secrets-in-a-stage)).
+
 ### Values written before the flag
 
 `fromStorage()` asks the codec `isEncrypted()` and hands plaintext
@@ -1321,17 +1329,32 @@ A stage keeps writes until they are applied together, and apply makes
 them in one database transaction. A stage takes a write only for a
 resource whose storage class implements
 `Drupal\surface\Pipeline\TransactionalStorageInterface`; any other is
-refused at prepare, code `does_not_apply`, naming the class. Only the
-resource's own storage class is checked, not the storage a variant or
-an attachment is routed to.
+refused at prepare, code `does_not_apply`, naming the class. The
+storage a variant or an attachment is routed to is checked too: apply
+commits it in the same transaction, so a routed child whose storage
+class does not implement the interface refuses the write, naming the
+child.
 
-Implementing it is a promise: `commit()` writes through the database
-connection alone, so rolling the transaction back undoes the write
-whole, and so does `delete()` on a storage that also implements
-`DeletableStorageInterface`, since a stage holds deletes too
-([Staging](staging.md#a-staged-delete)). A storage that saves config, writes State or changes a table's
-schema does not make it: config and State keep caches beside the
-database, and MySQL commits a schema change at once.
+Implementing it is a promise: `commit()` writes its permanent state
+through the database connection alone, so rolling the transaction back
+undoes the write whole, and so does `delete()` on a storage that also
+implements `DeletableStorageInterface`, since a stage holds deletes too
+([Staging](staging.md#a-staged-delete)); what it puts in caches or in
+memory is undone in `rolledBack()`. The config storages make it: config
+rows are the database's, and apply resets what config keeps beside them
+for every config name it wrote. A storage that writes State or changes a
+table's schema does not: State keeps a cache beside the database, and a
+database without transactional schema changes, such as MySQL and
+MariaDB, commits a schema change at once.
+
+The config storages make the promise for every subclass. A subclass
+whose `commit()` has effects outside the database, files written or
+deleted or a call to another service, is not undone when apply rolls
+back: such a subclass should not rely on staging, or undoes those
+effects in `rolledBack()`. `PerformanceStorage` in
+`surface_examples_performance` is the shipped example: its `commit()`
+deletes the CSS and JavaScript aggregates, which a rollback leaves
+deleted, and which the next page that needs them builds again.
 
 Its one method, `rolledBack()`, is called after apply rolls back, on the
 storage of every write whose commit had started, the last first, and on
@@ -1339,7 +1362,8 @@ each storage routed under it, whether its route wrote or not. Drop
 there what the storage cached beside the database for what it wrote: the
 entity example resets the entity storage's cache of each entity it saved
 or deleted (`resetCache([$id])`), so a load later in the request reads what the
-database holds. A storage that caches nothing, such as one over the
-database's key-value collection, leaves the body empty. What hooks do
+database holds. A config storage leaves the body empty, since apply
+resets config's caches itself, and so does a storage that caches
+nothing, such as one over the database's key-value collection. What hooks do
 beside the database during a save (a mail sent, a remote call) is not
 undone by the rollback and is not the storage's to undo.

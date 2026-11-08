@@ -24,6 +24,7 @@ use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
+use Drupal\surface\Staging\Stageable;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -597,7 +598,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   404 when a parameter, or the `X-Surface-Stage` header, names
    *   nothing. The access check lets such a request through only for an
    *   account holding the operation's permission. 400 for the header on
-   *   a path of the stage itself.
+   *   a path of the stage itself; 422 for the header on any other call a
+   *   stage does not apply to, one violation at no path, code
+   *   `does_not_apply`.
    */
   protected function served(ServedTarget $target): ServedOperation {
     // Refused here and not in the access check, which can only allow or
@@ -606,6 +609,14 @@ final class ResourceApiController implements ContainerInjectionInterface {
     if ($target->stage !== NULL && $target->definition->id === StageResource::ID) {
       $detail = (string) $this->t('The @header header names a stage to write into or read through, and a stage is not staged: send this request without it.', ['@header' => ServedPaths::STAGE_HEADER]);
       throw new ProblemException(400, $detail);
+    }
+    // A header the call cannot honor is refused, reads included, rather
+    // than read through a stage that could never hold a write of it.
+    // Decision: see
+    // docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+    if ($target->stage !== NULL && !Stageable::operation($target->definition, $target->operation)) {
+      $refusal = new Violation('', '', $this->t('A stage does not apply to this operation.'), Violation::DOES_NOT_APPLY);
+      throw $this->refused(ResultDocument::refused([], $refusal));
     }
     try {
       return $this->servedOperations->fromTarget($target);

@@ -9,6 +9,7 @@ use Drupal\Core\Database\Connection;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\Pipeline\Fingerprint;
 use Drupal\surface\Pipeline\NotEmitted;
@@ -22,7 +23,9 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\ResourceBuild\StorageAdapter;
+use Drupal\surface\Staging\ConfigWrites;
 use Drupal\surface\Staging\StageRaceException;
+use Drupal\surface\Staging\StagedSecrets;
 use Drupal\surface\Staging\StageStore;
 use Drupal\surface\SurfaceAccess;
 use Psr\Log\LoggerInterface;
@@ -50,9 +53,15 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *   again, commits each rehearsed write in staging order in one database
  *   transaction, and marks the record applied, which it keeps until it
  *   expires so the stage still answers after an apply. A write that
- *   throws rolls the transaction back, and the storage of each write
- *   whose commit had started is told (TransactionalStorageInterface).
- * - delete removes the record, open or applied, under the stage's lock.
+ *   throws rolls the transaction back, what config kept beside the
+ *   database for the config it wrote is reset (ConfigWrites), and the
+ *   storage of each write whose commit had started is told
+ *   (TransactionalStorageInterface); after a schema change made writes
+ *   permanent, the record is marked voided instead (replay()). A secret
+ *   the stage sealed is opened by the paths its entry recorded before it
+ *   is sent.
+ * - delete removes the record, open, applied or voided, under the
+ *   stage's lock.
  *
  * Every write of a record takes the stage's lock, so two writes of one
  * record never interleave while the lock lasts (core's 30 seconds). The
@@ -85,6 +94,14 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
   public const APPLIED = 'applied';
 
   /**
+   * A stage's status once an apply failed after a schema change.
+   *
+   * The writes at and before the failing position could not be rolled
+   * back, so the stage holds no writes and takes none: it is discarded.
+   */
+  public const VOIDED = 'voided';
+
+  /**
    * What a key's name escapes to in a JSON Pointer.
    */
   protected const POINTER_ESCAPES = ['~' => '~0', '/' => '~1'];
@@ -109,6 +126,11 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    *   What gives a new stage its id.
    * @param \Psr\Log\LoggerInterface $logger
    *   The module's log, for a storage that fails to hear of a rollback.
+   * @param \Drupal\surface\Staging\ConfigWrites $configWrites
+   *   What records the config an apply writes, and resets it after a
+   *   rollback.
+   * @param \Drupal\surface\Storage\SecretCodecInterface $codec
+   *   The codec the stage's records are sealed with.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
@@ -120,6 +142,10 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
     protected readonly UuidInterface $uuid,
     #[Autowire(service: 'logger.channel.surface')]
     protected readonly LoggerInterface $logger,
+    #[Autowire(service: 'surface.config_writes')]
+    protected readonly ConfigWrites $configWrites,
+    #[Autowire(service: 'surface.secret_codec')]
+    protected readonly SecretCodecInterface $codec,
     TranslationInterface $string_translation,
   ) {
     $this->stringTranslation = $string_translation;
@@ -136,6 +162,8 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
       $container->get('database'),
       $container->get('uuid'),
       $container->get('logger.channel.surface'),
+      $container->get('surface.config_writes'),
+      $container->get('surface.secret_codec'),
       $container->get('string_translation'),
     );
   }
@@ -174,7 +202,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
       return [];
     }
     return match ($context->id) {
-      'apply' => ['id' => $record['id']] + ($record['status'] === self::APPLIED ? ['applied' => $record['applied']] : []),
+      'apply' => ['id' => $record['id']] + (in_array($record['status'], [self::APPLIED, self::VOIDED], TRUE) ? ['applied' => $record['applied']] : []),
       'changes' => ['id' => $record['id']],
       default => ['id' => $record['id']] + ($record['label'] === NULL ? [] : ['label' => $record['label']]),
     };
@@ -340,6 +368,10 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    *   Naming every write that would fail, under `/writes/<position>`.
    */
   protected function rehearse(array $record, AccountInterface $account): array {
+    $voided = self::voided($record);
+    if ($voided !== NULL) {
+      throw self::refusal($voided, Violation::DOES_NOT_APPLY);
+    }
     if ($record['status'] !== self::OPEN) {
       throw self::refusal($this->t('The stage was applied; nothing is pending.'), Violation::DOES_NOT_APPLY);
     }
@@ -392,11 +424,23 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
       // moved keeps what is stored, whatever the stage last read of it. A
       // create is sent whole, as every write to it merged it (its changed
       // keys, every key, say the same).
+      // A secret the stage sealed is opened by the paths it recorded, and
+      // one it recorded cleared is sent as cleared: a NULL would keep
+      // what is stored.
+      // Decision: see
+      // docs/decisions.md#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths.
+      try {
+        $values = StagedSecrets::unseal($this->codec, (array) $write['values'], (array) ($write['sealed'] ?? []));
+      }
+      catch (SecretCodecException) {
+        throw self::refusal(self::unopened((string) $record['id']), Violation::DOES_NOT_APPLY);
+      }
       $input = match ($write['kind']) {
         'delete' => [],
-        'create' => (array) $write['values'],
-        default => array_intersect_key((array) $write['values'], array_flip($write['changed'])),
+        'create' => $values,
+        default => array_intersect_key($values, array_flip($write['changed'])),
       };
+      $input = StagedSecrets::clearing($input, (array) ($write['cleared'] ?? []));
       $result = $this->pipeline->submit($built, $input, $storage, TRUE, SurfaceAccess::decisive($access));
       if (!$result->isValid()) {
         foreach ($result->violations as $violation) {
@@ -429,9 +473,24 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    * deleted before the lock was had is a race, and none is deleted while
    * it is held, so a deleted stage is never written back as applied
    * unless the apply outlasts the lock (core's 30 seconds). A write that
-   * throws rolls the transaction back, and then the storage of each write
-   * whose commit had started, the last first, drops what it cached beside
-   * the database.
+   * throws rolls the transaction back; then what config kept beside the
+   * database for every config name the writes saved, deleted or renamed
+   * is reset (ConfigWrites), and the storage of each write whose commit
+   * had started, the last first, drops what it cached beside the
+   * database.
+   *
+   * On a database without transactional schema changes, such as MySQL
+   * and MariaDB, a write whose commit changes the schema (a field storage
+   * made or removed, a bundle deleted with its fields) commits the
+   * transaction at once, so nothing at or before it can be rolled back;
+   * PostgreSQL and SQLite roll schema changes back. When a later write
+   * throws, the same resets run, the stage is marked voided, its writes
+   * cleared, `applied` the writes that completed and `voided` the
+   * position that failed, and the throwable is answered as a
+   * RuntimeException that says so: the stage takes no write and no apply
+   * after that, only a discard. When every write succeeds after such a
+   * change, the writes are permanent already: the stage is applied, with
+   * no commit and no reset.
    *
    * @param array $prepared
    *   What rehearse() returned.
@@ -439,6 +498,9 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    * @throws \Drupal\surface\Staging\StageRaceException
    *   When the lock cannot be had, or the record is gone, or the record or
    *   what a write was staged against moved since the rehearsal.
+   * @throws \RuntimeException
+   *   When a schema change made the writes at and before the failing one
+   *   permanent, the write's throwable its previous.
    * @throws \Throwable
    *   What a write threw, after every write was rolled back.
    */
@@ -452,12 +514,18 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
           throw new StageRaceException(sprintf('What the stage "%s" staged at %s changed after its apply was rehearsed.', $record['id'], $entry['resource']));
         }
       }
-      $transaction = $this->database->startTransaction();
+      $transaction = NULL;
       $applied = [];
       $started = [];
+      $position = 0;
       try {
+        $transaction = $this->database->startTransaction();
+        // Decision: see
+        // docs/decisions.md#config-is-staged-and-apply-resets-what-its-rollback-leaves-behind.
+        $this->configWrites->start();
         foreach ($prepared['plan'] as $index => $entry) {
           $started[] = $entry;
+          $position = (int) $prepared['applied'][$index]['position'];
           $result = $entry['result'];
           assert($result instanceof SurfaceResult);
           $committed = $this->pipeline->commitDryRun($result, $entry['storage']);
@@ -469,11 +537,41 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
         }
       }
       catch (\Throwable $e) {
-        $transaction->rollBack();
+        // A schema change commits the transaction at once and voids it, and
+        // a rollback after that would only warn: the writes at and before
+        // it stand.
+        $voided = $transaction !== NULL && !$this->database->inTransaction();
+        if ($transaction !== NULL && !$voided) {
+          $transaction->rollBack();
+        }
+        // Released now, so the cache tags the writes invalidated, which
+        // core holds until the transaction ends, are discarded.
+        unset($transaction);
+        $this->configWrites->stop();
+        $this->resetConfig((string) $record['id']);
         $this->tellRolledBack($started, (string) $record['id']);
+        if ($voided) {
+          $now = $this->stages->now();
+          $record['status'] = self::VOIDED;
+          $record['applied'] = $applied;
+          $record['applied_at'] = $now;
+          $record['updated'] = $now;
+          $record['writes'] = [];
+          $record['voided'] = ['position' => $position];
+          $this->stages->write($record);
+          throw new \RuntimeException(sprintf('Writes at and before position %d were made permanent by a schema change and could not be rolled back; the stage is voided. Discard it. The write at position %d failed: %s', $position, $position, $e->getMessage()), 0, $e);
+        }
         throw $e;
       }
-      $transaction->commitOrRelease();
+      finally {
+        $this->configWrites->stop();
+      }
+      // A schema change voided the transaction and every write after it
+      // succeeded: each is permanent already, and a commit would only warn.
+      if ($this->database->inTransaction()) {
+        $transaction->commitOrRelease();
+      }
+      unset($transaction);
       $now = $this->stages->now();
       $record['status'] = self::APPLIED;
       $record['applied'] = $applied;
@@ -482,6 +580,64 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
       $record['writes'] = [];
       $this->stages->write($record);
     });
+  }
+
+  /**
+   * Resets what config kept beside the database, after a rollback.
+   *
+   * What the reset throws is logged, as tellRolledBack() logs what a
+   * storage throws: the throwable the apply rethrows is the write's.
+   *
+   * @param string $id
+   *   The stage's id, for the log.
+   */
+  protected function resetConfig(string $id): void {
+    try {
+      $this->configWrites->reset();
+    }
+    catch (\Throwable $e) {
+      $this->logger->error('Applying the stage @id was rolled back, and config failed to drop what it cached: @message', [
+        '@id' => $id,
+        '@message' => $e->getMessage(),
+      ]);
+    }
+  }
+
+  /**
+   * Says why a voided stage takes no write and no apply.
+   *
+   * @param array $record
+   *   The record.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|null
+   *   The message, naming the position that failed; NULL for a stage that
+   *   is not voided.
+   *
+   * @internal
+   */
+  public static function voided(array $record): ?TranslatableMarkup {
+    if (($record['status'] ?? NULL) !== self::VOIDED) {
+      return NULL;
+    }
+    return new TranslatableMarkup('The stage @stage was voided at position @position; writes at and before it were made permanent by a schema change. Discard the stage.', [
+      '@stage' => $record['id'],
+      '@position' => (int) ($record['voided']['position'] ?? 0),
+    ]);
+  }
+
+  /**
+   * Says why a stage whose seals cannot be opened is refused.
+   *
+   * @param string $id
+   *   The stage's id.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The message.
+   *
+   * @internal
+   */
+  public static function unopened(string $id): TranslatableMarkup {
+    return new TranslatableMarkup('The stage @stage was sealed under another hash salt and cannot be opened; discard it.', ['@stage' => $id]);
   }
 
   /**

@@ -287,7 +287,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
 
     // The keys less the identity the operation knows: the content type's
     // machine name, and everything that says which field it is.
-    $this->assertSame(['type'], array_keys($this->definition('surface:node.type:read')->getInputDefinitions(TRUE)));
+    $this->assertSame(['type', OperationInputs::STAGE], array_keys($this->definition('surface:node.type:read')->getInputDefinitions(TRUE)));
     $this->assertNotContains('type', self::properties($this->readValues('surface:node.type:read')));
     $this->assertSame(['entity_type', 'bundle', 'field_name'], array_keys($this->definition('surface:field.instance:read')->getInputDefinitions(TRUE)));
     $field = self::properties($this->readValues('surface:field.instance:read'));
@@ -295,11 +295,11 @@ class ReadToolTest extends SurfaceKernelTestBase {
     $this->assertContains('settings', $field);
     $this->assertContains('storage', $field);
 
-    // Step 3 needs nothing and takes nothing, and its map nests as the
-    // write tool's does: the variants, the attached contact, and the keys the
-    // compliance module mounts under third_party_settings.
+    // Step 3 needs nothing and takes only the stage, and its map nests as
+    // the write tool's does: the variants, the attached contact, and the
+    // keys the compliance module mounts under third_party_settings.
     $step3 = $this->definition(ExampleCalls::READ_TOOL);
-    $this->assertSame([], $step3->getInputDefinitions(TRUE));
+    $this->assertSame([OperationInputs::STAGE], array_keys($step3->getInputDefinitions(TRUE)));
     $values = $step3->getOutputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapOutputDefinition::class, $values);
     $properties = $values->getPropertyDefinitions();

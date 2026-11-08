@@ -134,6 +134,10 @@ abstract class ResourceOperationToolBase extends ToolBase {
         $stage = NULL;
         $missing = TRUE;
       }
+      // A stage sent to a tool that takes none: execute refuses it.
+      catch (\InvalidArgumentException) {
+        $stage = NULL;
+      }
       try {
         [$resource, $operation, $context] = $this->operation($values, $stage);
         $result = $this->operationAccess($resource, $context, $account);
@@ -208,7 +212,8 @@ abstract class ResourceOperationToolBase extends ToolBase {
    * @param \Drupal\Core\StringTranslation\TranslatableMarkup $message
    *   Why, which is also the result's message.
    * @param string $code
-   *   The violation's code: `permission`, `access` or `not_found`.
+   *   The violation's code: `permission`, `access`, `not_found` or
+   *   `does_not_apply`.
    * @param \Drupal\tool\FailureCategory $category
    *   The Tool API's category: Access where no other input can help.
    *
@@ -345,7 +350,8 @@ abstract class ResourceOperationToolBase extends ToolBase {
    *
    * @return array{0: \Drupal\surface\ResourceBuild\ResourceDefinition, 1: \Drupal\surface\ResourceBuild\OperationDefinition, 2: \Drupal\surface\Resource\OperationContext, 3: \Drupal\surface\Staging\Stage|null}|\Drupal\tool\ExecutableResult
    *   The resource, the operation, the context and the stage, or the
-   *   refusal of a stage the account may not use, naming it.
+   *   refusal of a stage the account may not use, naming it, or of a
+   *   stage sent to a tool that takes none.
    *
    * @throws \InvalidArgumentException
    *   When the stage or a parameter names nothing, or a parameter is
@@ -355,6 +361,9 @@ abstract class ResourceOperationToolBase extends ToolBase {
    */
   protected function staged(array $values): array|ExecutableResult {
     [, $operation] = $this->found();
+    if ($this->stageUndeclared($values)) {
+      return $this->refused($this->t('A stage does not apply to this operation.'), Violation::DOES_NOT_APPLY, FailureCategory::Input);
+    }
     $stage = $this->stage($values, $this->arguments($values, $operation));
     $refused = $stage === NULL ? NULL : $this->stageRefused($stage);
     if ($refused !== NULL) {
@@ -390,7 +399,9 @@ abstract class ResourceOperationToolBase extends ToolBase {
    * Gets the stage the call names, for the storage it is handed to.
    *
    * The `stage` input, read only where the tool takes it: empty, or left
-   * out, names none; a value that is not a string names nothing. Who may
+   * out, names none; a value that is not a string names nothing; a value
+   * sent to a tool that takes no stage is refused, so no adapter that
+   * hands undeclared inputs through has a write made for real. Who may
    * use the stage is not answered here (stageRefused()).
    *
    * Decision: see
@@ -408,11 +419,16 @@ abstract class ResourceOperationToolBase extends ToolBase {
    * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   At `stage`, when the id names no stage or the value is not a string,
    *   which the Tool API reports as the caller's input to correct.
+   * @throws \InvalidArgumentException
+   *   When a stage is sent to a tool that takes none.
    *
    * @internal
    */
   protected function stage(array $values, array $parameters): ?Stage {
     $id = $values[OperationInputs::STAGE] ?? '';
+    if ($this->stageUndeclared($values)) {
+      throw new \InvalidArgumentException('A stage does not apply to this operation: its tool takes no stage input.');
+    }
     if ($id === '' || !array_key_exists(OperationInputs::STAGE, $this->getInputDefinitions(TRUE))) {
       return NULL;
     }
@@ -420,6 +436,23 @@ abstract class ResourceOperationToolBase extends ToolBase {
       throw new NamesNothingException('A stage is named by its id, a string.', OperationInputs::STAGE);
     }
     return $this->stages->named($id)->withArguments($parameters);
+  }
+
+  /**
+   * Answers whether a stage is sent to a tool that takes none.
+   *
+   * @param array $values
+   *   The tool's input values.
+   *
+   * @return bool
+   *   TRUE when the values hold a stage that is not empty, and the tool
+   *   declares no `stage` input.
+   *
+   * @internal
+   */
+  protected function stageUndeclared(array $values): bool {
+    $id = $values[OperationInputs::STAGE] ?? NULL;
+    return $id !== NULL && $id !== '' && !array_key_exists(OperationInputs::STAGE, $this->getInputDefinitions(TRUE));
   }
 
   /**

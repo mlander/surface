@@ -114,13 +114,15 @@ class OperationKindsTest extends SurfaceKernelTestBase {
         // titled by it, its parameters its only inputs.
         $update = $manager->getDefinition($prefix . $resource->id . ':' . $operation->reads);
         $this->assertSame('Current values: ' . $update->getLabel(), (string) $definition->getLabel(), $id);
+        // A stage, where one applies, is the last input of both.
+        $inputs = array_values(array_diff(array_keys($definition->getInputDefinitions()), [OperationInputs::STAGE]));
         $this->assertSame(
           array_map(static fn ($parameter): string => $parameter->name, $operation->parameters),
-          array_keys($definition->getInputDefinitions()),
+          $inputs,
           $id . ': a read takes only the parameters.',
         );
-        $taken = [...array_keys($definition->getInputDefinitions()), OperationInputs::VALUES, OperationInputs::DRY_RUN];
-        $this->assertSame(array_keys($update->getInputDefinitions()), $taken, $id . ': the update\'s parameters.');
+        $taken = [...$inputs, OperationInputs::VALUES, OperationInputs::DRY_RUN];
+        $this->assertSame(array_values(array_diff(array_keys($update->getInputDefinitions()), [OperationInputs::STAGE])), $taken, $id . ': the update\'s parameters.');
         continue;
       }
       $description = (string) $definition->getDescription();

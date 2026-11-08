@@ -417,7 +417,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $this->assertStringContainsString('surface:registration.step3:configure', (string) $panel['tool']['#title']);
     $this->assertStringContainsString('cannot say a shape chosen by a sibling key', (string) $panel['tool']['note']['#markup']);
     $schema = json_decode((string) $panel['tool']['json']['#code'], TRUE);
-    $this->assertSame(['values', 'dry_run'], array_keys($schema['properties']));
+    $this->assertSame(['values', 'dry_run', 'stage'], array_keys($schema['properties']));
     $this->assertArrayNotHasKey('allOf', $schema['properties']['values']);
   }
 
