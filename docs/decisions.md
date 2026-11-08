@@ -4516,8 +4516,9 @@ twelve callers, and would still meet the create tool's `values` input,
 which keeps the resource's required keys outside the pipeline
 (`OperationInputs::declaredValues()`), and core's `NotNull` on a node's
 `title` inside the entity's validation. The cost stays: a flow whose create spreads its required
-keys over several steps is refused at its first step, where flows are
-declared; flows are not declared yet.
+keys over several steps is refused when its route is matched, since
+2026-11-08
+([A step order is checked against the refiner graph and a create's required keys at match time](#a-step-order-is-checked-against-the-refiner-graph-and-a-creates-required-keys-at-match-time)).
 
 (`Staging\StagedStorage::prepare()`, `StagedUpdateTest`,
 `StagedCreateTest`)
@@ -4713,14 +4714,22 @@ only for it.
   stays TRUE because the storage has to rehearse a create and the access
   class has to answer for one; the asked id stays because the adapter
   deletes by the kind of the context's operation.
+- **A flow's later steps build the create's context again.** A create
+  through a stage whose `Stage::creating()` names a position, as a flow
+  over a create hands its later steps the position its first step
+  staged, is that create's own context again, built the same way from
+  the entry `StageStore::createdAt()` finds at the position, so each
+  step writes into the one create instead of adding a second. A create
+  through a stage that names no position adds a thing.
 - **The stage decides a context, and is still never on one.** "A stage
   input is a door argument handed to storage, never context" holds for
   the stage itself: no context carries it, and no build is keyed by
   it. It now also decides which context `operation()` builds for a
   thing it creates, and only the position rides on what the context
-  knows. Any other call, or one whose arguments name no create of the
-  stage, builds as with no stage, the owner's method answering a local
-  id with `NamesNothingException`.
+  knows. Any other call, a create through a stage that names no
+  position, or a call whose arguments name no create of the stage,
+  builds as with no stage, the owner's method answering a local id with
+  `NamesNothingException`.
 
 Why: a write to a new thing has to be rehearsed as a create, and the
 owner's create context is the one that says what a create of it is;
@@ -4728,7 +4737,8 @@ building it anywhere but `operation()` would give every door its own
 copy.
 
 (`ResourcesInterface::operation()`, `Resources::stagedCreate()`,
-`OperationContext`, `StagedLocalIdTest`)
+`OperationContext`, `Staging\Stage::creating()`,
+`Staging\StageStore::createdAt()`, `StagedLocalIdTest`, `FlowFormTest`)
 
 ### A stage input is a door argument handed to storage, never context
 
@@ -4980,8 +4990,12 @@ A read through the stage and apply open exactly those paths.
 
 Decided 2026-11-08. `Staging\Stageable` answers whether a stage
 applies, and the tool door (`OperationInputs::stageInput()`), the
-OpenAPI document (`SurfaceStage`), the HTTP door and the staged
-storage's prepare ask it. A stage applies when the resource's declared
+OpenAPI document (`SurfaceStage`), the HTTP door, the operation form's
+`?stage` query (`OperationRoute::stageRequested()`) and the staged
+storage's prepare ask it. Only the operation form reads `?stage`: any
+other page served by an operation, a React page or a controller, refuses
+a stage in its query, so no page writes to storage while its URL names
+one. A stage applies when the resource's declared
 storage class implements `TransactionalStorageInterface` and the call
 names a thing: it creates, or its resource declares no identity keys,
 or its parameters name at least one of them. A read-only operation other
@@ -4993,9 +5007,10 @@ than the read of one thing, a listing, reads no one thing.
   no `stage`, and a write named into a stage from PHP is refused at
   prepare, code `does_not_apply`, naming the operation and the identity
   keys. The rule reads the operation's parameter names, which the tool
-  door, the document and the staged storage all have, so the three doors
-  and prepare agree by construction; `StagedConfigTest` asks each door
-  for every operation of its site. Prepare alone also checks that each
+  door, the document, the form door and the staged storage all have, so
+  the four doors and prepare agree by construction; `StagedConfigTest`
+  asks each door for every operation of its site, and the form door for
+  every operation form route. Prepare alone also checks that each
   routed child's storage is transactional (below), so a resource that
   routes a child to one that is not still offers the stage at the doors
   and is refused at the write.
@@ -5006,6 +5021,11 @@ than the read of one thing, a listing, reads no one thing.
   `does_not_apply`, "A stage does not apply to this operation.", from
   `ResourceApiController::served()`, beside the 400 on the stage's own
   paths, before the stage is read.
+- **A stage in a form page's query is forbidden where it does not
+  apply.** The route's access check can only allow or forbid, so a
+  `?stage` on a form whose operation the rule rules out is forbidden,
+  saying `does_not_apply`, the match-time twin of the HTTP door's 422,
+  before the stage is read.
 - **A routed child.** A child routed to a storage of its own commits with
   its parent at apply, in the same transaction, so prepare refuses the
   write when a routed child's storage class does not implement the
@@ -5013,8 +5033,9 @@ than the read of one thing, a listing, reads no one thing.
   No shipped resource routes a child under a storage a stage takes.
 
 (`Staging\Stageable`, `Tool\OperationInputs`, `OpenApi\OpenApiDocument`,
-`Http\ResourceApiController::served()`, `Staging\StagedStorage::prepare()`,
-`StagedConfigTest`, `StageToolsTest`, `OpenApiDocumentTest`)
+`Http\ResourceApiController::served()`, `ResourceBuild\OperationRoute::stageRequested()`,
+`Staging\StagedStorage::prepare()`, `StagedConfigTest`, `StageToolsTest`,
+`OpenApiDocumentTest`, `StagedFormTest`)
 
 ### Two identity-less entries of one storage class are one thing
 
@@ -5066,8 +5087,12 @@ the stage on submit.
 - **The page lists no `changes` items.** It reads the stage's `changes`
   through `SurfacePipelineInterface::outputs()` to learn whether
   anything is pending, and lists the selection from what is stored, with
-  the stage's label, since how a form door shows a run's outputs is not
-  decided yet.
+  the stage's label. How a form door shows a run's outputs was decided
+  on 2026-11-08 with declared flows: the confirm page lists `changes`
+  before the apply and `applied` after
+  ([A flow ends in a confirmation page that shows the stage's changes and applies it](#a-flow-ends-in-a-confirmation-page-that-shows-the-stages-changes-and-applies-it)).
+  This page stays as it is: its writes are many things chosen on a
+  listing, which no declared flow draws.
 
 Why: a destructive operation over many things is where a person wants
 to see what will happen before it happens, and a stage is that state
@@ -5078,6 +5103,112 @@ must carry before one is declared.
 (`surface_examples_entity`'s `Plugin\Action\StageDeleteAction` and
 `Form\StageDeleteConfirmForm`, `BulkDeleteFlowTest`,
 `BulkDeleteContentListTest`)
+
+### A flow is declared on the route that draws it, not a resource
+
+Decided 2026-11-08. A flow is the default `_surface_flow: { steps:
+[...], label: ... }` on an operation form route: the group ids of the
+route's one operation, drawn one per step into one stage, `?step=N` and
+`?stage=<id>` in the query, ending in a confirm page that `steps` does
+not list. The keys in no group are drawn at the first step, whose
+submit opens a stage when the query names none. Next stages a step's
+keys and goes on; Back goes back and stages nothing.
+`SurfaceFormBuilderInterface::buildSurfaceForm()` takes the keys to draw,
+so a step draws its own: a key not drawn says nothing, and the staged
+load overlays what earlier steps staged.
+
+- **The route, not the resource.** A flow is how a form page asks, so
+  the door that draws it declares it; the build, the tools and the HTTP
+  door never see it. An agent stages the same writes through the stage
+  input, a person through the steps.
+- **One operation.** A stage refuses a write to one thing through a
+  second operation, so the steps share the route's. A flow over a create
+  writes each later step into the create its first step staged: the
+  stage is handed on naming that create's position
+  (`Staging\Stage::creating()`), and `ResourcesInterface::operation()`
+  builds the create's context again from it.
+- **The form cache stays one form's.** The stage is the flow's state,
+  read from the query, so every tab and every Back holds its own place
+  (decision 3 of the stage design: `?stage=<id>`, not the session).
+- **What a flow stages.** Updates, and creates whose required keys with
+  no default are drawn at the first step: each step is validated as the
+  whole write.
+
+The content type example's flow draws the update's three groups over
+three steps (`/admin/structure/types/manage/{type}/surface-flow`).
+
+(`Form\Flow`, `Form\SurfaceOperationForm`, `Form\Drawing`,
+`surface_stage_test`'s `Resource\ItineraryResource`,
+`surface_examples_node_type.routing.yml`, `FlowFormTest`,
+`FlowRoundTripTest`)
+
+### A step order is checked against the refiner graph and a create's required keys at match time
+
+Decided 2026-11-08. Four refusals need the resource built, so they run
+when the route is matched, as a forbidden access answer naming the
+problem, through one `Form\Flow::refusal()` the route's access check and
+the form both ask: an operation a flow cannot stage, a delete, a
+read-only operation, or one a stage does not apply to; a step that names
+a group the operation's top level does not have, naming it; a key drawn
+at a step before a key its
+refinement depends on (`DefinitionMap::refinements()`), naming both; and
+for a create, a required key with no default drawn after the first
+step, naming it. The router's rebuild checks only the route's shape: a
+`_surface_flow` that is no map of distinct group ids with an optional
+non-empty `label` and `redirect`, a flow on a route that names no
+operation, or one whose `_form` is not the operation form.
+
+- **Not at the rebuild.** The stage design put the refiner-order
+  refusal at route registration. Nothing is built there, and a derived
+  resource's id with a path variable names no single resource then, so
+  the check follows the policy that what needs the resource built stays
+  at match ([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for), "What the route alone shows is refused when the router is rebuilt"),
+  as "both fixes and fills" has a rebuild check and a match twin.
+- **A conditional require is not seen.** A rule's `require()` applies
+  only once values exist, so it is no part of the check: the pipeline
+  refuses the step that leaves the key empty, as it refuses any write.
+- **Not derived.** The author orders the steps; the graph only refuses
+  an order that would draw a key before what it is narrowed by.
+
+(`Form\Flow::refusal()`, `Form\Flow::assertWritten()`,
+`Access\OperationAccessCheck`, `Access\OperationRouteSubscriber`,
+`FlowFormTest`)
+
+### A flow ends in a confirmation page that shows the stage's changes and applies it
+
+Decided 2026-11-08. `?step=confirm` draws the stage's `changes`, read
+through the pipeline, as a table (position, resource, operation, kind,
+parameters, the keys each moved), says "Each is checked again when it
+is made. They are made together or not at all.", and offers Back, Discard
+the stage and Apply the stage. Apply makes what the page listed: the
+page posts back a fingerprint of the stage's writes as it drew them,
+and a stage that holds other writes by then refuses the Apply and is
+listed again. Apply is then rehearsed, each refusal said on the page and
+nothing written, and run through the stage's `apply` for the owner; the
+page then goes to the flow's `redirect` route, or stays and shows the
+stage applied. A stage that changed while it was applied is said as an
+error, and the page is built again.
+
+- **What was listed, not what is there.** A write staged from another
+  tab or another door after the page was drawn, a delete among them,
+  would otherwise be applied unseen by the person who pressed Apply.
+- **The flow's redirect, not the cosmetic layer's.** The cosmetic
+  layer's redirect is handed an operation's result; the stage's apply
+  result is another resource's, so the flow names where to go
+  (`redirect`).
+
+- **Forced by what cannot be undone.** No new flag: when a write is a
+  delete, or its operation declares `destructive`, the page says how
+  many cannot be undone and Apply is a danger button.
+- **Discard is a button.** It deletes the stage through its `delete`,
+  and a link may not delete.
+- **How a form door shows a run's outputs.** `changes` before the apply,
+  `applied` after: the record keeps `applied` once applied, and the page
+  reads it. This closes what the entity example's bulk delete left open
+  ([A destructive bulk operation stages, then confirms over the stage](#a-destructive-bulk-operation-stages-then-confirms-over-the-stage)).
+
+(`Form\SurfaceOperationForm::confirmStep()`, `ConfirmStepTest`,
+`FlowRoundTripTest`)
 
 ## Access
 

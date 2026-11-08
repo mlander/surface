@@ -4,8 +4,18 @@ declare(strict_types=1);
 
 namespace Drupal\surface\ResourceBuild;
 
+use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Routing\RouteMatchInterface;
+use Drupal\Core\Session\AccountInterface;
+use Drupal\surface\Form\Flow;
+use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\StageResource;
+use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\Stageable;
+use Drupal\surface\SurfaceAccess;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
 
@@ -120,9 +130,10 @@ final class OperationRoute {
    * What Drupal and this module read for themselves on a form page: where
    * to go after the save, the CSRF token, the format and the wrapper
    * format, the AJAX form's marker, the pager, the path of a URL that is
-   * not clean, and a dry run. And `stage`, which nothing reads yet: the
-   * form will read it as the stage a flow's steps are written to, so no
-   * link may start a key from it first.
+   * not clean, and a dry run. And the two the operation form reads for a
+   * stage: `stage`, the id of the stage the page writes into
+   * (stageRequested()), and `step`, the step of the route's flow the page
+   * draws (Flow::step()).
    */
   public const RESERVED_QUERY = [
     'destination',
@@ -134,6 +145,7 @@ final class OperationRoute {
     'q',
     'dryRun',
     'stage',
+    'step',
   ];
 
   /**
@@ -179,6 +191,12 @@ final class OperationRoute {
    * @param array<string, string> $query
    *   The keys a link may start, each by the query parameter it starts
    *   from: key path => query name.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the page writes into, its arguments the operation's; NULL
+   *   for none.
+   * @param array<string, mixed> $arguments
+   *   The operation's arguments the route carries, by name: what a stage
+   *   opened for the page records beside its write.
    */
   public function __construct(
     public readonly string $resource,
@@ -186,6 +204,8 @@ final class OperationRoute {
     public readonly OperationContext $context,
     public readonly ?string $subject,
     public readonly array $query = [],
+    public readonly ?Stage $stage = NULL,
+    public readonly array $arguments = [],
   ) {}
 
   /**
@@ -217,6 +237,23 @@ final class OperationRoute {
   public static function reactPage(?Route $route): bool {
     $controller = $route?->getDefault('_controller');
     return is_string($controller) && str_ends_with($controller, self::REACT_PAGE);
+  }
+
+  /**
+   * Answers whether a route is served by the operation form.
+   *
+   * Its `_form` is SurfaceOperationForm or a class extending it: the one
+   * page that reads `stage` and `step` from its query.
+   *
+   * @param \Symfony\Component\Routing\Route|null $route
+   *   The route.
+   *
+   * @return bool
+   *   TRUE when its form is the operation form.
+   */
+  public static function operationForm(?Route $route): bool {
+    $form = $route?->getDefault('_form');
+    return is_string($form) && is_a(ltrim($form, '\\'), SurfaceOperationForm::class, TRUE);
   }
 
   /**
@@ -370,7 +407,8 @@ final class OperationRoute {
    * no rebuild saw (one built in code and matched by hand, as a test
    * does): a `{name}` a resource's id or a reference holds that is no
    * variable of the path, or one nothing bounds; one key both fixed and
-   * filled; a query map no link can use; keys fixed on a React page. Each
+   * filled; a query map no link can use; keys fixed on a React page; a
+   * `_surface_flow` written wrong (Flow::assertWritten()). Each
    * is one check, which both ask, so the rebuild and the match agree.
    * What needs the resource built, a path that names no key or a value
    * its key refuses, is judged at match alone.
@@ -389,6 +427,9 @@ final class OperationRoute {
     static::assertFixedOrFilled($route, $name);
     static::query($route, $name);
     static::assertFixedWhereHeld($route, $name);
+    if ($route->hasDefault(Flow::ROUTE)) {
+      Flow::assertWritten($route, $name);
+    }
   }
 
   /**
@@ -586,6 +627,10 @@ final class OperationRoute {
    *   What maps the route's parameters onto the operation's.
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which invokes the operation.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the page writes into (stageRequested()), which the
+   *   context is built through, so a local id in the path names what the
+   *   stage creates; NULL for none.
    *
    * @return self
    *   The operation, and the context it built.
@@ -603,7 +648,7 @@ final class OperationRoute {
    *   nothing reads, seeds on an operation that deletes, or a value the
    *   route fixes or fills that names no key or does not fit its key.
    */
-  public static function fromRouteMatch(RouteMatchInterface $route_match, ResourceRegistry $registry, OperationArguments $arguments, ResourcesInterface $resources): self {
+  public static function fromRouteMatch(RouteMatchInterface $route_match, ResourceRegistry $registry, OperationArguments $arguments, ResourcesInterface $resources, ?Stage $stage = NULL): self {
     [$named, $id] = static::named($route_match, $registry);
     $route = $route_match->getRouteObject();
     assert($route instanceof Route);
@@ -632,8 +677,11 @@ final class OperationRoute {
         break;
       }
     }
+    // Decision: see
+    // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+    $stage = $stage?->withArguments($given);
     try {
-      $context = $resources->operation($class, $id, $given);
+      $context = $resources->operation($class, $id, $given, $stage);
     }
     catch (NamesNothingException $e) {
       // A plain default is the route's literal: one that names nothing is
@@ -645,7 +693,102 @@ final class OperationRoute {
     }
     // A value of the path handed to the operation is in its context.
     $read = array_intersect(array_map('strval', array_keys($given)), $variables) !== [];
-    return new self($class, $operation, static::withRouteValues($route_match, $class, $context, $resources, $read), $subject, $query);
+    return new self($class, $operation, static::withRouteValues($route_match, $class, $context, $resources, $read), $subject, $query, $stage, $given);
+  }
+
+  /**
+   * Reads the stage a form page's query names, and who may write into it.
+   *
+   * `?stage=<id>` on a page served by an operation: the page writes into
+   * that stage instead of storage. Read from the request handed in, which
+   * the access check takes from the request stack when it is asked about
+   * a link, so a link and the page agree. Asked in this order, as the HTTP
+   * door asks its header: whether a stage applies to the route's operation
+   * (Stageable::operation()), whether the stage exists, and the stage's
+   * own `update` access for the account, which only its owner holds.
+   * Only an operation form reads the query: on any other page served by
+   * an operation, a React page or a controller, a stage is refused as
+   * not applying, so no page writes live while its URL names a stage.
+   *
+   * A flow over a create writes each step after its first into the
+   * create its first step staged (Flow::creating()), so the stage is
+   * handed on saying that create's position. That is asked only once
+   * the account may write into the stage, so no other account hears
+   * what the stage holds, and not at the confirm page, which writes
+   * nothing through the operation. A later step whose create was taken
+   * out of the stage is refused: a fresh create there would stage a
+   * second thing.
+   *
+   * Decision: see
+   * docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+   *
+   * @param \Drupal\Core\Routing\RouteMatchInterface $route_match
+   *   The route match.
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request whose query is read.
+   * @param \Drupal\surface\Staging\StageStore $stages
+   *   The stages.
+   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
+   *   The build step, which answers the stage's access.
+   * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
+   *   What discovery found.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account, or NULL for the current user.
+   *
+   * @return array{0: \Drupal\surface\Staging\Stage|null, 1: \Drupal\Core\Access\AccessResultInterface}|null
+   *   NULL when the query names no stage. Otherwise the stage, and the
+   *   answer for it: forbidden with no stage on a page that is no
+   *   operation form, and forbidden saying `does_not_apply` where a stage
+   *   does not apply to the operation; else the stage's own access
+   *   (StageAccess), which is never cached, or a refusal of a later step
+   *   of a flow over a create whose create is gone from the stage.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   At `stage`, when it names no stage; at `step`, when a flow over a
+   *   create has no such step; or as named() throws.
+   * @throws \InvalidArgumentException
+   *   When a flow over a create finds more than one create of it in the
+   *   stage, or as named() throws.
+   */
+  public static function stageRequested(RouteMatchInterface $route_match, Request $request, StageStore $stages, ResourcesInterface $resources, ResourceRegistry $registry, ?AccountInterface $account = NULL): ?array {
+    $id = $request->query->all()[Flow::STAGE] ?? NULL;
+    if ($id === NULL || $id === '') {
+      return NULL;
+    }
+    if (!static::operationForm($route_match->getRouteObject())) {
+      $refusal = sprintf('A stage does not apply to this page: only an operation form reads the "%s" query.', Flow::STAGE);
+      return [NULL, AccessResult::forbidden($refusal)->setCacheMaxAge(0)];
+    }
+    if (!is_string($id)) {
+      throw new NamesNothingException('The "stage" in the query names a stage by its id, one value.', Flow::STAGE);
+    }
+    [$resource, $operation] = static::named($route_match, $registry);
+    $definition = $registry->getDefinition($resource);
+    $found = $registry->getOperation($definition->name(), $operation);
+    if (!Stageable::operation($definition, $found)) {
+      $refusal = sprintf('A stage does not apply to the "%s" operation of %s (%s), so this page takes no "%s" in its query.', $found->id, $definition->id, Violation::DOES_NOT_APPLY, Flow::STAGE);
+      return [NULL, AccessResult::forbidden($refusal)->setCacheMaxAge(0)];
+    }
+    $stage = $stages->named($id);
+    $access = SurfaceAccess::decisive(
+      $resources->access(StageResource::ID, $resources->operation(StageResource::ID, 'update', ['id' => $id]), $account),
+      'This stage may not be written into by this account.',
+    );
+    $route = (string) $route_match->getRouteName();
+    $flow = $found->creates ? Flow::onRoute($route_match->getRouteObject(), $route) : NULL;
+    if ($flow === NULL || !$access->isAllowed()) {
+      return [$stage, $access];
+    }
+    $step = $flow->step($request);
+    if ($step === Flow::CONFIRM) {
+      return [$stage, $access];
+    }
+    $position = Flow::creating($stages, $stage, $definition->id, $found->id);
+    if ($position === NULL && $step !== 1) {
+      $refusal = sprintf('The %s route draws step %d of its flow into the create its first step staged, and its create was taken out of the stage; start the flow again.', $route, $step);
+      return [$stage, AccessResult::forbidden($refusal)->setCacheMaxAge(0)];
+    }
+    return [$position === NULL ? $stage : $stage->creating($position), $access];
   }
 
   /**

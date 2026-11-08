@@ -425,12 +425,37 @@ the record of the rework that brought the module to the pattern.
   `OutputsStorageInterface` stays internal
   (`docs/decisions.md#a-door-reads-what-a-run-reports-through-the-pipeline`).
 - **Flow**: several steps a person or an agent takes over one stage,
-  ending in its `apply`. The first flow is hand-built: the entity
-  example's bulk delete from the content list, a `system.action` that
-  stages one delete per selected node and a confirm page over the stage
-  that applies it (`docs/staging.md#a-flow-by-hand-bulk-delete-from-the-content-list`,
-  `docs/decisions.md#a-destructive-bulk-operation-stages-then-confirms-over-the-stage`);
-  slice 5 declares flows.
+  ending in its `apply`. Declared on an operation form route,
+  `_surface_flow: { steps: [...], label: ..., redirect: ... }` (`Form\Flow`,
+  internal): the route's one operation drawn a group a step
+  (`buildSurfaceForm(..., $keys)`), keys in no group at the first,
+  `?step=N` and `?stage=<id>` in the query, the first step opening the
+  stage, Next staging a step and Back staging nothing, and a confirm
+  page at `?step=confirm` that lists `changes` as a table, says how many
+  writes cannot be undone, and applies what it listed (a fingerprint it
+  posts back) or discards the stage; once applied it goes to the flow's
+  `redirect` route or stays. The rebuild refuses a malformed
+  `_surface_flow` default and a flow on a route whose `_form` is not the
+  operation form; the match (the access check and the form, through
+  `Flow::refusal()`) refuses an operation a flow cannot stage (a delete,
+  a read-only operation, one a stage does not apply to), an unknown
+  group, a key drawn before a key it is refined by, and a create's
+  required key with no default after the first step. A flow over a
+  create writes each later step into its first step's create
+  (`Stage::creating()`, internal).
+  The form door reads `?stage` on every operation form page, and any
+  other page served by an operation refuses it
+  (`OperationRoute::stageRequested()`: the stageable rule, the stage,
+  its access, then the thing's), says what was staged as the tool door
+  does, skips the cosmetics' message and redirect, and varies by
+  `url.query_args:stage` and `:step`, max-age 0 under a stage
+  (`docs/staging.md#the-form-door`, `docs/staging.md#flows`,
+  `docs/decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource`).
+  The entity example's bulk delete from the content list stays
+  hand-built, a `system.action` that stages one delete per selected node
+  and a confirm page over the stage that applies it, since it spans many
+  things (`docs/staging.md#a-flow-by-hand-bulk-delete-from-the-content-list`,
+  `docs/decisions.md#a-destructive-bulk-operation-stages-then-confirms-over-the-stage`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
@@ -758,7 +783,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2053, Assertions: 50385, Errors: 0, Failures: 0, Skipped: 3. Classes: 286 of 286, 8 at a time, browser classes 4.
+phpunit: Tests: 2081, Assertions: 51077, Errors: 0, Failures: 0, Skipped: 3. Classes: 290 of 290, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -778,8 +803,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1942, Assertions: 46029, Deprecations: 130, Skipped: 3. Classes:
-235, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1969, Assertions: 46696, Deprecations: 130, Skipped: 3. Classes:
+238, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1063,7 +1088,8 @@ src/Drush/               Drush commands (the site's catalog, the contract diff, 
                          config schema) and the resource generator, drush
                          generate surface:resource.
 src/Form/                Form builder, host traits, the operation form
-                         and its contract panel (ContractPanel.php).
+                         and its contract panel (ContractPanel.php);
+                         Flow.php, a route's declared flow (internal).
                          The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
                          Drawing.php, Extracting.php and Refreshing.php.
@@ -1119,6 +1145,11 @@ structures in `src/Structure/`, shapes in `src/Shape/`, alters in
 `src/Alter/`, storage classes in `src/Storage/` and access classes in
 `src/Access/`; only the first four are scanned, and the rest are
 registered because a resource or structure names them.
+
+The declared flows' fixture is `tests/modules/surface_stage_test`'s
+itinerary (`ItineraryResource`, `ItineraryStorage`, and the flow routes
+in `surface_stage_test.routing.yml`); the example is the content type's
+`surface_examples_node_type.flow` route.
 
 `surface_examples_entity` also holds the hand-built flow: the bulk
 action in `src/Plugin/Action/` (`StageDeleteAction`), its confirm page

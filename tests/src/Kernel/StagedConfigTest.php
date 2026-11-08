@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Config\ConfigEvents;
 use Drupal\Core\Config\Development\ConfigSchemaChecker;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
@@ -15,6 +16,7 @@ use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\StageResource;
+use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\StorageAdapter;
 use Drupal\surface\Staging\ConfigWrites;
 use Drupal\surface\Staging\Stage;
@@ -648,6 +650,10 @@ class StagedConfigTest extends SurfaceKernelTestBase {
    *   may name nothing, a body of `{}` may be refused). The stage's own
    *   calls answer with their own problem, never the stage refusal.
    *
+   * - for each operation form route of the site, a request with the
+   *   stage in its query is refused `does_not_apply` by the route's access
+   *   check exactly where the rule says no.
+   *
    * Every operation with a tool has an OpenAPI call but those listed in
    * NOT_SERVED, and every write reaches prepare but those in UNREACHED;
    * both lists are empty, and a new entry in either fails the test.
@@ -741,6 +747,53 @@ class StagedConfigTest extends SurfaceKernelTestBase {
         }
       }
     }
+    // The form door: each operation form route, asked with the stage in
+    // its query, refuses it `does_not_apply` exactly where the rule says
+    // no, before anything of its path is read. Every other route served
+    // by an operation refuses any stage: only the operation form reads
+    // the query. A React page and a controller are added, built by hand,
+    // to the routes the site serves.
+    $check = $this->container->get('surface.operation_access');
+    $forms = 0;
+    $formsStaged = 0;
+    $others = 0;
+    $routes = iterator_to_array($this->container->get('router.route_provider')->getAllRoutes());
+    $by = [
+      OperationRoute::RESOURCE => 'Drupal\\surface_examples\\Resource\\RegistrationStep1Resource',
+      OperationRoute::OPERATION => 'configure',
+    ];
+    $routes['test.react_page'] = new Route('/test/react', $by + ['_controller' => '\Drupal\surface_examples_react\Controller\ResourceReactPage::served']);
+    $routes['test.controller'] = new Route('/test/controller', $by + ['_controller' => '\Drupal\surface_examples\Controller\ExamplesController::index']);
+    foreach ($routes as $name => $route) {
+      if (!OperationRoute::serves($route)) {
+        continue;
+      }
+      if (!OperationRoute::operationForm($route)) {
+        $answer = $check->access(new RouteMatch((string) $name, $route), $this->container->get('current_user'), Request::create('/', 'GET', ['stage' => $headed]));
+        $this->assertTrue($answer->isForbidden(), $name);
+        $this->assertSame('A stage does not apply to this page: only an operation form reads the "stage" query.', $answer instanceof AccessResultReasonInterface ? $answer->getReason() : NULL, $name);
+        $others++;
+        continue;
+      }
+      $resource = (string) $route->getDefault(OperationRoute::RESOURCE);
+      $raw = [];
+      foreach ($route->compile()->getVariables() as $variable) {
+        $raw[$variable] = str_contains($resource, '{' . $variable . '}') ? 'page' : '1';
+      }
+      $route_match = new RouteMatch((string) $name, $route, $raw, $raw);
+      [$named, $served] = OperationRoute::named($route_match, $registry);
+      $definition = $registry->getDefinition($named);
+      $rule = Stageable::operation($definition, $registry->getOperation($definition->name(), $served));
+      $answer = $check->access($route_match, $this->container->get('current_user'), Request::create('/', 'GET', ['stage' => $headed]));
+      $reason = $answer instanceof AccessResultReasonInterface ? (string) $answer->getReason() : '';
+      $this->assertSame(!$rule, $answer->isForbidden() && str_contains($reason, '(' . Violation::DOES_NOT_APPLY . ')'), $name . ': the form door refuses the stage exactly where the rule says no.');
+      $forms++;
+      $formsStaged += (int) $rule;
+    }
+    $this->assertGreaterThanOrEqual(2, $others);
+    $this->assertGreaterThan(10, $forms);
+    $this->assertGreaterThan(5, $formsStaged);
+    $this->assertLessThan($forms, $formsStaged);
     sort($unserved);
     sort($unreached);
     $this->assertSame(self::UNREACHED, $unreached, 'Every write reaches prepare, but these.');

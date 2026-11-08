@@ -121,7 +121,7 @@ services:
   # operation's permission, then the resource's access class.
   surface.operation_access:
     class: Drupal\surface\Access\OperationAccessCheck
-    arguments: ['@surface.resources', '@surface.resource_registry', '@surface.operation_arguments', '@surface.operation_gate']
+    arguments: ['@surface.resources', '@surface.resource_registry', '@surface.operation_arguments', '@surface.operation_gate', '@surface.stages', '@request_stack']
     tags:
       - { name: access_check, applies_to: _surface_operation_access }
   # Adds that access check to every route naming a resource and an

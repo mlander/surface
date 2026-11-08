@@ -185,8 +185,11 @@ interface ResourcesInterface {
    * The position's key is reserved for the stage: an owner's context that
    * knows it is refused with a \LogicException. It is the one
    * context whose `creates` differs from its operation's, and it is not
-   * stamped. Any other call, or one that names no create of the stage,
-   * builds as with no stage. The stage is never on the context.
+   * stamped. A create builds that context too when the stage says the
+   * position of the create it writes into (Stage::creating()), which a
+   * flow's later steps over a create do. Any other call, or one that
+   * names no create of the stage, builds as with no stage. The stage is
+   * never on the context.
    *
    * Decision: see
    * docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.

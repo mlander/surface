@@ -1256,7 +1256,13 @@ final class Resources implements ResourcesInterface {
       return $this->operation($resource, $found->reads, $arguments, $stage);
     }
     $resolved = $this->operationArguments->resolve($found, $arguments);
-    $created = $stage === NULL || $found->creates || $found->structure !== NULL ? NULL : $this->stagedCreate($resource, $found, $resolved, $stage);
+    $created = match (TRUE) {
+      $stage === NULL || $found->structure !== NULL => NULL,
+      // A create through the stage adds a thing, unless the stage says
+      // which create it writes into (Stage::creating()).
+      $found->creates => $stage->creating === NULL ? NULL : $this->stagedCreate($resource, $found, $resolved, $stage),
+      default => $this->stagedCreate($resource, $found, $resolved, $stage),
+    };
     if ($created !== NULL) {
       return $created;
     }
@@ -1312,7 +1318,8 @@ final class Resources implements ResourcesInterface {
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
    * @param \Drupal\surface\ResourceBuild\OperationDefinition $found
-   *   The operation asked, which does not create.
+   *   The operation asked: one that does not create, or a create the
+   *   stage says the position of (Stage::creating()).
    * @param array<string, mixed> $arguments
    *   Its arguments, by name.
    * @param \Drupal\surface\Staging\Stage $stage
@@ -1320,11 +1327,14 @@ final class Resources implements ResourcesInterface {
    *
    * @return \Drupal\surface\Resource\OperationContext|null
    *   The context, or NULL when the stage creates no thing of the resource
-   *   under the arguments.
+   *   under the arguments, or at the position it says.
    */
   protected function stagedCreate(string $resource, OperationDefinition $found, array $arguments, Stage $stage): ?OperationContext {
     $definition = $this->registry->getDefinition($resource);
-    $entry = $this->classResolver->getInstanceFromDefinition(StageStore::class)->created($stage, $definition->id, $arguments);
+    $stages = $this->classResolver->getInstanceFromDefinition(StageStore::class);
+    $entry = $found->creates
+      ? $stages->createdAt($stage, $definition->id, (int) $stage->creating)
+      : $stages->created($stage, $definition->id, $arguments);
     if ($entry === NULL) {
       return NULL;
     }
