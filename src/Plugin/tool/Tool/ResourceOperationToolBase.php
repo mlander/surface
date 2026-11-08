@@ -20,7 +20,7 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Staging\Stage;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Tool\PlainTextMarkup;
 use Drupal\tool\ExecutableResult;
@@ -70,7 +70,7 @@ abstract class ResourceOperationToolBase extends ToolBase {
    *
    * @internal
    */
-  protected StageStore $stages;
+  protected StageStoreInterface $stages;
 
   /**
    * {@inheritdoc}

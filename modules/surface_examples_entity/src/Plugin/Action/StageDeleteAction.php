@@ -18,7 +18,7 @@ use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Staging\Stage;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageStoreInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -92,7 +92,7 @@ final class StageDeleteAction extends EntityActionBase {
    *   The build step: operations, their access, builds and storages.
    * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
    *   The pipeline, which opens the stage and stages each delete.
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   The stages, which name the stage a staged write is handed.
    * @param \Drupal\Core\TempStore\PrivateTempStoreFactory $tempStoreFactory
    *   The private temp store, which keeps the selection for the confirm
@@ -107,7 +107,7 @@ final class StageDeleteAction extends EntityActionBase {
     EntityTypeManagerInterface $entity_type_manager,
     protected readonly ResourcesInterface $resources,
     protected readonly SurfacePipelineInterface $pipeline,
-    protected readonly StageStore $stages,
+    protected readonly StageStoreInterface $stages,
     protected readonly PrivateTempStoreFactory $tempStoreFactory,
     protected readonly AccountInterface $currentUser,
   ) {

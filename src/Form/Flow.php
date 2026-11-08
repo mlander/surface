@@ -13,7 +13,8 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Staging\Stage;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageRecord;
+use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\Staging\Stageable;
 use Drupal\surface\SurfaceInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,9 +26,13 @@ use Symfony\Component\Routing\Route;
  * Declared on an operation form route by the default `_surface_flow`,
  * a map of `steps`, the group ids of the route's operation in the order
  * they are drawn; an optional `label`, the stage's label, which is the
- * operation's label by default; and an optional `redirect`, the name of
+ * operation's label by default; an optional `redirect`, the name of
  * the route the page goes to once the stage is applied, handed the flow
- * route's own parameters that its path takes:
+ * route's own parameters that its path takes; and an optional `keep`,
+ * how long the stage the first step opens lives after its last write:
+ * `short`, the form cache's lifetime (`form_cache_expiration`, six hours
+ * by default), for a flow finished in one sitting, or `long`, the temp
+ * store's (`tempstore.expire`, a week by default), the default:
  *
  * @code
  * example.flow:
@@ -39,6 +44,7 @@ use Symfony\Component\Routing\Route;
  *     _surface_flow:
  *       steps: [submission, workflow, display]
  *       redirect: entity.node_type.collection
+ *       keep: short
  * @endcode
  *
  * The page draws one step at a time, `?step=N` from 1, and writes each
@@ -98,12 +104,23 @@ final class Flow {
    * @param string|null $redirect
    *   The route the page goes to once the stage is applied, or NULL to
    *   stay on the confirm page.
+   * @param string $keep
+   *   How long the stage the first step opens lives after its last write:
+   *   StageRecord::SHORT or StageRecord::LONG.
+   *
+   * @throws \InvalidArgumentException
+   *   When $keep is neither.
    */
   public function __construct(
     public readonly array $steps,
     public readonly ?string $label = NULL,
     public readonly ?string $redirect = NULL,
-  ) {}
+    public readonly string $keep = StageRecord::LONG,
+  ) {
+    if (!in_array($keep, [StageRecord::SHORT, StageRecord::LONG], TRUE)) {
+      throw new \InvalidArgumentException(sprintf('A flow\'s "keep" is "%s" or "%s", not "%s".', StageRecord::SHORT, StageRecord::LONG, $keep));
+    }
+  }
 
   /**
    * Reads the flow a route declares.
@@ -125,7 +142,7 @@ final class Flow {
     }
     static::assertWritten($route, $name);
     $flow = $route->getDefault(self::ROUTE);
-    return new self(array_values($flow['steps']), $flow['label'] ?? NULL, $flow['redirect'] ?? NULL);
+    return new self(array_values($flow['steps']), $flow['label'] ?? NULL, $flow['redirect'] ?? NULL, $flow['keep'] ?? StageRecord::LONG);
   }
 
   /**
@@ -134,9 +151,10 @@ final class Flow {
    * What the router's rebuild refuses (OperationRouteSubscriber), and the
    * match again for a route no rebuild saw: a flow on a route that names
    * no operation, or whose `_form` is not the operation form, which alone
-   * draws steps; one that is no map of `steps`, `label` and `redirect`,
-   * or whose `label` or `redirect` is no non-empty string; and steps that
-   * are no list of distinct group ids.
+   * draws steps; one that is no map of `steps`, `label`, `redirect` and
+   * `keep`, whose `label` or `redirect` is no non-empty string, or whose
+   * `keep` is neither `short` nor `long`; and steps that are no list of
+   * distinct group ids.
    *
    * @param \Symfony\Component\Routing\Route $route
    *   The route, which declares a flow.
@@ -154,14 +172,17 @@ final class Flow {
     if (!OperationRoute::operationForm($route)) {
       throw new \InvalidArgumentException(sprintf('The %s route declares "%s" and its "_form" is not %s: only the operation form draws a flow\'s steps, so serve the route with it or a class extending it.', $name, self::ROUTE, SurfaceOperationForm::class));
     }
-    $shape = sprintf('The %s route\'s "%s" is a map of "steps", a list of the group ids drawn one per step, an optional "label" and an optional "redirect", a route name, as { steps: [where, when] }', $name, self::ROUTE);
-    if (!is_array($flow) || array_diff(array_keys($flow), ['steps', 'label', 'redirect']) !== []) {
+    $shape = sprintf('The %s route\'s "%s" is a map of "steps", a list of the group ids drawn one per step, an optional "label", an optional "redirect", a route name, and an optional "keep", short or long, as { steps: [where, when] }', $name, self::ROUTE);
+    if (!is_array($flow) || array_diff(array_keys($flow), ['steps', 'label', 'redirect', 'keep']) !== []) {
       throw new \InvalidArgumentException($shape . '.');
     }
     foreach (['label', 'redirect'] as $optional) {
       if (array_key_exists($optional, $flow) && (!is_string($flow[$optional]) || trim($flow[$optional]) === '')) {
         throw new \InvalidArgumentException(sprintf('%s: "%s" is a non-empty string, or left out.', $shape, $optional));
       }
+    }
+    if (array_key_exists('keep', $flow) && !in_array($flow['keep'], [StageRecord::SHORT, StageRecord::LONG], TRUE)) {
+      throw new \InvalidArgumentException(sprintf('%s: "keep" is "%s" or "%s", or left out.', $shape, StageRecord::SHORT, StageRecord::LONG));
     }
     $steps = $flow['steps'] ?? NULL;
     if (!is_array($steps) || $steps === [] || !array_is_list($steps) || array_filter($steps, static fn (mixed $step): bool => !is_string($step) || $step === '') !== []) {
@@ -357,7 +378,7 @@ final class Flow {
    * writes into it. The stage holds it as the one create of the resource
    * through the operation.
    *
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   The stages.
    * @param \Drupal\surface\Staging\Stage $stage
    *   The stage.
@@ -372,7 +393,7 @@ final class Flow {
    * @throws \InvalidArgumentException
    *   When the stage holds more than one, so no step can say which.
    */
-  public static function creating(StageStore $stages, Stage $stage, string $resource, string $operation): ?int {
+  public static function creating(StageStoreInterface $stages, Stage $stage, string $resource, string $operation): ?int {
     $positions = [];
     foreach ((array) ($stages->read($stage->id)['writes'] ?? []) as $write) {
       if ($write['kind'] === 'create' && $write['resource'] === $resource && $write['operation'] === $operation) {

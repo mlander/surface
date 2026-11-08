@@ -15,7 +15,7 @@ use Drupal\field\Entity\FieldConfig;
 use Drupal\field\Entity\FieldStorageConfig;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageRecord;
 use Drupal\surface\Storage\StageStorage;
 use Drupal\Tests\surface\Traits\DoorAgreementTrait;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
@@ -256,13 +256,14 @@ class EveryDoorAgreesTest extends SurfaceKernelTestBase {
       // A stage, empty, the account's, under an id the subjects name.
       $now = $this->container->get('datetime.time')->getRequestTime();
       $this->container->get('surface.stages')->write([
-        'version' => StageStore::VERSION,
+        'version' => StageRecord::VERSION,
         'id' => self::STAGE,
         'owner' => (int) $this->container->get('current_user')->id(),
         'label' => 'Every door',
         'status' => StageStorage::OPEN,
         'opened' => $now,
         'updated' => $now,
+        'keep' => (int) $this->container->getParameter('tempstore.expire'),
         'applied_at' => NULL,
         'applied' => NULL,
         'next' => 1,

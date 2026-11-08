@@ -10,11 +10,11 @@ namespace Drupal\surface\Staging;
  * What ResourcesInterface::storage() wraps a resource's storage with, so
  * a write is kept in the stage until the stage is applied, and a load
  * answers what the stage holds before what is stored. Its id and owner
- * name the stage's record, which StageStore::named() reads it from; its
- * arguments are the operation's parameters by name, as the code that
- * asks for the storage handed them to ResourcesInterface::operation(),
- * which the stage keeps beside a write so apply can build the operation
- * again.
+ * name the stage's record, which StageStoreInterface::named() reads it
+ * from; its arguments are the operation's parameters by name, as the
+ * code that asks for the storage handed them to
+ * ResourcesInterface::operation(), which the stage keeps beside a write
+ * so apply can build the operation again.
  *
  * Ownership is no fact of the value: the door asks the stage's own access
  * for the account it answers for before it hands a stage on, and apply

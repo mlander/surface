@@ -13,7 +13,7 @@ use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Staging\Stage;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\Staging\Stageable;
 use Drupal\surface\SurfaceAccess;
 use Symfony\Component\HttpFoundation\Request;
@@ -729,7 +729,7 @@ final class OperationRoute {
    *   The route match.
    * @param \Symfony\Component\HttpFoundation\Request $request
    *   The request whose query is read.
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   The stages.
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which answers the stage's access.
@@ -754,7 +754,7 @@ final class OperationRoute {
    *   When a flow over a create finds more than one create of it in the
    *   stage, or as named() throws.
    */
-  public static function stageRequested(RouteMatchInterface $route_match, Request $request, StageStore $stages, ResourcesInterface $resources, ResourceRegistry $registry, ?AccountInterface $account = NULL): ?array {
+  public static function stageRequested(RouteMatchInterface $route_match, Request $request, StageStoreInterface $stages, ResourcesInterface $resources, ResourceRegistry $registry, ?AccountInterface $account = NULL): ?array {
     $id = $request->query->all()[Flow::STAGE] ?? NULL;
     if ($id === NULL || $id === '') {
       return NULL;

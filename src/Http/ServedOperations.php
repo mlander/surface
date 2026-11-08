@@ -18,7 +18,7 @@ use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Staging\Stage;
 use Drupal\surface\Staging\Stageable;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\Storage\StageStorage;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
@@ -48,13 +48,13 @@ final class ServedOperations {
    *   What discovery found.
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which also resolves the operation's arguments.
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   Where the stages are kept, which a request's stage is read from.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly ResourcesInterface $resources,
-    protected readonly StageStore $stages,
+    protected readonly StageStoreInterface $stages,
   ) {}
 
   /**

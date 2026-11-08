@@ -4391,8 +4391,12 @@ the build derives (`create`, `read`, `update`, `changes`, `apply`,
 `delete`) and the HTTP paths of each. Its id is a UUID storage gives it;
 `handle` is the Tool API's word for a stored object on the same calls.
 Its record is one row of the expirable key-value collection
-`surface.stage`, a PHP array with no objects, written with the temp store
-expiry (`tempstore.expire`), which every write resets; the record names
+`surface.stage`, a PHP array with no objects, kept for the stage's
+lifetime after its last write, so every write resets it (amended
+2026-11-08: the lifetime is the record's `keep`, the temp store expiry
+`tempstore.expire` by default, and the store is one implementation of
+`StageStoreInterface`;
+[One store contract](#one-store-contract-a-stages-lifetime-is-data-on-its-record)); the record names
 its owner, and only the owner may use the stage, which the access class
 answers from the record, never cached. An anonymous account may not open
 one: it keeps nothing between requests but a session cookie.
@@ -4440,8 +4444,10 @@ one: it keeps nothing between requests but a session cookie.
   gone is done. A write waits two seconds (`StageStore::WAIT`) for a
   lock another request holds, then fails as a race, a delete too. The
   lock lasts core's default of 30 seconds: an apply that runs longer, or
-  a record that expires while it runs, lets the apply write the record
-  back as applied.
+  a record whose lifetime ends while it runs, lets the apply write the
+  record back as applied. The lock is the store's (amended 2026-11-08):
+  `StageStoreInterface::lock()` says what any store keeps, try, wait
+  once, try again; `WAIT` is the shipped store's.
 - **The arguments are the operation's.** A write records the arguments
   it was handed; handed none, it records the operation's parameters out
   of what the context knows, never the whole identity, which for a
@@ -4488,7 +4494,8 @@ one: it keeps nothing between requests but a session cookie.
 
 (`Resource\StageResource`, `Structure\StageChangesStructure`,
 `Structure\StageAppliedStructure`, `Storage\StageStorage`,
-`Access\StageAccess`, `Staging\StageStore`, `Staging\StagedStorage`,
+`Access\StageAccess`, `Staging\StageStore`, `Staging\StageStoreInterface`,
+`Staging\StageRecord`, `Staging\StagedStorage`,
 `Pipeline\TransactionalStorageInterface`, `StorageAdapter::rolledBack()`,
 `StageStoreTest`, `StageOwnershipTest`, `StageInWorkspaceTest`,
 `StagedUpdateTest`, `StagedDeleteTest`, `StageApplyTest`)
@@ -4591,7 +4598,7 @@ sees whole creates, and never a write over an id that does not exist.
   the record's version stays 1, since `StageStore::read()` refuses any
   other. An entry written before addresses were written is read as
   `-position` for each identity key its context knew to be empty
-  (`StageStore::address()`).
+  (`StageRecord::address()`).
 - **Matching.** A context that knows `StagedStorage::POSITION` finds the
   create entry of its own resource at that position, or nothing. A
   context that creates and knows no position finds nothing, so every
@@ -5078,7 +5085,8 @@ the stage on submit.
   selected nodes, names the stage and asks; its submit is `apply`,
   through the pipeline, as every door runs it.
 - **Nothing is removed before confirm.** A cancel is a link, and a link
-  may not discard, so the stage is left to expire.
+  may not discard, so the stage is left to expire at the end of its
+  lifetime.
 - **Every delete is checked again at apply**, its access and its token,
   and a refusal refuses them all, naming each by `/writes/<position>`;
   the stage and the selection are kept. A `does_not_apply` refusal of
@@ -5223,6 +5231,64 @@ error, and the page is built again.
 
 (`Form\SurfaceOperationForm::confirmStep()`, `ConfirmStepTest`,
 `FlowRoundTripTest`, `StagedConfigTest::testApplyEtagCarriesTheStagedWrites()`)
+
+### One store contract; a stage's lifetime is data on its record
+
+Decided 2026-11-08. Where stages are kept is one interface,
+`Staging\StageStoreInterface` (`named`, `read`, `created`, `createdAt`,
+`write`, `delete`, `lock`, `release`, `now`), the type of the
+`surface.stages` service and of every consumer: both stage storages,
+`Resources`, the access classes, the form, the tool and HTTP doors and
+the examples. `StageStore`, over `keyvalue.expirable`, is the shipped
+implementation; a site may swap the service. How long a stage lives is
+`keep` on its record, the seconds after its last write, written when
+the stage is opened and the only key a store acts on: the shipped
+store uses it as the time to live and resets it on each write; a store
+that keeps stages for good ignores it. A flow declares `keep: short`, the form
+cache's lifetime (`form_cache_expiration`, six hours by default), for a
+wizard finished in one sitting, or `long`, the temp store expiry
+(`tempstore.expire`, a week by default), the default everywhere.
+
+- **Why now.** The maintainer asked on 2026-11-08 whether short-lived
+  and long-lived stages could be two things, and whether a site could
+  later keep stages for good, per user. One contract answers both with
+  no second code path. Every consumer is internal today, so the seam
+  costs a few type changes; once third parties type against the class,
+  it costs a deprecation.
+- **Not an interface with one implementer.** The test module's
+  `ArrayStageStore`, in memory, kept for good and listing stages, runs a
+  whole stage through every step (`StageStoreSwapTest`), and a
+  permanent store per user is the stated second use.
+- **What never varies by store.** The record's shape and `VERSION`
+  (`Staging\StageRecord`, public since it is the one thing every store
+  shares, with `address()` and the create lookups any store reuses),
+  positions and tokens, the two-pass apply, sealing, the
+  owner check. `VERSION` stays 1: a record from before `keep` has none
+  and keeps the store's default, so no open stage is lost.
+- **The lifetime travels as a known key, not an input.** The stage's
+  `create` declares `id` and `label`; a `keep` input would join the
+  tool, HTTP and OpenAPI contract. The form puts `stage_keep`
+  (`StageStorage::KEEP`) on the create's context, reserved like the
+  position key: `Resources::operation()` refuses a resource whose own
+  context knows it. The tool and HTTP `create` open long-lived stages.
+- **Listing is optional.** `Staging\ListsStagesInterface::openStages()`
+  is a store's to offer; the shipped store declines, since its
+  collection has no query by owner and a listing would read every
+  record. When a store lists, a flow's first step offers to resume the
+  account's newest open stage whose first write is the same operation
+  for the same thing, and checks the owner itself.
+- **Costs stated, not built.** No permanent store ships. For whoever
+  builds one: tokens of stored things go stale over months, so apply
+  refuses more writes as conflicts; secrets are sealed with a key
+  derived from `hash_salt`, so after a salt rotation old records
+  cannot be opened: refused, never corrupted.
+
+(`Staging\StageStoreInterface`, `Staging\ListsStagesInterface`,
+`Staging\StageRecord`, `Staging\StageStore`, `Storage\StageStorage::KEEP`,
+`Form\Flow`, `Form\SurfaceOperationForm::offerResume()`,
+`surface_stage_test`'s `Staging\ArrayStageStore`, `StageStoreSwapTest`,
+`StageStoreTest::testKeepIsTheRecordsLifetime()`,
+`FlowFormTest::testKeepIsTheStagesLifetime()`)
 
 ## Access
 

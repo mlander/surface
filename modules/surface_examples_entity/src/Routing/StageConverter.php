@@ -10,7 +10,7 @@ use Drupal\surface\Resource\StageResource;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Staging\Stage;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageStoreInterface;
 use Symfony\Component\Routing\Route;
 
 /**
@@ -32,7 +32,7 @@ final class StageConverter implements ParamConverterInterface {
   /**
    * Constructs a StageConverter.
    *
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   The stages.
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which answers the stage's access.
@@ -40,7 +40,7 @@ final class StageConverter implements ParamConverterInterface {
    *   The current user.
    */
   public function __construct(
-    protected readonly StageStore $stages,
+    protected readonly StageStoreInterface $stages,
     protected readonly ResourcesInterface $resources,
     protected readonly AccountInterface $currentUser,
   ) {}

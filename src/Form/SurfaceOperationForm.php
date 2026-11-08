@@ -19,9 +19,11 @@ use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\SurfaceResult;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\StageResource;
+use Drupal\surface\Staging\ListsStagesInterface;
 use Drupal\surface\Staging\Stage;
 use Drupal\surface\Staging\StageRaceException;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageRecord;
+use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\Staging\StagedStorage;
 use Drupal\surface\Storage\StageStorage;
 use Drupal\surface\SurfaceAccess;
@@ -200,7 +202,7 @@ class SurfaceOperationForm extends FormBase {
    * @param \Drupal\surface\ResourceBuild\KeyPaths $keyPaths
    *   What finds the key a path names on the built resource, and holds a
    *   value to it.
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   The stages, which name the stage the query names.
    * @param \Drupal\Core\Routing\RouteProviderInterface $routeProvider
    *   The route provider, which says what a flow's `redirect` route takes.
@@ -211,7 +213,7 @@ class SurfaceOperationForm extends FormBase {
     protected readonly ResourceRegistry $surfaceRegistry,
     protected readonly OperationArguments $operationArguments,
     protected readonly KeyPaths $keyPaths,
-    protected readonly StageStore $stages,
+    protected readonly StageStoreInterface $stages,
     protected readonly RouteProviderInterface $routeProvider,
   ) {
   }
@@ -312,6 +314,14 @@ class SurfaceOperationForm extends FormBase {
     }
     if ($served->operation->kind() === OperationDefinition::DELETE) {
       return $this->stagedPage($this->confirmForm($form, $served, $surface, $form_state), $served);
+    }
+    if ($flow !== NULL && $step === 1 && $served->stage === NULL && $this->stages instanceof ListsStagesInterface) {
+      // Step 1 with no stage asks the store, so the answer is this
+      // account's and this request's.
+      $form['#cache']['max-age'] = 0;
+      if (!$form_state->isProgrammed() && $form_state->getUserInput() === []) {
+        $this->offerResume($flow, $served, $this->stages);
+      }
     }
     // Decision: see
     // docs/decisions.md#defaults-follow-the-definitions-under-a-stored-value.
@@ -1089,7 +1099,8 @@ class SurfaceOperationForm extends FormBase {
    * Opens a stage for the current user, for a flow's first step.
    *
    * Through the stage's `create`, then asked for its own access, as every
-   * door asks before it hands a stage on.
+   * door asks before it hands a stage on. The stage takes the lifetime
+   * the route's flow names in `keep`.
    *
    * @param string $label
    *   The stage's label.
@@ -1100,6 +1111,12 @@ class SurfaceOperationForm extends FormBase {
    */
   protected function openStage(string $label): ?Stage {
     $context = $this->resources->operation(StageResource::ID, 'create');
+    $keep = $this->flow()->keep ?? StageRecord::LONG;
+    if ($keep !== StageRecord::LONG) {
+      // Decision: see
+      // docs/decisions.md#one-store-contract-a-stages-lifetime-is-data-on-its-record.
+      $context = $context->withKnown([StageStorage::KEEP => $keep]);
+    }
     $built = $this->resources->build(StageResource::ID, $context);
     $storage = $this->resources->storage(StageResource::ID, $context, $built);
     $access = SurfaceAccess::decisive($this->resources->access(StageResource::ID, $context), 'No stage may be opened by this account.');
@@ -1124,6 +1141,71 @@ class SurfaceOperationForm extends FormBase {
       return NULL;
     }
     return $this->stages->named($id);
+  }
+
+  /**
+   * Says on a flow's first step that an open stage is for the same thing.
+   *
+   * When the store lists stages (ListsStagesInterface) and the account
+   * owns an open stage whose first write is this route's operation of its
+   * resource under these arguments: a status message with a link to the
+   * next step in that stage, or the confirm page of a one-step flow. The
+   * newest such stage is linked. Submitting the step opens a new stage,
+   * as it does when there is none.
+   *
+   * @param \Drupal\surface\Form\Flow $flow
+   *   The flow.
+   * @param \Drupal\surface\ResourceBuild\OperationRoute $served
+   *   The operation and its context, with no stage.
+   * @param \Drupal\surface\Staging\ListsStagesInterface $stages
+   *   The store.
+   */
+  protected function offerResume(Flow $flow, OperationRoute $served, ListsStagesInterface $stages): void {
+    $resource = $this->surfaceRegistry->getDefinition($served->resource)->id;
+    $owner = (int) $this->currentUser()->id();
+    foreach ($stages->openStages($owner) as $id) {
+      $record = $this->stages->read($id);
+      // The listing is the store's; the owner is checked here again, so a
+      // store that lists wrong links no other account's stage.
+      if ($record !== NULL && (int) $record['owner'] === $owner && self::startsWith($record, $resource, $served->operation->id, $served->arguments)) {
+        $this->messenger()->addStatus($this->t('You have an open stage for this: <a href=":resume">resume it</a> or start again.', [
+          ':resume' => $this->flowUrl($id, $flow->count() > 1 ? 2 : Flow::CONFIRM)->toString(),
+        ]));
+        return;
+      }
+    }
+  }
+
+  /**
+   * Answers whether an open record's first write is this operation.
+   *
+   * The resume rule of a flow's first step: the stage was opened by the
+   * same operation of the same resource, for the same thing.
+   *
+   * @param array $record
+   *   The record.
+   * @param string $resource
+   *   The resource's id.
+   * @param string $operation
+   *   The operation's id.
+   * @param array<string, mixed> $arguments
+   *   The operation's arguments, by name.
+   *
+   * @return bool
+   *   TRUE when the record is open and its first write is the operation
+   *   of the resource, under arguments equal to these as text.
+   */
+  private static function startsWith(array $record, string $resource, string $operation, array $arguments): bool {
+    $first = ($record['status'] ?? NULL) === StageRecord::OPEN ? (((array) ($record['writes'] ?? []))[0] ?? NULL) : NULL;
+    if (!is_array($first) || $first['resource'] !== $resource || $first['operation'] !== $operation) {
+      return FALSE;
+    }
+    $text = static fn (array $values): array => array_map(static fn (mixed $value): string => is_scalar($value) ? (string) $value : serialize($value), $values);
+    $held = $text((array) $first['arguments']);
+    $given = $text($arguments);
+    ksort($held);
+    ksort($given);
+    return $held === $given;
   }
 
   /**
