@@ -41,6 +41,13 @@ use Drupal\surface\SurfaceInterface;
  *   thing whole, the last of two writes winning, and the top level keys
  *   the write moved join the entry's, the keys apply sends.
  *
+ * A create is staged as an entry of kind `create`, appended whole: it
+ * names no stored thing, so it matches no entry and no entry matches it,
+ * two creates are two entries, and nothing in its stage reads, changes
+ * or removes it; apply creates it and answers its id. A name the caller
+ * gives a create is refused `taken` while another create of the same
+ * storage class in the stage holds it, through any resource.
+ *
  * A delete is staged as an entry of kind `delete`, its values empty and
  * its one changed key the empty one, the whole thing, as the pipeline
  * answers `changes: ['']` for a delete. It replaces the thing's entry at
@@ -129,7 +136,9 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * {@inheritdoc}
    *
    * What the stage holds for the thing, or what is stored; nothing is
-   * written, and no expiry is reset.
+   * written, and no expiry is reset. A create names no stored thing, so it
+   * is answered what the storage answers for a new one, and takes no
+   * token.
    */
   public function load(SurfaceInterface $surface): array {
     $record = $this->stages->read($this->stage->id);
@@ -151,12 +160,15 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    *
    * Refused whole, each refusal a violation of the whole call, for a
    * stage that is gone or applied, a thing the stage removed (a second
-   * delete of it included), a create, a storage class that does not
-   * declare a transaction rolls its writes back whole, a resource that
-   * holds a secret, a thing the stage holds through another resource, and
-   * a write through another operation than the one the thing is staged
-   * through, unless the write deletes; else the adapter's own prepare().
-   * A delete is rehearsed as a real one: the storage's prepareDelete().
+   * delete of it included), a storage class that does not declare a
+   * transaction rolls its writes back whole, a resource that holds a
+   * secret, a thing the stage holds through another resource, and a write
+   * through another operation than the one the thing is staged through,
+   * unless the write deletes; else the adapter's own prepare(). A create
+   * is no thing reached twice, so the last two do not apply to it; one
+   * whose caller names it is refused `taken` at the name while a create
+   * of the same storage class in the stage holds it. A delete is rehearsed
+   * as a real one: the storage's prepareDelete().
    */
   public function prepare(SurfaceInterface $surface, array $values): PreparedValues {
     $record = $this->stages->read($this->stage->id);
@@ -173,9 +185,6 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
         Violation::NOT_FOUND,
       );
     }
-    if ($this->creates()) {
-      throw self::refusal($this->t('A create cannot be staged yet; apply creates for real and stage updates and deletes.'), Violation::DOES_NOT_APPLY);
-    }
     // Decision: see
     // docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection.
     if (!is_a($this->storageClass, TransactionalStorageInterface::class, TRUE)) {
@@ -188,9 +197,24 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
     if (Outbound::secrets($surface) !== []) {
       throw self::refusal($this->t('A stage keeps values in the clear until secrets are sealed, so a resource that holds a secret cannot be staged yet.'), Violation::DOES_NOT_APPLY);
     }
+    // A new thing is no stored thing reached twice: two creates through
+    // two resources are two things.
+    if ($this->creates()) {
+      $name = $this->name($values);
+      $holder = $name === [] ? NULL : $this->creating($record, $name);
+      if ($holder !== NULL) {
+        $taken = new Violation((string) array_key_first($name), '', $this->t('A @thing named @id is created in this stage already, at position @position.', [
+          '@thing' => $holder['resource'],
+          '@id' => implode(' ', array_map(self::scalar(...), $name)),
+          '@position' => $holder['position'],
+        ]), Violation::TAKEN);
+        throw new StorageViolationsException(new ViolationSet([$taken]));
+      }
+      return $this->adapter->prepare($surface, $values);
+    }
     $known = $this->identityKnown();
     foreach ($record['writes'] as $write) {
-      if ($write['storage'] === $this->storageClass && $write['resource'] !== $this->resource && self::sameThing($known, (array) $write['known'])) {
+      if ($write['kind'] !== 'create' && $write['storage'] === $this->storageClass && $write['resource'] !== $this->resource && self::sameThing($known, (array) $write['known'])) {
         throw self::refusal($this->t('This is staged through @resource already; write it through that resource, or discard the stage.', ['@resource' => $write['resource']]), Violation::CONFLICT);
       }
     }
@@ -208,10 +232,15 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    * Under the stage's lock: the entry for the thing replaced whole by the
    * merged document, or added at the stage's next position. A delete
    * turns the thing's entry into a delete at its position, its staging
-   * time and token kept, or adds one. Storage is never written.
+   * time and token kept, or adds one. A create is always added, whole,
+   * with no token and every key changed; its entry knows what its context
+   * knew and the name its caller gave, and nothing in the stage names it
+   * again. Storage is never written.
    *
    * @throws \Drupal\surface\Staging\StageRaceException
-   *   When the lock cannot be had, or the stage is gone or applied.
+   *   When the lock cannot be had, or the stage is gone or applied, or a
+   *   create of the same storage class took the name a create's caller
+   *   gave while the write was prepared.
    */
   public function commit(PreparedValues $prepared): void {
     $id = $this->stage->id;
@@ -232,13 +261,11 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
           $moved[] = (string) $key;
         }
       }
-      $found = NULL;
-      foreach ($record['writes'] as $index => $write) {
-        if ($write['resource'] === $this->resource && self::sameThing($this->identityKnown(), (array) $write['known'], TRUE)) {
-          $found = $index;
-          break;
-        }
+      $name = $this->creates() ? $this->name($values) : [];
+      if ($name !== [] && $this->creating($record, $name) !== NULL) {
+        throw new StageRaceException(sprintf('The stage "%s" took a create of the name "%s" while the write was prepared.', $id, implode(' ', array_map(self::scalar(...), $name))));
       }
+      $found = $this->found($record);
       // Decision: see
       // docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection.
       if ($found !== NULL && $this->deletes()) {
@@ -266,10 +293,10 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
           'kind' => $this->deletes() ? 'delete' : ($this->creates() ? 'create' : 'update'),
           'storage' => $this->storageClass,
           'arguments' => $this->arguments(),
-          'known' => array_filter($this->context->known, static fn (mixed $value): bool => $value === NULL || is_scalar($value)),
+          'known' => array_filter($this->context->known, static fn (mixed $value): bool => $value === NULL || is_scalar($value)) + $name,
           'values' => $this->deletes() ? [] : $values,
           'changed' => $this->deletes() ? [''] : $moved,
-          'token' => $this->token,
+          'token' => $this->creates() ? NULL : $this->token,
           'staged' => $now,
           'touched' => $now,
         ];
@@ -289,7 +316,9 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    *
    * After a staged commit, what the stage now holds plus what the context
    * knows, as the adapter answers from storage after a real one; for a dry
-   * run or an operation that changes nothing, the adapter's own.
+   * run or an operation that changes nothing, the adapter's own. A staged
+   * create answers what it was sent and what its context knows, less what
+   * is empty: an id storage gives on save is not answered until apply.
    *
    * Decision: see docs/decisions.md#who-produces-outputs.
    */
@@ -298,7 +327,14 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
       return $this->adapter->outputs($surface, $values, $prepared);
     }
     $outputs = $surface->getOutputDefinitions()->toArray();
-    return $outputs === [] ? [] : array_intersect_key($this->load($surface) + $this->context->known, $outputs);
+    if ($outputs === []) {
+      return [];
+    }
+    if ($this->creates()) {
+      $answered = array_filter($values + $this->context->known, static fn (mixed $value): bool => $value !== NULL);
+      return array_intersect_key($answered, $outputs);
+    }
+    return array_intersect_key($this->load($surface) + $this->context->known, $outputs);
   }
 
   /**
@@ -308,12 +344,73 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    *   The stage's record.
    *
    * @return array|null
-   *   The entry, or NULL when the stage holds none.
+   *   The entry, or NULL when the stage holds none, as for a create.
    */
   protected function entry(array $record): ?array {
+    $found = $this->found($record);
+    return $found === NULL ? NULL : $record['writes'][$found];
+  }
+
+  /**
+   * Finds where in the record the entry for the thing this storage writes is.
+   *
+   * A create names no stored thing, so it finds none, and an entry that
+   * creates is found by nothing.
+   *
+   * @param array $record
+   *   The stage's record.
+   *
+   * @return int|string|null
+   *   The entry's index among the record's writes, or NULL.
+   */
+  protected function found(array $record): int|string|null {
+    if ($this->creates()) {
+      return NULL;
+    }
     $known = $this->identityKnown();
+    foreach ($record['writes'] as $index => $write) {
+      if ($write['kind'] !== 'create' && $write['resource'] === $this->resource && self::sameThing($known, (array) $write['known'], TRUE)) {
+        return $index;
+      }
+    }
+    return NULL;
+  }
+
+  /**
+   * Gets the name a create's caller gives the thing.
+   *
+   * The values of the identity keys the context does not know, as the
+   * write accepted them; empty for a create whose storage gives the id.
+   *
+   * @param array $values
+   *   The values the write accepted.
+   *
+   * @return array<string, mixed>
+   *   The name, by identity key.
+   */
+  protected function name(array $values): array {
+    $named = array_diff_key(array_intersect_key($values, array_flip($this->identity)), $this->context->known);
+    return array_filter($named, static fn (mixed $value): bool => is_scalar($value) && $value !== '');
+  }
+
+  /**
+   * Finds the create in the stage that already holds a name.
+   *
+   * Any create of the same storage class, through any resource, whose
+   * known identity agrees with this create's on every key both carry.
+   *
+   * @param array $record
+   *   The stage's record.
+   * @param array<string, mixed> $name
+   *   The name this create's caller gives.
+   *
+   * @return array|null
+   *   The entry, or NULL when no create holds the name.
+   */
+  protected function creating(array $record, array $name): ?array {
+    $identity = $this->identityKnown() + $name;
     foreach ($record['writes'] as $write) {
-      if ($write['resource'] === $this->resource && self::sameThing($known, (array) $write['known'], TRUE)) {
+      if ($write['kind'] === 'create' && $write['storage'] === $this->storageClass && self::sameThing($identity, (array) $write['known'])) {
         return $write;
       }
     }

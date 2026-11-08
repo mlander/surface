@@ -73,8 +73,9 @@ drush tool:run surface:entity.content:node.page:delete --uid=1 --input='{"id":<n
 drush tool:run surface:entity.content:node.page:delete --uid=1 --input=id=<nid>
 ```
 
-A delete takes `stage` as every write does, and is then kept in the
-stage until it is applied (`docs/staging.md`).
+A create and a delete take `stage` as every write does, and are then
+kept in the stage until it is applied (`docs/staging.md`); a staged
+create answers no `id` that storage gives until then.
 
 The entity type's resource holds the fields under `fields`. Both kinds
 are at every door; `docs/entities.md` says which to call when.

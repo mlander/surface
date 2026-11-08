@@ -88,7 +88,7 @@ final class StageChangesStructure implements StructureInterface, DefinesOutputsI
         ->setRequired(TRUE))
       ->setPropertyDefinition('parameters', (new ListDataDefinition([], $parameter))
         ->setLabel(t('Parameters'))
-        ->setDescription(t("The operation's parameters that named the thing, each value as text; empty for a thing with no identity.")));
+        ->setDescription(t("The operation's parameters that named the thing, each value as text; empty for a create, which names nothing until it is applied, and for a thing with no identity.")));
   }
 
 }

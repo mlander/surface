@@ -36,7 +36,10 @@ and field storage settings as resources
   `dry_run`; see [Tools](resources.md#tools). A resource whose storage
   can be staged adds `stage`, last, on its write, read and narrowing
   tools: the id of a stage the write is kept in, or the read and the
-  narrowing answer through ([Staging](staging.md#the-stage-input)). Two rules leave an operation
+  narrowing answer through ([Staging](staging.md#the-stage-input)). A
+  create staged so answers no `id` when storage gives the id, since
+  nothing is created until the stage is applied
+  ([Staging](staging.md#a-staged-create)). Two rules leave an operation
   out: `field.storage`'s `create` asks `administer %entity_type fields`
   and no parameter supplies the entity type, so it could never be
   allowed and is only ever a field's; and a structure a plugin names
@@ -65,7 +68,7 @@ description, and always present:
 | Key | Holds |
 | --- | --- |
 | `ok` | Whether nothing was refused. |
-| `committed` | Whether the values were written: to storage, or to the stage when one is named; false for a dry run, a refusal and a read only operation. |
+| `committed` | Whether the values were written: to storage, or to the stage when one is named; false for a dry run, a refusal and a read only operation. A create committed to a stage creates nothing until the stage is applied. |
 | `changed` | Whether the write moved a stored value; false when the values were what is stored, and then nothing was saved. |
 | `changes` | The JSON Pointer of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing (why: [decision](decisions.md#absent-keeps-null-clears)). Against the view of the stage when one is named: what this call moved since the last staged write. |
 | `values` | The accepted values, as the read tool would answer them after the write: no secret, no key this account may not see, and no key never stored that the write left at its default (a mounted key not sent). |

@@ -833,7 +833,12 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
       }
       $this->assertNotContains('GET ' . $base . '/schema', $staged, 'The full schema reads nothing stored.');
       $this->assertNotContains('GET ' . $base . '/{id}/schema', $staged, 'The full schema reads nothing stored.');
+      // A create under the header is staged: 200, created null, no id.
+      $create = $document['paths'][$base]['post'];
+      $this->assertStringContainsString('under the X-Surface-Stage header, the create is staged instead, 200, and nothing is created until the stage is applied: outputs hold no id and created is null.', $create['description']);
+      $this->assertStringContainsString('A create staged under the X-Surface-Stage header', $create['responses']['200']['description']);
     }
+    $this->assertStringEndsWith('and under the X-Surface-Stage header.', $document['components']['headers']['Location']['description']);
     $other = array_filter($staged, static fn (string $call): bool => !str_contains($call, ' /surface-api/entity.content:'));
     $this->assertSame([], array_values($other), 'No call of the stage, a config resource or a State one takes the header.');
     $this->assertArrayHasKey('/surface-api/surface.stage/{id}', $document['paths']);

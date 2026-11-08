@@ -330,8 +330,6 @@ class StagedUpdateTest extends SurfaceKernelTestBase {
         $this->assertSame(sprintf(' (%s): %s', $code, $message), $this->said($result));
       }
     };
-    // A create.
-    $refused(self::PAGE, 'create', [], ['title' => ['value' => 'New'], 'field_description' => ['value' => 'x']]);
     // A config object and a config entity.
     $refused('my_module.settings', 'configure', [], []);
     [$venue_built, $venue] = $this->permanent('event.venue', 'create');
