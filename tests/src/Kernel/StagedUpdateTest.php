@@ -27,7 +27,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the stage's view. A second write builds on the first; null clears and a
  * key left out keeps; two writes to one thing end last wins. A staged
  * write validates as a real write. A stage handed no arguments records
- * the operation's parameters. The write and read tools take the stage
+ * the operation's parameters. A thing staged through one operation is
+ * refused through another. The write and read tools take the stage
  * as their `stage` input. What a stage cannot hold yet is refused at
  * prepare, as a violation of the whole call: a storage class that does
  * not implement TransactionalStorageInterface and a resource that holds
@@ -291,6 +292,25 @@ class StagedUpdateTest extends SurfaceKernelTestBase {
     $this->assertSame(['' => Violation::CONFLICT], static::codes($result), $this->said($result));
     $this->assertStringContainsString(self::PAGE, $this->said($result));
     $this->assertCount(1, $this->stages()->read($id)['writes']);
+  }
+
+  /**
+   * Tests a thing staged through one operation is refused through another.
+   *
+   * The ledger's `update` and `touch` are two updates of one row: a row
+   * staged through `update` is refused through `touch`, naming the
+   * operation it is staged through, and the stage holds what it held.
+   */
+  public function testAnotherOperationOverOneThingIsRefused(): void {
+    $this->ledger('a', 'Alpha');
+    $id = $this->open();
+    $staged = $this->stage($id, 'stage_test.ledger', ['id' => 'a'], ['title' => 'Alpha, moved']);
+    $this->assertTrue($staged->committed, $this->said($staged));
+    $record = $this->stages()->read($id);
+    $touched = $this->stage($id, 'stage_test.ledger', ['id' => 'a'], [], 'touch');
+    $this->assertSame(['' => Violation::DOES_NOT_APPLY], static::codes($touched), $this->said($touched));
+    $this->assertSame(' (' . Violation::DOES_NOT_APPLY . '): This is staged through the update operation already; write it through that operation, or discard the stage.', $this->said($touched));
+    $this->assertSame($record, $this->stages()->read($id), 'The stage holds what it held.');
   }
 
   /**

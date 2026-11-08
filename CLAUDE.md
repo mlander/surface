@@ -382,6 +382,18 @@ the record of the rework that brought the module to the pattern.
   a narrowing and a write's `contract` and `ETag` are the staged view
   (`docs/staging.md`,
   `docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context`).
+  What a run reports (a stage's id after `create`, `items`, `applied`)
+  is read through the pipeline, `SurfacePipelineInterface::outputs($built,
+  $storage, $result)`, at every door that reads them; the adapter's
+  `OutputsStorageInterface` stays internal
+  (`docs/decisions.md#a-door-reads-what-a-run-reports-through-the-pipeline`).
+- **Flow**: several steps a person or an agent takes over one stage,
+  ending in its `apply`. The first flow is hand-built: the entity
+  example's bulk delete from the content list, a `system.action` that
+  stages one delete per selected node and a confirm page over the stage
+  that applies it (`docs/staging.md#a-flow-by-hand-bulk-delete-from-the-content-list`,
+  `docs/decisions.md#a-destructive-bulk-operation-stages-then-confirms-over-the-stage`);
+  slice 5 declares flows.
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
@@ -709,7 +721,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1989, Assertions: 47570, Errors: 0, Failures: 0, Skipped: 3. Classes: 279 of 279, 8 at a time, browser classes 4.
+phpunit: Tests: 2001, Assertions: 47927, Errors: 0, Failures: 0, Skipped: 3. Classes: 281 of 281, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -729,8 +741,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1879, Assertions: 43227, Skipped: 3, Deprecations: 130. Classes:
-229, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1890, Assertions: 43571, Skipped: 3, Deprecations: 130. Classes:
+230, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -998,8 +1010,10 @@ src/Pipeline/            Access, accept, validate, prepare, commit; results.
                          what a storage implements to be staged.
 src/Storage/             Where accepted values are written; settings layouts.
 src/Staging/             The stage's record store (StageStore), the
-                         staged-storage wrapper (StagedStorage) and the
-                         Stage it is handed.
+                         staged-storage wrapper (StagedStorage), the
+                         Stage it is handed, and StageRaceException,
+                         public, which a staged write, an apply or a
+                         stage operation throws on a race.
 src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
                          walks the frames, PropertySchema writes each key,
                          Conditionals the if/then, DocumentHead the top;
@@ -1064,3 +1078,10 @@ structures in `src/Structure/`, shapes in `src/Shape/`, alters in
 `src/Alter/`, storage classes in `src/Storage/` and access classes in
 `src/Access/`; only the first four are scanned, and the rest are
 registered because a resource or structure names them.
+
+`surface_examples_entity` also holds the hand-built flow: the bulk
+action in `src/Plugin/Action/` (`StageDeleteAction`), its confirm page
+and the delete form's cosmetics in `src/Form/`
+(`StageDeleteConfirmForm`, `EntityFormCosmetics`), the shipped
+`system.action` in `config/install/`, and its hand-written action
+configuration schema in `config/schema/`, which no generator writes.

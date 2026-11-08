@@ -12,3 +12,9 @@ services:
   # attaches them.
   Drupal\surface_examples_entity\Variants\BundleFieldStructures:
     arguments: ['@surface_examples_entity.field_item_derivation']
+
+  # What the basic page's delete form says once it deleted, and where it
+  # goes: the landing page, since the id it was served at names nothing.
+  surface_examples_entity.form_cosmetics:
+    class: Drupal\surface_examples_entity\Form\EntityFormCosmetics
+    arguments: ['@string_translation']

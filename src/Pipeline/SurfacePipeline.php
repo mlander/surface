@@ -15,15 +15,17 @@ use Drupal\surface\SurfaceAccess;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 
 /**
  * The one entry point from raw values to stored values.
  *
  * It keeps the write path and the document: what is written back and
  * what a write changes (kept(), changes()), prepare(), commit(), submit()
- * and its dry run, a delete, outbound() and document(). The three verbs
- * before a write are classes of their own, which this one constructs
- * from its services; accept(), validate() and conformOutput() call them:
+ * and its dry run, a delete, what a run reports (outputs()), outbound()
+ * and document(). The three verbs before a write are classes of their
+ * own, which this one constructs from its services; accept(), validate()
+ * and conformOutput() call them:
  *
  * - Accepting: raw values to typed values, by the coercion table, the
  *   three-way rule, secrets and computed keys.
@@ -530,6 +532,20 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       $this->commit($dry->prepared, $storage);
     }
     return new SurfaceResult($dry->values, $dry->violations, $dry->prepared, !$dry->prepared->changesNothing, $dry->access, $dry->notes, $dry->changes, $dry->written, $dry->writes);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function outputs(SurfaceInterface $built, SurfaceStorageInterface $storage, SurfaceResult $result): array {
+    // Decision: see
+    // docs/decisions.md#a-door-reads-what-a-run-reports-through-the-pipeline.
+    return match (TRUE) {
+      !$storage instanceof OutputsStorageInterface => [],
+      $result->committed => $storage->outputs($built, $result->values),
+      $result->prepared !== NULL => $storage->outputs($built, $result->values, $result->prepared),
+      default => [],
+    };
   }
 
   /**

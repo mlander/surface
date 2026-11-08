@@ -44,7 +44,7 @@ final class StageChangesStructure implements StructureInterface, DefinesOutputsI
     $item = self::write(t('Staged write'))
       ->setPropertyDefinition('changed', ListDataDefinition::create('string')
         ->setLabel(t('Changed'))
-        ->setDescription(t('The JSON Pointer of each top level key the stage moved; apply sends these.')))
+        ->setDescription(t('The JSON Pointer of each top level key the stage moved, or the empty pointer "" for a delete, which takes the whole thing; apply sends the moved keys, and makes the delete.')))
       ->setPropertyDefinition('staged', DataDefinition::create('timestamp')
         ->setLabel(t('Staged'))
         ->setDescription(t('When the first write to the thing was staged.'))

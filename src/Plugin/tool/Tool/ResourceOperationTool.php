@@ -17,7 +17,6 @@ use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
-use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\Plugin\Derivative\ResourceOperationToolDeriver;
 use Drupal\surface\Tool\InputDefinitions;
 use Drupal\surface\Tool\OperationInputs;
@@ -393,12 +392,7 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     // back once committed, and for an operation that changes nothing or a
     // dry run, what its prepare answered.
     // Decision: see docs/decisions.md#who-produces-outputs.
-    $outputs = match (TRUE) {
-      !$storage instanceof OutputsStorageInterface => [],
-      $result->committed => $storage->outputs($built, $result->values),
-      $result->prepared !== NULL => $storage->outputs($built, $result->values, $result->prepared),
-      default => [],
-    };
+    $outputs = $this->pipeline->outputs($built, $storage, $result);
     if ($resource->id === StageResource::ID) {
       $outputs = $this->conformed($built, $outputs);
     }

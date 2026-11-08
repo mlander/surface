@@ -24,7 +24,6 @@ use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
-use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -249,9 +248,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     if (!$result->isValid()) {
       throw $this->refused($result->document($this->values($served, $result->held()), machine: FALSE));
     }
-    $outputs = $served->storage instanceof OutputsStorageInterface && $result->prepared !== NULL
-      ? $served->storage->outputs($served->surface, $result->values, $result->prepared)
-      : [];
+    $outputs = $this->pipeline->outputs($served->surface, $served->storage, $result);
     $response = $this->respond($outputs);
     $response->headers->set('Link', sprintf('<%s>; rel="describedby"', $this->location($served, TRUE)->getGeneratedUrl()));
     return $response;
@@ -512,10 +509,10 @@ final class ResourceApiController implements ContainerInjectionInterface {
       throw $this->refused($answer);
     }
     $answer += ['outputs' => new \stdClass(), 'contract' => NULL, 'created' => NULL];
-    if (($dry || $served->surface->changesNothing()) && $served->storage instanceof OutputsStorageInterface && $result->prepared !== NULL) {
+    if ($dry || $served->surface->changesNothing()) {
       // A read, and a dry run, answer what its prepare answered.
       // Decision: see docs/decisions.md#who-produces-outputs.
-      $answer['outputs'] = (object) $this->conformed($served, $served->storage->outputs($served->surface, $result->values, $result->prepared));
+      $answer['outputs'] = (object) $this->conformed($served, $this->pipeline->outputs($served->surface, $served->storage, $result));
     }
     if ($dry) {
       return $this->respond($answer + [self::DRY_RUN => TRUE]);
@@ -526,9 +523,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
       // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
       return $this->respond($answer);
     }
-    $outputs = $served->storage instanceof OutputsStorageInterface
-      ? $this->conformed($served, $served->storage->outputs($served->surface, $result->values))
-      : [];
+    $outputs = $this->conformed($served, $this->pipeline->outputs($served->surface, $served->storage, $result));
     // Built afresh: what was written is what the resource now refines
     // against and what the storage now loads.
     $fresh = $this->served($target);

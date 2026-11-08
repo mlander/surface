@@ -266,11 +266,14 @@ item derivation's keys, which the engine does not own
   and every revision it has: core's storage rule, in one transaction of
   core's own. Core's delete form, on a translation that is not the
   default, removes that translation alone; the example follows storage,
-  since it writes the default translation only. The rule is the entity
-  type's storage handler's, so a module that replaces the handler
-  replaces it: the contrib trash module's keeps the entity, its
-  translations and its revisions in the database, marked deleted and
-  restorable, and a load finds it no more. What the entity's
+  since it writes the default translation only, and so does its bulk
+  delete, where a translation's row of the content list stages the
+  removal of the whole node
+  ([Staging](staging.md#a-flow-by-hand-bulk-delete-from-the-content-list)).
+  The rule is the entity type's storage handler's, so a module that
+  replaces the handler replaces it: the contrib trash module's keeps the
+  entity, its translations and its revisions in the database, marked
+  deleted and restorable, and a load finds it no more. What the entity's
   delete hooks do beside the database is theirs. The access class asks
   core's delete access, for a node what `delete any <type> content` and
   `delete own <type> content` grant. Each field child is invoked under

@@ -3876,6 +3876,30 @@ and the one it would write; a storage that rehearses nothing under an
 output's name answers nothing, as before.
 (`StorageAdapter::outputs()`)
 
+### A door reads what a run reports through the pipeline
+
+Decided 2026-11-07. What a storage reports after a run (a created id, a
+stage's `items`, what an apply made) is read through
+`SurfacePipelineInterface::outputs($built, $storage, $result)`: read back
+once the run was committed, what prepare answered for a dry run or an
+operation that changes nothing, and nothing for a refused run or a
+storage that reports nothing. The tool door, the HTTP door and apply
+replaying a staged write call it; none asks the storage itself.
+
+Why: PHP code that opens a stage could not read the stage's id, which a
+create reports only as an output, since the one way to it was
+`ResourceBuild\OutputsStorageInterface`, internal beside
+`StorageAdapter`. A PHP caller is a door
+([Calling it without a form](pipeline.md#calling-it-without-a-form)),
+and a door reads what a run reports through the pipeline, never through
+the adapter. Making the adapter's interface public was the alternative;
+a method beside `submit()` and `commitDryRun()` keeps the public
+surface in `src/Pipeline` and the adapter free to change. The doors'
+behavior is unchanged: each read the cases that apply to it.
+
+(`SurfacePipeline::outputs()`, `ResourceOperationTool`,
+`ResourceApiController`, `StageStorage`, `BulkDeleteFlowTest`)
+
 ### A computed key is a pure function of its sources
 
 Decided 2026-10-23, with example 15's slug: a key of the resource whose
@@ -4571,10 +4595,59 @@ refused, code `does_not_apply`.
   `StageRaceException`; every refusal a rehearsal can see is a
   violation from prepare. The record's writes, not its time, tell a
   race: the time is the request's, which two writes in one second share.
+  *Decided 2026-11-07*, with the bulk delete: the exception is public,
+  since every door that applies a stage or writes into one meets it, and
+  PHP code that applies or writes into a stage catches it by name to tell
+  the person to try again; the module's tool door answers it as a runtime
+  failure naming the class, and the HTTP door as a server error.
 
 (`Storage\StageStorage`, `SurfacePipeline::submit()`,
 `Staging\StageRaceException`, `EmptyStructureTest`, `StageApplyTest`,
 `PipelineGuardTest`)
+
+### A destructive bulk operation stages, then confirms over the stage
+
+Decided 2026-11-07, with the entity example's bulk delete. The content
+list's bulk action "Delete content through a stage" removes nothing: it
+opens a stage, stages one delete per selected node, each asked its
+delete access, and sends the account to a confirm page, which applies
+the stage on submit.
+
+- **The selection is a stage.** What core keeps as a list of ids to
+  delete is a set of staged deletes, each rehearsed as a real one when
+  it is staged.
+- **The confirm page is the stage's own reading.** It lists the
+  selected nodes, names the stage and asks; its submit is `apply`,
+  through the pipeline, as every door runs it.
+- **Nothing is removed before confirm.** A cancel is a link, and a link
+  may not discard, so the stage is left to expire.
+- **Every delete is checked again at apply**, its access and its token,
+  and a refusal refuses them all, naming each by `/writes/<position>`;
+  the stage and the selection are kept. A `does_not_apply` refusal of
+  the whole stage, the stage applied or emptied elsewhere, clears the
+  selection and sends the person back, since the deletes were made or
+  nothing is staged. Core's delete form skips a node it may no longer
+  delete with a warning and removes the rest
+  (`DeleteMultipleForm::submitForm()`); here they are made together or
+  not at all, in one transaction.
+- **The temp store carries the stage's id and the staged ids alone**, in
+  the private temp store, one selection per account, as core's delete
+  action keeps its selection. The stage holds the writes.
+- **The page lists no `changes` items.** It reads the stage's `changes`
+  through `SurfacePipelineInterface::outputs()` to learn whether
+  anything is pending, and lists the selection from what is stored, with
+  the stage's label, since how a form door shows a run's outputs is not
+  decided yet.
+
+Why: a destructive operation over many things is where a person wants
+to see what will happen before it happens, and a stage is that state
+already, with its access, its expiry and its apply. Building the first
+flow by hand, over core's own bulk form, shows what a declared flow
+must carry before one is declared.
+
+(`surface_examples_entity`'s `Plugin\Action\StageDeleteAction` and
+`Form\StageDeleteConfirmForm`, `BulkDeleteFlowTest`,
+`BulkDeleteContentListTest`)
 
 ## Access
 
