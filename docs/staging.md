@@ -1,5 +1,14 @@
 # Staging
 
+**Experimental.** Staging (the stage, its flows, the confirm page and
+the preview page) is one of this module's bolder ideas, not a settled
+part of the pattern. Its PHP API, its stored shape and what its doors
+answer may change in any commit, and nothing is migrated. The record's
+shape may change between commits, and a stage opened before such a
+change may need to be discarded.
+[What is promised](evolution.md#what-is-promised) says what the module
+does promise.
+
 Use this page when writes should be kept and made later, together, or
 not at all: an agent that edits several pages and asks a person to
 check them first, a change reviewed before it goes live, a set of edits

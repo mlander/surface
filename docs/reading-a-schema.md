@@ -1,5 +1,12 @@
 # Reading a schema
 
+**Experimental.** Reading a schema (the JSON Schema, config schema and
+typed data readers) is one of this module's bolder ideas, not a settled
+part of the pattern. Its PHP API, its stored shape and what its doors
+answer may change in any commit, and nothing is migrated.
+[What is promised](evolution.md#what-is-promised) says what the module
+does promise.
+
 Read this page when you already have a JSON Schema document and want
 the module to build keys and rules from it instead of from a class. It
 lists what the module keeps from a document, what it checks on the

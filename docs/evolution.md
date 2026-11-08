@@ -52,6 +52,16 @@ site does to a resource it does not own (the site runs the contract
 diff on its own baselines); the Tool API's rendering of a tool; and the
 React app's internals.
 
+Five ideas are marked experimental on their own pages, beyond the
+module-wide note above, because they reach furthest past what core does
+today and are the likeliest to change:
+
+- [Staging](staging.md)
+- [Reading a schema](reading-a-schema.md)
+- [Variants stored flat](storage.md#variants-stored-flat)
+- [Declaring keys as properties](declaring-a-resource.md#declared-as-properties)
+- [Generating a resource](generating.md)
+
 ## Compatible and breaking
 
 A change is **compatible** when every value already stored still loads,

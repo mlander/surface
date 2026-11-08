@@ -380,6 +380,12 @@ $inputs->add('max_length', 'integer', t('Maximum alias length'), default: 100)
 
 ## Declared as properties
 
+**Experimental.** Declaring keys as properties is one of this module's
+bolder ideas, not a settled part of the pattern. Its PHP API, its stored
+shape and what its doors answer may change in any commit, and nothing is
+migrated. [What is promised](evolution.md#what-is-promised) says what
+the module does promise.
+
 A class may declare its keys as properties instead: each key a property
 carrying the attribute of the blueprint verb it stands for, and the class
 using `DeclaresByProperties`, which supplies `defineInputs()` and
