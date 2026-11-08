@@ -63,7 +63,9 @@ use Symfony\Component\HttpFoundation\Response;
  * A request whose `X-Surface-Stage` header names a stage is served as
  * the thing stands in that stage, every answer but the full schema: the
  * envelope and its `ETag`, a narrowing, and a write, which is kept in the
- * stage until it is applied. The answer names no stage: the caller did.
+ * stage until it is applied; a staged create answers 200, `created` null
+ * and no `Location`, since nothing is created until then. The answer
+ * names no stage: the caller did.
  *
  * Access is the route's requirement, the operation's permission then the
  * resource's access class; the pipeline is handed the same answer, as the
@@ -465,8 +467,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   `contract`, the envelope rebuilt from what is stored now, and
    *   `created`, for an operation that creates, the operation the created
    *   thing now lives at; a dry run adds `x-surface-dry-run: true`. 200,
-   *   or 201 with `Location` for a written create; the `ETag` of what is
-   *   now stored for a written update.
+   *   or 201 with `Location` for a written create (200 with `created` null
+   *   for a staged one); the `ETag` of what is now stored for a written
+   *   update.
    *
    * @throws \Drupal\surface\Http\ProblemException
    *   412 when `If-Match` no longer names what is stored, 415 for a body
@@ -527,11 +530,15 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // Built afresh: what was written is what the resource now refines
     // against and what the storage now loads.
     $fresh = $this->served($target);
-    $created = $this->servedOperations->created($served, $result->values, $outputs);
+    // A create staged under the stage header created nothing: nothing
+    // lives anywhere until the stage is applied, so it answers 200 with no
+    // Location, and no candidate is resolved against what is stored.
+    $staged = $target->stage !== NULL;
+    $created = $staged ? NULL : $this->servedOperations->created($served, $result->values, $outputs);
     $answer['outputs'] = (object) $outputs;
     $answer['contract'] = $this->envelope($this->emit($fresh, $this->servedOperations->current($fresh)));
     $answer['created'] = $created;
-    if ($served->context->creates) {
+    if ($served->context->creates && !$staged) {
       $response = $this->respond($answer, 201);
       $location = $created === NULL ? NULL : $this->createdAt($created);
       if ($location !== NULL) {

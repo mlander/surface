@@ -408,6 +408,12 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
         // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
         $operation->kind() === OperationDefinition::DELETE && $result->committed => $this->t('@label: removed. The values it held are answered.', ['@label' => (string) $operation->label]),
         $operation->kind() === OperationDefinition::DELETE => $this->t('Dry run of @label: the removal was rehearsed, and nothing was removed. The values it holds are answered.', ['@label' => (string) $operation->label]),
+        // A staged create is no create: the stage holds it until apply,
+        // which answers its id.
+        $operation->creates && $result->committed && $stage !== NULL => $this->t('@label: the values were accepted and staged in @stage; nothing is created until the stage is applied, which answers the new id.', [
+          '@label' => (string) $operation->label,
+          '@stage' => $stage->id,
+        ]),
         $result->committed && !$result->changed() => $this->t('@label: the values were accepted, and they are what is stored, so nothing was written.', ['@label' => (string) $operation->label]),
         $result->committed && $stage !== NULL => $this->t('@label: the values were accepted and staged in @stage.', [
           '@label' => (string) $operation->label,

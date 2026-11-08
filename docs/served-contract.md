@@ -1566,7 +1566,7 @@ present, then three keys of its own:
 | `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |
 | `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; on a dry run, and for an operation that changes nothing, what its `prepare()` answered under an output's name; `{}` when none are declared or none was answered. |
 | `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. |
-| `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); otherwise `null`. |
+| `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); otherwise `null`, a create staged under `X-Surface-Stage` included. |
 | `x-surface-dry-run` | `true`, on a dry run only. |
 
 Every path is a JSON Pointer (RFC 6901): `/contact/email`, the whole
@@ -1580,7 +1580,7 @@ same at both doors, so a program calling the API branches on them
 
 | Status | When |
 | --- | --- |
-| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`. |
+| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`. A create staged under `X-Surface-Stage`, with `created: null` and no `Location` ([Staging](staging.md#a-staged-create)). |
 | 201 | A create written, with `Location`, the created thing's read (`/surface-api/node.type/recipe`); no `Location` when no operation addresses it (a field added to a bundle). |
 | 400 | A body that is not a JSON object, or a parameter the operation needs given nowhere. |
 | 403 | Access refused, at the route or by the pipeline for the whole call (code `access` or `permission`); the session's token missing. |
@@ -1750,7 +1750,10 @@ and its read is the `Location`. A field added at
 `field.instance:create` lives at its `update(string $entity_type, string
 $bundle, string $field_name)`, answered by the identity the write
 accepted: `Location: /surface-api/field.instance/node/article/field_x`.
-Example 2's `configure` creates nothing, so `null`.
+Example 2's `configure` creates nothing, so `null`. A create staged
+under `X-Surface-Stage` created nothing either: `created` is `null`, the
+answer 200 and no `Location`, and no candidate is built against what is
+stored ([Staging: A staged create](staging.md#a-staged-create)).
 
 ### If-Match
 

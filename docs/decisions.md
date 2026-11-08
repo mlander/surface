@@ -4387,8 +4387,8 @@ one: it keeps nothing between requests but a session cookie.
 - **Not the private temp store.** It reads the owner from the current
   user and the session, which nothing an operation runs may read
   ([Nothing an operation runs reads the request](#nothing-an-operation-runs-reads-the-request)).
-- **What a stage can hold for now.** Updates and deletes to a resource
-  whose storage class implements `Pipeline\TransactionalStorageInterface`,
+- **What a stage can hold for now.** Creates, updates and deletes to a
+  resource whose storage class implements `Pipeline\TransactionalStorageInterface`,
   the storage's promise that its commit writes through the database
   connection alone, so the transaction apply opens undoes it whole: the
   entity example's content entity storage, the stage fixture's row of a
@@ -4399,7 +4399,7 @@ one: it keeps nothing between requests but a session cookie.
   State in its own code (State keeps a cache a rollback leaves stale), or
   change a table's schema (which MySQL commits at once). Refused at
   prepare, each a violation of the whole call, code `does_not_apply`: a
-  create, a storage class that does not implement the
+  storage class that does not implement the
   interface (the stage's own, the config storages until config staging,
   a storage in State), and a resource that holds a secret (a stage keeps
   values in the clear). One stored thing reached through two resources
@@ -4447,7 +4447,10 @@ one: it keeps nothing between requests but a session cookie.
   before the storage sees a write, an update of it that leaves out a
   required key is refused `required` first. *Decided 2026-11-07*, with
   the content entity delete: a refusal before validation would need a
-  seam for storage the pipeline does not have.
+  seam for storage the pipeline does not have. A create is no stored
+  thing: it is always an entry of its own, which nothing in its stage
+  finds again
+  ([A staged create is whole and rehearsed as a create](#a-staged-create-is-whole-and-rehearsed-as-a-create)).
 - **How a stage and a workspace compose.** The active workspace is the
   request's, so neither the stage nor its access asks it. A staged
   write reads and a staged apply writes the workspace's view, as any
@@ -4481,12 +4484,68 @@ apply each write is checked again against what is stored then.
 
 Why: required is unconditional in validation and an entity validates in
 prepare, so a partial mode would change the pipeline for every door. For
-an update the merged document is whole, so nothing is lost. The cost:
-a create whose required keys are drawn over several steps of a flow
-cannot be staged until its first write is whole; whether to add a
-partial mode is decided with staged creates.
+an update the merged document is whole, so nothing is lost. A staged
+create is whole at its write: validated and rehearsed as a real create,
+the entity's `validate()` and the storage's check of a name already
+stored included.
 
-(`Staging\StagedStorage::prepare()`, `StagedUpdateTest`)
+*Decided 2026-11-07, with staged creates:* no partial mode. One would
+cross about ten methods of the pipeline, both pipeline test fixtures and
+twelve callers, and would still meet the create tool's `values` input,
+which keeps the resource's required keys outside the pipeline
+(`OperationInputs::declaredValues()`), and core's `NotNull` on a node's
+`title` inside the entity's validation. The cost stays: a flow whose create spreads its required
+keys over several steps is refused at its first step, where flows are
+declared; flows are not declared yet.
+
+(`Staging\StagedStorage::prepare()`, `StagedUpdateTest`,
+`StagedCreateTest`)
+
+### A staged create is whole and rehearsed as a create
+
+Decided 2026-11-07. A create may be staged. It names no stored thing,
+so the wrapper matches it with no entry and no later write matches its
+entry: every staged create appends an entry of kind `create` at the
+stage's next position, with no arguments (a create takes no
+parameters), no token (nothing is stored to compare), the whole
+document the pipeline accepted, and every key changed. Two creates are
+two entries, through one resource or through two, such as
+`entity.content:node.page` and `entity.content:node`: the check that
+refuses one stored thing staged through two resources does not apply
+to a new thing.
+
+- **A name the caller gives is unique per storage class in a stage.**
+  Where the create's context does not know an identity key, the caller
+  names the thing; the entry records the name beside what the context
+  knew. A second staged create whose name agrees with a staged create
+  of the same storage class, through any resource, is refused at the
+  name, code `taken`, naming the position that holds it; checked at
+  prepare and again under the lock at commit, where a create of the
+  name that landed in between is a race. The storage's own check of a
+  name already stored runs after it, as without a stage. The ledger
+  fixture's storage refuses no name, so the stage's check is its only
+  one.
+- **Apply rehearses it as a create.** The context is built again from
+  the recorded operation with no arguments, create access is asked for
+  the owner, no token is compared, and the whole values are sent, so a
+  name stored by another path since staging is refused at
+  `/writes/<position>/<key>`, code `taken`. The commit reads the id
+  storage gave and `applied` answers it as text.
+- **It cannot be named again in its stage.** It has no stored id until
+  apply, so nothing in the stage can read, change or remove it, and nothing
+  can refer to it; the staged answer holds no `id`, since an output of
+  an id storage gives on save is answered only once there is one. To
+  change it, discard the stage.
+- **200, not 201, over HTTP.** `POST` with the stage header created
+  nothing, so it answers 200 as a staged `PATCH` and `DELETE` do, with
+  `created` null and no `Location`: a `Location` must name where the
+  thing is read without a request header, and there is none until
+  apply. Where it lives is not resolved against what is stored, which
+  holds nothing of it.
+
+(`Staging\StagedStorage`, `Storage\StageStorage::rehearse()`,
+`ResourceApiController::write()`, `StagedCreateTest`,
+`StagedCallerNamedCreateTest`)
 
 ### A stage input is a door argument handed to storage, never context
 

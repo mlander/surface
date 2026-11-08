@@ -18,7 +18,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * each conforms as the storage reads it back, a dry run's id marked not
  * emitted. An applied write's id is text whatever the resource types it
  * as; a staged update answers its own `id` as the resource types it, an
- * integer for a node.
+ * integer for a node, and a staged create answers none, its listing item
+ * with no parameters.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -40,7 +41,13 @@ class StageOutputsConformTest extends SurfaceKernelTestBase {
     parent::setUp();
     $this->installEntityFixture();
     $this->setUpCurrentUser(admin: TRUE);
-    $this->setUpCurrentUser([], ['access content', 'edit any page content', 'use text format basic', 'keep the ledger']);
+    $this->setUpCurrentUser([], [
+      'access content',
+      'create page content',
+      'edit any page content',
+      'use text format basic',
+      'keep the ledger',
+    ]);
   }
 
   /**
@@ -62,6 +69,18 @@ class StageOutputsConformTest extends SurfaceKernelTestBase {
     $this->assertTrue($this->pipeline()->conformOutput($built, $outputs)->isEmpty());
     $this->assertTrue($this->stage($id, 'stage_test.ledger', ['id' => 'a'], ['title' => 'Bravo'])->committed);
 
+    // A staged create answers no id: storage gives it at apply.
+    [$built, $storage] = $this->staged($id, 'entity.content:node.page', 'create');
+    $result = $this->submitted($built, $storage, [
+      'title' => ['value' => 'New'],
+      'field_description' => ['value' => 'y'],
+    ]);
+    $this->assertTrue($result->committed, $this->said($result));
+    $this->assertInstanceOf(OutputsStorageInterface::class, $storage);
+    $outputs = $storage->outputs($built, $result->values);
+    $this->assertSame([], $outputs);
+    $this->assertTrue($this->pipeline()->conformOutput($built, $outputs)->isEmpty());
+
     // What each of the stage's own operations answers.
     foreach ([['changes', FALSE], ['apply', TRUE], ['apply', FALSE]] as [$operation, $dry_run]) {
       [$built, $storage] = $this->permanent('surface.stage', $operation, ['id' => $id]);
@@ -72,11 +91,13 @@ class StageOutputsConformTest extends SurfaceKernelTestBase {
       $violations = $this->pipeline()->conformOutput($built, $outputs);
       $this->assertTrue($violations->isEmpty(), $operation . ': ' . implode(', ', array_map(static fn ($violation): string => $violation->fullPath() . ' ' . $violation->message, iterator_to_array($violations))));
       if ($operation === 'changes') {
-        $this->assertSame(2, $outputs['total']);
-        $this->assertSame([1, 2], array_column($outputs['items'], 'position'));
+        $this->assertSame(3, $outputs['total']);
+        $this->assertSame([1, 2, 3], array_column($outputs['items'], 'position'));
+        $this->assertSame('create', $outputs['items'][2]['kind']);
+        $this->assertSame([], $outputs['items'][2]['parameters']);
         continue;
       }
-      $this->assertCount(2, $outputs['applied']);
+      $this->assertCount(3, $outputs['applied']);
       foreach ($outputs['applied'] as $applied) {
         if ($dry_run) {
           $this->assertTrue(NotEmitted::is($applied['id']), 'A dry run marks the id not emitted.');
@@ -85,7 +106,7 @@ class StageOutputsConformTest extends SurfaceKernelTestBase {
         $this->assertIsString($applied['id']);
       }
       if (!$dry_run) {
-        $this->assertSame([(string) $node->id(), 'a'], array_column($outputs['applied'], 'id'));
+        $this->assertSame([(string) $node->id(), 'a', (string) ((int) $node->id() + 1)], array_column($outputs['applied'], 'id'));
       }
     }
 

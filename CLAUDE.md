@@ -359,11 +359,15 @@ the record of the rework that brought the module to the pattern.
   prepare is the storage's, commit writes the record. `changes` lists
   the writes; `apply` (`Storage\StageStorage`) rehearses them all in
   prepare and makes them in commit, in order, in one transaction, and
-  keeps the record marked applied. For now a stage takes updates and
-  deletes of a resource whose storage class implements
+  keeps the record marked applied. For now a stage takes creates,
+  updates and deletes of a resource whose storage class implements
   `Pipeline\TransactionalStorageInterface` (a transaction undoes its
   writes whole; `rolledBack()` drops what it cached after an apply rolls
-  back), any other refused at prepare; a delete is an entry of kind
+  back), any other refused at prepare; a create is an entry of kind
+  `create`, always appended whole with no token, a caller-named name
+  unique per storage class in the stage (`taken`), and it cannot be
+  named again in its stage, having no stored id until apply
+  (`docs/staging.md#a-staged-create`); a delete is an entry of kind
   `delete`, values `[]` and `changed: ['']`, replacing an update of the
   thing at its position, and a later write to the thing is refused
   `not_found` (`docs/staging.md#a-staged-delete`)
@@ -721,7 +725,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2001, Assertions: 47927, Errors: 0, Failures: 0, Skipped: 3. Classes: 281 of 281, 8 at a time, browser classes 4.
+phpunit: Tests: 2017, Assertions: 48452, Errors: 0, Failures: 0, Skipped: 3. Classes: 283 of 283, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -741,8 +745,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1890, Assertions: 43571, Skipped: 3, Deprecations: 130. Classes:
-230, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1906, Assertions: 44096, Skipped: 3, Deprecations: 130. Classes:
+232, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the

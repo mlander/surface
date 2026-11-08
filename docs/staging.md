@@ -96,7 +96,10 @@ drush tool:run surface:entity.content:node.page:update --uid=1 --json \
   stage, holds them), `changes` against the stage's view (what this
   call moved since the last staged write), and the message "Edit Basic
   page: the values were accepted and staged in 9033…." A write that
-  moves nothing says nothing was written, as without a stage.
+  moves nothing says nothing was written, as without a stage. A create
+  whose storage gives the id answers no `id`, and every create says
+  nothing is created until the stage is applied
+  ([A staged create](#a-staged-create)).
 - A read answers the thing as it stands in the stage, and without the
   input what is stored.
 - The refined `values` input defaults each key to the staged view, so
@@ -128,6 +131,11 @@ X-Surface-Stage: 90330186-6d51-43bf-a4cd-d7f144e63c1e
   the one every write answers; it names no stage, since the caller
   did. Its `contract` is the envelope of the staged view and its `ETag`
   that view's fingerprint.
+- `POST` on the collection, a create, keeps the whole document in the
+  stage ([A staged create](#a-staged-create)). The answer is 200, not
+  201: `committed: true`, `outputs` with no `id` storage gives,
+  `contract` the create's envelope, `created: null`, no `Location` and
+  no `ETag`. Nothing is created until the stage is applied.
 - `DELETE`, a delete, keeps the removal in the stage
   ([A staged delete](#a-staged-delete)). The answer is the one every
   delete answers: `committed: true`, `changes: [""]`, the values the
@@ -252,8 +260,6 @@ what the promise rules out.
 Each is refused at the staged write's prepare, a violation of the whole
 call:
 
-- **A create**, code `does_not_apply`: a staged create would need an id
-  before it exists, and local ids are not built.
 - **A resource that holds a secret**, code `does_not_apply`: a stage
   keeps its values in the clear, so a secret would sit unsealed in the
   record. Refused whether the secret is sent or not.
@@ -271,6 +277,57 @@ call:
 - **The stage's own storage**: a stage is not written into a stage.
 - **A write into a stage that was applied**, code `does_not_apply`, and
   one that expired or was discarded, code `not_found`.
+
+## A staged create
+
+A create tool takes `stage` as every write tool of a resource a stage
+takes does, and the HTTP door takes the header on `POST`:
+
+```
+drush tool:run surface:entity.content:node.page:create --uid=1 --json \
+  --input='{"stage":"9033…","values":{"title":{"value":"New"},"field_description":{"value":"In the hall."}}}'
+```
+
+- **Whole.** A staged create is validated and rehearsed as a real
+  create, at staging and again at apply: every required key, the
+  entity's own validation and, for an id the caller names, the
+  storage's check that no stored thing has it. Its one write sends what
+  a create requires; there is no partial create to finish in a later
+  call
+  (why: [decision](decisions.md#a-staged-write-validates-as-a-real-write)).
+- **The entry.** An entry of kind `create`, added at the stage's next
+  position: no arguments (a create takes no parameters), no token
+  (nothing is stored to compare), the whole document the pipeline
+  accepted, and every key changed. `changes` lists it with `kind:
+  "create"` and `parameters: []`.
+- **Not named again in its stage.** A create names no stored thing, so
+  it matches no entry and no later write matches it. Two creates are
+  two entries, through one resource or through `entity.content:node.page`
+  and `entity.content:node`, which are two new things, not one thing
+  through two resources.
+- **A name the caller gives.** Where the caller names the thing (an
+  entity type whose id is a string with no default), a second staged
+  create of the same name through any resource of the same storage
+  class is refused at the name, code `taken`: "A … named first is
+  created in this stage already, at position 1." A name already stored
+  is refused by the storage, as without a stage; one stored by another
+  path after staging is refused at apply, at `/writes/<position>/id`,
+  code `taken`.
+- **The answer.** `committed: true` (the stage holds the create),
+  `changes` every key of the document, `outputs` with no `id` (storage
+  gives the id when it saves, so there is none until apply; a name the
+  caller gave is answered), and the message "Add Basic page: the values were
+  accepted and staged in 9033…; nothing is created until the stage is
+  applied, which answers the new id."
+- **Over HTTP**, `POST` with the header answers 200, not 201, since
+  nothing was created: `outputs` as the tool answers them, `contract`
+  the create's envelope, `created: null`, no `Location` and no `ETag`.
+- **Apply** rehearses the create as a real one, create access asked
+  again for the owner, and creates it in its place in position order.
+  `applied` lists it with `kind: "create"`, `parameters: []` and `id`,
+  the new id as a string. A rollback leaves nothing created.
+
+(why: [decision](decisions.md#a-staged-create-is-whole-and-rehearsed-as-a-create))
 
 ## A staged delete
 
@@ -479,9 +536,10 @@ access meets core's own refusal, an exception from its predelete hook,
   or an entity query reads permanent storage.
 - **One translation.** The entity example writes the default
   translation, and a stage inherits that.
-- **No local ids yet.** A thing created in a stage cannot be named or
-  referred to by a later write in the same stage, because staged
-  creates are not built.
+- **A staged create cannot be named again in its stage**: it has no
+  stored id until apply, so nothing in the stage can read, change or
+  remove it, and nothing can refer to it; discard the stage to change
+  it.
 - **An id that names nothing on the stage's own paths.** The stage's
   operations declare no permission, so at the tool door's access check
   (`drush tool:run`, MCP) and the HTTP route's, an id that names no

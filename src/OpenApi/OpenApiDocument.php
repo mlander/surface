@@ -521,6 +521,7 @@ final class OpenApiDocument {
 
     [$method, $named] = $this->paths->writes($definition, $operation);
     $written = match (TRUE) {
+      $creates && $staged !== [] => (string) $this->t("The write: 201 with the created thing's Location, the envelope rebuilt and, under created, where it now lives; under the X-Surface-Stage header, the create is staged instead, 200, and nothing is created until the stage is applied: outputs hold no id and created is null. With dryRun, the same run stopped before anything is written, 200. A refusal is 422, nothing written."),
       $creates => (string) $this->t("The write: 201 with the created thing's Location, the envelope rebuilt and, under created, where it now lives. With dryRun, the same run stopped before anything is written, 200. A refusal is 422, nothing written."),
       $kind === OperationDefinition::READ => (string) $this->t('The run: the values checked, and nothing written at all. A refusal is 422.'),
       $kind === OperationDefinition::DELETE => (string) $this->t('The removal, with no body, held by If-Match to the stored values its ETag named (412 when they changed): 200 with the values the thing held, and no envelope: the thing is gone, or, under the X-Surface-Stage header, its removal is staged and nothing is removed until the stage is applied. With dryRun, the same run stopped before anything is removed. A refusal is 422, nothing removed.'),
@@ -529,6 +530,7 @@ final class OpenApiDocument {
     $answers = [
       '200' => $this->answer(
         match (TRUE) {
+          $creates && $staged !== [] => (string) $this->t('A dry run: the result, nothing written. A create staged under the X-Surface-Stage header: the result, then outputs, contract and created, which is null; nothing is created until the stage is applied.'),
           $creates => (string) $this->t('A dry run: the result, nothing written.'),
           $kind === OperationDefinition::DELETE => (string) $this->t('The result, its values what the thing held; contract and created are null.'),
           default => (string) $this->t('The result, then outputs, contract and created.'),
@@ -1090,7 +1092,7 @@ final class OpenApiDocument {
         'schema' => ['type' => 'string'],
       ],
       'Location' => [
-        'description' => (string) $this->t('Where the created thing is now read; absent when no operation of the resource addresses it.'),
+        'description' => (string) $this->t('Where the created thing is now read; absent when no operation of the resource addresses it, and under the X-Surface-Stage header.'),
         'schema' => ['type' => 'string', 'format' => 'uri'],
       ],
     ];
@@ -1389,7 +1391,7 @@ final class OpenApiDocument {
             'properties' => [
               'outputs' => $object + $this->said($this->t('The declared outputs, as storage reads them back after the write.')),
               'contract' => $either('Contract') + $this->said($this->t('On a write, the envelope rebuilt from what is stored now.')),
-              'created' => $either('Created') + $this->said($this->t('On a create that was written, where the created thing now lives.')),
+              'created' => $either('Created') + $this->said($this->t('On a create that was written, where the created thing now lives; null under the X-Surface-Stage header, which creates nothing until the stage is applied.')),
               ResourceApiController::DRY_RUN => ['type' => 'boolean', 'const' => TRUE] + $this->said($this->t('On a dry run only: nothing was written.')),
             ],
             'required' => ['outputs', 'contract', 'created'],
