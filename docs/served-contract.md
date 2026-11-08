@@ -1645,6 +1645,7 @@ theme no longer has can still be removed.
 | `?dryRun=true` | Rehearse the removal and remove nothing; `x-surface-dry-run: true`. |
 | `If-Match: "<ETag>"` | Remove only if what is stored is still what that `ETag` named; 412 otherwise. |
 | `X-CSRF-Token` | The session's token, with the session cookie. |
+| `X-Surface-Stage` | Keep the removal in that stage, where the resource's storage can be staged; the thing is removed when the stage is applied ([Staging](staging.md#a-staged-delete)). |
 
 It answers 200 with the one result: `values` the values the thing held,
 `changes` `[""]`, the empty pointer, the whole thing, `committed` and
@@ -1654,6 +1655,8 @@ that is not there is a 404, as on any path. A delete that is not its
 path's default is a custom method, `POST .../{x}:{operation}`, its
 envelope `GET .../{x}:{operation}` as any other's; the placement's
 `delete` is the default, `DELETE /surface-api/block.placement/{id}`.
+With the stage header the answer is the same, `committed` true, and the
+thing is still there until the stage is applied.
 
 ### Problem details
 

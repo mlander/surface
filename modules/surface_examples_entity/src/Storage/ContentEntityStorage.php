@@ -19,8 +19,8 @@ use Drupal\surface\Pipeline\ViolationMessage;
 use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\ViolationSet;
+use Drupal\surface\Resource\DeletableStorageInterface;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Resource\ResourceStorageInterface;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface_examples_entity\FieldItemDerivation;
 use Drupal\surface_examples_entity\Resource\FieldItemStructures;
@@ -62,14 +62,27 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * add the bundle is the value the caller chose. A violation about a field
  * is then filed under that key.
  *
- * A save is a write through the database connection alone, so a stage
- * may hold this storage's writes: when an apply that saved an entity is
- * rolled back, rolledBack() drops the entity storage's cache of it, so a
- * load after it reads what the database holds.
+ * A delete removes the entity the context names, with every translation
+ * and every revision it has: core's storage rule, which removes them all
+ * in one transaction of its own, where core's delete form removes a
+ * translation that is not the default one alone. The rule is the entity
+ * type's storage handler's, and a module that replaces the handler
+ * replaces it: the contrib trash module's keeps the entity, its
+ * translations and its revisions in the database, marked deleted and
+ * restorable, and a load finds it no more. prepareDelete() finds
+ * the entity and refuses one that is gone, code `not_found`; it asks no
+ * access, which the access class answers, and validates nothing. What
+ * the entity's delete hooks do beside the database is theirs.
+ *
+ * A save and a delete are writes through the database connection alone,
+ * so a stage may hold this storage's writes: when an apply that saved or
+ * deleted an entity is rolled back, rolledBack() drops the entity
+ * storage's cache of it, so a load after it reads what the database
+ * holds.
  *
  * Decision: see docs/decisions.md#the-content-entity-storage.
  */
-final class ContentEntityStorage implements ResourceStorageInterface, TransactionalStorageInterface, ContainerInjectionInterface {
+final class ContentEntityStorage implements DeletableStorageInterface, TransactionalStorageInterface, ContainerInjectionInterface {
 
   use DependencySerializationTrait;
   use StringTranslationTrait;
@@ -85,14 +98,14 @@ final class ContentEntityStorage implements ResourceStorageInterface, Transactio
   public const FIELDS_AT = 'fields_at';
 
   /**
-   * The entity the last commit saved: entity type id, bundle and id.
+   * The entity the last commit saved or removed: entity type, bundle, id.
    *
    * @var array{0: string, 1: string, 2: int|string}|null
    */
   protected ?array $committed = NULL;
 
   /**
-   * The entities a commit wrote since the last rollback, by entity type.
+   * The entities a commit or a delete wrote since the last rollback, by type.
    *
    * @var array<string, array<int|string, int|string>>
    */
@@ -291,6 +304,66 @@ final class ContentEntityStorage implements ResourceStorageInterface, Transactio
   /**
    * {@inheritdoc}
    *
+   * Finds the entity the context names; one that is gone is refused, at
+   * the whole call. What delete() is handed is the entity's type, bundle
+   * and id.
+   */
+  public function prepareDelete(OperationContext $context, AccountInterface $account): array {
+    $entity = $this->stored($context);
+    if ($entity === NULL) {
+      $nothing = new Violation('', '', $this->t('Nothing is stored under this id, so nothing was removed.'), Violation::NOT_FOUND);
+      throw new StorageViolationsException(new ViolationSet([$nothing]));
+    }
+    return [
+      'entity_type' => $entity->getEntityTypeId(),
+      'bundle' => $entity->bundle(),
+      'id' => $entity->id(),
+    ];
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The entity as stored, never the object anyone else holds, removed
+   * with every translation and revision; one gone by then is gone.
+   */
+  public function delete(OperationContext $context, array $prepared, AccountInterface $account): void {
+    $type = (string) $prepared['entity_type'];
+    $entity = $this->entityTypeManager->getStorage($type)->loadUnchanged($prepared['id']);
+    if ($entity === NULL) {
+      return;
+    }
+    // Before the delete, so a delete that throws after writing is reset
+    // too.
+    $this->written[$type][$entity->id()] = $entity->id();
+    $entity->delete();
+    $this->committed = [$type, (string) $prepared['bundle'], $entity->id()];
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Whether an entity of the context's entity type, and of its bundle when
+   * the context knows one, is stored under the id it knows.
+   */
+  public function exists(OperationContext $context): bool {
+    return $this->stored($context) !== NULL;
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Read by SurfaceUnique, which holds only a resource with one identity
+   * key, never these; one storage serves every entity type, so it names
+   * none.
+   */
+  public function singularLabel(): \Stringable {
+    return $this->t('item');
+  }
+
+  /**
+   * {@inheritdoc}
+   *
    * The entity storage's caches, static and persistent, of every entity a
    * commit wrote since the last rollback.
    */
@@ -299,6 +372,27 @@ final class ContentEntityStorage implements ResourceStorageInterface, Transactio
       $this->entityTypeManager->getStorage($type)->resetCache(array_values($ids));
     }
     $this->written = [];
+  }
+
+  /**
+   * Loads the entity a context names, of its bundle when it knows one.
+   *
+   * @param \Drupal\surface\Resource\OperationContext $context
+   *   The context.
+   *
+   * @return \Drupal\Core\Entity\ContentEntityInterface|null
+   *   The entity, or NULL when none is stored under the id it knows.
+   */
+  protected function stored(OperationContext $context): ?ContentEntityInterface {
+    [$entity_type_id, $bundle, $id] = static::identity($context);
+    if ($entity_type_id === '' || $id === NULL || !$this->entityTypeManager->hasDefinition($entity_type_id)) {
+      return NULL;
+    }
+    $entity = $this->entityTypeManager->getStorage($entity_type_id)->load($id);
+    if (!$entity instanceof ContentEntityInterface || ($bundle !== '' && $entity->bundle() !== $bundle)) {
+      return NULL;
+    }
+    return $entity;
   }
 
   /**

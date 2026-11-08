@@ -590,8 +590,9 @@ context that creates.
   (`ReferenceDependencies`, through a presave hook). A save made any
   other way, a form of core's or `$entity->save()`, recalculates without
   them until the next save through the storage.
-- **`prepareDelete()` and `delete()`** remove the entity the context
-  names, for an operation that deletes
+- **`prepareDelete()` and `delete()`**, `DeletableStorageInterface`'s
+  verbs, remove the entity the context names, for an operation that
+  deletes
   (why: [decision](decisions.md#a-placed-block-is-a-resource)).
 - **`mayClear()` and `widerThanSchema()`** read the entity's config
   schema, `<config prefix>.*`, for the keys stored under a property: the
@@ -825,8 +826,9 @@ first:
 - `Drupal\surface\Resource\ResourceStorageInterface`, what
   `#[Resource(storage:)]` names, over the context; its write verbs,
   `prepare()` and `commit()` (and a deleting storage's
-  `prepareDelete()` and `delete()`), are handed the account the write
-  is made as, and it never reads the current user
+  `prepareDelete()` and `delete()`, on
+  `Drupal\surface\Resource\DeletableStorageInterface`), are handed the
+  account the write is made as, and it never reads the current user
   ([No door-specific context](resources.md#no-door-specific-context)).
 
 The pipeline's:
@@ -1325,7 +1327,9 @@ an attachment is routed to.
 
 Implementing it is a promise: `commit()` writes through the database
 connection alone, so rolling the transaction back undoes the write
-whole. A storage that saves config, writes State or changes a table's
+whole, and so does `delete()` on a storage that also implements
+`DeletableStorageInterface`, since a stage holds deletes too
+([Staging](staging.md#a-staged-delete)). A storage that saves config, writes State or changes a table's
 schema does not make it: config and State keep caches beside the
 database, and MySQL commits a schema change at once.
 
@@ -1334,7 +1338,7 @@ storage of every write whose commit had started, the last first, and on
 each storage routed under it, whether its route wrote or not. Drop
 there what the storage cached beside the database for what it wrote: the
 entity example resets the entity storage's cache of each entity it saved
-(`resetCache([$id])`), so a load later in the request reads what the
+or deleted (`resetCache([$id])`), so a load later in the request reads what the
 database holds. A storage that caches nothing, such as one over the
 database's key-value collection, leaves the body empty. What hooks do
 beside the database during a save (a mail sent, a remote call) is not

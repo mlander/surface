@@ -128,6 +128,11 @@ X-Surface-Stage: 90330186-6d51-43bf-a4cd-d7f144e63c1e
   the one every write answers; it names no stage, since the caller
   did. Its `contract` is the envelope of the staged view and its `ETag`
   that view's fingerprint.
+- `DELETE`, a delete, keeps the removal in the stage
+  ([A staged delete](#a-staged-delete)). The answer is the one every
+  delete answers: `committed: true`, `changes: [""]`, the values the
+  thing held, no `contract` and no `ETag`. The thing is removed only
+  when the stage is applied.
 - `GET` answers the staged view and its `ETag`; without the header,
   what is stored and its `ETag`.
 - `If-Match` is held to the view the header names: with the staged
@@ -174,13 +179,14 @@ implements `Pipeline\TransactionalStorageInterface`; for any other
 resource no tool takes the input, and a write named into a stage
 anyway (through the header, or from PHP) is refused at prepare, code
 `does_not_apply`, naming the class. The interface is a promise:
-`commit()` writes through the database connection alone, so the
-transaction apply opens undoes the write whole.
+`commit()`, and `delete()` where the storage also implements
+`DeletableStorageInterface`, write through the database connection
+alone, so the transaction apply opens undoes the write whole.
 
 Its one method, `rolledBack()`, is called after an apply rolls back, on
 the storage of every write whose commit had started. A storage drops
 there what it cached beside the database. The entity example resets the
-entity storage's cache of what it saved:
+entity storage's cache of what it saved or deleted:
 
 <!-- excerpt: modules/surface_examples_entity/src/Storage/ContentEntityStorage.php -->
 
@@ -214,7 +220,6 @@ call:
 
 - **A create**, code `does_not_apply`: a staged create would need an id
   before it exists, and local ids are not built.
-- **A delete**, code `does_not_apply`.
 - **A resource that holds a secret**, code `does_not_apply`: a stage
   keeps its values in the clear, so a secret would sit unsealed in the
   record. Refused whether the secret is sent or not.
@@ -224,10 +229,59 @@ call:
 - **A second resource over one thing**, code `conflict`: a page staged
   through `entity.content:node.page` cannot be staged again through
   `entity.content:node` in the same stage. One thing is also written
-  through one operation per stage.
+  through one operation per stage, except that a delete replaces what
+  the stage holds for it ([A staged delete](#a-staged-delete)).
+- **A write to a thing the stage removed**, a second delete among them,
+  code `not_found`: "This was removed in the stage; the removal stands
+  until the stage is applied or discarded."
 - **The stage's own storage**: a stage is not written into a stage.
 - **A write into a stage that was applied**, code `does_not_apply`, and
   one that expired or was discarded, code `not_found`.
+
+## A staged delete
+
+A delete tool takes `stage` as every write tool of a resource a stage
+takes does, and the HTTP door takes the header on `DELETE`:
+
+```
+drush tool:run surface:entity.content:node.page:delete --uid=1 --json \
+  --input='{"id":"3","stage":"9033…"}'
+```
+
+- **The entry.** The stage records the delete as an entry of kind
+  `delete`, its values empty and its one changed key the empty pointer,
+  `changed: [""]`: the whole thing, as the pipeline answers `changes:
+  [""]` for any delete. Its token is what was stored when the thing was
+  first read through the stage. `changes` lists it with `kind:
+  "delete"` and `changed: [""]`.
+- **The answer.** `committed: true` (the stage holds the removal),
+  `changes: [""]`, the values the thing held in the stage's view, and
+  the message "Delete Basic page: the removal was accepted and staged
+  in 9033…; nothing was removed." A dry run with `stage` says what a
+  dry run of any delete says, and stages nothing.
+- **Read through the stage**, the thing answers nothing: a load
+  through the stage answers no values for a thing it removed. Without
+  the stage, what is stored, which is still there.
+- **Delete, then delete or update.** A second delete of the thing, and
+  an update of it, are refused, code `not_found`, "This was removed in
+  the stage; the removal stands until the stage is applied or
+  discarded." No operation discards one write; discarding the stage
+  discards them all. Through another resource over the same thing the
+  refusal is the `conflict` above.
+- **Update, then delete.** A delete of a thing the stage already holds
+  an update of replaces that entry where it stands: the entry keeps its
+  position, when it was first staged and its token, and takes the
+  delete's operation, its arguments, empty values and `changed: [""]`.
+  Apply then removes the thing in the place the update held.
+- **Apply** rehearses the delete as a real one, its access asked again
+  (delete access, for the entity example), the token compared with what
+  is stored, and then deletes the thing as its storage deletes: a
+  content entity with every translation and revision it has, removed
+  by core's storage, kept marked deleted where a module such as trash
+  replaces it ([Entities: The storage](entities.md#the-storage)).
+  `applied` lists it with `kind:
+  "delete"` and `id`, the thing's id as a string. A rollback leaves it
+  in place.
 
 ## Apply
 
@@ -288,6 +342,16 @@ A stage does not remember the workspace it was opened in. If it ever
 should, the door would hand the workspace id to the stage as an
 argument; storage and access would still not read it.
 
+**A delete in a workspace** is refused by core. Workspaces forbids delete
+access, in a workspace that is not Live, to an entity the workspace did
+not create, and the entity example's access asks core's delete access:
+a delete there is refused, code `access`, whether it is made at once,
+staged, or staged in Live and applied in the workspace (at
+`/writes/<position>`), and nothing is removed. An entity created in the
+workspace may be deleted there. Code that runs a delete without asking
+access meets core's own refusal, an exception from its predelete hook,
+"This content item can only be deleted in the Live workspace."
+
 ## Limits
 
 - **Invisible to render, Views and queries.** A staged value is read
@@ -305,6 +369,14 @@ argument; storage and access would still not read it.
   declares none; a tool called from PHP, which runs no access check,
   answers `not_found`. A stage named through the `stage` input or the
   header that names nothing is not found.
+- **A required key after a staged delete.** The pipeline validates a
+  write before the storage sees it, and a load through the stage
+  answers no values for a thing it removed. So an update of that thing
+  that leaves out a required key is refused for the key, code
+  `required`, before it can be refused as removed in the stage; one
+  that sends every required key is refused `not_found`.
+- **A delete in a workspace** is refused, code `access`
+  ([above](#stages-and-workspaces)).
 - **Revisions at apply time.** An entity apply saves a new revision
   where the resource carries `revision_log`, dated when apply runs, by
   the owner; when the write was staged is in the stage, not on the

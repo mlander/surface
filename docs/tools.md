@@ -27,8 +27,9 @@ and field storage settings as resources
   describing them. The field example adds `surface:field.instance:create`,
   `:reuse` and `:update` and `surface:field.storage:update`; the node
   type example adds `surface:node.type:create` and `:update`, and
-  `surface_examples_entity` one `create` and one `update` per content entity
-  bundle with a form display, `surface:entity.content:node.page:create`. The inputs
+  `surface_examples_entity` a `create`, an `update`, a `read` and a
+  `delete` per content entity bundle with a form display and per entity
+  type with such a bundle, `surface:entity.content:node.page:create`. The inputs
   are the operation's parameters (each a value; one named for a
   resource key described as that key), the
   resource's keys the operation does not know as `values`, and
@@ -388,7 +389,9 @@ destroys nothing, and the access answer has to be the real one, and the
 read the build adds asks the same question. A delete, such as
 `surface:block.placement:delete` from `surface_examples_block`, is a
 destructive `Write` whose inputs are its parameters and `dry_run`, with
-no `values`. A field tool's access is the operation's permission, `administer %entity_type
+no `values`, then `stage` where its resource's storage can be staged,
+as `surface:entity.content:node.page:delete`'s can
+([Staging](staging.md#a-staged-delete)). A field tool's access is the operation's permission, `administer %entity_type
 fields`, named from the identity the operation's context knows (the
 entity type every field tool is given), then `FieldInstanceAccess`,
 which refuses a locked

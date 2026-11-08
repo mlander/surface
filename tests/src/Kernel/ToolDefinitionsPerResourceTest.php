@@ -88,9 +88,9 @@ class ToolDefinitionsPerResourceTest extends SurfaceKernelTestBase {
     $cold = $this->listInNewRequest();
     $this->assertArrayHasKey('entity.content:node.page', $cold);
     $this->assertArrayHasKey('entity.content:node.kitchen', $cold);
-    // Each operation of a bundle (add, and edit with its read tool) is
-    // built once for every tool it makes, and once more for its outputs.
-    $this->assertLessThanOrEqual(4, $cold['entity.content:node.page']);
+    // Each operation of a bundle (add, edit, its read and its delete) is
+    // built once for the tool it makes, and add once more for its outputs.
+    $this->assertLessThanOrEqual(5, $cold['entity.content:node.page']);
 
     $field = FieldConfig::loadByName('node', 'page', 'field_description');
     assert($field !== NULL);

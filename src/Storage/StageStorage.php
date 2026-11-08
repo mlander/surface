@@ -86,6 +86,11 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
   public const APPLIED = 'applied';
 
   /**
+   * What a key's name escapes to in a JSON Pointer.
+   */
+  protected const POINTER_ESCAPES = ['~' => '~0', '/' => '~1'];
+
+  /**
    * The id of the stage this storage opened last, for the create's `id`.
    */
   protected ?string $committed = NULL;
@@ -305,13 +310,14 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    *
    * @return array{items: list<array>, total: int}
    *   Each write's position, resource, operation, kind, parameters, the
-   *   keys it moved as JSON Pointers and when it was staged; and how many.
+   *   keys it moved as JSON Pointers (a delete's the empty one, the whole
+   *   thing) and when it was staged; and how many.
    */
   protected function listing(array $record): array {
     $items = [];
     foreach (self::ordered($record) as $write) {
       $items[] = self::described($write) + [
-        'changed' => array_map(static fn (string $key): string => '/' . strtr($key, ['~' => '~0', '/' => '~1']), $write['changed']),
+        'changed' => array_map(static fn (string $key): string => $key === '' ? '' : '/' . strtr($key, self::POINTER_ESCAPES), $write['changed']),
         'staged' => (int) $write['staged'],
       ];
     }

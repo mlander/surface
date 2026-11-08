@@ -359,11 +359,14 @@ the record of the rework that brought the module to the pattern.
   prepare is the storage's, commit writes the record. `changes` lists
   the writes; `apply` (`Storage\StageStorage`) rehearses them all in
   prepare and makes them in commit, in order, in one transaction, and
-  keeps the record marked applied. For now a stage takes updates of a
-  resource whose storage class implements
+  keeps the record marked applied. For now a stage takes updates and
+  deletes of a resource whose storage class implements
   `Pipeline\TransactionalStorageInterface` (a transaction undoes its
   writes whole; `rolledBack()` drops what it cached after an apply rolls
-  back), any other refused at prepare
+  back), any other refused at prepare; a delete is an entry of kind
+  `delete`, values `[]` and `changed: ['']`, replacing an update of the
+  thing at its position, and a later write to the thing is refused
+  `not_found` (`docs/staging.md#a-staged-delete`)
   (`docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection`,
   `docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner`).
   The doors name one only for such a resource: the **stage input**,
@@ -630,8 +633,11 @@ storage or identity keys is a resource, any other a structure.
 (`entity.content:*`) and a structure per field (`field.item:*`), with
 field access as each field child's access, and a resource per entity
 type, `entity.content:node`, whose `bundle` chooses the bundle's fields
-as variants under `fields` (`docs/entities.md`); whether `create` takes
-`id` is read from the id field (a serial integer, or a default, is
+as variants under `fields` (`docs/entities.md`); each has `create`,
+`update`, `read` and `delete`, the delete asking core's delete access
+and removing the entity with every translation and revision
+(`ContentEntityStorage` implements `DeletableStorageInterface`);
+whether `create` takes `id` is read from the id field (a serial integer, or a default, is
 computed; a string with no default is the caller's to name, required,
 and refused at `id` when taken;
 `docs/decisions.md#an-entity-types-id-is-computed-or-named-by-the-caller`). A
@@ -703,7 +709,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1970, Assertions: 46967, Errors: 0, Failures: 0, Skipped: 3. Classes: 277 of 277, 8 at a time, browser classes 4.
+phpunit: Tests: 1989, Assertions: 47570, Errors: 0, Failures: 0, Skipped: 3. Classes: 279 of 279, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -723,8 +729,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1860, Assertions: 42624, Skipped: 3, Deprecations: 130. Classes:
-227, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1879, Assertions: 43227, Skipped: 3, Deprecations: 130. Classes:
+229, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the

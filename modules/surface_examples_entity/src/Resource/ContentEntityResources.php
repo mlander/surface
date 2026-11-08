@@ -30,10 +30,10 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  *
  * `entity.content:<entity type>.<bundle>`, `entity.content:node.page`: a
  * content entity's create and update form, said as a resource. Its
- * identity is the entity type, the bundle and the entity's id; its three
+ * identity is the entity type, the bundle and the entity's id; its four
  * operations are `create`, which knows the entity type and the bundle (and
- * that there is no id yet), and `update` and `read`, which take the
- * identity key `id` and have the storage load the entity it names. Its
+ * that there is no id yet), and `update`, `read` and `delete`, which take
+ * the identity key `id` and have the storage load the entity it names. Its
  * keys are one child per field the bundle's default form
  * display shows, in the display's order, each the field's item structure
  * (FieldItemStructures), invoked through the item's operation of the same
@@ -53,13 +53,15 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * schema names the bundles and leaves their fields to the schema call
  * that chooses one. On `create` the bundle is the caller's to choose, of
  * the bundles the account may create (SurfaceCreatableBundle); on
- * `update` it is the entity's, fixed.
+ * `update`, `read` and `delete` it is the entity's, fixed.
  *
- * The storage reads and writes the entity (ContentEntityStorage), and the
- * access class is the entity's: create access on add, update access on
- * edit, view access on a read. Both resources declare `read` rather than
- * take the one the build adds, which is asked as `update` is: an account
- * that may view a node and not edit it reads it here.
+ * The storage reads, writes and removes the entity (ContentEntityStorage),
+ * and the access class is the entity's: create access on add, update
+ * access on edit, view access on a read, delete access on a delete, which
+ * removes the entity with every translation and revision it has. Both
+ * resources declare `read` rather than take the one the build adds,
+ * which is asked as `update` is: an account that may view a node and not
+ * edit it reads it here.
  *
  * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
  *
@@ -176,6 +178,18 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
                 '@entity_type' => $entity_type->getLabel(),
               ]),
             ),
+            new DerivedOperation(
+              'delete',
+              $this->t('Delete @bundle', ['@bundle' => $bundle_label]),
+              new ResourceCallable(self::class, 'delete', [...$bound, $this->derivation->idType($entity_type_id)]),
+              ['id'],
+              destructive: TRUE,
+              deletes: TRUE,
+              description: $this->t('Deletes an existing @bundle item (@entity_type), named by its id, with every translation and revision it has.', [
+                '@bundle' => $bundle_label,
+                '@entity_type' => $entity_type->getLabel(),
+              ]),
+            ),
           ],
           storage: ContentEntityStorage::class,
           access: ContentEntityAccess::class,
@@ -265,6 +279,17 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
           description: $this->t("Reads an existing @entity_type, named by its id: its @bundle_label, and each of that @bundle_label's fields the account may view.", [
             '@entity_type' => $label,
             '@bundle_label' => $bundle_label,
+          ]),
+        ),
+        new DerivedOperation(
+          'delete',
+          $this->t('Delete @entity_type', ['@entity_type' => $label]),
+          new ResourceCallable(self::class, 'deleteAny', [$entity_type_id, $this->derivation->idType($entity_type_id)]),
+          ['id'],
+          destructive: TRUE,
+          deletes: TRUE,
+          description: $this->t('Deletes an existing @entity_type, named by its id, with every translation and revision it has.', [
+            '@entity_type' => $label,
           ]),
         ),
       ],
@@ -498,10 +523,35 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
   }
 
   /**
+   * An entity of the bundle that exists, to delete.
+   *
+   * @param array{id: mixed} $arguments
+   *   The entity's id, the identity key's value.
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $bundle
+   *   The bundle.
+   * @param string $id_type
+   *   The Surface API type of the entity's id, 'integer' or 'string'.
+   *
+   * @return \Drupal\surface\Resource\OperationContext
+   *   A context knowing which entity, which its access class asks delete
+   *   access for.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   When the id names no entity, or one of another bundle.
+   * @throws \InvalidArgumentException
+   *   When what it was handed is no id.
+   */
+  public function delete(array $arguments, string $entity_type_id, string $bundle, string $id_type = 'string'): OperationContext {
+    return $this->existing('delete', $arguments, $entity_type_id, $bundle, $id_type);
+  }
+
+  /**
    * The context of an operation on an entity of the bundle that exists.
    *
    * @param string $operation
-   *   The operation id, `update` or `read`.
+   *   The operation id, `update`, `read` or `delete`.
    * @param array{id: mixed} $arguments
    *   The entity's id, which the storage loads.
    * @param string $entity_type_id
@@ -610,10 +660,32 @@ final class ContentEntityResources implements ResourceDeriverInterface, KnowsDer
   }
 
   /**
+   * An entity of the entity type that exists, to delete, its bundle its own.
+   *
+   * @param array{id: mixed} $arguments
+   *   The entity's id, the identity key's value.
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $id_type
+   *   The Surface API type of the entity's id, 'integer' or 'string'.
+   *
+   * @return \Drupal\surface\Resource\OperationContext
+   *   A context knowing which entity and which bundle.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   When the id names no entity, or one of a bundle with no form display.
+   * @throws \InvalidArgumentException
+   *   When what it was handed is no id.
+   */
+  public function deleteAny(array $arguments, string $entity_type_id, string $id_type = 'string'): OperationContext {
+    return $this->existingAny('delete', $arguments, $entity_type_id, $id_type);
+  }
+
+  /**
    * The context of an operation on an entity of the entity type that exists.
    *
    * @param string $operation
-   *   The operation id, `update` or `read`.
+   *   The operation id, `update`, `read` or `delete`.
    * @param array{id: mixed} $arguments
    *   The entity's id, which the storage loads.
    * @param string $entity_type_id

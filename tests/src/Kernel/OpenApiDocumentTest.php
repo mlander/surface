@@ -764,7 +764,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
     $this->assertArrayHasKey('entity.content:node.page:update', $description->operations);
     $item = $document['paths']['/surface-api/entity.content:node.page/{id}'] ?? NULL;
     $this->assertNotNull($item);
-    $this->assertSame(['get', 'patch'], array_keys($item));
+    $this->assertSame(['get', 'patch', 'delete'], array_keys($item));
     foreach ($item as $call) {
       $id = array_values(array_filter($call['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
       $this->assertCount(1, $id);

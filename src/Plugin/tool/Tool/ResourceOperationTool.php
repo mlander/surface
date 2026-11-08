@@ -406,6 +406,11 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     // Decision: see docs/decisions.md#locked-at-the-top.
     return ExecutableResult::success(
       $this->withNotes(match (TRUE) {
+        // A staged removal is no removal: the stage holds it until apply.
+        $operation->kind() === OperationDefinition::DELETE && $result->committed && $stage !== NULL => $this->t('@label: the removal was accepted and staged in @stage; nothing was removed.', [
+          '@label' => (string) $operation->label,
+          '@stage' => $stage->id,
+        ]),
         // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
         $operation->kind() === OperationDefinition::DELETE && $result->committed => $this->t('@label: removed. The values it held are answered.', ['@label' => (string) $operation->label]),
         $operation->kind() === OperationDefinition::DELETE => $this->t('Dry run of @label: the removal was rehearsed, and nothing was removed. The values it holds are answered.', ['@label' => (string) $operation->label]),
