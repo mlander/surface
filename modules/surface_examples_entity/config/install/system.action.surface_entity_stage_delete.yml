@@ -1,0 +1,11 @@
+langcode: en
+status: true
+dependencies:
+  module:
+    - node
+    - surface_examples_entity
+id: surface_entity_stage_delete
+label: 'Delete content through a stage'
+type: node
+plugin: surface_entity_stage_delete
+configuration: {  }

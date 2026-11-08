@@ -20,7 +20,6 @@ use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Resource\DeletableStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\NamesNothingException;
-use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\ResourceBuild\StorageAdapter;
 use Drupal\surface\Staging\StageRaceException;
@@ -458,7 +457,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
           $committed = $this->pipeline->commitDryRun($result, $entry['storage']);
           // Read at once: a storage instance remembers the last thing it
           // wrote.
-          $outputs = $entry['storage'] instanceof OutputsStorageInterface ? $entry['storage']->outputs($entry['built'], $committed->values) : [];
+          $outputs = $this->pipeline->outputs($entry['built'], $entry['storage'], $committed);
           $id = $outputs['id'] ?? $entry['id'];
           $applied[] = array_diff_key($prepared['applied'][$index], ['changed' => TRUE, 'id' => TRUE]) + ['changed' => $committed->changed()] + ($id === NULL ? [] : ['id' => (string) $id]);
         }

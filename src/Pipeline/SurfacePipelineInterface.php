@@ -329,6 +329,10 @@ interface SurfacePipelineInterface {
    *   answer it was given, so a caller can merge its cacheability, and
    *   the notes accept() made: each locked key whose value sent it did
    *   not take, blocking nothing.
+   *
+   * @throws \Drupal\surface\Staging\StageRaceException
+   *   From a storage under a stage, when the stage moved or its lock was
+   *   not had.
    */
   public function submit(SurfaceInterface $surface, array $input, SurfaceStorageInterface $storage, bool $dry_run = FALSE, ?AccessResultInterface $access = NULL): SurfaceResult;
 
@@ -354,7 +358,44 @@ interface SurfacePipelineInterface {
    *
    * @throws \LogicException
    *   When the run was refused, stopped before prepare, or was written.
+   * @throws \Drupal\surface\Staging\StageRaceException
+   *   From a storage under a stage, when the stage moved or its lock was
+   *   not had.
    */
   public function commitDryRun(SurfaceResult $dry, SurfaceStorageInterface $storage): SurfaceResult;
+
+  /**
+   * Reads what the storage reports after a run, beside the result.
+   *
+   * The values the result does not carry and the storage alone can say:
+   * the id of a thing just created, a stage's `items`, what an apply
+   * made. Keyed as the resource's outputs declare them. Read back from
+   * the storage once the run was committed; for a run that stopped after
+   * prepare, a dry run or an operation that changes nothing, what prepare
+   * answered. Read at once after the run: a storage remembers the last
+   * thing it wrote.
+   *
+   * A PHP caller is a door, and every door reads outputs here: the tool,
+   * the HTTP door, and apply for each staged write it makes, call this
+   * and never the storage.
+   *
+   * Decision: see docs/decisions.md#who-produces-outputs, and
+   * docs/decisions.md#a-door-reads-what-a-run-reports-through-the-pipeline.
+   *
+   * @param \Drupal\surface\SurfaceInterface $built
+   *   The data surface the run was submitted to, whose output definitions
+   *   say which keys are outputs.
+   * @param \Drupal\surface\Pipeline\SurfaceStorageInterface $storage
+   *   The storage the run was submitted to.
+   * @param \Drupal\surface\Pipeline\SurfaceResult $result
+   *   What submit() or commitDryRun() returned.
+   *
+   * @return array
+   *   The outputs, keyed by output name: empty for a storage that reports
+   *   nothing (a host's own, such as a plugin's configuration), a data
+   *   surface that declares no outputs, and a run that was refused or
+   *   stopped before prepare.
+   */
+  public function outputs(SurfaceInterface $built, SurfaceStorageInterface $storage, SurfaceResult $result): array;
 
 }

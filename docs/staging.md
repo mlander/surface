@@ -151,24 +151,58 @@ every write of each resource that can be staged.
 
 ### From PHP
 
+A stage is opened as any thing is created, and its id is what the
+storage reports after the run, read through the pipeline's `outputs()`:
+
+```php
+$resources = \Drupal::service('surface.resources');
+$pipeline = \Drupal::service('surface.pipeline');
+$create = $resources->operation('surface.stage', 'create');
+$built = $resources->build('surface.stage', $create);
+$storage = $resources->storage('surface.stage', $create, $built, $account);
+$result = $pipeline->submit($built, ['label' => 'Edits for review'], $storage, access: $resources->access('surface.stage', $create, $account));
+$id = $pipeline->outputs($built, $storage, $result)['id'];
+```
+
 `ResourcesInterface::storage()` takes the stage as its fifth argument
 and wraps the storage it builds otherwise; the pipeline runs unchanged.
 Ask the stage's access first, as the doors do:
 
 ```php
-$resources = \Drupal::service('surface.resources');
 $stage = \Drupal::service('surface.stages')->named($id)->withArguments(['id' => 3]);
 $update = $resources->operation('surface.stage', 'update', ['id' => $id]);
 if ($resources->access('surface.stage', $update, $account)->isAllowed()) {
   $context = $resources->operation('entity.content:node.page', 'update', ['id' => 3]);
   $built = $resources->build('entity.content:node.page', $context);
   $storage = $resources->storage('entity.content:node.page', $context, $built, $account, $stage);
-  $result = \Drupal::service('surface.pipeline')->submit($built, $values, $storage);
+  $result = $pipeline->submit($built, $values, $storage);
 }
 ```
 
 `withArguments()` hands the operation's parameters by name, which the
 stage records beside the write so apply can build the operation again.
+
+A read is a run with no values: the stage's `read` resolves to the
+update's context, so the run writes nothing and answers what is stored
+in `$result->values`, the stage's label among them (ask its access
+first, as above):
+
+```php
+$read = $resources->operation('surface.stage', 'read', ['id' => $id]);
+$built = $resources->build('surface.stage', $read);
+$storage = $resources->storage('surface.stage', $read, $built, $account);
+$result = $pipeline->submit($built, [], $storage); $label = $result->values['label'];
+```
+
+`Staging\StageRaceException` is what a staged write, an apply or a
+stage's own create, rename or discard throws on a race: the stage's
+lock was not had, or its record moved under the operation (applied,
+expired or discarded, a write the rehearsal did not see, or a staged
+thing changed since its token was taken; [Apply](#apply)). PHP code
+that applies or writes into a stage catches it and tells the person to
+try again, as the entity example's confirm page does. The module's own
+doors do not catch it: the tool door answers it as a runtime failure
+naming the class, and the HTTP door as a server error.
 
 (why: [decision](decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context))
 
@@ -282,6 +316,92 @@ drush tool:run surface:entity.content:node.page:delete --uid=1 --json \
   `applied` lists it with `kind:
   "delete"` and `id`, the thing's id as a string. A rollback leaves it
   in place.
+
+## A flow by hand: bulk delete from the content list
+
+The entity example builds the first flow by hand, over core's content
+list (`modules/surface_examples_entity`): a bulk delete that stages,
+then confirms over the stage. Flows are not declared yet; this one is
+code.
+
+- **The action.** The example ships a `system.action` config entity,
+  "Delete content through a stage" (plugin
+  `surface_entity_stage_delete`, type `node`), which the content list's
+  bulk form offers beside core's "Delete content". The bulk form runs it
+  on the rows its `access()` lets through, the node's own delete access
+  as for core's. The list has one row per translation and hands the
+  action each row's translation, so two rows of one node are one node.
+  The action asks the delete access of each node through
+  `entity.content:node`, leaving a refused one out with a message; opens
+  a stage as the current user, labeled with the count of the nodes
+  allowed, "Delete 2 items"; stages one delete per node; and keeps
+  `['stage' => <id>, 'ids' => [...]]` in the private temp store
+  collection `surface_examples_entity` under `stage_delete`, one
+  selection per account, as core's delete action keeps its own. A
+  delete the stage refuses is left out with a message too, so the label
+  may count more nodes than the page asks to delete; with no node
+  allowed, no stage is opened. Nothing is removed.
+- **A limit of the example.** A translation's row stages the removal of
+  the whole node with every translation, as the storage deletes
+  ([Entities: The storage](entities.md#the-storage)), where core's own
+  "Delete content" removes the one translation.
+- **The confirm page.** The bulk form sends the account to the action's
+  `confirm_form_route_name`, `/surface-entity/delete`, a
+  `ConfirmFormBase` page. It lists the selected nodes as they are
+  stored, since each is there until the stage is applied, names the
+  stage by its label, asks "Delete 2 items?", and is never cached. The
+  label is read by running the stage's `read`, which the module resolves
+  to the update's context, through the pipeline with no values, a run
+  that writes nothing and answers what is stored in `$result->values`
+  ([From PHP](#from-php)); the read tool and the HTTP door read stored
+  values through the storage's `load()` instead. Before it asks, it
+  runs the stage's `changes` the same way and reads `total` through the
+  pipeline's `outputs()`: with `total` 0 (the stage was applied through
+  another door, or holds no write) it clears the selection and goes back
+  to the content list, "The stage of this selection holds nothing to
+  apply: it was applied or emptied. Select the content again to stage
+  removals afresh." With no selection, or a stage that expired or was
+  discarded, it goes back to the content list with a message, the
+  selection cleared; with a stage the account may not read, it goes
+  back with the selection kept.
+- **Delete** runs the stage's `apply` through the pipeline for the
+  current user, the stage's owner ([Apply](#apply)): each delete is
+  checked again, its delete access and its token, and all are made in
+  one transaction. Committed, the page says "Deleted 2 items.", the
+  count of `applied`, clears the selection and goes back to the content
+  list, or to the `?destination` the bulk form set.
+- **A refusal** removes nothing. A refusal of a write is shown as one
+  error per refusal, by its path and its code, `/writes/1:
+  entity.content:node 3: what is stored changed since it was staged.
+  (conflict)`, the stage and the selection kept, and a last line that
+  ends in one of two ways. A `conflict` (a selected node changed since
+  it was staged) or a `not_found` (one was removed elsewhere) never
+  clears: the stage keeps the token it took and refuses a second delete
+  of the node, `not_found`, so the page says to select the content again
+  on the content list, which opens a new stage and replaces the
+  selection. Any other refusal, an `access` one among them, says the
+  stage keeps every delete; it clears once its cause does (the account
+  may delete the node again), and the page can then be submitted again.
+- **A refusal of the whole stage**, `does_not_apply` at no path, "The
+  stage was applied; nothing is pending." (applied through another
+  door since the page was built) or "Nothing is staged.", clears the
+  selection and goes back to the content list with that message alone:
+  no delete is left to keep.
+- **A race.** A stage that changed while it was being applied is
+  refused with "The stage changed while it was being applied (another
+  request, an edit to a selected item, or the stage expired, was
+  discarded or was applied); try again.": the page catches the
+  `StageRaceException` apply throws and is built again, so the selection
+  is kept when the lock was not had or a selected item changed, and
+  cleared when the stage was applied, expired or discarded by then.
+- **Cancel** is a link back to the content list, and a link may not
+  discard: the stage expires as any does, and the next selection
+  replaces this one in the temp store.
+
+The page reads the stage's `changes` for its `total` alone and lists
+none of its items: how a form door shows a run's outputs is decided with
+declared flows.
+(why: [decision](decisions.md#a-destructive-bulk-operation-stages-then-confirms-over-the-stage))
 
 ## Apply
 

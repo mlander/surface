@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\Form\FormState;
+use Drupal\Core\Url;
 use Drupal\language\Entity\ConfigurableLanguage;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
@@ -31,7 +32,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * the tool says it removed it, and a second call names nothing; delete
  * access is core's, `delete any` or `delete own`, never the update's;
  * field access is asked as under a write; the form route draws a
- * confirmation and removes on submit.
+ * confirmation, removes on submit and goes back to the landing page.
  *
  * @see \Drupal\surface_examples_entity\Storage\ContentEntityStorage
  */
@@ -348,7 +349,15 @@ class ContentEntityDeleteTest extends SurfaceKernelTestBase {
     $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $form_state);
     $this->assertSame([], $form_state->getErrors());
     $this->assertNull($this->stored($node->id()));
-    $this->assertSame(['Delete Basic page: removed.'], array_map('strval', $this->container->get('messenger')->messagesByType('status')));
+    // The example's cosmetics: what was deleted, and back to the landing
+    // page, since the id the form was served at names nothing now. A
+    // programmed submission is not redirected, so the flag is dropped to
+    // read where the form sends the account.
+    $this->assertSame(['The page <em class="placeholder">Going by form</em> has been deleted.'], array_map('strval', $this->container->get('messenger')->messagesByType('status')));
+    $form_state->setProgrammed(FALSE);
+    $redirect = $form_state->getRedirect();
+    $this->assertInstanceOf(Url::class, $redirect);
+    $this->assertSame('surface_examples_entity.index', $redirect->getRouteName());
   }
 
 }

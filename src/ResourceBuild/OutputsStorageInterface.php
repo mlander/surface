@@ -10,15 +10,18 @@ use Drupal\surface\Pipeline\PreparedValues;
 /**
  * A pipeline storage that reads back what a call answers with.
  *
- * The doors ask it for a call's outputs once the pipeline has run: the
- * tool, and the HTTP door's write and list. StorageAdapter answers it
- * from the resource's storage; a storage that stands in front of the
- * adapter is to answer it too, so a door reads outputs from whichever
- * storage it was handed and never asks which class that is.
+ * The pipeline asks it for a call's outputs once the call has run, and
+ * every door reads them through the pipeline's outputs(): the tool, the
+ * HTTP door's write and list, apply, and PHP code. StorageAdapter answers
+ * it from the resource's storage; a storage that stands in front of the
+ * adapter is to answer it too, so the pipeline reads outputs from
+ * whichever storage it was handed and no door asks which class that is.
  *
  * Internal beside StorageAdapter, a final internal class: nothing an
- * author writes implements it or calls it.
+ * author writes implements it or calls it; a caller reads what it says
+ * through SurfacePipelineInterface::outputs().
  *
+ * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::outputs()
  * @see \Drupal\surface\ResourceBuild\StorageAdapter::outputs()
  *
  * @internal

@@ -1,0 +1,5 @@
+# The bulk action "Delete content through a stage" takes no configuration,
+# as core's node actions that take none.
+action.configuration.surface_entity_stage_delete:
+  type: action_configuration_default
+  label: 'Delete content through a stage configuration'

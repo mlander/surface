@@ -523,7 +523,7 @@ final class OpenApiDocument {
     $written = match (TRUE) {
       $creates => (string) $this->t("The write: 201 with the created thing's Location, the envelope rebuilt and, under created, where it now lives. With dryRun, the same run stopped before anything is written, 200. A refusal is 422, nothing written."),
       $kind === OperationDefinition::READ => (string) $this->t('The run: the values checked, and nothing written at all. A refusal is 422.'),
-      $kind === OperationDefinition::DELETE => (string) $this->t('The removal, with no body, held by If-Match to the stored values its ETag named (412 when they changed): 200 with the values the thing held, and no envelope, since it is gone. With dryRun, the same run stopped before anything is removed. A refusal is 422, nothing removed.'),
+      $kind === OperationDefinition::DELETE => (string) $this->t('The removal, with no body, held by If-Match to the stored values its ETag named (412 when they changed): 200 with the values the thing held, and no envelope: the thing is gone, or, under the X-Surface-Stage header, its removal is staged and nothing is removed until the stage is applied. With dryRun, the same run stopped before anything is removed. A refusal is 422, nothing removed.'),
       default => (string) $this->t('The write, held by If-Match to the stored values its ETag named (412 when they changed): 200 with the envelope rebuilt and the new ETag. With dryRun, the same run stopped before anything is written. A refusal is 422, nothing written.'),
     };
     $answers = [
