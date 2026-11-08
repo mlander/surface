@@ -1803,16 +1803,17 @@ and the test module's camp, which lists the hut from a provider.
 Variants at a key may be stored flat: the storage keeps the chosen
 variant's keys beside the deciding key, with nothing stored at the key
 itself, while every door still asks for them under the key. It is a
-storage layout, not a way to compose. The blueprint states what is
-asked, and a setting on the map `attachVariants()` returns,
-`->setSetting(Variants::STORED_AS, Variants::FLAT)`, says how it is
-kept. `Storage\FlatVariantsLayout` applies it for the config storages,
-`ConfigObjectStorage` and `ConfigEntityStorage`, beside the layout that
-stores a reference by uuid. It is the shape core gives a condition's
-settings and a views handler's options, and the block example stores
-each visibility condition's settings so, in the block's config entity
-(`VisibilityConditionStructure`). The test module's kit stores its gear
-so:
+storage layout, not a way to compose. Stored flat is experimental: see
+[Variants stored flat](storage.md#variants-stored-flat). The blueprint
+states what is asked, and a setting on the map `attachVariants()`
+returns, `->setSetting(Variants::STORED_AS, Variants::FLAT)`, says how
+it is kept. `Storage\FlatVariantsLayout` applies it for the config
+storages, `ConfigObjectStorage` and `ConfigEntityStorage`, beside the
+layout that stores a reference by uuid. It is the shape core gives a
+condition's settings and a views handler's options, and the block
+example stores each visibility condition's settings so, in the block's
+config entity (`VisibilityConditionStructure`). The test module's kit
+stores its gear so:
 
 <!-- code: tests/modules/surface_resource_test/src/Resource/Kit/KitResource.php -->
 

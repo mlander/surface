@@ -670,6 +670,12 @@ as stored, at the owner's level or inside a child the owner stores.
 
 ### Variants stored flat
 
+**Experimental.** Variants stored flat is one of this module's bolder
+ideas, not a settled part of the pattern. Its PHP API, its stored shape
+and what its doors answer may change in any commit, and nothing is
+migrated. [What is promised](evolution.md#what-is-promised) says what
+the module does promise.
+
 Variants at a key whose map says
 `->setSetting(Variants::STORED_AS, Variants::FLAT)` are stored with the
 chosen variant's keys beside the deciding key and nothing at the key,

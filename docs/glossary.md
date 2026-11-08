@@ -588,6 +588,8 @@ a way to compose.
 
 Not in the introduction. Reference: [Stored flat](resources.md#stored-flat).
 
+Experimental: see [Variants stored flat](storage.md#variants-stored-flat).
+
 ### Variants mixed in
 
 Removed 2026-11-06: variants kept beside their deciding key are
@@ -618,6 +620,8 @@ notes what no verb takes in a `Reader\Reading`.
 Not in the introduction. Reference: [Reading a schema](reading-a-schema.md),
 [Config schema](reading-a-schema.md#config-schema).
 
+Experimental: see [Reading a schema](reading-a-schema.md).
+
 ### Open
 
 A key declared open accepts any value, as it is stored.
@@ -628,6 +632,8 @@ still holds what is stored there; both documents write it with its
 title and no type.
 
 Not in the introduction. Reference: [Config schema](reading-a-schema.md#config-schema).
+
+Experimental: see [Reading a schema](reading-a-schema.md).
 
 ### Port
 
@@ -789,6 +795,8 @@ stage, a directory of files.
 
 Not in the introduction. Reference: [Staging](staging.md).
 
+Experimental: see [Staging](staging.md).
+
 ### Staged write
 
 A staged write is a write kept in a stage instead of storage.
@@ -803,3 +811,5 @@ entry first. It answers `committed: true`.
 
 Not in the introduction. Reference:
 [Staging: the model](staging.md#the-model).
+
+Experimental: see [Staging](staging.md).
