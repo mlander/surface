@@ -213,8 +213,9 @@ interface ResourcesInterface {
    *   When it has no such operation.
    * @throws \LogicException
    *   When two providers declare the operation, it returns something
-   *   other than a context for its own id, or its context knows the key
-   *   reserved for the stage (StagedStorage::POSITION).
+   *   other than a context for its own id, or its context knows a key
+   *   reserved for the stage (StagedStorage::POSITION,
+   *   StageStorage::KEEP).
    */
   public function operation(string $resource, string $operation, array $arguments = [], ?Stage $stage = NULL): OperationContext;
 

@@ -7,7 +7,9 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Lock\DatabaseLockBackend;
 use Drupal\surface\ResourceBuild\NamesNothingException;
+use Drupal\surface\Staging\ListsStagesInterface;
 use Drupal\surface\Staging\StageRaceException;
+use Drupal\surface\Staging\StageRecord;
 use Drupal\surface\Staging\StageStore;
 use Drupal\surface\Storage\StageStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -76,11 +78,12 @@ class StageStoreTest extends SurfaceKernelTestBase {
     $this->assertIsArray($record);
     $keys = [
       'version', 'id', 'owner', 'label', 'status', 'opened', 'updated',
-      'applied_at', 'applied', 'next', 'writes',
+      'keep', 'applied_at', 'applied', 'next', 'writes',
     ];
     $this->assertSame($keys, array_keys($record));
-    $this->assertSame(StageStore::VERSION, $record['version']);
+    $this->assertSame(StageRecord::VERSION, $record['version']);
     $this->assertSame(['open', 1, []], [$record['status'], $record['next'], $record['writes']]);
+    $this->assertSame(604800, $record['keep'], 'Opened through the stage\'s create, a stage takes the long lifetime.');
 
     // A staged write: the record is still plain arrays and scalars.
     $result = $this->stage($id, 'stage_test.ledger', ['id' => 'a'], ['title' => 'Beta']);
@@ -170,6 +173,7 @@ class StageStoreTest extends SurfaceKernelTestBase {
       $this->container->get('surface.config_writes'),
       $this->container->get('surface.secret_codec'),
       $this->container->get('string_translation'),
+      3600,
     );
     $account = $this->container->get('current_user');
 
@@ -192,6 +196,89 @@ class StageStoreTest extends SurfaceKernelTestBase {
     $lock->asked = [];
     $storage->delete($delete, ['id' => $id], $account);
     $this->assertSame([['acquire', $name], ['release', $name]], $lock->asked);
+  }
+
+  /**
+   * Tests the record's `keep` is how long it lives after each write.
+   *
+   * A record with no `keep`, as every record written before stages
+   * carried one, is kept for the store's default and still read.
+   */
+  public function testKeepIsTheRecordsLifetime(): void {
+    $database = $this->container->get('database');
+    $expiry = fn (string $id): int => (int) $database->select('key_value_expire', 'k')->fields('k', ['expire'])
+      ->condition('collection', StageStore::COLLECTION)->condition('name', $id)->execute()->fetchField();
+    $now = $this->container->get('datetime.time')->getRequestTime();
+
+    $id = $this->open();
+    $record = $this->stages()->read($id);
+    $record['keep'] = 120;
+    $this->stages()->write($record);
+    $this->assertEqualsWithDelta($now + 120, $expiry($id), 5);
+
+    unset($record['keep']);
+    $this->stages()->write($record);
+    $this->assertEqualsWithDelta($now + 604800, $expiry($id), 5, 'No keep: the temp store expiry.');
+    $this->assertSame($record, $this->stages()->read($id), 'A record with no keep still reads.');
+    $this->assertSame($id, $this->stages()->named($id)->id);
+    $this->assertNotInstanceOf(ListsStagesInterface::class, $this->stages(), 'The shipped store does not list stages.');
+  }
+
+  /**
+   * Tests a lifetime resolves from its two names or seconds, and only so.
+   *
+   * Each answer is at least one second and at most StageRecord::MAX, so
+   * a site setting of zero never means the default and a huge number
+   * never overflows the expiry.
+   */
+  public function testKeepResolvesEachForm(): void {
+    $this->assertSame(21600, StageRecord::keep(StageRecord::SHORT, 604800), 'short: the form cache default.');
+    $this->setSetting('form_cache_expiration', 600);
+    $this->assertSame(600, StageRecord::keep(StageRecord::SHORT, 604800), 'short: the site setting.');
+    $this->setSetting('form_cache_expiration', 0);
+    $this->assertSame(1, StageRecord::keep(StageRecord::SHORT, 604800), 'short: a setting of zero is one second.');
+    $this->setSetting('form_cache_expiration', -5);
+    $this->assertSame(1, StageRecord::keep(StageRecord::SHORT, 604800), 'short: a negative setting is one second.');
+    $this->assertSame(604800, StageRecord::keep(StageRecord::LONG, 604800), 'long: the parameter.');
+    $this->assertSame(1, StageRecord::keep(StageRecord::LONG, 0), 'long: a parameter of zero is one second.');
+    $this->assertSame(90, StageRecord::keep(90, 604800), 'Seconds as given.');
+    $this->assertSame(StageRecord::MAX, StageRecord::keep(PHP_INT_MAX, 604800), 'Seconds past the maximum are cut to it.');
+    $this->assertSame(StageRecord::MAX, StageRecord::keep(StageRecord::LONG, PHP_INT_MAX), 'A long past the maximum is cut to it.');
+    $this->assertSame(315360000, StageRecord::MAX, 'Ten years.');
+    foreach (['forever', '120', '', 1.5, 0, -1, ['short'], NULL, TRUE] as $keep) {
+      try {
+        StageRecord::keep($keep, 604800);
+        $this->fail(sprintf('%s is refused.', var_export($keep, TRUE)));
+      }
+      catch (\InvalidArgumentException $e) {
+        $this->assertStringContainsString('"short", "long" or a positive integer of seconds', $e->getMessage());
+      }
+    }
+  }
+
+  /**
+   * Tests no owner's operation may know a key the stage reserves.
+   *
+   * The stage's storage reads the position of a staged create and the
+   * lifetime of a new stage from the context's known keys, so
+   * Resources::operation() refuses a resource whose own context knows
+   * either.
+   */
+  public function testReservedKeysAreRefused(): void {
+    $this->enableModules(['surface_reserved_test']);
+    $refusals = [
+      'position' => 'The "position" operation of reserved_test.thing knows the key "stage_position", which is reserved for the stage: the stage\'s storage reads it to tell a thing a stage creates.',
+      'keep' => 'The "keep" operation of reserved_test.thing knows the key "stage_keep", which is reserved for the stage: the stage\'s storage reads it for how long a new stage is kept.',
+    ];
+    foreach ($refusals as $operation => $message) {
+      try {
+        $this->resources()->operation('reserved_test.thing', $operation);
+        $this->fail(sprintf('The "%s" operation was not refused.', $operation));
+      }
+      catch (\LogicException $e) {
+        $this->assertSame($message, $e->getMessage());
+      }
+    }
   }
 
   /**

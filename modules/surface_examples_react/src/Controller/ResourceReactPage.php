@@ -23,7 +23,7 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Staging\Stage;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\SurfaceInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -103,7 +103,7 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    *   and builds it.
    * @param \Drupal\surface\ResourceBuild\KeyPaths $keyPaths
    *   What holds a value a link sends to the key it starts.
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   The stages, one of which a page's query may name.
    */
   public function __construct(
@@ -113,7 +113,7 @@ final class ResourceReactPage implements ContainerInjectionInterface {
     protected readonly OperationArguments $arguments,
     protected readonly ResourcesInterface $resources,
     protected readonly KeyPaths $keyPaths,
-    protected readonly StageStore $stages,
+    protected readonly StageStoreInterface $stages,
   ) {}
 
   /**

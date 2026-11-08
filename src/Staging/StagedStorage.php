@@ -137,7 +137,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
    *   The resource's storage, as the pipeline is handed it otherwise.
    * @param \Drupal\surface\Staging\Stage $stage
    *   The stage.
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   Where its record is kept.
    * @param string $resource
    *   The resource's id.
@@ -156,7 +156,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
   public function __construct(
     protected readonly StorageAdapter $adapter,
     protected readonly Stage $stage,
-    protected readonly StageStore $stages,
+    protected readonly StageStoreInterface $stages,
     protected readonly string $resource,
     protected readonly OperationContext $context,
     protected readonly string $storageClass,
@@ -202,7 +202,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
       if ($entry === NULL) {
         return $this->current = [];
       }
-      $this->address = StageStore::address($entry);
+      $this->address = StageRecord::address($entry);
       return $this->current = array_intersect_key($this->readable($entry), $surface->getDefinitions()->toArray());
     }
     if ($entry !== NULL) {
@@ -381,7 +381,7 @@ final class StagedStorage implements CreatingStorageInterface, DeletingStorageIn
       // docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it.
       if ($position !== NULL) {
         $entry = $record['writes'][$found];
-        $this->address = StageStore::address($entry);
+        $this->address = StageRecord::address($entry);
         if ($this->deletes()) {
           unset($record['writes'][$found]);
           $record['writes'] = array_values($record['writes']);

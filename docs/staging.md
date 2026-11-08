@@ -32,10 +32,16 @@ it when it is opened.
 **The record.** Each stage is one row of the expirable key-value
 collection `surface.stage` (`Staging\StageStore`, the service
 `surface.stages`): its owner, its label, its status (`open` or
-`applied`), and its writes in the order they were first staged. It is
-kept for the site's temp store expiry (`tempstore.expire`, a week by
-default) after its last write, then it expires and names nothing. Every
-write of a record takes a lock named for the stage.
+`applied`), its lifetime (`keep`), and its writes in the order they
+were first staged. It is kept for its lifetime after its last write,
+then it expires and names nothing. The lifetime is long, the site's
+temp store expiry (`tempstore.expire`, a week by default), unless a
+flow declares `keep: short`, the form cache's lifetime
+(`form_cache_expiration` in settings.php, six hours by default), for a
+flow finished in one sitting ([Flows](#flows)). The tool, the HTTP door
+and PHP code open long-lived stages. Every write of a record takes a
+lock named for the stage. A site may keep records elsewhere
+([Another store](#another-store)).
 
 **The owner.** The account that opened the stage is the only one that
 may use it (`Access\StageAccess`): read it, rename it, write into it,
@@ -248,7 +254,10 @@ $id = $pipeline->outputs($built, $storage, $result)['id'];
 
 `ResourcesInterface::storage()` takes the stage as its fifth argument
 and wraps the storage it builds otherwise; the pipeline runs unchanged.
-Ask the stage's access first, as the doors do:
+The `surface.stages` service is a `Staging\StageStoreInterface`; a
+class that takes it injects that interface, never `StageStore`, so a
+swapped store reaches it. Ask the stage's access first, as the doors
+do:
 
 ```php
 $stage = \Drupal::service('surface.stages')->named($id)->withArguments(['id' => 3]);
@@ -305,6 +314,67 @@ again. A flow's first step whose write is refused or races after it
 opened the stage deletes that stage, so no empty one is left.
 
 (why: [decision](decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context))
+
+## Another store
+
+The `surface.stages` service is the one place records are kept. A site
+may replace it with its own class that implements
+`Staging\StageStoreInterface`. The reliable way is the `alter()` method
+of a service provider (`ServiceModifierInterface`), which sets the
+service's class after every module's services are loaded. A
+`services.yml` that redefines `surface.stages` works only when that
+module's services load after this module's. Every consumer in the
+module is typed to the interface, so nothing else changes.
+
+**What a store must keep.** The record's shape, which
+`Staging\StageRecord` states and every store shares: a PHP array with
+no objects, written whole and read back unchanged, its `version`
+`StageRecord::VERSION`, its `status` one of `StageRecord::OPEN`,
+`APPLIED` and `VOIDED`. A store changes no key. Beyond the keys
+`read()`, `named()`, the create lookups and a listing read, the only key
+it acts on is `keep`. `read()` answers NULL for a record of another
+version or under another id (`StageRecord::readable()`). `write()`
+throws when it cannot keep the record, and runs outside the apply's
+database transaction. `now()` stamps a record's `opened` and `updated`,
+which a listing orders by. `lock()` tries, waits once for another
+request's lock, and tries again. A store answers `created()` and
+`createdAt()` from its `read()` through `StageRecord::created()` and
+`StageRecord::createdAt()`, which also read a create staged before
+creates carried an address (`StageRecord::address()`). Positions,
+tokens, the two-pass apply, sealing and the owner check live in the
+stage's storage, not the store.
+
+**What a store may change.** Where records live; how long they live
+(the record's `keep` is the seconds after its last write, resolved from
+`short`, `long` or seconds when the stage opened, which a store may
+honor or ignore); and whether it lists stages.
+
+**Costs of a long-lived store.** A stage holds a token of each stored
+thing it wrote to, taken the first time the stage read the thing
+([The token](#the-model)). The longer a stage lives, the likelier a
+later save changed what is stored, and apply refuses each such write as
+a conflict, to be staged again. A stage seals its secrets with a key
+derived from the site's `hash_salt`
+([Secrets in a stage](#secrets-in-a-stage)); after the salt changes, a
+record sealed before can no longer be opened, and its writes and its
+apply are refused, never sent with something else in place.
+
+**Listing.** A store that also implements
+`Staging\ListsStagesInterface` answers `openStages($owner)`, the ids of
+an account's open stages, newest first. The shipped store does not: its
+collection has no query by owner, so it would read every record. When
+the store lists, the first step of a flow with no stage in the query
+says "You have an open stage for this: resume it or start again." for
+the account's newest open stage whose first write is the route's
+operation of its resource under the same arguments, linking to the next
+step in that stage, or the confirm page of a one-step flow. The page is
+then not cached.
+
+The test module `surface_stage_test` ships `Staging\ArrayStageStore`, an
+in-memory store that ignores `keep` and lists stages, and
+`StageStoreSwapTest` runs a stage through it.
+
+(why: [decision](decisions.md#one-store-contract-a-stages-lifetime-is-data-on-its-record))
 
 ## Walk-through with drush
 
@@ -855,8 +925,13 @@ surface_examples_node_type.flow:
   operation's label by default. `redirect`, optional, is the route the
   page goes to once the stage is applied, handed the flow route's own
   parameters its path takes; without it the page stays on the confirm
-  page. The first step also draws every key in no group (here the name,
-  the machine name and the description). A key in a group no step names
+  page. `keep`, optional, is how long the stage the first step opens
+  lives after its last write: `short`, the form cache's lifetime
+  (`form_cache_expiration`, six hours by default), for a flow a person
+  finishes in one sitting, or `long`, the temp store expiry
+  (`tempstore.expire`, a week by default), the default. The first step
+  also draws every key in no group (here the name, the machine name and
+  the description). A key in a group no step names
   is never drawn and keeps what it holds.
   Every step writes through the route's one operation: a stage refuses
   a second operation on one thing.
@@ -1062,7 +1137,8 @@ did not move. Read the thing, stage again, apply again.
 apply made is recorded, and the stage still answers: `read`, and
 `changes` with `total: 0`. A second apply is refused, code
 `does_not_apply`, "The stage was applied; nothing is pending." The
-record expires as any record does, or `delete` removes it.
+record expires at the end of its lifetime, as any record does, or
+`delete` removes it.
 
 **Applying from elsewhere.** `Resources::build()` builds for the current
 user, so apply builds each write's data surface for the current user

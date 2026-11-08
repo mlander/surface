@@ -10,7 +10,7 @@ use Drupal\surface\Pipeline\SurfaceResult;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_stage_test\Storage\LedgerStorage;
@@ -38,10 +38,10 @@ trait StageTestTrait {
   /**
    * Gets the stages.
    *
-   * @return \Drupal\surface\Staging\StageStore
+   * @return \Drupal\surface\Staging\StageStoreInterface
    *   The service.
    */
-  protected function stages(): StageStore {
+  protected function stages(): StageStoreInterface {
     return $this->container->get('surface.stages');
   }
 

@@ -66,11 +66,13 @@ services:
   Drupal\surface\ResourceBuild\ResourcesInterface: '@surface.resources'
   # The stages: one record per stage in the expirable key-value collection
   # surface.stage, each write under a lock named for the stage, kept for the
-  # temp store expiry after the last.
+  # record's own lifetime (keep) after the last, or the temp store expiry. A
+  # site may swap the service for another StageStoreInterface; consumers
+  # are typed to the interface, so no alias names the class.
   surface.stages:
     class: Drupal\surface\Staging\StageStore
     arguments: ['@keyvalue.expirable', '@lock', '@datetime.time', '%tempstore.expire%']
-  Drupal\surface\Staging\StageStore: '@surface.stages'
+  Drupal\surface\Staging\StageStoreInterface: '@surface.stages'
   # Records the config an apply writes, so a rolled back apply resets what
   # config kept beside the database for those names.
   surface.config_writes:

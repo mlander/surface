@@ -16,7 +16,7 @@ use Drupal\surface\ResourceBuild\OperationArguments;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageStoreInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Route;
@@ -96,7 +96,7 @@ final class OperationAccessCheck implements AccessInterface {
    *   What maps the route's parameters onto the operation's.
    * @param \Drupal\surface\Access\OperationGate $gate
    *   The answers every door serving an operation gives alike.
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   The stages, which name the stage a page's query names.
    * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
    *   The request stack, whose current request stands in for the one
@@ -107,7 +107,7 @@ final class OperationAccessCheck implements AccessInterface {
     protected readonly ResourceRegistry $registry,
     protected readonly OperationArguments $arguments,
     protected readonly OperationGate $gate,
-    protected readonly StageStore $stages,
+    protected readonly StageStoreInterface $stages,
     protected readonly RequestStack $requestStack,
   ) {}
 

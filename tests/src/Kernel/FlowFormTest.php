@@ -9,6 +9,7 @@ use Drupal\Core\Routing\RouteBuildEvent;
 use Drupal\Core\Url;
 use Drupal\node\Entity\NodeType;
 use Drupal\surface\Access\OperationRouteSubscriber;
+use Drupal\surface\Form\Flow;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Staging\StageStore;
 use Drupal\surface_stage_test\Storage\ItineraryStorage;
@@ -97,6 +98,40 @@ class FlowFormTest extends SurfaceKernelTestBase {
     $this->assertSame('north', $this->trip()['region'], 'Nothing is written to the trip.');
     $this->assertStringContainsString('staged in', $this->statusMessage());
     $this->assertFalse($this->container->get('request_stack')->getCurrentRequest()->query->has('destination'), 'Next goes to the next step, whatever "destination" says.');
+  }
+
+  /**
+   * Tests a flow's `keep` is how long the stage it opens lives.
+   *
+   * Short is the form cache's lifetime, long the temp store's, the
+   * default; each later write starts the time again. The shipped store
+   * lists no stages, so step 1 offers none to resume.
+   */
+  public function testKeepIsTheStagesLifetime(): void {
+    $database = $this->container->get('database');
+    $expiry = fn (string $id): int => (int) $database->select('key_value_expire', 'k')->fields('k', ['expire'])
+      ->condition('collection', StageStore::COLLECTION)->condition('name', $id)->execute()->fetchField();
+    $now = $this->container->get('datetime.time')->getRequestTime();
+
+    $long = $this->firstStep();
+    $this->assertSame(604800, $this->stages()->read($long)['keep']);
+    $this->assertEqualsWithDelta($now + 604800, $expiry($long), 5);
+
+    $this->visit('/surface-test/itinerary/trip/flow-short');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $this->assertSame([], $this->container->get('messenger')->messagesByType('status'), 'The shipped store lists no stages: no resume is offered.');
+    $this->assertNotSame(0, $form['#cache']['max-age'] ?? NULL, 'With no listing, step 1 stays cacheable.');
+    [, $redirect] = $this->submitStep(['region' => 'south']);
+    $short = $redirect->getOption('query')['stage'];
+    $this->assertSame(21600, $this->stages()->read($short)['keep']);
+    $this->assertEqualsWithDelta($now + 21600, $expiry($short), 5);
+
+    // A later write starts the short time again.
+    $database->update('key_value_expire')->fields(['expire' => $now + 10])
+      ->condition('collection', StageStore::COLLECTION)->condition('name', $short)->execute();
+    $this->visit('/surface-test/itinerary/trip/flow-short?stage=' . $short . '&step=2');
+    $this->submitStep(['day' => 'tue', 'nights' => '3']);
+    $this->assertEqualsWithDelta($now + 21600, $expiry($short), 5);
   }
 
   /**
@@ -239,7 +274,7 @@ class FlowFormTest extends SurfaceKernelTestBase {
       '_surface_resource' => 'stage_test.itinerary',
       '_surface_operation' => 'update',
     ];
-    $shape = 'The bad route\'s "_surface_flow" is a map of "steps", a list of the group ids drawn one per step, an optional "label" and an optional "redirect", a route name, as { steps: [where, when] }';
+    $shape = 'The bad route\'s "_surface_flow" is a map of "steps", a list of the group ids drawn one per step, an optional "label", an optional "redirect", a route name, and an optional "keep", short or long, as { steps: [where, when] }';
     $cases = [
       $shape . ': "steps" lists at least one group id, each a non-empty string.' => $base + [
         '_surface_flow' => ['steps' => []],
@@ -260,6 +295,9 @@ class FlowFormTest extends SurfaceKernelTestBase {
       $shape . ': "redirect" is a non-empty string, or left out.' => $base + [
         '_surface_flow' => ['steps' => ['where'], 'redirect' => ['entity.node_type.collection']],
       ],
+      $shape . ': "keep" is "short" or "long", or left out.' => $base + [
+        '_surface_flow' => ['steps' => ['where'], 'keep' => 3600],
+      ],
       'The bad route declares "_surface_flow" and its "_form" is not Drupal\surface\Form\SurfaceOperationForm: only the operation form draws a flow\'s steps, so serve the route with it or a class extending it.' => [
         '_controller' => '\Drupal\surface_examples_react\Controller\ResourceReactPage::served',
         '_surface_flow' => ['steps' => ['where']],
@@ -275,6 +313,14 @@ class FlowFormTest extends SurfaceKernelTestBase {
       catch (\InvalidArgumentException $e) {
         $this->assertSame($message, $e->getMessage());
       }
+    }
+    // A flow built in code is held to the same two lifetimes.
+    try {
+      new Flow(['where'], keep: '3600');
+      $this->fail('The constructor did not refuse a third lifetime.');
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertSame('A flow\'s "keep" is "short" or "long", not "3600".', $e->getMessage());
     }
   }
 

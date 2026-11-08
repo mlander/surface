@@ -9,7 +9,7 @@ use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Resource\OperationAccessInterface;
 use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageStoreInterface;
 
 /**
  * A stage is its owner's: opened by an account, used by that one alone.
@@ -36,10 +36,10 @@ final class StageAccess implements OperationAccessInterface {
   /**
    * Constructs a StageAccess.
    *
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   Where the records are kept, which name their owners.
    */
-  public function __construct(protected readonly StageStore $stages) {}
+  public function __construct(protected readonly StageStoreInterface $stages) {}
 
   /**
    * {@inheritdoc}

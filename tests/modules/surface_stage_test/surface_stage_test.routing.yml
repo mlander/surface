@@ -1,5 +1,5 @@
 # The itinerary drawn over steps, one group a step, into a stage: what a
-# flow is checked against. Two flows hold and three are refused when the
+# flow is checked against. Four flows hold and three are refused when the
 # route is matched, each saying why.
 
 # An update over its three groups in order.
@@ -11,6 +11,30 @@ surface_stage_test.itinerary_flow:
     _surface_resource: 'stage_test.itinerary'
     _surface_operation: 'update'
     _surface_flow: { steps: [where, when, who], label: 'Edit a trip' }
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# The same update, its stage kept for the form cache's lifetime.
+surface_stage_test.itinerary_flow_short:
+  path: '/surface-test/itinerary/{id}/flow-short'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'update'
+    _surface_flow: { steps: [where, when, who], keep: short }
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# The same update in one step, which goes on to the confirm page.
+surface_stage_test.itinerary_flow_one:
+  path: '/surface-test/itinerary/{id}/flow-one'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'update'
+    _surface_flow: { steps: [where] }
   requirements:
     id: '[a-z0-9_-]+'
 

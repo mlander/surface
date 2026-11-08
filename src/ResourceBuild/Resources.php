@@ -29,8 +29,10 @@ use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
 use Drupal\surface\Staging\Stage;
 use Drupal\surface\Staging\StagedStorage;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageRecord;
+use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\Storage\SecretCodecInterface;
+use Drupal\surface\Storage\StageStorage;
 use Drupal\surface\Storage\ConfigEntityStorage;
 use Drupal\surface\Storage\ConfigObjectStorage;
 
@@ -1285,8 +1287,9 @@ final class Resources implements ResourcesInterface {
         OperationContext::class,
       ));
     }
-    // The stage's storage reads this key to tell a thing a stage creates,
-    // so no owner's context may know it.
+    // The stage's storage reads these keys, one to tell a thing a stage
+    // creates and one for a new stage's lifetime, so no owner's context
+    // may know them.
     // Decision: see docs/decisions.md#known-keys-that-are-not-identity.
     if (array_key_exists(StagedStorage::POSITION, $context->known)) {
       throw new \LogicException(sprintf(
@@ -1294,6 +1297,14 @@ final class Resources implements ResourcesInterface {
         $found->id,
         $resource,
         StagedStorage::POSITION,
+      ));
+    }
+    if (array_key_exists(StageStorage::KEEP, $context->known)) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation of %s knows the key "%s", which is reserved for the stage: the stage\'s storage reads it for how long a new stage is kept.',
+        $found->id,
+        $resource,
+        StageStorage::KEEP,
       ));
     }
     // Decision: see docs/decisions.md#a-contexts-id-is-the-operation-id.
@@ -1331,7 +1342,7 @@ final class Resources implements ResourcesInterface {
    */
   protected function stagedCreate(string $resource, OperationDefinition $found, array $arguments, Stage $stage): ?OperationContext {
     $definition = $this->registry->getDefinition($resource);
-    $stages = $this->classResolver->getInstanceFromDefinition(StageStore::class);
+    $stages = $this->classResolver->getInstanceFromDefinition(StageStoreInterface::class);
     $entry = $found->creates
       ? $stages->createdAt($stage, $definition->id, (int) $stage->creating)
       : $stages->created($stage, $definition->id, $arguments);
@@ -1340,7 +1351,7 @@ final class Resources implements ResourcesInterface {
     }
     $create = $this->operation($definition->name(), (string) $entry['operation'], (array) $entry['arguments']);
     $context = $create->withId($found->id, TRUE)->withKnown([StagedStorage::POSITION => (int) $entry['position']]);
-    foreach (StageStore::address($entry) as $key => $name) {
+    foreach (StageRecord::address($entry) as $key => $name) {
       if (!array_key_exists($key, $create->known)) {
         $context = $context->withConstraint($key, 'Choice', ['choices' => [$name], 'surface_fixed' => TRUE]);
       }
@@ -1411,7 +1422,7 @@ final class Resources implements ResourcesInterface {
     // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
     $codec = $this->classResolver->getInstanceFromDefinition('surface.secret_codec');
     assert($codec instanceof SecretCodecInterface);
-    return new StagedStorage($adapter, $stage, $this->classResolver->getInstanceFromDefinition(StageStore::class), $definition->id, $context, get_class($this->storageInstance($definition->name())), $definition->identity, $parameters, $codec);
+    return new StagedStorage($adapter, $stage, $this->classResolver->getInstanceFromDefinition(StageStoreInterface::class), $definition->id, $context, get_class($this->storageInstance($definition->name())), $definition->identity, $parameters, $codec);
   }
 
   /**

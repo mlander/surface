@@ -9,27 +9,31 @@ use Drupal\Core\KeyValueStore\KeyValueExpirableFactoryInterface;
 use Drupal\Core\KeyValueStore\KeyValueStoreExpirableInterface;
 use Drupal\Core\Lock\LockBackendInterface;
 use Drupal\surface\ResourceBuild\NamesNothingException;
-use Drupal\surface\Storage\StageStorage;
 
 /**
- * Where the stages are kept: one record per stage, until it expires.
+ * The shipped store: one record per stage, until it expires.
  *
- * The `surface.stages` service. Each record is a PHP array with no
- * objects, under the stage's id in the expirable key-value collection
- * `surface.stage`, written with the site's temp store expiry
- * (`tempstore.expire`), which every write resets; a read ignores a
- * record that expired. The record names its owner: who may use a stage
- * is the stage's access class's answer, which the door asks, so the store
- * takes no account and reads none.
+ * The `surface.stages` service. Each record is kept under the stage's id
+ * in the expirable key-value collection `surface.stage`, for its `keep`
+ * seconds after its last write; a record with no `keep` is kept for the
+ * temp store expiry (`tempstore.expire`), the $expire it is given. Every
+ * write starts the time again; a read ignores a record that expired. The
+ * record names its owner: who may use a stage is the stage's access
+ * class's answer, which the door asks, so the store takes no account and
+ * reads none.
  *
- * Writes to one record are serialized by a lock named for the stage,
- * taken and released inside each write: a staged write's commit, and
- * the stage's own create, update, apply and delete.
+ * Writes to one record are serialized by a lock named for the stage, on
+ * core's `lock` service, taken and released around each write: a staged
+ * write's commit, and the stage's own create, update, apply and delete.
+ *
+ * It does not implement ListsStagesInterface: the expirable collection
+ * has no query by owner, and listing an account's stages would read
+ * every stage of every account.
  *
  * Decision: see
  * docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection.
  */
-final class StageStore {
+final class StageStore implements StageStoreInterface {
 
   /**
    * The expirable key-value collection the records are kept in.
@@ -37,13 +41,6 @@ final class StageStore {
    * @internal
    */
   public const COLLECTION = 'surface.stage';
-
-  /**
-   * The version of the record's shape this store reads and writes.
-   *
-   * @internal
-   */
-  public const VERSION = 1;
 
   /**
    * How long a write waits, in seconds, for a lock another request holds.
@@ -62,7 +59,8 @@ final class StageStore {
    * @param \Drupal\Component\Datetime\TimeInterface $time
    *   The time, for when a record is written.
    * @param int $expire
-   *   How long a record is kept after its last write, in seconds.
+   *   How long a record with no `keep` is kept after its last write, in
+   *   seconds.
    */
   public function __construct(
     protected readonly KeyValueExpirableFactoryInterface $keyValue,
@@ -72,16 +70,7 @@ final class StageStore {
   ) {}
 
   /**
-   * Gets the stage an id names, for a storage to be handed.
-   *
-   * @param string $id
-   *   The stage's id.
-   *
-   * @return \Drupal\surface\Staging\Stage
-   *   The stage, with no arguments yet.
-   *
-   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
-   *   At `stage`, when no stage has the id, or it expired.
+   * {@inheritdoc}
    */
   public function named(string $id): Stage {
     $record = $this->read($id);
@@ -92,159 +81,55 @@ final class StageStore {
   }
 
   /**
-   * Reads a stage's record.
-   *
-   * @param string $id
-   *   The stage's id.
-   *
-   * @return array|null
-   *   The record, or NULL when there is none, it expired, or it is of a
-   *   shape this store does not read.
-   *
-   * @internal
+   * {@inheritdoc}
    */
   public function read(string $id): ?array {
     if ($id === '') {
       return NULL;
     }
     $record = $this->records()->get($id);
-    if (!is_array($record) || ($record['version'] ?? NULL) !== self::VERSION || ($record['id'] ?? NULL) !== $id) {
-      return NULL;
-    }
-    return $record;
+    return StageRecord::readable($record, $id) ? $record : NULL;
   }
 
   /**
-   * Finds the create a stage holds of a resource, by the address given it.
+   * {@inheritdoc}
    *
-   * The create entry of the resource in the stage's open record whose
-   * every address key is among the arguments and equal to it as text, so
-   * `-3`, `"-3"` and a caller's name `abc` each name what was staged under
-   * them. One record read.
-   *
-   * @param \Drupal\surface\Staging\Stage $stage
-   *   The stage.
-   * @param string $resource
-   *   The resource's id.
-   * @param array<string, mixed> $arguments
-   *   The operation's arguments, by name.
-   *
-   * @return array|null
-   *   The entry, or NULL when the stage is gone, applied or voided, or
-   *   creates no thing of the resource under these arguments.
-   *
-   * @internal
+   * One record read.
    */
   public function created(Stage $stage, string $resource, array $arguments): ?array {
-    $record = $this->read($stage->id);
-    if ($record === NULL || $record['status'] !== StageStorage::OPEN) {
-      return NULL;
-    }
-    foreach ((array) $record['writes'] as $write) {
-      $address = $write['kind'] === 'create' && $write['resource'] === $resource ? self::address($write) : [];
-      if ($address === []) {
-        continue;
-      }
-      foreach ($address as $key => $value) {
-        $given = $arguments[$key] ?? NULL;
-        if (!is_scalar($given) || (string) $given !== (string) $value) {
-          continue 2;
-        }
-      }
-      return $write;
-    }
-    return NULL;
+    return StageRecord::created($this->read($stage->id), $resource, $arguments);
   }
 
   /**
-   * Finds the create a stage holds of a resource, by its position.
-   *
-   * @param \Drupal\surface\Staging\Stage $stage
-   *   The stage.
-   * @param string $resource
-   *   The resource's id.
-   * @param int $position
-   *   The create's position.
-   *
-   * @return array|null
-   *   The entry, or NULL when the stage is gone, applied or voided, or
-   *   holds no create of the resource at the position.
-   *
-   * @internal
+   * {@inheritdoc}
    */
   public function createdAt(Stage $stage, string $resource, int $position): ?array {
-    $record = $this->read($stage->id);
-    if ($record === NULL || $record['status'] !== StageStorage::OPEN) {
-      return NULL;
-    }
-    foreach ((array) $record['writes'] as $write) {
-      if ($write['kind'] === 'create' && $write['resource'] === $resource && (int) $write['position'] === $position) {
-        return $write;
-      }
-    }
-    return NULL;
+    return StageRecord::createdAt($this->read($stage->id), $resource, $position);
   }
 
   /**
-   * Reads the address a create entry was given, by identity key.
+   * {@inheritdoc}
    *
-   * Written once, at the create's first commit: `-position` for each
-   * identity key its context knew to be empty, the name the caller gave
-   * for each it did not know. An entry staged before addresses were
-   * written has none, and is read as `-position` for each key its context
-   * knew to be empty.
-   *
-   * @param array $write
-   *   A create entry.
-   *
-   * @return array<string, int|string>
-   *   The address.
-   *
-   * @internal
-   */
-  public static function address(array $write): array {
-    if (isset($write['address']) && is_array($write['address'])) {
-      return $write['address'];
-    }
-    $empty = array_filter((array) ($write['known'] ?? []), static fn (mixed $value): bool => $value === NULL);
-    return array_map(static fn (): int => -(int) $write['position'], $empty);
-  }
-
-  /**
-   * Writes a stage's record, its expiry starting again.
-   *
-   * @param array $record
-   *   The record, which names its id.
-   *
-   * @internal
+   * Kept for the record's `keep` seconds, or for $expire when it has
+   * none, starting now.
    */
   public function write(array $record): void {
-    $this->records()->setWithExpire((string) $record['id'], $record, $this->expire);
+    $keep = $record['keep'] ?? NULL;
+    $this->records()->setWithExpire((string) $record['id'], $record, is_int($keep) && $keep > 0 ? $keep : $this->expire);
   }
 
   /**
-   * Deletes a stage's record.
-   *
-   * @param string $id
-   *   The stage's id.
-   *
-   * @internal
+   * {@inheritdoc}
    */
   public function delete(string $id): void {
     $this->records()->delete($id);
   }
 
   /**
-   * Takes the lock of one stage, waiting once for another request's.
+   * {@inheritdoc}
    *
-   * @param string $id
-   *   The stage's id.
-   *
-   * @return bool
-   *   TRUE when this request holds it; FALSE when another still did after
-   *   the wait.
-   *
-   * @internal
+   * The lock is named for the collection and the stage, and the wait is
+   * WAIT seconds.
    */
   public function lock(string $id): bool {
     $name = self::COLLECTION . ':' . $id;
@@ -256,24 +141,14 @@ final class StageStore {
   }
 
   /**
-   * Releases the lock of one stage.
-   *
-   * @param string $id
-   *   The stage's id.
-   *
-   * @internal
+   * {@inheritdoc}
    */
   public function release(string $id): void {
     $this->lock->release(self::COLLECTION . ':' . $id);
   }
 
   /**
-   * Gets the time a record is written at.
-   *
-   * @return int
-   *   The request time.
-   *
-   * @internal
+   * {@inheritdoc}
    */
   public function now(): int {
     return $this->time->getRequestTime();

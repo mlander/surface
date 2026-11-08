@@ -26,7 +26,8 @@ use Drupal\surface\ResourceBuild\StorageAdapter;
 use Drupal\surface\Staging\ConfigWrites;
 use Drupal\surface\Staging\StageRaceException;
 use Drupal\surface\Staging\StagedSecrets;
-use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Staging\StageRecord;
+use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\SurfaceAccess;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -86,12 +87,12 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
   /**
    * A stage's status while it takes writes.
    */
-  public const OPEN = 'open';
+  public const OPEN = StageRecord::OPEN;
 
   /**
    * A stage's status once applied.
    */
-  public const APPLIED = 'applied';
+  public const APPLIED = StageRecord::APPLIED;
 
   /**
    * A stage's status once an apply failed after a schema change.
@@ -99,7 +100,21 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    * The writes at and before the failing position could not be rolled
    * back, so the stage holds no writes and takes none: it is discarded.
    */
-  public const VOIDED = 'voided';
+  public const VOIDED = StageRecord::VOIDED;
+
+  /**
+   * The known key that names a new stage's lifetime.
+   *
+   * Carried by the context of the stage's own `create` when its caller
+   * asks for a lifetime other than the default: StageRecord::SHORT or
+   * seconds; absent, the lifetime is StageRecord::LONG, the default.
+   * prepare() resolves it into the record's `keep` (StageRecord::keep()).
+   * No input of the stage, so the tool and the HTTP door open every stage
+   * with the long lifetime.
+   *
+   * @internal
+   */
+  public const KEEP = 'stage_keep';
 
   /**
    * What a key's name escapes to in a JSON Pointer.
@@ -114,7 +129,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
   /**
    * Constructs a StageStorage.
    *
-   * @param \Drupal\surface\Staging\StageStore $stages
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   Where the records are kept.
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which apply builds each staged write with.
@@ -133,9 +148,12 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    *   The codec the stage's records are sealed with.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
+   * @param int $long
+   *   The seconds of the long lifetime, the temp store expiry
+   *   (`tempstore.expire`).
    */
   public function __construct(
-    protected readonly StageStore $stages,
+    protected readonly StageStoreInterface $stages,
     protected readonly ResourcesInterface $resources,
     protected readonly SurfacePipelineInterface $pipeline,
     protected readonly Connection $database,
@@ -147,6 +165,8 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
     #[Autowire(service: 'surface.secret_codec')]
     protected readonly SecretCodecInterface $codec,
     TranslationInterface $string_translation,
+    #[Autowire(param: 'tempstore.expire')]
+    protected readonly int $long,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -165,6 +185,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
       $container->get('surface.config_writes'),
       $container->get('surface.secret_codec'),
       $container->get('string_translation'),
+      (int) $container->getParameter('tempstore.expire'),
     );
   }
 
@@ -239,13 +260,14 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
     if ($context->creates) {
       $now = $this->stages->now();
       return [
-        'version' => StageStore::VERSION,
+        'version' => StageRecord::VERSION,
         'id' => $this->uuid->generate(),
         'owner' => (int) $account->id(),
         'label' => is_string($values['label'] ?? NULL) ? $values['label'] : NULL,
         'status' => self::OPEN,
         'opened' => $now,
         'updated' => $now,
+        'keep' => StageRecord::keep($context->known[self::KEEP] ?? StageRecord::LONG, $this->long),
         'applied_at' => NULL,
         'applied' => NULL,
         'next' => 1,
@@ -751,7 +773,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    */
   protected static function described(array $write): array {
     $parameters = [];
-    $named = $write['kind'] === 'create' ? StageStore::address($write) : (array) $write['arguments'];
+    $named = $write['kind'] === 'create' ? StageRecord::address($write) : (array) $write['arguments'];
     foreach ($named as $name => $value) {
       $parameters[] = [
         'name' => (string) $name,

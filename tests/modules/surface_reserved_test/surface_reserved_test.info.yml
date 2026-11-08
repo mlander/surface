@@ -1,0 +1,8 @@
+name: 'Surface API reserved keys test'
+type: module
+description: 'A resource whose operations know the known keys the stage reserves, which Resources::operation() refuses.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

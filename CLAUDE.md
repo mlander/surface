@@ -356,7 +356,10 @@ the record of the rework that brought the module to the pattern.
   discarded: the base module's one resource, `surface.stage`
   (`Resource\StageResource`), its id a UUID, its record one row of the
   expirable key-value collection `surface.stage` (`Staging\StageStore`,
-  `surface.stages`), its owner the only account its access lets in
+  the `surface.stages` service, typed `Staging\StageStoreInterface`,
+  which a site may swap), kept for its lifetime `keep` after its last
+  write (long, `tempstore.expire`, unless a flow says `keep: short`,
+  `form_cache_expiration`), its owner the only account its access lets in
   (`Access\StageAccess`). Code writes into one by handing a
   `Staging\Stage` to `ResourcesInterface::storage()`, which wraps the
   storage in a `Staging\StagedStorage`: load answers the stage first,
@@ -793,7 +796,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2097, Assertions: 51641, Errors: 0, Failures: 0, Skipped: 3. Classes: 294 of 294, 8 at a time, browser classes 4.
+phpunit: Tests: 2105, Assertions: 51873, Errors: 0, Failures: 0, Skipped: 3. Classes: 295 of 295, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -813,8 +816,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1984, Assertions: 47242, Deprecations: 134, Skipped: 3. Classes:
-241, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1992, Assertions: 47474, Deprecations: 134, Skipped: 3. Classes:
+242, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1087,9 +1090,13 @@ src/Pipeline/            Access, accept, validate, prepare, commit; results.
                          interfaces; TransactionalStorageInterface is
                          what a storage implements to be staged.
 src/Storage/             Where accepted values are written; settings layouts.
-src/Staging/             The stage's record store (StageStore), the
-                         staged-storage wrapper (StagedStorage), the
-                         Stage it is handed, and StageRaceException,
+src/Staging/             The store contract (StageStoreInterface, and
+                         the optional ListsStagesInterface), the
+                         shipped store (StageStore), the record's shape
+                         and lookups every store shares (StageRecord,
+                         public), the staged-storage wrapper
+                         (StagedStorage), the Stage it is handed, and
+                         StageRaceException,
                          public, which a staged write, an apply or a
                          stage operation throws on a race; the one
                          rule of where a stage applies (Stageable),
@@ -1164,8 +1171,14 @@ registered because a resource or structure names them.
 
 The declared flows' fixture is `tests/modules/surface_stage_test`'s
 itinerary (`ItineraryResource`, `ItineraryStorage`, and the flow routes
-in `surface_stage_test.routing.yml`); the example is the content type's
+in `surface_stage_test.routing.yml`, one of them `keep: short` and one
+of a single step); the example is the content type's
 `surface_examples_node_type.flow` route.
+The same module's `Staging\ArrayStageStore` is the second store, in
+memory, which `StageStoreSwapTest` swaps in for `surface.stages`.
+`tests/modules/surface_reserved_test` holds a resource whose operations
+know the stage's reserved keys, which `StageStoreTest` enables to pin
+the refusals of `Resources::operation()`.
 
 `surface_examples_entity` also holds the hand-built flow: the bulk
 action in `src/Plugin/Action/` (`StageDeleteAction`), its confirm page
