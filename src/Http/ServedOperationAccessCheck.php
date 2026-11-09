@@ -11,7 +11,7 @@ use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Access\OperationGate;
-use Drupal\surface\Form\Flow;
+use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\ResourceBuild\NamesNothingException;
@@ -169,14 +169,14 @@ final class ServedOperationAccessCheck implements AccessInterface {
       return $permission;
     }
     // A page names its stage in its query, as the operation form does.
-    $queried = $api ? NULL : ($request->query->all()[Flow::STAGE] ?? NULL);
+    $queried = $api ? NULL : ($request->query->all()[CompiledFlow::STAGE] ?? NULL);
     if ($queried !== NULL && $queried !== '') {
       if (!is_string($queried)) {
         return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
       }
       if (!$this->servedOperations->stageable($resource, $operation)) {
-        $refusal = sprintf('A stage does not apply to the "%s" operation of %s (%s), so this page takes no "%s" in its query.', $operation, $resource, Violation::DOES_NOT_APPLY, Flow::STAGE);
-        return AccessResult::forbidden($refusal)->addCacheContexts(['url.query_args:' . Flow::STAGE])->setCacheMaxAge(0);
+        $refusal = sprintf('A stage does not apply to the "%s" operation of %s (%s), so this page takes no "%s" in its query.', $operation, $resource, Violation::DOES_NOT_APPLY, CompiledFlow::STAGE);
+        return AccessResult::forbidden($refusal)->addCacheContexts(['url.query_args:' . CompiledFlow::STAGE])->setCacheMaxAge(0);
       }
       $stage = $queried;
       $parameters = $this->servedOperations->parameters($resource, $operation, $request);
@@ -241,7 +241,7 @@ final class ServedOperationAccessCheck implements AccessInterface {
       $access = $access->andIf($staged);
     }
     if (!$api && $access->isAllowed()) {
-      $access = $access->andIf(AccessResult::allowed()->addCacheContexts(['url.query_args:' . Flow::STAGE]));
+      $access = $access->andIf(AccessResult::allowed()->addCacheContexts(['url.query_args:' . CompiledFlow::STAGE]));
     }
     // An account that holds the operation's permission for what the
     // parameters name may hear why the rest refused; any other learns

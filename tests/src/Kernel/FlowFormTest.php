@@ -13,7 +13,7 @@ use Drupal\Core\Routing\RouteBuildEvent;
 use Drupal\Core\Url;
 use Drupal\node\Entity\NodeType;
 use Drupal\surface\Access\OperationRouteSubscriber;
-use Drupal\surface\Form\Flow;
+use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Staging\StageStore;
 use Drupal\surface\Storage\StageStorage;
@@ -283,20 +283,20 @@ class FlowFormTest extends SurfaceKernelTestBase {
       '_surface_resource' => 'stage_test.itinerary',
       '_surface_operation' => 'update',
     ];
-    $shape = 'The bad route\'s "_surface_flow" is a map of "steps", a list of the steps drawn in order, an optional "label", an optional "redirect", a route name, and an optional "keep", short or long, as { steps: [where, when] }';
+    $shape = 'The bad route\'s "_surface_flow" is the id of a flow class, or a map of "steps", a list of the steps drawn in order, an optional "label", an optional "redirect", a route name, and an optional "keep", short or long, as { steps: [where, when] }';
     $ledger = ['resource' => 'stage_test.ledger', 'operation' => 'update'];
     $notes = $ledger + ['group' => 'notes'];
     $cases = [
-      $shape . ': "steps" lists at least one step, each a group id of the route\'s operation, a non-empty string, or a step over another resource, a map of "resource" and "operation", each a non-empty string, an optional "group", a non-empty string, and optional "arguments", a map of values by parameter name, as { resource: example.settings, operation: configure }.' => $base + [
+      $shape . ': "steps" lists at least one step, each a group id of the route\'s operation, a non-empty string; keys of the route\'s operation, a map of "keys", a list of distinct keys, as { keys: [region, day] }; or a step over another resource, a map of "resource" and "operation", each a non-empty string, optional "keys" or an optional "group", a non-empty string, and optional "arguments", a map of values by parameter name, as { resource: example.settings, operation: configure }.' => $base + [
         '_surface_flow' => ['steps' => []],
       ],
-      'The bad route\'s "_surface_flow" starts with a step over another resource: the first step\'s submit opens the stage for the route\'s own operation, so list one of its group ids first.' => $base + [
+      'The bad route\'s "_surface_flow" starts with a step over another resource: the first step\'s submit opens the stage for the route\'s own operation, so list one of its group ids or keys first.' => $base + [
         '_surface_flow' => ['steps' => [$ledger, 'where']],
       ],
       'The bad route\'s "_surface_flow" lists the group "notes" of the "update" operation of stage_test.ledger twice: each group is drawn at one step.' => $base + [
         '_surface_flow' => ['steps' => ['where', $notes, $notes]],
       ],
-      'The bad route\'s "_surface_flow" draws the "update" operation of stage_test.ledger at more than one step, and one of them names no group: a step with no group draws the whole operation, so give each step over it a group.' => $base + [
+      'The bad route\'s "_surface_flow" draws the "update" operation of stage_test.ledger at more than one step, and one of them names no keys and no group: a step with neither draws the whole operation, so give each step over it keys or a group.' => $base + [
         '_surface_flow' => ['steps' => ['where', $ledger, $notes]],
       ],
       $shape . '.' => $base + [
@@ -305,7 +305,7 @@ class FlowFormTest extends SurfaceKernelTestBase {
       'The bad route\'s "_surface_flow" lists the group "where" twice: each group is drawn at one step.' => $base + [
         '_surface_flow' => ['steps' => ['where', 'where']],
       ],
-      'The bad route declares "_surface_flow" and names no resource and operation: a flow draws one operation\'s form over steps, so name them in "_surface_resource" and "_surface_operation".' => [
+      'The bad route declares "_surface_flow" and names no resource and operation: a flow draws one operation\'s form over steps, so name them in "_surface_resource" and "_surface_operation", or name a flow class, whose first step names them.' => [
         '_form' => SurfaceOperationForm::class,
         '_surface_flow' => ['steps' => ['where']],
       ],
@@ -327,7 +327,7 @@ class FlowFormTest extends SurfaceKernelTestBase {
       $collection = new RouteCollection();
       $collection->add('bad', new Route('/bad/{id}', $defaults, ['id' => '[a-z]+']));
       try {
-        (new OperationRouteSubscriber())->onAlterRoutes(new RouteBuildEvent($collection));
+        (new OperationRouteSubscriber($this->container->get('surface.flows')))->onAlterRoutes(new RouteBuildEvent($collection));
         $this->fail('The rebuild did not refuse: ' . $message);
       }
       catch (\InvalidArgumentException $e) {
@@ -341,7 +341,7 @@ class FlowFormTest extends SurfaceKernelTestBase {
       '_surface_flow' => ['steps' => ['where', $ledger + ['step' => 2]]],
     ], ['id' => '[a-z]+']));
     try {
-      (new OperationRouteSubscriber())->onAlterRoutes(new RouteBuildEvent($collection));
+      (new OperationRouteSubscriber($this->container->get('surface.flows')))->onAlterRoutes(new RouteBuildEvent($collection));
       $this->fail('The rebuild did not refuse a step over another resource with a key it does not take.');
     }
     catch (\InvalidArgumentException $e) {
@@ -349,7 +349,7 @@ class FlowFormTest extends SurfaceKernelTestBase {
     }
     // A flow built in code is held to the same two lifetimes.
     try {
-      new Flow(['where'], keep: '3600');
+      new CompiledFlow(['where'], keep: '3600');
       $this->fail('The constructor did not refuse a third lifetime.');
     }
     catch (\InvalidArgumentException $e) {
@@ -549,24 +549,24 @@ class FlowFormTest extends SurfaceKernelTestBase {
     $whole = ['resource' => 'stage_test.ledger', 'operation' => 'update', 'arguments' => ['id' => 'row']];
     $by_class = ['group' => 'notes', 'resource' => LedgerResource::class] + $whole;
     $route->setDefault('_surface_flow', ['steps' => ['where', $whole, $by_class]]);
-    Flow::assertWritten($route, 'example.flow');
+    CompiledFlow::assertWritten($route, 'example.flow');
     $this->serveBuilt('example.flow', $route, ['id' => 'trip']);
-    $this->assertRefused('The example.flow route\'s "_surface_flow" draws the "update" operation of stage_test.ledger at more than one step, and one of them names no group: a step with no group draws the whole operation, so give each step over it a group.');
+    $this->assertRefused('The example.flow route\'s "_surface_flow" draws the "update" operation of stage_test.ledger at more than one step, and one of them names no keys and no group: a step with neither draws the whole operation, so give each step over it keys or a group.');
 
     $own = ['resource' => 'stage_test.itinerary', 'operation' => 'update', 'group' => 'when'];
     $route->setDefault('_surface_flow', ['steps' => ['where', $own]]);
-    Flow::assertWritten($route, 'example.flow');
+    CompiledFlow::assertWritten($route, 'example.flow');
     $this->serveBuilt('example.flow', $route, ['id' => 'trip']);
-    $this->assertRefused('The example.flow route\'s flow draws the route\'s own operation, "update" of stage_test.itinerary, as a step over another resource at step 2: its keys are drawn by the route\'s group steps, so write it as a group.');
+    $this->assertRefused('The example.flow route\'s flow draws the route\'s own operation, "update" of stage_test.itinerary, as a step over another resource at step 2: the route\'s own operation takes its arguments from the route\'s path, so in a map write the step as a group or { keys }, with no "resource" or "operation", and in a class give the step no arguments.');
 
     $one = ['resource' => 'stage_test.ledger', 'operation' => 'update'];
     $true = $one + ['arguments' => ['id' => TRUE]];
     $text = $one + ['arguments' => ['id' => '1']];
     $route->setDefault('_surface_flow', ['steps' => ['where', $true, $text]]);
-    Flow::assertWritten($route, 'example.flow');
+    CompiledFlow::assertWritten($route, 'example.flow');
     $route->setDefault('_surface_flow', ['steps' => ['where', $text, $text]]);
     $this->expectExceptionMessage('draws the "update" operation of stage_test.ledger at more than one step');
-    Flow::assertWritten($route, 'example.flow');
+    CompiledFlow::assertWritten($route, 'example.flow');
   }
 
   /**

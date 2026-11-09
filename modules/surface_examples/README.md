@@ -36,9 +36,11 @@ Example 18 is a caterer's keys declared twice, once with calls in
 `defineInputs()` as the earlier examples write them and once as
 properties of the class, each carrying an attribute, the same blueprint
 saving to one config object ([below](#example-18-declared-as-properties)).
-Example 19 is a flow: the event set up over three steps into one stage,
-two groups of one resource and then another resource, applied together
-from a confirm page ([below](#example-19-one-stage-several-steps)).
+Example 19 is a flow written as a class: the event set up over three
+steps into one stage, two steps of one resource and then another
+resource while ticket sales are open or a banner is shown, checked and
+applied together from
+a confirm page ([below](#example-19-one-stage-several-steps)).
 
 ```bash
 drush pm:install surface_examples
@@ -5283,13 +5285,93 @@ of code, counted without blank lines or comments:
 `/surface-examples/19`
 
 The event set up over three steps, all written into one stage, and
-nothing written to the site until the confirm page saves them. Steps 1
-and 2 are the two groups of `event.setup`, `basics` and `tickets`. Step
-3 is another resource, `event.notices`, drawn whole. Neither resource
-knows it is drawn in steps: the route declares the flow
-([Flows](../../docs/staging.md#flows)).
+nothing written to the site until the confirm page saves them. The flow
+is a class, `EventSetupFlow`: steps 1 and 2 split the keys of
+`event.setup` between them, so the resource declares no groups for
+them, and step 3 is another resource, `event.notices`, drawn whole
+while ticket sales are open or a banner is shown. Neither resource
+knows it is drawn in
+steps ([Flows](../../docs/staging.md#flows)).
 
-The route, with `_surface_flow`:
+The flow:
+
+<!-- code: src/Flow/EventSetupFlow.php -->
+
+```php
+#[Flow('event.setup_flow', label: new TranslatableMarkup('Set up the event'), keep: 'short')]
+final class EventSetupFlow implements FlowInterface, ChecksBeforeApplyInterface {
+
+  use StringTranslationTrait;
+
+  /**
+   * Constructs an EventSetupFlow.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service.
+   */
+  public function __construct(TranslationInterface $string_translation) {
+    $this->stringTranslation = $string_translation;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function defineSteps(StepsInterface $steps): void {
+    $steps->step('basics', 'event.setup', 'configure')
+      ->keys('name', 'date', 'capacity')
+      ->label($this->t('The event'))
+      ->description($this->t('What the event is called, when it is, and how many people it holds.'));
+
+    $steps->step('tickets', 'event.setup', 'configure')
+      ->keys('price', 'sales_open', 'note')
+      ->label($this->t('Tickets'));
+
+    $steps->step('notices', 'event.notices', 'configure')
+      ->label($this->t('Notices'))
+      ->description($this->t('Drawn while ticket sales are open or a banner is shown.'))
+      ->when(static fn (StagedInterface $staged): bool => $staged->value('event.setup', 'sales_open') === TRUE || $staged->value('event.notices', 'show_banner') === TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function beforeApply(StagedInterface $staged): array {
+    if ($staged->value('event.notices', 'show_banner') === TRUE && $staged->value('event.setup', 'sales_open') !== TRUE) {
+      return [new Violation('', '', $this->t('The notices show a banner while ticket sales are closed; open sales or hide the banner.'), 'banner_while_sales_closed')];
+    }
+    return [];
+  }
+
+}
+```
+
+A step names its id, a resource and one of its operations. `keys()`
+lists the keys it draws; a step that lists none and names no group draws
+the whole operation, as the notices do. `label()` and `description()`
+are the heading drawn above the step's fields. The first step is the
+route's operation and opens the stage, labeled "Set up the event". Each
+Next stages the step's keys and goes on to the next step drawn. Back
+shows what an earlier step staged, because every step reads through the
+stage; what you typed on this page is kept only when you press Next.
+Cancel discards the stage. `keep: 'short'` keeps the stage for the form
+cache's lifetime, six hours after its last write by default.
+
+`when()` draws the notices while the stage holds ticket sales open or
+a banner shown: with sales closed and no banner, Next on the tickets
+step goes to the confirm page, and a link to step 3 goes there too. It
+decides what is drawn, not what the stage holds: a banner's text staged
+at step 3 stays in the stage after sales are closed. `beforeApply()`
+refuses a banner shown while sales are closed: the confirm page refuses
+Save with its sentence until sales are open again or the banner is
+hidden, and step 3, drawn while the banner is shown, is where it is
+hidden. The check is the form's alone; the stage's `apply` tool and its
+HTTP path do not run it.
+
+The confirm page, `?step=confirm`, lists the writes of both resources
+and saves them together or not at all.
+
+The route names the flow by its id, and no resource or operation: it
+takes them from the flow's first step when the router is rebuilt.
 
 ```yaml
 surface_examples.step19:
@@ -5297,27 +5379,11 @@ surface_examples.step19:
   defaults:
     _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Example 19: one stage, several steps'
-    _surface_resource: 'Drupal\surface_examples\Resource\EventSetupResource'
-    _surface_operation: 'configure'
     _surface_panel: 'surface_examples.panels'
-    _surface_flow:
-      steps: [basics, tickets, { resource: event.notices, operation: configure }]
-      label: 'Set up the event'
-      keep: short
+    _surface_flow: event.setup_flow
 ```
 
-A step is a group id of the route's operation, or a map naming another
-resource's operation: `resource`, `operation`, an optional `group`, and
-optional `arguments` for its parameters. The first step opens the stage,
-labeled "Set up the event". Each Next stages the step's keys and goes
-on. Back shows what an earlier step staged, because every step reads
-through the stage; what you typed on this page is kept only when you
-press Next. Cancel discards the stage. The confirm
-page, `?step=confirm`, lists the writes of both resources and saves them
-together or not at all. `keep: short` keeps the stage for the form
-cache's lifetime, six hours after its last write by default.
-
-The two groups, at steps 1 and 2:
+The setup, stock keys in no group, at steps 1 and 2:
 
 <!-- code: src/Resource/EventSetupResource.php -->
 
@@ -5334,13 +5400,9 @@ final class EventSetupResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $basics = ArrangementGroup::details('basics', t('Basics'));
-    $tickets = ArrangementGroup::details('tickets', t('Tickets'));
-
     $inputs->add('name', 'string', t('Event name'), default: 'Autumn meetup')
       ->setRequired(TRUE)
       ->addConstraint('Length', ['max' => 128]);
-    $inputs->describe('name', group: $basics);
 
     $inputs->add('date', 'string', t('Date'), default: '2026-10-17')
       ->setDescription(t('YYYY-MM-DD.'))
@@ -5349,22 +5411,18 @@ final class EventSetupResource implements ResourceInterface {
         'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
         'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-17.'),
       ]);
-    $inputs->describe('date', group: $basics);
 
     $inputs->add('capacity', 'integer', t('Capacity'), default: 100)
       ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
-    $inputs->describe('capacity', group: $basics);
 
     $inputs->add('price', 'float', t('Ticket price'), default: 25.0)
       ->addConstraint('Range', ['min' => 0]);
-    $inputs->describe('price', group: $tickets, suffix: t('EUR'));
+    $inputs->describe('price', suffix: t('EUR'));
 
     $inputs->add('sales_open', 'boolean', t('Ticket sales open'), default: FALSE);
-    $inputs->describe('sales_open', group: $tickets);
 
     $inputs->add('note', 'string', t('Note for buyers'))
       ->setSetting('multiline', TRUE);
-    $inputs->describe('note', group: $tickets);
   }
 
 }
@@ -5447,11 +5505,12 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/EventSetupResource.php`](src/Resource/EventSetupResource.php) | the resource of steps 1 and 2: stock keys in two groups, basics and tickets | 35 |
+| [`modules/surface_examples/src/Resource/EventSetupResource.php`](src/Resource/EventSetupResource.php) | the resource of steps 1 and 2: stock keys in no group, which the flow splits | 28 |
 | [`modules/surface_examples/src/Resource/EventNoticesResource.php`](src/Resource/EventNoticesResource.php) | the resource of step 3: another resource, drawn whole | 14 |
 | [`modules/surface_examples/src/Storage/EventSetupStorage.php`](src/Storage/EventSetupStorage.php) | the setup's storage: names its config object | 3 |
 | [`modules/surface_examples/src/Storage/EventNoticesStorage.php`](src/Storage/EventNoticesStorage.php) | the notices' storage: names a config object of their own | 3 |
-| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step19` | the route: the generic operation form, and the flow, its steps, its label and how long its stage lives | 12 |
+| [`modules/surface_examples/src/Flow/EventSetupFlow.php`](src/Flow/EventSetupFlow.php) | the flow: its three steps, the keys each draws, its label and how long its stage lives, the condition on the third step and the check before Save | 26 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step19` | the route: the generic operation form and the flow it names | 7 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.event_setup` | the setup's config schema, generated from the class | 42 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.event_notices` | the notices' config schema, generated from the class | 17 |
 | [`modules/surface_examples/config/install/surface_examples.event_setup.yml`](config/install/surface_examples.event_setup.yml) | the setup the module ships with | 6 |
@@ -5500,7 +5559,7 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\RetitleFormTest` | Example 17 through its form and over HTTP: anonymous refused; an account that may edit no page refused on its page, nothing written; the retitler's save written, and the page then making its calls as dry runs; `PATCH` refused with a 422 per item, a dry run answering the titles it would write, a write answering what it wrote, and the titles read back. |
 | `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the article saved by its uuid either way and drawn back as its id, and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating the id of a reference of any type per entity type. |
 | `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12, 14 and 19 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form, example 19's first step through Next into a stage; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
-| `Functional\FlowRoundTripTest::testTheExampleFlowStagesTwoResources` | Example 19 page by page: the event setup's two groups over steps 1 and 2, the event notices at step 3, each through Next, the confirm page listing both resources' writes, and Save writing both config objects; the page then shows the stage applied. |
+| `Functional\FlowRoundTripTest::testTheExampleFlowStagesTwoResources` | Example 19 page by page: the event setup's keys split over steps 1 and 2, each under its heading, the event notices at step 3 once ticket sales are open, each through Next, the confirm page listing both resources' writes; Back to the tickets to close sales, the notices still drawn for the banner, the confirm page refusing Save for it, the banner hidden, the notices then passed over, sales opened again, and Save writing both config objects; the page then shows the stage applied. |
 | `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; the signer, the webhook's code, signing with the pasted key while the module is off or no managed key is chosen and with the managed key's value once one is, the pasted key kept in config and the managed value stored nowhere, and with no key for a name the site no longer manages; and this page quoting the documents, the use and the lock it does not ship. |
 | `Functional\ExamplesExtensionFormTest` | Example 14 through its forms without JavaScript: the one source drawn as its label and no select, then a select of two; the mailer's pasted key saved, the managed key chosen and the pasted source chosen back with nothing typed, the key kept; the webhook's pasted box gone once a managed key is saved, and back when the module is off. |
 | `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, the hero's narrowed slot pinned, and what it renders, slots included ([its README](../surface_examples_component_block/README.md)). |

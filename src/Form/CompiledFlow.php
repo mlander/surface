@@ -6,6 +6,9 @@ namespace Drupal\surface\Form;
 
 use Drupal\surface\Computed;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Flow\FlowInterface;
+use Drupal\surface\Flow\FlowRegistry;
+use Drupal\surface\Flow\StagedInterface;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationDefinition;
@@ -22,18 +25,20 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
 
 /**
- * A flow: one operation's form drawn over several steps into one stage.
+ * A route's flow, compiled: one operation's form over steps, one stage.
  *
- * Declared on an operation form route by the default `_surface_flow`,
- * a map of `steps`, in the order they are drawn; an optional `label`,
- * the stage's label, which is the operation's label by default; an
- * optional `redirect`, the name of the route the page goes to once the
- * stage is applied, handed the flow route's own parameters that its path
- * takes; and an optional `keep`, how long the stage the first step opens
- * lives after its last write: `short`, the form cache's lifetime
- * (`form_cache_expiration`, six hours by default), for a flow finished
- * in one sitting, or `long`, the temp store's (`tempstore.expire`, a week
- * by default), the default:
+ * A route names a flow in the default `_surface_flow`, in one of two
+ * spellings that compile to this one object. A string is the id of a
+ * flow class, `#[Flow]` on a FlowInterface class in a module's src/Flow
+ * (FlowRegistry). A map is the short form: `steps`, in the order they
+ * are drawn; an optional `label`, the stage's label, which is the
+ * operation's label by default; an optional `redirect`, the name of the
+ * route the page goes to once the stage is applied, handed the flow
+ * route's own parameters that its path takes; and an optional `keep`,
+ * how long the stage the first step opens lives after its last write:
+ * `short`, the form cache's lifetime (`form_cache_expiration`, six hours
+ * by default), for a flow finished in one sitting, or `long`, the temp
+ * store's (`tempstore.expire`, a week by default), the default:
  *
  * @code
  * example.flow:
@@ -45,53 +50,61 @@ use Symfony\Component\Routing\Route;
  *     _surface_flow:
  *       steps:
  *         - submission
- *         - workflow
+ *         - { keys: [preview_mode, help] }
  *         - { resource: example.settings, operation: configure }
  *       redirect: entity.node_type.collection
  *       keep: short
  * @endcode
  *
- * A step is one of two shapes. A string is a group id of the route's
- * operation. A map is a step over another resource: `resource`, its id
- * or class; `operation`, one of its operations; an optional `group`, one
- * of that operation's groups, without which the step draws the whole
- * operation; and optional `arguments`, literal values for the
- * operation's parameters, none when left out. The first step is a group
- * of the route's operation: its submit opens the stage.
+ * A step of the map is one of three shapes. A string is a group id of the
+ * route's operation. A map of `keys` alone lists keys of the route's
+ * operation. A map with `resource` is a step over another resource:
+ * `resource`, its id or class; `operation`, one of its operations;
+ * optional `keys` or an optional `group`, without which the step draws
+ * the whole operation; and optional `arguments`, literal values for the
+ * operation's parameters, none when left out. The first step is the
+ * route's own operation: its submit opens the stage. A class flow's steps
+ * compile to the same: its first step is the route's operation, and a
+ * later step over the same resource and operation, with no arguments,
+ * is a step of the route's operation too.
  *
  * The page draws one step at a time, `?step=N` from 1, and writes each
- * step's keys into the stage `?stage` names. The first step also draws
- * every key of the route's operation in no group, and its submit opens a
- * stage when none is named; the first step over another operation draws
- * that operation's keys in no group. The last page of every flow is the
- * confirm page, `?step=confirm`, which lists the stage's writes and
- * applies them; `steps` does not list it. Every group step writes
- * through the route's one operation, and every step over another
- * resource through its own: a stage refuses a write to one thing through
- * two operations.
+ * step's keys into the stage `?stage` names. A step's keys come before
+ * its group: a key a step lists is drawn there; a key in no group and
+ * listed by no step is drawn at the first step over its operation; a key
+ * in a group is drawn at the step that names its group, or nowhere. The
+ * first step's submit opens a stage when none is named. A step a class
+ * flow draws under a condition (`when`) is passed over while the stage's
+ * values say so (nextDrawn(), previousDrawn()). The last page of every
+ * flow is the confirm page, `?step=confirm`, which lists the stage's
+ * writes and applies them; `steps` does not list it. Every step of the
+ * route's operation writes through that one operation, and every step
+ * over another resource through its own: a stage refuses a write to one
+ * thing through two operations.
  *
  * What the route alone shows is checked when the router is rebuilt
- * (assertWritten()). What needs the resource built is checked when the
- * route is matched, by the access check and by the form, through
- * refusal(), stepRefusal() and servedAt(): an operation a flow cannot
- * stage (a delete, a read-only operation, or one a stage does not apply
- * to), a step over another resource whose operation creates or is the
- * route's own, a step that names no group of its operation, a key drawn
- * before a key its refinement depends on within one operation, and a
- * create's required key with no default drawn after the first step. A
+ * (assertWritten(), and FlowRegistry::onRoute() for a class flow). What
+ * needs the resource built is checked when the route is matched, by the
+ * access check and by the form, through refusal(), stepRefusal() and
+ * servedAt(): an operation a flow cannot stage (a delete, a read-only
+ * operation, or one a stage does not apply to), a step over another
+ * resource whose operation creates or is the route's own, a step that
+ * names no group or key of its operation or that draws no key, a key
+ * drawn before a key its refinement depends on within one operation, and
+ * a create's required key with no default drawn after the first step. A
  * required key a rule requires only for some values cannot be seen
  * before values exist, so it is not checked here: the pipeline refuses
  * the step that leaves it empty, as it refuses any write.
  *
  * Decision: see
- * docs/decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource.
+ * docs/decisions.md#a-flow-is-a-class-and-the-map-is-its-short-form.
  *
  * @internal
  */
-final class Flow {
+final class CompiledFlow {
 
   /**
-   * The route default declaring the flow.
+   * The route default naming the flow.
    */
   public const ROUTE = '_surface_flow';
 
@@ -111,11 +124,13 @@ final class Flow {
   public const CONFIRM = 'confirm';
 
   /**
-   * Constructs a Flow.
+   * Constructs a CompiledFlow.
    *
-   * @param list<string|array{resource: string, operation: string, group?: string, arguments?: array<string, mixed>}> $steps
+   * @param list<string|array{resource?: string, operation?: string, group?: string, keys?: list<string>, arguments?: array<string, mixed>, id?: string, label?: \Stringable|string, description?: \Stringable|string, when?: callable}> $steps
    *   The steps, in the order they are drawn: a group id of the route's
-   *   operation, or a map naming another resource's operation.
+   *   operation; a map with no `resource`, a step of the route's
+   *   operation that lists `keys`, names a `group`, or neither, drawing it
+   *   whole; or a map naming another resource's operation.
    * @param string|null $label
    *   The stage's label, or NULL for the operation's.
    * @param string|null $redirect
@@ -124,6 +139,14 @@ final class Flow {
    * @param string $keep
    *   How long the stage the first step opens lives after its last write:
    *   StageRecord::SHORT or StageRecord::LONG.
+   * @param string|null $id
+   *   The id of the flow class it was compiled from; NULL for a map.
+   * @param \Drupal\surface\Flow\FlowInterface|null $declared
+   *   The flow class it was compiled from, which may check the stage
+   *   before it is applied; NULL for a map.
+   * @param array{resource: string, operation: string}|null $first
+   *   The resource and operation of a flow class's first step, as it
+   *   writes them; NULL for a map.
    *
    * @throws \InvalidArgumentException
    *   When $keep is neither.
@@ -133,6 +156,9 @@ final class Flow {
     public readonly ?string $label = NULL,
     public readonly ?string $redirect = NULL,
     public readonly string $keep = StageRecord::LONG,
+    public readonly ?string $id = NULL,
+    public readonly ?FlowInterface $declared = NULL,
+    public readonly ?array $first = NULL,
   ) {
     if (!in_array($keep, [StageRecord::SHORT, StageRecord::LONG], TRUE)) {
       throw new \InvalidArgumentException(sprintf('A flow\'s "keep" is "%s" or "%s", not "%s".', StageRecord::SHORT, StageRecord::LONG, $keep));
@@ -146,19 +172,30 @@ final class Flow {
    *   The route.
    * @param string $name
    *   Its name, for the refusals.
+   * @param \Drupal\surface\Flow\FlowRegistry|null $flows
+   *   The flow classes, which a route naming one by its id needs.
    *
    * @return self|null
    *   The flow, or NULL when the route declares none.
    *
    * @throws \InvalidArgumentException
-   *   When the route declares one written wrong (assertWritten()).
+   *   When the route declares one written wrong (assertWritten(),
+   *   FlowRegistry::onRoute()).
+   * @throws \LogicException
+   *   When the route names a flow class and no registry is handed in.
    */
-  public static function onRoute(?Route $route, string $name): ?self {
+  public static function onRoute(?Route $route, string $name, ?FlowRegistry $flows = NULL): ?self {
     if ($route === NULL || !$route->hasDefault(self::ROUTE)) {
       return NULL;
     }
     static::assertWritten($route, $name);
     $flow = $route->getDefault(self::ROUTE);
+    if (is_string($flow)) {
+      if ($flows === NULL) {
+        throw new \LogicException(sprintf('The %s route names the flow "%s", and its reader was handed no flow registry.', $name, $flow));
+      }
+      return $flows->onRoute($route, $name);
+    }
     return new self(array_values($flow['steps']), $flow['label'] ?? NULL, $flow['redirect'] ?? NULL, $flow['keep'] ?? StageRecord::LONG);
   }
 
@@ -168,16 +205,20 @@ final class Flow {
    * What the router's rebuild refuses (OperationRouteSubscriber), and the
    * match again for a route no rebuild saw: a flow on a route that names
    * no operation, or whose `_form` is not the operation form, which alone
-   * draws steps; one that is no map of `steps`, `label`, `redirect` and
-   * `keep`, whose `label` or `redirect` is no non-empty string, or whose
-   * `keep` is neither `short` nor `long`; steps that are no list of group
-   * ids and maps of `resource`, `operation`, an optional `group` and
-   * optional `arguments`; a first step that is no group id; a group
-   * listed twice; and a step over another operation with no group beside
-   * another step over the same operation. Those two compare a step's
-   * resource as written, a first pass that needs no registry; the match
-   * asks them again over the resolved resource ids, and refuses a step
-   * over the route's own operation (stepRefusal()).
+   * draws steps; one that is neither a flow class's id nor a map of
+   * `steps`, `label`, `redirect` and `keep`; whose `label` or `redirect`
+   * is no non-empty string, or whose `keep` is neither `short` nor
+   * `long`; steps that are no list of group ids, maps of `keys`, and maps
+   * of `resource`, `operation`, optional `keys` or an optional `group`,
+   * and optional `arguments`; a step with both keys and a group; a first
+   * step over another resource; a group or a key listed twice; and a
+   * step with neither keys nor a group beside another step over the same
+   * operation. Those two compare a step's resource as written, a first
+   * pass that needs no registry; the match asks them again over the
+   * resolved resource ids, and refuses a step over the route's own
+   * operation (stepRefusal()). A flow class is read when the subscriber
+   * writes the route's resource and operation from it
+   * (FlowRegistry::onRoute()).
    *
    * @param \Symfony\Component\Routing\Route $route
    *   The route, which declares a flow.
@@ -190,12 +231,15 @@ final class Flow {
   public static function assertWritten(Route $route, string $name): void {
     $flow = $route->getDefault(self::ROUTE);
     if ((string) ($route->getDefault('_surface_operation') ?? '') === '' || (string) ($route->getDefault('_surface_resource') ?? '') === '') {
-      throw new \InvalidArgumentException(sprintf('The %s route declares "%s" and names no resource and operation: a flow draws one operation\'s form over steps, so name them in "_surface_resource" and "_surface_operation".', $name, self::ROUTE));
+      throw new \InvalidArgumentException(sprintf('The %s route declares "%s" and names no resource and operation: a flow draws one operation\'s form over steps, so name them in "_surface_resource" and "_surface_operation", or name a flow class, whose first step names them.', $name, self::ROUTE));
     }
     if (!OperationRoute::operationForm($route)) {
       throw new \InvalidArgumentException(sprintf('The %s route declares "%s" and its "_form" is not %s: only the operation form draws a flow\'s steps, so serve the route with it or a class extending it.', $name, self::ROUTE, SurfaceOperationForm::class));
     }
-    $shape = sprintf('The %s route\'s "%s" is a map of "steps", a list of the steps drawn in order, an optional "label", an optional "redirect", a route name, and an optional "keep", short or long, as { steps: [where, when] }', $name, self::ROUTE);
+    $shape = sprintf('The %s route\'s "%s" is the id of a flow class, or a map of "steps", a list of the steps drawn in order, an optional "label", an optional "redirect", a route name, and an optional "keep", short or long, as { steps: [where, when] }', $name, self::ROUTE);
+    if (is_string($flow) && trim($flow) !== '') {
+      return;
+    }
     if (!is_array($flow) || array_diff(array_keys($flow), ['steps', 'label', 'redirect', 'keep']) !== []) {
       throw new \InvalidArgumentException($shape . '.');
     }
@@ -208,11 +252,18 @@ final class Flow {
       throw new \InvalidArgumentException(sprintf('%s: "keep" is "%s" or "%s", or left out.', $shape, StageRecord::SHORT, StageRecord::LONG));
     }
     $steps = $flow['steps'] ?? NULL;
-    if (!is_array($steps) || $steps === [] || !array_is_list($steps) || array_filter($steps, static fn (mixed $step): bool => !static::written($step)) !== []) {
-      throw new \InvalidArgumentException($shape . ': "steps" lists at least one step, each a group id of the route\'s operation, a non-empty string, or a step over another resource, a map of "resource" and "operation", each a non-empty string, an optional "group", a non-empty string, and optional "arguments", a map of values by parameter name, as { resource: example.settings, operation: configure }.');
+    if (is_array($steps)) {
+      foreach ($steps as $step) {
+        if (is_array($step) && array_key_exists('keys', $step) && array_key_exists('group', $step)) {
+          throw new \InvalidArgumentException(sprintf('The %s route\'s "%s" gives a step both "keys" and a "group": a step draws a group or keys, not both.', $name, self::ROUTE));
+        }
+      }
     }
-    if (!is_string($steps[0])) {
-      throw new \InvalidArgumentException(sprintf('The %s route\'s "%s" starts with a step over another resource: the first step\'s submit opens the stage for the route\'s own operation, so list one of its group ids first.', $name, self::ROUTE));
+    if (!is_array($steps) || $steps === [] || !array_is_list($steps) || array_filter($steps, static fn (mixed $step): bool => !static::written($step)) !== []) {
+      throw new \InvalidArgumentException($shape . ': "steps" lists at least one step, each a group id of the route\'s operation, a non-empty string; keys of the route\'s operation, a map of "keys", a list of distinct keys, as { keys: [region, day] }; or a step over another resource, a map of "resource" and "operation", each a non-empty string, optional "keys" or an optional "group", a non-empty string, and optional "arguments", a map of values by parameter name, as { resource: example.settings, operation: configure }.');
+    }
+    if (!static::own($steps[0])) {
+      throw new \InvalidArgumentException(sprintf('The %s route\'s "%s" starts with a step over another resource: the first step\'s submit opens the stage for the route\'s own operation, so list one of its group ids or keys first.', $name, self::ROUTE));
     }
     $duplicated = static::duplicated($steps, $name);
     if ($duplicated !== NULL) {
@@ -223,14 +274,14 @@ final class Flow {
   /**
    * Says why a flow's steps draw one operation's keys twice.
    *
-   * A group listed twice for one operation, and a step over another
-   * operation with no group beside another step over the same operation.
+   * A group or a key listed twice for one operation, and a step with
+   * neither keys nor a group beside another step over the same operation.
    * Steps over another resource are told apart by operationKey(): at the
    * rebuild by the resource as written, at the match by its resolved id
    * (resolved()), so a resource named by its id at one step and its class
    * at another is one resource there.
    *
-   * @param list<string|array{resource: string, operation: string, group?: string, arguments?: array<string, mixed>}> $steps
+   * @param list<string|array<string, mixed>> $steps
    *   The steps.
    * @param string $name
    *   The route's name.
@@ -239,41 +290,69 @@ final class Flow {
    *   The refusal, naming the route; NULL when no operation's keys are
    *   drawn twice.
    */
-  protected static function duplicated(array $steps, string $name): ?string {
+  public static function duplicated(array $steps, string $name): ?string {
     $drawn = [];
     foreach ($steps as $step) {
-      $over = is_string($step) ? '' : static::operationKey($step);
-      $group = is_string($step) ? $step : ($step['group'] ?? NULL);
-      if ($group !== NULL && in_array($group, $drawn[$over] ?? [], TRUE)) {
-        return is_string($step)
+      $own = static::own($step);
+      $over = $own ? '' : static::operationKey($step);
+      $group = static::groupOf($step);
+      $keys = static::keysOf($step);
+      $seen = $drawn[$over] ?? ['groups' => [], 'keys' => [], 'count' => 0, 'whole' => FALSE];
+      if ($group !== NULL && in_array($group, $seen['groups'], TRUE)) {
+        return $own
           ? sprintf('The %s route\'s "%s" lists the group "%s" twice: each group is drawn at one step.', $name, self::ROUTE, $group)
           : sprintf('The %s route\'s "%s" lists the group "%s" of the "%s" operation of %s twice: each group is drawn at one step.', $name, self::ROUTE, $group, $step['operation'], $step['resource']);
       }
-      $drawn[$over][] = $group;
-      if (is_array($step) && count($drawn[$over]) > 1 && in_array(NULL, $drawn[$over], TRUE)) {
-        return sprintf('The %s route\'s "%s" draws the "%s" operation of %s at more than one step, and one of them names no group: a step with no group draws the whole operation, so give each step over it a group.', $name, self::ROUTE, $step['operation'], $step['resource']);
+      foreach ($keys ?? [] as $key) {
+        if (in_array($key, $seen['keys'], TRUE)) {
+          return $own
+            ? sprintf('The %s route\'s "%s" lists the key "%s" at more than one step: each key is drawn at one step.', $name, self::ROUTE, $key)
+            : sprintf('The %s route\'s "%s" lists the key "%s" of the "%s" operation of %s at more than one step: each key is drawn at one step.', $name, self::ROUTE, $key, $step['operation'], $step['resource']);
+        }
+      }
+      $seen['groups'] = $group === NULL ? $seen['groups'] : [...$seen['groups'], $group];
+      $seen['keys'] = [...$seen['keys'], ...($keys ?? [])];
+      $seen['count']++;
+      $seen['whole'] = $seen['whole'] || ($group === NULL && $keys === NULL);
+      $drawn[$over] = $seen;
+      if ($seen['count'] > 1 && $seen['whole']) {
+        return $own
+          ? sprintf('The %s route\'s "%s" draws the route\'s own operation at more than one step, and one of them names no keys and no group: a step with neither draws the whole operation, so give each step over it keys or a group.', $name, self::ROUTE)
+          : sprintf('The %s route\'s "%s" draws the "%s" operation of %s at more than one step, and one of them names no keys and no group: a step with neither draws the whole operation, so give each step over it keys or a group.', $name, self::ROUTE, $step['operation'], $step['resource']);
       }
     }
     return NULL;
   }
 
   /**
-   * Answers whether a step is written in one of the two shapes.
+   * Answers whether a step of the map is written in one of its shapes.
    *
    * @param mixed $step
    *   The step as the route writes it.
    *
    * @return bool
-   *   TRUE for a non-empty string, or a map of a non-empty `resource` and
-   *   `operation`, an optional non-empty `group` and optional `arguments`
-   *   keyed by name, and nothing else.
+   *   TRUE for a non-empty string; a map of `keys` alone; or a map of a
+   *   non-empty `resource` and `operation`, optional `keys` or an optional
+   *   non-empty `group`, and optional `arguments` keyed by name, and
+   *   nothing else. `keys` is a non-empty list of distinct non-empty
+   *   strings: an empty one would draw every key.
    */
   protected static function written(mixed $step): bool {
     if (is_string($step)) {
       return $step !== '';
     }
-    if (!is_array($step) || array_diff(array_keys($step), ['resource', 'operation', 'group', 'arguments']) !== []) {
+    if (!is_array($step) || array_diff(array_keys($step), ['resource', 'operation', 'group', 'keys', 'arguments']) !== []) {
       return FALSE;
+    }
+    if (array_key_exists('keys', $step)) {
+      $keys = $step['keys'];
+      if (!is_array($keys) || $keys === [] || !array_is_list($keys) || array_filter($keys, static fn (mixed $key): bool => !is_string($key) || $key === '') !== [] || count(array_unique($keys)) !== count($keys)) {
+        return FALSE;
+      }
+    }
+    if (!array_key_exists('resource', $step) && !array_key_exists('operation', $step)) {
+      // A step of the route's operation, by its keys.
+      return array_keys($step) === ['keys'];
     }
     foreach (['resource', 'operation', 'group'] as $key) {
       if (($key !== 'group' || array_key_exists($key, $step)) && (!is_string($step[$key] ?? NULL) || $step[$key] === '')) {
@@ -282,6 +361,45 @@ final class Flow {
     }
     $arguments = $step['arguments'] ?? [];
     return is_array($arguments) && ($arguments === [] || !array_is_list($arguments));
+  }
+
+  /**
+   * Answers whether a step is one of the route's own operation.
+   *
+   * @param string|array $step
+   *   The step.
+   *
+   * @return bool
+   *   TRUE for a group id, or a map that names no resource.
+   */
+  protected static function own(string|array $step): bool {
+    return is_string($step) || !isset($step['resource']);
+  }
+
+  /**
+   * Gets the group a step names.
+   *
+   * @param string|array $step
+   *   The step.
+   *
+   * @return string|null
+   *   The group id, or NULL.
+   */
+  protected static function groupOf(string|array $step): ?string {
+    return is_string($step) ? $step : ($step['group'] ?? NULL);
+  }
+
+  /**
+   * Gets the keys a step lists.
+   *
+   * @param string|array $step
+   *   The step.
+   *
+   * @return list<string>|null
+   *   The keys, or NULL when it lists none.
+   */
+  protected static function keysOf(string|array $step): ?array {
+    return is_array($step) && is_array($step['keys'] ?? NULL) ? array_values($step['keys']) : NULL;
   }
 
   /**
@@ -317,7 +435,7 @@ final class Flow {
    */
   public function resolved(ResourceRegistry $registry): self {
     $steps = array_map(static function (string|array $step) use ($registry): string|array {
-      if (is_string($step)) {
+      if (static::own($step)) {
         return $step;
       }
       try {
@@ -327,11 +445,11 @@ final class Flow {
         return $step;
       }
     }, $this->steps);
-    return new self($steps, $this->label, $this->redirect, $this->keep);
+    return new self($steps, $this->label, $this->redirect, $this->keep, $this->id, $this->declared, $this->first);
   }
 
   /**
-   * Counts the group steps, the confirm page aside.
+   * Counts the steps, the confirm page aside.
    *
    * @return int
    *   The count.
@@ -372,12 +490,12 @@ final class Flow {
    * @param int $step
    *   The step, from 1.
    *
-   * @return array{resource: string, operation: string, group?: string, arguments?: array<string, mixed>}|null
-   *   The step's map, or NULL for a group of the route's operation.
+   * @return array{resource: string, operation: string, group?: string, keys?: list<string>, arguments?: array<string, mixed>}|null
+   *   The step's map, or NULL for a step of the route's operation.
    */
   public function over(int $step): ?array {
     $at = $this->steps[$step - 1] ?? NULL;
-    return is_array($at) ? $at : NULL;
+    return is_array($at) && isset($at['resource']) ? $at : NULL;
   }
 
   /**
@@ -387,12 +505,98 @@ final class Flow {
    *   The step, from 1.
    *
    * @return string|null
-   *   The group id; NULL for a step over another resource that draws its
-   *   whole operation, or a step the flow does not have.
+   *   The group id; NULL for a step that lists keys or draws its whole
+   *   operation, or a step the flow does not have.
    */
   public function group(int $step): ?string {
     $at = $this->steps[$step - 1] ?? NULL;
-    return is_array($at) ? ($at['group'] ?? NULL) : $at;
+    return $at === NULL ? NULL : static::groupOf($at);
+  }
+
+  /**
+   * Gets a step's heading and the line under it.
+   *
+   * @param int $step
+   *   The step, from 1.
+   *
+   * @return array{0: \Stringable|string|null, 1: \Stringable|string|null}
+   *   The label and the description a flow class gave the step; NULL for
+   *   each it did not give, and for every step of a map.
+   */
+  public function heading(int $step): array {
+    $at = $this->steps[$step - 1] ?? NULL;
+    return is_array($at) ? [$at['label'] ?? NULL, $at['description'] ?? NULL] : [NULL, NULL];
+  }
+
+  /**
+   * Answers whether any step is drawn under a condition.
+   *
+   * @return bool
+   *   TRUE when a step has `when`.
+   */
+  public function conditional(): bool {
+    foreach ($this->steps as $step) {
+      if (is_array($step) && isset($step['when'])) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Answers whether a step is drawn, for what the stage holds.
+   *
+   * @param int $step
+   *   The step, from 1.
+   * @param \Drupal\surface\Flow\StagedInterface|null $staged
+   *   The stage's values, or NULL when no step has a condition.
+   *
+   * @return bool
+   *   TRUE for a step with no condition, or whose condition holds.
+   */
+  public function drawn(int $step, ?StagedInterface $staged): bool {
+    $when = $this->steps[$step - 1]['when'] ?? NULL;
+    return !is_callable($when) || $staged === NULL || (bool) $when($staged);
+  }
+
+  /**
+   * Gets the next step drawn after a step.
+   *
+   * @param int $step
+   *   The step, from 1.
+   * @param \Drupal\surface\Flow\StagedInterface|null $staged
+   *   The stage's values, or NULL when no step has a condition.
+   *
+   * @return int|string
+   *   The next step drawn, or CONFIRM after the last.
+   */
+  public function nextDrawn(int $step, ?StagedInterface $staged): int|string {
+    for ($next = $step + 1; $next <= $this->count(); $next++) {
+      if ($this->drawn($next, $staged)) {
+        return $next;
+      }
+    }
+    return self::CONFIRM;
+  }
+
+  /**
+   * Gets the step drawn before a step, or before the confirm page.
+   *
+   * @param int|string $step
+   *   The step, from 1, or CONFIRM.
+   * @param \Drupal\surface\Flow\StagedInterface|null $staged
+   *   The stage's values, or NULL when no step has a condition.
+   *
+   * @return int
+   *   The step drawn before it; 1, the first, which is always drawn.
+   */
+  public function previousDrawn(int|string $step, ?StagedInterface $staged): int {
+    for ($previous = ($step === self::CONFIRM ? $this->count() + 1 : (int) $step) - 1; $previous > 1; $previous--) {
+      if ($this->drawn($previous, $staged)) {
+        return $previous;
+      }
+    }
+    return 1;
   }
 
   /**
@@ -401,18 +605,19 @@ final class Flow {
    * @param int $step
    *   The step, from 1.
    *
-   * @return array<int, string|null>
+   * @return array<int, array{0: string|null, 1: list<string>|null}>
    *   Each step over the same operation, the route's or another
-   *   resource's of the same thing, by number, in order: its group, or
-   *   NULL for the whole operation.
+   *   resource's of the same thing, by number, in order: its group and
+   *   its keys, both NULL for the whole operation.
    */
   protected function alike(int $step): array {
     $over = $this->over($step);
     $key = $over === NULL ? '' : static::operationKey($over);
     $alike = [];
     foreach ($this->steps as $index => $at) {
-      if ((is_string($at) && $key === '') || (is_array($at) && $key !== '' && static::operationKey($at) === $key)) {
-        $alike[$index + 1] = is_string($at) ? $at : ($at['group'] ?? NULL);
+      $own = static::own($at);
+      if (($own && $key === '') || (!$own && $key !== '' && static::operationKey($at) === $key)) {
+        $alike[$index + 1] = [static::groupOf($at), static::keysOf($at)];
       }
     }
     return $alike;
@@ -421,10 +626,11 @@ final class Flow {
   /**
    * Lists the keys a step draws.
    *
-   * The keys of the step's group; at the first step over its operation,
-   * every key in no group too; every key, for a step over another
-   * resource that names no group. A group is one of the top level's: a
-   * group inside an attached child is drawn with the child.
+   * The keys the step lists; the keys of the step's group that no step
+   * lists; at the first step over its operation, every key in no group
+   * that no step lists too; every key, for a step that names neither keys
+   * nor a group. A group is one of the top level's: a group inside an
+   * attached child is drawn with the child.
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The resource the step is drawn from, built.
@@ -445,34 +651,99 @@ final class Flow {
    *
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The operation's resource, built.
-   * @param array<int, string|null> $steps
-   *   The steps over the operation, by number: each one's group, or NULL
-   *   for the whole operation.
+   * @param array<int, array{0: string|null, 1: list<string>|null}> $steps
+   *   The steps over the operation, by number: each one's group and keys,
+   *   both NULL for the whole operation.
    *
    * @return array{0: array<string, int>, 1: array<string, true>}
    *   The step of each key a step draws, and the groups the top level
    *   declares.
    */
   protected static function placed(SurfaceInterface $surface, array $steps): array {
-    $whole = array_search(NULL, $steps, TRUE);
+    $whole = FALSE;
+    $listed = [];
+    $named = [];
+    foreach ($steps as $number => [$group, $keys]) {
+      if ($group === NULL && $keys === NULL && $whole === FALSE) {
+        $whole = $number;
+      }
+      foreach ($keys ?? [] as $key) {
+        $listed[$key] ??= $number;
+      }
+      if ($group !== NULL) {
+        $named[$group] ??= $number;
+      }
+    }
     $first = array_key_first($steps);
     $at = [];
     $groups = [];
     foreach ($surface->getDefinitions() as $key => $definition) {
+      $key = (string) $key;
       $group = DefinitionMetadata::arrangementOf($definition)?->group?->id;
       if ($group !== NULL) {
         $groups[$group] = TRUE;
       }
       $step = match (TRUE) {
         $whole !== FALSE => $whole,
+        isset($listed[$key]) => $listed[$key],
         $group === NULL => $first,
-        default => array_search($group, $steps, TRUE),
+        default => $named[$group] ?? NULL,
       };
-      if ($step !== FALSE) {
-        $at[(string) $key] = (int) $step;
+      if ($step !== NULL) {
+        $at[$key] = (int) $step;
       }
     }
     return [$at, $groups];
+  }
+
+  /**
+   * Says why the steps over one operation do not hold for its resource.
+   *
+   * A group its top level does not declare, a key it does not have, and
+   * a step that draws no key, since an empty list of keys would draw them
+   * all.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The operation's resource, built.
+   * @param array<int, array{0: string|null, 1: list<string>|null}> $steps
+   *   The steps over the operation, by number.
+   * @param array<string, int> $at
+   *   The step of each key a step draws (placed()).
+   * @param array<string, true> $groups
+   *   The groups the top level declares.
+   * @param string $name
+   *   The route's name.
+   * @param string $operation
+   *   The operation's id.
+   * @param string $resource
+   *   The resource's id.
+   * @param bool $own
+   *   Whether it is the route's own operation, whose unknown group is said
+   *   as it always was.
+   *
+   * @return string|null
+   *   The refusal; NULL when every step draws keys the operation has.
+   */
+  protected static function unplaced(SurfaceInterface $surface, array $steps, array $at, array $groups, string $name, string $operation, string $resource, bool $own): ?string {
+    foreach ($steps as $number => [$group]) {
+      if ($group !== NULL && !isset($groups[$group])) {
+        return $own
+          ? sprintf('The %s route\'s flow draws the group "%s" at a step, and the "%s" operation of %s has no such group: name one of %s.', $name, $group, $operation, $resource, $groups === [] ? 'its groups, and it declares none' : '"' . implode('", "', array_keys($groups)) . '"')
+          : sprintf('The %s route\'s flow draws the group "%s" of the "%s" operation of %s at step %d, and the operation has no such group: name one of %s.', $name, $group, $operation, $resource, $number, $groups === [] ? 'its groups, and it declares none, or leave "group" out to draw it whole' : '"' . implode('", "', array_keys($groups)) . '"');
+      }
+    }
+    $declared = array_map('strval', array_keys(iterator_to_array($surface->getDefinitions())));
+    foreach ($steps as $number => [, $keys]) {
+      foreach (array_diff($keys ?? [], $declared) as $key) {
+        return sprintf('The %s route\'s flow draws the key "%s" at step %d, and the "%s" operation of %s has no such key: name one of "%s".', $name, $key, $number, $operation, $resource, implode('", "', $declared));
+      }
+    }
+    foreach (array_keys($steps) as $number) {
+      if (!in_array($number, $at, TRUE)) {
+        return sprintf('The %s route\'s flow draws no key of the "%s" operation of %s at step %d: every key it would draw is drawn at another step, so list keys of its own for it, or leave it out.', $name, $operation, $resource, $number);
+      }
+    }
+    return NULL;
   }
 
   /**
@@ -507,7 +778,8 @@ final class Flow {
    * Asked when the route is matched, by the access check and by the form,
    * with the resource built for the route: an operation a stage does not
    * apply to, that deletes, or that is read-only; a group step naming no
-   * group of the operation's top level; a key drawn at a step before a
+   * group of the operation's top level, a key it does not have, or a step
+   * that draws no key; a key drawn at a step before a
    * key its refinement depends on (DefinitionMap::refinements()); and for
    * a create, a required key with no default that is drawn after the
    * first step, since every step is validated as a whole write. Steps
@@ -532,10 +804,9 @@ final class Flow {
     }
     $steps = $this->alike(1);
     [$at, $groups] = static::placed($surface, $steps);
-    foreach ($steps as $group) {
-      if (!isset($groups[$group])) {
-        return sprintf('The %s route\'s flow draws the group "%s" at a step, and the "%s" operation of %s has no such group: name one of %s.', $name, $group, $operation->id, $resource->id, $groups === [] ? 'its groups, and it declares none' : '"' . implode('", "', array_keys($groups)) . '"');
-      }
+    $unplaced = static::unplaced($surface, $steps, $at, $groups, $name, $operation->id, $resource->id, TRUE);
+    if ($unplaced !== NULL) {
+      return $unplaced;
     }
     $outOfOrder = static::outOfOrder($surface, $at);
     if ($outOfOrder !== NULL) {
@@ -564,12 +835,12 @@ final class Flow {
    *
    * What the registry alone shows, asked of every such step at every
    * page of the flow: a resource or operation that is not discovered; the
-   * route's own operation, whose keys a group step draws; an operation
+   * route's own operation, whose keys its own steps draw; an operation
    * that creates, since a create's local id does not cross resources; one
    * that deletes or is read-only, which takes no values; one a stage does
    * not apply to (`does_not_apply`); and, over the resolved resource ids
-   * (resolved()), a group listed twice or a step with no group beside
-   * another over the same operation (duplicated()). What needs a step's
+   * (resolved()), a group or a key listed twice or a step with neither
+   * beside another over the same operation (duplicated()). What needs a step's
    * resource built is asked by servedAt().
    *
    * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
@@ -586,7 +857,7 @@ final class Flow {
   public function stepRefusal(ResourceRegistry $registry, OperationRoute $served, string $name): ?string {
     $own = $registry->getDefinition($served->resource)->id;
     foreach ($this->steps as $index => $step) {
-      if (!is_array($step)) {
+      if (static::own($step)) {
         continue;
       }
       $number = $index + 1;
@@ -598,7 +869,7 @@ final class Flow {
         return sprintf('The %s route\'s flow draws step %d over the "%s" operation of %s, which names nothing: %s', $name, $number, $step['operation'], $step['resource'], $e->getMessage());
       }
       if ($resource->id === $own && $operation->id === $served->operation->id) {
-        return sprintf('The %s route\'s flow draws the route\'s own operation, "%s" of %s, as a step over another resource at step %d: its keys are drawn by the route\'s group steps, so write it as a group.', $name, $operation->id, $resource->id, $number);
+        return sprintf('The %s route\'s flow draws the route\'s own operation, "%s" of %s, as a step over another resource at step %d: the route\'s own operation takes its arguments from the route\'s path, so in a map write the step as a group or { keys }, with no "resource" or "operation", and in a class give the step no arguments.', $name, $operation->id, $resource->id, $number);
       }
       if ($operation->creates) {
         return sprintf('The %s route\'s flow draws step %d through the "%s" operation of %s, which creates: a step over another resource updates a stored thing or configures a settings object; a create is drawn only by the route\'s own operation.', $name, $number, $operation->id, $resource->id);
@@ -659,7 +930,8 @@ final class Flow {
   /**
    * Gets the operation a step is served by.
    *
-   * The route's own for a group step and the confirm page. For a step over
+   * The route's own for a step of the route's operation and the confirm
+   * page. For a step over
    * another resource, that resource's operation, built from the step's
    * arguments and written into the route's stage under them; none of the
    * route's fixed values, defaults, query or cosmetic layer applies to
@@ -686,16 +958,19 @@ final class Flow {
    * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   When the step's arguments name nothing.
    * @throws \InvalidArgumentException
-   *   When the step names a group its operation does not have, or draws
-   *   a key before a key its refinement depends on, naming the route.
+   *   When the step names a group or a key its operation does not have,
+   *   draws no key, or draws a key before a key its refinement depends on,
+   *   naming the route.
    */
   public function servedAt(OperationRoute $served, ResourcesInterface $resources, ResourceRegistry $registry, string $name, ?Request $request): OperationRoute {
     $step = $request === NULL ? 1 : $this->step($request);
     if ($step === 1 && $served->stage === NULL) {
       // Before the first write: a flow that cannot be served at a later
       // step is refused before anything is staged.
-      foreach (array_keys(array_filter($this->steps, 'is_array')) as $index) {
-        $this->servedOver($served, $resources, $registry, $name, $index + 1);
+      foreach (array_keys($this->steps) as $index) {
+        if ($this->over($index + 1) !== NULL) {
+          $this->servedOver($served, $resources, $registry, $name, $index + 1);
+        }
       }
     }
     return is_int($step) && $this->over($step) !== NULL ? $this->servedOver($served, $resources, $registry, $name, $step) : $served;
@@ -721,8 +996,9 @@ final class Flow {
    * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   When the step's arguments name nothing.
    * @throws \InvalidArgumentException
-   *   When the step names a group its operation does not have, or draws
-   *   a key before a key its refinement depends on, naming the route.
+   *   When the step names a group or a key its operation does not have,
+   *   draws no key, or draws a key before a key its refinement depends on,
+   *   naming the route.
    */
   protected function servedOver(OperationRoute $served, ResourcesInterface $resources, ResourceRegistry $registry, string $name, int $step): OperationRoute {
     $over = (array) $this->over($step);
@@ -738,10 +1014,9 @@ final class Flow {
     $steps = $this->alike($step);
     $surface = $resources->build($class, $context);
     [$at, $groups] = static::placed($surface, $steps);
-    foreach ($steps as $number => $group) {
-      if ($group !== NULL && !isset($groups[$group])) {
-        throw new \InvalidArgumentException(sprintf('The %s route\'s flow draws the group "%s" of the "%s" operation of %s at step %d, and the operation has no such group: name one of %s.', $name, $group, $operation->id, $resource->id, $number, $groups === [] ? 'its groups, and it declares none, or leave "group" out to draw it whole' : '"' . implode('", "', array_keys($groups)) . '"'));
-      }
+    $unplaced = static::unplaced($surface, $steps, $at, $groups, $name, $operation->id, $resource->id, FALSE);
+    if ($unplaced !== NULL) {
+      throw new \InvalidArgumentException($unplaced);
     }
     $outOfOrder = static::outOfOrder($surface, $at);
     if ($outOfOrder !== NULL) {

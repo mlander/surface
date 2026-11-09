@@ -6,6 +6,7 @@ namespace Drupal\surface\ResourceBuild;
 
 use Drupal\surface\Resource\Attribute\Alters;
 use Drupal\surface\Resource\Attribute\DerivesResources;
+use Drupal\surface\Resource\Attribute\Flow;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
 use Drupal\surface\Resource\Attribute\Shape;
@@ -14,10 +15,10 @@ use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 /**
- * Finds resources, structures, shapes, alters and operations.
+ * Finds resources, structures, shapes, alters, operations and flows.
  *
  * The precedent is core's HookCollectorPass, which scans src/Hook: this
- * scans src/Resource, src/Structure, src/Shape and src/Alter,
+ * scans src/Resource, src/Structure, src/Shape, src/Alter and src/Flow,
  * recursively, in every module the container is being built for, so
  * nothing is registered by hand and a module that is switched off stops
  * contributing the moment the container is rebuilt without it. The
@@ -28,8 +29,9 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  *
  * What it keeps is deliberately small: which classes carry #[Resource]
  * or #[Structure], which carry #[Shape], which carry #[Alters], which
- * carry #[DerivesResources], and which carry #[Operation] on the class
- * or on a method, each with the module it came from; and, for each
+ * carry #[DerivesResources], which carry #[Operation] on the class
+ * or on a method, and which carry #[Flow], each with the module it came
+ * from; and, for each
  * deriver whose attribute names an override attribute, the classes in
  * any src/Resource or src/Structure carrying that attribute. The reading
  * of every attribute on those classes (labels, kind, identity, refiners,
@@ -39,8 +41,8 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  *
  * Classes that must be built with services are registered as autowired
  * services here, keyed by class name, the way a hook class is: every
- * alter and every deriver, and every storage and access class a
- * discovered resource or structure names. A derived resource's storage
+ * alter, every deriver and every flow class, and every storage and access
+ * class a discovered resource or structure names. A derived resource's storage
  * and access class are named at run time, so the class resolver builds
  * them. A resource or a structure itself is not registered and never
  * instantiated: its defineInputs() and its refiners are static, called
@@ -74,9 +76,10 @@ final class ResourceCollectorPass implements CompilerPassInterface {
    * The directories scanned in each module, relative to its src/.
    *
    * The first two hold resources, structures and derivers alike, and are
-   * read as one list; the third holds shapes, the last alters.
+   * read as one list; the third holds shapes, the fourth alters, the last
+   * flows.
    */
-  public const DIRECTORIES = ['Resource', 'Structure', 'Shape', 'Alter'];
+  public const DIRECTORIES = ['Resource', 'Structure', 'Shape', 'Alter', 'Flow'];
 
   /**
    * The directories of resources and structures, read as one list.
@@ -113,7 +116,7 @@ final class ResourceCollectorPass implements CompilerPassInterface {
    *   The class lists, by kind, then class name, valued with the module.
    */
   public static function discover(array $modules, string $root, ?ContainerBuilder $container = NULL): array {
-    $found = array_fill_keys(['resources', 'shapes', 'alters', 'operations', 'derivers', 'overrides'], []);
+    $found = array_fill_keys(['resources', 'shapes', 'alters', 'operations', 'derivers', 'overrides', 'flows'], []);
     $scanned = [];
     foreach ($modules as $module => $info) {
       $module_dir = $root . dirname($info['pathname']);
@@ -240,6 +243,10 @@ final class ResourceCollectorPass implements CompilerPassInterface {
     }
     if ($class->getAttributes(Operation::class) !== []) {
       $found['operations'][$name] = $module;
+    }
+    if ($class->getAttributes(Flow::class) !== []) {
+      $found['flows'][$name] = $module;
+      self::registerAutowired($container, $name);
     }
     foreach ($class->getMethods() as $method) {
       if ($method->getAttributes(Operation::class) !== []) {
