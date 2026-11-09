@@ -443,8 +443,9 @@ the record of the rework that brought the module to the pattern.
   first step opening the stage, Next staging a step, Back staging
   nothing and Cancel discarding the stage, and a confirm page at
   `?step=confirm` that lists `changes` of every resource as a table,
-  draws the route's panel, says how many writes cannot be undone, and
-  Save applies what it listed (a fingerprint it posts back); once
+  draws the route's panel after the buttons (as every operation form
+  does: `placeRefreshedBeside()`), says how many writes cannot be
+  undone, and Save applies what it listed (a fingerprint it posts back); once
   applied it goes to the flow's `redirect` route or stays. A step asked
   with an applied or voided stage answers 303 to the confirm page, which
   says so and links "Start again"; a post into such a stage is judged by
@@ -810,7 +811,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2118, Assertions: 52721, Errors: 0, Failures: 0, Skipped: 3. Classes: 295 of 295, 8 at a time, browser classes 4.
+phpunit: Tests: 2118, Assertions: 52735, Errors: 0, Failures: 0, Skipped: 3. Classes: 295 of 295, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -830,7 +831,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2004, Assertions: 48210, Deprecations: 134, Skipped: 3. Classes:
+`Tests: 2004, Assertions: 48219, Deprecations: 134, Skipped: 3. Classes:
 242, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 

@@ -161,7 +161,20 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $this->assertSame('Spring meetup', $container['title']['#default_value']);
     $this->assertSame(1000, $container['capacity']['#max']);
     $this->assertSame('checkbox', $container['open']['#type']);
-    $this->assertArrayHasKey(SurfaceOperationForm::PANEL_KEY, $container);
+    // The panel is drawn after the buttons, outside the container: Save
+    // sits right under the fields, and the panel describes them after it.
+    $this->assertArrayNotHasKey(SurfaceOperationForm::PANEL_KEY, $container);
+    $panel = $this->wrapperSelector($form[SurfaceOperationForm::PANEL_KEY]);
+    $this->assertLessThan($form[SurfaceOperationForm::PANEL_KEY]['#weight'], $form['actions']['#weight']);
+    $html = (string) $this->container->get('renderer')->renderInIsolation($form);
+    $fields = strpos($html, 'name="surface[title]"');
+    $save = strpos($html, 'value="Save"');
+    $after = strpos($html, 'id="' . substr($panel, 1) . '"');
+    $this->assertIsInt($fields);
+    $this->assertIsInt($save);
+    $this->assertIsInt($after);
+    $this->assertLessThan($save, $fields);
+    $this->assertLessThan($after, $save);
 
     // A checkbox left clear is submitted as nothing at all.
     $state = $this->submitTheForm(['title' => 'Summer meetup', 'capacity' => '200', 'open' => NULL]);
@@ -368,7 +381,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     // per variant, keyed on the pricing beside it, and no widget hints.
     $this->serveRoute('surface_examples.step3');
     $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
-    $panel = $form[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT];
+    $panel = $form[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT];
     $this->assertSame('The schema for these answers', (string) $panel['contract']['#title']);
     $contract = json_decode((string) $panel['contract']['json']['#code'], TRUE);
     $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['$schema']);
@@ -463,7 +476,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $this->assertSame('room', $container[SurfaceFormBuilderInterface::STALE_MARKER_KEY]['#value']);
 
     $rows = [];
-    foreach ($container[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
+    foreach ($form[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
       $rows[$row['surface-key']] = $row['data'];
     }
     $this->assertSame('one of Auditorium, Upper deck', (string) $rows['room'][5]['data']['#markup']);
@@ -551,14 +564,14 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $this->assertSame([
       $this->wrapperSelector($container['room']),
       $capacity,
-      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $markup = $this->ajaxMarkup($response, $capacity);
     $this->assertStringNotContainsString('max=', $markup);
     $this->assertStringNotContainsString('Up to', $markup);
     // The panel beside it says the same thing.
     $rows = [];
-    foreach ($container[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
+    foreach ($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT]['keys']['#rows'] as $row) {
       $rows[$row['surface-key']] = $row['data'];
     }
     $this->assertSame('at least 1', (string) $rows['capacity'][5]['data']['#markup']);
@@ -598,7 +611,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $this->assertSame([
       $this->wrapperSelector($container['room']),
       $this->wrapperSelector($container['capacity']),
-      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $settings = $state->getUserInput()['surface'];
     $this->assertSame(['note' => 'Bring a badge'], $settings['ticket']);

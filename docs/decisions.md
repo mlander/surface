@@ -5230,8 +5230,8 @@ operation, or one whose `_form` is not the operation form.
 Decided 2026-11-08. `?step=confirm` draws the stage's `changes`, read
 through the pipeline, as a table (position, resource, operation, kind,
 parameters, the keys each moved), says "Each is checked again when it
-is made. They are made together or not at all.", draws the route's
-panel, and offers Save, Back and Cancel. Save makes what the page listed: the
+is made. They are made together or not at all.", offers Save, Back and
+Cancel, and draws the route's panel after them. Save makes what the page listed: the
 page posts back a fingerprint of the stage's writes as it drew them,
 and a stage that holds other writes by then refuses the Save and is
 listed again. The apply is then rehearsed, each refusal said on the page and
@@ -6943,17 +6943,26 @@ resource](#a-read-is-an-operation-of-the-resource)).
 
 ## Forms
 
-### A panel inside the operation form
+### A panel after the operation form's buttons
 
 A route may name a read-only panel in `_surface_panel`, a service
 id or class implementing `SurfaceFormPanelInterface`, the way it
-names a cosmetic layer. The operation form places what it returns
-inside the form's `surface` container, and the AJAX rebuild replaces it
-along with the dependents of whatever changed, because a panel
-describing the resource as it stands has to follow every change; it is
-handed the values the elements are built with, not a refined data
-surface, so it can tell which variant is shown. The
-contract panel lives in the base module and shows the
+names a cosmetic layer. The operation form draws what it returns after
+its actions, outside the form's `surface` container, at
+`SurfaceOperationForm::PANEL_KEY`: the buttons act on the fields and
+the panel describes them, so a person reaches Save or Next right under
+what they filled in, and the example pages' open panels come after.
+Before this, the panel sat inside the container, and on a three-step
+flow with two open panels Next was far below the fields (decided
+2026-11-09). The form places it with the builder's
+`placeRefreshedBeside()`, so the AJAX rebuild still replaces it along
+with the dependents of whatever changed, because a panel describing the
+resource as it stands has to follow every change. The builder learns
+only that the container lists a sibling every rebuild replaces, never
+the operation form's key. The confirm page draws the panel after its
+actions too. The panel is handed the values the elements are built
+with, not a refined data surface, so it can tell which variant is
+shown. The contract panel lives in the base module and shows the
 derived tool's JSON Schema where the tool module is installed. Its "Right now" column, and the React
 page's, says "narrowed, and checked at runtime" for a key that is
 narrowed and that a runtime rule also checks (decided 2026-10-19,

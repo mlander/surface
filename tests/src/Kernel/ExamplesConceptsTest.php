@@ -136,6 +136,20 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Builds the generic form at a route and returns its panel.
+   *
+   * @param string $route_name
+   *   The route.
+   *
+   * @return array
+   *   The panel, drawn after the form's actions.
+   */
+  protected function panelAt(string $route_name): array {
+    $this->serveRoute($route_name);
+    return $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::PANEL_KEY];
+  }
+
+  /**
    * Submits the generic form at the route on the stack.
    *
    * @param array $values
@@ -572,12 +586,14 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->serveStep($stage, '3');
     $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
     $this->assertSame('Doors open at six.', $form[SurfaceOperationForm::SURFACE_KEY]['banner']['#default_value'], 'Step 3 reads through the stage.');
-    $concept = $form[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $concept = $form[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $this->assertStringContainsString((string) $this->container->get('surface_examples.concept_panel')->paragraph('event.notices'), (string) $concept['what']['#markup']);
+    $this->assertLessThan($form[SurfaceOperationForm::PANEL_KEY]['#weight'], $form['actions']['#weight'], 'A step draws its panel after Next.');
 
     $this->serveStep($stage, 'confirm');
     $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
     $this->assertSame(['event.setup', 'event.notices'], array_column($form['changes']['#rows'], 1));
+    $this->assertLessThan($form[SurfaceOperationForm::PANEL_KEY]['#weight'], $form['actions']['#weight'], 'The confirm page draws its panel after Save.');
     $state = (new FormState())->setValues(['op' => 'Save']);
     $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $state);
     $this->assertSame([], $state->getErrors());
@@ -610,7 +626,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
    * Tests the panel above examples 7 to 12, 14, 18 and 19, none above 1 to 3.
    */
   public function testThePanelSaysWhatEachShows(): void {
-    $panel = $this->formAt('surface_examples.step3')[SurfaceOperationForm::PANEL_KEY];
+    $panel = $this->panelAt('surface_examples.step3');
     $this->assertArrayNotHasKey(ExamplePanels::CONCEPT, $panel);
 
     $pages = [
@@ -630,7 +646,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     ];
     $order = [ExamplePanels::CONCEPT, ExamplePanels::FILES, ExamplePanels::CONTRACT, ExamplePanels::TODAY];
     foreach ($pages as $route => $id) {
-      $panel = $this->formAt('surface_examples.' . $route)[SurfaceOperationForm::PANEL_KEY];
+      $panel = $this->panelAt('surface_examples.' . $route);
       $concept = $panel[ExamplePanels::CONCEPT];
       $this->assertSame(-1, $concept['#weight'], $route);
       $this->assertTrue($concept['#open']);
@@ -648,7 +664,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     // Example 7's rules are its resource's, which the Files panel beside
     // the concept panel shows whole, so the concept panel no longer quotes
     // them.
-    $panels = $this->formAt('surface_examples.step7')[SurfaceOperationForm::PANEL_KEY];
+    $panels = $this->panelAt('surface_examples.step7');
     $this->assertArrayNotHasKey('rules', $panels[ExamplePanels::CONCEPT]);
     $this->assertArrayHasKey('conditionals', $panels[ExamplePanels::CONCEPT]);
     $bulletin = $panels[ExamplePanels::FILES]['files']['#items'][0];
@@ -656,7 +672,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $rules = (string) $bulletin['whole']['text']['#code'];
     $this->assertStringContainsString("    \$inputs->narrow('send_day')\n      ->when(Condition::equals('frequency', 'monthly'))\n      ->doesNotApply();", $rules);
     // Example 10's two accounts and its facts.
-    $panel = $this->formAt('surface_examples.step10')[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $panel = $this->panelAt('surface_examples.step10')[ExamplePanels::CONCEPT];
     $accounts = json_decode((string) $panel['accounts']['content']['#code'], TRUE);
     $this->assertTrue($accounts['you']['property'][ContractEmitter::EXTENSION]['live']);
     $this->assertTrue($accounts['without the permission']['property']['readOnly']);
@@ -683,7 +699,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
       'readOnlyHint true, destructiveHint false, idempotentHint true',
     ], $panel['facts']['#rows'][2]);
     // Example 12's component, its schema beside the structure it became.
-    $panel = $this->formAt('surface_examples.step12')[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $panel = $this->panelAt('surface_examples.step12')[ExamplePanels::CONCEPT];
     $read = json_decode((string) $panel['read']['content']['#code'], TRUE);
     $this->assertSame(['heading'], $read['schema']['required']);
     $this->assertSame('event.spotlight.props.surface_examples:card', $read['structure']['title']);
@@ -803,7 +819,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertContains('surface:block.placement:create:schema', array_column($page['parts']['tools']['#rows'], 0));
     $this->assertContains('surface:block.placement:update:schema', array_column($page['parts']['tools']['#rows'], 0));
 
-    $panel = $this->formAt('surface_examples.step12')[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $panel = $this->panelAt('surface_examples.step12')[ExamplePanels::CONCEPT];
     $this->assertStringContainsString('The site has 4 components, more than 2, the site list limit', (string) $panel['what']['#markup']);
     $this->assertStringContainsString('surface:event.spotlight:configure:schema', (string) $panel['what']['#markup']);
     $this->assertStringContainsString('GET /surface-api/event.spotlight/schema?choose=/props={component}', (string) $panel['what']['#markup']);
@@ -823,7 +839,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertSame('Example 14: an optional extension', strip_tags((string) $index[14]['title']['#markup']));
     $this->assertArrayHasKey('extension', $index);
 
-    $concept = $this->formAt('surface_examples.step14')[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $concept = $this->panelAt('surface_examples.step14')[ExamplePanels::CONCEPT];
     $items = array_map(static fn ($item): string => strip_tags((string) (is_array($item) ? ($item['#markup'] ?? '') : $item)), $concept['enable']['#items']);
     $this->assertSame('Enable it: ddev drush pm:install surface_examples_keys; take it away again with ddev drush pm:uninstall surface_examples_keys.', $items[0]);
     $this->assertStringStartsWith('It is not enabled on this site yet: the mailer has one source', $items[1]);
@@ -834,11 +850,11 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertSame('<p>' . $this->container->get('surface_examples.concept_panel')->atUse() . '</p><p>A post cannot be signed now: no key is pasted, and no managed key is chosen.</p>', (string) $concept['use']['#markup']);
     $this->assertSame(ConceptPanel::LOCKING, (string) $concept['alternative']['content']['#code']);
     $this->assertSame(['event.mailer:pasted', 'event.mailer:read', 'event.webhook:pasted'], array_values(array_filter(array_keys($concept['calls']), static fn (string $key): bool => str_contains($key, ':'))), 'With the module off, the calls that need nothing of it.');
-    $this->assertSame(array_keys($concept['calls']), array_keys($this->formAt('surface_examples.step14_webhook')[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT]['calls']), 'Both pages make both resources\' calls.');
+    $this->assertSame(array_keys($concept['calls']), array_keys($this->panelAt('surface_examples.step14_webhook')[ExamplePanels::CONCEPT]['calls']), 'Both pages make both resources\' calls.');
 
     $this->container->get('module_installer')->install([ConceptPanel::KEYS]);
     $this->setUpCurrentUser(admin: TRUE);
-    $concept = $this->formAt('surface_examples.step14')[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $concept = $this->panelAt('surface_examples.step14')[ExamplePanels::CONCEPT];
     $this->assertStringStartsWith('It is enabled on this site now: the mailer offers two sources', strip_tags((string) $concept['enable']['#items'][1]));
     $contract = json_decode((string) $concept['contract']['content']['#code'], TRUE);
     $this->assertSame(['pasted', 'managed'], array_column($contract['event.mailer']['source']['oneOf'], 'const'));

@@ -8,14 +8,16 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\ResourceBuild\OperationRoute;
 
 /**
- * Something shown inside an operation form's data surface, rebuilt with it.
+ * Something shown after an operation form's buttons, rebuilt with it.
  *
  * Named by a route's optional `_surface_panel` default, as a service
  * id or a class, the way the cosmetic layer is. SurfaceOperationForm
- * places what it returns inside the data surface container, so the AJAX
- * rebuild a refinement triggers replaces it together with the elements:
- * a panel describing the data surface as it stands changes the moment an
- * answer does.
+ * draws what it returns after its actions, beside the data surface
+ * container, at SurfaceOperationForm::PANEL_KEY, and places it with
+ * placeRefreshedBeside(), so the AJAX rebuild a refinement triggers
+ * replaces it together with the elements: a panel describing the data
+ * surface as it stands changes the moment an answer does. The form sets
+ * its weight.
  *
  * Read only. A panel holds no input and is never extracted; what it
  * returns is rendered, not read.

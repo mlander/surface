@@ -185,10 +185,11 @@ class RetitleExampleTest extends SurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_examples.step17');
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
-    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
+    $built = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $form = $built[SurfaceOperationForm::SURFACE_KEY];
     $this->assertArrayHasKey('items', $form);
     $this->assertSame('select', $form['style']['#type']);
-    $concept = $form[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $concept = $built[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $this->assertSame(ConceptPanel::DOCS['ai.retitle'], array_map(static fn (array $item): string => strip_tags((string) $item['#markup']), $concept['docs']['#items']));
     foreach (ConceptPanel::DOCS['ai.retitle'] as $page) {
       $this->assertFileExists(dirname(__DIR__, 3) . '/' . strtok($page, '#'));

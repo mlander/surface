@@ -90,7 +90,7 @@ class ExamplesTodayPanelTest extends SurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
     $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
-    return $form[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY];
+    return $form[SurfaceOperationForm::PANEL_KEY];
   }
 
   /**
@@ -223,9 +223,9 @@ class ExamplesTodayPanelTest extends SurfaceKernelTestBase {
     $container = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY];
     $response = $this->ajaxResponse($state);
     // One wrapper for both panels, replaced as the contract panel was.
-    $panels = $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]);
+    $panels = $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]);
     $this->assertSame([$this->wrapperSelector($container['ticket']), $panels], $this->ajaxSelectors($response, 'replaceWith'));
-    $after = $container[SurfaceOperationForm::PANEL_KEY][ExamplePanels::TODAY];
+    $after = $state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY][ExamplePanels::TODAY];
     $this->assertSame([
       'title, $comment',
       'title, anyOf, if/then on pricing (2 variants: free has note, $ref (registration.step3.ticket.free); paid has price, currency, $ref (registration.step3.ticket.paid))',
@@ -241,7 +241,7 @@ class ExamplesTodayPanelTest extends SurfaceKernelTestBase {
     $this->assertStringContainsString('No schema is defined for property of type', $markup);
 
     $state = $this->postStep(3, ['venue' => 'harbour'] + self::SHIPPED, ['_triggering_element_name' => 'surface[venue]']);
-    $panels = $state->getCompleteForm()[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY];
+    $panels = $state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY];
     $after = $panels[ExamplePanels::TODAY];
     $this->assertSame($this->comparison($before), $this->comparison($after));
     $this->assertSame($before['derived']['json']['#code'], $after['derived']['json']['#code']);
