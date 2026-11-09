@@ -201,8 +201,11 @@ resource the command writes:
   or `[]` for a list) for one with neither.
 
 The other entries in the file, and the comments above an entry, are
-kept as they are; each entry written says so on the line above it. A
-test holds the shipped ones to it, `ConfigSchemaDriftTest`, which also
+kept as they are; each entry written says so on the line above it, and
+an entry that says so but whose resource, still declared, no longer
+writes it is dropped with the comments above it (an entry of a resource
+no longer declared is kept, and deleted by hand). A test holds the
+shipped ones to it, `ConfigSchemaDriftTest`, which also
 writes the test modules' files (they are never installed on a site) when
 run with `SURFACE_CONFIG_SCHEMA_WRITE=1`.
 
@@ -587,8 +590,9 @@ context that creates.
   (`ReferenceDependencies`, through a presave hook). A save made any
   other way, a form of core's or `$entity->save()`, recalculates without
   them until the next save through the storage.
-- **`prepareDelete()` and `delete()`** remove the entity the context
-  names, for an operation that deletes
+- **`prepareDelete()` and `delete()`**, `DeletableStorageInterface`'s
+  verbs, remove the entity the context names, for an operation that
+  deletes
   (why: [decision](decisions.md#a-placed-block-is-a-resource)).
 - **`mayClear()` and `widerThanSchema()`** read the entity's config
   schema, `<config prefix>.*`, for the keys stored under a property: the
@@ -664,6 +668,130 @@ repeats the members.
 A member the structure's access omits for the account writing is kept
 as stored, at the owner's level or inside a child the owner stores.
 
+### Variants stored flat
+
+**Experimental.** Variants stored flat is one of this module's bolder
+ideas, not a settled part of the pattern. Its PHP API, its stored shape
+and what its doors answer may change in any commit, and nothing is
+migrated. [What is promised](evolution.md#what-is-promised) says what
+the module does promise.
+
+Variants at a key whose map says
+`->setSetting(Variants::STORED_AS, Variants::FLAT)` are stored with the
+chosen variant's keys beside the deciding key and nothing at the key,
+while every door asks for them under the key
+([Stored flat](resources.md#stored-flat)). The layout
+(`Storage\FlatVariantsLayout`) tells the generator to write every
+variant's keys at that level (`StoredSchemaInterface::SPREAD`), and what
+that writes depends on where the level is.
+
+At a config object's root the schema is the union. Core types a root by
+its name alone: `TypedConfigManager` merges the root's definition with
+no replacements, so a `[<key>]` in a root's `type:` never resolves. The
+root lists every variant's keys beside the deciding key, each nullable,
+since a key may belong to a variant not chosen. The test module's kit:
+
+<!-- yaml: tests/modules/surface_resource_test/config/schema/surface_resource_test.schema.yml#surface_resource_test.kit -->
+
+```yaml
+surface_resource_test.kit:
+  type: config_object
+  label: 'Camping kit'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    kind:
+      type: string
+      label: 'Kind'
+    weight:
+      type: integer
+      label: 'Weight'
+      nullable: true
+    fuel:
+      type: string
+      label: 'Fuel'
+      nullable: true
+    poles:
+      type: integer
+      label: 'Poles'
+      nullable: true
+    fly:
+      type: boolean
+      label: 'Rain fly'
+      nullable: true
+    notes:
+      type: string
+      label: 'Notes'
+      nullable: true
+```
+
+Inside a mapping (an item of a collection, a child at a key, an entry
+of keys from the site), the generator writes core's own-key form,
+`<type>.[<key>]`: the level is typed by the deciding key it holds, the
+owner's keys at that level are a mapping type of their own, and each
+variant's type extends it with the variant's keys. The test module's
+campsite types each pitch by its kind:
+
+<!-- yaml: tests/modules/surface_resource_test/config/schema/surface_resource_test.schema.yml#surface_resource_test.campsite -->
+
+```yaml
+surface_resource_test.campsite:
+  type: config_object
+  label: 'Campsite'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    pitches:
+      type: sequence
+      label: 'Pitches'
+      nullable: true
+      sequence:
+        type: 'surface_resource_test.campsite.pitches.[kind]'
+        label: 'Pitches'
+```
+
+<!-- yaml: tests/modules/surface_resource_test/config/schema/surface_resource_test.schema.yml#surface_resource_test.campsite.pitches -->
+
+```yaml
+surface_resource_test.campsite.pitches:
+  type: mapping
+  label: 'Pitches'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    name:
+      type: string
+      label: 'Name'
+    kind:
+      type: string
+      label: 'Kind'
+```
+
+<!-- yaml: tests/modules/surface_resource_test/config/schema/surface_resource_test.schema.yml#surface_resource_test.campsite.pitches.hammock -->
+
+```yaml
+surface_resource_test.campsite.pitches.hammock:
+  type: surface_resource_test.campsite.pitches
+  label: 'Hammock'
+  mapping:
+    straps:
+      type: integer
+      label: 'Straps'
+      constraints:
+        Range:
+          min: 1
+```
+
+Below the top level the layout keeps nothing of a variant not chosen:
+an item's position may hold another item on the next write, and the
+chosen variant's type declares none of the other variants' keys.
+
 ### The site's defaults are not stored values
 
 A site's own defaults live in their own config object,
@@ -704,8 +832,9 @@ first:
 - `Drupal\surface\Resource\ResourceStorageInterface`, what
   `#[Resource(storage:)]` names, over the context; its write verbs,
   `prepare()` and `commit()` (and a deleting storage's
-  `prepareDelete()` and `delete()`), are handed the account the write
-  is made as, and it never reads the current user
+  `prepareDelete()` and `delete()`, on
+  `Drupal\surface\Resource\DeletableStorageInterface`), are handed the
+  account the write is made as, and it never reads the current user
   ([No door-specific context](resources.md#no-door-specific-context)).
 
 The pipeline's:
@@ -763,7 +892,9 @@ $storage = $resources->storage(NodeTypeResource::class, $context);
 pipeline's interface and composes it along the tree of its children: a
 child whose class names storage of its own (an attached resource) has
 its values routed there, and a child without any (a structure, usually)
-is stored by its parent under its key.
+is stored by its parent under its key. Handed a stage as its fifth
+argument, it wraps that storage so a write is kept in the stage until
+the stage is applied ([Staging](staging.md#from-php)).
 
 A structure a plugin uses names no storage, because only the plugin's
 host holds the instance its values belong to. The host supplies it:
@@ -865,6 +996,15 @@ accepted values instead (why: [decision](decisions.md#every-door-projects-what-t
 | `BaseFieldOverrideStorage` | A bundle's overrides of an entity type's base fields. | The overrides to save, as exported arrays, and the fields whose override goes. | `NodeTypeStorage` |
 | `PluginConfigurationStorage` | A plugin's configuration array. | The complete configuration. | the plugin hosts |
 | `CompositeStorage` | Several of the above, in order. | One prepared set per child. | no shipped resource yet |
+
+`ConfigObjectStorage` and `ConfigEntityStorage` implement
+`TransactionalStorageInterface` ([Opting into staging](#opting-into-staging)),
+so a stage takes a write to a resource either stores, every subclass
+included: config rows are the database's, and a rolled back apply resets
+what config keeps beside them ([Staging: Config in a stage](staging.md#config-in-a-stage)).
+`StateStorage` does not. The five in `Pipeline\Storage\` are a host's,
+which a stage never wraps. The entity example's `ContentEntityStorage`
+implements it.
 
 `ConfigObjectStorage` came back once every settings resource had
 written the same class: the examples' three, and the one the first
@@ -1088,6 +1228,13 @@ structure declaring a secret against unwired storage still gets the form
 and `accept()` halves of the flag, which is to say the value is kept and
 never echoed, but stored in the clear.
 
+A stage is the first place that seals such a secret: its record holds a
+staged write's whole document, and every string at a secret path is
+sealed there with the codec, by the paths the entry records, and opened
+only at a read through the stage and at apply. Apply then hands the
+secret to the resource's own storage, which keeps it as it always does
+([Staging: Secrets in a stage](staging.md#secrets-in-a-stage)).
+
 ### Values written before the flag
 
 `fromStorage()` asks the codec `isEncrypted()` and hands plaintext
@@ -1165,6 +1312,8 @@ A resource's storage class, a `ResourceStorageInterface` named by
 4. It is an autowired service, so it takes services in its constructor;
    container-built, it translates with `$this->t()`.
 5. Compose `DependencySerializationTrait`, and hold no closures.
+6. To let a stage hold its writes, implement
+   `TransactionalStorageInterface` ([below](#opting-into-staging)).
 
 An engine storage class, a `SurfaceStorageInterface` the pipeline
 writes to directly:
@@ -1179,3 +1328,48 @@ writes to directly:
 4. Declare any dependencies the artifact carries in the `PreparedValues`,
    in the shape `calculateDependencies()` collects them.
 5. Compose `DependencySerializationTrait`, and hold no closures.
+
+### Opting into staging
+
+A stage keeps writes until they are applied together, and apply makes
+them in one database transaction. A stage takes a write only for a
+resource whose storage class implements
+`Drupal\surface\Pipeline\TransactionalStorageInterface`; any other is
+refused at prepare, code `does_not_apply`, naming the class. The
+storage a variant or an attachment is routed to is checked too: apply
+commits it in the same transaction, so a routed child whose storage
+class does not implement the interface refuses the write, naming the
+child.
+
+Implementing it is a promise: `commit()` writes its permanent state
+through the database connection alone, so rolling the transaction back
+undoes the write whole, and so does `delete()` on a storage that also
+implements `DeletableStorageInterface`, since a stage holds deletes too
+([Staging](staging.md#a-staged-delete)); what it puts in caches or in
+memory is undone in `rolledBack()`. The config storages make it: config
+rows are the database's, and apply resets what config keeps beside them
+for every config name it wrote. A storage that writes State or changes a
+table's schema does not: State keeps a cache beside the database, and a
+database without transactional schema changes, such as MySQL and
+MariaDB, commits a schema change at once.
+
+The config storages make the promise for every subclass. A subclass
+whose `commit()` has effects outside the database, files written or
+deleted or a call to another service, is not undone when apply rolls
+back: such a subclass should not rely on staging, or undoes those
+effects in `rolledBack()`. `PerformanceStorage` in
+`surface_examples_performance` is the shipped example: its `commit()`
+deletes the CSS and JavaScript aggregates, which a rollback leaves
+deleted, and which the next page that needs them builds again.
+
+Its one method, `rolledBack()`, is called after apply rolls back, on the
+storage of every write whose commit had started, the last first, and on
+each storage routed under it, whether its route wrote or not. Drop
+there what the storage cached beside the database for what it wrote: the
+entity example resets the entity storage's cache of each entity it saved
+or deleted (`resetCache([$id])`), so a load later in the request reads what the
+database holds. A config storage leaves the body empty, since apply
+resets config's caches itself, and so does a storage that caches
+nothing, such as one over the database's key-value collection. What hooks do
+beside the database during a save (a mail sent, a remote call) is not
+undone by the rollback and is not the storage's to undo.

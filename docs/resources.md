@@ -26,27 +26,29 @@ pattern left open.
 
 ## Which way to compose
 
-A resource or structure is made of others in six ways. Each answers a
+A resource or structure is made of others in seven ways. Each answers a
 different question, keeps the keys in a different place and is stated
-differently in the schema; the examples module shows every one on a
-page of its own.
+differently in the schema; the examples module shows all seven, on the
+pages the third column names.
 
 | The question you are asking | What it gives | The example that shows it | On this page |
 | --- | --- | --- | --- |
-| Is this group of keys a thing of its own? | `attach($key, Child::class)`: a fixed child, its keys stored as a map under the key, behind the wall; the schema refers to the child's def at the key. | The contact, `/surface-examples/3`; the press contact, `/surface-examples/8` | [Children](#children) |
+| Is this group of keys a thing of its own? | `attach($key, Child::class, $label)`: a fixed child, its keys stored as a map under the key, behind the wall; the schema refers to the child's def at the key. | The contact, `/surface-examples/3`; the press contact, `/surface-examples/8` | [Children](#children) |
+| Is this group of keys mine alone, with no class of its own? | `addMap($key, $label, fn (BlueprintInterface $map) => ...)`: an anonymous map, the owner's own keys under the key, stored as a map; the schema is an inline object, with no def. | The desk's location, `/surface-examples/8/desk` | [An anonymous map](declaring-a-resource.md#an-anonymous-map) |
 | Are these keys shared members that are part of this thing? | `mixIn(Structure::class)`: a mixin, its members the owner's own keys, stored flat beside them; the schema is `allOf` of the structure's def and the owner's properties. | The review, `/surface-examples/8` | [Mixins](#mixins) |
 | Does a structure need a value its container holds? | `reads($port, $type)` in the structure, wired by `attach(..., reads: [$port => $key])`: a port, the value kept at the container's key and stored by nothing in the structure; the def lists its ports, and what depends on one is stated on the container's `allOf`. | The person's `listed`, `/surface-examples/8` and `/surface-examples/8/desk` | [Ports](#ports) |
-| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
-| Does a group of keys repeat? | `attachList($key, Child::class, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
+| Does one key's value choose which further keys apply? | `attachVariants($key, by: $sibling, label: $label)` and a `#[Variant]` per value, or `from:` a provider that lists them from the site, each with its schema: variants, the chosen variant's keys stored under the key; the schema is an `if`/`then` on the sibling for each variant. Stored flat beside the deciding key where the storage keeps it so, `->setSetting(Variants::STORED_AS, Variants::FLAT)`; the contract does not change ([Stored flat](#stored-flat)). | The ticket, `/surface-examples/3`; a component's props, `/surface-examples/12` | [Variants](#variants), [from the site](#variants-from-the-site) |
+| Does a group of keys repeat? | `attachList($key, Child::class, $label, min:, max:)`: a collection, a list under the key whose every item is the child's keys; the schema is an array whose `items` refer to the child's def, its Count as `minItems` and `maxItems`. | The volunteers, `/surface-examples/8/desk` | [Collections](#collections) |
 | Is there one key per thing the site has? | `addEach()` or `attachEach()` with a provider: keys from the site, a map under the key with one entry per thing the provider lists at every build; the schema states every entry, the map a def of the owner's. | The ticket types, `/surface-examples/9` | [Keys that come from the site](#keys-that-come-from-the-site) |
 
-The rule of thumb: nest for a thing of its own, mix in for shared
-members that are part of this thing, and read a port for a value the
-container holds. Use variants when a key chooses the keys, and a
-collection when groups repeat. Use keys from the site when the site,
+The rule of thumb: nest for a thing of its own, write an anonymous map
+for keys only this thing holds, mix in for shared members that are part
+of this thing, and read a port for a value the container holds. Use
+variants when a key chooses the keys, and a collection when groups
+repeat. Use keys from the site when the site,
 not the code, decides how many there are. Whichever way, the key takes
-the label the parent gives it, and the child's def in the schema the
-label the child gives itself, `#[Structure(label:)]`
+the label the parent gives it with the key, and the child's def in the
+schema the label the child gives itself, `#[Structure(label:)]`
 ([What it is called](declaring-a-resource.md#what-it-is-called)).
 
 ## Where things live
@@ -281,8 +283,9 @@ already known, and that is a **context**, an `OperationContext`:
   keeps its value. `deletes: TRUE`, beside `destructive: TRUE`, makes an
   operation a delete: it takes no values, its storage removes the thing
   its context names (`DeletableStorageInterface`), its tool takes the
-  parameters and a dry run, and HTTP serves it as `DELETE` (the
-  placement's `delete`; why:
+  parameters and a dry run, and `stage` where its resource's storage can
+  be staged ([Staging](staging.md#a-staged-delete)), and HTTP serves it
+  as `DELETE` (the placement's `delete`, a content entity's; why:
   [decision](decisions.md#a-placed-block-is-a-resource)).
 
 The content type resource is the worked example:
@@ -885,7 +888,8 @@ own is a tool, `surface:<resource id>:<operation id>`, derived by
   parameter named for one of the resource's keys described as that key,
   with its label, meaning and allowed values), then `values`, the
   resource's keys less the identity keys the operation knows, then
-  `dry_run`. What `values` requires follows the operation's kind
+  `dry_run`, then `stage` where a stage applies to the operation
+  ([Staging](staging.md#the-stage-input)). What `values` requires follows the operation's kind
   (`create`, `update` or `read`, read off its attribute and stated in
   both documents). An operation that creates requires what the
   resource requires and lists the declared defaults. One that changes a
@@ -1549,9 +1553,14 @@ Each refusal names the class and method at fault:
 - an alter attaching anywhere but its own mount, beside keys of its own
   there, a collection, or a resource, a structure with children of its
   own, or one whose access is not open, at its mount;
-- a structure mixed in that clashes, cycles, holds a child, stores
-  itself, has outputs, is mixed in by an alter, or is wired wrong, and
-  an owner naming what it may not of it ([Mixins](#mixins)).
+- a structure mixed in that clashes, cycles, holds variants at a key or
+  keys from the site, wires a child's ports, stores itself, has outputs
+  or is wired wrong, and an owner naming what it may not of it
+  ([Mixins](#mixins));
+- variants stored flat at two keys of one level, a variant stored flat
+  that declares a key its owner declares at that level or stores
+  variants flat of its own, and variants stored flat by a storage that
+  is no config storage ([Stored flat](#stored-flat)).
 
 ## Children
 
@@ -1569,15 +1578,18 @@ it at all of them ([Named shapes](declaring-a-resource.md#named-shapes)).
 The compliance structure's license is one; a shape handed to `attach()`
 is refused.
 
-- `attach('key', Child::class)` is a fixed child.
-- `attachVariants('key', by: 'sibling')` attaches **variants**: children
-  the sibling's value chooses between, one per value
-  ([Variants](#variants)).
+- `attach('key', Child::class, t('Label'))` is a fixed child.
+- `attachVariants('key', by: 'sibling', label: t('Label'))` attaches
+  **variants**: children the sibling's value chooses between, one per
+  value ([Variants](#variants)).
 
-`attach()` and `attachVariants()` return the map definition at the key, a
-core `MapDataDefinition`, the way `add()` returns its definition, so
-the owner labels and describes its own child's key with the core
-setters. A structure may ask for the widget that draws it as a whole,
+The label is given with the key, as `add()`'s is, and is optional: NULL
+gives the key no label of its own, leaving the structure's, which titles
+its def. `attach()` and `attachVariants()` return the map
+definition at the key, a core `MapDataDefinition`, the way `add()`
+returns its definition, so the owner describes its own child's key with
+the core setters (`setLabel()` still works, and says in two statements
+what one says). A structure may ask for the widget that draws it as a whole,
 `#[Structure('event.pair', widget: 'my_pair')]`, by the word a key's
 `widget` setting uses; it is set on the key wherever the structure is
 attached, unless the owner set one there, and a widget that cannot draw
@@ -1640,9 +1652,9 @@ output attaches nothing; both are refused by name otherwise.
 ### Variants
 
 Variants are a tagged union whose tag is a sibling key.
-`attachVariants('key', by: 'sibling')` attaches them at the key, and the
-sibling, the deciding key, chooses one. They are always open. The parent
-never names them: every class marked
+`attachVariants('key', by: 'sibling', label: t('Label'))` attaches them at the key,
+and the sibling, the deciding key, chooses one. They are always open.
+The parent never names them: every class marked
 `#[Variant(of: Parent::class, at: 'key', for: '...', label: ...)]` is the
 variant for that value, and the sibling's allowed values become exactly
 the values the variants are for, each offered by the variant's `label:`
@@ -1683,8 +1695,7 @@ as are the storage's own settings:
 $inputs->add('presentation', 'string', t('Presentation'), default: 'list')
   ->setRequired(TRUE);
 
-$inputs->attachVariants('presentation_settings', by: 'presentation')
-  ->setLabel(t('Presentation settings'))
+$inputs->attachVariants('presentation_settings', by: 'presentation', label: t('Presentation settings'))
   ->setDescription(t('What the chosen presentation needs.'));
 
 // ListPresentationStructure and GridPresentationStructure, beside it
@@ -1701,15 +1712,12 @@ $inputs->attachVariants('presentation_settings', by: 'presentation')
 #[Variant(of: ExampleBlockStructure::class, at: 'presentation_settings', for: 'grid', label: new TranslatableMarkup('Grid'))]
 
 // FieldInstanceResource, in surface_examples_field
-$inputs->attach('storage', FieldStorageResource::class)
-  ->setLabel(t('Field storage'));
+$inputs->attach('storage', FieldStorageResource::class, t('Field storage'));
 
-$inputs->attachVariants('settings', by: 'field_type')
-  ->setLabel(t('Field settings'));
+$inputs->attachVariants('settings', by: 'field_type', label: t('Field settings'), from: FieldSettingsSchemaVariants::class);
 
 // FieldStorageResource, in surface_examples_field
-$inputs->attachVariants('settings', by: 'field_type')
-  ->setLabel(t('Storage settings'));
+$inputs->attachVariants('settings', by: 'field_type', label: t('Storage settings'), from: FieldStorageSettingsSchemaVariants::class);
 
 // AddressFieldSettingsResource, in surface_examples_address
 #[Resource('field.settings.address', storage: AddressFieldSettingsStorage::class)]
@@ -1734,6 +1742,260 @@ presentation chose grid.`); a stored value that does not fit a newly
 chosen variant falls back to that variant's defaults, but a secret of
 another variant, which is kept beside them for the day its variant is
 chosen again (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+
+A variant may hold variants of its own. The test module's shelter
+attaches the variant its kind chooses at `shelter`, and its hut holds a
+covering its roof chooses, thatch or slate, each a `#[Variant]` of the
+hut at `covering`:
+
+<!-- code: tests/modules/surface_resource_test/src/Structure/Shelter/HutStructure.php -->
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\surface_resource_test\Structure\Shelter;
+
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\surface\Resource\Attribute\Structure;
+use Drupal\surface\Resource\Attribute\Variant;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\StructureInterface;
+use Drupal\surface_resource_test\Resource\Shelter\ShelterResource;
+
+/**
+ * A hut: the shelter's variant for "hut", holding variants of its own.
+ *
+ * Its roof chooses the covering: thatch or slate, each a #[Variant] of
+ * this class at "covering", whichever owner holds the hut. The camp
+ * lists it too.
+ */
+#[Structure('resource_test.shelter.hut')]
+#[Variant(of: ShelterResource::class, at: 'shelter', for: 'hut', label: new TranslatableMarkup('Hut'))]
+final class HutStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('roof', 'string', t('Roof'))
+      ->setRequired(TRUE);
+
+    $inputs->attachVariants('covering', by: 'roof', label: t('Covering'));
+  }
+
+}
+```
+
+The hut's def states the covering as any def states variants at a key:
+`anyOf` of the coverings' defs at `covering`, and one conditional per
+covering on the roof in the hut's own `allOf`. The form draws the
+covering under the hut and redraws it when the roof changes, a covering
+sent under another roof is refused, and the contract diff judges a
+covering added or removed as a choice the roof gains or loses
+(`VariantsHoldTest`). Which classes the covering holds is the hut's, so
+every owner that holds the hut holds the same coverings: the shelter,
+and the test module's camp, which lists the hut from a provider.
+
+### Stored flat
+
+Variants at a key may be stored flat: the storage keeps the chosen
+variant's keys beside the deciding key, with nothing stored at the key
+itself, while every door still asks for them under the key. It is a
+storage layout, not a way to compose. Stored flat is experimental: see
+[Variants stored flat](storage.md#variants-stored-flat). The blueprint
+states what is asked, and a setting on the map `attachVariants()`
+returns, `->setSetting(Variants::STORED_AS, Variants::FLAT)`, says how
+it is kept. `Storage\FlatVariantsLayout` applies it for the config
+storages, `ConfigObjectStorage` and `ConfigEntityStorage`, beside the
+layout that stores a reference by uuid. It is the shape core gives a
+condition's settings and a views handler's options, and the block
+example stores each visibility condition's settings so, in the block's
+config entity (`VisibilityConditionStructure`). The test module's kit
+stores its gear so:
+
+<!-- code: tests/modules/surface_resource_test/src/Resource/Kit/KitResource.php -->
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\surface_resource_test\Resource\Kit;
+
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\surface\Resource\Attribute\Operation;
+use Drupal\surface\Resource\Attribute\Resource;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\ResourceInterface;
+use Drupal\surface\Variants;
+use Drupal\surface_resource_test\Storage\KitStorage;
+
+/**
+ * A camping kit: the variant its kind chooses, at its gear, stored flat.
+ *
+ * The tent and the stove are variants at "gear", each a #[Variant] of
+ * this class there, asked for under the gear like any variants at a key.
+ * The gear's map says Variants::STORED_AS FLAT, so the kit's config object
+ * keeps the chosen variant's keys beside the kind, and no gear, which is
+ * what the engine's layout writes and reads (FlatVariantsLayout). Both
+ * declare the weight; the fuel is the stove's, the poles and the fly the
+ * tent's.
+ *
+ * @see docs/resources.md#stored-flat
+ */
+#[Resource('resource_test.kit', storage: KitStorage::class, label: new TranslatableMarkup('Camping kit'))]
+final class KitResource implements ResourceInterface {
+
+  /**
+   * Configures the kit, whose settings always exist.
+   */
+  #[Operation('configure', label: 'Configure the kit', permission: 'administer site configuration')]
+  public static function configure(): OperationContext {
+    return new OperationContext('configure');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('title', 'string', t('Title'))
+      ->setRequired(TRUE);
+    $inputs->add('kind', 'string', t('Kind'))
+      ->setRequired(TRUE);
+    $inputs->attachVariants('gear', by: 'kind', label: t('Gear'))
+      ->setSetting(Variants::STORED_AS, Variants::FLAT);
+    $inputs->add('notes', 'string', t('Notes'));
+  }
+
+}
+```
+
+<!-- code: tests/modules/surface_resource_test/src/Structure/Kit/TentKitStructure.php -->
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Drupal\surface_resource_test\Structure\Kit;
+
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Resource\Attribute\Structure;
+use Drupal\surface\Resource\Attribute\Variant;
+use Drupal\surface\Resource\BlueprintInterface;
+use Drupal\surface\Resource\StructureInterface;
+use Drupal\surface_resource_test\Resource\Kit\KitResource;
+
+/**
+ * A tent: the kit's variant for "tent", at its gear.
+ *
+ * It declares the weight as the stove does, which the kit stores as one
+ * key beside its kind. Its poles are required wherever it is chosen; with
+ * the rain fly up, a rule of its own asks for two at least.
+ */
+#[Structure('resource_test.kit.tent', label: new TranslatableMarkup('Tent kit'))]
+#[Variant(of: KitResource::class, at: 'gear', for: 'tent', label: new TranslatableMarkup('Tent'))]
+final class TentKitStructure implements StructureInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('weight', 'integer', t('Weight'))
+      ->addConstraint('Range', ['min' => 0]);
+    $inputs->add('poles', 'integer', t('Poles'), default: 2)
+      ->setRequired(TRUE)
+      ->addConstraint('Range', ['min' => 1]);
+    $inputs->add('fly', 'boolean', t('Rain fly'), default: FALSE);
+    $inputs->narrow('poles')
+      ->when(Condition::equals('fly', TRUE))
+      ->constrain('Range', ['min' => 2])
+      ->because(t('A rain fly takes two poles at least.'));
+  }
+
+}
+```
+
+The stove is the variant for `stove`, with the same `weight` and a
+`fuel` of its own. Declared as properties, the setting is an attribute
+beside the verb's,
+`#[AttachVariants(by: 'kind', label: 'Gear')] #[Setting(Variants::STORED_AS, Variants::FLAT)]`,
+as the test module's campsite pitch declares its gear
+([Declaring a resource](declaring-a-resource.md#declared-as-properties)).
+
+Every door asks for the kit's `title`, `kind`, `gear` and `notes`, the
+chosen variant's keys under `gear`. Without the setting, the kit's
+config object would hold the tent under its key:
+
+```yaml
+title: 'Weekend kit'
+kind: tent
+gear:
+  weight: 2300
+  poles: 2
+  fly: true
+notes: ''
+```
+
+Stored flat, it holds the tent's keys beside the kind, and nothing at
+`gear`. Its install file also holds a stove's fuel, a key of a variant
+not chosen:
+
+<!-- code: tests/modules/surface_resource_test/config/install/surface_resource_test.kit.yml -->
+
+```yaml
+title: 'Weekend kit'
+kind: tent
+weight: 2300
+fuel: gas
+poles: 2
+fly: true
+notes: ''
+```
+
+On read, the layout gathers every stored key at that level that is not
+one of the owner's own under the key, and reads back the chosen
+variant's keys and the secrets the other variants keep
+(`Variants::keptSecrets()`). A plain leftover of a variant not chosen
+stays in storage, unread: the kit above reads back with no fuel, since
+the pipeline would read a value holding another variant's key as
+written for that variant. A variant the site lists is settled to name
+its keys. A chosen variant of which nothing is stored reads back as an
+empty map, as variants under a key read back the empty map the
+pipeline writes for a variant with no keys. On write, the chosen keys
+are laid out beside the deciding key, the key itself is not stored, and
+at the top level what the read left out is kept. A switch back writes the variant whole
+from its defaults beneath what is sent, as variants at a key are
+written once the deciding key moves on, and as core writes a plugin's
+settings when its id changes: the tent's poles kept in storage are not
+read back. Below the top level nothing is kept for a variant not
+chosen, since an item's position in a collection may hold another item
+on the next write (`FlatVariantsLayoutTest`).
+
+Refused at build, each naming the owner and the key: two keys stored
+flat at one level, since read back every key that is not the owner's is
+gathered under the one flat key, and nothing could tell which keys each
+left behind; a variant that declares a key the owner declares at that
+level, a member of a structure the owner mixes in among them, since
+stored flat the two would be one key; a variant that stores variants
+flat of its own, which would land at the same level; and variants
+stored flat by a storage that is no config storage, which no layout
+applies. A variant the site lists is built when a door reads it, and
+checked then (`Resources::settleVariant()`).
+
+The config schema written from the resource describes the stored
+shape: at a config object's root it lists every variant's keys beside
+the deciding key, each nullable, since core types a root by its name
+alone; inside a mapping it is core's own-key form, `<type>.[<key>]`, as
+the test module's campsite types each pitch by its kind
+([Storage](storage.md#variants-stored-flat)). The config schema reader
+reads core's own-key types, `condition.plugin.[id]` and
+`views.sort.[plugin_id]`, as this layout at `configuration`
+([Config schema](reading-a-schema.md#config-schema)).
 
 ### Ports
 
@@ -1894,19 +2156,26 @@ timestamps' two are the journal's own.
   not there and storage keeps them. The owner's access answers for the
   rest, and where both answer for the same keys the stricter stands
   (why: [decision](decisions.md#a-mixin-is-merged-flat)).
+- **Children.** A child the structure attaches at a fixed key or in a
+  collection, an anonymous map with a frame among them, is the owner's
+  child at that key: built with the owner's children, in its own frame,
+  its access its own, stored at the key beside the members, nothing
+  wiring its ports. Omitted with the structure, it goes; locked with it,
+  it is locked. The test module's harnessed structure mixes in a harness
+  that brings a hip belt, its pockets and a rain cover.
 - **One def.** Both documents write the structure once, as a def, and
   the owner's frame is `allOf` of a reference to it and the owner's own
   properties, closed with `unevaluatedProperties`
   ([the served contract](served-contract.md#a-mixed-in-structure-is-composed)).
 - **Refused at build**, naming the class or the method: a member the
   owner, or another structure mixed in, declares too; a structure mixed
-  into itself, directly or through another; a structure that attaches a
-  child, attaches variants or a collection; a resource; one with outputs;
-  a `mixIn()` from an alter; an unwired port, one wired to a key the
-  owner does not declare, to one of the structure's own members, or of
-  another type; an owner's refiner or rule ruling a member out, or
-  naming a member of a structure with an access class; a structure's
-  alter that mounts a key.
+  into itself, directly or through another; a structure that attaches
+  variants at a key or keys from the site, or wires the ports of a child
+  it attaches; a resource; one with outputs; an unwired port, one wired
+  to a key the owner does not declare, to one of the structure's own
+  members, or of another type; an owner's refiner or rule ruling a
+  member out, or naming a member of a structure with an access class; a
+  structure's alter that mounts a key.
 
 ### Reusing a structure from another module
 
@@ -2025,11 +2294,13 @@ racks a context whole, where the access class answers the same and
 ### Variants from the site
 
 Some variants are the site's, not the code's: one per component a
-site's themes provide, one per layout its configuration lists. No class
-can be written for each, and each says what it holds already, in a
-JSON Schema. `attachVariants()` names a provider that lists them, each
-with its schema, and the reader writes each schema into a variant
-([Reading a schema](reading-a-schema.md)). The provider is the one
+site's themes provide, one per layout its configuration lists, one per
+plugin. No class can be written for each, and each says what it holds
+already, in a JSON Schema or a config schema. `attachVariants()` names a
+provider that lists them, each with its schema, which the reader writes
+into a variant ([Reading a schema](reading-a-schema.md)), or with the
+structure it is: one a plugin declares, or one read straight from config
+schema ([Config schema](reading-a-schema.md#config-schema)). The provider is the one
 interface [keys from the site](#keys-that-come-from-the-site) name too,
 `SiteListInterface`, and its list the one list type, `SiteList`; each
 verb reads what it needs of an entry and refuses the rest:
@@ -2038,8 +2309,7 @@ verb reads what it needs of an entry and refuses the rest:
 // SpotlightResource, example 12
 $inputs->add('component', 'string', t('Component'), default: 'surface_examples:card')
   ->setRequired(TRUE);
-$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
-  ->setLabel(t('Props'));
+$inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
 
 // ComponentProps, the main module's, built by the class resolver
 final class ComponentProps implements SiteListInterface {
@@ -2062,7 +2332,8 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **The provider** implements `SiteListInterface`: `list()` answers a
   `SiteList`, per value of the deciding key its label and the schema of
   what it chooses, `add($value, $label, schema: $schema)`, an object in
-  JSON Schema 2020-12 or an older draft. An entry that says a start or a
+  JSON Schema 2020-12 or an older draft, or the structure it is,
+  `add($value, $label, structure: $class_or_id)`. An entry that says a start or a
   lock, which only a key per thing reads, is refused, and so is one with
   neither a schema nor a structure. It is built by the class resolver, and asked at every
   build, as a provider of [keys from the site](#keys-that-come-from-the-site)
@@ -2072,7 +2343,9 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 - **Each variant is a structure read from its schema**, its id
   `<owner>.<key>.<value>` (`event.spotlight.props.surface_examples:card`),
   built by the build step as a class is: its keys, their constraints,
-  its maps, children, variants and rules, what its schema says.
+  its maps, children, variants and rules, what its schema says. An
+  entry that names a structure, `add($value, $label, structure:)`, is
+  that structure, by class or by id.
 - **Bound to its owner.** A provider that lists for several owners
   implements `BoundSiteListInterface`, whose `listFor($arguments)` the
   build asks with what the owner bound, `attachVariants('fields', by:
@@ -2144,22 +2417,23 @@ manages, the second only while the module that manages keys is on
 
 A placed block is the case at scale. `surface_examples_block`'s
 `block.placement` attaches its `settings` with
-`attachVariants('settings', by: 'plugin', from:
+`attachVariants('settings', by: 'plugin', label: t('Settings'), from:
 BlockPluginStructures::class)`: one variant per block plugin the block
 layout offers. A plugin whose class names its settings with
 `#[UsesStructure]` is that structure, built as declared, which a
 provider says with `SiteList::add($value, $label, structure: $class)`
 in place of a schema; the component block's is one, its own
-variants, the components' props, inside it. Any other plugin is read
-from its config schema, `block.settings.<plugin id>`, written as JSON
-Schema for the reader. The keys every block has (its title, whether it
+variants, the components' props, inside it. Any other plugin is the
+structure its config schema is, `block.settings.<plugin id>`, read
+straight from the schema less the keys every block has, the plugin's
+defaults laid over it. The keys every block has (its title, whether it
 shows, its theme, region, weight and status) are the resource's own, and
 its visibility a collection of conditions chosen the same way
 (why: [decision](decisions.md#a-placed-block-is-a-resource)).
 
 A field type's settings are the case again, in `surface_examples_field`.
 `FieldInstanceResource` attaches its `settings` with
-`attachVariants('settings', by: 'field_type', from:
+`attachVariants('settings', by: 'field_type', label: t('Field settings'), from:
 FieldSettingsSchemaVariants::class)`, and `FieldStorageResource` its own
 from `FieldStorageSettingsSchemaVariants`: one entry per field type
 offered in the UI, labeled with the field type's label, its schema
@@ -2214,19 +2488,19 @@ the variants' placeholder may become another type
 
 ### Collections
 
-`attachList('key', Child::class, min: 1, max: 4)` is a collection: a
-key whose value is a list, every item of which is an instance of the
-child. It returns the list definition at the key, a core
-`ListDataDefinition` whose item is the child's map, so the owner labels
-and describes it with the core setters, as `attach()` returns its map.
+`attachList('key', Child::class, t('Label'), min: 1, max: 4)` is a
+collection: a key whose value is a list, every item of which is an
+instance of the child, labeled as `attach()` labels its key. It returns
+the list definition at the key, a core `ListDataDefinition` whose item
+is the child's map, so the owner describes it with the core setters, as
+`attach()` returns its map.
 `min` and `max` are the list's `Count`; a NULL `max` is unlimited. The
 child is named the way `attach()` names one, by class or by a derived
 resource's id, and a derived resource's inputs callable may call it too.
 
 ```php
 // CellarResource, in the test module
-$inputs->attachList('racks', SpiceRackResource::class, min: 1, max: 4)
-  ->setLabel('Spice racks')
+$inputs->attachList('racks', SpiceRackResource::class, 'Spice racks', min: 1, max: 4)
   ->setDescription('One rack to four.');
 
 #[RefinesInput('racks')]
@@ -2271,8 +2545,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
 A collection is not an attached child in the engine's sense: its entry
 carries a `Collection` (`Entry::$list`), not an attachment, so
 `isNested()` is FALSE and the key is refined and locked as the
-parent's own. A list whose every item chooses its own child,
-`attachListBy()`, is not built.
+parent's own.
 
 ## Keys that come from the site
 
@@ -2284,8 +2557,7 @@ the things:
 
 ```php
 // HoneypotSettingsResource, in the honeypot port
-$inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, default: FALSE)
-  ->setLabel(t('Honeypot Enabled Forms'));
+$inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, label: t('Honeypot Enabled Forms'), default: FALSE);
 
 // ProtectedForms, a service
 final class ProtectedForms implements SiteListInterface {
@@ -2303,17 +2575,25 @@ final class ProtectedForms implements SiteListInterface {
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 
-- **The spelling.** `addEach($key, $type, from:, default:)` declares one
-  value per thing, each as `add()` declares a key: a type of the type
-  table or a shape, labeled with the thing's label, starting from the
-  thing's default or else `default:`. An entry that refers to an entity
-  names its entity type and has no type of its own,
-  `addEach('pages', NULL, from: Slots::class, to: 'node', bundles:
-  ['page'])`: each entry is the id, typed as the entity type keeps it,
-  with `SurfaceValidReference`, and `entity:node`
-  as the type is refused, as `add()` refuses it. `attachEach($key, Structure::class, from:)`
-  holds the structure at every thing, as `attach()` holds one. Both
-  return the map at the key, for the owner to label and describe.
+- **The spelling.** `addEach($key, $type, from:, label:, default:)`
+  declares one value per thing, each as `add()` declares a key: a type
+  of the type table or a shape, labeled with the thing's label, starting
+  from the thing's default or else `default:`. `$type` may be the
+  entry's definition instead, as `addList()` takes its item's, copied
+  for every thing. The map's label is required, since its values have
+  no structure to borrow one from. An entry that refers to an entity is
+  the id's type with `SurfaceValidReference`, as any reference key is,
+  `addEach('pages',
+  DataDefinition::create('integer')->addConstraint('SurfaceValidReference',
+  ['entityTypeId' => 'node', 'bundles' => ['page']]), from: Slots::class,
+  label: t('Pages'))`, its type checked against the entity type's id
+  when the resource is built; as a property, `#[Each('integer', from:,
+  label:)]` with `#[Constraint('SurfaceValidReference', [...], item:
+  TRUE)]`. `entity:node` as the type is refused, as `add()` refuses it.
+  `attachEach($key, Structure::class, from:, label:)` holds the
+  structure at every thing, as `attach()` holds one, its label optional
+  as `attach()`'s is. Both return the map at the key, for the owner to
+  describe.
 - **The provider** implements `SiteListInterface`, the one interface
   [variants from the site](#variants-from-the-site) name too: `list()`
   answers a `SiteList`, an id and a label per thing in order, and for
@@ -2400,8 +2680,10 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   to `attachEach()`; a list that cannot be cached or varies by the
   account; at the things, a structure that names storage or identity, or
   requires a port its owner leaves unwired, and a thing that says what a
-  structure starts from; either verb from an alter or inside a structure
-  mixed in.
+  structure starts from; either verb inside a structure mixed in. An
+  alter has neither verb: both are on `BlueprintInterface`, the owner's
+  blueprint, and not on the `BlueprintAdditionsInterface` an alter is
+  handed.
 
 A deriver ([below](#derived-resources)) is for what is a resource or
 structure of its own: operations, storage, identity, or a use at many
@@ -2409,7 +2691,7 @@ sites. Keys that only one resource asks for, one per thing, are this
 (why: [decision](decisions.md#keys-that-come-from-the-site)). Where each
 thing chooses a group of keys of its own, a schema per thing, the
 spelling is [variants from the site](#variants-from-the-site):
-`attachVariants($key, by: $sibling, from: Provider::class)`.
+`attachVariants($key, by: $sibling, label: $label, from: Provider::class)`.
 
 ### Ports on an entry
 
@@ -2421,8 +2703,8 @@ the same provider; the entry `<id>` reads the sibling's entry `<id>`:
 
 ```php
 // TicketSalesResource, example 9
-$inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, default: FALSE);
-$inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, reads: ['selling' => 'on_sale']);
+$inputs->addEach('on_sale', 'boolean', from: TicketTypes::class, label: t('On sale'), default: FALSE);
+$inputs->attachEach('limits', TicketLimitStructure::class, from: TicketTypes::class, label: t('Limits'), reads: ['selling' => 'on_sale']);
 
 // TicketLimitStructure
 $inputs->reads('selling', 'boolean');
@@ -2559,7 +2841,6 @@ what is derived from what, and where core's APIs fell short.
 
 ## Not built yet
 
-A collection whose items choose their own child (`attachListBy()`),
-input shapes, and options sources with their alters are deferred; [the pattern](pattern.md#deferred) records the position each is held to.
+Input shapes and options sources with their alters are deferred; [the pattern](pattern.md#deferred) records the position each is held to.
 Until options sources exist, a live list is a constraint with an
 options resolver.

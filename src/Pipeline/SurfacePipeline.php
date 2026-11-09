@@ -15,15 +15,17 @@ use Drupal\surface\SurfaceAccess;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
+use Drupal\surface\ResourceBuild\OutputsStorageInterface;
 
 /**
  * The one entry point from raw values to stored values.
  *
  * It keeps the write path and the document: what is written back and
  * what a write changes (kept(), changes()), prepare(), commit(), submit()
- * and its dry run, a delete, outbound() and document(). The three verbs
- * before a write are classes of their own, which this one constructs
- * from its services; accept(), validate() and conformOutput() call them:
+ * and its dry run, a delete, what a run reports (outputs()), outbound()
+ * and document(). The three verbs before a write are classes of their
+ * own, which this one constructs from its services; accept(), validate()
+ * and conformOutput() call them:
  *
  * - Accepting: raw values to typed values, by the coercion table, the
  *   three-way rule, secrets and computed keys.
@@ -446,8 +448,13 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       return $this->delete($surface, $input, $storage, $dry_run, $access);
     }
     $current = $storage->load($surface);
+    // A thing being created computes its computed keys from the merged
+    // sources, as a stage's apply computes them for a create it holds.
+    // Decision: see
+    // docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it.
+    $creates = $storage instanceof CreatingStorageInterface && $storage->creates();
     try {
-      $values = $this->accept($surface, $input, $current);
+      $values = $this->accepting->accept($surface, $input, $current, $creates);
     }
     catch (UnknownKeysException $e) {
       return new SurfaceResult($current, $this->accepting->unknownKeyViolations($e), access: $access);
@@ -471,7 +478,7 @@ final class SurfacePipeline implements SurfacePipelineInterface {
     if ($this->accepting->unmatched() !== []) {
       return new SurfaceResult($values, new ViolationSet(array_values($this->accepting->unmatched())), access: $access, notes: $notes);
     }
-    $violations = $this->validate($surface, $values, $current);
+    $violations = $this->validating->validate($surface, $values, $current, $creates);
     if (!$violations->isEmpty()) {
       return new SurfaceResult($values, $violations, access: $access, notes: $notes);
     }
@@ -479,9 +486,18 @@ final class SurfacePipeline implements SurfacePipelineInterface {
     // back where nothing was said or what was said is what it holds. A
     // thing being created is written whole.
     // Decision: see docs/decisions.md#absent-keeps-null-clears.
-    $creates = $storage instanceof CreatingStorageInterface && $storage->creates();
     $write = $this->kept($surface, $values, $current, $creates ? NULL : $input);
-    $changes = $surface->changesNothing() ? [] : static::changes($write, $current);
+    // A data surface with no keys, whether it declares none or access
+    // omits every one, has no document to compare: the call is the whole
+    // write, as a delete removes the whole thing, so its one change is the
+    // empty pointer.
+    // Decision: see
+    // docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner.
+    $changes = match (TRUE) {
+      $surface->changesNothing() => [],
+      count($surface->getDefinitions()) === 0 => [''],
+      default => static::changes($write, $current),
+    };
     try {
       $prepared = $this->prepare($surface, $write, $storage);
     }
@@ -520,6 +536,20 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       $this->commit($dry->prepared, $storage);
     }
     return new SurfaceResult($dry->values, $dry->violations, $dry->prepared, !$dry->prepared->changesNothing, $dry->access, $dry->notes, $dry->changes, $dry->written, $dry->writes);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function outputs(SurfaceInterface $built, SurfaceStorageInterface $storage, SurfaceResult $result): array {
+    // Decision: see
+    // docs/decisions.md#a-door-reads-what-a-run-reports-through-the-pipeline.
+    return match (TRUE) {
+      !$storage instanceof OutputsStorageInterface => [],
+      $result->committed => $storage->outputs($built, $result->values),
+      $result->prepared !== NULL => $storage->outputs($built, $result->values, $result->prepared),
+      default => [],
+    };
   }
 
   /**

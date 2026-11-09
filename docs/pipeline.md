@@ -34,6 +34,9 @@ to do.
 
 ## The stages
 
+These are the steps of one call. A stage of [Staging](staging.md), a
+set of writes kept until they are applied, is another thing.
+
 ### access
 
 ```php
@@ -497,15 +500,30 @@ in `commit()`. The storage owns the transform; the host owns the write
 ## Calling it without a form
 
 ```php
-$result = \Drupal::service('surface.pipeline')->submit(
-  $block->getSurface(),
-  ['headline' => 'Latest', 'limit' => '5'],
-  new PluginConfigurationStorage($block),
-);
+$pipeline = \Drupal::service('surface.pipeline');
+$surface = $block->getSurface();
+$storage = new PluginConfigurationStorage($block);
+$result = $pipeline->submit($surface, ['headline' => 'Latest', 'limit' => '5'], $storage);
 if (!$result->isValid()) {
   // $result->violations, a ViolationSet.
 }
 ```
+
+What the storage reports after the run, beside the result (the id of a
+thing just created, a stage's `items`), is read through the pipeline
+too, keyed as the resource's outputs declare:
+
+```php
+$outputs = $pipeline->outputs($surface, $storage, $result);
+```
+
+A plugin's configuration storage reports nothing, so `$outputs` is `[]`
+here; a storage that reports an id, a stage's, is in
+[Staging: From PHP](staging.md#from-php).
+
+A PHP caller is a door, and every door reads outputs this way, never
+from the storage
+(why: [decision](decisions.md#a-door-reads-what-a-run-reports-through-the-pipeline)).
 
 Each class's `use` line: [Namespaces](concepts.md#namespaces).
 

@@ -21,8 +21,11 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * for the entity when it knows one: exactly what core's own form route
  * asks, so the resource never lets anyone write what core's form would
  * not. A read asks view access for the entity, as core's own page does,
- * so an account that may view a node and not edit it reads it. Each field
- * then answers for itself (FieldItemAccess).
+ * so an account that may view a node and not edit it reads it. A delete
+ * asks delete access, as core's delete form does: for a node, what
+ * `delete any <type> content` and `delete own <type> content` grant
+ * through NodeEntityHooks::nodeAccess(). Each field then answers for
+ * itself (FieldItemAccess).
  *
  * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
  *
@@ -81,7 +84,12 @@ final class ContentEntityAccess implements OperationAccessInterface, ContainerIn
     if ($entity === NULL) {
       return AccessResult::forbidden(sprintf('There is no %s %s.', $entity_type_id, $id));
     }
-    return $entity->access($context->id === self::READ ? 'view' : 'update', $account, TRUE);
+    $operation = match ($context->id) {
+      self::READ => 'view',
+      'delete' => 'delete',
+      default => 'update',
+    };
+    return $entity->access($operation, $account, TRUE);
   }
 
 }

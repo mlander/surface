@@ -397,11 +397,14 @@ final class ResourceOperationToolDeriver extends DeriverBase implements Containe
           );
           static::behaves($definition, $operation);
           // Once the operation's parameters arrive, the values input is
-          // the resource built in the operation's real context.
+          // the resource built in the operation's real context, and where
+          // the tool takes a stage, the thing as it stands there.
           $parameters = array_map(static fn ($parameter): string => $parameter->name, $operation->parameters);
+          $inputs = $definition->getInputDefinitions(TRUE);
           // A delete has no values input to refine.
-          $values = $definition->getInputDefinitions(TRUE)[OperationInputs::VALUES] ?? NULL;
-          $definition->setInputDefinitionRefiners($parameters === [] || $values === NULL ? [] : [OperationInputs::VALUES => $parameters]);
+          $values = $inputs[OperationInputs::VALUES] ?? NULL;
+          $dependencies = isset($inputs[OperationInputs::STAGE]) ? [...$parameters, OperationInputs::STAGE] : $parameters;
+          $definition->setInputDefinitionRefiners($parameters === [] || $values === NULL ? [] : [OperationInputs::VALUES => $dependencies]);
         }
         catch (\LogicException | \InvalidArgumentException $e) {
           $this->skip($id, $e);

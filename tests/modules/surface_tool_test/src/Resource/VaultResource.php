@@ -33,10 +33,8 @@ final class VaultResource implements ResourceInterface {
     $inputs->add('endpoint', 'string', t('Endpoint'), default: '');
     $token = $inputs->add('token', 'string', t('API key'), default: '');
     DefinitionMetadata::setSecret($token);
-    $inputs->attach('backup', VaultBackupStructure::class)
-      ->setLabel(t('Backup'));
-    $inputs->attachList('mirrors', VaultBackupStructure::class)
-      ->setLabel(t('Mirrors'));
+    $inputs->attach('backup', VaultBackupStructure::class, t('Backup'));
+    $inputs->attachList('mirrors', VaultBackupStructure::class, t('Mirrors'));
   }
 
 }

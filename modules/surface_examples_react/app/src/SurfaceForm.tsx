@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createApi, pageOf, SEND_FINGERPRINT, startedPaths, startingValues, type Fetcher, type Settings } from './api';
-import type { Contract, Narrowed, Schema, Settled, Values, Violation } from './contract';
+import { createApi, pageOf, SEND_FINGERPRINT, stagePageOf, startedPaths, startingValues, type Fetcher, type Settings } from './api';
+import type { Contract, Created, Narrowed, Schema, Settled, Values, Violation } from './contract';
 import { ContractRefused, inlineSchema, isSuggested, joinedFetch, narrow, narrowingStatus, watchedPaths, setAt, withoutComputed, withoutSuggested } from './contract';
 import { ContractPanel } from './ContractPanel';
 import { Properties } from './widgets/Field';
@@ -31,6 +31,10 @@ interface Summary {
   violations: Violation[];
   notes: Violation[];
   stale: Violation[];
+  /** What the run answered beside its values: a listing's items, an apply's writes. */
+  outputs: Values;
+  /** Where a created thing now lives, or null. */
+  created: Created | null;
 }
 
 /** Files violations by path, for the fields to show inline. */
@@ -40,6 +44,133 @@ function byPath(violations: Violation[]): Record<string, string[]> {
     (errors[violation.path] ??= []).push(violation.message);
   }
   return errors;
+}
+
+/**
+ * Writes one value of an output as text, for a table cell or a definition.
+ *
+ * A list is its items joined with commas; a map of a name and a value, as
+ * a list of parameters holds, is `name: value`; any other map is each key
+ * and its value.
+ */
+export function outputText(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+  if (Array.isArray(value)) {
+    return value.map(outputText).join(', ');
+  }
+  if (typeof value === 'object') {
+    const map = value as Record<string, unknown>;
+    const keys = Object.keys(map);
+    if (keys.length === 2 && keys.includes('name') && keys.includes('value')) {
+      return `${outputText(map.name)}: ${outputText(map.value)}`;
+    }
+    return keys.map((key) => `${key}: ${outputText(map[key])}`).join('; ');
+  }
+  return String(value);
+}
+
+/** Whether an output is a list of maps, drawn as a table. */
+function isTable(value: unknown): value is Record<string, unknown>[] {
+  return Array.isArray(value) && value.length > 0 && value.every((item) => typeof item === 'object' && item !== null && !Array.isArray(item));
+}
+
+/**
+ * What a run answered beside its values, drawn whatever the operation.
+ *
+ * A list of maps is a table, its columns every key its maps hold, in the
+ * order they first appear; anything else is a term and its value.
+ */
+export function Outputs({ outputs }: { outputs: Values }): JSX.Element | null {
+  const entries = Object.entries(outputs);
+  if (entries.length === 0) {
+    return null;
+  }
+  const tables = entries.filter(([, value]) => isTable(value));
+  const terms = entries.filter(([, value]) => !isTable(value));
+  return (
+    <div className="dsr-outputs">
+      {terms.length > 0 ? (
+        <dl className="dsr-outputs__terms">
+          {terms.map(([name, value]) => (
+            <div key={name}>
+              <dt>{name}</dt>
+              <dd>{Array.isArray(value) && value.length === 0 ? 'none' : outputText(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+      {tables.map(([name, value]) => {
+        const rows = value as Record<string, unknown>[];
+        const columns = [...new Set(rows.flatMap((row) => Object.keys(row)))];
+        return (
+          <table key={name} className="dsr-outputs__table">
+            <caption>{name}</caption>
+            <thead>
+              <tr>
+                {columns.map((column) => (
+                  <th key={column} scope="col">
+                    {column}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => (
+                <tr key={index}>
+                  {columns.map((column) => (
+                    <td key={column}>{outputText(row[column])}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+      })}
+    </div>
+  );
+}
+
+/** What the summary says of a write that went through. */
+function written(settings: Settings, created: Created | null): string {
+  if (settings.stage === undefined) {
+    return 'Saved: the values were written.';
+  }
+  if (created !== null) {
+    const id = Object.values(created.parameters).map(String).join(', ');
+    return `Staged: nothing is created until the stage is applied; the stage names it by ${id}.`;
+  }
+  return 'Staged: the values are kept in the stage until it is applied.';
+}
+
+/**
+ * The bar above a form under a stage: which stage, and its two pages.
+ *
+ * The stage's own `changes` and `apply` pages, which the module derives
+ * for every operation, list what the stage holds and apply it.
+ */
+function StageBar({ settings }: { settings: Settings }): JSX.Element | null {
+  const changes = stagePageOf(settings, 'changes');
+  const apply = stagePageOf(settings, 'apply');
+  if (changes === null || apply === null) {
+    return null;
+  }
+  return (
+    <div className="dsr-stage" role="note">
+      <p>
+        Stage <strong>{settings.stageLabel ?? settings.stage}</strong>. Writes here go to the stage.
+      </p>
+      <ul>
+        <li>
+          <a href={changes}>List the staged writes</a>
+        </li>
+        <li>
+          <a href={apply}>Apply the stage</a>
+        </li>
+      </ul>
+    </div>
+  );
 }
 
 /**
@@ -69,7 +200,12 @@ function byPath(violations: Violation[]): Record<string, string[]> {
  * re-renders from the contract the answer carries, its ETag the next
  * write's; a write that created something moves to the page where it
  * now lives. A document of any contract but 3 is refused, and the
- * refusal shown as the form's error.
+ * refusal shown as the form's error. What a run answers beside its values
+ * (its `outputs`) is drawn below the summary.
+ *
+ * Under a stage (`settings.stage`), every request names it, a bar above
+ * the form says so and links the stage's own pages, a write says it was
+ * staged, and a create moves to the page that names it in the stage.
  *
  * A page a module serves at a route of its own starts the values from
  * more than the envelope: the route's defaults, then what a link sent,
@@ -370,7 +506,7 @@ export function SurfaceForm({
       // An operation that only reads answers its run accepted, and writes
       // nothing: valid, but not saved.
       const kind = result.ok && !result.committed ? 'run' : 'submit';
-      setSummary({ kind, valid: result.ok, violations: result.violations, notes: result.notes, stale: result.stale });
+      setSummary({ kind, valid: result.ok, violations: result.violations, notes: result.notes, stale: result.stale, outputs: result.outputs, created: result.created });
       if (!result.committed) {
         return;
       }
@@ -397,9 +533,14 @@ export function SurfaceForm({
   }, [api, settings, navigate, show]);
 
   if (contract === null || schema === null) {
-    return failure === null
-      ? <p className="dsr-status">Loading the form…</p>
-      : <div className="dsr-summary dsr-summary--error" role="alert">The form could not be loaded: {failure}</div>;
+    return (
+      <>
+        <StageBar settings={settings} />
+        {failure === null
+          ? <p className="dsr-status">Loading the form…</p>
+          : <div className="dsr-summary dsr-summary--error" role="alert">The form could not be loaded: {failure}</div>}
+      </>
+    );
   }
 
   return (
@@ -412,6 +553,7 @@ export function SurfaceForm({
       }}
       aria-busy={refining || submitting || undefined}
     >
+      <StageBar settings={settings} />
       {failure !== null ? (
         <div className="dsr-summary dsr-summary--error" role="alert">
           {failure}
@@ -421,7 +563,9 @@ export function SurfaceForm({
         <div className={`dsr-summary ${summary.valid ? 'dsr-summary--valid' : 'dsr-summary--error'}`} role="status">
           {summary.valid ? (
             summary.kind === 'submit' ? (
-              <p>Saved: the values were written.</p>
+              <p>{written(settings, summary.created)}</p>
+            ) : Object.keys(summary.outputs).length > 0 ? (
+              <p>Listed.</p>
             ) : (
               <p>Valid: these values would be accepted. Nothing was written.</p>
             )
@@ -465,6 +609,7 @@ export function SurfaceForm({
           ) : null}
         </div>
       ) : null}
+      {summary !== null && summary.valid ? <Outputs outputs={summary.outputs} /> : null}
       {/* Locked whole: every field is fixed, so there is nothing to submit. */}
       {contract.schema.readOnly ? (
         <p className="dsr-status">This may be seen and not changed.</p>

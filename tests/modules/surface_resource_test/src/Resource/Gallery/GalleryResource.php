@@ -53,16 +53,12 @@ final class GalleryResource implements ResourceInterface {
     $inputs->add('name', 'string', t('Name'))
       ->setRequired(TRUE);
     $inputs->mixIn(PlaqueStructure::class);
-    $inputs->attach('north', WallStructure::class)
-      ->setLabel(t('North wall'));
-    $inputs->attach('south', WallStructure::class)
-      ->setLabel(t('South wall'));
+    $inputs->attach('north', WallStructure::class, t('North wall'));
+    $inputs->attach('south', WallStructure::class, t('South wall'));
     $inputs->add('medium', 'string', t('Medium'), default: 'oil')
       ->setRequired(TRUE);
-    $inputs->attachVariants('finish', by: 'medium')
-      ->setLabel(t('Finish'));
-    $inputs->attachEach('rooms', RoomStructure::class, from: GalleryRooms::class)
-      ->setLabel(t('Rooms'));
+    $inputs->attachVariants('finish', by: 'medium', label: t('Finish'));
+    $inputs->attachEach('rooms', RoomStructure::class, from: GalleryRooms::class, label: t('Rooms'));
   }
 
 }

@@ -341,7 +341,8 @@ final class Rule {
    *   The definition, a copy the engine handed over.
    *
    * @return \Drupal\Core\TypedData\DataDefinitionInterface
-   *   The definition narrowed, or marked when the key does not apply.
+   *   The definition narrowed, held to another, or marked when the key
+   *   does not apply.
    */
   public function apply(DataDefinitionInterface $definition): DataDefinitionInterface {
     return $this->narrow($definition, FALSE);

@@ -1469,7 +1469,7 @@ final class SchemaReader {
         'label' => $labels[(string) $value] ?? NULL,
       ];
     }
-    $shell = $inputs->attachReadVariants($name, $found['by'], $variants);
+    $shell = $inputs->attachReadVariants($name, $found['by'], $variants, static::title($property));
     $this->describeShell($shell, $property, $name, $required, $pointer);
   }
 
@@ -1498,7 +1498,20 @@ final class SchemaReader {
   }
 
   /**
-   * Labels and describes the map a child is held in.
+   * Reads the title a key's schema gives it.
+   *
+   * @param array $property
+   *   The key's schema.
+   *
+   * @return string|null
+   *   The title, or NULL where it gives none.
+   */
+  protected static function title(array $property): ?string {
+    return is_string($property['title'] ?? NULL) ? $property['title'] : NULL;
+  }
+
+  /**
+   * Describes the map a child is held in, labeled by the verb.
    *
    * @param \Drupal\Core\TypedData\MapDataDefinition $shell
    *   The map attach() handed back.
@@ -1512,9 +1525,6 @@ final class SchemaReader {
    *   The key's pointer.
    */
   protected function describeShell(MapDataDefinition $shell, array $property, string $name, bool $required, string $pointer): void {
-    if (is_string($property['title'] ?? NULL)) {
-      $shell->setLabel($property['title']);
-    }
     if (is_string($property['description'] ?? NULL)) {
       $shell->setDescription($property['description']);
     }
@@ -1559,7 +1569,7 @@ final class SchemaReader {
             $this->note(static::below('', '$defs', $def_name, ContractEmitter::EXTENSION, 'ports', (string) $port, 'required'), sprintf('Read optional where %s attaches it unwired.', $pointer));
           }
         }
-        $shell = $inputs->attach($name, $this->structureAt($inputs, $def_name, $from, static::below('', '$defs', $def_name)), $reads);
+        $shell = $inputs->attach($name, $this->structureAt($inputs, $def_name, $from, static::below('', '$defs', $def_name)), static::title($property), $reads);
         $this->describeShell($shell, $property, $name, $required, $pointer);
         return;
       }
@@ -1585,11 +1595,12 @@ final class SchemaReader {
         static::declareRead($inputs, $name, $this->finished($map, $property, $required, in_array('null', $types, TRUE)));
         return;
       }
-      if (array_diff(array_keys($property), [...self::MAP, ContractEmitter::EXTENSION]) === [] && ($property['additionalProperties'] ?? NULL) === FALSE) {
+      if (array_diff(array_keys($property), [...self::MAP, 'allOf']) === [] && ($property['additionalProperties'] ?? NULL) === FALSE) {
         // An object written as a map, holding what a plain map does not
-        // (a structure, a rule): an anonymous map, written inline again.
+        // (a structure, a rule, which its `allOf` states): an anonymous
+        // map, written inline again.
         // Decision: see docs/decisions.md#an-anonymous-map.
-        $shell = $inputs->addMap($name, is_string($property['title'] ?? NULL) ? $property['title'] : $name, function (BlueprintInterface $map) use ($name, $property, $pointer, $root): void {
+        $shell = $inputs->addMap($name, static::title($property) ?? $name, function (BlueprintInterface $map) use ($name, $property, $pointer, $root): void {
           if (!$map instanceof ResourceBlueprint) {
             throw new NeedsFrame($name);
           }
@@ -1598,7 +1609,7 @@ final class SchemaReader {
         $this->describeShell($shell, $property, $name, $required, $pointer);
         return;
       }
-      $shell = $inputs->attach($name, $this->structureAt($inputs, $inputs->ownerId() . '.' . $name, $root, $pointer));
+      $shell = $inputs->attach($name, $this->structureAt($inputs, $inputs->ownerId() . '.' . $name, $root, $pointer), static::title($property));
       $this->describeShell($shell, $property, $name, $required, $pointer);
       return;
     }
@@ -1829,12 +1840,9 @@ final class SchemaReader {
     }
     $min = is_int($property['minItems'] ?? NULL) ? $property['minItems'] : NULL;
     $max = is_int($property['maxItems'] ?? NULL) ? $property['maxItems'] : NULL;
-    $list = $inputs->attachList($name, $child, $min, $max);
+    $list = $inputs->attachList($name, $child, static::title($property), $min, $max);
     if (($property['uniqueItems'] ?? FALSE) === TRUE) {
       $list->addConstraint('UniqueItems', []);
-    }
-    if (is_string($property['title'] ?? NULL)) {
-      $list->setLabel($property['title']);
     }
     if (is_string($property['description'] ?? NULL)) {
       $list->setDescription($property['description']);

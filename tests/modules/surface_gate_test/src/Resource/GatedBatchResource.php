@@ -27,8 +27,7 @@ final class GatedBatchResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attachList('items', GatedBatchItemStructure::class, min: 1, max: 10)
-      ->setLabel('Items')
+    $inputs->attachList('items', GatedBatchItemStructure::class, 'Items', min: 1, max: 10)
       ->setDescription('Each node and its note.');
   }
 

@@ -56,6 +56,11 @@ class OperationKindsTest extends SurfaceKernelTestBase {
   ];
 
   /**
+   * The line an update over a structure with no keys ends with instead.
+   */
+  protected const NO_KEYS = 'Takes no values: send values {}.';
+
+  /**
    * {@inheritdoc}
    */
   protected static $modules = [
@@ -109,19 +114,24 @@ class OperationKindsTest extends SurfaceKernelTestBase {
         // titled by it, its parameters its only inputs.
         $update = $manager->getDefinition($prefix . $resource->id . ':' . $operation->reads);
         $this->assertSame('Current values: ' . $update->getLabel(), (string) $definition->getLabel(), $id);
+        // A stage, where one applies, is the last input of both.
+        $inputs = array_values(array_diff(array_keys($definition->getInputDefinitions()), [OperationInputs::STAGE]));
         $this->assertSame(
           array_map(static fn ($parameter): string => $parameter->name, $operation->parameters),
-          array_keys($definition->getInputDefinitions()),
+          $inputs,
           $id . ': a read takes only the parameters.',
         );
-        $taken = [...array_keys($definition->getInputDefinitions()), OperationInputs::VALUES, OperationInputs::DRY_RUN];
-        $this->assertSame(array_keys($update->getInputDefinitions()), $taken, $id . ': the update\'s parameters.');
+        $taken = [...$inputs, OperationInputs::VALUES, OperationInputs::DRY_RUN];
+        $this->assertSame(array_values(array_diff(array_keys($update->getInputDefinitions()), [OperationInputs::STAGE])), $taken, $id . ': the update\'s parameters.');
         continue;
       }
       $description = (string) $definition->getDescription();
       // The vault says none, and is described by its label.
       $this->assertSame($operation->description === NULL, $id === 'surface:tool_test.vault:configure', $id . ': every shipped operation says what it does.');
-      $this->assertSame((string) ($operation->description ?? $operation->label . '.') . ' ' . self::RULES[$kind], $description, $id . ': its own description, then its kind\'s call rules.');
+      // An update whose data surface declares no keys, the stage's apply,
+      // says it takes none instead.
+      $rules = $kind === OperationDefinition::UPDATE && $resources->buildDeclared($resource->name(), $operation->needsNothing() ? $resources->operation($resource->name(), $operation->id) : new OperationContext($operation->contextId()))->getDefinitions()->toArray() === [] ? self::NO_KEYS : self::RULES[$kind];
+      $this->assertSame((string) ($operation->description ?? $operation->label . '.') . ' ' . $rules, $description, $id . ': its own description, then its kind\'s call rules.');
       $this->assertStringNotContainsString('"', $description, $id . ': no literal quotes, which a bridge escapes.');
 
       $context = $operation->needsNothing() ? $resources->operation($resource->name(), $operation->id) : new OperationContext($operation->id);
@@ -209,6 +219,12 @@ class OperationKindsTest extends SurfaceKernelTestBase {
       'surface:registration.step2:read' => 'read',
       'surface:registration.step3:configure' => 'update',
       'surface:registration.step3:read' => 'read',
+      'surface:surface.stage:apply' => 'update',
+      'surface:surface.stage:changes' => 'read',
+      'surface:surface.stage:create' => 'create',
+      'surface:surface.stage:delete' => 'delete',
+      'surface:surface.stage:read' => 'read',
+      'surface:surface.stage:update' => 'update',
       'surface:tool_test.cabinet:count' => 'read',
       'surface:tool_test.cabinet:read' => 'read',
       'surface:tool_test.cabinet:update' => 'update',

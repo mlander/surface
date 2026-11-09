@@ -109,7 +109,13 @@ declares; the test module's `TestBlockStructure`, a structure, uses two.
   under the element and the property's description.
   `addList()` is the same for a list of values, `addMap()` for a map,
   and `addDefinition()` the long form, for one value built by hand
-  ([Maps and lists](#maps-and-lists)). The label is
+  ([Maps and lists](#maps-and-lists)). Every verb that declares a key
+  takes its label with it, after what fills the key:
+  `attach('contact', ContactStructure::class, t('Contact'))`,
+  `attachList()` and `attachVariants()` third, `attachEach()` and
+  `addEach()` after `from:`. On the four `attach` verbs it is optional,
+  NULL leaving the structure's own; `addEach()` requires one, since its
+  values have no structure to borrow a name from. The label is
   `t('...')` with a literal string; see [Translatable
   strings](#translatable-strings). The type may be a shape's class, a
   value declared once for every key that asks for it ([Named
@@ -230,8 +236,9 @@ Both are optional. Where they are said:
   out.
 - **The contract panel** names a part by its label, its id after it.
 
-Two labels are not the same thing. The label `attach()` or
-`attachVariants()` gives the key, `->setLabel(t('Ticket'))`, is the
+Two labels are not the same thing. The label given with the key to
+`attach()` or `attachVariants()`,
+`attachVariants('ticket', by: 'pricing', label: t('Ticket'))`, is the
 key's: the form element's title, the property's `title` beside the
 `$ref`. The structure's own label is what the structure is wherever it
 is held, the def's `title`. A structure that one plugin holds takes the
@@ -373,6 +380,12 @@ $inputs->add('max_length', 'integer', t('Maximum alias length'), default: 100)
 
 ## Declared as properties
 
+**Experimental.** Declaring keys as properties is one of this module's
+bolder ideas, not a settled part of the pattern. Its PHP API, its stored
+shape and what its doors answer may change in any commit, and nothing is
+migrated. [What is promised](evolution.md#what-is-promised) says what
+the module does promise.
+
 A class may declare its keys as properties instead: each key a property
 carrying the attribute of the blueprint verb it stands for, and the class
 using `DeclaresByProperties`, which supplies `defineInputs()` and
@@ -436,15 +449,20 @@ whether it must be given. The attributes say the rest:
 | `addList('days', 'string', ...)` | `#[Input('Days', list: 'string')] public array $days = [];`, an item constraint `#[Constraint(..., item: TRUE)]` |
 | `addList()` of maps | `list:` naming a plain class of `#[Input]` properties |
 | `addMap('coordinates', ..., fn)` | `#[Map('Coordinates')] public Coordinates $coordinates;`, a plain class of `#[Input]` properties |
-| `attach('contact', PersonStructure::class, reads: [...])` | `#[Attach(reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
-| `attachList('rooms', VenueRoomStructure::class, max: 20)` | `#[AttachList(VenueRoomStructure::class, max: 20)] public array $rooms;` |
-| `attachVariants('ticket', by: 'pricing')` | `#[Variants(by: 'pricing')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
-| `addEach()`, `attachEach()` | `#[Each(from:, type:)]`, `#[AttachEach(Structure::class, from:)]` on an array property |
+| `attach('contact', PersonStructure::class, t('Caterer contact'), reads: [...])` | `#[Attach(label: 'Caterer contact', reads: [...])] public PersonStructure $contact;`, or the class on the attribute |
+| `attachList('rooms', VenueRoomStructure::class, t('Rooms'), max: 20)` | `#[AttachList(VenueRoomStructure::class, label: 'Rooms', max: 20)] public array $rooms;` |
+| `attachVariants('ticket', by: 'pricing', label: t('Ticket'))` | `#[AttachVariants(by: 'pricing', label: 'Ticket')] public array $ticket;`; each variant still carries `#[Variant(of:, at:)]` |
+| `addEach('on_sale', 'boolean', from:, label:)`, `attachEach()` | `#[Each('boolean', from:, label:)]`, a constraint on each entry `#[Constraint(..., item: TRUE)]`; `#[AttachEach(Structure::class, from:, label:)]` on an array property |
 | `reads('listed', 'boolean')` | `#[Port] public bool $listed;`, `type: 'any'` for any type |
 | `compute('slug', ..., from:, using:, when:)` | `#[Computed('Slug', from:, using:, when:)] public string $slug;` |
 | `narrow('items')->when(Condition::equals('frequency', 'weekly'))->constrain(...)` | `#[Rule(whenEquals: ['frequency', 'weekly'], constrain: ['Range', ['max' => 5]])]` on `$items` |
 | `mixIn(ReviewStructure::class, reads: [...])` | `#[MixIn(ReviewStructure::class, reads: [...])]` on the class |
 | `defineOutputs()` | `#[Output(...)]`, which says what `#[Input]` says, on the class implementing `DefinesOutputsInterface` |
+
+An attribute for the owner's own keys names the kind of member
+(`Input`, `Output`, `Map`, `Each`, `Computed`, `Port`); an attribute for
+a composition restates the verb (`Attach`, `AttachList`, `AttachEach`,
+`AttachVariants`, `MixIn`).
 
 `#[RefinesInput]` methods, `#[Operation]`, `#[Resource]`, `#[Structure]`,
 `#[Variant]`, alters, access and storage are as on any class.
@@ -457,18 +475,20 @@ whether it must be given. The attributes say the rest:
   A computed key is never required by what its property says.
 - **Texts.** An attribute argument cannot call `t()`, so the texts the
   reader names (a label, a description, a placeholder, a prefix, a
-  suffix, a help text, a group's title, a rule's reason) are written as
-  bare strings, which it wraps in `TranslatableMarkup`. A text inside a
+  suffix, a help text, a group's title, a rule's reason, a `#[Variant]`'s
+  label) are written as bare strings, which it wraps in
+  `TranslatableMarkup`. A text inside a
   constraint's options (a message, a choice's label) is handed to core
   as it is, and is written `new TranslatableMarkup('...')`. The
   trade-off: a bare string is translated where a translation exists, but
   string extraction does not find it; `new TranslatableMarkup('...')` is
   found.
 - **Order.** The properties, in the order written, each one's
-  `#[Describe]` right after it; then each `#[MixIn]`, its members after
-  every property; then each `#[Rule]`, in the order of the properties
-  carrying them. A class that mixes in before its own keys keeps
-  `defineInputs()`.
+  `#[Describe]` right after it, an `#[AttachVariants]` property's key
+  and its `#[Setting]` among them where the property stands; then each
+  `#[MixIn]`, its members after every property; then each `#[Rule]`, in
+  the order of the properties carrying them. A class that mixes in
+  before its own keys keeps `defineInputs()`.
 - **What stays a method.** What an attribute argument cannot hold: a list
   computed by a call (`Venues::rooms()`), a key declared in a loop, a
   condition `#[Rule]` does not spell (it spells `whenEquals:`,

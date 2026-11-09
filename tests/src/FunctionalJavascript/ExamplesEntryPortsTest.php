@@ -62,7 +62,7 @@ class ExamplesEntryPortsTest extends ExamplesWebDriverTestBase {
     $assert->assertWaitOnAjaxRequest();
     $page->pressButton('Save');
     // The press returns before the saved page has loaded: wait for it.
-    $this->assertNotNull($assert->waitForText('The changes have been saved.'));
+    $this->assertTrue($assert->waitForText('The changes have been saved.'));
     $assert->elementNotExists('css', '.error');
     $stored = $this->config('surface_examples.sales')->get();
     $this->assertFalse($stored['on_sale']['student']);

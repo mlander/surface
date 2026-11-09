@@ -31,6 +31,7 @@ use Drupal\surface\DefinitionMetadata;
  * | Changing or dropping a Length or Count exactly | refused |
  * | Sharpening a label, description, default or example | neither |
  * | Changing the data type to one of its derivatives | narrower |
+ * | Changing the data type of an open value (held whole) | narrower |
  * | Changing the data type any other way (but from the placeholder) | refused |
  * | Turning off the required flag | refused |
  * | Removing a constraint | refused |
@@ -52,10 +53,13 @@ use Drupal\surface\DefinitionMetadata;
  * (DefinitionMetadata::variantsBy()), advertises nothing of its own, so
  * every type is narrower than it: it resolves to the map of the variant
  * its deciding key chose, the one way a shape may appear during
- * refinement. Any other `any` is held to its type like every type: a
- * blueprint declares none (add() refuses it), and a value a schema read
- * holds whole stays `any`. A key whose shape depends on another key's
- * value is variants, never a refiner returning a map.
+ * refinement. An open value, `any` held whole (LeafRules::open()), accepts
+ * every value, so every type is narrower than it too: it is what a reader
+ * declares for a key its schema says nothing of. Its own flag and
+ * constraints are compared, as from the placeholder. Any other `any` is
+ * held to its type like every type: a blueprint declares none (add()
+ * refuses it). A key whose shape depends on another key's value is
+ * variants, never a refiner returning a map.
  * Decision: see docs/decisions.md#variants-not-slots.
  *
  * A derivative is the other narrower type: `entity:node` is typed data's
@@ -154,11 +158,11 @@ final class Narrowing {
     if (DoesNotApply::marks($before)) {
       return 'a key that did not apply was made to apply';
     }
-    if (($before->getDataType() === 'any' && DefinitionMetadata::variantsBy($before) !== NULL) || self::isDerivative($before->getDataType(), $after->getDataType())) {
+    if (($before->getDataType() === 'any' && (DefinitionMetadata::variantsBy($before) !== NULL || DefinitionMetadata::isHeldWhole($before))) || self::isDerivative($before->getDataType(), $after->getDataType())) {
       // The variants' placeholder, which stands for what its deciding key
-      // chooses, or the base of what it became, so the shape it becomes
-      // is no wider; only its own flag and constraints are left to
-      // compare.
+      // chooses, an open value, which accepts every value, or the base of
+      // what it became, so the shape it becomes is no wider; only its own
+      // flag and constraints are left to compare.
       return self::ownWidening($before, $after);
     }
     if ($before->getDataType() !== $after->getDataType()) {

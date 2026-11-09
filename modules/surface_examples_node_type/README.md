@@ -61,6 +61,7 @@ drush role:perm:add content_editor 'administer surface examples content types'
 | --- | --- |
 | `/admin/structure/types/surface-add` | Add a content type |
 | `/admin/structure/types/manage/{node_type}/surface-edit` | Edit one |
+| `/admin/structure/types/manage/{node_type}/surface-flow` | Edit one over three steps into a stage, then confirm and apply |
 
 The edit form is also offered as an "Edit (resource)" operation on the
 content type listing, beside core's own, so the two forms are one click

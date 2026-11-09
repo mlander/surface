@@ -51,8 +51,7 @@ class LeafTypesTest extends SurfaceKernelTestBase {
   protected function blueprint(SurfaceBuilder $builder = new SurfaceBuilder()): ResourceBlueprint {
     $shapes = new Shapes($this->container->get('surface.resource_registry'), $this->container->get('class_resolver'), $this->container->get('config.typed'));
     return (new ResourceBlueprint($builder, $this->container->get('typed_data_manager')))
-      ->useShapes($shapes)
-      ->useReferences($this->container->get('surface.references'));
+      ->useShapes($shapes);
   }
 
   /**

@@ -37,8 +37,9 @@ final class Variant {
    * @param string $for
    *   The value of the deciding key this structure is the variant for.
    * @param string|\Stringable|null $label
-   *   What a person is offered the value as, written as
-   *   `new TranslatableMarkup(...)`: the choice's word, which stands over
+   *   What a person is offered the value as: a bare string, which the
+   *   build makes translatable, or `new TranslatableMarkup(...)`, which
+   *   string extraction finds. It is the choice's word, which stands over
    *   the structure's own label. NULL offers the structure's label, or
    *   the value itself where the structure has none. A deciding key that
    *   declares no list of its own is offered its variants' values by

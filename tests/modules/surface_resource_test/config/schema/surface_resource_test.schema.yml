@@ -754,3 +754,274 @@ surface_resource_test.poster:
     panels:
       type: ignore
       label: 'Panels'
+
+# The kit fixture: the members of the variant its kind chooses, listed
+# flat beside the kind, every one of them optional.
+# Generated from the resource_test.kit resource by drush surface:config-schema.
+surface_resource_test.kit:
+  type: config_object
+  label: 'Camping kit'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    kind:
+      type: string
+      label: 'Kind'
+    weight:
+      type: integer
+      label: 'Weight'
+      nullable: true
+    fuel:
+      type: string
+      label: 'Fuel'
+      nullable: true
+    poles:
+      type: integer
+      label: 'Poles'
+      nullable: true
+    fly:
+      type: boolean
+      label: 'Rain fly'
+      nullable: true
+    notes:
+      type: string
+      label: 'Notes'
+      nullable: true
+
+# The pack fixture: the variant its carry chooses under its load, typed
+# by the carry, its children inside.
+# Generated from the resource_test.pack resource by drush surface:config-schema.
+surface_resource_test.pack:
+  type: config_object
+  label: 'Backpack'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    carry:
+      type: string
+      label: 'Carry'
+    load:
+      type: 'surface_resource_test.pack.load.[%parent.carry]'
+      label: 'Load'
+    notes:
+      type: string
+      label: 'Notes'
+      nullable: true
+
+# Generated from the resource_test.shelter resource by drush surface:config-schema.
+surface_resource_test.shelter:
+  type: config_object
+  label: 'resource_test.shelter'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    kind:
+      type: string
+      label: 'Kind'
+    shelter:
+      type: 'surface_resource_test.shelter.shelter.[%parent.kind]'
+      label: 'Shelter'
+    notes:
+      type: string
+      label: 'Notes'
+      nullable: true
+
+# The campsite fixture: each pitch typed by its own kind, the keys of the
+# gear its kind chooses beside the kind.
+# Generated from the resource_test.campsite resource by drush surface:config-schema.
+surface_resource_test.campsite:
+  type: config_object
+  label: 'Campsite'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    title:
+      type: string
+      label: 'Title'
+    pitches:
+      type: sequence
+      label: 'Pitches'
+      nullable: true
+      sequence:
+        type: 'surface_resource_test.campsite.pitches.[kind]'
+        label: 'Pitches'
+
+# Generated from the resource_test.campsite resource by drush surface:config-schema.
+surface_resource_test.campsite.pitches:
+  type: mapping
+  label: 'Pitches'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    name:
+      type: string
+      label: 'Name'
+    kind:
+      type: string
+      label: 'Kind'
+
+# Generated from the resource_test.campsite resource by drush surface:config-schema.
+surface_resource_test.campsite.pitches.hammock:
+  type: surface_resource_test.campsite.pitches
+  label: 'Hammock'
+  mapping:
+    straps:
+      type: integer
+      label: 'Straps'
+      constraints:
+        Range:
+          min: 1
+
+# Generated from the resource_test.campsite resource by drush surface:config-schema.
+surface_resource_test.campsite.pitches.cot:
+  type: surface_resource_test.campsite.pitches
+  label: 'Cot'
+  mapping:
+    length:
+      type: integer
+      label: 'Length'
+      nullable: true
+      constraints:
+        Range:
+          min: 0
+
+# Generated from the resource_test.pack resource by drush surface:config-schema.
+surface_resource_test.pack.load.day:
+  type: mapping
+  label: 'Daypack'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    capacity:
+      type: integer
+      label: 'Volume'
+      nullable: true
+      constraints:
+        Range:
+          min: 10
+    cover:
+      type: mapping
+      label: 'Rain cover'
+      mapping:
+        color:
+          type: string
+          label: 'Color'
+          nullable: true
+        pouch:
+          type: mapping
+          label: 'Pouch'
+          mapping:
+            name:
+              type: string
+              label: 'Name'
+
+# Generated from the resource_test.pack resource by drush surface:config-schema.
+surface_resource_test.pack.load.frame:
+  type: mapping
+  label: 'Frame pack'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    capacity:
+      type: integer
+      label: 'Capacity'
+      nullable: true
+      constraints:
+        Range:
+          min: 10
+    belt:
+      type: mapping
+      label: 'Hip belt'
+      mapping:
+        padded:
+          type: boolean
+          label: 'Padded'
+          nullable: true
+        width:
+          type: integer
+          label: 'Width'
+          nullable: true
+          constraints:
+            Range:
+              min: 1
+    pockets:
+      type: sequence
+      label: 'Pockets'
+      nullable: true
+      constraints:
+        Count:
+          max: 3
+      sequence:
+        type: mapping
+        label: 'Pockets'
+        mapping:
+          name:
+            type: string
+            label: 'Name'
+
+# Generated from the resource_test.shelter resource by drush surface:config-schema.
+surface_resource_test.shelter.shelter.hut.covering.slate:
+  type: mapping
+  label: 'Slate'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    tiles:
+      type: integer
+      label: 'Tiles'
+      constraints:
+        Range:
+          min: 1
+
+# Generated from the resource_test.shelter resource by drush surface:config-schema.
+surface_resource_test.shelter.shelter.hut.covering.thatch:
+  type: mapping
+  label: 'Thatch'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    depth:
+      type: integer
+      label: 'Depth'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+
+# Generated from the resource_test.shelter resource by drush surface:config-schema.
+surface_resource_test.shelter.shelter.hut:
+  type: mapping
+  label: 'Hut'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    roof:
+      type: string
+      label: 'Roof'
+    covering:
+      type: 'surface_resource_test.shelter.shelter.hut.covering.[%parent.roof]'
+      label: 'Covering'
+
+# Generated from the resource_test.shelter resource by drush surface:config-schema.
+surface_resource_test.shelter.shelter.tarp:
+  type: mapping
+  label: 'Tarp'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    size:
+      type: integer
+      label: 'Size'
+      nullable: true
+      constraints:
+        Range:
+          min: 1

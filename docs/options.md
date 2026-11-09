@@ -411,11 +411,13 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   16 declares it, `AnyEntityStructure` and one structure per filter in
   `surface_examples_references`, each naming its entity types in its own
   declaration ([decision](decisions.md#a-blueprint-takes-no-complex-data-types)).
-- **One per thing the site has**, `addEach('pages', NULL, from:
-  Slots::class, to: 'node', bundles: ['page'])`: a map of keys from the
-  site whose every entry is such an id, typed as the entity type keeps
-  it, with the constraint; `addEach($key, 'entity:node', ...)` is
-  refused, as `add()` refuses it.
+- **One per thing the site has**, `addEach('pages',
+  DataDefinition::create('integer')->addConstraint('SurfaceValidReference',
+  ['entityTypeId' => 'node', 'bundles' => ['page']]), from: Slots::class,
+  label: t('Pages'))`: a map of keys from the site whose every entry is
+  such an id, the definition copied for every entry and checked as any
+  reference key is; `addEach($key, 'entity:node', from: ..., label: ...)`
+  is refused, as `add()` refuses it.
 - **A reference field's `target_id`.** The content entity example
   builds a reference field's target id as such a key, naming the
   field's selection handler and its settings

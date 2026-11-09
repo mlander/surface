@@ -11,6 +11,9 @@ use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Access\OperationGate;
+use Drupal\surface\Form\Flow;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Resource\StageResource;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
@@ -41,6 +44,23 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * a page that names nothing is let through only in the request's own
  * dispatch, so no link to it is drawn. Both answers are the operation
  * form's route's too (OperationGate).
+ *
+ * An API request whose `X-Surface-Stage` header names a stage is asked
+ * the stage's own `update` access after the permission and before the
+ * thing's context, which is then built through the stage, so another
+ * account's stage is refused, 403, on any call and whatever the
+ * parameters name. A header that names no stage is let through, as a
+ * parameter that names nothing is: the controller answers 422 on a call
+ * a stage does not apply to and 404 on one it applies to. On a path of
+ * the stage itself the header is the controller's to refuse.
+ *
+ * A page reads the stage from its query, `?stage=<id>`, as the operation
+ * form does (OperationRoute::stageRequested()), and asks the same three
+ * things in the same order: whether a stage applies to the operation,
+ * refused naming `does_not_apply`; whether the stage exists, a page not
+ * found when it does not; and the stage's own `update` access. The
+ * context is then built through the stage, so `?id=-1&stage=<id>` names
+ * what the stage creates. A page's answer varies by the query's `stage`.
  *
  * Decision: see
  * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
@@ -112,6 +132,7 @@ final class ServedOperationAccessCheck implements AccessInterface {
     // The page names the operation in its path; the API, by the method.
     $api = $operation === NULL;
     $parameters = NULL;
+    $stage = NULL;
     if ($api) {
       // The API: the operation is what the path and the method name.
       $segments = array_map(static fn (string $name): string => (string) $route_match->getRawParameter($name), ServedPaths::SEGMENTS);
@@ -126,6 +147,7 @@ final class ServedOperationAccessCheck implements AccessInterface {
       $resource = $target->definition->id;
       $operation = $target->operation->id;
       $parameters = $target->parameters;
+      $stage = $target->definition->id === StageResource::ID ? NULL : $target->stage;
       // A client calls the API; no link the site draws points at it. What
       // its path names, or does not, is its controller's to answer, as
       // it answers a path that names nothing above.
@@ -146,13 +168,53 @@ final class ServedOperationAccessCheck implements AccessInterface {
       // parameter, so saying it says nothing of what one names.
       return $permission;
     }
+    // A page names its stage in its query, as the operation form does.
+    $queried = $api ? NULL : ($request->query->all()[Flow::STAGE] ?? NULL);
+    if ($queried !== NULL && $queried !== '') {
+      if (!is_string($queried)) {
+        return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
+      }
+      if (!$this->servedOperations->stageable($resource, $operation)) {
+        $refusal = sprintf('A stage does not apply to the "%s" operation of %s (%s), so this page takes no "%s" in its query.', $operation, $resource, Violation::DOES_NOT_APPLY, Flow::STAGE);
+        return AccessResult::forbidden($refusal)->addCacheContexts(['url.query_args:' . Flow::STAGE])->setCacheMaxAge(0);
+      }
+      $stage = $queried;
+      $parameters = $this->servedOperations->parameters($resource, $operation, $request);
+    }
+    // The stage the header names is asked for before the thing: another
+    // account's is refused whatever the parameters name, on any call,
+    // and one that names nothing is the controller's to answer, 422 on a
+    // call a stage does not apply to and 404 on one it applies to. A
+    // context is then built through it, so a local id names what the
+    // stage creates.
+    // Decision: see
+    // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+    $staged = NULL;
+    $through = NULL;
+    if ($stage !== NULL) {
+      try {
+        $staged = $this->servedOperations->contextAccess(StageResource::ID, $this->servedOperations->context(StageResource::ID, 'update', ['id' => $stage]), $account);
+        $through = $this->servedOperations->stage($stage, $parameters);
+      }
+      catch (\InvalidArgumentException) {
+        // The header names no stage: the controller answers 422 where a
+        // stage does not apply, else 404. A page's query names none: a
+        // page not found.
+        return $api
+          ? AccessResult::allowed()->addCacheableDependency($permission)->setCacheMaxAge(0)
+          : $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
+      }
+      if (!$staged->isAllowed()) {
+        return $this->refused($staged instanceof AccessResultReasonInterface ? (string) $staged->getReason() : '')->addCacheableDependency($staged);
+      }
+    }
     // The context alone, built from the parameters: access is answered
     // from it, and nothing is built for a response the page cache answers.
     // Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
     try {
       $context = $parameters === NULL
         ? $this->servedOperations->contextFromRequest($resource, $operation, $request)
-        : $this->servedOperations->context($resource, $operation, $parameters);
+        : $this->servedOperations->context($resource, $operation, $parameters, $through);
     }
     catch (\InvalidArgumentException $e) {
       // A permission that names a parameter (`administer %entity_type
@@ -173,6 +235,14 @@ final class ServedOperationAccessCheck implements AccessInterface {
       return $this->refused($e->getMessage());
     }
     $access = $this->servedOperations->contextAccess($resource, $context, $account);
+    if ($access->isAllowed() && $staged !== NULL) {
+      // Decision: see
+      // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+      $access = $access->andIf($staged);
+    }
+    if (!$api && $access->isAllowed()) {
+      $access = $access->andIf(AccessResult::allowed()->addCacheContexts(['url.query_args:' . Flow::STAGE]));
+    }
     // An account that holds the operation's permission for what the
     // parameters name may hear why the rest refused; any other learns
     // nothing of what they name.

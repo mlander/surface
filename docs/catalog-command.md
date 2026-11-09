@@ -128,7 +128,7 @@ discovery raises (an attribute misplaced, two classes claiming one id)
 is one refusal of the whole site, since nothing can be read past it.
 
 Every route that serves an operation that builds is judged beside it,
-and a route written wrong is listed under Refused (its stage `route` in
+and a route written wrong is listed under Refused (its phase `route` in
 the JSON, beside `discovery` and `build`), its message naming the route
 as every visitor of it is refused. A route whose path has no variable,
 and which fixes or fills keys or pins a parameter, is read as its access

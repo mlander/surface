@@ -1,0 +1,173 @@
+# A sequence's Count, carried onto the list the reader declares: one of
+# values, one of mappings. Core's own schema declares none.
+surface_reader_test.counted:
+  type: config_object
+  label: 'Counted'
+  mapping:
+    tags:
+      type: sequence
+      label: 'Tags'
+      constraints:
+        Count:
+          min: 1
+          max: 3
+      sequence:
+        type: string
+        label: 'Tag'
+    stops:
+      type: sequence
+      label: 'Stops'
+      constraints:
+        Count:
+          min: 1
+          max: 3
+      sequence:
+        type: mapping
+        label: 'Stop'
+        mapping:
+          name:
+            type: string
+            label: 'Name'
+
+# Keys no shape is read for, each declared open: one the schema checks
+# nothing of, and one whose type a key outside its frame chooses.
+surface_reader_test.open:
+  type: config_object
+  label: 'Open'
+  mapping:
+    kind:
+      type: string
+      label: 'Kind'
+    loose:
+      type: ignore
+      label: 'Loose'
+    nested:
+      type: mapping
+      label: 'Nested'
+      mapping:
+        options:
+          type: surface_reader_test.options.[%parent.%parent.kind]
+          label: 'Options'
+
+surface_reader_test.options.wide:
+  type: mapping
+  label: 'Wide'
+  mapping:
+    width:
+      type: integer
+      label: 'Width'
+
+# A handler typed by its own key, one type holding variants at a key that
+# a key of its own chooses, as views.field.field holds its formatter's
+# settings.
+surface_reader_test_handler:
+  type: mapping
+  label: 'Handler'
+  mapping:
+    plugin_id:
+      type: string
+      label: 'Plugin'
+
+surface_reader_test.handler.*:
+  type: surface_reader_test_handler
+  label: 'Any handler'
+
+surface_reader_test.handler.formatted:
+  type: surface_reader_test_handler
+  label: 'Formatted'
+  mapping:
+    format:
+      type: string
+      label: 'Format'
+    settings:
+      type: surface_reader_test.format.[%parent.format]
+      label: 'Settings'
+
+surface_reader_test.handler.plain:
+  type: surface_reader_test_handler
+  label: 'Plain'
+  mapping:
+    size:
+      type: integer
+      label: 'Size'
+
+surface_reader_test.format.bold:
+  type: mapping
+  label: 'Bold'
+  mapping:
+    weight:
+      type: integer
+      label: 'Weight'
+
+surface_reader_test.format.italic:
+  type: mapping
+  label: 'Italic'
+  mapping:
+    slant:
+      type: integer
+      label: 'Slant'
+
+# A signal typed by its own key, two types declaring one key unlike: a
+# string in one, a mapping in the other, as views.area.text and
+# views.area.text_custom declare their content.
+surface_reader_test_signal:
+  type: mapping
+  label: 'Signal'
+  mapping:
+    kind:
+      type: string
+      label: 'Kind'
+
+surface_reader_test.signal.*:
+  type: surface_reader_test_signal
+  label: 'Any signal'
+
+surface_reader_test.signal.word:
+  type: surface_reader_test_signal
+  label: 'Word'
+  mapping:
+    pattern:
+      type: string
+      label: 'Pattern'
+
+surface_reader_test.signal.timed:
+  type: surface_reader_test_signal
+  label: 'Timed'
+  mapping:
+    pattern:
+      type: mapping
+      label: 'Pattern'
+      mapping:
+        on:
+          type: integer
+          label: 'On'
+        off:
+          type: integer
+          label: 'Off'
+
+# A setting typed by its own key whose every value holds a key named
+# configuration, where the chosen type's keys would be asked for.
+surface_reader_test_setting:
+  type: mapping
+  label: 'Setting'
+  mapping:
+    kind:
+      type: string
+      label: 'Kind'
+    configuration:
+      type: string
+      label: 'Configuration'
+
+surface_reader_test.setting.*:
+  type: surface_reader_test_setting
+  label: 'Any setting'
+
+# The condition host: one condition typed by its own id, as a block's
+# visibility types each, the chosen condition's keys beside the id.
+surface_reader_test.condition_host:
+  type: config_object
+  label: 'Condition host'
+  mapping:
+    condition:
+      type: condition.plugin.[id]
+      label: 'Condition'

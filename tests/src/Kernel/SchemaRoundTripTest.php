@@ -215,6 +215,9 @@ class SchemaRoundTripTest extends SurfaceKernelTestBase {
     $this->assertSame([], array_filter($differ, static fn (string $what): bool => $what === 'error'), 'Every document is read back, and what it reads builds.');
     $this->assertSame(array_keys(self::DIFFERS), array_keys($differ), 'What does not round-trip is listed, and nothing listed round-trips.');
     $this->assertGreaterThanOrEqual(30, count($same), 'Most shipped declarations round-trip byte for byte.');
+    // An anonymous map whose only frame is a rule: its `allOf` states the
+    // rule, and it reads back as addMap(), inline, not as a def.
+    $this->assertContains('resource_test.awning:configure', $same, 'An anonymous map framed by a rule alone round-trips.');
     // The kind an adopter's test reports a document as
     // (ResourceTestBase) is the one listed here for each.
     $this->assertSame(self::DIFFERS, $kinds, 'Each document that differs is named the kind listed for it.');

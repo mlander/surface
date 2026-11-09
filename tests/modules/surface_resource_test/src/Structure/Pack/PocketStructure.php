@@ -2,23 +2,24 @@
 
 declare(strict_types=1);
 
-namespace Drupal\surface_resource_test\Structure\Broken;
+namespace Drupal\surface_resource_test\Structure\Pack;
 
 use Drupal\surface\Resource\Attribute\Structure;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\StructureInterface;
 
 /**
- * A structure MixinByAlter tries to mix the timestamps into.
+ * A pocket, each item of the frame pack's collection.
  */
-#[Structure('resource_test.broken.mixin_by_alter')]
-final class MixinByAlterStructure implements StructureInterface {
+#[Structure('resource_test.pack.pocket')]
+final class PocketStructure implements StructureInterface {
 
   /**
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add('title', 'string', 'Title');
+    $inputs->add('name', 'string', t('Name'))
+      ->setRequired(TRUE);
   }
 
 }

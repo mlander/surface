@@ -17,11 +17,14 @@ use Drupal\surface\Contract\UnknownChoiceException;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Reference\References;
+use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
+use Drupal\surface\Pipeline\ViolationSummary;
+use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
-use Drupal\surface\ResourceBuild\StorageAdapter;
+use Drupal\surface\Staging\Stageable;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -57,6 +60,15 @@ use Symfony\Component\HttpFoundation\Response;
  *   the stored values the `ETag` named (412 when they changed); a refusal
  *   is problem details (422), each error's path a JSON Pointer; a create
  *   answers 201 with the created thing's `Location`.
+ *
+ * A request whose `X-Surface-Stage` header names a stage is served as
+ * the thing stands in that stage, every answer but the full schema: the
+ * envelope and its `ETag`, a narrowing, and a write, which is kept in the
+ * stage until it is applied; a staged create answers 200, its local id
+ * in `outputs` and `created` naming it in the stage, and no `Location`,
+ * since nothing is created until then. A path whose id is the local id
+ * names the staged create with the header alone. The answer names no
+ * stage: the caller did.
  *
  * Access is the route's requirement, the operation's permission then the
  * resource's access class; the pipeline is handed the same answer, as the
@@ -241,9 +253,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     if (!$result->isValid()) {
       throw $this->refused($result->document($this->values($served, $result->held()), machine: FALSE));
     }
-    $outputs = $served->storage instanceof StorageAdapter && $result->prepared !== NULL
-      ? $served->storage->outputs($served->surface, $result->values, $result->prepared)
-      : [];
+    $outputs = $this->pipeline->outputs($served->surface, $served->storage, $result);
     $response = $this->respond($outputs);
     $response->headers->set('Link', sprintf('<%s>; rel="describedby"', $this->location($served, TRUE)->getGeneratedUrl()));
     return $response;
@@ -460,8 +470,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   `contract`, the envelope rebuilt from what is stored now, and
    *   `created`, for an operation that creates, the operation the created
    *   thing now lives at; a dry run adds `x-surface-dry-run: true`. 200,
-   *   or 201 with `Location` for a written create; the `ETag` of what is
-   *   now stored for a written update.
+   *   or 201 with `Location` for a written create (200 and no `Location`
+   *   for a staged one, `created` naming its local id in the stage); the
+   *   `ETag` of what is now stored for a written update.
    *
    * @throws \Drupal\surface\Http\ProblemException
    *   412 when `If-Match` no longer names what is stored, 415 for a body
@@ -504,10 +515,10 @@ final class ResourceApiController implements ContainerInjectionInterface {
       throw $this->refused($answer);
     }
     $answer += ['outputs' => new \stdClass(), 'contract' => NULL, 'created' => NULL];
-    if (($dry || $served->surface->changesNothing()) && $served->storage instanceof StorageAdapter && $result->prepared !== NULL) {
+    if ($dry || $served->surface->changesNothing()) {
       // A read, and a dry run, answer what its prepare answered.
       // Decision: see docs/decisions.md#who-produces-outputs.
-      $answer['outputs'] = (object) $served->storage->outputs($served->surface, $result->values, $result->prepared);
+      $answer['outputs'] = (object) $this->conformed($served, $this->pipeline->outputs($served->surface, $served->storage, $result));
     }
     if ($dry) {
       return $this->respond($answer + [self::DRY_RUN => TRUE]);
@@ -518,17 +529,20 @@ final class ResourceApiController implements ContainerInjectionInterface {
       // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
       return $this->respond($answer);
     }
-    $outputs = $served->storage instanceof StorageAdapter
-      ? $served->storage->outputs($served->surface, $result->values)
-      : [];
+    $outputs = $this->conformed($served, $this->pipeline->outputs($served->surface, $served->storage, $result));
     // Built afresh: what was written is what the resource now refines
     // against and what the storage now loads.
     $fresh = $this->served($target);
+    // A create staged under the stage header created nothing: it lives at
+    // its local id in the stage alone, which `created` names, and it
+    // answers 200 with no Location, which has to resolve without a header.
+    // Decision: see
+    // docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it.
     $created = $this->servedOperations->created($served, $result->values, $outputs);
     $answer['outputs'] = (object) $outputs;
     $answer['contract'] = $this->envelope($this->emit($fresh, $this->servedOperations->current($fresh)));
     $answer['created'] = $created;
-    if ($served->context->creates) {
+    if ($served->operation->creates && $served->stage === NULL) {
       $response = $this->respond($answer, 201);
       $location = $created === NULL ? NULL : $this->createdAt($created);
       if ($location !== NULL) {
@@ -542,6 +556,36 @@ final class ResourceApiController implements ContainerInjectionInterface {
   }
 
   /**
+   * Holds the stage's own outputs to what its structures declare.
+   *
+   * The stage's `changes` and `apply` answer lists of maps, and a dry run
+   * of apply marks the id it cannot know NotEmitted: what the declaration
+   * does not hold is a fault of the stage, and what is not emitted is left
+   * out. Any other resource's outputs are answered as read.
+   *
+   * @param \Drupal\surface\Http\ServedOperation $served
+   *   The operation.
+   * @param array $outputs
+   *   The outputs the storage read back.
+   *
+   * @return array
+   *   The outputs, every key not emitted left out.
+   *
+   * @throws \LogicException
+   *   When the stage's do not hold to the declaration.
+   */
+  protected function conformed(ServedOperation $served, array $outputs): array {
+    if ($served->definition->id !== StageResource::ID) {
+      return $outputs;
+    }
+    $violations = $this->pipeline->conformOutput($served->surface, $outputs);
+    if (!$violations->isEmpty()) {
+      throw new \LogicException('The stage answered outputs its structure does not declare: ' . ViolationSummary::fromViolations($violations));
+    }
+    return NotEmitted::strip($outputs);
+  }
+
+  /**
    * Builds the operation a target names.
    *
    * @param \Drupal\surface\Http\ServedTarget $target
@@ -551,11 +595,29 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The operation.
    *
    * @throws \Drupal\surface\Http\ProblemException
-   *   404 when a parameter names nothing. The access check lets such a
-   *   request through only for an account holding the operation's
-   *   permission.
+   *   404 when a parameter, or the `X-Surface-Stage` header, names
+   *   nothing. The access check lets such a request through only for an
+   *   account holding the operation's permission. 400 for the header on
+   *   a path of the stage itself; 422 for the header on any other call a
+   *   stage does not apply to, one violation at no path, code
+   *   `does_not_apply`.
    */
   protected function served(ServedTarget $target): ServedOperation {
+    // Refused here and not in the access check, which can only allow or
+    // forbid: a stage is never written into a stage, and the caller needs
+    // the reason to drop the header.
+    if ($target->stage !== NULL && $target->definition->id === StageResource::ID) {
+      $detail = (string) $this->t('The @header header names a stage to write into or read through, and a stage is not staged: send this request without it.', ['@header' => ServedPaths::STAGE_HEADER]);
+      throw new ProblemException(400, $detail);
+    }
+    // A header the call cannot honor is refused, reads included, rather
+    // than read through a stage that could never hold a write of it.
+    // Decision: see
+    // docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+    if ($target->stage !== NULL && !Stageable::operation($target->definition, $target->operation)) {
+      $refusal = new Violation('', '', $this->t('A stage does not apply to this operation.'), Violation::DOES_NOT_APPLY);
+      throw $this->refused(ResultDocument::refused([], $refusal));
+    }
     try {
       return $this->servedOperations->fromTarget($target);
     }
@@ -658,10 +720,11 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * @param \Symfony\Component\HttpFoundation\Response $response
    *   The response.
    * @param \Drupal\surface\Http\ServedOperation $served
-   *   The operation; one that creates, or names no storage, has none.
+   *   The operation; one that creates, or names no storage, has none. A
+   *   thing a stage creates has the staged view's.
    */
   protected function tag(Response $response, ServedOperation $served): void {
-    $fingerprint = $served->context->creates ? NULL : $this->servedOperations->fingerprint($served);
+    $fingerprint = $served->operation->creates ? NULL : $this->servedOperations->fingerprint($served);
     if ($fingerprint !== NULL) {
       // Strong: the tag names the stored values, whatever the bytes of
       // the document they are served in.

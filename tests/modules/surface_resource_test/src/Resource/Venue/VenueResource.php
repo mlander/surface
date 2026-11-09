@@ -45,8 +45,10 @@ final class VenueResource implements ResourceInterface {
     $inputs->add('capacity', 'integer', t('Capacity'), default: 80)
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
-    $inputs->attach('seating', SeatingStructure::class, reads: ['layout' => 'layout', 'guests' => 'capacity'])
-      ->setLabel(t('Seating'));
+    $inputs->attach('seating', SeatingStructure::class, t('Seating'), reads: [
+      'layout' => 'layout',
+      'guests' => 'capacity',
+    ]);
   }
 
 }

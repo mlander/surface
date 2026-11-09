@@ -1,0 +1,11 @@
+title: 'Day hike'
+carry: frame
+load:
+  capacity: 40
+  belt:
+    padded: true
+    width: 8
+  pockets:
+    -
+      name: Lid
+notes: ''

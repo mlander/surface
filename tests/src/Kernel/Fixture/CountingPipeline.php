@@ -107,4 +107,11 @@ final class CountingPipeline implements SurfacePipelineInterface {
     return $this->inner->commitDryRun($dry, $storage);
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function outputs(SurfaceInterface $built, SurfaceStorageInterface $storage, SurfaceResult $result): array {
+    return $this->inner->outputs($built, $storage, $result);
+  }
+
 }

@@ -46,8 +46,7 @@ final class ProgramResource implements ResourceInterface {
 
     $inputs->add('published', 'boolean', t('Published'), default: FALSE);
 
-    $inputs->attach('fees', FeesStructure::class)
-      ->setLabel(t('Fees'));
+    $inputs->attach('fees', FeesStructure::class, t('Fees'));
   }
 
 }

@@ -27,21 +27,25 @@ the `tool` module; the HTTP door is the base module's.
 `status`), the plugin's settings and the visibility:
 
 ```php
-$inputs->attachVariants('settings', by: 'plugin', from: BlockPluginStructures::class)
-  ->setLabel(t('Settings'));
+$inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: BlockPluginStructures::class);
 // ...
-$inputs->attachList('visibility', VisibilityConditionStructure::class)
-  ->setLabel(t('Visibility'));
+$inputs->attachList('visibility', VisibilityConditionStructure::class, t('Visibility'));
 ```
 
 - **The plugin chooses the settings.** `Variants\BlockPluginStructures`
   lists the plugins the block layout offers, less any plugin that reads
   a context, which is not offered yet. A plugin whose class names its
   settings with `#[UsesStructure]` (the component block, the example block)
-  is that structure, built as declared. Any other is read from its
-  config schema, `block.settings.<plugin id>`, less the keys every block
-  has, written as JSON Schema by `Contract\ConfigSchemaDocument` and
-  read by the schema reader, the plugin's own defaults its defaults.
+  is that structure, built as declared. Any other is the structure its
+  config schema is, `block.settings.<plugin id>` or its fallback
+  `block.settings.*`, read straight into the blueprint by
+  `Reader\ConfigSchemaReader` in its `:own` form: less the keys of
+  `block.settings.*`, which every block has and the placement holds
+  itself. Config schema has no defaults, so the provider hands the
+  reader the plugin's own as each key's default. The provider keeps
+  only what config schema cannot know: which plugins are offered, their
+  labels and their defaults. A `#[Variant]` declared for the placement at
+  `settings` wins over both, as at any key.
 - **The theme chooses the region.** The theme is one of the installed
   themes (core's `ExtensionExists`, read by the main module's
   `extension_exists` resolver); the region, a visible region of any
@@ -51,9 +55,18 @@ $inputs->attachList('visibility', VisibilityConditionStructure::class)
   enumerates the region per theme.
 - **The visibility is a list of conditions.** Each item is a condition
   plugin, whether it is negated, and its settings, chosen by the
-  condition the same way (`Variants\ConditionPluginStructures`), with a
-  `context_mapping` for a condition that reads a context, its default
-  the context the block layout assigns.
+  condition the same way (`Variants\ConditionPluginStructures`):
+  `condition.plugin.<id>` read straight from config schema, less the
+  keys of `condition.plugin`, the condition's defaults laid over it. A
+  condition that reads a context (the user's roles, the content's
+  bundle) is still written as JSON Schema by `Contract\ConfigSchemaDocument`
+  and read by the schema reader, since its settings add a
+  `context_mapping` of the contexts the site has, its default the
+  context the block layout assigns: site state, which no schema says.
+  The settings are asked for under `settings` and stored flat beside the
+  condition's id, as core keeps them, by a setting on the map:
+  `->setSetting(Variants::STORED_AS, Variants::FLAT)`
+  ([Stored flat](../../docs/resources.md#stored-flat)).
 - **Three operations.** `create` places a block under a machine name the
   caller types, refused when it is in use; `update` changes one, its theme
   held to the one it is in; `delete` removes it, taking no values

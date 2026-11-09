@@ -412,7 +412,7 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     $this->assertFalse($definition->isDestructive());
     $this->assertSame('Schema for these values: Configure the poster', (string) $definition->getLabel());
     $inputs = $definition->getInputDefinitions();
-    $this->assertSame([OperationInputs::VALUES], array_keys($inputs));
+    $this->assertSame([OperationInputs::VALUES, OperationInputs::STAGE], array_keys($inputs));
     $this->assertInstanceOf(MapInputDefinition::class, $inputs[OperationInputs::VALUES]);
     $this->assertFalse($inputs[OperationInputs::VALUES]->isRequired());
     $this->assertSame([], $inputs[OperationInputs::VALUES]->getPropertyDefinitions());

@@ -106,8 +106,8 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
   /**
    * {@inheritdoc}
    */
-  public function buildSurfaceForm(SurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'surface'): array {
-    return $this->drawing->buildSurfaceForm($surface, $values, $form_state, $wrapper_key);
+  public function buildSurfaceForm(SurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'surface', array $keys = []): array {
+    return $this->drawing->buildSurfaceForm($surface, $values, $form_state, $wrapper_key, $keys);
   }
 
   /**

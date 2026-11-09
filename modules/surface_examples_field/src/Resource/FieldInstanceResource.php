@@ -188,12 +188,10 @@ final class FieldInstanceResource implements ResourceInterface {
       ->setDescription(t('Whether the field is required.'));
 
     // Its parts.
-    $inputs->attach('storage', FieldStorageResource::class)
-      ->setLabel(t('Field storage'))
+    $inputs->attach('storage', FieldStorageResource::class, t('Field storage'))
       ->setDescription(t('What every bundle using this field shares.'));
 
-    $inputs->attachVariants('settings', by: 'field_type', from: FieldSettingsSchemaVariants::class)
-      ->setLabel(t('Field settings'))
+    $inputs->attachVariants('settings', by: 'field_type', label: t('Field settings'), from: FieldSettingsSchemaVariants::class)
       ->setDescription(t('Settings for this field on this bundle, described by the field type itself.'));
   }
 

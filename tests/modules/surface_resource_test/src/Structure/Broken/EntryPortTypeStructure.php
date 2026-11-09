@@ -20,7 +20,7 @@ final class EntryPortTypeStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('layouts', 'boolean', from: WorkshopBenches::class);
+    $inputs->addEach('layouts', 'boolean', from: WorkshopBenches::class, label: t('Layouts'));
     $inputs->attachEach('seats', SeatingStructure::class, from: WorkshopBenches::class, reads: ['layout' => 'layouts']);
   }
 

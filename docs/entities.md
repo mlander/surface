@@ -42,9 +42,10 @@ is a resource of its own, with operations, storage and identity, and a
 field a structure every bundle carrying it shares; keys from the site
 are for one resource asking a value or a group per thing.
 
-The module serves `node.page` at `/surface-entity/node/page/add` and
-`/surface-entity/node/{id}/edit`, through the generic operation form
-with the contract panel beside it; `/surface-entity` lists every
+The module serves `node.page` at `/surface-entity/node/page/add`,
+`/surface-entity/node/{id}/edit` and `/surface-entity/node/{id}/delete`,
+through the generic operation form, with the contract panel beside the
+first two and a confirmation on the third; `/surface-entity` lists every
 content entity resource the site has, what each carries and what it
 leaves out and why, read from the registry.
 
@@ -53,8 +54,8 @@ leaves out and why, read from the registry.
 | What | From |
 | --- | --- |
 | The content entity resource's keys | the identity (`entity_type`, `bundle`, `id`), then one child per component of the bundle's default form display, in its weight order |
-| Its operations | `create`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty), or for an entity type whose ids the caller names, taking `id` as a required key ([below](#which-entity-types-take-an-id-on-create)); `update` and `read`, each taking the identity key `id`, whose value the storage loads the entity by (an id that names nothing, or an entity of another bundle, is a not found at `id`); `read` is read only |
-| Its access | the entity's: create access for the bundle on create, update access for the entity on update, view access on a read |
+| Its operations | `create`, knowing the entity type, the bundle and that there is no id yet (`id` known as NULL, so locked empty), or for an entity type whose ids the caller names, taking `id` as a required key ([below](#which-entity-types-take-an-id-on-create)); `update`, `read` and `delete`, each taking the identity key `id`, whose value the storage loads the entity by (an id that names nothing, or an entity of another bundle, is a not found at `id`); `read` is read only; `delete` is destructive, takes no values and removes the entity with every translation and revision ([below](#the-storage)) |
+| Its access | the entity's: create access for the bundle on create, update access for the entity on update, view access on a read, delete access on a delete |
 | Its storage | `ContentEntityStorage`, below |
 | Its outputs | `id`, the entity's id once saved |
 | A field item structure's keys | the item's property definitions the field type stores and a caller sets, typed as the coercion table carries them (the table below) |
@@ -65,11 +66,11 @@ leaves out and why, read from the registry.
 | Default | the field's literal default (`getDefaultValueLiteral()`), cast to the key's type |
 | Constraints | `Length`, `Range`, `Regex` and `Choice` from the property definitions and from the field type's own `getConstraints()` (its `ComplexData` per property), and on a reference field's `target_id` the reference key's `SurfaceValidReference`, answered by the field's own handler; the rest are checked when its storage validates the entity |
 | What settings narrow | a list field's allowed values (`LabeledChoice`), a text field's formats (`LabeledChoice`, then a runtime refiner), a reference's targets (a constraint and its options resolver), a date's form (`Regex`) |
-| Its operations | `create`, `update` and `read`, which the parent invokes to match its own; each knows the entity type, the bundle and the field, and `update` and `read` the entity's id |
+| Its operations | `create`, `update`, `read` and `delete`, which the parent invokes to match its own; each knows the entity type, the bundle and the field, and `update`, `read` and `delete` the entity's id. Field access asks a `delete` as a write, as an `update` ([below](#the-storage)) |
 | Its access | field access, as the child's access: open, locked or omitted; on a read, open or omitted, by view access |
 | The entity type resource's keys | the identity (`entity_type`, `id`), `bundle`, and `fields`: variants `bundle` chooses, one per bundle with a form display, each that bundle's `.fields` structure, which attaches the same field children the bundle's resource holds at its root |
-| Its operations | `create`, knowing the entity type and that there is no id, `bundle` held to the bundles the account may create (`SurfaceCreatableBundle`); `update` and `read`, taking the identity key `id`, the entity loaded by the storage, `bundle` fixed to the entity's, the fields under `fields` |
-| Its access | on create, open to an account that may create at least one bundle, the chosen bundle's create access asked at `bundle` once a value is sent; on update, the entity's update access; on a read, its view access |
+| Its operations | `create`, knowing the entity type and that there is no id, `bundle` held to the bundles the account may create (`SurfaceCreatableBundle`); `update`, `read` and `delete`, taking the identity key `id`, the entity loaded by the storage, `bundle` fixed to the entity's, the fields under `fields`; `delete` removes an entity of any bundle |
+| Its access | on create, open to an account that may create at least one bundle, the chosen bundle's create access asked at `bundle` once a value is sent; on update, the entity's update access; on a read, its view access; on a delete, its delete access |
 | Its storage | `ContentEntityStorage`, the bundle read from the values on create and from the entity on update, the fields under `fields` |
 
 The parent labels each child's key with the field's label and
@@ -248,7 +249,11 @@ item derivation's keys, which the engine does not own
 - **Commit** applies the prepared values again and saves. It then
   describes what it saved: a load that knows no id reads the entity it
   just created, so the `id` output answers with the new id, the derived
-  tool returns it and the React app can open the page it made.
+  tool returns it and the React app can open the page it made. A create
+  staged in a stage commits to the stage alone and answers its local
+  id, `id: -1`, the negative of its position in the stage, which names
+  it there alone until the stage is applied and storage gives the id
+  ([Staging](staging.md#a-staged-create)).
 - **Revisions**: on an update, a resource that carries the revision log field
   makes a new revision, by the account the write is made as, at the
   request time, with the log the caller gave; one that does not leaves
@@ -257,6 +262,37 @@ item derivation's keys, which the engine does not own
   unless the values name one. The account is handed to `prepare()` and
   `commit()`, the current user when the caller names none
   ([No door-specific context](resources.md#no-door-specific-context)).
+- **Delete** (`DeletableStorageInterface`): `prepareDelete()` finds the
+  entity the context names and refuses one that is gone, `not_found` at
+  the whole call; it asks no access, which the access class answers,
+  and validates nothing. `delete()` loads the entity as stored
+  (`loadUnchanged()`) and deletes it, which removes every translation
+  and every revision it has: core's storage rule, in one transaction of
+  core's own. Core's delete form, on a translation that is not the
+  default, removes that translation alone; the example follows storage,
+  since it writes the default translation only, and so does its bulk
+  delete, where a translation's row of the content list stages the
+  removal of the whole node
+  ([Staging](staging.md#a-flow-by-hand-bulk-delete-from-the-content-list)).
+  The rule is the entity type's storage handler's, so a module that
+  replaces the handler replaces it: the contrib trash module's keeps the
+  entity, its translations and its revisions in the database, marked
+  deleted and restorable, and a load finds it no more. What the entity's
+  delete hooks do beside the database is theirs. The access class asks
+  core's delete access, for a node what `delete any <type> content` and
+  `delete own <type> content` grant. Each field child is invoked under
+  the delete through its own `delete`, which `FieldItemAccess` asks as
+  a write, as under an update (edit access, else view access): it
+  decides which keys the delete answers, so a field the account may not
+  see is not answered, never whether the entity is removed. The delete
+  carries the keys the update carries for the same account, so an
+  update and a delete of one thing in a stage compare one token
+  (`ContentEntityDeleteTest`).
+- **In a workspace**: core forbids delete access, in a workspace that is
+  not Live, to an entity the workspace did not create, so a delete there
+  is refused `access`, made at once or at a stage's apply, and nothing
+  is removed; an entity created in the workspace may be deleted there
+  ([Staging](staging.md#stages-and-workspaces)).
 - **Secrets**: none; a node has no secret field.
 
 A dry run stops after prepare; a PHP caller reads the prepared values
@@ -273,14 +309,16 @@ base field definition (`FieldItemDerivation::callerNamesId()`):
 - **Computed**: an integer id, which core's SQL storage makes serial and
   assigns on save, or an id field with a default of its own. The create
   knows there is no id yet, and its `id` output answers the one storage
-  gave. Every content entity type core and the common contributed
-  modules ship is one: node, media, user, term, block content, file.
+  gave, which a staged create has only at apply, in `applied[].id`;
+  until then it answers its local id in the stage, `-1`.
+  Every content entity type core and the common contributed modules ship
+  is one: node, media, user, term, block content, file.
 - **Named by the caller**: any other id, a string with no default. The
   create takes `id` as a required key, its length the id field's, and
   the entity is created under it; an id an entity already has is
   refused at `id`, code `taken`, so the create is idempotent, a second
-  identical call refused for the id the first took. `update` and `read`
-  take the id as for any entity type.
+  identical call refused for the id the first took. `update`, `read`
+  and `delete` take the id as for any entity type.
 
 Why the field and not the entity type: an integer is what makes the
 storage assign the id, and a string id may have a default the entity
@@ -289,10 +327,13 @@ holds once created; the field definition says both
 
 ## The doors
 
-- **The form**: `/surface-entity/node/page/add` and
-  `/surface-entity/node/{id}/edit`, the generic operation form with the
-  contract panel. The update route hands the operation `{id}` as the
-  path carries it, and the resource's storage loads the node
+- **The form**: `/surface-entity/node/page/add`,
+  `/surface-entity/node/{id}/edit` and `/surface-entity/node/{id}/delete`,
+  the generic operation form, with the contract panel on the first two;
+  the delete draws a confirmation that names what is removed and one
+  button, "Delete Basic page". The update and delete routes hand the
+  operation `{id}` as the path carries it, and the resource's storage
+  loads the node
   (`ContentEntityStorage::entity()`): an id no node has, and a node of
   another bundle, are values that name nothing here.
   A derived content entity operation declares no permission, since
@@ -315,17 +356,19 @@ holds once created; the field definition says both
   every bundle puts the bundle in its path too,
   `/{node_type}/{id}/edit`, since a node's bundle is known only once the
   node is loaded, and refuses a node of another bundle as above.
-- **The tools**: `surface:entity.content:node.page:create`, `:update`
-  and `:read`, derived like every other operation's. The field item
-  structures have no storage, so they are no tools. Every bundle with a form
-  display has its three. Every entity type with such a bundle has five:
-  `surface:entity.content:node:create`, `:update`, `:read`, and a
-  narrowing tool beside each write, `:create:schema` and
-  `:update:schema`, since its fields are variants the site lists.
+- **The tools**: `surface:entity.content:node.page:create`, `:update`,
+  `:read` and `:delete`, derived like every other operation's. The field
+  item structures have no storage, so they are no tools. Every bundle
+  with a form display has its four. Every entity type with such a bundle
+  has six: `surface:entity.content:node:create`, `:update`, `:read`,
+  `:delete`, and a narrowing tool beside each write that takes values,
+  `:create:schema` and `:update:schema`, since its fields are variants
+  the site lists. A delete tool takes `id`, `dry_run` and `stage`.
 - **HTTP**: `GET /surface-api/entity.content:node.page/{id}` serves the
   read, its envelope and its schema at `.../{id}/schema`; the update's
   envelope is its custom method's, `GET .../{id}:update`, and `PATCH
-  .../{id}` runs it as before.
+  .../{id}` runs it as before; `DELETE .../{id}` runs the delete,
+  `?dryRun=true` rehearses it.
 - **Both kinds**: a site has `surface:entity.content:node:create` and
   `surface:entity.content:node.page:create`, `POST
   /surface-api/entity.content:node` and `POST
@@ -343,6 +386,11 @@ holds once created; the field definition says both
 - **The React app**: `/surface-react/entity.content:node.page/create` and
   `/surface-react/entity.content:node.page/update?id=<nid>`. The derived id
   holds a colon, which a route parameter takes as it is.
+- **A staged node's preview**:
+  `/surface-entity/stage/{stage}/preview/{id}`, the node a stage writes
+  rendered in its full view mode as it will be once the stage is applied,
+  nothing saved; `{id}` is a stored node's id or a staged create's local
+  id, `-1` ([Staging: Preview](staging.md#preview)).
 - **The landing page**: `/surface-entity`.
 
 ## What it does not do
@@ -486,7 +534,10 @@ the registry cache and its tags), `ContentEntityAccessTest` (locked and
 omitted children from field access, the parent's entity access, an
 alter by base id, an override by field type), `ContentEntityStorageTest`
 (create, update with a revision, an entity violation on its key, a dry run,
-the derived tools, the React door's `created`, the contracts) and
+the derived tools, the React door's `created`, the contracts),
+`ContentEntityDeleteTest` (the delete through the pipeline, the tools
+and the form route, every revision and translation removed, core's
+delete access, field access asked as a write) and
 `ContentEntityResourceFormTest` (the two routes and the landing page in
 a browser) and `ContentEntityTypeResourceTest` (the entity type's
 resource narrowed by each bundle equal to that bundle's, the bundles an

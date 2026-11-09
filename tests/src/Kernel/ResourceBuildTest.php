@@ -25,6 +25,8 @@ use Drupal\surface_resource_test\Structure\Broken\NosyParentStructure;
 use Drupal\surface_resource_test\Structure\Broken\RefinesAttachedStructure;
 use Drupal\surface_resource_test\Structure\Broken\SelfAttachingStructure;
 use Drupal\surface_resource_test\Structure\Broken\UnofferedVariantStructure;
+use Drupal\surface_resource_test\Structure\Broken\Kit\KitListByStructure;
+use Drupal\surface_resource_test\Structure\Broken\Kit\KitUndeclaredByStructure;
 use Drupal\surface_resource_test\Structure\Broken\WatchesAttachedStructure;
 use Drupal\surface_resource_test\Structure\Broken\ClashingOperationStructure;
 use Drupal\surface_resource_test\Structure\Broken\InstanceAlterRefinerStructure;
@@ -299,6 +301,14 @@ class ResourceBuildTest extends SurfaceKernelTestBase {
       'a deciding value no variant is for' => [
         UnofferedVariantStructure::class,
         'resource_test.broken.unoffered_variant lists "pot" for "kind", and no variant at "settings" is for it.',
+      ],
+      'variants chosen by a key never declared' => [
+        KitUndeclaredByStructure::class,
+        'In resource_test.broken.kit_undeclared_by, the variants at "gear" are chosen by "kind", which it never declares as a plain input: variants are chosen by a sibling that holds one value.',
+      ],
+      'variants chosen by a list' => [
+        KitListByStructure::class,
+        'The variants at "gear" are chosen by "kind", which is a list: a deciding key holds one value.',
       ],
       'an owner refiner that is an instance method' => [
         InstanceRefinerStructure::class,

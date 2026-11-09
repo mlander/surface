@@ -6,6 +6,7 @@ namespace Drupal\surface\Resource;
 
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\TypedData\DataDefinition;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 
 /**
@@ -48,9 +49,14 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * whichever entity type) is handed the arguments that say which list,
    * `arguments:`, and implements BoundSiteListInterface.
    *
+   * `->setSetting(Variants::STORED_AS, Variants::FLAT)` on the map this
+   * returns has a config storage keep the chosen variant's keys beside $by
+   * and nothing at $key, while every door asks for them under $key
+   * (FlatVariantsLayout), as the test module's kit does
+   * (tests/modules/surface_resource_test/src/Resource/Kit/KitResource.php).
+   *
    * @code
-   * $inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
-   *   ->setLabel(t('Props'));
+   * $inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
    * $inputs->attachVariants('fields', by: 'bundle', from: BundleFields::class, arguments: ['node']);
    * @endcode
    *
@@ -58,16 +64,18 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   The key the structure sits at.
    * @param string $by
    *   The sibling input key whose value chooses the structure.
+   * @param string|\Stringable|null $label
+   *   The map's label, or NULL to leave each variant's.
    * @param string|null $from
    *   The provider of variants from the site, by class, or NULL for the
    *   #[Variant] classes alone.
-   * @param list<string|int> $arguments
+   * @param array $arguments
    *   What the provider lists for (BoundSiteListInterface::listFor()), or
-   *   none for its list().
+   *   none for its list(). The shape is the provider's.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, for the owner to label and describe with the
-   *   core setters, as attach() returns it.
+   *   The map at the key, for the owner to describe with the core
+   *   setters, as attach() returns it.
    *
    * @throws \LogicException
    *   When the key is already declared, for outputs, which do not attach
@@ -77,7 +85,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @see docs/resources.md#variants-from-the-site
    */
-  public function attachVariants(string $key, string $by, ?string $from = NULL, array $arguments = []): MapDataDefinition;
+  public function attachVariants(string $key, string $by, string|\Stringable|null $label = NULL, ?string $from = NULL, array $arguments = []): MapDataDefinition;
 
   /**
    * A map with one value per thing the site has: keys from the site.
@@ -88,21 +96,21 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * one: of $type, labeled with the entry's label, starting from the
    * entry's default or else $default, held to what is stored when the
    * entry is locked; an entry that names a schema or a structure is
-   * refused, since a key per thing reads neither. An entry that refers to
-   * an entity names no type of its own: `to:` its entity type and
-   * `bundles:` the bundles it may name, each entry then the id typed as
-   * the entity type keeps it, with the SurfaceValidReference constraint
-   * naming the type and the bundles. The provider is asked
+   * refused, since a key per thing reads neither. $type is a type or a
+   * definition, as addList() takes its item: an entry with constraints of
+   * its own is a definition, and an entry that refers to an entity is the
+   * id's type with the SurfaceValidReference constraint, as any reference
+   * key is, its type checked against the entity type's id at the build
+   * (References::settle()). The provider is asked
    * when the resource is built,
    * never by the resource; what it read is the built resource's
    * cacheability, so the form, both schema documents and the tool listing
    * change when the site does.
    *
    * @code
-   * $inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, default: FALSE)
-   *   ->setLabel(t('Protected forms'));
-   * $inputs->addEach('pages', NULL, from: Slots::class, to: 'node', bundles: ['page'])
-   *   ->setLabel(t('Pages'));
+   * $inputs->addEach('form_settings', 'boolean', from: ProtectedForms::class, label: t('Protected forms'), default: FALSE);
+   * $inputs->addEach('pages', DataDefinition::create('integer')
+   *   ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['page']]), from: Slots::class, label: t('Pages'));
    * @endcode
    *
    * The map is the owner's key: a rule of the owner's may say it does not
@@ -110,32 +118,32 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *
    * @param string $key
    *   The key the map sits at.
-   * @param string|null $type
-   *   What each entry is: a type of the type table, or a shape's class;
-   *   NULL for an entry that refers to an entity, whose type is its
-   *   entity type's id.
+   * @param string|\Drupal\Core\TypedData\DataDefinitionInterface $type
+   *   What each entry is: one of the types add() takes, the class of a
+   *   shape, or the entry's definition, one value, copied for every
+   *   entry.
    * @param string $from
    *   The provider's class, implementing SiteListInterface.
+   * @param string|\Stringable $label
+   *   The map's label: the values have no structure to borrow one from.
    * @param mixed $default
    *   What every entry starts from unless it says otherwise; NULL for
    *   nothing.
-   * @param string|null $to
-   *   The entity type each entry refers to; NULL for an entry of a type.
-   * @param string[] $bundles
-   *   The bundles such an entry may name; none for every bundle.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, for the owner to label and describe.
+   *   The map at the key, for the owner to describe.
    *
    * @throws \LogicException
    *   When the key is taken, for outputs, inside a structure mixed in,
-   *   when the provider implements no SiteListInterface, for a type and an
-   *   entity type both or neither, and for an entity type string,
-   *   `entity:<type>`, which is no type of the table.
+   *   when the provider implements no SiteListInterface, for a definition
+   *   that is a map or a list or whose type is no type of the table
+   *   (LeafTypes), for a class that is no shape's, a resource's or a
+   *   structure's among them, and for an
+   *   entity type string, `entity:<type>`, which is no type of the table.
    *
    * @see docs/resources.md#keys-that-come-from-the-site
    */
-  public function addEach(string $key, ?string $type, string $from, mixed $default = NULL, ?string $to = NULL, array $bundles = []): MapDataDefinition;
+  public function addEach(string $key, string|DataDefinitionInterface $type, string $from, string|\Stringable $label, mixed $default = NULL): MapDataDefinition;
 
   /**
    * A map with one child per thing the site has: keys from the site.
@@ -150,8 +158,7 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    * sibling map that addEach() declared from the same provider.
    *
    * @code
-   * $inputs->attachEach('rows', RowStructure::class, from: SiteRows::class)
-   *   ->setLabel(t('Rows'));
+   * $inputs->attachEach('rows', RowStructure::class, from: SiteRows::class, label: t('Rows'));
    * $inputs->attachEach('limits', LimitStructure::class, from: Types::class, reads: ['selling' => 'on_sale']);
    * @endcode
    *
@@ -161,19 +168,72 @@ interface BlueprintInterface extends BlueprintAdditionsInterface {
    *   The structure each entry is, by class, or a derived one's id.
    * @param string $from
    *   The provider's class, implementing SiteListInterface.
+   * @param string|\Stringable|null $label
+   *   The map's label, or NULL to leave the structure's.
    * @param array<string, string> $reads
    *   Each port of the structure, mapped to a sibling map from the same
    *   provider, whose entry of the same id it reads.
    *
    * @return \Drupal\Core\TypedData\MapDataDefinition
-   *   The map at the key, for the owner to label and describe.
+   *   The map at the key, for the owner to describe.
    *
    * @throws \LogicException
    *   As addEach() does, and for a shape.
    *
    * @see docs/resources.md#ports-on-an-entry
    */
-  public function attachEach(string $key, string $structure, string $from, array $reads = []): MapDataDefinition;
+  public function attachEach(string $key, string $structure, string $from, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition;
+
+  /**
+   * Mixes a structure in: its members become this blueprint's own keys.
+   *
+   * Where attach() nests a structure under a key, behind the wall, this
+   * merges its members into the owner's keys at this point of the
+   * declaration: stored flat, described by the owner's config schema,
+   * refined in the owner's frame, drawn and accepted as the owner's own.
+   * The structure keeps what makes it reusable: its coded refiners and
+   * declared rules (which narrow only its own members and read only its
+   * members and its ports), its alters, its access class (which locks or
+   * omits its members) and its def, one id however many owners mix it in.
+   * What it reads of the owner it declares as ports (reads()), which
+   * $reads wires to the owner's keys, as attach() wires them; every port
+   * is wired. A child it attaches at a fixed key or in a collection is the
+   * owner's child at that key, nothing wiring its ports.
+   *
+   * Nest for a thing of its own inside this one (a contact, a ticket);
+   * mix in for shared members that are part of this thing (timestamps,
+   * ownership, publishing flags).
+   *
+   * Owner only: an alter's keys live under its own module's name, so the
+   * alter's blueprint, BlueprintAdditionsInterface, has no mixIn(); an
+   * alter attaches a structure at its own mount instead.
+   *
+   * @code
+   * $inputs->mixIn(TimestampsStructure::class);
+   * $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
+   * @endcode
+   *
+   * @param string $structure
+   *   The structure's class: an ordinary #[Structure], holding keys, maps
+   *   and children at a fixed key or in a collection, no variants at a
+   *   key and no keys from the site.
+   * @param array<string, string> $reads
+   *   Its ports, each mapped to the owner's key it reads, by name.
+   *
+   * @return $this
+   *
+   * @throws \LogicException
+   *   For outputs, for a class that is no resource or structure, for a
+   *   structure mixed into itself (directly or through another), for one
+   *   holding variants at a key, keys from the site or a child whose ports
+   *   it wires, and when one of its members is a key this
+   *   blueprint, or another structure mixed in, declares already.
+   *   The structure, its access and the wiring are checked when the owner
+   *   is built: see docs/resources.md#mixins.
+   *
+   * @see docs/decisions.md#a-mixin-is-merged-flat
+   */
+  public function mixIn(string $structure, array $reads = []): static;
 
   /**
    * A port: a value this structure reads from its container.

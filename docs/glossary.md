@@ -45,7 +45,7 @@ answer access for its keys. Declared as a class carrying
 its def's title and description (with none, it takes those of the one
 plugin that holds it), implementing `Resource\StructureInterface`;
 or a plugin that is its own structure, `#[UsesStructure]` with no
-argument. The six ways one is made of others are side by side in
+argument. The seven ways one is made of others are side by side in
 [Which way to compose](resources.md#which-way-to-compose).
 
 Introduced in [Structures](introduction/03-structures.md). Reference:
@@ -504,10 +504,11 @@ Keys and variants from the site are one key, or one variant, per thing
 the site has, listed when the data surface is built.
 
 Precisely: one key per thing the site has, such as a checkbox per form,
-in a map at a key: `addEach($key, $type, from:)` for a value per thing,
+in a map at a key: `addEach($key, $type, from:, label:)` for a value per thing,
 `attachEach($key, Structure::class, from:)` for a structure per thing;
 or one variant per thing, each read from its JSON Schema or a structure
-class, `attachVariants($key, by: $sibling, from:)`. The provider is one
+it names by class or id (one read from config schema among them),
+`attachVariants($key, by: $sibling, from:)`. The provider is one
 interface for both, a service implementing `SiteListInterface`, whose
 `list()` answers a `SiteList`, asked at every build; a closed one,
 `ClosedSiteListInterface`, names every structure it may list.
@@ -572,6 +573,67 @@ members that are part of this thing.
 
 Named in [Resources made of structures](introduction/11-resources-made-of-structures.md).
 Reference: [Mixins](resources.md#mixins).
+
+### Stored flat
+
+Variants stored flat keep the chosen variant's keys beside the key that
+chooses it, in storage only.
+
+Precisely: variants at a key whose map says
+`->setSetting(Variants::STORED_AS, Variants::FLAT)`: a config storage
+keeps the chosen variant's keys beside the deciding key and nothing at
+the key (`Storage\FlatVariantsLayout`), while every door asks for them
+under the key, and the contract does not change. A storage layout, not
+a way to compose.
+
+Not in the introduction. Reference: [Stored flat](resources.md#stored-flat).
+
+Experimental: see [Variants stored flat](storage.md#variants-stored-flat).
+
+### Variants mixed in
+
+Removed 2026-11-06: variants kept beside their deciding key are
+[stored flat](resources.md#stored-flat)
+([decision](decisions.md#variants-stored-flat-are-a-layout)).
+
+### Widest
+
+Removed 2026-11-06 with variants mixed in: each variant states its own
+keys in its own frame ([Stored flat](resources.md#stored-flat),
+[decision](decisions.md#variants-stored-flat-are-a-layout)).
+
+### Held to
+
+Removed 2026-11-06 with variants mixed in, for the reason Widest gives
+([decision](decisions.md#variants-stored-flat-are-a-layout)).
+
+### Reader
+
+A reader turns a definition written somewhere else into a blueprint.
+
+Precisely: a class that calls the blueprint's verbs with what its
+source says, a `Reader\DeclarationReaderInterface`
+(`ConfigSchemaReader` for a config schema type, `TypedDataReader` for a
+typed data definition, `SchemaReader` for a JSON Schema document), and
+notes what no verb takes in a `Reader\Reading`.
+
+Not in the introduction. Reference: [Reading a schema](reading-a-schema.md),
+[Config schema](reading-a-schema.md#config-schema).
+
+Experimental: see [Reading a schema](reading-a-schema.md).
+
+### Open
+
+A key declared open accepts any value, as it is stored.
+
+Precisely: an `any` held whole to nothing (`LeafRules::open()`), what a
+reader declares at a key it reads no shape for, so the closed frame
+still holds what is stored there; both documents write it with its
+title and no type.
+
+Not in the introduction. Reference: [Config schema](reading-a-schema.md#config-schema).
+
+Experimental: see [Reading a schema](reading-a-schema.md).
 
 ### Port
 
@@ -717,3 +779,37 @@ the wire format both documents are written in.
 Not in the introduction. Reference:
 [The version](evolution.md#the-version),
 [The contract's own version](evolution.md#the-contracts-own-version).
+
+### Stage
+
+A stage keeps writes until they are applied together, or discarded.
+
+Precisely: the base module's resource `surface.stage`, its id a UUID,
+its record one row of the expirable key-value collection
+`surface.stage`, its owner the only account that may use it. `changes`
+lists its writes; `apply` checks them all, then makes them in one
+database transaction; `delete` discards them. A tool names one in its
+`stage` input, an HTTP request in its `X-Surface-Stage` header. Not the
+pipeline's stages, the steps of one call, nor core's Package Manager
+stage, a directory of files.
+
+Not in the introduction. Reference: [Staging](staging.md).
+
+Experimental: see [Staging](staging.md).
+
+### Staged write
+
+A staged write is a write kept in a stage instead of storage.
+
+Precisely: a write through a resource's own operation with a stage
+named, for a resource whose storage implements
+`TransactionalStorageInterface`, and the operation names a thing
+(identity or create). The pipeline runs as for a real write,
+the storage's own `prepare()` included; `commit()` writes the stage's
+record, one entry per thing, and a read through the stage answers that
+entry first. It answers `committed: true`.
+
+Not in the introduction. Reference:
+[Staging: the model](staging.md#the-model).
+
+Experimental: see [Staging](staging.md).

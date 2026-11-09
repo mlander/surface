@@ -33,8 +33,7 @@ final class PressResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('public', 'boolean', t('Show on the press page'), default: TRUE);
 
-    $inputs->attach('contact', PersonStructure::class, reads: ['listed' => 'public'])
-      ->setLabel(t('Press contact'));
+    $inputs->attach('contact', PersonStructure::class, t('Press contact'), reads: ['listed' => 'public']);
 
     $inputs->mixIn(ReviewStructure::class);
   }

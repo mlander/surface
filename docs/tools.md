@@ -27,12 +27,21 @@ and field storage settings as resources
   describing them. The field example adds `surface:field.instance:create`,
   `:reuse` and `:update` and `surface:field.storage:update`; the node
   type example adds `surface:node.type:create` and `:update`, and
-  `surface_examples_entity` one `create` and one `update` per content entity
-  bundle with a form display, `surface:entity.content:node.page:create`. The inputs
+  `surface_examples_entity` a `create`, an `update`, a `read` and a
+  `delete` per content entity bundle with a form display and per entity
+  type with such a bundle, `surface:entity.content:node.page:create`. The inputs
   are the operation's parameters (each a value; one named for a
   resource key described as that key), the
   resource's keys the operation does not know as `values`, and
-  `dry_run`; see [Tools](resources.md#tools). Two rules leave an operation
+  `dry_run`; see [Tools](resources.md#tools). An operation a stage
+  applies to ([Staging](staging.md#where-a-stage-applies)) adds
+  `stage`, last, on its write, read and narrowing tools: the id of a
+  stage the write is kept in, or the read and the narrowing answer
+  through ([Staging](staging.md#the-stage-input)). A
+  create staged so answers a local id, `id: -1`, when storage gives the
+  id, since nothing is created until the stage is applied; a write, a
+  read or a delete with the same stage names the staged create by it
+  ([Staging](staging.md#a-staged-create)). Two rules leave an operation
   out: `field.storage`'s `create` asks `administer %entity_type fields`
   and no parameter supplies the entity type, so it could never be
   allowed and is only ever a field's; and a structure a plugin names
@@ -61,9 +70,9 @@ description, and always present:
 | Key | Holds |
 | --- | --- |
 | `ok` | Whether nothing was refused. |
-| `committed` | Whether the values were written; false for a dry run, a refusal and a read only operation. |
-| `changed` | Whether the write moved a stored value; false when the values were what is stored, and then nothing was saved. |
-| `changes` | The JSON Pointer of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing (why: [decision](decisions.md#absent-keeps-null-clears)). |
+| `committed` | Whether the values were written: to storage, or to the stage when one is named; false for a dry run, a refusal and a read only operation. A create committed to a stage creates nothing until the stage is applied. |
+| `changed` | Whether the write moved a stored value; false when the values were what is stored, and then nothing was saved. When a stage is named, whether it moved a staged value; false when the values were what is staged, and then the stage was not written. |
+| `changes` | The JSON Pointer of each stored value the write changed, or a dry run would, so writing back what the read tool returned changes nothing (why: [decision](decisions.md#absent-keeps-null-clears)). Against the view of the stage when one is named: what this call moved since the last staged write. |
 | `values` | The accepted values, as the read tool would answer them after the write: no secret, no key this account may not see, and no key never stored that the write left at its default (a mounted key not sent). |
 | `violations` | Each refusal, `{path, code, message}`; a refusal of the whole call has an empty path. |
 | `notes` | Each value sent for a locked key and not taken, `{path, code, message}`, code `locked`. |
@@ -217,8 +226,9 @@ operation of its own, `read`, whose tool is `surface:<resource>:read`
   field's asks `view` field access, so a field the account may not see
   is left out and one it may see and not edit is read
   ([docs/entities.md](entities.md)).
-- **Inputs.** The operation's parameters, and nothing else: no `values`,
-  no `dry_run`. It has no narrowing tool: it takes no values to narrow.
+- **Inputs.** The operation's parameters, and `stage` where a stage
+  applies ([Staging](staging.md#the-stage-input)): no `values`, no
+  `dry_run`. It has no narrowing tool: it takes no values to narrow.
 - **Output.** `values`: what the resource's composed storage loads, in
   the shape the update's `values` input takes (the resource's keys
   less the identity keys the operation knows, keys other modules mount
@@ -384,7 +394,9 @@ destroys nothing, and the access answer has to be the real one, and the
 read the build adds asks the same question. A delete, such as
 `surface:block.placement:delete` from `surface_examples_block`, is a
 destructive `Write` whose inputs are its parameters and `dry_run`, with
-no `values`. A field tool's access is the operation's permission, `administer %entity_type
+no `values`, then `stage` where a stage applies to it,
+as `surface:entity.content:node.page:delete`'s can
+([Staging](staging.md#a-staged-delete)). A field tool's access is the operation's permission, `administer %entity_type
 fields`, named from the identity the operation's context knows (the
 entity type every field tool is given), then `FieldInstanceAccess`,
 which refuses a locked

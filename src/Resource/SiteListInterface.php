@@ -9,8 +9,8 @@ namespace Drupal\surface\Resource;
  *
  * Named by class where a blueprint declares what it fills:
  *
- * - `addEach('forms', 'boolean', from: ProtectedForms::class)`, one key
- *   per thing, a value of the type or shape named;
+ * - `addEach('forms', 'boolean', from: ProtectedForms::class, label:
+ *   t('Forms'))`, one key per thing, a value of the type or shape named;
  * - `attachEach('rows', RowStructure::class, from: ...)`, one key per
  *   thing, the structure named at each;
  * - `attachVariants('props', by: 'component', from: ComponentProps::class)`,

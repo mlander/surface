@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\block\Entity\Block;
 use Drupal\surface\Pipeline\Violation;
+use Drupal\surface_examples_block\Resource\BlockPlacementResource;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use Drupal\tool\Tool\ToolOperation;
@@ -117,15 +118,25 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
     $this->assertFalse($tools->hasDefinition('surface:block.placed_component:configure'), 'The stop-gap resource is gone.');
     $this->assertFalse($tools->hasDefinition(self::TOOL . 'delete:read'), 'A delete has nothing to read before.');
     $expected = [
-      'create' => ['Place a block', ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
+      'create' => [
+        'Place a block',
+        ToolOperation::Write,
+        FALSE,
+        [OperationInputs::VALUES, OperationInputs::DRY_RUN, OperationInputs::STAGE],
+      ],
       'update' => [
         'Edit a placed block',
         ToolOperation::Write,
         FALSE,
-        ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN],
+        ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN, OperationInputs::STAGE],
       ],
-      'read' => ['Current values: Edit a placed block', ToolOperation::Read, FALSE, ['id']],
-      'delete' => ['Remove a placed block', ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN]],
+      'read' => ['Current values: Edit a placed block', ToolOperation::Read, FALSE, ['id', OperationInputs::STAGE]],
+      'delete' => [
+        'Remove a placed block',
+        ToolOperation::Write,
+        TRUE,
+        ['id', OperationInputs::DRY_RUN, OperationInputs::STAGE],
+      ],
     ];
     foreach ($expected as $operation => [$label, $kind, $destructive, $inputs]) {
       $definition = $tools->getDefinition(self::TOOL . $operation);
@@ -349,6 +360,72 @@ class BlockPlacementToolsTest extends SurfaceKernelTestBase {
     $settings = Block::load('branding')->get('settings');
     $this->assertFalse($settings['use_site_slogan']);
     $this->assertSame('0', $settings['label_display']);
+  }
+
+  /**
+   * Stores a branding block in Stark's header as config, past its save.
+   *
+   * Written to the config storage itself: a block's save lays each
+   * condition's defaults in, and the config schema check refuses a key a
+   * condition's schema does not declare, both of which a stored block may
+   * still hold.
+   *
+   * @param string $id
+   *   The block's machine name.
+   * @param array $visibility
+   *   Its conditions, by id, as stored.
+   *
+   * @return array
+   *   What the storage reads of its conditions, as asked for.
+   */
+  protected function storeVisibility(string $id, array $visibility): array {
+    $this->container->get('entity_type.manager')->getStorage('block')->create([
+      'id' => $id,
+      'theme' => 'stark',
+      'region' => 'header',
+      'plugin' => 'system_branding_block',
+      'settings' => ['label' => 'Branding'],
+    ])->save();
+    $name = 'block.block.' . $id;
+    $this->container->get('config.storage')->write($name, ['visibility' => $visibility] + $this->config($name)->getRawData());
+    $this->container->get('config.factory')->reset($name);
+    $this->container->get('entity_type.manager')->getStorage('block')->resetCache([$id]);
+    $resources = $this->container->get('surface.resources');
+    $update = $resources->operation(BlockPlacementResource::class, 'update', ['id' => $id]);
+    $built = $resources->build(BlockPlacementResource::class, $update);
+    return $resources->storage(BlockPlacementResource::class, $update, $built)->load($built)['visibility'];
+  }
+
+  /**
+   * Tests a condition stored with no settings reads them as an empty map.
+   *
+   * The condition's settings are stored flat beside its id and negation
+   * (FlatVariantsLayout): where nothing of them is stored, the chosen
+   * variant reads as an empty map, as variants under a key read back the
+   * empty map the pipeline writes for one.
+   */
+  public function testConditionWithNoSettingsReadsAnEmptyMap(): void {
+    $read = $this->storeVisibility('bare', ['request_path' => ['id' => 'request_path', 'negate' => TRUE]]);
+    $this->assertSame([['id' => 'request_path', 'negate' => TRUE, 'settings' => []]], $read);
+    $this->assertSame([['id' => 'request_path', 'negate' => TRUE, 'settings' => []]], $this->call('read', ['id' => 'bare'])['values']['visibility'], 'The tool reads the same.');
+  }
+
+  /**
+   * Tests a key no variant of a stored condition declares is not read.
+   *
+   * The read keeps the chosen variant's keys and the secrets kept for the
+   * others; a key no variant declares stays in storage, unread.
+   *
+   * Decision: see docs/decisions.md#variants-stored-flat-are-a-layout.
+   */
+  public function testStaleKeyInConditionIsNotRead(): void {
+    $stored = ['id' => 'request_path', 'negate' => FALSE, 'pages' => '/events', 'stale_key' => 'x'];
+    $read = $this->storeVisibility('stale', ['request_path' => $stored]);
+    $this->assertSame([['id' => 'request_path', 'negate' => FALSE, 'settings' => ['pages' => '/events']]], $read);
+    $settings = $this->call('read', ['id' => 'stale'])['values']['visibility'][0]['settings'];
+    $this->assertSame(['pages' => '/events'], $settings);
+    $this->assertArrayNotHasKey('stale_key', $settings);
+    $this->assertSame($stored, $this->config('block.block.stale')->getRawData()['visibility']['request_path'], 'Still stored after the read.');
   }
 
   /**

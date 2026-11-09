@@ -6,8 +6,11 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\block\Entity\Block;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Reader\ConfigSchemaReader;
 use Drupal\surface_examples_block\Resource\BlockPlacementResource;
 use Drupal\surface_examples_block\Structure\VisibilityConditionStructure;
+use Drupal\surface_examples_block\Variants\BlockPluginStructures;
+use Drupal\surface_examples_block\Variants\ConditionPluginStructures;
 use Drupal\surface_examples_component_block\Structure\ComponentBlockStructure;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -228,6 +231,9 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
     $this->assertSame('boolean', $branding->getDefinition('use_site_logo')->getDataType());
     // A block with no settings of its own reads as no keys.
     $this->assertSame([], $variants->variants['system_powered_by_block']->child->getDefinitions()->names());
+    // What a variant leaves out is the fallback's keys, which are the keys
+    // the placement holds itself and its storage keeps out of the settings.
+    $this->assertSame(BlockPluginStructures::BASE, array_keys($this->container->get(ConfigSchemaReader::class)->keysOf(BlockPluginStructures::FALLBACK)));
   }
 
   /**
@@ -247,6 +253,10 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
     $this->assertSame(['roles', 'context_mapping'], $roles->getDefinitions()->names());
     $this->assertSame(['user' => '@user.current_user_context:current_user'], $roles->getDefaultValues()['context_mapping'] ?? NULL, 'The context the block layout assigns is the default.');
     $this->assertSame(VisibilityConditionStructure::class, $this->container->get('surface.resource_registry')->getDefinition('block.placement.condition')->class);
+    // What a variant leaves out, the fallback's keys, the condition entry
+    // holds itself or the provider writes.
+    $this->assertSame(['id', 'negate', 'context_mapping'], array_keys($this->container->get(ConfigSchemaReader::class)->keysOf(ConditionPluginStructures::FALLBACK)));
+    $this->assertSame([], array_diff(['id', 'negate', 'context_mapping'], ConditionPluginStructures::BASE));
   }
 
   /**
@@ -313,9 +323,11 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
       'idempotent' => TRUE,
     ], $schema[ContractEmitter::EXTENSION]['operation']);
     $this->assertSame(self::PLUGINS, array_column($schema['properties']['plugin']['oneOf'], 'const'));
-    // The core block, read from its config schema.
+    // The core block, read from its config schema: the structure its type
+    // is, less the keys every block has, each key required as its fully
+    // validatable type holds it, with the plugin's defaults.
     $this->assertSame([
-      'title' => 'block.placement.settings.system_branding_block',
+      'title' => 'config_schema:block.settings.system_branding_block:own',
       'type' => 'object',
       'properties' => [
         'use_site_logo' => ['title' => 'Use site logo', 'type' => 'boolean', 'default' => TRUE],
@@ -323,7 +335,8 @@ class BlockPlacementResourceTest extends SurfaceKernelTestBase {
         'use_site_slogan' => ['title' => 'Use site slogan', 'type' => 'boolean', 'default' => TRUE],
       ],
       'additionalProperties' => FALSE,
-    ], $schema['$defs']['block.placement.settings.system_branding_block']);
+      'required' => ['use_site_logo', 'use_site_name', 'use_site_slogan'],
+    ], $schema['$defs']['config_schema:block.settings.system_branding_block:own']);
     // The three components, under the component block's own id.
     foreach (self::COMPONENTS as $component) {
       $this->assertArrayHasKey('block.surface_component.props.' . $component, $schema['$defs']);

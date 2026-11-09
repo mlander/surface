@@ -490,6 +490,10 @@ refused and a renderer offers none; why:
 `rules`), `access` (`live`), `fetch` and `entries` (inside `deferred`)
 and `list` (`collection`).
 
+Removed on 2026-11-06, within contract 4, with `mixInVariants()`:
+`variantsMixedIn` (variants sit at a key, whose `by` and `variants` say
+which def each value chooses, stored flat or not; no client read it).
+
 A document is read as well as written. `Contract\SchemaReader` reads a
 JSON Schema into a structure by this page's table run backwards, and the
 full schema of a declaration, read back, is the same document again, but
@@ -522,15 +526,32 @@ key declared with it refers to.
    its class's `#[Structure]` or `#[Resource]` (`registration.contact`).
    A child with no class, a [variant from the site](resources.md#variants-from-the-site), is keyed
    `<parent id>.<key>.<value>` (`field.storage.settings.string`), an
-   attached one `<parent id>.<key>`. The same class at two keys, or in
-   two frames, is one def. A def may refer to other defs (a child inside
-   a variant). Two children claiming one id with declarations that are
-   not the same, which only a hand-sealed data surface or two different
-   contexts can produce, keep one def each, the second as `<id>@2`,
-   because a site may only narrow its def and neither would narrow the
-   other. A child reached inside its own def would be referred to, so a
-   resource or structure that ever contained itself ends; the build step
-   already refuses one.
+   attached one `<parent id>.<key>`. A structure read from config schema
+   (`ConfigSchemaReader`) is keyed
+   `config_schema:<type>[:<path>][:own]`, `<type>` the schema type's
+   name, which may hold `:` itself
+   (`config_schema:block.settings.system_menu_block:*:own`), or an
+   own-key expression as written
+   (`config_schema:views.field.[plugin_id]`), and `<path>` the dotted
+   path of a mapping inside the type that a key holds inline. `:own` is
+   a promise about the def: it holds the type's keys less those of its
+   frame type, the type itself or a type it extends, matched by keys
+   (`config_schema:condition.plugin.request_path:own` holds the keys
+   `condition.plugin` does not). An own-key expression's def holds its
+   fallback's keys and `configuration`, the variants its own key
+   chooses, each one of those `:own` defs
+   ([variants are conditionals](#variants-are-conditionals)). Two reads
+   of one type under one id with different content, such as two plugins
+   of one type with different defaults, keep one def each, filed apart
+   as `<id>@<n>`. The same class at two keys, or in two frames, is one
+   def. A def may refer to
+   other defs (a child inside a variant). Two children claiming one id
+   with declarations that are not the same, which only a hand-sealed
+   data surface or two different contexts can produce, keep one def
+   each, the second as `<id>@2`, because a site may only narrow its def
+   and neither would narrow the other. A child reached inside its own
+   def would be referred to, so a resource or structure that ever
+   contained itself ends; the build step already refuses one.
 2. **The def is the declaration**: the child's frame as it emits itself
    for no values, with nothing locked. Its properties, `required` and
    `additionalProperties: false`; its own conditionals under its
@@ -1526,6 +1547,7 @@ refused.
 | `?dryRun=true` | Run through prepare and stop before commit: nothing is written, and the answer is the one a write would give, with `x-surface-dry-run: true`. Always 200, never a `Location`. It was `/validate`. |
 | `If-Match: "<ETag>"` | Write only if what is stored is still what that `ETag` named; 412 otherwise, nothing written. `*` matches whatever is stored. Opt-in: with none, the last write wins ([below](#if-match)). Checked on a dry run too. |
 | `X-Surface-Stale: /room, /ticket/price` | The stale paths the envelope named that the body sends empty: each stands for the stored value. |
+| `X-Surface-Stage: <id>` | The stage the write is kept in until the stage is applied, on a call a stage applies to; `contract` and the `ETag` are then the staged view's, and `If-Match` is held to it. The envelope and the narrowing take it too. On any other call it is 422, `does_not_apply` ([Staging](staging.md#the-x-surface-stage-header)). |
 | `X-CSRF-Token` | The session's token, with the session cookie. |
 
 It answers the one result shape every door answers a run in
@@ -1535,16 +1557,16 @@ present, then three keys of its own:
 | Key | Holds |
 | --- | --- |
 | `ok` | Whether nothing was refused; `true` on every 2xx. |
-| `committed` | Whether the values were written; `false` on a dry run and for a read-only operation. |
+| `committed` | Whether the values were written: to storage, or to the stage when one is named; `false` on a dry run and for a read-only operation. |
 | `changed` | Whether the write moved a stored value; `false` unless committed. |
-| `changes` | The JSON Pointer of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored (why: [decision](decisions.md#absent-keeps-null-clears)). |
+| `changes` | The JSON Pointer of each stored value the write changes, or on a dry run would change, a map by its own keys, a list whole: a plan, empty when the values are what is stored (why: [decision](decisions.md#absent-keeps-null-clears)). Against the view of the stage when one is named: what this call moved since the last staged write. |
 | `values` | What `accept()` made of the input, as the read tool would answer it once written: no key the build left out for this account, no secret, no key that does not apply, and no key never stored that the run left at its default. |
 | `violations` | Empty on a 2xx; a refusal is [problem details](#problem-details). |
 | `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused (why: [decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
 | `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |
 | `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; on a dry run, and for an operation that changes nothing, what its `prepare()` answered under an output's name; `{}` when none are declared or none was answered. |
 | `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. |
-| `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); otherwise `null`. |
+| `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); for a create staged under `X-Surface-Stage`, where it lives in that stage, its parameters its local id (`{id: -1}`); otherwise `null`. |
 | `x-surface-dry-run` | `true`, on a dry run only. |
 
 Every path is a JSON Pointer (RFC 6901): `/contact/email`, the whole
@@ -1558,8 +1580,8 @@ same at both doors, so a program calling the API branches on them
 
 | Status | When |
 | --- | --- |
-| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`. |
-| 201 | A create written, with `Location`, the created thing's read (`/surface-api/node.type/recipe`); no `Location` when no operation addresses it (a field added to a bundle). |
+| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`. A create staged under `X-Surface-Stage`, its `outputs.id` the local id, `created` naming it in the stage and no `Location` ([Staging](staging.md#a-staged-create)). |
+| 201 | A create written, with `Location`, the created thing's read (`/surface-api/node.type/recipe`); no `Location` when no operation addresses it (a field added to a bundle), and none under `X-Surface-Stage`, which answers 200. |
 | 400 | A body that is not a JSON object, or a parameter the operation needs given nowhere. |
 | 403 | Access refused, at the route or by the pipeline for the whole call (code `access` or `permission`); the session's token missing. |
 | 404 | A resource, an operation or an id that names nothing. |
@@ -1567,7 +1589,7 @@ same at both doors, so a program calling the API branches on them
 | 410 | A contract 2 path ([gone](#gone)). |
 | 412 | `If-Match` no longer names what is stored ([conflict](#conflict)). |
 | 415 | A body of a media type the method does not take; a `PATCH`'s answer names them in `Accept-Patch`. |
-| 422 | The values were refused ([refused](#refused)). |
+| 422 | The values were refused ([refused](#refused)), or the call carries `X-Surface-Stage` and a stage does not apply to it. |
 
 What storage rehearsed is not served: it holds what the caller may not
 see, so a dry run answers the accepted document and its verdict
@@ -1623,6 +1645,7 @@ theme no longer has can still be removed.
 | `?dryRun=true` | Rehearse the removal and remove nothing; `x-surface-dry-run: true`. |
 | `If-Match: "<ETag>"` | Remove only if what is stored is still what that `ETag` named; 412 otherwise. |
 | `X-CSRF-Token` | The session's token, with the session cookie. |
+| `X-Surface-Stage` | Keep the removal in that stage, where a stage applies to the delete; the thing is removed when the stage is applied ([Staging](staging.md#a-staged-delete)). |
 
 It answers 200 with the one result: `values` the values the thing held,
 `changes` `[""]`, the empty pointer, the whole thing, `committed` and
@@ -1632,6 +1655,8 @@ that is not there is a 404, as on any path. A delete that is not its
 path's default is a custom method, `POST .../{x}:{operation}`, its
 envelope `GET .../{x}:{operation}` as any other's; the placement's
 `delete` is the default, `DELETE /surface-api/block.placement/{id}`.
+With the stage header the answer is the same, `committed` true, and the
+thing is still there until the stage is applied.
 
 ### Problem details
 
@@ -1711,21 +1736,26 @@ path either.
 
 ### Where a created thing lives
 
-`ServedOperations::created()` answers only for an operation whose
-context `creates`. It takes the resource's operations in declaration
+`ServedOperations::created()` answers only for an operation that
+`creates`, as its attribute says. It takes the resource's operations in declaration
 order and picks the first that does not create and whose every required
 parameter is supplied, by name, from the outputs storage read back,
 then from the identity keys the write accepted, then from the identity
 the creating operation already knew. The answer is checked, not
 assumed: the operation is built from those parameters (its storage
-loads what each names), its context must not create, and every identity
+loads what each names), it must not create, and every identity
 key it knows must equal what was written. The content type's
 `update(string $type)` is answered by the `type` the write accepted,
 and its read is the `Location`. A field added at
 `field.instance:create` lives at its `update(string $entity_type, string
 $bundle, string $field_name)`, answered by the identity the write
 accepted: `Location: /surface-api/field.instance/node/article/field_x`.
-Example 2's `configure` creates nothing, so `null`.
+Example 2's `configure` creates nothing, so `null`. A create staged
+under `X-Surface-Stage` created nothing yet: each candidate is built
+through the stage, so a page staged as `-1` lives at `update` with `{id:
+-1}` in that stage, which `created` answers; the answer is 200 with no
+`Location`, since a `Location` has to resolve without a request header
+([Staging: A staged create](staging.md#a-staged-create)).
 
 ### If-Match
 
@@ -1828,7 +1858,9 @@ so a site grants them to the roles it chooses. The document is open.
   behaves is `x-surface-kind` on every call, and on its run
   `x-surface-idempotent`, `x-surface-destructive` and
   `x-surface-creates`. `dryRun` is a query parameter; `If-Match`,
-  `X-Surface-Stale` and `X-CSRF-Token` header parameters; the read
+  `X-Surface-Stale` and `X-CSRF-Token` header parameters, and
+  `X-Surface-Stage` (`SurfaceStage`) on a call a stage applies to
+  ([Staging: Where a stage applies](staging.md#where-a-stage-applies)); the read
   answers `ETag` and `Link`, a written create `Location`. Every answer
   carries the `Contract-Version` header; every error is `ProblemDetails`.
 - **Components.** Each operation's full schema, as `emitFull()` writes

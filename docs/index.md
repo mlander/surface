@@ -59,12 +59,13 @@ install; read it first.
   class, adopting it [on a plugin](declaring-a-resource.md#on-a-plugin),
   defaults, locking, secrets, required.
 - [Resources and structures](resources.md): [which way to compose](resources.md#which-way-to-compose), operations, alters,
-  attached structures and variants, variants from the site, ports,
-  mixins, collections, keys from the site, access, storage, tools, the
-  catalog.
+  attached structures and variants, variants stored flat, variants from
+  the site, ports, mixins, collections, keys from the site, access,
+  storage, tools, the catalog.
 - [Reading a schema](reading-a-schema.md): a JSON Schema read into a
   structure: the mapping, what is kept and checked on the server, what
-  is noted and refused, older drafts, the round trip.
+  is noted and refused, older drafts, the round trip; and a config
+  schema type read straight into one.
 - [Refinement](refinement.md): an alter offering values and a refiner
   narrowing them, a rule declared as data, a key that does not apply,
   the narrowing table, cacheability, a worked example, and what it does
@@ -97,6 +98,9 @@ install; read it first.
   rendered from it.
 - [The pipeline](pipeline.md): access, accept, validate, prepare,
   commit; dry runs; exceptions.
+- [Staging](staging.md): a stage keeps writes until they are applied
+  together, or discarded: its six operations, the `stage` input and the
+  `X-Surface-Stage` header, apply, and how a storage opts in.
 - [Value semantics](semantics.md): configured or not, the coercion
   table (the Tool API's), secrets, stale values, type mismatches,
   required, locked keys.

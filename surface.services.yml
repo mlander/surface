@@ -64,10 +64,37 @@ services:
     factory: ['@cache_factory', 'get']
     arguments: [surface_build]
   Drupal\surface\ResourceBuild\ResourcesInterface: '@surface.resources'
+  # The stages: one record per stage in the expirable key-value collection
+  # surface.stage, each write under a lock named for the stage, kept for the
+  # record's own lifetime (keep) after the last, or the temp store expiry. A
+  # site may swap the service for another StageStoreInterface; consumers
+  # are typed to the interface, so no alias names the class.
+  surface.stages:
+    class: Drupal\surface\Staging\StageStore
+    arguments: ['@keyvalue.expirable', '@lock', '@datetime.time', '%tempstore.expire%']
+  Drupal\surface\Staging\StageStoreInterface: '@surface.stages'
+  # Records the config an apply writes, so a rolled back apply resets what
+  # config kept beside the database for those names.
+  surface.config_writes:
+    class: Drupal\surface\Staging\ConfigWrites
+    arguments: ['@cache.config', '@config.factory', '@entity.memory_cache', '@entity_type.bundle.info', '@entity_field.manager', '@state']
+    tags:
+      - { name: event_subscriber }
+  Drupal\surface\Staging\ConfigWrites: '@surface.config_writes'
   # Reads one entry of a provider's variants when a door builds it, named
   # by class in the read definitions the build registers.
   Drupal\surface\ResourceBuild\SiteEntries:
     arguments: ['@class_resolver', '@language_manager']
+  # Readers straight into the blueprint, prototype: a config schema type
+  # and a typed data definition, each a structure registered on demand by
+  # the class (ResourceCallable), and the variants a config schema type
+  # names through another key.
+  Drupal\surface\Reader\ConfigSchemaReader:
+    arguments: ['@config.typed', '@surface.resource_registry']
+  Drupal\surface\Reader\TypedDataReader:
+    arguments: ['@typed_data_manager', '@surface.references', '@surface.resource_registry']
+  Drupal\surface\Variants\ConfigSchemaTypes:
+    arguments: ['@Drupal\surface\Reader\ConfigSchemaReader', '@config.typed', '@service_container']
   # The defaults a site sets over the declared ones, surface.defaults,
   # which every build reads and carries the cache tag of.
   surface.site_defaults:
@@ -96,7 +123,7 @@ services:
   # operation's permission, then the resource's access class.
   surface.operation_access:
     class: Drupal\surface\Access\OperationAccessCheck
-    arguments: ['@surface.resources', '@surface.resource_registry', '@surface.operation_arguments', '@surface.operation_gate']
+    arguments: ['@surface.resources', '@surface.resource_registry', '@surface.operation_arguments', '@surface.operation_gate', '@surface.stages', '@request_stack']
     tags:
       - { name: access_check, applies_to: _surface_operation_access }
   # Adds that access check to every route naming a resource and an
@@ -196,7 +223,7 @@ services:
   # context, the built resource and its storage, and answers access.
   surface.served_operations:
     class: Drupal\surface\Http\ServedOperations
-    arguments: ['@surface.resource_registry', '@surface.resources']
+    arguments: ['@surface.resource_registry', '@surface.resources', '@surface.stages']
   # Reads which operation a path and a method name, and writes the path of
   # an operation: contract 3's paths.
   surface.served_paths:

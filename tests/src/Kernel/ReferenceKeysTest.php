@@ -225,7 +225,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     catch (\LogicException $e) {
       $this->assertStringContainsString('test declares "map.inner" as a reference to node with the string type', $e->getMessage());
     }
-    $blueprint = (new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager')))->useReferences($references);
+    $blueprint = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
     foreach (['entity:node', 'entity:node:article', 'entity'] as $type) {
       try {
         $blueprint->add('x', $type, 'X');

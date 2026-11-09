@@ -1,0 +1,8 @@
+name: Surface API Stage Test
+type: module
+description: 'Test support for the stage: a ledger row kept in a key-value collection, a plain database write a transaction rolls back whole, with a computed slug and an operation over a structure of no keys; a note holding a secret, which a stage keeps sealed; and a trip drawn over three groups, the flows over it.'
+package: Testing
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

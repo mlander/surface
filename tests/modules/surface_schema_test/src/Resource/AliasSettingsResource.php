@@ -32,10 +32,8 @@ final class AliasSettingsResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('types', 'boolean', from: AliasTypes::class, default: FALSE)
-      ->setLabel(t('Types with aliases'));
-    $inputs->addEach('marks', MarkAction::class, from: AliasMarks::class)
-      ->setLabel(t('Punctuation'));
+    $inputs->addEach('types', 'boolean', from: AliasTypes::class, label: t('Types with aliases'), default: FALSE);
+    $inputs->addEach('marks', MarkAction::class, from: AliasMarks::class, label: t('Punctuation'));
     $inputs->describe('marks', group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE));
   }
 

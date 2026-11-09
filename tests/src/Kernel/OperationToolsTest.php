@@ -107,6 +107,12 @@ class OperationToolsTest extends SurfaceKernelTestBase {
       'surface:node.type:create',
       'surface:node.type:read',
       'surface:node.type:update',
+      'surface:surface.stage:apply',
+      'surface:surface.stage:changes',
+      'surface:surface.stage:create',
+      'surface:surface.stage:delete',
+      'surface:surface.stage:read',
+      'surface:surface.stage:update',
     ], $ids);
     // The address settings name storage and have no operation of their
     // own: they are only ever a field's.
@@ -159,7 +165,7 @@ class OperationToolsTest extends SurfaceKernelTestBase {
     // whole resource, machine name included and unique.
     $add = $manager->getDefinition('surface:node.type:create');
     $this->assertSame('Add a content type', (string) $add->getLabel());
-    $this->assertSame([OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($add->getInputDefinitions()));
+    $this->assertSame([OperationInputs::VALUES, OperationInputs::DRY_RUN, OperationInputs::STAGE], array_keys($add->getInputDefinitions()));
     $values = $add->getInputDefinition(OperationInputs::VALUES);
     $this->assertInstanceOf(MapInputDefinition::class, $values);
     $this->assertArrayHasKey('type', $values->getPropertyDefinitions());
@@ -172,7 +178,7 @@ class OperationToolsTest extends SurfaceKernelTestBase {
     // required: what the resource requires is said in words, and a key
     // left out keeps what is stored.
     $edit = $manager->getDefinition('surface:node.type:update');
-    $this->assertSame(['type', OperationInputs::VALUES, OperationInputs::DRY_RUN], array_keys($edit->getInputDefinitions()));
+    $this->assertSame(['type', OperationInputs::VALUES, OperationInputs::DRY_RUN, OperationInputs::STAGE], array_keys($edit->getInputDefinitions()));
     $this->assertSame('string', $edit->getInputDefinition('type')->getDataType());
     $this->assertTrue($edit->getInputDefinition('type')->isRequired());
     $values = $edit->getInputDefinition(OperationInputs::VALUES);
@@ -196,7 +202,7 @@ class OperationToolsTest extends SurfaceKernelTestBase {
     // Adding one creates, so it lists the declared defaults.
     $this->assertSame('Title', $add->getInputDefinition(OperationInputs::VALUES)->getPropertyDefinitions()['title_label']->getDefaultValue());
     $this->assertStringNotContainsString('keeps its value', (string) $add->getDescription());
-    $this->assertSame([OperationInputs::VALUES => ['type']], $edit->getInputDefinitionRefiners());
+    $this->assertSame([OperationInputs::VALUES => ['type', OperationInputs::STAGE]], $edit->getInputDefinitionRefiners());
 
     // A field: add takes the entity type and bundle, reuse and edit the
     // entity type, bundle and field name, and each leaves out what it

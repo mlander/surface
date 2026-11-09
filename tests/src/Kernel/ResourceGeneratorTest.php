@@ -242,8 +242,7 @@ PHP, $resource, 'An enum is a Choice.');
     $inputs->add(self::SLUG, 'string', t('Slug'))
       ->addConstraint('Regex', ['pattern' => '/^[a-z0-9-]+$/D']);
 
-    $inputs->attach(self::VENUE, VenueStructure::class)
-      ->setLabel(t('Venue'));
+    $inputs->attach(self::VENUE, VenueStructure::class, t('Venue'));
 
     $inputs->addMap(self::CONTACT, t('Contact'), function (BlueprintInterface $map): void {
 PHP, $resource, 'A $ref to a scalar def is read in place; one to an object def is a structure of its own; a nested object is a map.');

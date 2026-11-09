@@ -73,8 +73,11 @@ final class Computed {
    * Answers whether the key is computed again for these values.
    *
    * Always while storage holds nothing for it, which is how a thing being
-   * created starts; once it holds a value, only when `when` is ON_CHANGE
-   * and a key it is computed from holds other than what is stored.
+   * created starts, and on every write of a thing being created unless
+   * the key takes a sent value: a stage merges later writes into a create
+   * whose level holds a value, and apply computes the key from the merged
+   * sources. Once it holds a value, only when `when` is ON_CHANGE and a
+   * key it is computed from holds other than what is stored.
    *
    * @param string $key
    *   The computed key.
@@ -82,12 +85,19 @@ final class Computed {
    *   The values of its level, sources included.
    * @param array $stored
    *   What storage holds for its level.
+   * @param bool $creates
+   *   TRUE when the write creates the thing.
    *
    * @return bool
    *   TRUE when its value is computed; FALSE when what is stored stands.
    */
-  public function recomputes(string $key, array $values, array $stored): bool {
+  public function recomputes(string $key, array $values, array $stored, bool $creates = FALSE): bool {
     if (!array_key_exists($key, $stored) || !ValueState::isConfigured($stored[$key])) {
+      return TRUE;
+    }
+    // Decision: see
+    // docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it.
+    if ($creates && !$this->takesSent()) {
       return TRUE;
     }
     if ($this->when !== Compute::ON_CHANGE) {
@@ -114,13 +124,15 @@ final class Computed {
    *   What storage holds for its level.
    * @param \Drupal\Core\TypedData\DataDefinitionInterface|null $definition
    *   The key's own definition, handed to the class computing it.
+   * @param bool $creates
+   *   TRUE when the write creates the thing (recomputes()).
    *
    * @return mixed
    *   The value computed from the sources, or what is stored when it is
    *   not computed again.
    */
-  public function value(string $key, array $values, array $stored, ?DataDefinitionInterface $definition = NULL): mixed {
-    return $this->recomputes($key, $values, $stored) ? $this->compute($values, $definition) : $stored[$key];
+  public function value(string $key, array $values, array $stored, ?DataDefinitionInterface $definition = NULL, bool $creates = FALSE): mixed {
+    return $this->recomputes($key, $values, $stored, $creates) ? $this->compute($values, $definition) : $stored[$key];
   }
 
   /**

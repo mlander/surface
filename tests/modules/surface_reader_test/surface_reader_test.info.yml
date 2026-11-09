@@ -1,0 +1,13 @@
+name: 'Surface API reader test'
+type: module
+description: 'Structures that attach the same settings twice, once through the JSON Schema route and once straight from config schema, which ConfigSchemaReaderTest compares, and a condition read from config schema and stored as core stores it.'
+package: Testing
+hidden: true
+version: VERSION
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - drupal:block
+  - drupal:field
+  - surface:surface
+  - surface:surface_examples_block
+  - surface:surface_examples_field

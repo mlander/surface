@@ -125,37 +125,37 @@
                         "description": "The settings of the block chosen, as its plugin declares them.",
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/block.placement.settings.local_actions_block"
+                                "$ref": "#/$defs/config_schema:block.settings.*:own"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.settings.local_tasks_block"
+                                "$ref": "#/$defs/config_schema:block.settings.local_tasks_block:own"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.settings.page_title_block"
+                                "$ref": "#/$defs/config_schema:block.settings.*:own"
                             },
                             {
                                 "$ref": "#/$defs/block.surface_component"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.settings.system_branding_block"
+                                "$ref": "#/$defs/config_schema:block.settings.system_branding_block:own"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.settings.system_breadcrumb_block"
+                                "$ref": "#/$defs/config_schema:block.settings.*:own"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.settings.system_clear_cache_block"
+                                "$ref": "#/$defs/config_schema:block.settings.*:own"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.settings.system_main_block"
+                                "$ref": "#/$defs/config_schema:block.settings.*:own"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.settings.system_messages_block"
+                                "$ref": "#/$defs/config_schema:block.settings.*:own"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.settings.system_powered_by_block"
+                                "$ref": "#/$defs/config_schema:block.settings.*:own"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.settings.user_login_block"
+                                "$ref": "#/$defs/config_schema:block.settings.*:own"
                             },
                             {
                                 "type": "null"
@@ -167,17 +167,17 @@
                             ],
                             "by": "plugin",
                             "variants": {
-                                "local_actions_block": "#/$defs/block.placement.settings.local_actions_block",
-                                "local_tasks_block": "#/$defs/block.placement.settings.local_tasks_block",
-                                "page_title_block": "#/$defs/block.placement.settings.page_title_block",
+                                "local_actions_block": "#/$defs/config_schema:block.settings.*:own",
+                                "local_tasks_block": "#/$defs/config_schema:block.settings.local_tasks_block:own",
+                                "page_title_block": "#/$defs/config_schema:block.settings.*:own",
                                 "surface_component": "#/$defs/block.surface_component",
-                                "system_branding_block": "#/$defs/block.placement.settings.system_branding_block",
-                                "system_breadcrumb_block": "#/$defs/block.placement.settings.system_breadcrumb_block",
-                                "system_clear_cache_block": "#/$defs/block.placement.settings.system_clear_cache_block",
-                                "system_main_block": "#/$defs/block.placement.settings.system_main_block",
-                                "system_messages_block": "#/$defs/block.placement.settings.system_messages_block",
-                                "system_powered_by_block": "#/$defs/block.placement.settings.system_powered_by_block",
-                                "user_login_block": "#/$defs/block.placement.settings.user_login_block"
+                                "system_branding_block": "#/$defs/config_schema:block.settings.system_branding_block:own",
+                                "system_breadcrumb_block": "#/$defs/config_schema:block.settings.*:own",
+                                "system_clear_cache_block": "#/$defs/config_schema:block.settings.*:own",
+                                "system_main_block": "#/$defs/config_schema:block.settings.*:own",
+                                "system_messages_block": "#/$defs/config_schema:block.settings.*:own",
+                                "system_powered_by_block": "#/$defs/config_schema:block.settings.*:own",
+                                "user_login_block": "#/$defs/config_schema:block.settings.*:own"
                             }
                         }
                     },
@@ -313,7 +313,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.local_actions_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.*:own"
                                 }
                             }
                         }
@@ -334,7 +334,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.local_tasks_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.local_tasks_block:own"
                                 }
                             }
                         }
@@ -355,7 +355,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.page_title_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.*:own"
                                 }
                             }
                         }
@@ -397,7 +397,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.system_branding_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.system_branding_block:own"
                                 }
                             }
                         }
@@ -418,7 +418,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.system_breadcrumb_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.*:own"
                                 }
                             }
                         }
@@ -439,7 +439,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.system_clear_cache_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.*:own"
                                 }
                             }
                         }
@@ -460,7 +460,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.system_main_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.*:own"
                                 }
                             }
                         }
@@ -481,7 +481,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.system_messages_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.*:own"
                                 }
                             }
                         }
@@ -502,7 +502,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.system_powered_by_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.*:own"
                                 }
                             }
                         }
@@ -523,21 +523,21 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the block chosen, as its plugin declares them.",
-                                    "$ref": "#/$defs/block.placement.settings.user_login_block"
+                                    "$ref": "#/$defs/config_schema:block.settings.*:own"
                                 }
                             }
                         }
                     }
                 ],
                 "$defs": {
-                    "block.placement.settings.local_actions_block": {
-                        "title": "block.placement.settings.local_actions_block",
+                    "config_schema:block.settings.*:own": {
+                        "title": "config_schema:block.settings.*:own",
                         "type": "object",
                         "properties": {},
                         "additionalProperties": false
                     },
-                    "block.placement.settings.local_tasks_block": {
-                        "title": "block.placement.settings.local_tasks_block",
+                    "config_schema:block.settings.local_tasks_block:own": {
+                        "title": "config_schema:block.settings.local_tasks_block:own",
                         "type": "object",
                         "properties": {
                             "primary": {
@@ -551,13 +551,11 @@
                                 "default": true
                             }
                         },
-                        "additionalProperties": false
-                    },
-                    "block.placement.settings.page_title_block": {
-                        "title": "block.placement.settings.page_title_block",
-                        "type": "object",
-                        "properties": {},
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "required": [
+                            "primary",
+                            "secondary"
+                        ]
                     },
                     "block.surface_component.props.surface_examples:call_to_action": {
                         "title": "block.surface_component.props.surface_examples:call_to_action",
@@ -2020,8 +2018,8 @@
                             }
                         ]
                     },
-                    "block.placement.settings.system_branding_block": {
-                        "title": "block.placement.settings.system_branding_block",
+                    "config_schema:block.settings.system_branding_block:own": {
+                        "title": "config_schema:block.settings.system_branding_block:own",
                         "type": "object",
                         "properties": {
                             "use_site_logo": {
@@ -2040,43 +2038,12 @@
                                 "default": true
                             }
                         },
-                        "additionalProperties": false
-                    },
-                    "block.placement.settings.system_breadcrumb_block": {
-                        "title": "block.placement.settings.system_breadcrumb_block",
-                        "type": "object",
-                        "properties": {},
-                        "additionalProperties": false
-                    },
-                    "block.placement.settings.system_clear_cache_block": {
-                        "title": "block.placement.settings.system_clear_cache_block",
-                        "type": "object",
-                        "properties": {},
-                        "additionalProperties": false
-                    },
-                    "block.placement.settings.system_main_block": {
-                        "title": "block.placement.settings.system_main_block",
-                        "type": "object",
-                        "properties": {},
-                        "additionalProperties": false
-                    },
-                    "block.placement.settings.system_messages_block": {
-                        "title": "block.placement.settings.system_messages_block",
-                        "type": "object",
-                        "properties": {},
-                        "additionalProperties": false
-                    },
-                    "block.placement.settings.system_powered_by_block": {
-                        "title": "block.placement.settings.system_powered_by_block",
-                        "type": "object",
-                        "properties": {},
-                        "additionalProperties": false
-                    },
-                    "block.placement.settings.user_login_block": {
-                        "title": "block.placement.settings.user_login_block",
-                        "type": "object",
-                        "properties": {},
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "required": [
+                            "use_site_logo",
+                            "use_site_name",
+                            "use_site_slogan"
+                        ]
                     },
                     "block.placement.condition.settings.entity_bundle:node": {
                         "title": "block.placement.condition.settings.entity_bundle:node",
@@ -2116,27 +2083,28 @@
                         },
                         "additionalProperties": false
                     },
-                    "block.placement.condition.settings.request_path": {
-                        "title": "block.placement.condition.settings.request_path",
+                    "config_schema:condition.plugin.request_path:own": {
+                        "title": "config_schema:condition.plugin.request_path:own",
                         "type": "object",
                         "properties": {
                             "pages": {
-                                "title": "String",
-                                "type": "string",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
                                 "default": ""
                             }
                         },
                         "additionalProperties": false
                     },
-                    "block.placement.condition.settings.response_status": {
-                        "title": "block.placement.condition.settings.response_status",
+                    "config_schema:condition.plugin.response_status:own": {
+                        "title": "config_schema:condition.plugin.response_status:own",
                         "type": "object",
                         "properties": {
                             "status_codes": {
-                                "title": "Sequence",
+                                "title": "status_codes",
                                 "type": "array",
                                 "items": {
-                                    "title": "Integer",
                                     "type": "integer",
                                     "oneOf": [
                                         {
@@ -2156,7 +2124,10 @@
                                 "default": []
                             }
                         },
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "required": [
+                            "status_codes"
+                        ]
                     },
                     "block.placement.condition.settings.user_role": {
                         "title": "block.placement.condition.settings.user_role",
@@ -2240,10 +2211,10 @@
                                         "$ref": "#/$defs/block.placement.condition.settings.entity_bundle:node"
                                     },
                                     {
-                                        "$ref": "#/$defs/block.placement.condition.settings.request_path"
+                                        "$ref": "#/$defs/config_schema:condition.plugin.request_path:own"
                                     },
                                     {
-                                        "$ref": "#/$defs/block.placement.condition.settings.response_status"
+                                        "$ref": "#/$defs/config_schema:condition.plugin.response_status:own"
                                     },
                                     {
                                         "$ref": "#/$defs/block.placement.condition.settings.user_role"
@@ -2259,8 +2230,8 @@
                                     "by": "id",
                                     "variants": {
                                         "entity_bundle:node": "#/$defs/block.placement.condition.settings.entity_bundle:node",
-                                        "request_path": "#/$defs/block.placement.condition.settings.request_path",
-                                        "response_status": "#/$defs/block.placement.condition.settings.response_status",
+                                        "request_path": "#/$defs/config_schema:condition.plugin.request_path:own",
+                                        "response_status": "#/$defs/config_schema:condition.plugin.response_status:own",
                                         "user_role": "#/$defs/block.placement.condition.settings.user_role"
                                     }
                                 }
@@ -2308,7 +2279,7 @@
                                         "settings": {
                                             "title": "Settings",
                                             "description": "The settings of the condition chosen.",
-                                            "$ref": "#/$defs/block.placement.condition.settings.request_path"
+                                            "$ref": "#/$defs/config_schema:condition.plugin.request_path:own"
                                         }
                                     }
                                 }
@@ -2329,7 +2300,7 @@
                                         "settings": {
                                             "title": "Settings",
                                             "description": "The settings of the condition chosen.",
-                                            "$ref": "#/$defs/block.placement.condition.settings.response_status"
+                                            "$ref": "#/$defs/config_schema:condition.plugin.response_status:own"
                                         }
                                     }
                                 }

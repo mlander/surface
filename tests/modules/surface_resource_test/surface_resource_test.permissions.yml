@@ -46,3 +46,12 @@ freeze walls:
 hide plaques:
   title: 'Hide the plaques'
   description: 'The gallery fixture''s plaque is left out, by an alter''s answer.'
+inspect stove:
+  title: 'Inspect the stove'
+  description: 'The kit fixture''s stove variant is locked: its members are shown and fixed.'
+hide stove:
+  title: 'Hide the stove'
+  description: 'The kit fixture''s stove variant is omitted: it is not offered, and its own members are not there.'
+hide frame pack:
+  title: 'Hide the frame pack'
+  description: 'The pack fixture''s frame pack variant is omitted: it is not offered, and its own members and children are not there.'

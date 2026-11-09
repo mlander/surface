@@ -260,6 +260,39 @@ blueprint's verbs spelled as properties
 no blueprint method and no interface, since the trait calls the verbs
 there are. The pins below are 27 attributes and 112 arguments since.
 
+*Grown 2026-11-05,* by one blueprint method, `mixInVariants()`, and its
+attribute, `#[MixInVariants(by:, from:, arguments:)]`
+([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)):
+a config schema type chosen by a key inside its own value is stored
+flat, which neither `mixIn()` (one structure) nor `attachVariants()`
+(nested under a key) can declare. The pins are 28 attributes, 115
+arguments and 18 blueprint methods since.
+
+*Shrunk 2026-11-06,* by two attribute arguments, `#[Each(to:,
+bundles:)]`: a reference per entry is the entry's definition with
+the reference constraint, `#[Constraint(..., item: TRUE)]` beside
+`#[Each]`
+([A reference is a constraint on a value](#a-reference-is-a-constraint-on-a-value)).
+The pins are 28 attributes, 113 arguments and 18 blueprint methods
+since.
+
+*Shrunk 2026-11-06,* by one blueprint method, `mixInVariants()`, and
+its attribute, `#[MixInVariants]`, with its three arguments: a tagged
+union has one blueprint form, `attachVariants()` at a key, and keeping
+the chosen keys beside the deciding key is the setting
+`Variants::STORED_AS` on that key, which the engine's layout reads.
+The pins are 27 attributes, 110 arguments and 17 blueprint methods
+since.
+
+*Grown 2026-11-07,* by one interface a storage implements,
+`Pipeline\TransactionalStorageInterface`, and its one method,
+`rolledBack()`: only a storage that declares a transaction undoes its
+writes whole may be staged
+([A stage is a resource of the base module, kept in an expirable key-value collection](#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection)).
+It is in `src/Pipeline/`, which the four pins do not count, so they are
+unchanged; `PublicSurfaceTest` pins the storage interfaces of
+`src/Pipeline/` by name and method from this date.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -753,6 +786,17 @@ and `paid`, in the form and both documents.
 (`Resource\Attribute\Variant::$label`, `SurfaceBuilder::attachVariants()`,
 `Attaching::assertListNarrowsVariants()`)
 
+*Amended 2026-11-05:* the structure a sibling key chooses may be mixed
+in, its members stored flat beside the deciding key, with
+`mixInVariants($by)`. The tags live on the variants there too: a
+`#[Variant(of:, at:)]` whose `at` is the deciding key is one, and the
+deciding key is offered the variants' values by their labels, the same
+way ([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)).
+*Reversed 2026-11-06:* variants mixed in were removed; variants kept
+beside their deciding key are variants at a key stored flat, whose tags
+live on the variants the same way, `at` naming the key
+([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
+
 *Amended 2026-11-01:* there is no escape hatch beside variants. A key
 declared `any` with a `#[RefinesInput]` method returning a whole
 definition was the one way a child that could not be listed got its
@@ -763,6 +807,16 @@ anything holds for the variants' placeholder alone (`Narrowing`).
 `DynamicChildStructure` is removed: the crate and its fruit variant
 cover the same behavior
 ([One table of leaf types](#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
+
+*Amended 2026-11-05:* an open value, `any` held whole
+(`LeafRules::open()`), may become any type too, since it accepts every
+value: a reader declares a key it reads no shape for open, and the
+frame of variants mixed in declares a member two variants declare
+unlike open, held to the chosen variant's own definition there
+(`Narrowing`, [A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)).
+`add()` still refuses `any`. *Amended 2026-11-06:* the frame of
+variants mixed in went with them; a reader's open key is the one use
+([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
 
 ### A page stands without the decisions page
 
@@ -890,10 +944,10 @@ use `DeclaresByProperties`, which supplies `defineInputs()` and
   argument cannot hold: a call (`Venues::rooms()`), a loop, a condition
   `#[Rule]` does not spell.
 - **What the reader refuses.** Only what the verbs cannot know: a
-  public property with no attribute saying what it is, a group no
-  `#[Group]` declares, a type that is no key type and no shape with no
-  `type:`, a child or map naming no class, an item constraint on a key
-  that is no list, and an output on a class that does not implement
+  public property with no attribute saying what it is, or with two, a
+  group no `#[Group]` declares, a type that is no key type and no shape
+  with no `type:`, a child or map naming no class, an item constraint on
+  a key that is no list, and an output on a class that does not implement
   `DefinesOutputsInterface`. Each names the class, the property and the
   fix.
 - **Pure.** The reader reads types, initializers and attributes and
@@ -907,6 +961,19 @@ use `DeclaresByProperties`, which supplies `defineInputs()` and
 (`Resource\DeclaresByProperties`, `ResourceBuild\PropertyDeclaration`,
 `Resource\Attribute\*`, `PropertyDeclarationTest`, `CateringResource`
 and its twin with calls, `CateringByMethodResource`, example 18)
+
+*Amended 2026-11-06:* `#[Variants]` is `#[AttachVariants]`, by the rule
+the attributes now follow: an attribute for the owner's own keys names
+the kind of member (`Input`, `Output`, `Map`, `Each`, `Computed`,
+`Port`); an attribute for a composition restates the verb (`Attach`,
+`AttachList`, `AttachEach`, `AttachVariants`, `MixIn`). `Variants` was
+the one composition attribute without its verb, and the same word
+already named the engine class `Drupal\surface\Variants` and the
+namespace `Drupal\surface\Variants\`. A property carrying two of the
+attributes that say what it is (`#[Input]` and `#[Attach]`, say) is
+refused, naming both; the reader had called one of their verbs, in an
+order of its own, and dropped the other without a word. A `#[Variant]`'s `label:` is wrapped
+in `TranslatableMarkup` as a property attribute's is.
 
 ### An operation on the class
 
@@ -1131,6 +1198,16 @@ one plugin that holds it, else NULL, and a caller names it by its id
   is wherever it is held. The `#[Variant]` label is the choice's word and
   stands over the structure's: the paid ticket is offered as "Paid" and
   titled "Paid ticket".
+- **The key's label is given with the key.** *Amended 2026-11-06:* a key
+  is declared in one statement, what it is and what it is called.
+  `attach()`, `attachList()` and `attachVariants()` take the label
+  third, `attachEach()` and `addEach()` after `from:`, as `add()` takes
+  its own. The label is optional where a structure has its own (NULL
+  leaves the structure's), and required on `addEach()` and `#[Each]`,
+  whose values have none to borrow. `->setLabel()` on the definition a
+  verb returns stays: it is core's setter, and a key labeled with it
+  emits the same documents. The description stays a setter
+  (`->setDescription()`, `description:` on an attribute twin).
 - **Rejected: a label on every `#[Variant]`**, the only place a
   structure could be named before. It names a structure only where it is
   a variant, says nothing in the catalog or at an attached child's def,
@@ -1154,7 +1231,7 @@ one plugin that holds it, else NULL, and a caller names it by its id
 `ResourcePlugins::hostNames()`, `Subschemas::named()`,
 `DocumentHead::top()`, `Attaching::variantLabels()`,
 `SchemaReader::names()`, `CatalogDocument::names()`,
-`ResourceLabelsTest`)
+`BlueprintAdapterBase::labeled()`, `ResourceLabelsTest`)
 
 ## Context
 
@@ -1296,7 +1373,11 @@ on another calls `withId()`. A context that was never stamped, an
 operation's method called directly and handed to `build()`, is refused
 there: ask for the operation through `operation()`.
 (`OperationDefinition::stamp()`, `ResourceRegistry::assertStamps()`,
-`Resources::operation()`)
+`Resources::operation()`) *Amended 2026-11-07:* one context is not
+stamped: an update, a read or a delete of a thing a stage creates is
+its create's context under the asked id, and creates though its
+operation does not
+([A stage decides the context of a thing it creates](#a-stage-decides-the-context-of-a-thing-it-creates)).
 
 ### Constraints and starting values for an attached key
 
@@ -1712,7 +1793,16 @@ type was known the same way; it became identity when it started
 choosing between the settings variants.) *Amended 2026-10-28:* the storage's entity type and field name are
 identity too, beside its field type ([A parameter is identity the caller
 knows](#a-parameter-is-identity-the-caller-knows)); a field's settings
-child still knows the field's bundle this way.
+child still knows the field's bundle this way. *Amended 2026-11-07:* the
+context of a thing a stage creates knows the create's position in the
+stage this way, `StagedStorage::POSITION` (`stage_position`): not
+locked, handed to children by `withKnown()` with the rest of what the
+parent knows, and read by the stage's storage, and by the read and write
+tools to tell a thing a stage creates from a create
+([A stage decides the context of a thing it creates](#a-stage-decides-the-context-of-a-thing-it-creates)).
+The key name is reserved for the stage: `Resources::operation()` throws a
+`LogicException` naming the resource and the key when an owner's
+context knows it.
 
 ### An entity parameter given as an id
 
@@ -2028,10 +2118,14 @@ already has:
 - **`Declaring`** answers what the thing declares: its blueprints filled
   from the class and its alters, the site's defaults, the context's
   constraints and known identity, and the context a child is invoked in.
+- **`Mixing`** answers what the thing takes in as its own keys:
+  each structure mixed in, built by itself for its def and its access,
+  its members settled in the owner's frame, and what of the owner's
+  names a member it may not depend on refused.
 - **`Attaching`** answers what the thing holds: each child, collection,
-  variant, map of keys from the site, structure mixed in and structure at
-  an alter's mount, each built through the whole sequence again in its
-  own frame, its ports wired to the parent's keys.
+  variant, map of keys from the site and structure at an alter's mount,
+  each built through the whole sequence again in its own frame, its
+  ports wired to the parent's keys.
 - **`Binding`** answers what each contributor says about its keys: the
   `#[RefinesInput]` methods and the rules declared as data, bound into
   the builder, the owner's before any alter's.
@@ -2053,7 +2147,17 @@ phases. A core reviewer reviews one phase at a time, its dependencies
 named by its constructor. Nothing changed in what is built: the method
 bodies moved as they were, and the sealed data surfaces, the documents
 and the contract baselines are byte for byte what they were.
-(`Resources`, `Declaring`, `Attaching`, `Binding`, `Gating`)
+
+*Split 2026-11-05:* the mixing phase split out of attaching once
+variants mixed in made it the larger half; same behavior. `Mixing` is
+constructed over `Attaching`, which builds each structure and variant
+mixed in by itself and finds a call's variants; `Attaching` reaches
+`Mixing::layVariantMixins()` through a closure `Resources` hands it.
+(`Resources`, `Declaring`, `Mixing`, `Attaching`, `Binding`, `Gating`)
+
+*Cut 2026-11-06:* the variants half of the mixing phase went with
+`mixInVariants()`, and with it the closure; `Mixing` mixes in structures
+alone.
 
 ## Refinement
 
@@ -3058,8 +3162,11 @@ journal is the first case. Each choice, and why:
   closed, which the emitter reads off the document (below).
 - **Declared by the owner only.** An alter's keys live under its own
   module's name, so a structure an alter mixed in would put its members
-  at the owner's level, which is what the mount exists to prevent; an
-  alter's `mixIn()` is refused, naming the mount to attach at instead.
+  at the owner's level, which is what the mount exists to prevent. An
+  alter attaches at its own mount instead. Since 2026-11-06 `mixIn()` is
+  declared on the owner's `BlueprintInterface`, so an alter's blueprint
+  has no such verb; it was declared on `BlueprintAdditionsInterface` and
+  refused at run time.
 - **Stored flat, described by the owner's config schema.** The members
   are the owner's keys, so storage holds them beside the owner's own
   and the owner's config schema lists them. A mapping of the members
@@ -3071,9 +3178,11 @@ journal is the first case. Each choice, and why:
   structure mixed in, declares (named both ways: the owner first, the
   structure first, two structures), since one name is declared once; a
   structure mixed into itself, directly or through another; a structure
-  holding a child (a child of the owner at a key the structure named is
-  not built: attach it instead); a resource, which stores itself; one
-  with outputs, which are not merged. A structure may mix another in.
+  holding variants at a key or keys from the site, which the owner's
+  frame does not find, or wiring the ports of a child it attaches (a
+  child at a fixed key or in a collection is the owner's child at that
+  key); a resource, which stores itself; one with outputs, which are not
+  merged. A structure may mix another in.
 - **Emitted as a composition, so the def stays reusable.** The frame is
   `allOf` of a reference to each structure's def and its own
   `properties`, closed with `unevaluatedProperties: false`. Each member
@@ -3139,17 +3248,236 @@ journal is the first case. Each choice, and why:
   definitions and has no `allOf` to carry.
 
 Open: listing mixins in the catalog; an optional port a mixin's owner
-leaves unwired; a mixed-in structure's alter that mounts; a mixed-in
-structure holding a child; a container opting out of a structure's
-alters. Found on the way and left: the React page narrows an attached
+leaves unwired; a mixed-in structure's alter that mounts; a container
+opting out of a structure's alters. Found on the way and left: the React page narrows an attached
 child whose def states conditionals of its own to the instance (its
 answered conditionals dropped), where `/refine` inlined carries the
 def's too, the same constraints written twice; the Vitest chain for the
 journal leaves the child's step out for it.
-(`BlueprintAdditionsInterface::mixIn()`, `ResourceBlueprint::mixIn()`,
-`Attaching::mixIn()`, `Binding::bindMixin()`,
-`Attaching::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
+(`BlueprintInterface::mixIn()`, `ResourceBlueprint::mixIn()`,
+`Mixing::mixIn()`, `Binding::bindMixin()`,
+`Mixing::assertMixinsUnnamed()`, `Mixin`, `ContractEmitter::composed()`,
 `SchemaResolver::mixIn()`, `mixIn()` in `app/src/contract.ts`)
+
+*Amended 2026-11-05:* a mixin may be chosen by a sibling key: the
+variants that key chooses mixed in, each variant's members the owner's
+keys, flat, where the call stands
+([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key)).
+What this entry says of a structure mixed in holds for each variant:
+built by itself for its def, refined in the owner's frame on its own
+members, its access locking or omitting them, its def written open.
+
+*Amended 2026-11-05, later:* a structure mixed in may hold a child at a
+fixed key or in a collection, an anonymous map with a frame among them,
+lifted from the refusals above, since a child the structure brings is
+the owner's child at that key, built with the owner's children, its
+access its own, nothing wiring its ports; variants at a key and keys
+from the site stay refused. (`ResourceBlueprint::attachments()`,
+`ResourceBlueprint::lists()`, `MixinsTest::testMixedInStructureHoldsChildren()`)
+
+*Amended 2026-11-05, step 3:* a variant mixed in may hold variants at a
+key, since the nested variants are declared statically under the key
+like any member and narrowed by the owner's frame, chosen by a member
+that is the owner's key; a structure mixed in with `mixIn()` still
+refuses them, as it refuses keys from the site.
+([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key))
+
+*Amended 2026-11-05, step 4:* a member two variants mixed in declare
+unlike is declared at the frame as wide as both and held to the chosen
+variant's definition, since the chosen value says which definition
+reads it; a member that two structures mixed in with `mixIn()` both
+declare is still refused, since no value chooses between them.
+([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key))
+
+*Amended 2026-11-06:* variants mixed in were removed, so the three
+amendments above that speak of them record what was; a structure mixed
+in with `mixIn()` still refuses variants at a key
+([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
+
+### A mixin may be chosen by a sibling key
+
+Decided 2026-11-05, by the maintainer. Config schema's own-key form,
+`views.sort.[plugin_id]` or `condition.plugin.[id]`, is a mapping whose
+type a key inside it chooses: the keys of a fallback type every value
+holds, and the chosen type's keys stored flat beside them. Neither verb
+could declare it: `mixIn()` merges one structure, and `attachVariants()`
+nests the chosen one under a key of its own, which changes the stored
+shape. `mixInVariants($by, from:, arguments:)` is a mixin chosen by a
+sibling key, `#[MixInVariants(by:, from:, arguments:)]` as a property.
+The test module's kit is the first case; the config schema reader reads
+the own-key form into it.
+
+- **A verb, not a flag on `attachVariants()`.** The vocabulary stays:
+  attach puts a structure under a key of yours, mix in puts its keys
+  among yours. This is the second move with a choice, so it is the
+  second verb, beside `mixIn()`.
+
+*Superseded 2026-11-06:* a stored shape that differs from the asked
+shape is a storage layout, so the flat form is variants at a key with
+`Variants::STORED_AS` `Variants::FLAT`
+([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
+`mixInVariants()`, `#[MixInVariants]` and what this entry built for
+them are removed: the call's place in the builder's order, the rules
+that chose and held each member, the widest frame, the conditionals and
+`x-surface.variantsMixedIn`, the reader's wall. `MixinVariantsTest`'s
+cases for variants that hold children and variants are
+`VariantsHoldTest`'s, and those for the kit's stored shape
+`FlatVariantsLayoutTest`'s.
+
+*Amended 2026-11-05, later:* two variants declaring a member alike but
+for its label shared it, and a variant could hold a child (removed with
+the verb).
+
+*Amended 2026-11-05, step 3:* a variant mixed in could hold variants at
+a key (removed with the verb; a variant at a key holds them,
+[Variants](resources.md#variants)).
+
+*Amended 2026-11-05, step 4:* a member two variants declared unlike was
+declared widest and held to the chosen variant's definition (removed
+with the verb).
+
+*Amended 2026-11-06:* `ConfigSchemaTypes` takes its arguments by name,
+as core passes a constraint's options: `['type' => <expression>]` for
+the own-key form above, `['type' => 'block.block.*', 'path' =>
+'settings']` for a value typed through a parent key. `by` is optional:
+given, the provider refuses an expression decided by another key, which
+protects a binding written by hand; the reader gives none, since it
+binds the key the schema names. A list by position is refused, the
+message showing the keyed spelling. Other providers read their
+arguments as they did. (`ConfigSchemaTypes::listFor()`)
+
+*Amended 2026-11-06, later:* the reader no longer mixes an own-key
+type in. `ConfigSchemaReader` reads `prefix.[<key>]` as the fallback's
+keys and the variants the key chooses at `configuration`
+(`ConfigSchemaReader::CHOSEN`), marked `Variants::STORED_AS`
+`Variants::FLAT`, so a door asks for the chosen type's keys under
+`configuration` and config stores them flat beside the deciding key, as
+before. Each variant is whole in its own frame, so no wall is needed:
+`ownKeyWall()` and the keys it declared open are gone, and a fallback
+that declares `configuration` itself is refused.
+(`ConfigSchemaReader::ownKey()`, `FlatVariantsLayout`)
+
+### Variants stored flat are a layout
+
+Decided 2026-11-06, by the maintainer. A stored shape that differs from
+the asked shape is a storage layout, never a verb. Variants whose
+chosen keys the storage keeps beside the deciding key are variants at
+a key, `attachVariants()`, and the map it returns says how they are
+kept: `->setSetting(Variants::STORED_AS, Variants::FLAT)`, or
+`#[Setting(Variants::STORED_AS, Variants::FLAT)]` beside
+`#[AttachVariants]`. The engine's `FlatVariantsLayout` applies it for
+the config storages, under `StorageAdapter` and beside
+`ReferenceStorageLayout`, as `References::STORED_AS` tells the reference
+layout to keep an id. The blueprint states what is asked; the storage
+says how it is kept. The test module's kit is the first case, its
+campsite the case inside a mapping, and the config schema reader reads
+core's own-key form into it. Each choice, and why:
+
+- **The blueprint states no storage fact.** The maintainer's reason.
+  Where the chosen keys sit in storage is the storage's word
+  ([A layout is the storage's one word on its shape](#a-layout-is-the-storages-one-word-on-its-shape)),
+  and a verb for it put a storage fact into the blueprint, which the
+  module keeps out of it everywhere else. A variant does not know how
+  its owner stores it, and two owners may store one variant each its
+  own way.
+- **One union form.** A tagged union has one blueprint form and one
+  contract form: `attachVariants()` at a key, stated as `anyOf` of the
+  variants' defs at the key and one conditional per value on the
+  parent. `attach()` and `mixIn()` differ by whether the key exists in
+  what is asked, and variants always have their key. "A verb, not a
+  flag" ([A mixin may be chosen by a sibling key](#a-mixin-may-be-chosen-by-a-sibling-key))
+  refused a flag that changes the asked shape, and that still holds:
+  this setting changes only the stored shape, and the contract, the
+  form, the tool and the pipeline do not read it.
+- **The wire trade, accepted.** The contract asks for the chosen keys
+  one level under the key where the YAML holds them flat beside the
+  deciding key. The block example's visibility conditions did this by
+  hand, in both directions, in `BlockPlacementStorage` until 2026-11-06
+  ([A placed block is a resource](#a-placed-block-is-a-resource)); the
+  layout does it for every config storage, at any depth the sealed
+  surface holds, with no transform an owner writes.
+- **Read back by exclusion, the chosen variant alone.** On read, every
+  stored key at the level that is not one of the owner's own there is
+  gathered under the key, which needs no settled variant and no schema,
+  as `BlockPlacementStorage::fromEntity()` gathered a condition's
+  settings by hand until the block example took the setting. Of what is
+  gathered, the chosen variant's keys and the secrets the other variants
+  keep (`Variants::keptSecrets()`) are read under the key; naming the
+  chosen keys settles the chosen variant, one the site lists included
+  (2026-11-07: until then a listed variant no door had settled read
+  every gathered key back, a block condition's stale key among them). A
+  chosen variant of which nothing is stored reads back as an empty map,
+  as an empty variant under a key does
+  ([An empty variant is an empty map](#an-empty-variant-is-an-empty-map)). A plain
+  leftover of a variant not chosen stays in
+  storage, unread: under the key, the pipeline would read the value as
+  written for that other variant (`Variants::held()`), and a plain value
+  of a variant not chosen goes, as for any variants at a key
+  ([An extension is a variant the site adds, or an alter](#an-extension-is-a-variant-the-site-adds-or-an-alter)).
+  On write, the top level keeps what the read left out, and a switch
+  back writes the variant whole from its defaults beneath what is sent,
+  as core writes a plugin's settings when its id changes. Below the top
+  level nothing is kept for a variant not chosen, since an item's
+  position may hold another item on the next write.
+- **Four refusals, at build.** One flat key per level: read back,
+  every key that is not the owner's is gathered under the one flat key,
+  so with two nothing could tell which keys each left behind
+  (`Attaching::assertOneFlatKey()`). A variant may not declare a key the
+  owner declares at that level, a member of a structure the owner mixes
+  in among them: stored flat, the two would be one key. A variant stored
+  flat may not store variants flat of its own: its keys land at the same
+  level, the first refusal again (both `Attaching::assertFlatVariantFits()`).
+  And variants stored flat by a storage that is no config storage are
+  refused naming it, since no layout applies there
+  (`Attaching::assertFlatFits()`).
+- **Checked when settled.** A variant the site lists is built when a
+  door reads it, so it is checked then: `VariantsToSettle` carries the
+  owner's keys at the level when the key is stored flat, and
+  `Resources::settleVariant()` holds the variant it builds to
+  `Attaching::assertFlatVariantFits()`.
+- **The schema follows the level.** The layout tells the generator to
+  write every variant's keys at the level
+  (`StoredSchemaInterface::SPREAD`). At a config object's root that is
+  the union, every variant's keys beside the deciding key, each
+  nullable, since core types a root by its name alone:
+  `TypedConfigManager::createFromNameAndData()` merges the root's
+  definition with no replacements, so a `[<key>]` in a root's `type:`
+  never resolves. Inside a mapping it is core's own-key form,
+  `<type>.[<key>]`, the owner's keys at the level a mapping type that
+  each variant's type extends.
+- **The reader.** `ConfigSchemaReader` reads core's own-key form,
+  `condition.plugin.[id]` or `views.sort.[plugin_id]`, as the fallback's
+  keys and the variants the own key chooses at `configuration`
+  (`ConfigSchemaReader::CHOSEN`), stored flat. Each variant is whole in
+  its own frame, so two types that declare one key unlike never meet,
+  and a fallback that declares `configuration` itself is refused.
+
+Discarded with `mixInVariants()`: the widest frame and the members held
+to the chosen variant's definition, variants inside a variant mixed in,
+the second meaning of `#[Variant(at:)]` (the deciding key), the
+reader's wall, and the contract's `x-surface.variantsMixedIn`, recorded
+as removed within contract 4
+([`x-surface`](served-contract.md#x-surface)). One behavior changed
+with them: the kit held a leftover of a variant not chosen through its
+widest frame; stored flat, the rule for variants at a key applies, and
+the leftover is not read.
+
+Rejected: keeping the verb under another name, since the cost was the
+second model, not the name; a `stored:` or `flat:` argument on
+`attachVariants()`, which puts the storage fact in the verb's
+signature; a `layout()` on the storage class as the only channel, since
+a views handler inside a display is a structure the reader derives,
+with no storage class of its own; and both channels, two spellings of
+one fact.
+
+Not built: variants stored flat by a storage that is no config storage,
+refused today. (`Variants::STORED_AS`, `Variants::FLAT`,
+`Storage\FlatVariantsLayout`, `StoredSchemaInterface::SPREAD`,
+`StorageAdapter`, `Attaching::assertOneFlatKey()`,
+`Attaching::assertFlatFits()`, `Attaching::assertFlatVariantFits()`,
+`Resources::settleVariant()`, `VariantsToSettle`,
+`ConfigSchemaReader::CHOSEN`, `FlatVariantsLayoutTest`,
+`VariantsHoldTest`)
 
 ### An anonymous map
 
@@ -3182,14 +3510,21 @@ class and an id where naming buys nothing.
   that an alter should reach, is a structure.
 - **Where it holds plain keys alone.** An alter's map and an output's:
   an alter attaches a structure at its own mount alone, and outputs
-  hold no attached structures; a structure mixed in holds no child. A
-  call that needs a frame there is refused naming why.
+  hold no attached structures. A call that needs a frame there is
+  refused naming why. *Amended 2026-11-05:* a structure mixed in may
+  hold one, the owner's child at that key
+  ([A mixin is merged flat](#a-mixin-is-merged-flat)).
 - **Read back.** `SchemaReader` reads an inline object that holds a
   structure as `addMap()`, so the document reads back to itself.
   *Amended 2026-11-01:* every inline object is read as `addMap()` and
   every list as `addList()`, and `addMap()` is the one way to declare a
   map of plain keys: `addDefinition()` takes one value
   ([A blueprint takes no complex data types](#a-blueprint-takes-no-complex-data-types)).
+  *Amended 2026-11-05:* an inline object whose `allOf` states its rules
+  is read as `addMap()` too; it was read as a structure attached at
+  `<owner>.<key>`, so a map framed by a rule alone wrote a def where it
+  had been inline and did not read back to itself (`SchemaReader`, the
+  awning in `SchemaRoundTripTest`).
 
 (`BlueprintAdditionsInterface::addMap()`, `MapBlueprint`,
 `ResourceBlueprint::replay()`, `AnonymousMapTest`, example 8's
@@ -3240,6 +3575,11 @@ item as a list in its place ([A collection on a form](forms.md#a-collection-on-a
 routing an item to its child's storage, which needs an identity key on
 the child to say which stored item it is. (`Resources::buildResource()`,
 `Collection`, `Form\Drawing::buildCollection()`)
+
+*Amended 2026-11-06:* `attachListBy()`, a list whose every item chooses
+its own child, is dropped from every page that named it as not built. A
+list whose items choose their own child is `attachList()` of a structure
+holding variants at a key, so no verb is missing.
 
 ### Access once per list
 
@@ -3548,6 +3888,30 @@ say it before writing. Example 17's dry run answers each node's old title
 and the one it would write; a storage that rehearses nothing under an
 output's name answers nothing, as before.
 (`StorageAdapter::outputs()`)
+
+### A door reads what a run reports through the pipeline
+
+Decided 2026-11-07. What a storage reports after a run (a created id, a
+stage's `items`, what an apply made) is read through
+`SurfacePipelineInterface::outputs($built, $storage, $result)`: read back
+once the run was committed, what prepare answered for a dry run or an
+operation that changes nothing, and nothing for a refused run or a
+storage that reports nothing. The tool door, the HTTP door and apply
+replaying a staged write call it; none asks the storage itself.
+
+Why: PHP code that opens a stage could not read the stage's id, which a
+create reports only as an output, since the one way to it was
+`ResourceBuild\OutputsStorageInterface`, internal beside
+`StorageAdapter`. A PHP caller is a door
+([Calling it without a form](pipeline.md#calling-it-without-a-form)),
+and a door reads what a run reports through the pipeline, never through
+the adapter. Making the adapter's interface public was the alternative;
+a method beside `submit()` and `commitDryRun()` keeps the public
+surface in `src/Pipeline` and the adapter free to change. The doors'
+behavior is unchanged: each read the cases that apply to it.
+
+(`SurfacePipeline::outputs()`, `ResourceOperationTool`,
+`ResourceApiController`, `StageStorage`, `BulkDeleteFlowTest`)
 
 ### A computed key is a pure function of its sources
 
@@ -4016,6 +4380,915 @@ entity is on the site yet.
 `ReferenceDependencyHooks`, `StorageAdapter::referenceLayout()`,
 `surface_store_references_by_uuid()`, `ReferenceStorageTest`,
 `ReferenceStoredByUuidTest`)
+
+### A stage is a resource of the base module, kept in an expirable key-value collection
+
+Decided 2026-11-07. A set of writes kept until they are applied
+together, or discarded, is a resource with identity and storage of its
+own, `surface.stage`: the one thing that outlives a request is a
+resource, so a stage has a contract, an access class and the six tools
+the build derives (`create`, `read`, `update`, `changes`, `apply`,
+`delete`) and the HTTP paths of each. Its id is a UUID storage gives it;
+`handle` is the Tool API's word for a stored object on the same calls.
+Its record is one row of the expirable key-value collection
+`surface.stage`, a PHP array with no objects, kept for the stage's
+lifetime after its last write, so every write resets it (amended
+2026-11-08: the lifetime is the record's `keep`, the temp store expiry
+`tempstore.expire` by default, and the store is one implementation of
+`StageStoreInterface`;
+[One store contract](#one-store-contract-a-stages-lifetime-is-data-on-its-record)); the record names
+its owner, and only the owner may use the stage, which the access class
+answers from the record, never cached. An anonymous account may not open
+one: it keeps nothing between requests but a session cookie.
+
+- **Not the private temp store.** It reads the owner from the current
+  user and the session, which nothing an operation runs may read
+  ([Nothing an operation runs reads the request](#nothing-an-operation-runs-reads-the-request)).
+- **What a stage can hold.** Creates, updates and deletes to a
+  resource whose storage class implements `Pipeline\TransactionalStorageInterface`,
+  the storage's promise that its commit writes its permanent state
+  through the database connection alone, so the transaction apply opens
+  undoes it whole, and that what it puts in caches or memory is undone
+  in `rolledBack()`: the entity example's content entity storage, the
+  config storages, the stage fixture's row of a key-value collection in
+  the database. A storage is refused by what its class does not declare,
+  never by a list of classes (the resource's own storage class and every
+  routed child's): a list of what to refuse could not hold, since any
+  storage may write State in its own code (State keeps a cache a
+  rollback leaves stale), or change a table's schema (which MySQL commits
+  at once). Refused at prepare, each a violation of the whole call, code
+  `does_not_apply`: a storage class that does not implement the
+  interface (the stage's own, a storage in State), a routed child's that
+  does not, and an operation that names no thing
+  ([One rule says where a stage applies, at every door](#one-rule-says-where-a-stage-applies-at-every-door)).
+  One stored thing reached through two resources
+  is refused, code `conflict`, and a thing is written through one
+  operation per stage. When apply rolls back, it resets what config kept
+  beside the database for the config it wrote, then calls `rolledBack()`
+  on the storage of every write whose commit had started, the last
+  first, so each drops what it cached beside the database (the entity
+  storage's cache of what it saved); what hooks did beside the database
+  is theirs. *Closed 2026-11-07:* the allow-list to settle before a door
+  takes a stage input is this interface. *Amended 2026-11-08:* config is
+  staged
+  ([Config is staged, and apply resets what its rollback leaves behind](#config-is-staged-and-apply-resets-what-its-rollback-leaves-behind)),
+  and so is a resource that holds a secret, sealed in the record
+  ([A secret is sealed in the stage record by its recorded paths](#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths)).
+- **Every write of a record takes the stage's lock.** A staged write's
+  commit, and the stage's create, update, apply and delete, each take
+  the lock named for the stage. The writes that change a record already
+  there, a staged write's commit, update and apply, read it again under
+  the lock, so a delete never lands while an apply holds the record and
+  a deleted stage is never written back as applied. A create writes a
+  new UUID no other request names, and a delete that finds the record
+  gone is done. A write waits two seconds (`StageStore::WAIT`) for a
+  lock another request holds, then fails as a race, a delete too. The
+  lock lasts core's default of 30 seconds: an apply that runs longer, or
+  a record whose lifetime ends while it runs, lets the apply write the
+  record back as applied. The lock is the store's (amended 2026-11-08):
+  `StageStoreInterface::lock()` says what any store keeps, try, wait
+  once, try again; `WAIT` is the shipped store's.
+- **The arguments are the operation's.** A write records the arguments
+  it was handed; handed none, it records the operation's parameters out
+  of what the context knows, never the whole identity, which for a
+  derived entity resource names its entity type and bundle beside the
+  id. At apply, arguments that build no operation are a violation of
+  their write, code `does_not_apply`, as one that names nothing now is
+  code `not_found`.
+- **One entry per thing.** The thing is the resource and the identity its
+  context knows. Its entry holds the whole document the pipeline merged,
+  the top level keys the stage moved (what apply sends), the arguments
+  that built the operation and a token of what storage held at the
+  first read (`Fingerprint::of()`). The last of two writes to one thing
+  wins whole, under the stage's lock, as two writes without `If-Match`
+  do. A delete is an entry of kind `delete`, its values `[]` (never
+  NULL: a load through the stage answers no values for it either way)
+  and its changed keys `['']`, the whole thing, as the pipeline answers
+  a delete's changes. A delete of a thing the stage holds an update of
+  replaces that entry where it stands, keeping its position, when it was
+  first staged and its token, and taking the delete's operation and
+  arguments; it is the one write that may name another operation than
+  the entry's. A write to a thing the stage removed, a second delete
+  included, is refused, code `not_found`; since the pipeline validates
+  before the storage sees a write, an update of it that leaves out a
+  required key is refused `required` first. *Decided 2026-11-07*, with
+  the content entity delete: a refusal before validation would need a
+  seam for storage the pipeline does not have. A create is no stored
+  thing: it is always an entry of its own, which only a context of the
+  thing it creates finds again, by its position
+  ([A staged create is whole and rehearsed as a create](#a-staged-create-is-whole-and-rehearsed-as-a-create),
+  [A staged create is named by a local id, and a later write merges into it](#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it)).
+- **How a stage and a workspace compose.** The active workspace is the
+  request's, so neither the stage nor its access asks it. A staged
+  write reads and a staged apply writes the workspace's view, as any
+  save does: applied in the workspace it was staged in, it is a pending
+  revision there; staged in a workspace whose view of the thing differs
+  from Live's and applied in Live, its token does not match and it is
+  refused, code `conflict`; staged in a workspace whose view of the
+  thing matches Live's and applied in Live, it writes Live. A delete in
+  a workspace that is not Live is core's to refuse: Workspaces forbids
+  delete access there to an entity the workspace did not create
+  (`EntityAccess::entityAccess()`), which the entity example's access
+  asks, so it is refused `access`, at once or at apply; an entity the
+  workspace created may be deleted there.
+
+(`Resource\StageResource`, `Structure\StageChangesStructure`,
+`Structure\StageAppliedStructure`, `Storage\StageStorage`,
+`Access\StageAccess`, `Staging\StageStore`, `Staging\StageStoreInterface`,
+`Staging\StageRecord`, `Staging\StagedStorage`,
+`Pipeline\TransactionalStorageInterface`, `StorageAdapter::rolledBack()`,
+`StageStoreTest`, `StageOwnershipTest`, `StageInWorkspaceTest`,
+`StagedUpdateTest`, `StagedDeleteTest`, `StageApplyTest`)
+
+### A staged write validates as a real write
+
+Decided 2026-11-07. A write into a stage runs what a write to storage
+runs, and nothing less: access at the door, the keys locked whole,
+accept, every constraint and rule between keys with the required ones
+among them, on the document merged over what the stage holds, and the
+storage's own prepare as a rehearsal, an entity's validation included.
+Only commit differs: it writes the stage's record and never storage. At
+apply each write is checked again against what is stored then.
+
+Why: required is unconditional in validation and an entity validates in
+prepare, so a partial mode would change the pipeline for every door. For
+an update the merged document is whole, so nothing is lost. A staged
+create is whole at its write: validated and rehearsed as a real create,
+the entity's `validate()` and the storage's check of a name already
+stored included.
+
+*Decided 2026-11-07, with staged creates:* no partial mode. One would
+cross about ten methods of the pipeline, both pipeline test fixtures and
+twelve callers, and would still meet the create tool's `values` input,
+which keeps the resource's required keys outside the pipeline
+(`OperationInputs::declaredValues()`), and core's `NotNull` on a node's
+`title` inside the entity's validation. The cost stays: a flow whose create spreads its required
+keys over several steps is refused when its route is matched, since
+2026-11-08
+([A step order is checked against the refiner graph and a create's required keys at match time](#a-step-order-is-checked-against-the-refiner-graph-and-a-creates-required-keys-at-match-time)).
+
+(`Staging\StagedStorage::prepare()`, `StagedUpdateTest`,
+`StagedCreateTest`)
+
+### A staged create is whole and rehearsed as a create
+
+Decided 2026-11-07. A create may be staged. It names no stored thing,
+so the wrapper matches it with no entry and no later write matches its
+entry: every staged create appends an entry of kind `create` at the
+stage's next position, with no arguments (a create takes no
+parameters), no token (nothing is stored to compare), the whole
+document the pipeline accepted, and every key changed. Two creates are
+two entries, through one resource or through two, such as
+`entity.content:node.page` and `entity.content:node`: the check that
+refuses one stored thing staged through two resources does not apply
+to a new thing.
+
+- **A name the caller gives is unique per storage class in a stage.**
+  Where the create's context does not know an identity key, the caller
+  names the thing; the entry records the name beside what the context
+  knew. A second staged create whose name agrees with a staged create
+  of the same storage class, through any resource, is refused at the
+  name, code `taken`, naming the position that holds it; checked at
+  prepare and again under the lock at commit, where a create of the
+  name that landed in between is a race. The storage's own check of a
+  name already stored runs after it, as without a stage. The ledger
+  fixture's storage refuses no name, so the stage's check is its only
+  one.
+- **Apply rehearses it as a create.** The context is built again from
+  the recorded operation with no arguments, create access is asked for
+  the owner, no token is compared, and the whole values are sent, so a
+  name stored by another path since staging is refused at
+  `/writes/<position>/<key>`, code `taken`. The commit reads the id
+  storage gave and `applied` answers it as text.
+- **No later write in its stage reaches it.** It has no stored id until
+  apply, so nothing in the stage can read, change or remove it, and nothing
+  can refer to it; the staged answer holds no `id`, since an output of
+  an id storage gives on save is answered only once there is one. To
+  change it, discard the stage. *Superseded 2026-11-07:* a staged create
+  is named by its address in its stage, and a later write merges into
+  it; nothing outside the stage can refer to it still
+  ([A staged create is named by a local id, and a later write merges into it](#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it)).
+- **200, not 201, over HTTP.** `POST` with the stage header created
+  nothing, so it answers 200 as a staged `PATCH` and `DELETE` do, with
+  `created` null and no `Location`: a `Location` must name where the
+  thing is read without a request header, and there is none until
+  apply. Where it lives is not resolved against what is stored, which
+  holds nothing of it. *Amended 2026-11-07:* still 200 with no
+  `Location`, and `created` names the update that reaches it in the
+  stage, its local id as the parameter.
+
+(`Staging\StagedStorage`, `Storage\StageStorage::rehearse()`,
+`ResourceApiController::write()`, `StagedCreateTest`,
+`StagedCallerNamedCreateTest`)
+
+### A staged create is named by a local id, and a later write merges into it
+
+Decided 2026-11-07. A staged create can be read, changed and removed
+again in its stage, by an address the stage gives it; apply only ever
+sees whole creates, and never a write over an id that does not exist.
+
+- **The address.** A create entry gains one key, `address`, written once
+  at its first commit and never changed: for each identity key the
+  create's context knows to be empty, the negative of the entry's
+  position, an integer (`{id: -3}` for the third entry), its local id;
+  for each identity key the caller names, the name from the accepted
+  values (`{id: "abc"}`). Keys the context knows with a value, an
+  entity's type and bundle, are left out. The position is unique and
+  never reused, so no counter is added; `next` stays the only one, and
+  the record's version stays 1, since `StageStore::read()` refuses any
+  other. An entry written before addresses were written is read as
+  `-position` for each identity key its context knew to be empty
+  (`StageRecord::address()`).
+- **Matching.** A context that knows `StagedStorage::POSITION` finds the
+  create entry of its own resource at that position, or nothing. A
+  context that creates and knows no position finds nothing, so every
+  create appends. Every other context matches as before, over entries
+  that are not creates. The check for one thing through two resources
+  and the check for another operation are skipped for a write that
+  knows a position, as for a create.
+- **The context.** `ResourcesInterface::operation()` builds it, handed
+  the stage
+  ([A stage decides the context of a thing it creates](#a-stage-decides-the-context-of-a-thing-it-creates)).
+- **A write merges into the create.** The stage's `load()` answers the
+  entry's values whole. The context creates, so the pipeline computes
+  each computed key that takes no sent value from the merged sources on
+  every write, as apply's rehearsal of the create will; a key computed on
+  create kept at its first value would be refused there, code
+  `computed`. Every other key not sent keeps the entry's value. A write
+  that moves nothing answers `changed: false` and `changes: []`, and a
+  read answers the computed keys. The pipeline merges unchanged
+  (accept keeps what was not sent, a create is written whole), and the
+  author's prepare rehearses the merged whole document as a create, the
+  entity's validation and the storage's own taken check included. The
+  entry's values are replaced whole and its changed keys joined; its
+  position, kind, operation, arguments, known, token and address are
+  kept. A write that moves no key writes no record: the tool's "nothing
+  was written" stays true and the expiry is not reset. A create whose
+  caller named it is fixed to its name, so a write that sends another is
+  refused at validation, code `no_such_choice`; the `taken` check runs
+  for it too, skipping its own entry.
+- **A delete drops the create.** It rehearses nothing (the storage's
+  `prepareDelete()` would refuse an empty id) and takes the entry out
+  of the record, `next` unchanged. Nothing of it is left in `changes`,
+  and there is nothing to undo. After that its address names nothing, as
+  without the stage: no create matches it, so its context is built as
+  with no stage and the owner refuses the id, the tool's call with
+  `not_found`, the Tool API runner and HTTP, for an account that holds
+  no operation permission (the entity resources declare none), with
+  their fixed refusals. A
+  write whose context was built before the drop and prepared after it
+  is refused by the stage, code `not_found`, "The stage no longer
+  creates this thing: its create was taken out of the stage."; a write
+  whose create went between its prepare and its commit is a race.
+- **The local id in every answer.** The stage's `outputs()` fills each
+  identity key the context knows to be empty from the address, typed as
+  the output declares, so a staged create and every write, read, delete
+  and dry run of it answer `id: -3` (an integer for a node); a dry run
+  of a create, which has no address yet, keeps the adapter's empty id.
+  `changes` and `applied` list a create's address as its parameters, so
+  `applied` pairs `{id: "-3"}` with the id storage gave.
+- **Apply.** A create entry's input is its values whole (which its
+  changed keys, every key, already gave); the rest is unchanged: built
+  with no stage from the create's own operation, create access asked,
+  no token compared.
+- **The doors.** The stage's own access is asked before the thing's
+  context is built, at the tool's call (the stage named, its access,
+  then the context through it, then the thing's access) and over HTTP
+  (the permission, the stage's access, the context through it, the
+  thing's access), so when both would refuse, the stage's refusal
+  answers. The Tool API runner (`drush tool:run`, MCP) asks the tool's
+  access check before the call, and that check builds without a stage
+  the account may not use: where the thing would refuse without it, as
+  a local id does, the runner answers its fixed refusal,
+  `access_denied`, which names no stage. A
+  named stage that names nothing is answered as not found, the tool's
+  `not_found` naming the stage and HTTP's 404, a local id included.
+  Door decisions read the served `OperationDefinition`'s `creates`, and
+  storage and access read the context's; outside a stage the two agree,
+  so each switch is unchanged there: HTTP's 201 and `Location`, its
+  `ETag`, `created`, the read tool's refusal of a context that creates
+  (now only one that knows no position), and the refined `values`.
+- **Over HTTP.** A staged `POST` create answers 200 with `outputs.id`
+  the local id, `created` `{resource, operation: update, parameters:
+  {id: -3}}` resolved through the stage, and no `Location` or `ETag`.
+  `GET` and `PATCH` at `/-3` with the header answer 200 with the staged
+  view's `ETag`, `If-Match` comparing staged with staged; `POST
+  .../schema` at `/-3` with the header answers 200 narrowed over the
+  staged view, with no `ETag`, as a narrowing has none without a stage;
+  `DELETE` at `/-3` with the header answers 200; `/-3` without
+  the header is the route's fixed refusal, 403.
+- **Access.** Read access of a staged create is its bundle's create
+  access, which the context that creates asks: an account that may
+  create a page but not edit one reads back and changes its own staged
+  create. (Node's create access asks `access content` too.)
+- **What stays refused.** A reference to a local id, code
+  `valid_reference`: the reference check asks the selection handler,
+  which reads permanent storage. The local id without the stage, or
+  through another resource than the create's. A rename of a create
+  whose caller named it.
+
+Rejected: rewriting later writes' arguments at apply (no entry ever
+names a local id: a write to one merges into its create); a public
+`Stage::POSITION` (an `@internal` constant of the `@internal` wrapper is
+enough); deriving the address instead of recording it (the listing has
+no identity keys to derive it from); a 201 with a `Location` that
+resolves only with the header.
+
+(`Staging\StagedStorage`, `Staging\StageStore::created()`,
+`Storage\StageStorage::described()`, `Resources::operation()`,
+`ResourceOperationToolBase::staged()`, `ServedOperationAccessCheck`,
+`ResourceApiController::write()`, `StagedLocalIdTest`,
+`StagedCallerNamedCreateTest`, `StageToolsTest`, `StageOwnershipTest`)
+
+### A stage decides the context of a thing it creates
+
+Decided 2026-11-07. Two rules bend for a thing a stage creates, and
+only for it.
+
+- **The stamp rule has one exception.** A context's `creates` is its
+  operation's, stamped from the attribute
+  ([A context's id is the operation id](#a-contexts-id-is-the-operation-id)).
+  The context `ResourcesInterface::operation()` builds, handed a stage,
+  for an update, a read or a delete (an operation that does not create
+  and takes no structure) whose arguments name a create the stage holds
+  is that create's own context again, from the operation and arguments
+  the stage recorded, so what the owner put on it stands (a known empty
+  id, `createAny()`'s `SurfaceCreatableBundle`); then `withId()` the
+  asked operation's id, `creates` still TRUE, `withKnown()` the
+  position, and for each name the caller gave a Choice of that one name
+  that fixes the key, as `existingAny()` fixes a bundle. It is not
+  stamped: `stamp()` would refuse `creates` under `update`. `creates`
+  stays TRUE because the storage has to rehearse a create and the access
+  class has to answer for one; the asked id stays because the adapter
+  deletes by the kind of the context's operation.
+- **A flow's later steps build the create's context again.** A create
+  through a stage whose `Stage::creating()` names a position, as a flow
+  over a create hands its later steps the position its first step
+  staged, is that create's own context again, built the same way from
+  the entry `StageStore::createdAt()` finds at the position, so each
+  step writes into the one create instead of adding a second. A create
+  through a stage that names no position adds a thing.
+- **The stage decides a context, and is still never on one.** "A stage
+  input is a door argument handed to storage, never context" holds for
+  the stage itself: no context carries it, and no build is keyed by
+  it. It now also decides which context `operation()` builds for a
+  thing it creates, and only the position rides on what the context
+  knows. Any other call, a create through a stage that names no
+  position, or a call whose arguments name no create of the stage,
+  builds as with no stage, the owner's method answering a local id with
+  `NamesNothingException`.
+
+Why: a write to a new thing has to be rehearsed as a create, and the
+owner's create context is the one that says what a create of it is;
+building it anywhere but `operation()` would give every door its own
+copy.
+
+(`ResourcesInterface::operation()`, `Resources::stagedCreate()`,
+`OperationContext`, `Staging\Stage::creating()`,
+`Staging\StageStore::createdAt()`, `StagedLocalIdTest`, `FlowFormTest`)
+
+### A stage input is a door argument handed to storage, never context
+
+Decided 2026-11-07. A stage reaches a write as `dry_run` does, an
+argument the door hands down, never a fact of the operation's context:
+`ResourcesInterface::storage()` takes a `Staging\Stage` as its fifth
+parameter and wraps the storage it builds otherwise in a
+`StagedStorage`, whose `load()` answers what the stage holds before what
+is stored, whose `prepare()` is the storage's, and whose `commit()`
+writes the stage's record. The pipeline runs unchanged. A stage on the
+context would key every build kept for the request by stage, for
+values that do not depend on it.
+
+A door asks the stage's own access for the account before it hands a
+stage on; the stage carries its id, its owner and the operation's
+arguments, which apply builds the operation again from.
+
+*Built 2026-11-07, with the doors.* Two doors take a stage, and only
+for a resource whose declared storage class implements
+`Pipeline\TransactionalStorageInterface`, so a stage is offered where it
+can hold the write (*amended 2026-11-08:* only where one rule says a
+stage applies, which also asks that the operation name a thing,
+[One rule says where a stage applies, at every door](#one-rule-says-where-a-stage-applies-at-every-door)):
+
+- **The tool door.** The input `stage` (`OperationInputs::STAGE`), a
+  string, optional, last on every write tool (right after `dry_run`),
+  read tool and narrowing tool. Its default is the empty string and not
+  NULL: the `values` refiner depends on it, and the Tool API fires a
+  refiner only when every input it depends on is non-NULL. The tool
+  base resolves it (`ResourceOperationToolBase::stage()`): empty names
+  none; an id that names no stage is the caller's input to correct,
+  `not_found`; another account's stage is refused by the stage's own
+  `update` access, code `access`, the message naming the stage. The
+  refined `values` and the read are the staged view, and a staged
+  write's message says "staged in" the stage.
+- **The HTTP door.** The request header `X-Surface-Stage`
+  (`ServedPaths::STAGE_HEADER`), read in `ServedPaths::target()` into
+  `ServedTarget::$stage` so the route's access check sees it too; the
+  check asks the stage's `update` access once the thing's allows, so
+  another account's stage is 403 before anything is built, and lets a
+  header that names nothing through for the controller's 404
+  (`ServedOperations::fromTarget()`). The full schema and a lookup
+  ignore it, since they read nothing stored, but at a local id, which
+  only the stage names; on a path of the stage itself it is 400,
+  answered by the controller, since an access check can only allow or
+  forbid and the caller needs the reason. The answer names no stage,
+  and after a staged write its `contract` and `ETag` are the staged
+  view's. The OpenAPI document references one shared header parameter,
+  `SurfaceStage`.
+
+An id that names no stage on the stage's own tools and paths, whose
+operations declare no permission, gets the door's fixed refusal at
+both access checks, as for any operation that declares none, and not
+the `not_found` this entry's draft expected; only a tool called from
+PHP, which runs no access check, answers `not_found` there.
+
+*Amended 2026-11-07, with local ids:* the stage is never on the context,
+and it decides which context `operation()` builds for a thing it
+creates, the position alone riding on what the context knows
+([A stage decides the context of a thing it creates](#a-stage-decides-the-context-of-a-thing-it-creates)).
+Both doors now ask the stage's own access before the thing's context is
+built, and build it through the stage: the route's check asks the
+permission, then the stage's access, then the context, then the thing's
+access, so a header that names nothing is let through to the 404 before
+any thing is asked about; the tool's access check builds the context
+through the stage only when the stage exists and the account may use
+it, and lets a call through when the stage names nothing, for
+`not_found`.
+
+(`ResourcesInterface::storage()`, `Resources::storage()`,
+`Staging\Stage`, `Staging\StagedStorage`, `Tool\OperationInputs`,
+`ResourceOperationToolBase::stage()`, `Http\ServedPaths`,
+`Http\ServedOperations`, `Http\ServedOperationAccessCheck`,
+`StagedUpdateTest`, `StageToolsTest`, `StageOwnershipTest`,
+`StageApiTest`)
+
+### Apply builds for the current user and writes as the owner
+
+Decided 2026-11-07. `apply` rehearses every staged write in its
+storage's `prepare()`, with no lock and no side effect: the operation
+built again from its arguments, its access asked again for the account,
+the token compared with what is stored now, and the pipeline run dry
+over the keys the stage moved, every refusal filed under
+`/writes/<position>` and all of them answered together. Its `commit()`
+takes the stage's lock, checks the record's writes and every token
+again, commits each rehearsed write in staging order in one database
+transaction (`commitDryRun()`, one prepare per write), and marks the
+record applied. A write that throws rolls every write back, each
+storage whose write had started is told (`rolledBack()`), and the stage
+stays open. A dry run of `apply` is the check; a second `apply` is
+refused, code `does_not_apply`.
+
+- **A narrowing of
+  [Nothing an operation runs reads the request](#nothing-an-operation-runs-reads-the-request).**
+  `Resources::build()` takes no account and builds for the current user,
+  so apply builds each write's data surface for the current user while
+  it writes as the account it is handed. The two agree because the
+  stage's access refuses every account but the owner. Code that applies
+  a stage for its owner from elsewhere (a queue worker) sets the owner
+  as the current user first. Whether `build()` should take an account is
+  open.
+- **A refinement of [One result at every door](#one-result-at-every-door)
+  and [Absent keeps, null clears](#absent-keeps-null-clears).** A staged
+  write answers `committed: true`: the call went through and the storage
+  it was handed, the stage, holds the values. Its `changes` are against
+  what `load()` returned, the stage's view under a stage.
+- **A data surface with no keys writes whole.** `apply` takes a
+  structure that declares no keys, so it has no document to compare; as a
+  delete removes the whole thing, the pipeline answers its one change
+  as the empty pointer, `changes: ['']`, and a committed run as
+  `changed: true`. `changesNothing()` is true for a read-only operation
+  alone, which answers no changes. The rule reads the data surface as
+  built, so it also holds where access or an alter omits every key for
+  the account: such a write answered `changed: false` before, though its
+  storage was committed.
+- **The record is kept after apply.** Marked `applied`, its writes
+  emptied and what apply made recorded, until it expires or is deleted:
+  the HTTP door builds the operation again after a committed write, and
+  a record deleted in commit would answer that 404 after writing.
+- **A race is a runtime failure.** A record written or deleted, a token
+  moved between the two passes, or a lock not had after one wait, throws
+  `StageRaceException`; every refusal a rehearsal can see is a
+  violation from prepare. The record's writes, not its time, tell a
+  race: the time is the request's, which two writes in one second share.
+  *Decided 2026-11-07*, with the bulk delete: the exception is public,
+  since every door that applies a stage or writes into one meets it, and
+  PHP code that applies or writes into a stage catches it by name to tell
+  the person to try again; the module's tool door answers it as a runtime
+  failure naming the class, and the HTTP door as a server error.
+
+(`Storage\StageStorage`, `SurfacePipeline::submit()`,
+`Staging\StageRaceException`, `EmptyStructureTest`, `StageApplyTest`,
+`PipelineGuardTest`)
+
+### Config is staged, and apply resets what its rollback leaves behind
+
+Decided 2026-11-08. `ConfigObjectStorage` and `ConfigEntityStorage`
+implement `Pipeline\TransactionalStorageInterface`, so a stage takes a
+write to a config object or a config entity, and every subclass's. The
+config table's rows go through the database connection apply's
+transaction holds, so a rollback undoes them. What it does not undo is
+what config keeps beside them: the config factory's objects, the cached
+storage's lists by prefix, the `cache.config` bin (a memory backend in a
+kernel test, a fast APCu layer over the database on a live site, Redis
+or Memcache where a site sets one), the entity memory cache, the bundle
+and field definitions a bundle entity's save rebuilt, and State's cache.
+
+- **Apply resets it, not the storage.** An internal subscriber,
+  `Staging\ConfigWrites` (`surface.config_writes`), records the name of
+  every config saved, deleted or renamed while apply's transaction is
+  open. After a rollback apply releases the transaction, so the cache tag
+  invalidations core held until it ended are discarded, then deletes
+  each name from `cache.config` (after forgetting the fast backend's
+  last write time, so the delete marks every APCu copy out of date),
+  resets each name in the config factory, empties the entity memory
+  cache, clears the cached bundles and field definitions, and resets
+  State's cache; then it tells each storage `rolledBack()`. The config
+  storages' `rolledBack()` is empty. Why: a storage knows only the name
+  it saved, while a commit also saves what a subclass adds (a content
+  type's base field overrides), what core saves or deletes in a cascade
+  on a delete, and what a hook saves; recording at the config layer
+  covers all of them, and adds no method to the interface.
+- **A schema change cannot be rolled back, and voids the stage.** On a
+  database without transactional schema changes, such as MySQL and
+  MariaDB, a write whose commit changes the database's schema (a field
+  storage created or deleted, a bundle delete that removes fields)
+  commits the transaction at once, and a later rollback only warns;
+  PostgreSQL and SQLite roll schema changes back. Apply checks the
+  connection is still in its transaction before it rolls back; when it
+  is not, it runs the same resets, marks the stage `voided` (its writes
+  cleared, `applied` the writes that completed, `voided` the position
+  that failed) and throws a `RuntimeException` that starts "Writes at
+  and before position N were made permanent by a schema change and
+  could not be rolled back; the stage is voided. Discard it.", the
+  write's throwable its previous. "At and before": the write at N may
+  itself have made part of its change. Why voided and not open: an
+  open stage would rehearse its creates again on a retry, which carry
+  no token, and make them twice. A voided stage refuses apply and every
+  staged write, code `does_not_apply`, naming the position; only a
+  discard acts on it. When every write succeeds after such a change, the
+  writes are permanent already: apply skips the commit, which would only
+  warn, resets nothing and marks the stage applied. No shipped resource
+  a stage takes makes such a write; the field resources keep their own
+  storages, which a stage does not take.
+- **Recorded before core's listeners.** `Config::save()` writes the
+  storage and the cache before it dispatches the save event, and a
+  listener may throw after that, as the schema checker does on a test
+  site at priority 255. The subscriber listens at 1024, so the name is
+  recorded first.
+- **An empty key the stored object leaves out did not move.** A config
+  storage prepares `third_party_settings: []` where nothing is mounted
+  yet; counted as moved, apply sent it, and an alter's mount under it
+  (the keys example's on the webhook) was refused as empty. A key one
+  side leaves out and the other holds as NULL or an empty map is not
+  among the keys a staged write moved.
+- **Not undone.** Config objects other code already holds, and what a
+  hook or a subscriber did outside the database. A config entity's uuid
+  lookup in a kernel test, which the kernel keeps in a memory key-value
+  store, stays as the rolled back write left it: no core API rebuilds it.
+
+(`Staging\ConfigWrites`, `Storage\StageStorage::replay()`,
+`Storage\ConfigObjectStorage::rolledBack()`,
+`Storage\ConfigEntityStorage::rolledBack()`, `StagedConfigTest`)
+
+### A secret is sealed in the stage record by its recorded paths
+
+Decided 2026-11-08. A resource that declares a secret can be staged.
+A stage entry holds the whole document the pipeline merged, the secrets
+stored for the thing among them, so before the record is written each
+string at a secret path (`Outbound::secrets()`, the deep tree, a list's
+items under `@each`) is encrypted with the `surface.secret_codec`
+service, an envelope a caller sent wrapped again, NULL and the empty
+string kept, and the entry records the paths it sealed under `sealed`,
+a list of paths, each a list of segments, a list position as a string.
+A read through the stage and apply open exactly those paths.
+
+- **Never by the look of a value.** Opening every string that looks like
+  an envelope would let a caller place one at a key that is not secret,
+  have apply open it and the storage keep the secret in the clear.
+- **Compared in the clear.** Encryption is not deterministic, so the keys
+  a write moved are compared before it seals, and a write that merges
+  into a staged create opens the entry first.
+- **A cleared secret is recorded.** A write that sends the clear marker
+  leaves NULL at the path, which apply would read as "keep what is
+  stored"; a secret path empty after the write where the view it merged
+  over held a value is recorded under `cleared`, joined across writes
+  and left by a write that sets it again, and apply sends the marker
+  there. Keep on empty never leaves a held secret empty otherwise. Only
+  a key the write holds is a clear: every parent on the path an array
+  in its values and the key present. A secret removed with its parent
+  (a map set to NULL, a list that shrank) is no clear, and apply builds
+  no parent again.
+- **The record's version stays 1.** An entry with no `sealed` has
+  nothing sealed, so a record written before this reads as it did.
+- **A codec that cannot open the record refuses.** A hash salt changed
+  since staging makes `decrypt()` throw `SecretCodecException`. A read
+  through the stage leaves the sealed paths out, as every read leaves a
+  secret out, and a staged write into it and apply are refused, code
+  `does_not_apply`: "The stage … was sealed under another hash salt and
+  cannot be opened; discard it." Why not throw: a 500 tells the caller
+  nothing it can act on, and the discard is the one remedy.
+- **The stage is the first sealed place.** A resource's own storage
+  keeps its secrets as it did: in the clear unless its layout seals them
+  ([Storage: Secrets at the codec](storage.md#secrets-at-the-codec)).
+
+(`Staging\StagedSecrets`, `Staging\StagedStorage`,
+`Storage\StageStorage::rehearse()`, `StagedSecretsTest`)
+
+### One rule says where a stage applies, at every door
+
+Decided 2026-11-08. `Staging\Stageable` answers whether a stage
+applies, and the tool door (`OperationInputs::stageInput()`), the
+OpenAPI document (`SurfaceStage`), the HTTP door, the operation form's
+`?stage` query (`OperationRoute::stageRequested()`) and the staged
+storage's prepare ask it. The operation form and the React page read
+`?stage`, the React page at `/surface-react/{resource}/{operation}`
+through the HTTP door's access check and at a module's route through
+`stageRequested()`, and its app names the stage in the header of every
+request it sends. Any other page served by an operation, a controller
+of a module's own, refuses a stage in its query, so no page writes to
+storage while its URL names one (amended 2026-11-08, slice 6: the React
+page refused it before, or ignored it at its own path). A stage applies
+when the resource's declared storage class implements
+`TransactionalStorageInterface` and the call
+names a thing: it creates, or its resource declares no identity keys,
+or its parameters name at least one of them. A read-only operation other
+than the read of one thing, a listing, reads no one thing.
+
+- **An operation that names no thing.** The venues' reorder writes
+  several venues and its context knows no id: an entry for it would
+  match every entry of the resource and record no venue. Its tool takes
+  no `stage`, and a write named into a stage from PHP is refused at
+  prepare, code `does_not_apply`, naming the operation and the identity
+  keys. The rule reads the operation's parameter names, which every
+  place that asks it has (the list is in
+  [Where a stage applies](staging.md#where-a-stage-applies)), so they
+  agree by construction; `StagedConfigTest` asks each door and the
+  React page for every operation of its site, and the form door for
+  every operation form route. Prepare alone also checks that each
+  routed child's storage is transactional (below), so a resource that
+  routes a child to one that is not still offers the stage at the doors
+  and is refused at the write.
+- **A header the call cannot honor is 422.** Before, the HTTP door read
+  the header on every path and answered a read through it. Now a request
+  with `X-Surface-Stage` on a call a stage does not apply to, a read
+  included, answers 422 with one violation at no path, code
+  `does_not_apply`, "A stage does not apply to this operation.", from
+  `ResourceApiController::served()`, beside the 400 on the stage's own
+  paths, before the stage is read.
+- **A stage in a form page's query is forbidden where it does not
+  apply.** The route's access check can only allow or forbid, so a
+  `?stage` on a form whose operation the rule rules out is forbidden,
+  saying `does_not_apply`, the match-time twin of the HTTP door's 422,
+  before the stage is read.
+- **A routed child.** A child routed to a storage of its own commits with
+  its parent at apply, in the same transaction, so prepare refuses the
+  write when a routed child's storage class does not implement the
+  interface, naming the child (`StorageAdapter::routedStorageClasses()`).
+  No shipped resource routes a child under a storage a stage takes.
+
+(`Staging\Stageable`, `Tool\OperationInputs`, `OpenApi\OpenApiDocument`,
+`Http\ResourceApiController::served()`, `ResourceBuild\OperationRoute::stageRequested()`,
+`Staging\StagedStorage::prepare()`, `StagedConfigTest`, `StageToolsTest`,
+`OpenApiDocumentTest`, `StagedFormTest`)
+
+### Two identity-less entries of one storage class are one thing
+
+Decided 2026-11-08. A config object storage keeps one config object, so
+two resources that store through one such class are one thing:
+`event.catering` and `event.catering.method` keep
+`surface_examples.catering`. Neither context knows identity, so the
+check that refuses one stored thing staged through two resources found
+no key to compare and let both through, and the second write at apply
+would overwrite the first unchecked. Two entries of one storage class
+whose contexts both know no identity now name one thing: the second
+resource is refused, code `conflict`, naming the first.
+
+A thing with no id is named by its resource alone: `changes` and
+`applied` list it with `parameters: []`, `applied` gives it no `id`, and
+a message names it by the resource id.
+
+(`Staging\StagedStorage::sameThing()`, `Structure\StageAppliedStructure`,
+`StagedConfigTest`)
+
+### A destructive bulk operation stages, then confirms over the stage
+
+Decided 2026-11-07, with the entity example's bulk delete. The content
+list's bulk action "Delete content through a stage" removes nothing: it
+opens a stage, stages one delete per selected node, each asked its
+delete access, and sends the account to a confirm page, which applies
+the stage on submit.
+
+- **The selection is a stage.** What core keeps as a list of ids to
+  delete is a set of staged deletes, each rehearsed as a real one when
+  it is staged.
+- **The confirm page is the stage's own reading.** It lists the
+  selected nodes, names the stage and asks; its submit is `apply`,
+  through the pipeline, as every door runs it.
+- **Nothing is removed before confirm.** A cancel is a link, and a link
+  may not discard, so the stage is left to expire at the end of its
+  lifetime.
+- **Every delete is checked again at apply**, its access and its token,
+  and a refusal refuses them all, naming each by `/writes/<position>`;
+  the stage and the selection are kept. A `does_not_apply` refusal of
+  the whole stage, the stage applied or emptied elsewhere, clears the
+  selection and sends the person back, since the deletes were made or
+  nothing is staged. Core's delete form skips a node it may no longer
+  delete with a warning and removes the rest
+  (`DeleteMultipleForm::submitForm()`); here they are made together or
+  not at all, in one transaction.
+- **The temp store carries the stage's id and the staged ids alone**, in
+  the private temp store, one selection per account, as core's delete
+  action keeps its selection. The stage holds the writes.
+- **The page lists no `changes` items.** It reads the stage's `changes`
+  through `SurfacePipelineInterface::outputs()` to learn whether
+  anything is pending, and lists the selection from what is stored, with
+  the stage's label. How a form door shows a run's outputs was decided
+  on 2026-11-08 with declared flows: the confirm page lists `changes`
+  before the apply and `applied` after
+  ([A flow ends in a confirmation page that shows the stage's changes and applies it](#a-flow-ends-in-a-confirmation-page-that-shows-the-stages-changes-and-applies-it)).
+  This page stays as it is: its writes are many things chosen on a
+  listing, which no declared flow draws.
+
+Why: a destructive operation over many things is where a person wants
+to see what will happen before it happens, and a stage is that state
+already, with its access, its expiry and its apply. Building the first
+flow by hand, over core's own bulk form, shows what a declared flow
+must carry before one is declared.
+
+(`surface_examples_entity`'s `Plugin\Action\StageDeleteAction` and
+`Form\StageDeleteConfirmForm`, `BulkDeleteFlowTest`,
+`BulkDeleteContentListTest`)
+
+### A flow is declared on the route that draws it, not a resource
+
+Decided 2026-11-08. A flow is the default `_surface_flow: { steps:
+[...], label: ... }` on an operation form route: the group ids of the
+route's one operation, drawn one per step into one stage, `?step=N` and
+`?stage=<id>` in the query, ending in a confirm page that `steps` does
+not list. The keys in no group are drawn at the first step, whose
+submit opens a stage when the query names none. Next stages a step's
+keys and goes on; Back goes back and stages nothing.
+`SurfaceFormBuilderInterface::buildSurfaceForm()` takes the keys to draw,
+so a step draws its own: a key not drawn says nothing, and the staged
+load overlays what earlier steps staged.
+
+- **The route, not the resource.** A flow is how a form page asks, so
+  the door that draws it declares it; the build, the tools and the HTTP
+  door never see it. An agent stages the same writes through the stage
+  input, a person through the steps.
+- **One operation.** A stage refuses a write to one thing through a
+  second operation, so the steps share the route's. A flow over a create
+  writes each later step into the create its first step staged: the
+  stage is handed on naming that create's position
+  (`Staging\Stage::creating()`), and `ResourcesInterface::operation()`
+  builds the create's context again from it.
+- **The form cache stays one form's.** The stage is the flow's state,
+  read from the query, so every tab and every Back holds its own place
+  (decision 3 of the stage design: `?stage=<id>`, not the session).
+- **What a flow stages.** Updates, and creates whose required keys with
+  no default are drawn at the first step: each step is validated as the
+  whole write.
+
+The content type example's flow draws the update's three groups over
+three steps (`/admin/structure/types/manage/{type}/surface-flow`).
+
+(`Form\Flow`, `Form\SurfaceOperationForm`, `Form\Drawing`,
+`surface_stage_test`'s `Resource\ItineraryResource`,
+`surface_examples_node_type.routing.yml`, `FlowFormTest`,
+`FlowRoundTripTest`)
+
+### A step order is checked against the refiner graph and a create's required keys at match time
+
+Decided 2026-11-08. Four refusals need the resource built, so they run
+when the route is matched, as a forbidden access answer naming the
+problem, through one `Form\Flow::refusal()` the route's access check and
+the form both ask: an operation a flow cannot stage, a delete, a
+read-only operation, or one a stage does not apply to; a step that names
+a group the operation's top level does not have, naming it; a key drawn
+at a step before a key its
+refinement depends on (`DefinitionMap::refinements()`), naming both; and
+for a create, a required key with no default drawn after the first
+step, naming it. The router's rebuild checks only the route's shape: a
+`_surface_flow` that is no map of distinct group ids with an optional
+non-empty `label` and `redirect`, a flow on a route that names no
+operation, or one whose `_form` is not the operation form.
+
+- **Not at the rebuild.** The stage design put the refiner-order
+  refusal at route registration. Nothing is built there, and a derived
+  resource's id with a path variable names no single resource then, so
+  the check follows the policy that what needs the resource built stays
+  at match ([A route may fill or fix what an operation asks for](#a-route-may-fill-or-fix-what-an-operation-asks-for), "What the route alone shows is refused when the router is rebuilt"),
+  as "both fixes and fills" has a rebuild check and a match twin.
+- **A conditional require is not seen.** A rule's `require()` applies
+  only once values exist, so it is no part of the check: the pipeline
+  refuses the step that leaves the key empty, as it refuses any write.
+- **Not derived.** The author orders the steps; the graph only refuses
+  an order that would draw a key before what it is narrowed by.
+
+(`Form\Flow::refusal()`, `Form\Flow::assertWritten()`,
+`Access\OperationAccessCheck`, `Access\OperationRouteSubscriber`,
+`FlowFormTest`)
+
+### A flow ends in a confirmation page that shows the stage's changes and applies it
+
+Decided 2026-11-08. `?step=confirm` draws the stage's `changes`, read
+through the pipeline, as a table (position, resource, operation, kind,
+parameters, the keys each moved), says "Each is checked again when it
+is made. They are made together or not at all.", and offers Back, Discard
+the stage and Apply the stage. Apply makes what the page listed: the
+page posts back a fingerprint of the stage's writes as it drew them,
+and a stage that holds other writes by then refuses the Apply and is
+listed again. Apply is then rehearsed, each refusal said on the page and
+nothing written, and run through the stage's `apply` for the owner; the
+page then goes to the flow's `redirect` route, or stays and shows the
+stage applied. A stage that changed while it was applied is said as an
+error, and the page is built again.
+
+- **What was listed, not what is there.** A write staged from another
+  tab or another door after the page was drawn, a delete among them,
+  would otherwise be applied unseen by the person who pressed Apply.
+- **The same fingerprint over HTTP.** `StageStorage::listed()`, an
+  xxh128 hash of the record's writes and next position, is the confirm
+  page's fingerprint and part of the `ETag` of `GET` and `PATCH
+  .../{id}:apply` (`ServedOperations::fingerprint()`), so `PATCH :apply`
+  with an `If-Match` read before another write was staged answers 412,
+  code `conflict`, and writes nothing. The tool door takes no `If-Match`,
+  so a tool's apply makes what the stage holds when it runs.
+- **The flow's redirect, not the cosmetic layer's.** The cosmetic
+  layer's redirect is handed an operation's result; the stage's apply
+  result is another resource's, so the flow names where to go
+  (`redirect`).
+
+- **Forced by what cannot be undone.** No new flag: when a write is a
+  delete, or its operation declares `destructive`, the page says how
+  many cannot be undone and Apply is a danger button.
+- **Discard is a button.** It deletes the stage through its `delete`,
+  and a link may not delete.
+- **How a form door shows a run's outputs.** `changes` before the apply,
+  `applied` after: the record keeps `applied` once applied, and the page
+  reads it. This closes what the entity example's bulk delete left open
+  ([A destructive bulk operation stages, then confirms over the stage](#a-destructive-bulk-operation-stages-then-confirms-over-the-stage)).
+
+(`Form\SurfaceOperationForm::confirmStep()`, `ConfirmStepTest`,
+`FlowRoundTripTest`, `StagedConfigTest::testApplyEtagCarriesTheStagedWrites()`)
+
+### One store contract; a stage's lifetime is data on its record
+
+Decided 2026-11-08. Where stages are kept is one interface,
+`Staging\StageStoreInterface` (`named`, `read`, `created`, `createdAt`,
+`write`, `delete`, `lock`, `release`, `now`), the type of the
+`surface.stages` service and of every consumer: both stage storages,
+`Resources`, the access classes, the form, the tool and HTTP doors and
+the examples. `StageStore`, over `keyvalue.expirable`, is the shipped
+implementation; a site may swap the service. How long a stage lives is
+`keep` on its record, the seconds after its last write, written when
+the stage is opened and the only key a store acts on: the shipped
+store uses it as the time to live and resets it on each write; a store
+that keeps stages for good ignores it. A flow declares `keep: short`, the form
+cache's lifetime (`form_cache_expiration`, six hours by default), for a
+wizard finished in one sitting, or `long`, the temp store expiry
+(`tempstore.expire`, a week by default), the default everywhere.
+
+- **Why now.** The maintainer asked on 2026-11-08 whether short-lived
+  and long-lived stages could be two things, and whether a site could
+  later keep stages for good, per user. One contract answers both with
+  no second code path. Every consumer is internal today, so the seam
+  costs a few type changes; once third parties type against the class,
+  it costs a deprecation.
+- **Not an interface with one implementer.** The test module's
+  `ArrayStageStore`, in memory, kept for good and listing stages, runs a
+  whole stage through every step (`StageStoreSwapTest`), and a
+  permanent store per user is the stated second use.
+- **What never varies by store.** The record's shape and `VERSION`
+  (`Staging\StageRecord`, public since it is the one thing every store
+  shares, with `address()` and the create lookups any store reuses),
+  positions and tokens, the two-pass apply, sealing, the
+  owner check. `VERSION` stays 1: a record from before `keep` has none
+  and keeps the store's default, so no open stage is lost.
+- **The lifetime travels as a known key, not an input.** The stage's
+  `create` declares `id` and `label`; a `keep` input would join the
+  tool, HTTP and OpenAPI contract. The form puts `stage_keep`
+  (`StageStorage::KEEP`) on the create's context, reserved like the
+  position key: `Resources::operation()` refuses a resource whose own
+  context knows it. The tool and HTTP `create` open long-lived stages.
+- **Listing is optional.** `Staging\ListsStagesInterface::openStages()`
+  is a store's to offer; the shipped store declines, since its
+  collection has no query by owner and a listing would read every
+  record. When a store lists, a flow's first step offers to resume the
+  account's newest open stage whose first write is the same operation
+  for the same thing, and checks the owner itself.
+- **Costs stated, not built.** No permanent store ships. For whoever
+  builds one: tokens of stored things go stale over months, so apply
+  refuses more writes as conflicts; secrets are sealed with a key
+  derived from `hash_salt`, so after a salt rotation old records
+  cannot be opened: refused, never corrupted.
+
+(`Staging\StageStoreInterface`, `Staging\ListsStagesInterface`,
+`Staging\StageRecord`, `Staging\StageStore`, `Storage\StageStorage::KEEP`,
+`Form\Flow`, `Form\SurfaceOperationForm::offerResume()`,
+`surface_stage_test`'s `Staging\ArrayStageStore`, `StageStoreSwapTest`,
+`StageStoreTest::testKeepIsTheRecordsLifetime()`,
+`FlowFormTest::testKeepIsTheStagesLifetime()`)
 
 ## Access
 
@@ -6678,9 +7951,10 @@ and access stay derived, because they are the field's, not its type's.
 ### Field access is child access
 
 Each field of a content entity resource is a child invoked through its
-own operation, `create` or `update` to match the parent's, so field
-access is the child's access, through the three answers access already
-had: edit allowed is open, view allowed is locked, neither is omitted.
+own operation, `create`, `update`, `read` or `delete` to match the
+parent's, so field access is the child's access, through the three
+answers access already had: edit allowed is open, view allowed is
+locked, neither is omitted.
 No mechanism of its own was needed, which is what the child operations
 were built for ([One invocation model for both
 levels](#one-invocation-model-for-both-levels)). Field access takes
@@ -6704,6 +7978,25 @@ the delta dropped, and one about the whole entity to `@entity`; it
 drops one about a field the resource does not carry, or one the account
 may not edit, as core's form does. (`ContentEntityStorage::prepare()`)
 
+*Added 2026-11-07:* it implements `DeletableStorageInterface`, so both
+entity resources have a `delete`. A delete removes the entity with every
+translation and every revision it has, core's storage rule, where
+core's delete form removes a translation that is not the default one
+alone; the example follows storage, since it writes the default
+translation only. The rule is the entity type's storage handler's, so
+a module that replaces the handler replaces it: the contrib trash
+module's keeps the entity marked deleted and restorable.
+`prepareDelete()` refuses an entity that is gone,
+code `not_found`, and asks neither access nor validation; the access
+class asks core's delete access, and each field child is invoked under
+a delete through its own `delete`, which field access asks as a write,
+as under an update. That decides which keys the delete answers, so a
+field the account may not see is not answered, and an update and a
+delete of one thing carry the same keys for one account, so a stage
+compares one token over both. (`ContentEntityStorage::prepareDelete()`,
+`ContentEntityAccess::access()`, `FieldItemStructures::delete()`,
+`ContentEntityDeleteTest`)
+
 ### Two entity resources from one deriver: static per bundle, runtime per entity type
 
 Decided 2026-10-31, from that day's design conversation.
@@ -6720,8 +8013,9 @@ the bundle's resource does, through the one method both call
 - **Why both.** A resource per bundle states its fields outright: no
   conditional, its refiners the fields' own, and a precise path per
   bundle, `/surface-api/entity.content:node.page`. A resource per entity
-  type keeps the tool list short as bundles grow (five tools per entity
-  type, where each bundle adds three) and has the shape agents expect
+  type keeps the tool list short as bundles grow (six tools per entity
+  type, where each bundle adds four, since the delete of 2026-11-07) and
+  has the shape agents expect
   from the services this module replaces: one create and one update per
   entity type, the bundle an input.
 - **One deriver, proven equal.** Both are derived from the same field
@@ -6841,10 +8135,8 @@ punctuation character, a checkbox per form the site has) declares them
 inline, where a key is declared, and names who lists them:
 
 ```php
-$inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class)
-  ->setLabel(t('Punctuation'));
-$inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class)
-  ->setLabel(t('Benches'));
+$inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class, label: t('Punctuation'));
+$inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, label: t('Benches'));
 ```
 
 The `from:` class is a provider, `SiteListInterface::list()`, answering
@@ -6930,7 +8222,9 @@ why:
   provider). The structure at the entries is built once for the map, so
   its access answers once, as a collection's item's does; it may name no
   storage or identity, its owner storing it. Neither verb is offered to
-  an alter, or inside a structure mixed in, which holds no children.
+  an alter, or inside a structure mixed in, which holds no keys from the
+  site (*amended 2026-11-05:* it may hold a child at a fixed key or in a
+  collection, [A mixin is merged flat](#a-mixin-is-merged-flat)).
 - **Ports on an entry.** Decided by the owner on 2026-10-21:
   `attachEach($key, Structure::class, from:, reads: ['port' =>
   'sibling'])` wires the port of the entry `<id>` to `sibling.<id>`, the
@@ -7241,17 +8535,19 @@ form, each validated as any resource is. Each choice, and why:
   yet, and the `plugin` key's description says so. A plugin whose class
   carries `#[UsesStructure]` is its declared structure, built as
   declared: `SiteList::add(..., structure:)` names a structure class where
-  an entry otherwise carries a schema. Any other plugin is read with the
-  schema reader from `block.settings.<plugin id>`, resolved as typed
-  config resolves it (a wildcard type, and `block.settings.*` for a
-  plugin with none), less the keys every block has, written as JSON
-  Schema by `ConfigSchemaDocument`, the plugin's own defaults each key's
-  default. Why both: a declared structure keeps its refiners, children
-  and variants, which its schema read back would not (a coded refiner
-  cannot be read back), and the config schema is the one description a
-  plain plugin has. What a config schema says that JSON Schema says too
-  is carried (Choice, Range, Length, Count, NotBlank); the rest is left
-  to storage, which holds the whole block to its schema before anything
+  an entry otherwise carries a schema. Any other plugin is the structure
+  `ConfigSchemaReader::structure()` reads straight from
+  `block.settings.<plugin id>`, resolved as typed config resolves it (a
+  wildcard type, and `block.settings.*` for a plugin with none), in its
+  `:own` form, less the keys every block has, the plugin's own defaults
+  laid over it as each key's default. A `#[Variant]` declared for the
+  placement at `settings` wins over both, as at any key. Why both: a
+  declared structure keeps its refiners, children and variants, which
+  its schema read would not (a coded refiner is code), and the config
+  schema is the one description a plain plugin has. Every constraint
+  the schema states on a value is carried but one whose options name
+  another value of the typed config tree (`%parent`), which only typed
+  config resolves; storage holds the whole block to its schema before anything
   is written, so neither document is stricter than the block.
 - **The keys every block has are the resource's.** `label`,
   `label_display` (a boolean, stored as core's `visible` or `0`),
@@ -7279,8 +8575,9 @@ form, each validated as any resource is. Each choice, and why:
   chooses, from `ConditionPluginStructures`: the conditions the block
   layout offers (those whose contexts the site can give, less the
   current theme, and the language while the site has one), each its
-  declared structure or read from `condition.plugin.<id>`, with a
-  `context_mapping` of one key per context it reads, offering the
+  declared structure or read from `condition.plugin.<id>` as a block's
+  settings are, a condition that reads a context written as JSON Schema
+  with a `context_mapping` of one key per context it reads, offering the
   site's contexts that fit, the first the default, as the block layout
   assigns it. Storage writes core's map by condition id and refuses a
   condition held twice (`taken`, by its place in the list); a list of
@@ -7338,6 +8635,72 @@ chosen. (`BlockPlacementResource`, `BlockPlacementStorage`,
 `BlockPlacementToolsTest`, `BlockPlacementApiTest`,
 `BlockPlacementFormTest`, `BlockPlacementReactTest`,
 `ConfigEntityStorageTest`)
+
+*Changed 2026-11-04:* a plugin with no declared structure is no longer
+written as JSON Schema. `BlockPluginStructures` and
+`ConditionPluginStructures` keep the list and its filtering, the labels
+and the plugin's defaults; each entry names the structure
+`ConfigSchemaReader::structure()` reads from `block.settings.<id>`
+(`condition.plugin.<id>`) in its `:own` form, less the keys of
+`block.settings.*` (`condition.plugin`), the defaults laid over it as
+each key's default, since config schema states none. So a settings
+structure is found in this order: a `#[Variant]` class declared for the
+placement, then the plugin's `#[UsesStructure]`, then
+`block.settings.<id>` read from schema with the plugin's defaults laid
+over. Why: config schema becomes a structure with no JSON Schema
+between, so the contract states what the JSON step dropped (a fully
+validatable plugin's keys required; `MenuLinkDepth` on a menu block's
+`level`, checked on the server) and titles a key by its own label. Each
+variant's def is named by its structure's id,
+`config_schema:<type>:own`, and plugins of one type with the same
+defaults share it. A constraint whose options name another value of the
+typed config tree (`%parent`) is not carried: only typed config
+resolves it, and the storage holds the block to its schema. A condition
+that reads a context is still written as JSON Schema, its context
+mapping added: which contexts the site has is site state, which no
+schema says. (`ConfigSchemaReader::structure()`,
+`LeafRules::treeExpression()`, `BlockPlacementResourceTest`)
+
+*Amended 2026-11-05:* the generic provider follows the same order.
+`ConfigSchemaTypes`, behind `attachVariants(..., from:
+ConfigSchemaTypes::class)` and the variants a config schema type chosen
+by its own key mixes in, lists a plugin whose class names its settings
+with `#[UsesStructure]` as that structure where the deciding key's
+values are a plugin manager's (a `PluginExists` constraint), read from
+the plugin definition with no plugin built, and reads every other value
+from its schema; a `#[Variant]` declared for the owner still wins. Why:
+the plugin's declared structure is what its host builds, and a schema
+read back would lose its refiners, children and defaults. Values from a
+`Choice` or from the schema names have no plugin definition, and are
+read from the schema alone. (`ConfigSchemaTypes::resolve()`,
+`ConfigSchemaTypesTest`)
+
+*Amended 2026-11-06:* `:own` means one thing, since the id is a def key
+on the wire: the type's keys less those of its frame type, which is the
+type itself (a plugin with no schema of its own, read as its fallback
+less itself, holds no key) or a type it extends at any distance, matched
+by keys. `ConfigSchemaReader::structure()` walks the type's ancestry,
+the `type:` each definition is written with, and accepts the type left
+out when its keys are the type's or those of any type in it; it refuses
+any other with the ancestry and the keys that differ from the nearest.
+So `block.settings.*`, which is `type: block_settings` and adds no key,
+and `block_settings` are one frame, and `views.argument.*` is the frame
+of `views.argument.date_day`, which is `type: views.argument.date`,
+which is `type: views_argument`, as `views.argument.*` is: the variant
+holds every key the chosen type has beyond the fallback's, intermediate
+types included. Why: the id promises what the def holds; read less a
+type that is not its frame, one `:own` id would carry different keys.
+Two reads of one type under one id with different content are filed
+apart as `<id>@<n>`, as for defaults.
+(`ConfigSchemaReader::structure()`,
+`ConfigSchemaReaderTest::testOwnIsTheTypeLessItsFrameType()`)
+
+*Changed 2026-11-06:* `VisibilityConditionStructure` stores its
+`settings` flat (`Variants::STORED_AS`), so what `BlockPlacementStorage`'s
+two visibility loops did to lay a condition's settings beside its id and
+gather them back went with the layout, the loops keeping the conditions
+keyed by id and a list of strings as core's map of each value to itself
+([Variants stored flat are a layout](#variants-stored-flat-are-a-layout)).
 
 ### A listing is a read-only operation with outputs; a reorder is an update over the collection
 
@@ -7612,7 +8975,10 @@ resource's or a structure's own blueprint declares.
   `References::spells()` and `spelled()` went. Why `NULL` for the type:
   an entry that refers to an entity has no type of its own, its id
   typed as the entity type keeps it, and the type stays the second
-  argument for every other entry.
+  argument for every other entry. *Superseded 2026-11-06:* `to:`,
+  `bundles:` and the `NULL` type went; the entry is a definition
+  carrying the constraint
+  ([A reference is a constraint on a value](#a-reference-is-a-constraint-on-a-value)).
 
 (`BlueprintAdditionsInterface::refer()`, `References::definition()`,
 `ReferenceKeysTest`)
@@ -7651,13 +9017,23 @@ $inputs->add('page', 'integer', t('Announcement'))
   alone.
 - **What is unchanged.** Every served contract, every baseline and the
   example 16 documents; `References::definition()` stays the helper for
-  code that derives a reference key (`addEach(to:)`'s entries, a
-  reference field's `target_id`). The generator's interview asks the
+  code that derives a reference key (a reference field's `target_id`, a
+  reference the typed data reader reads). The generator's interview asks the
   entity type and types the key by its id; the generator writes the
   constraint as it writes any other.
 - **What is left.** `addEach($key, NULL, from:, to:, bundles:)` still
   names the entity type and takes the id's type from it: one type for
-  every entry, which the provider's entries do not each say.
+  every entry, which the provider's entries do not each say. *Done
+  2026-11-06:* `addEach()` takes an entry definition as `addList()`
+  takes an item; a reference per entry is the constraint on that
+  definition, `addEach('pages',
+  DataDefinition::create('integer')->addConstraint('SurfaceValidReference',
+  ['entityTypeId' => 'node']), from: Slots::class, label: t('Pages'))`,
+  checked by `References::settle()` at the build as any key is
+  (`Declaring::settleReferences()` hands it the definition every entry
+  is copied from); `#[Each('integer', ...)]` with
+  `#[Constraint('SurfaceValidReference', [...], item: TRUE)]` as a
+  property. `to:` and `bundles:` are gone.
 
 (`BlueprintAdapterBase::add()`, `References::settle()`,
 `Declaring::settleReferences()`, `KeyAnswers`, `ResourceCode`,
@@ -7790,7 +9166,10 @@ need two discriminators on one object. Restating the parent as a
 `oneOf` of whole objects would make it legal and multiply the parent
 per variant, per key with variants. The `if`/`then` is
 the JSON Schema statement, and `x-surface.by` names the key for a
-reader that wants it. (`ContractEmitter::variants()`)
+reader that wants it. The reason holds for every form, the variants'
+keys stored flat or not: a variant's def is partial, the keys for one
+value, not a whole alternative of the parent, so a `mapping` would
+point at the wrong object. (`ContractEmitter::variants()`)
 
 ### Two documents, never stricter than the runtime
 
@@ -9410,6 +10789,17 @@ in configuration a site edits, as a provider of variants.
 `Resource\SiteList`, `Plugin\Validation\Constraint\JsonSchemaConstraint`,
 `ResourceRegistry::defineRead()`, `DefinitionMap::frameConstraints()`,
 `SchemaReaderTest`, `SchemaRoundTripTest`, `VariantsFromSiteTest`)
+
+*Amended 2026-11-05:* a key a config schema or a typed data definition
+declares is always declared, open where the reader derives no shape for
+it, because the frame is closed: a key left out would refuse the stored
+value that holds it, in the structure that claims to describe it. Open
+is `any` held whole to nothing (`LeafRules::open()`), written with its
+title and no type, read back to itself; the reason stays noted at its
+path. A type chosen by its own key that falls back declares every key
+its types declare beside the fallback's open the same way.
+(`ConfigSchemaReader::open()`, `TypedDataReader::open()`,
+`ConfigSchemaReaderTest::testKeyNoShapeIsReadForIsOpen()`)
 
 ## Evolution
 

@@ -679,7 +679,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertSame('Both are enabled on this site now.', $items[1]);
     $this->assertSame('Place a component block in stark: /admin/structure/block/add/surface_component/stark', $items[4]);
     [$spotlight, $block_lines] = array_map(static fn (array $cell): string => (string) $cell['data']['#code'], $page['parts']['two_lines']['#rows'][0]);
-    $lines = "\$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)\n  ->setLabel(t('Props'));\n\$inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)\n  ->setLabel(t('Slots'));";
+    $lines = "\$inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);\n\$inputs->attachVariants('slots', by: 'component', label: t('Slots'), from: ComponentSlots::class);";
     $this->assertStringContainsString($lines, $spotlight);
     $this->assertSame("\$inputs->add('component', 'string', t('Component'));\n" . $lines, $block_lines);
     $contract = json_decode((string) $page['parts']['contract']['content']['#code'], TRUE);
@@ -693,17 +693,17 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     // listing leaves out whatever their count, so each placement tool that
     // takes values has a narrowing tool beside it.
     $this->assertSame([
-      ['surface:block.placement:create', 'Place a block', 'write', 'values, dry_run'],
-      ['surface:block.placement:create:schema', 'Schema for these values: Place a block', 'read', 'values'],
-      ['surface:block.placement:update', 'Edit a placed block', 'write', 'id, values, dry_run'],
-      ['surface:block.placement:read', 'Current values: Edit a placed block', 'read', 'id'],
+      ['surface:block.placement:create', 'Place a block', 'write', 'values, dry_run, stage'],
+      ['surface:block.placement:create:schema', 'Schema for these values: Place a block', 'read', 'values, stage'],
+      ['surface:block.placement:update', 'Edit a placed block', 'write', 'id, values, dry_run, stage'],
+      ['surface:block.placement:read', 'Current values: Edit a placed block', 'read', 'id, stage'],
       [
         'surface:block.placement:update:schema',
         'Schema for these values: Edit a placed block',
         'read',
-        'id, values',
+        'id, values, stage',
       ],
-      ['surface:block.placement:delete', 'Remove a placed block', 'write', 'id, dry_run'],
+      ['surface:block.placement:delete', 'Remove a placed block', 'write', 'id, dry_run, stage'],
     ], $page['parts']['tools']['#rows']);
     $answer = static fn (string $call): string => (string) $page['calls']['block.placement:' . $call]['answer']['#code'];
     $this->assertStringStartsWith("Failed: The values were refused:\n/id: A block named surface_examples_spotlight already exists.", $answer('place'));

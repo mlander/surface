@@ -89,7 +89,7 @@ final class Drawing {
    *
    * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::buildSurfaceForm()
    */
-  public function buildSurfaceForm(SurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'surface'): array {
+  public function buildSurfaceForm(SurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'surface', array $keys = []): array {
     // Two views of one overlay. The data surface is refined against the keys
     // as they stand, an orphan held unanswered; each element is rendered
     // with what it holds, an orphan standing for its stored value, so its
@@ -125,6 +125,13 @@ final class Drawing {
     // Decision: see docs/decisions.md#locked-at-the-top.
     $whole = $surface->lockedWhole() !== NULL;
     foreach ($definitions as $name => $definition) {
+      if ($keys !== [] && !in_array((string) $name, $keys, TRUE)) {
+        // Another step's: no element, so it says nothing, and accept keeps
+        // what it holds.
+        // Decision: see
+        // docs/decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource.
+        continue;
+      }
       // Each key is drawn as its arrangement says, whichever widget draws
       // it: read off the key as declared, which a variant's definition
       // below stands in for.

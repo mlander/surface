@@ -1,13 +1,17 @@
-# A basic page's create and update forms, served by the derived content
-# entity resource entity.content:node.page and the generic operation
-# form, with the contract panel beside each; and a landing page saying
-# what was derived and what was left out, read from the registry.
+# A basic page's create, update and delete forms, served by the derived
+# content entity resource entity.content:node.page and the generic
+# operation form, with the contract panel beside the create and update
+# forms (a confirmation draws none); and a landing page saying what was
+# derived and what was left out, read from the registry.
 #
 # Each route is one operation of the derived resource, named by its id:
-# a derived resource has no class. The update route's {id} is the
-# operation's one parameter, the node's id as the path carries it, which
-# the resource's storage loads; a node of another bundle is refused by the
-# operation, and so by the route's access.
+# a derived resource has no class. The update and delete routes' {id} is
+# the operation's one parameter, the node's id as the path carries it,
+# which the resource's storage loads; a node of another bundle is refused
+# by the operation, and so by the route's access. The delete route draws
+# a confirmation, as for every operation that deletes, and once the page
+# is deleted goes back to the landing page, through the example's
+# cosmetics: the id it was served at names nothing any more.
 
 surface_examples_entity.index:
   path: '/surface-entity'
@@ -36,3 +40,50 @@ surface_examples_entity.node_page_update:
     _surface_panel: 'surface.contract_panel'
   requirements:
     id: '\d+'
+
+surface_examples_entity.node_page_delete:
+  path: '/surface-entity/node/{id}/delete'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Delete a basic page (resource)'
+    _surface_resource: 'entity.content:node.page'
+    _surface_operation: 'delete'
+    _surface_cosmetics: 'surface_examples_entity.form_cosmetics'
+  requirements:
+    id: '\d+'
+
+# The confirm page of the content list's bulk action "Delete content
+# through a stage" (StageDeleteAction, whose confirm_form_route_name this
+# is): it lists what the action staged and applies the stage. The content
+# list's own permission lets an account see it; the apply is the stage's
+# owner's alone, and each delete's access is asked again when it is made.
+# It reads the private temp store, so it is never cached.
+surface_examples_entity.stage_delete_confirm:
+  path: '/surface-entity/delete'
+  defaults:
+    _form: 'Drupal\surface_examples_entity\Form\StageDeleteConfirmForm'
+    _title: 'Delete content through a stage'
+  requirements:
+    _permission: 'access content overview'
+  options:
+    no_cache: TRUE
+
+# One node as a stage holds it, rendered in its full view mode the way
+# core's node preview renders an unsaved node: {node_id} is a stored
+# node's id or a local id the stage gave a create (-1). The stage is
+# converted for its owner alone; the page asks the stage's access and the
+# node's update access, or the bundle's create access for a local id, as
+# core's NodePreviewAccessCheck does. Never cached.
+surface_examples_entity.stage_preview:
+  path: '/surface-entity/stage/{surface_stage}/preview/{node_id}'
+  defaults:
+    _controller: '\Drupal\surface_examples_entity\Controller\StagePreviewController::view'
+    _title: 'Preview a staged node'
+  requirements:
+    _custom_access: '\Drupal\surface_examples_entity\Controller\StagePreviewController::access'
+    node_id: '-?\d+'
+  options:
+    no_cache: TRUE
+    parameters:
+      surface_stage:
+        type: surface_stage

@@ -131,7 +131,7 @@ final class Binding {
    *   The refiner links, as declareShape() answered them.
    * @param array<string, \Drupal\surface\ResourceBuild\ResourceBlueprintAdditions> $additions
    *   Each alter's additions, by module.
-   * @param array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]} $mixins
+   * @param array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached: string[], lists: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]} $mixins
    *   What mixIn() answered.
    * @param array<string, string[]> $readable
    *   The keys of the structure each module attached at its mount.
@@ -202,8 +202,10 @@ final class Binding {
    * @param \Drupal\surface\ResourceBuild\Build $build
    *   The owner's build: its builder, the owner, and its context, which
    *   says which alters apply.
-   * @param array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]} $mixin
-   *   The structure, as mixIn() lists it.
+   * @param array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[], attached?: string[], lists?: string[]} $mixin
+   *   The structure, as mixIn() lists it: its plain members, and those
+   *   holding a child at a fixed key or a collection, which its refiners
+   *   and rules may only rule out.
    */
   protected function bindMixin(Build $build, array $mixin): void {
     $builder = $build->builder;
@@ -219,7 +221,7 @@ final class Binding {
         $ruling[] = $refiner->key;
       }
     }
-    $inside = $build->forMixin($structure, $keys, $ports, $reads, $ruling);
+    $inside = $build->forMixin($structure, $keys, $ports, $reads, $ruling, $mixin['attached'] ?? [], $mixin['lists'] ?? []);
     $this->bindRefiners($inside, $structure->isDerived() ? $structure->name() : Declaring::resourceClass($structure), $structure->refiners);
     $this->bindRules($inside, $mixin['blueprint']->rules());
     foreach ($structure->alters as $alter) {
@@ -228,7 +230,7 @@ final class Binding {
       }
       $instance = $this->declaring->alter($alter->class);
       $within = [$structure->id, $definition->id, $keys];
-      $additions = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, $within))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references());
+      $additions = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, $within))->useShapes($this->declaring->shapes());
       if ($instance instanceof AltersInputsInterface) {
         $instance->alterInputs($additions);
         $this->declaring->settleReferences($structure->id, [sprintf('third_party_settings.%s.', $alter->module) => $additions]);
