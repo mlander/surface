@@ -79,8 +79,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * the first of the operation's parameters that is a variable of the
  * route's path; a parameter a plain default pins is never the subject
  * (OperationRoute). A panel, named the same way by the optional
- * `_surface_panel` default, is placed inside the data surface
- * container and rebuilt with it (SurfaceFormPanelInterface). The
+ * `_surface_panel` default, is drawn after the buttons, beside the data
+ * surface container, and rebuilt with it (SurfaceFormPanelInterface). The
  * leading underscore keeps each of these defaults out of the route
  * match's parameters and out of what `_title` substitutes; no converter
  * runs for one, since none is declared for it under `options.parameters`,
@@ -169,12 +169,23 @@ class SurfaceOperationForm extends FormBase {
   public const PANEL = '_surface_panel';
 
   /**
-   * The key the panel is placed at inside the data surface container.
+   * The key the panel is placed at in the form, beside SURFACE_KEY.
    *
-   * Not a data surface key: extraction reads the data surface's own keys
-   * only, so nothing placed here is ever taken for a value.
+   * Outside the data surface container: extraction reads the data
+   * surface's own keys only, so nothing placed here is ever taken for a
+   * value.
    */
   public const PANEL_KEY = 'surface_panel';
+
+  /**
+   * The weight the panel is drawn at: after the actions, which are at 100.
+   *
+   * The buttons act on the fields and the panel describes them, so Save
+   * or Next sits right under what the person filled in.
+   *
+   * Decision: see docs/decisions.md#a-panel-after-the-operation-forms-buttons.
+   */
+  protected const PANEL_WEIGHT = 1000;
 
   /**
    * The temporary form state value the validated dry run is kept under.
@@ -381,13 +392,14 @@ class SurfaceOperationForm extends FormBase {
     }
     $panel = $this->surfacePanel();
     if ($panel !== NULL) {
-      // Inside the container and placed as refreshed, so every rebuild a
-      // refinement triggers replaces the panel beside the elements it
-      // describes, whichever key moved.
-      $form[static::SURFACE_KEY] = $builder->placeRefreshed(
-        $form[static::SURFACE_KEY],
+      // After the actions, and placed as refreshed beside the container,
+      // so every rebuild a refinement triggers replaces the panel with
+      // the elements it describes, whichever key moved.
+      $form = $builder->placeRefreshedBeside(
+        $form,
+        static::SURFACE_KEY,
         static::PANEL_KEY,
-        $panel->buildPanel($served, $surface, $values),
+        ['#weight' => static::PANEL_WEIGHT] + $panel->buildPanel($served, $surface, $values),
       );
     }
     // Locked whole: every element is drawn disabled by its key's lock,
@@ -1371,7 +1383,7 @@ class SurfaceOperationForm extends FormBase {
     $form['actions'] = ['#type' => 'actions', '#weight' => 100];
     $panel = $this->surfacePanel();
     if ($panel !== NULL) {
-      $form[static::PANEL_KEY] = ['#weight' => 90] + $panel->buildPanel($served, $surface, $surface->withDefaults($this->storedSurfaceValues($surface, $storage)));
+      $form[static::PANEL_KEY] = ['#weight' => static::PANEL_WEIGHT] + $panel->buildPanel($served, $surface, $surface->withDefaults($this->storedSurfaceValues($surface, $storage)));
     }
     $closed = $this->closedSaying($record);
     if ($closed !== NULL) {

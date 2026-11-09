@@ -1002,8 +1002,8 @@ surface_examples_node_type.flow:
   a table: each write's position, resource, operation, kind, parameters
   and the keys it moved, every resource's writes alike. It says "Each is
   checked again when it is made. They are made together or not at all."
-  and draws the route's panel, so an example's explanation shows there
-  too. When a write is a delete, or its operation is destructive, it says
+  and draws the route's panel after the buttons, as every step does, so
+  an example's explanation shows there too. When a write is a delete, or its operation is destructive, it says
   "One of these cannot be undone once applied." and Save is a danger
   button. Back goes to the last step. Cancel deletes the stage through
   its `delete` and goes back to the first step with no stage; it is a

@@ -86,8 +86,8 @@ final class ExamplePanels implements SurfaceFormPanelInterface {
   public function buildPanel(OperationRoute $served, SurfaceInterface $declared, array $values): array {
     $contract_panel = $this->contractPanel->buildPanel($served, $declared, $values);
     $panels = [
-      // Last in the form's 'surface' container, where the contract panel put
-      // itself.
+      // The contract panel's own weight; the operation form draws the
+      // whole after its actions whatever it is.
       '#weight' => $contract_panel['#weight'] ?? 0,
       self::CONTRACT => ['#weight' => 0] + $contract_panel,
     ];

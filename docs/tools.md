@@ -341,8 +341,9 @@ why: [decision](decisions.md#a-budget-for-what-the-site-decides),
 
 `ContractPanel`, the service `surface.contract_panel`,
 is a read-only panel any operation route can name in
-`_surface_panel`. The generic operation form places it inside the
-data surface's form, so it rebuilds with the form: every key with its type, label,
+`_surface_panel`. The generic operation form draws it after its
+buttons and replaces it on every rebuild
+([forms](forms.md#a-panel-after-the-buttons)): every key with its type, label,
 requiredness, default, what it allows in words, what it depends on, and
 whether it is narrowed right now. Below the table, collapsed, are three
 JSON Schema documents: "The schema for these answers", which
