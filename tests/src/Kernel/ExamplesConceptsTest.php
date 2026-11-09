@@ -10,9 +10,11 @@ use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Flow\Staged;
 use Drupal\surface\Form\SurfaceFormBuilder;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples\CodeLines;
 use Drupal\surface_examples\ConceptPanel;
@@ -563,15 +565,18 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
    * Tests example 19's stage, filled without a form, saved on its page.
    *
    * A stage opened through the stage resource's tool, and both resources
-   * staged through theirs, as an agent does: step 3 draws the notices with
-   * their panel, the confirm page lists both writes, and Save makes both.
+   * staged through theirs, as an agent does: with ticket sales staged
+   * open, step 3 draws the notices with their panel, the confirm page
+   * lists both writes, and Save makes both.
    */
   public function testNineteenSavesWhatToolsStaged(): void {
     $opened = $this->runTool('surface:surface.stage:create', [OperationInputs::VALUES => ['label' => 'Set up the event']]);
     $this->assertTrue($opened['success'], $opened['message']);
     $stage = (string) $opened['outputs']['id'];
     $calls = [
-      'event.setup' => ['name' => 'Winter meetup', 'capacity' => 80],
+      // The values of the panel's commands: the banner needs sales open,
+      // or the flow's check refuses Save.
+      'event.setup' => ['name' => 'Winter meetup', 'date' => '2026-12-05', 'sales_open' => TRUE],
       'event.notices' => ['banner' => 'Doors open at six.', 'show_banner' => TRUE],
     ];
     foreach ($calls as $resource => $values) {
@@ -588,6 +593,10 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertSame('Doors open at six.', $form[SurfaceOperationForm::SURFACE_KEY]['banner']['#default_value'], 'Step 3 reads through the stage.');
     $concept = $form[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $this->assertStringContainsString((string) $this->container->get('surface_examples.concept_panel')->paragraph('event.notices'), (string) $concept['what']['#markup']);
+    foreach ($calls as $resource => $values) {
+      $input = json_encode(['stage' => '<id>', 'values' => $values]);
+      $this->assertStringContainsString('surface:' . $resource . ':configure --uid=1 --json --input=\'' . $input . '\'', $concept['without']['content']['#code'], 'The panel\'s command stages what this test stages.');
+    }
     $this->assertLessThan($form[SurfaceOperationForm::PANEL_KEY]['#weight'], $form['actions']['#weight'], 'A step draws its panel after Next.');
 
     $this->serveStep($stage, 'confirm');
@@ -599,9 +608,39 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertSame([], $state->getErrors());
     $this->container->get('config.factory')->reset();
     $this->assertSame('Winter meetup', $this->config('surface_examples.event_setup')->get('name'));
-    $this->assertSame(80, $this->config('surface_examples.event_setup')->get('capacity'));
+    $this->assertSame('2026-12-05', $this->config('surface_examples.event_setup')->get('date'));
+    $this->assertTrue($this->config('surface_examples.event_setup')->get('sales_open'));
     $this->assertSame('Doors open at six.', $this->config('surface_examples.event_notices')->get('banner'));
     $this->assertTrue($this->config('surface_examples.event_notices')->get('show_banner'));
+  }
+
+  /**
+   * Tests example 19's flow reads a dotted key of any resource it stages.
+   *
+   * The info desk is drawn by no step of the flow: it is read through its
+   * read, staged else stored, and a dotted key reads into its map.
+   */
+  public function testNineteenReadsDottedKeysThroughTheStage(): void {
+    $opened = $this->runTool('surface:surface.stage:create', [OperationInputs::VALUES => ['label' => 'Set up the event']]);
+    $stage = (string) $opened['outputs']['id'];
+    $answer = $this->runTool('surface:event.desk:configure', [
+      OperationInputs::VALUES => ['location' => ['lat' => 45.5, 'lng' => -73.5]],
+      OperationInputs::STAGE => $stage,
+    ]);
+    $this->assertTrue($answer['success'], $answer['message']);
+    $this->serveStep($stage, '2');
+    $registry = $this->container->get('surface.resource_registry');
+    $staged = new Staged(
+      $this->resources(),
+      $registry,
+      $this->stages(),
+      $this->container->get('surface.flows')->get('event.setup_flow')->resolved($registry),
+      OperationRoute::fromRouteMatch($this->container->get('current_route_match'), $registry, $this->container->get('surface.operation_arguments'), $this->resources()),
+      $this->stages()->named($stage),
+    );
+    $this->assertSame(45.5, $staged->value('event.desk', 'location.lat'), 'Staged.');
+    $this->assertSame('Alex Kim', $staged->value('event.desk', 'lead.name'), 'Stored.');
+    $this->assertSame(43.6532, $this->config('surface_examples.desk')->get('location.lat'), 'Nothing was written.');
   }
 
   /**

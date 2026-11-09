@@ -36,7 +36,7 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
  * - the operation form and a React page served at a module's route,
  *   which read `?stage` in their query (OperationRoute::stageRequested());
  * - the React page's access check (ServedOperations::stageable());
- * - the flow's own check (Flow::refusal());
+ * - the flow's own check (CompiledFlow::refusal());
  * - the staged storage's prepare, through storage() and namesThing().
  *
  * Prepare alone also checks that the storage of each routed child is

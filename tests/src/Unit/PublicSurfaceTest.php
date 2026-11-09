@@ -83,6 +83,16 @@ use PHPUnit\Framework\Attributes\Group;
  * `src/Pipeline/` are pinned beside them, by name and method, from this
  * date.
  *
+ * Grown on 2026-11-09 by one attribute and its four arguments,
+ * #[Flow(id, label, keep, redirect)], a flow written as a class, and five
+ * interfaces outside `src/Resource/`, in `src/Flow/`: FlowInterface,
+ * StepsInterface, StepInterface, StagedInterface and
+ * ChecksBeforeApplyInterface, which a flow class implements, declares
+ * its steps into and reads the stage through
+ * (docs/decisions.md#a-flow-is-a-class-and-the-map-is-its-short-form):
+ * 28 attributes, 114 arguments. The interfaces of `src/Flow/` are pinned
+ * by name and method from this date.
+ *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
 #[Group('surface')]
@@ -102,8 +112,8 @@ class PublicSurfaceTest extends UnitTestCase {
    * What the surface holds, by kind.
    */
   protected const PINNED = [
-    'attributes' => 27,
-    'attribute arguments' => 110,
+    'attributes' => 28,
+    'attribute arguments' => 114,
     'blueprint methods' => 17,
     'interfaces' => 22,
   ];
@@ -116,6 +126,17 @@ class PublicSurfaceTest extends UnitTestCase {
     'DeletingStorageInterface' => ['deletes'],
     'SurfaceStorageInterface' => ['commit', 'load', 'prepare'],
     'TransactionalStorageInterface' => ['rolledBack'],
+  ];
+
+  /**
+   * The interfaces of a flow class in `src/Flow/`, with their methods.
+   */
+  protected const FLOW = [
+    'ChecksBeforeApplyInterface' => ['beforeApply'],
+    'FlowInterface' => ['defineSteps'],
+    'StagedInterface' => ['value'],
+    'StepInterface' => ['description', 'group', 'keys', 'label', 'when'],
+    'StepsInterface' => ['step'],
   ];
 
   /**
@@ -183,6 +204,25 @@ class PublicSurfaceTest extends UnitTestCase {
     }
     ksort($found);
     $this->assertSame(self::PIPELINE_STORAGE, $found, 'Say why a storage interface of the pipeline changed, and pin it here and in docs/decisions.md#the-surface-was-counted-and-cut.');
+  }
+
+  /**
+   * Tests the interfaces of a flow class are the ones pinned.
+   *
+   * Each is what a flow class implements, declares its steps into or
+   * reads the stage through: one added or removed, or one of their
+   * methods, fails here until this test says why.
+   */
+  public function testTheFlowInterfacesArePinned(): void {
+    $found = [];
+    foreach (glob(__DIR__ . '/../../../src/Flow/*Interface.php') ?: [] as $file) {
+      $name = basename($file, '.php');
+      $methods = array_map(static fn (\ReflectionMethod $method): string => $method->getName(), (new \ReflectionClass('Drupal\\surface\\Flow\\' . $name))->getMethods());
+      sort($methods);
+      $found[$name] = $methods;
+    }
+    ksort($found);
+    $this->assertSame(self::FLOW, $found, 'Say why an interface of a flow class changed, and pin it here and in docs/decisions.md#the-surface-was-counted-and-cut.');
   }
 
 }

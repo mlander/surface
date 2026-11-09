@@ -67,7 +67,8 @@ Examples 7 to 12 are a small resource each, for one or two later
 concepts. Examples 13 to 17 each add one more idea, most in a submodule
 of their own. Example 18 declares the keys of an earlier kind of example
 as properties. Example 19 draws two resources over three steps into one
-stage, a flow, applied together from a confirm page.
+stage, a flow written as a class, checked and applied together from a
+confirm page.
 
 | Example | Concept it shows | Submodule | Page on a site | Concept's page |
 | --- | --- | --- | --- | --- |
@@ -89,7 +90,7 @@ stage, a flow, applied together from a confirm page.
 | [16: references, three ways](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-16-references-three-ways) | A key that refers to an entity: listed while the site has few, looked up past the limit, and of any entity type. | `drush pm:install surface_examples_references` (needs node) | `/surface-examples/16` | [A key that refers to an entity](../options.md#a-key-that-refers-to-an-entity) |
 | [17: retitle in bulk, access borrowed](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-17-retitle-in-bulk-access-borrowed) | A gate: access another thing's owner decides, asked per node, never copied. | `drush pm:install surface_examples_retitle` (needs node) | `/surface-examples/17` | [A gate borrowed from another thing](../resources.md#a-gate-borrowed-from-another-thing) |
 | [18: declared as properties](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-18-declared-as-properties) | The same keys twice, declared with calls and as properties carrying attributes, one blueprint in two spellings. | `surface_examples` | `/surface-examples/18`, `/surface-examples/18/method` | [Declared as properties](../declaring-a-resource.md#declared-as-properties) |
-| [19: one stage, several steps](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-19-one-stage-several-steps) | A flow: two groups of one resource and another resource, three steps into one stage, applied together from a confirm page. | `surface_examples` | `/surface-examples/19` | [Flows](../staging.md#flows) |
+| [19: one stage, several steps](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-19-one-stage-several-steps) | A flow written as a class: one resource's keys split over two steps, then another resource while ticket sales are open or a banner is shown, into one stage, checked and applied together from a confirm page. | `surface_examples` | `/surface-examples/19` | [Flows](../staging.md#flows) |
 
 ### The teaching modules
 
