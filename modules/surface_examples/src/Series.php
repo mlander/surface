@@ -463,6 +463,24 @@ final class Series {
           self::INSTALL . 'surface_examples.catering.yml' => t('the settings the module ships with'),
         ],
       ],
+      19 => [
+        'title' => t('one stage, several steps'),
+        'concept' => t('a flow: one form drawn over several steps into one stage, the last step another resource, applied together from a confirm page'),
+        'docs' => 'docs/staging.md#flows',
+        'decision' => 'a-flow-is-declared-on-the-route-that-draws-it-not-a-resource',
+        'routes' => ['surface_examples.step19'],
+        'files' => [
+          self::MODULE . 'src/Resource/EventSetupResource.php' => t('the resource of steps 1 and 2: stock keys in two groups, basics and tickets'),
+          self::MODULE . 'src/Resource/EventNoticesResource.php' => t('the resource of step 3: another resource, drawn whole'),
+          self::MODULE . 'src/Storage/EventSetupStorage.php' => t("the setup's storage: names its config object"),
+          self::MODULE . 'src/Storage/EventNoticesStorage.php' => t("the notices' storage: names a config object of their own"),
+          self::ROUTES . 'surface_examples.step19' => t('the route: the generic operation form, and the flow, its steps, its label and how long its stage lives'),
+          self::SCHEMA . 'surface_examples.event_setup' => t("the setup's config schema, generated from the class"),
+          self::SCHEMA . 'surface_examples.event_notices' => t("the notices' config schema, generated from the class"),
+          self::INSTALL . 'surface_examples.event_setup.yml' => t('the setup the module ships with'),
+          self::INSTALL . 'surface_examples.event_notices.yml' => t('the notices the module ships with'),
+        ],
+      ],
     ];
   }
 

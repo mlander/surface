@@ -363,7 +363,7 @@ The callback answers with an `AjaxResponse`:
 | Command | For |
 | --- | --- |
 | `ReplaceCommand` | Each dependent, by its own wrapper. Variants whose deciding key moved are replaced whole, by the wrapper of the key they sit at. |
-| `ReplaceCommand` | Each element placed with `placeRefreshed()` (the operation form's panel), on every rebuild. |
+| `ReplaceCommand` | Each element placed with `placeRefreshed()` inside the container or `placeRefreshedBeside()` beside it (the operation form's panel), on every rebuild. |
 | `RemoveCommand`, then `AppendCommand` | The [stale marker](#stale-values-on-a-form): removed, and appended to the container again when the rebuild left one. It names stale selects across the whole container and may appear or disappear with the rebuild, so it is never replaced in place. |
 | `ReplaceCommand` | The trigger itself, by its own wrapper, in three cases only: its own value was refused (the error is printed under it), its previous request printed an error under it (so a fixed error goes away), or the rebuild changed the options it offers (a required select loses `- Select -` once something is chosen). |
 | `RemoveCommand`, then `PrependCommand` | Whatever else the request put in the messenger, a stale value kept, printed inside the container where the render-array path printed it, after the previous request's are taken away. An error on the trigger is never among them: it is printed under the trigger. |
@@ -948,11 +948,11 @@ The defaults:
 | `_surface_resource` | The resource class, or its `#[Resource]` id. A derived resource's id may hold a variable of the route's path, `entity.content:node.{node_type}`, so one route serves every bundle ([below](#one-route-for-every-bundle)). |
 | `_surface_operation` | One of its operation ids. |
 | `_surface_cosmetics` | Optional. A service id or class implementing `Form\SurfaceFormCosmeticsInterface`: a borrowed element, markup, the message and the redirect. Grouping and order are the keys' [arrangement](#arranging-the-keys). |
-| `_surface_panel` | Optional. A service id or class implementing `Form\SurfaceFormPanelInterface`: something shown inside the data surface's container, rebuilt with it. |
+| `_surface_panel` | Optional. A service id or class implementing `Form\SurfaceFormPanelInterface`: something shown after the form's buttons, rebuilt with the data surface's container. |
 | `_surface_fixed` | Optional. A map of key paths to values, each key fixed to its value on this page; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
 | `_surface_defaults` | Optional. A map of key paths to values, each the value its key starts from on this page, for an operation that creates; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
 | `_surface_query` | Optional. A map of key paths to query parameter names, each key a link may start from the parameter it names, `?subject=Pricing`, on any operation that draws values ([below](#keys-a-link-or-the-code-starts)). |
-| `_surface_flow` | Optional. A map of `steps`, the operation's group ids drawn one per step; `label`, optional, the stage's label, the operation's label by default; `redirect`, optional, the route the page goes to once the stage is applied, handed this route's own parameters its path takes; and `keep`, optional, `short` (the form cache's lifetime, `form_cache_expiration`) or `long` (the temp store expiry, `tempstore.expire`, the default), how long the stage lives after its last write. The page draws the operation over those steps into one stage, `?step=N` and `?stage=<id>` in its query, and ends in a confirm page at `?step=confirm` that applies it ([Staging: Flows](staging.md#flows)). |
+| `_surface_flow` | Optional. A map of `steps`, drawn one per step, each a group id of the operation or a step over another resource, `{ resource: <id>, operation: <id>, group: <id>, arguments: { <name>: <value> } }`, `group` and `arguments` optional, the whole operation drawn when `group` is left out, the first step a group of the route's operation; `label`, optional, the stage's label, the operation's label by default; `redirect`, optional, the route the page goes to once the stage is applied, handed this route's own parameters its path takes; and `keep`, optional, `short` (the form cache's lifetime, `form_cache_expiration`) or `long` (the temp store expiry, `tempstore.expire`, the default), how long the stage lives after its last write. The page draws the operation over those steps into one stage, `?step=N` and `?stage=<id>` in its query, and ends in a confirm page at `?step=confirm` whose Save applies it ([Staging: Flows](staging.md#flows)). |
 
 The route's parameters are the operation's, by name, each handed its raw
 value as the path carries it: `update(string $type)` is served by a
@@ -1019,18 +1019,23 @@ The data surface's container is built under the `surface` key, which is
 `SurfaceOperationForm::SURFACE_KEY` and is part of the contract with
 anything that reads submitted values by path.
 
-### A panel beside the elements
+### A panel after the buttons
 
 A route may name a panel in `_surface_panel`. The form hands it the
 operation, the resource built in it, and the values the elements are
-built with, and places what it returns inside the data surface's
-container,
-under `SurfaceOperationForm::PANEL_KEY`, with the builder's
-`placeRefreshed()`: every AJAX rebuild a refinement triggers replaces
-it beside the dependents, whichever key moved, because a panel that
-describes the built resource as the answers stand changes when they
-do. Extraction reads only the data surface's own keys, so nothing in a panel is
-ever taken for a value.
+built with, and draws what it returns after its actions, outside the
+data surface's container, under `SurfaceOperationForm::PANEL_KEY` at
+the form's top level. The order is the title and any status items, the
+container with the fields, the actions, then the panel: the buttons act
+on the fields, so Save or Next sits right under them
+([the decision](decisions.md#a-panel-after-the-operation-forms-buttons)).
+The form places the panel with the builder's `placeRefreshedBeside()`:
+the container lists it, and every AJAX rebuild a refinement triggers
+replaces it beside the dependents, whichever key moved, because a panel
+that describes the built resource as the answers stand changes when
+they do. A cosmetic layer finds it at `$form[PANEL_KEY]`. Extraction
+reads only the data surface's own keys, so nothing in a panel is ever
+taken for a value.
 
 `surface.contract_panel` (`ContractPanel`) is the one
 the module ships: every key with its type, label, requiredness,

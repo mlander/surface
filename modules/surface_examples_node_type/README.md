@@ -65,7 +65,8 @@ drush role:perm:add content_editor 'administer surface examples content types'
 
 The edit form is also offered as an "Edit (resource)" operation on the
 content type listing, beside core's own, so the two forms are one click
-apart to compare.
+apart to compare. After it, "Edit in steps" links to the flow, offered
+when the flow route's own access check lets the account in.
 
 ## Who may use it
 
@@ -78,6 +79,7 @@ reviewer of core's own content type form has not already reviewed.
 | `surface_examples_node_type.create`, `surface:node.type:create` | node type create access | `administer surface examples content types` |
 | `surface_examples_node_type.update`, `surface:node.type:update` | `$node_type->access('update')` | `administer surface examples content types` |
 | The "Edit (resource)" operation link | `$node_type->access('update')` | `administer surface examples content types` |
+| `surface_examples_node_type.flow`, the "Edit in steps" operation link | `$node_type->access('update')`, asked by the route's access check through the access manager | `administer surface examples content types` |
 
 All of them ask one question, the content type resource's access for
 the operation, so none can drift from the others: the routes through

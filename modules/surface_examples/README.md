@@ -36,6 +36,9 @@ Example 18 is a caterer's keys declared twice, once with calls in
 `defineInputs()` as the earlier examples write them and once as
 properties of the class, each carrying an attribute, the same blueprint
 saving to one config object ([below](#example-18-declared-as-properties)).
+Example 19 is a flow: the event set up over three steps into one stage,
+two groups of one resource and then another resource, applied together
+from a confirm page ([below](#example-19-one-stage-several-steps)).
 
 ```bash
 drush pm:install surface_examples
@@ -49,7 +52,7 @@ venues the module ships, example 15's config entities, and each example
 keeps its settings in a config object of its own
 (`surface_examples.registration_step1` to `_step3`, then
 `surface_examples.bulletin`, `.press`, `.desk`, `.sales`,
-`.program`, `.doors`, `.spotlight`, `.mailer`, `.webhook` and `.catering`), so the examples never write over
+`.program`, `.doors`, `.spotlight`, `.mailer`, `.webhook`, `.catering`, `.event_setup` and `.event_notices`), so the examples never write over
 each other.
 
 Every code block on the pages is highlighted with Prism 1.30.0: the
@@ -2047,7 +2050,7 @@ final class ProgramWorkflowAlter implements OperationAccessInterface {
 }
 ```
 
-The panel above the form then says what the module answers, and its
+The panel under the form then says what the module answers, and its
 last call is made with the workflow state published, set for the call
 and put back after it:
 
@@ -5275,6 +5278,185 @@ of code, counted without blank lines or comments:
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.catering` | the config schema, generated from either class, the same entry | 66 |
 | [`modules/surface_examples/config/install/surface_examples.catering.yml`](config/install/surface_examples.catering.yml) | the settings the module ships with | 12 |
 
+## Example 19: one stage, several steps
+
+`/surface-examples/19`
+
+The event set up over three steps, all written into one stage, and
+nothing written to the site until the confirm page saves them. Steps 1
+and 2 are the two groups of `event.setup`, `basics` and `tickets`. Step
+3 is another resource, `event.notices`, drawn whole. Neither resource
+knows it is drawn in steps: the route declares the flow
+([Flows](../../docs/staging.md#flows)).
+
+The route, with `_surface_flow`:
+
+```yaml
+surface_examples.step19:
+  path: '/surface-examples/19'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 19: one stage, several steps'
+    _surface_resource: 'Drupal\surface_examples\Resource\EventSetupResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+    _surface_flow:
+      steps: [basics, tickets, { resource: event.notices, operation: configure }]
+      label: 'Set up the event'
+      keep: short
+```
+
+A step is a group id of the route's operation, or a map naming another
+resource's operation: `resource`, `operation`, an optional `group`, and
+optional `arguments` for its parameters. The first step opens the stage,
+labeled "Set up the event". Each Next stages the step's keys and goes
+on. Back shows what an earlier step staged, because every step reads
+through the stage; what you typed on this page is kept only when you
+press Next. Cancel discards the stage. The confirm
+page, `?step=confirm`, lists the writes of both resources and saves them
+together or not at all. `keep: short` keeps the stage for the form
+cache's lifetime, six hours after its last write by default.
+
+The two groups, at steps 1 and 2:
+
+<!-- code: src/Resource/EventSetupResource.php -->
+
+```php
+#[Resource('event.setup', storage: EventSetupStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Set up the event'),
+  description: new TranslatableMarkup('Sets the event name, date and capacity, then the ticket price, whether sales are open and a note for buyers.'),
+  permission: 'administer site configuration',
+)]
+final class EventSetupResource implements ResourceInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $basics = ArrangementGroup::details('basics', t('Basics'));
+    $tickets = ArrangementGroup::details('tickets', t('Tickets'));
+
+    $inputs->add('name', 'string', t('Event name'), default: 'Autumn meetup')
+      ->setRequired(TRUE)
+      ->addConstraint('Length', ['max' => 128]);
+    $inputs->describe('name', group: $basics);
+
+    $inputs->add('date', 'string', t('Date'), default: '2026-10-17')
+      ->setDescription(t('YYYY-MM-DD.'))
+      ->setSetting('widget', 'date')
+      ->addConstraint('Regex', [
+        'pattern' => '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D',
+        'message' => t('Write the date as YYYY-MM-DD, such as 2026-10-17.'),
+      ]);
+    $inputs->describe('date', group: $basics);
+
+    $inputs->add('capacity', 'integer', t('Capacity'), default: 100)
+      ->addConstraint('Range', ['min' => 1, 'max' => 5000]);
+    $inputs->describe('capacity', group: $basics);
+
+    $inputs->add('price', 'float', t('Ticket price'), default: 25.0)
+      ->addConstraint('Range', ['min' => 0]);
+    $inputs->describe('price', group: $tickets, suffix: t('EUR'));
+
+    $inputs->add('sales_open', 'boolean', t('Ticket sales open'), default: FALSE);
+    $inputs->describe('sales_open', group: $tickets);
+
+    $inputs->add('note', 'string', t('Note for buyers'))
+      ->setSetting('multiline', TRUE);
+    $inputs->describe('note', group: $tickets);
+  }
+
+}
+```
+
+The third step, another resource in a config object of its own:
+
+<!-- code: src/Resource/EventNoticesResource.php -->
+
+```php
+#[Resource('event.notices', storage: EventNoticesStorage::class)]
+#[Operation('configure',
+  label: new TranslatableMarkup('Configure the event notices'),
+  description: new TranslatableMarkup('Sets the banner shown on the event pages and whether it is shown.'),
+  permission: 'administer site configuration',
+)]
+final class EventNoticesResource implements ResourceInterface {
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function defineInputs(BlueprintInterface $inputs): void {
+    $inputs->add('banner', 'string', t('Banner'), default: '')
+      ->setSetting('multiline', TRUE)
+      ->addConstraint('Length', ['max' => 500]);
+
+    $inputs->add('show_banner', 'boolean', t('Show the banner'), default: FALSE);
+  }
+
+}
+```
+
+Each resource keeps its own config object. Two resources of one
+storage class whose contexts know no identity are one thing in the
+stage, as `event.catering` and `event.catering.method` are, and the
+stage refuses the second write to it (`conflict`). Two storage classes
+over one config object are not detected, which is why each resource
+here has its own.
+
+The same stage without a form: an agent opens one with the
+`surface:surface.stage:create` tool, calls each resource's tool with
+the stage's id as `stage`, reads what it holds with
+`surface:surface.stage:changes`, and applies it with
+`surface:surface.stage:apply`. Over HTTP the same calls name the stage
+in the `X-Surface-Stage` header. The account the agent acts as can open
+`/surface-examples/19?stage=<id>&step=confirm` and review what was
+staged before it is saved
+([Walk-through with drush](../../docs/staging.md#walk-through-with-drush)).
+
+The calls below are dry runs on each resource alone:
+
+```bash
+drush tool:run surface:event.setup:configure --uid=1 --input='{"values":{"name":"Winter meetup","date":"2026-12-05","capacity":80,"price":15.0,"sales_open":true}}' --input=dry_run=true
+
+drush tool:run surface:event.setup:configure --uid=1 --input='{"values":{"name":"Winter meetup","date":"05/12/2026"}}' --input=dry_run=true
+
+drush tool:run surface:event.notices:configure --uid=1 --input='{"values":{"banner":"Doors open at six.","show_banner":true}}' --input=dry_run=true
+```
+
+```
+1. The winter meetup, its tickets on sale
+Success: Dry run of Set up the event: the values were accepted and prepared, and nothing was written.
+  values: {"name":"Winter meetup","date":"2026-12-05","capacity":80,"price":15.0,"sales_open":true,"note":null}
+
+2. A date written the other way round: refused
+Failed: The values were refused:
+/date: Write the date as YYYY-MM-DD, such as 2026-10-17.
+
+1. A banner, shown
+Success: Dry run of Configure the event notices: the values were accepted and prepared, and nothing was written.
+  values: {"banner":"Doors open at six.","show_banner":true}
+```
+
+### Files
+
+What example 19 is made of, as its page lists them, each with its lines
+of code, counted without blank lines or comments:
+
+<!-- files: 19 -->
+
+| File | What it is | Lines |
+| --- | --- | --- |
+| [`modules/surface_examples/src/Resource/EventSetupResource.php`](src/Resource/EventSetupResource.php) | the resource of steps 1 and 2: stock keys in two groups, basics and tickets | 35 |
+| [`modules/surface_examples/src/Resource/EventNoticesResource.php`](src/Resource/EventNoticesResource.php) | the resource of step 3: another resource, drawn whole | 14 |
+| [`modules/surface_examples/src/Storage/EventSetupStorage.php`](src/Storage/EventSetupStorage.php) | the setup's storage: names its config object | 3 |
+| [`modules/surface_examples/src/Storage/EventNoticesStorage.php`](src/Storage/EventNoticesStorage.php) | the notices' storage: names a config object of their own | 3 |
+| [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step19` | the route: the generic operation form, and the flow, its steps, its label and how long its stage lives | 12 |
+| [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.event_setup` | the setup's config schema, generated from the class | 42 |
+| [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.event_notices` | the notices' config schema, generated from the class | 17 |
+| [`modules/surface_examples/config/install/surface_examples.event_setup.yml`](config/install/surface_examples.event_setup.yml) | the setup the module ships with | 6 |
+| [`modules/surface_examples/config/install/surface_examples.event_notices.yml`](config/install/surface_examples.event_notices.yml) | the notices the module ships with | 2 |
+
 ## How this page is kept true
 
 Every code block above is the file it names, from its first attribute
@@ -5283,7 +5465,7 @@ when one drifts, and so does the component example 12 quotes. Each
 example's Files table is its list in `Series`, the one its page and its
 line on the landing page are drawn from, and `ExampleFilesTest`
 fails when a table and the list differ, or the list and the module. The Drush
-commands and answers of examples 7 to 18 are asserted by
+commands and answers of examples 7 to 19 are asserted by
 `ExamplesConceptsToolTest`, and example 15's config schema entry is the
 schema file's, which `ExamplesReadmeTest` checks. The JSON of example 1's config schema is asserted by
 `ConfigSchemaContractTest`, which also checks this page quotes it. The tool's three answers are asserted by
@@ -5292,7 +5474,7 @@ Drush commands are checked against `ExampleCalls`.
 
 | Test | Covers |
 | --- | --- |
-| `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does; example 2's twin refuses a capacity beyond the room's seats or below 1 in the resource's words and stores a valid set as the resource does; the venue narrows the room and the room the capacity; the pricing chooses the ticket variant; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
+| `Kernel\ExamplesStepsTest` | Examples 1 to 3: each form builds and saves, example 1 as its classic twin does, its panel drawn after Save; example 2's twin refuses a capacity beyond the room's seats or below 1 in the resource's words and stores a valid set as the resource does; the venue narrows the room and the room the capacity; the pricing chooses the ticket variant; the contact validates its email; the panel's rows as the answers move; each example's class stays screen sized. |
 | `Kernel\ExamplesComplianceTest` | Example 4: the alter's keys and label; its keys in one fieldset titled "Compliance", drawn between the capacity and the pricing; the capacity capped at a hundred without a license and the room's limit with one; the license's pattern; the stewards' minimum following the capacity; what the license and the capacity replace on the form; a room closed in State left out, said in the room's help, and refused on submit; example 5's calls unchanged. |
 | `Kernel\StaticRefinerEnforcementTest` | Examples 2 and 3, without example 4 and with it: every conditional the served contract enumerates, in the full schema and in the schema for no values and for the defaults, is what refining afresh for its values answers, and example 4's declared license rule is what refining with the rules alone answers for sampled values. |
 | `Kernel\ExamplesToolTest` | Example 5: the three calls and their answers; what the script prints. |
@@ -5303,21 +5485,22 @@ Drush commands are checked against `ExampleCalls`.
 | `Functional\ExamplesRoutesTest` | Every route answers an administrator and refuses anonymous; the landing page; both panels under example 3, and a save through it; each classic twin's page with its two documents, and a save through it; example 2's twin linked from the landing page with its line counts, and its page saying them; the Files panel of examples 1 to 5, the twins included, each file linked with its lines of code and a short one shown whole; under each example on the landing page, what it introduces, where it is explained, the decision and the file count, one line per example from `Series`. |
 | `Functional\ExamplesStep2ClassicTest` | Example 2 and its twin posted the same answers without JavaScript: a room of another venue refused on the room by both, a capacity beyond the room's seats and one below 1 refused by both in the same words, and a valid set stored identically by each. |
 | `FunctionalJavascript\ExamplesStep2ClassicAjaxTest` | Example 2's twin in a browser: a new venue swaps the room's options and leaves it on "- Select -" with nothing stored changed, a room describes the capacity, the venue moved back shows the stored room again, and a save after a move writes the new venue and room. |
-| `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity with no upper bound; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were. |
+| `FunctionalJavascript\ExamplesAjaxRefreshTest` | In a browser: example 2's venue replaces the room and the capacity and leaves the venue the same node, the orphaned room on its empty option with the stale marker and the capacity with no upper bound; a room then narrows the capacity and loses `- Select -`. Example 3's paid pricing swaps the note for a price and a currency, and leaves the second panel's table and its two documents as they were; the contract panel, drawn after Save and outside the container, is replaced and says the paid variant. |
 | `FunctionalJavascript\ExamplesComplianceRefreshTest` | Example 4, in a browser: one fieldset titled "Compliance", the ceiling of 100 lifted to the main hall's 400 by `2048`, and the stewards at 1 for 50 and 3 for 150; a malformed license on blur is said once, under the license, with `aria-invalid` and nothing at the top, and caps the capacity at a hundred; corrected, the error goes and the room's limit comes back. A refused capacity left by a click on text keeps no focus, and left by Tab lands on the Compliance fieldset after it. The fieldset is drawn below the capacity and above the pricing, and stays there when `2048` and Tab lift the capacity, which, with the stewards, is all that is replaced. With the East room closed in State, choosing Riverside Hall offers the main hall alone and says why. |
 | `Functional\ServedContractEndpointsTest` | In React: the landing page's links, and example 2's contract, refine and validate over HTTP. |
 | `Functional\ServedSubmitEndpointTest` | In React: example 2 saved over HTTP, refused, and refused after someone else saved. |
 | `Kernel\ExamplesResetTest` | Reset to defaults puts every example, and what another module stored on example 3, back to the shipped files, puts example 15's venues back as shipped, a venue removed made again and one added removed, and opens every room example 4 closed. |
-| `Kernel\ExamplesConceptsTest` | Examples 7 to 12 and 14: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the use paragraph and the line naming the key a post is signed with, the lock not shipped, and the calls each state allows; example 18's full schema, what PHP made required and the defaults, the serving time and, through the port, the contact's email required while the caterer is shown, and its form refusing both then saving; and the same keys declared with calls emitting both documents the same, byte for byte once the id is made the same, saving to the same config object. |
+| `Kernel\ExamplesConceptsTest` | Examples 7 to 12, 14, 18 and 19: each form builds and saves; example 7's rules in the full schema as declared, the send day gone for a monthly bulletin and kept in storage; example 8's one def at two sites with each wiring, the mixed-in keys flat, the shape at two keys, the volunteers' collection; example 9's keys from the configuration, a type added without a cache rebuild, the locked type in both documents and on the form; example 10's fees for two accounts, locked once published, and both operations' facts and tools; example 11's widgets, the always held badges and the notes that clear; example 12's four components read as four variants at the props and again at the slots, the card's props as keys with their constraints, its text a slot, both documents stating them, the form swapped to the hero and saved with its slot, a hero too dark refused; the panel above each, and none above examples 1 to 3; each class stays screen sized; example 13's page with its modules off, saying how to enable both, then with the block alone on, its parts and no call, then with the placement resource on too, the Spotlight and Tonight blocks placed through the create operation, the three lines side by side, the block's contract cut to the four components, the hero's actions narrowed, the four placement tools and the five calls' answers, nothing written.; example 14's panel with its module off, then on: how to enable it, the one source and then two in the contract excerpt, the webhook's rule, the use paragraph and the line naming the key a post is signed with, the lock not shipped, and the calls each state allows; example 18's full schema, what PHP made required and the defaults, the serving time and, through the port, the contact's email required while the caterer is shown, and its form refusing both then saving; and the same keys declared with calls emitting both documents the same, byte for byte once the id is made the same, saving to the same config object; example 19's stage opened and filled through the tools, step 3's panel, and the confirm page listing both writes and saving them. |
 | `Kernel\ExamplesWorkflowTest` | Example 10 with the workflow module: the fees left out of the full schema, the tool listing and the read tool for an account without "see event fees" and kept for one with it; the program locked whole once the workflow state is published, settled at call time and left unmarked in the full schema; checking still answers; the panel's paragraph, with the module and without it. |
-| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 18: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
+| `Kernel\ExamplesConceptsToolTest` | Examples 7 to 19: every call `ConceptCalls` writes down, its answer, nothing left written, the two blocks and the venues included, and this page quoting each command and answer. |
 | `Kernel\VenueResourceTest` | Example 15: the entity type installs with its three venues and holds to its generated schema; the resource builds for each operation; both documents of create, update, list and reorder; the listing's outputs schema; the tools, the listing paged and filtered and an account that only views left without the disabled venue; the reorder written in one commit, and refused for an unknown venue and one named twice; the slug computed from the name on create and kept on a rename, left out of the write and in the read, a slug sent equal noted and another refused, one another venue holds refused naming the name, and the post-update writing a missing one; example 2 offering a venue added, with no cache rebuild. |
 | `Functional\VenueApiTest` | Example 15 over HTTP and through its forms: `GET` on the collection answering the listing, a refused query, `POST` 201 with `Location`, the slug written and read, `POST .../schema` answering the slug it would compute, a `PATCH` sending another slug refused, the venue's `PATCH` and `DELETE`, the reorder's `PATCH` and its 405 for `POST`; the create and update forms saving, the slug drawn fixed; the delete form's confirmation removing; the page and its calls. |
 | `Kernel\ReferenceKeysTest` | Example 16: the three spellings and what each builds; both documents of the sponsorship pinned whole under the limit and past it, under `tests/fixtures/references/`; the candidates the account's, cached by what they read; the refusals, in one message; the lookup and what it leaves out; the tool listing's enum and the sentence naming the lookup; the OpenAPI document's lookup; the page's panel. |
 | `Kernel\RetitleExampleTest` | Example 17: the module writes its three pages and its two roles, and deletes the pages when uninstalled; both documents of the retitle pinned whole under `tests/fixtures/retitle/`, the list marked `live` in the full schema alone; the tool listing's permission, its description and the sentence on the list; the rewriter the same every time, and again on what it wrote; the page's form and panel, the gates, the calls, and each title put back. |
 | `Functional\RetitleFormTest` | Example 17 through its form and over HTTP: anonymous refused; an account that may edit no page refused on its page, nothing written; the retitler's save written, and the page then making its calls as dry runs; `PATCH` refused with a 422 per item, a dry run answering the titles it would write, a write answering what it wrote, and the titles read back. |
 | `Functional\ReferenceKeysFormTest` | Example 16 without JavaScript: a select up to the limit, core's entity autocomplete past it, the article saved by its uuid either way and drawn back as its id, and refused in the constraint's words; the lookup answering, refusing an account without the permission and leaving the draft out for one that may not see it; the React page told where the lookup is, and the full schema stating the id of a reference of any type per entity type. |
-| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12 and 14 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
+| `Functional\ExamplesConceptsRoutesTest` | Every route of examples 7 to 12, 14 and 19 answers an administrator and refuses anonymous; the landing page lists them; each page shows its panel and its Files panel and saves through its form, example 19's first step through Next into a stage; example 10's check writes nothing. Example 13 refuses anonymous, says to enable its two modules, then, with them on, shows its parts and the calls' answers, and draws the Spotlight card and the Tonight section below on its page alone; its Files panel, the modules on or off. |
+| `Functional\FlowRoundTripTest::testTheExampleFlowStagesTwoResources` | Example 19 page by page: the event setup's two groups over steps 1 and 2, the event notices at step 3, each through Next, the confirm page listing both resources' writes, and Save writing both config objects; the page then shows the stage applied. |
 | `Kernel\ExamplesExtensionTest` | Example 14 with the module that manages keys off, then on: both resources' full schemas, whole; the one source stated as `const` and drawn fixed, then two; the second source and the managed key there with no cache rebuild, in the documents and the tool; a pasted key kept across a switch to the managed key and back, and the config schema each source's stored value holds to; the read tool leaving the pasted key out and naming the managed key; the refusals, a pasted key sent while the managed source is chosen, a pasted key beside a managed key on the webhook, a key the site does not manage; the webhook's pasted key back with its value once the module is off; the signer, the webhook's code, signing with the pasted key while the module is off or no managed key is chosen and with the managed key's value once one is, the pasted key kept in config and the managed value stored nowhere, and with no key for a name the site no longer manages; and this page quoting the documents, the use and the lock it does not ship. |
 | `Functional\ExamplesExtensionFormTest` | Example 14 through its forms without JavaScript: the one source drawn as its label and no select, then a select of two; the mailer's pasted key saved, the managed key chosen and the pasted source chosen back with nothing typed, the key kept; the webhook's pasted box gone once a managed key is saved, and back when the module is off. |
 | `Kernel\ComponentBlockTest` | Example 13's block: its structure and both documents, the hero's narrowed slot pinned, and what it renders, slots included ([its README](../surface_examples_component_block/README.md)). |

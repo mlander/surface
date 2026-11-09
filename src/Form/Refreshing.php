@@ -31,7 +31,8 @@ use Drupal\surface\Widget\SurfaceWidgetBase;
  * markers put back as the rebuild left them, and a sentence saying what
  * changed (refreshSurface(), changesSaid()). A host's own element takes
  * the container in (mergeSurfaceContainer()), and the container takes an
- * element every rebuild replaces (placeRefreshed()).
+ * element every rebuild replaces, inside it (placeRefreshed()) or beside
+ * it (placeRefreshedBeside()).
  *
  * The Form API callbacks stay on SurfaceFormBuilder under their own
  * names, because form caches and render arrays hold those names. Its
@@ -66,6 +67,14 @@ final class Refreshing {
    * Filled by placeRefreshed().
    */
   protected const REFRESHED_KEY = '#surface_refreshed';
+
+  /**
+   * Render key on the container listing the siblings every rebuild replaces.
+   *
+   * Each is a key of the element the container sits in. Filled by
+   * placeRefreshedBeside().
+   */
+  protected const REFRESHED_BESIDE_KEY = '#surface_refreshed_beside';
 
   /**
    * Where a request keeps the options its triggers were rendered with.
@@ -178,6 +187,24 @@ final class Refreshing {
   }
 
   /**
+   * Places an element beside the container that every refinement replaces.
+   *
+   * @see \Drupal\surface\Form\SurfaceFormBuilderInterface::placeRefreshedBeside()
+   */
+  public function placeRefreshedBeside(array $form, string $container_key, string $key, array $element): array {
+    if (!isset($form[$container_key][self::WRAPPER_KEY])) {
+      throw new \LogicException(sprintf('No data surface container is at "%s" to place "%s" beside.', $container_key, $key));
+    }
+    if ($key === $container_key) {
+      throw new \LogicException(sprintf('"%s" is the data surface container, so nothing can be placed beside it under that key.', $key));
+    }
+    $form[$key] = $element;
+    $listed = $form[$container_key][self::REFRESHED_BESIDE_KEY] ?? [];
+    $form[$container_key][self::REFRESHED_BESIDE_KEY] = array_values(array_unique([...$listed, $key]));
+    return $form;
+  }
+
+  /**
    * AJAX callback: replaces what the triggering element's change moved.
    *
    * What is replaced is read off the trigger, which carries the
@@ -213,7 +240,22 @@ final class Refreshing {
     }
     $elements = [];
     $drawn = [];
-    foreach ([...$replaces, ...($container[self::REFRESHED_KEY] ?? []), ...($replace_own ? [$own] : [])] as $dotted) {
+    // An element beside the container is named by its key alone, as a
+    // list of one, and found beside the container in the rebuilt form.
+    $beside = array_map(static fn (string $key): array => [$key], $container[self::REFRESHED_BESIDE_KEY] ?? []);
+    $around = array_slice($container['#array_parents'] ?? [], 0, -1);
+    foreach ([...$replaces, ...($container[self::REFRESHED_KEY] ?? []), ...$beside, ...($replace_own ? [$own] : [])] as $dotted) {
+      if (is_array($dotted)) {
+        $exists = FALSE;
+        $element = NestedArray::getValue($form, [...$around, ...$dotted], $exists);
+        if (!$exists || !is_array($element) || !isset($element[SurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
+          // Taken out by a host or a cosmetic layer: it is not on the
+          // page either, so there is nothing to replace.
+          continue;
+        }
+        $elements[$element[SurfaceFormBuilderInterface::REFRESH_ID_KEY]] = $element;
+        continue;
+      }
       if ($dotted === $own && !$replace_own) {
         // Not the element that was touched, unless its own value was
         // refused: it already shows what the person chose, and redrawing
@@ -454,6 +496,7 @@ final class Refreshing {
         $state->setTemporaryValue([self::DRAWN_AS, static::containerKey($element)], Drawing::drawnAs($element));
       }
       static::wrapRefreshed($element, $wrapper_id);
+      static::wrapBeside($element, $complete_form, $wrapper_id);
       if (isset($element[SurfaceFormBuilderInterface::STALE_MARKER_KEY]) && !isset($element[SurfaceFormBuilderInterface::STALE_MARKER_KEY][SurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
         $element[SurfaceFormBuilderInterface::STALE_MARKER_KEY] = static::wrapped($element[SurfaceFormBuilderInterface::STALE_MARKER_KEY], static::reservedId($wrapper_id, 'stale'));
       }
@@ -545,6 +588,32 @@ final class Refreshing {
         $element[$key] = static::wrapped($element[$key], static::refreshId($wrapper_id, (string) $element[$key][self::REFRESH_KEY]));
       }
       static::wrapRefreshed($element[$key], $wrapper_id);
+    }
+  }
+
+  /**
+   * Gives every element placed beside the container its wrapper.
+   *
+   * Written into the complete form, where the element sits beside the
+   * container: Form API hands every #process callback the complete form
+   * by reference, and the element, processed before or after the
+   * container, is rendered with what is written here.
+   *
+   * @param array $container
+   *   The container, its #array_parents known.
+   * @param array $complete_form
+   *   The complete form.
+   * @param string $wrapper_id
+   *   The container's id.
+   */
+  protected static function wrapBeside(array $container, array &$complete_form, string $wrapper_id): void {
+    $around = array_slice($container['#array_parents'] ?? [], 0, -1);
+    foreach ($container[self::REFRESHED_BESIDE_KEY] ?? [] as $key) {
+      $exists = FALSE;
+      $element = NestedArray::getValue($complete_form, [...$around, $key], $exists);
+      if ($exists && is_array($element) && !isset($element[SurfaceFormBuilderInterface::REFRESH_ID_KEY])) {
+        NestedArray::setValue($complete_form, [...$around, $key], static::wrapped($element, static::reservedId($wrapper_id, 'beside-' . Html::getId($key))));
+      }
     }
   }
 

@@ -487,9 +487,10 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_examples.step16');
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
-    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
+    $built = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $form = $built[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('select', $form['venue']['#type']);
-    $panel = $form[SurfaceOperationForm::PANEL_KEY];
+    $panel = $built[SurfaceOperationForm::PANEL_KEY];
     $this->assertSame([ExamplePanels::CONCEPT, ExamplePanels::FILES, ExamplePanels::CONTRACT, ExamplePanels::TODAY], array_values(array_intersect(Element::children($panel, TRUE), [
       ExamplePanels::CONCEPT,
       ExamplePanels::FILES,

@@ -232,7 +232,7 @@ class RouteValuesTest extends SurfaceKernelTestBase {
     $this->assertSame(['white', 'cream'], array_column($item['properties']['color']['oneOf'], 'const'));
 
     // The contract panel beside the form states what the form draws.
-    $panel = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY];
+    $panel = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::PANEL_KEY];
     $this->assertStringContainsString('"const": "Welcome"', $panel['contract']['json']['#code']);
     $this->assertStringContainsString('"const": "cream"', $panel['full']['json']['#code']);
   }
@@ -277,13 +277,14 @@ class RouteValuesTest extends SurfaceKernelTestBase {
     $this->assertNotContains('occasion', $this->fullSchema()['required'] ?? []);
 
     $this->serveRoute('add_thanks');
-    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
+    $built = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $form = $built[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('item', $form['occasion']['#type']);
     $this->assertSame('thanks', $form['occasion']['#value']);
     $this->assertSame('thanks', $form['occasion']['#plain_text']);
     // The contract panel beside the form states it so, in both documents.
     foreach (['contract', 'full'] as $document) {
-      $schema = json_decode($form[SurfaceOperationForm::PANEL_KEY][$document]['json']['#code'], TRUE);
+      $schema = json_decode($built[SurfaceOperationForm::PANEL_KEY][$document]['json']['#code'], TRUE);
       $occasion = static::property($schema, 'occasion');
       $this->assertSame('thanks', $occasion['const'], $document);
       $this->assertSame('thanks', $occasion['default'], $document);

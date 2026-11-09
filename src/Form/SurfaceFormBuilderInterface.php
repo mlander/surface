@@ -128,10 +128,10 @@ interface SurfaceFormBuilderInterface {
    * Render key holding the DOM id of an element's own AJAX wrapper.
    *
    * Set on every refinement target, every key with variants and every
-   * element placed with placeRefreshed() when the container is processed:
-   * derived from the container's id and the element's path, so it is
-   * unique wherever the container's is and stays the same on every
-   * rebuild.
+   * element placed with placeRefreshed() or placeRefreshedBeside() when
+   * the container is processed: derived from the container's id and the
+   * element's path, so it is unique wherever the container's is and
+   * stays the same on every rebuild.
    */
   public const REFRESH_ID_KEY = '#surface_refresh_id';
 
@@ -445,10 +445,11 @@ interface SurfaceFormBuilderInterface {
    * Places an element in the container that every refinement replaces.
    *
    * For something shown inside the data surface that describes it as the
-   * answers stand (the operation form's panel), and so has to follow
-   * every rebuild, whichever key triggered it. It gets a wrapper of its
-   * own, like a refinement target's, and refreshSurface() replaces it
-   * beside the dependents. It is not a data surface key: extraction reads
+   * answers stand, and so has to follow every rebuild, whichever key
+   * triggered it. placeRefreshedBeside() does the same for an element
+   * outside the container (the operation form's panel). It gets a wrapper
+   * of its own, like a refinement target's, and refreshSurface() replaces
+   * it beside the dependents. It is not a data surface key: extraction reads
    * the data surface's own keys only.
    *
    * @param array $container
@@ -464,14 +465,46 @@ interface SurfaceFormBuilderInterface {
   public function placeRefreshed(array $container, string $key, array $element): array;
 
   /**
+   * Places an element beside the container that every refinement replaces.
+   *
+   * What placeRefreshed() does, for an element drawn outside the
+   * container, so a host can draw something after its own elements that
+   * follow the container, such as its buttons. The element is placed at
+   * $form[$key], a sibling of the container at $form[$container_key],
+   * and the container lists the key, so the container's #process gives
+   * the element a wrapper of its own and refreshSurface() finds it beside
+   * the rebuilt container and replaces it on every rebuild, whichever key
+   * triggered it. An element a host or a cosmetic layer takes out of the
+   * form is not replaced. Extraction never reads it: it is outside the
+   * container.
+   *
+   * @param array $form
+   *   The element holding the container, usually the complete form.
+   * @param string $container_key
+   *   The key of the container built by buildSurfaceForm() in $form.
+   * @param string $key
+   *   The key to place the element at in $form.
+   * @param array $element
+   *   The element.
+   *
+   * @return array
+   *   $form, holding the element.
+   *
+   * @throws \LogicException
+   *   When no container is at $container_key, or $key is that key.
+   */
+  public function placeRefreshedBeside(array $form, string $container_key, string $key, array $element): array;
+
+  /**
    * AJAX callback: replaces what the triggering element's change moved.
    *
    * One replace command per element that depends on the trigger,
    * transitively — the closure the discard cascade walks, each found in
    * the rebuilt container by its path and replaced by the wrapper id it
    * was rendered with — plus every element placed with
-   * placeRefreshed(), the stale marker removed and put back as the
-   * rebuild left it, and the messages the request produced. The
+   * placeRefreshed() or placeRefreshedBeside(), the stale marker removed
+   * and put back as the rebuild left it, and the messages the request
+   * produced. The
    * triggering element itself is not among them — what the person just
    * touched stays where it is, and only what it changed is redrawn —
    * with one exception: a trigger whose own value was refused is

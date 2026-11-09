@@ -6,6 +6,8 @@ namespace Drupal\surface\Access;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Access\AccessResultReasonInterface;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
@@ -63,11 +65,18 @@ use Symfony\Component\Routing\Route;
  *     operation declares none; any other refusal is the route's, saying
  *     why;
  *   - on a route that declares a flow (Flow), what the flow needs of the
- *     built resource (Flow::refusal()), refused saying why; a step the
+ *     built resource (Flow::refusal()) and of each step over another
+ *     resource (Flow::stepRefusal()), refused saying why; a step the
  *     flow does not have, a page not found; a step after the first with
- *     no stage, refused;
- *   - the access class, for that context, and with the stage's answer.
- * The answer varies by `stage` and `step` in the query. A URL that
+ *     no stage, refused; at a step over another resource, its
+ *     operation's permission, then that resource's operation
+ *     (Flow::servedAt()), whose arguments naming nothing is a page not
+ *     found;
+ *   - the access class, for that context, and with the stage's answer;
+ *     at a step over another resource, that resource's access too, so
+ *     the route's operation gates every page and the step adds its own.
+ * The answer varies by `stage` and `step` in the query, and a refusal
+ * at a flow's page is kept for this request alone. A URL that
  * names nothing is let through in the request's own dispatch, for the
  * form to answer with a 404, and refused when access is asked about a
  * link, so no link to a page not found is drawn
@@ -201,19 +210,52 @@ final class OperationAccessCheck implements AccessInterface {
     catch (\InvalidArgumentException $e) {
       return AccessResult::forbidden($e->getMessage());
     }
-    $flow = Flow::onRoute($route, (string) $route_match->getRouteName());
+    $flow = Flow::onRoute($route, (string) $route_match->getRouteName())?->resolved($this->registry);
+    $at = $served;
+    // Every answer at a flow's page varies by the step and the stage.
+    $varies = (new CacheableMetadata())->addCacheContexts([
+      'url.query_args:' . Flow::STAGE,
+      'url.query_args:' . Flow::STEP,
+    ]);
     if ($flow !== NULL) {
       $refusal = $flow->refusedAt($served, $this->resources, $this->registry, (string) $route_match->getRouteName(), $query, $staged !== NULL);
       if ($refusal === FALSE) {
         return $this->gate->namesNothing($request, answersNotFound: static::answersNotFound($route));
       }
       if ($refusal !== NULL) {
-        return AccessResult::forbidden($refusal)->setCacheMaxAge(0);
+        return AccessResult::forbidden($refusal)->addCacheableDependency($varies)->setCacheMaxAge(0);
+      }
+      // A step over another resource adds its operation's permission,
+      // asked before that operation is built, so an account without it
+      // hears the permission's reason and nothing of what the step names.
+      $step = $query === NULL ? 1 : $flow->step($query);
+      $over = is_int($step) ? $flow->over($step) : NULL;
+      if ($over !== NULL) {
+        $permission = $this->gate->permission($over['resource'], $over['operation'], $account, $over['arguments'] ?? []);
+        if ($permission->isForbidden()) {
+          $reason = $permission instanceof AccessResultReasonInterface ? $permission->getReason() : NULL;
+          return AccessResult::forbidden($reason)->addCacheableDependency($permission)->addCacheableDependency($varies)->setCacheMaxAge(0);
+        }
+      }
+      // A step over another resource is that resource's operation.
+      try {
+        $at = $flow->servedAt($served, $this->resources, $this->registry, (string) $route_match->getRouteName(), $query);
+      }
+      catch (NamesNothingException) {
+        return $this->gate->namesNothing($request, answersNotFound: static::answersNotFound($route));
+      }
+      catch (\InvalidArgumentException $e) {
+        return AccessResult::forbidden($e->getMessage())->addCacheableDependency($varies)->setCacheMaxAge(0);
       }
     }
+    // The route's operation gates every page of a flow; a step over
+    // another resource adds its own permission and access.
     $access = AccessResult::allowed()
-      ->addCacheContexts(['url.query_args:' . Flow::STAGE, 'url.query_args:' . Flow::STEP])
+      ->addCacheableDependency($varies)
       ->andIf($this->resources->access($served->resource, $served->context, $account));
+    if ($at !== $served) {
+      $access = $access->andIf($this->resources->access($at->resource, $at->context, $account));
+    }
     // Decision: see
     // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
     return $staged === NULL ? $access : $access->andIf($staged[1]);

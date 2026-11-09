@@ -651,3 +651,66 @@ surface_examples.catering:
           constraints:
             Regex:
               pattern: '/^\+?[0-9 ]{7,20}$/D'
+
+# Generated from the event.notices resource by drush surface:config-schema.
+surface_examples.event_notices:
+  type: config_object
+  label: 'Event notices, example 19'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    banner:
+      type: string
+      label: 'Banner'
+      nullable: true
+      constraints:
+        Length:
+          max: 500
+    show_banner:
+      type: boolean
+      label: 'Show the banner'
+      nullable: true
+
+# Generated from the event.setup resource by drush surface:config-schema.
+surface_examples.event_setup:
+  type: config_object
+  label: 'Event setup, example 19'
+  constraints:
+    FullyValidatable: ~
+  mapping:
+    name:
+      type: string
+      label: 'Event name'
+      constraints:
+        Length:
+          max: 128
+    date:
+      type: string
+      label: 'Date'
+      nullable: true
+      constraints:
+        Regex:
+          pattern: '/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/D'
+    capacity:
+      type: integer
+      label: 'Capacity'
+      nullable: true
+      constraints:
+        Range:
+          min: 1
+          max: 5000
+    price:
+      type: float
+      label: 'Ticket price'
+      nullable: true
+      constraints:
+        Range:
+          min: 0
+    sales_open:
+      type: boolean
+      label: 'Ticket sales open'
+      nullable: true
+    note:
+      type: string
+      label: 'Note for buyers'
+      nullable: true

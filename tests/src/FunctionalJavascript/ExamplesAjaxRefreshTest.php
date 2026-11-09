@@ -22,6 +22,14 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
 
   /**
+   * Script finding the contract panel: the details around its keys table.
+   *
+   * The examples' other panels share its class, so the class alone does
+   * not tell it apart.
+   */
+  protected const CONTRACT_PANEL = 'document.querySelector("table.surface-contract-keys").closest("details")';
+
+  /**
    * Tests example 2: the venue moves the room and the capacity, then the room.
    */
   public function testTheVenueAndThenTheRoom(): void {
@@ -93,6 +101,11 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
       'title, type, oneOf (6), if/then on venue (3 cases)',
     ], $this->todayRow('room'));
 
+    // The contract panel is drawn after Save, outside the container.
+    $this->assertSame([TRUE, FALSE, TRUE], $this->contractPanelPlace());
+    $this->assertSame('the free variant', $this->contractRightNow('ticket'));
+    $this->getSession()->executeScript(self::CONTRACT_PANEL . '.dataset.surfaceProbe = "kept";');
+
     $this->probe(['surface[pricing]', 'surface[contact][email]']);
     $page->selectFieldOption('surface[pricing]', 'paid');
     $assert->assertWaitOnAjaxRequest();
@@ -116,6 +129,39 @@ class ExamplesAjaxRefreshTest extends ExamplesWebDriverTestBase {
     ], $this->todayRow('ticket'));
     $this->assertSame($documents, $this->todayDocuments());
     $assert->elementsCount('css', 'details.surface-today-panel', 1);
+    // The contract panel outside the container was replaced, says the
+    // paid variant, and is still after Save.
+    $this->assertNotSame('kept', $this->getSession()->evaluateScript('return ' . self::CONTRACT_PANEL . '.dataset.surfaceProbe || "";'));
+    $assert->elementsCount('css', 'table.surface-contract-keys', 1);
+    $this->assertSame('the paid variant', $this->contractRightNow('ticket'));
+    $this->assertSame([TRUE, FALSE, TRUE], $this->contractPanelPlace());
+  }
+
+  /**
+   * Says where the contract panel is drawn.
+   *
+   * @return bool[]
+   *   Whether it follows the Save button, whether it is inside the data
+   *   surface container, and whether that container was found.
+   */
+  protected function contractPanelPlace(): array {
+    return $this->getSession()->evaluateScript('return (() => { const panel = ' . self::CONTRACT_PANEL . '; const save = document.querySelector("input[type=submit][value=Save]"); const container = document.querySelector("[name=\\"surface[pricing]\\"]").closest("[data-drupal-selector=\\"edit-surface\\"]"); return [Boolean(save.compareDocumentPosition(panel) & Node.DOCUMENT_POSITION_FOLLOWING), container !== null && container.contains(panel), container !== null]; })();');
+  }
+
+  /**
+   * Reads the "Right now" cell of one key's row of the contract panel.
+   *
+   * @param string $key
+   *   The key's path.
+   *
+   * @return string
+   *   The cell's text.
+   */
+  protected function contractRightNow(string $key): string {
+    return (string) $this->getSession()->evaluateScript(sprintf(
+      'return Array.from(document.querySelectorAll(%s)).pop().textContent.trim();',
+      json_encode('table.surface-contract-keys tr[surface-key="' . $key . '"] td'),
+    ));
   }
 
   /**

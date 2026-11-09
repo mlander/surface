@@ -52,6 +52,7 @@ class ExamplesRoutesTest extends BrowserTestBase {
     'surface-examples/3',
     'surface-examples/4',
     'surface-examples/5',
+    'surface-examples/19',
     'surface-examples/reset',
   ];
 
