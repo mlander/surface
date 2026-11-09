@@ -5121,13 +5121,18 @@ must carry before one is declared.
 
 ### A flow is declared on the route that draws it, not a resource
 
-Decided 2026-11-08. A flow is the default `_surface_flow: { steps:
-[...], label: ... }` on an operation form route: the group ids of the
-route's one operation, drawn one per step into one stage, `?step=N` and
+Decided 2026-11-08, amended 2026-11-09. A flow is the default
+`_surface_flow: { steps: [...], label: ... }` on an operation form
+route, drawn one step at a time into one stage, `?step=N` and
 `?stage=<id>` in the query, ending in a confirm page that `steps` does
-not list. The keys in no group are drawn at the first step, whose
-submit opens a stage when the query names none. Next stages a step's
-keys and goes on; Back goes back and stages nothing.
+not list. A step is one of two shapes: a group id of the route's
+operation, or a map `{ resource, operation, group, arguments }`, a step
+over another resource's operation, its whole surface when `group` is
+left out, its parameters the literal `arguments`. The first step is a
+group of the route's operation. The keys in no group are drawn at the
+first step over their operation, and the route's first step opens a
+stage when the query names none. Next stages a step's keys and goes on;
+Back goes back and stages nothing; Cancel discards the stage.
 `SurfaceFormBuilderInterface::buildSurfaceForm()` takes the keys to draw,
 so a step draws its own: a key not drawn says nothing, and the staged
 load overlays what earlier steps staged.
@@ -5136,8 +5141,23 @@ load overlays what earlier steps staged.
   the door that draws it declares it; the build, the tools and the HTTP
   door never see it. An agent stages the same writes through the stage
   input, a person through the steps.
-- **One operation.** A stage refuses a write to one thing through a
-  second operation, so the steps share the route's. A flow over a create
+- **Two step shapes.** Steps were groups of the route's operation
+  alone. The stage already holds writes to several resources, and the
+  confirm page, `changes` and apply are about all of them, so a flow
+  across settings objects, the registration case the stage design named,
+  needs only a step that names another resource. Such a step is
+  served by that resource's operation (`Form\Flow::servedAt()`): the
+  route's operation still gates every page, and the step adds its own
+  permission, access and the rule of where a stage applies, refused at
+  match. It may not create, since a create's local id does not cross
+  resources (limit 2 of the stage); the route's own operation may.
+  Fixed values, defaults, the query and the cosmetic layer stay the
+  route resource's. Two steps over resources that share one
+  identity-less storage class are one thing to the stage, and the
+  stage's `conflict` rule refuses the second write when it is staged.
+- **One operation per thing.** A stage refuses a write to one thing
+  through a second operation, so the group steps share the route's, and
+  the steps over another resource share that resource's. A flow over a create
   writes each later step into the create its first step staged: the
   stage is handed on naming that create's position
   (`Staging\Stage::creating()`), and `ResourcesInterface::operation()`
@@ -5151,11 +5171,13 @@ load overlays what earlier steps staged.
 
 The content type example's flow draws the update's three groups over
 three steps (`/admin/structure/types/manage/{type}/surface-flow`).
+Example 19 (`/surface-examples/19`) draws two groups of `event.setup`,
+then `event.notices` as a step over another resource.
 
 (`Form\Flow`, `Form\SurfaceOperationForm`, `Form\Drawing`,
-`surface_stage_test`'s `Resource\ItineraryResource`,
-`surface_examples_node_type.routing.yml`, `FlowFormTest`,
-`FlowRoundTripTest`)
+`surface_stage_test`'s `Resource\ItineraryResource` and its routes,
+`surface_examples_node_type.routing.yml`, `surface_examples.routing.yml`,
+`FlowFormTest`, `FlowRoundTripTest`)
 
 ### A step order is checked against the refiner graph and a create's required keys at match time
 
@@ -5169,7 +5191,7 @@ at a step before a key its
 refinement depends on (`DefinitionMap::refinements()`), naming both; and
 for a create, a required key with no default drawn after the first
 step, naming it. The router's rebuild checks only the route's shape: a
-`_surface_flow` that is no map of distinct group ids with an optional
+`_surface_flow` that is no map of distinct steps with an optional
 non-empty `label` and `redirect`, a flow on a route that names no
 operation, or one whose `_form` is not the operation form.
 
@@ -5184,8 +5206,22 @@ operation, or one whose `_form` is not the operation form.
   refuses the step that leaves the key empty, as it refuses any write.
 - **Not derived.** The author orders the steps; the graph only refuses
   an order that would draw a key before what it is narrowed by.
+- **Per operation.** Amended 2026-11-09 with steps over another
+  resource. A refiner cannot cross resources, so the unknown group and
+  the refiner order are asked over the steps drawn from one operation:
+  the route's in `refusal()` at every page, another resource's in
+  `Form\Flow::servedAt()` at its own step, and for every step over
+  another resource at the first step while no stage is named, so a flow
+  that cannot be served is refused before anything is staged. What the
+  registry alone shows of each step over another resource, an operation
+  not discovered, the route's own operation, one that creates, deletes
+  or is read-only, one a stage does not apply to (`does_not_apply`), and
+  the duplicate checks of the rebuild asked again over resolved resource
+  ids, `Form\Flow::stepRefusal()` asks at every page.
+  Only the route's operation may create, so the required keys check is
+  its alone.
 
-(`Form\Flow::refusal()`, `Form\Flow::assertWritten()`,
+(`Form\Flow::refusal()`, `Form\Flow::stepRefusal()`, `Form\Flow::servedAt()`, `Form\Flow::assertWritten()`,
 `Access\OperationAccessCheck`, `Access\OperationRouteSubscriber`,
 `FlowFormTest`)
 
@@ -5194,11 +5230,11 @@ operation, or one whose `_form` is not the operation form.
 Decided 2026-11-08. `?step=confirm` draws the stage's `changes`, read
 through the pipeline, as a table (position, resource, operation, kind,
 parameters, the keys each moved), says "Each is checked again when it
-is made. They are made together or not at all.", and offers Back, Discard
-the stage and Apply the stage. Apply makes what the page listed: the
+is made. They are made together or not at all.", draws the route's
+panel, and offers Save, Back and Cancel. Save makes what the page listed: the
 page posts back a fingerprint of the stage's writes as it drew them,
-and a stage that holds other writes by then refuses the Apply and is
-listed again. Apply is then rehearsed, each refusal said on the page and
+and a stage that holds other writes by then refuses the Save and is
+listed again. The apply is then rehearsed, each refusal said on the page and
 nothing written, and run through the stage's `apply` for the owner; the
 page then goes to the flow's `redirect` route, or stays and shows the
 stage applied. A stage that changed while it was applied is said as an
@@ -5206,7 +5242,7 @@ error, and the page is built again.
 
 - **What was listed, not what is there.** A write staged from another
   tab or another door after the page was drawn, a delete among them,
-  would otherwise be applied unseen by the person who pressed Apply.
+  would otherwise be applied unseen by the person who pressed Save.
 - **The same fingerprint over HTTP.** `StageStorage::listed()`, an
   xxh128 hash of the record's writes and next position, is the confirm
   page's fingerprint and part of the `ETag` of `GET` and `PATCH
@@ -5221,16 +5257,32 @@ error, and the page is built again.
 
 - **Forced by what cannot be undone.** No new flag: when a write is a
   delete, or its operation declares `destructive`, the page says how
-  many cannot be undone and Apply is a danger button.
-- **Discard is a button.** It deletes the stage through its `delete`,
+  many cannot be undone and Save is a danger button.
+- **Cancel is a button.** It deletes the stage through its `delete`,
   and a link may not delete.
+- **A closed stage says so.** A step asked for with a stage already
+  applied or voided goes to the confirm page (303), which says when the
+  stage was applied, or why it was voided, and links to the first step
+  with no stage, "Start again", and to the flow's `redirect` when it
+  names one. What is posted from a page drawn before, as the browser's
+  Back after Save shows it, is judged by each button's submit handler
+  (`closedGuard()`), not by validation: core drops a validation error
+  for a button whose `#limit_validation_errors` is empty, as Back's and
+  Cancel's are, and takes a posted `op` that names no drawn button for
+  the first button drawn. Back is let through, and Cancel on a voided
+  stage; Next, Save, Cancel on an applied stage, whose record says what
+  was made, and any `op` that is not the pressed button's label answer
+  the same sentence and link as an error message, not the stage's
+  `does_not_apply`, and go to the confirm page.
 - **How a form door shows a run's outputs.** `changes` before the apply,
   `applied` after: the record keeps `applied` once applied, and the page
   reads it. This closes what the entity example's bulk delete left open
   ([A destructive bulk operation stages, then confirms over the stage](#a-destructive-bulk-operation-stages-then-confirms-over-the-stage)).
 
-(`Form\SurfaceOperationForm::confirmStep()`, `ConfirmStepTest`,
-`FlowRoundTripTest`, `StagedConfigTest::testApplyEtagCarriesTheStagedWrites()`)
+(`Form\SurfaceOperationForm::confirmStep()`,
+`Form\SurfaceOperationForm::closedGuard()`, `ConfirmStepTest`,
+`FlowFormTest`, `FlowRoundTripTest`,
+`StagedConfigTest::testApplyEtagCarriesTheStagedWrites()`)
 
 ### One store contract; a stage's lifetime is data on its record
 

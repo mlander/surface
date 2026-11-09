@@ -119,7 +119,7 @@ class ContractDiffCommandTest extends SurfaceKernelTestBase {
     $this->copyCommitted();
     [$status, $display] = $this->diff(['--module' => self::PINNED, '--dir' => $this->directory]);
     $this->assertSame(0, $status, $display);
-    $this->assertStringContainsString('31 resources and structures in contract 4, emitted for user 1', $display);
+    $this->assertStringContainsString('33 resources and structures in contract 4, emitted for user 1', $display);
     $this->assertStringContainsString('0 failing', $display);
   }
 
@@ -236,7 +236,7 @@ class ContractDiffCommandTest extends SurfaceKernelTestBase {
     $this->assertSame(['first.newsletter', 'first.store'], $report['written']);
     $this->assertSame(['first.gone'], $report['removed']);
     $this->assertFileDoesNotExist($this->directory . '/first.gone.json');
-    $this->assertCount(40, glob($this->directory . '/*.json'), 'The other modules\' 38 baselines and the named module\'s two.');
+    $this->assertCount(42, glob($this->directory . '/*.json'), 'The other modules\' 40 baselines and the named module\'s two.');
     $this->assertFileExists($this->directory . '/registration.step1.json');
   }
 

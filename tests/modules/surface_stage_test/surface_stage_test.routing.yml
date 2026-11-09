@@ -1,6 +1,7 @@
 # The itinerary drawn over steps, one group a step, into a stage: what a
-# flow is checked against. Four flows hold and three are refused when the
-# route is matched, each saying why.
+# flow is checked against. Six flows hold and five are refused when the
+# route is matched, each saying why; three of them draw a step over
+# another resource.
 
 # An update over its three groups in order.
 surface_stage_test.itinerary_flow:
@@ -35,6 +36,63 @@ surface_stage_test.itinerary_flow_one:
     _surface_resource: 'stage_test.itinerary'
     _surface_operation: 'update'
     _surface_flow: { steps: [where] }
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# Two groups of the update, then a ledger row's update as a third step:
+# one stage, two resources.
+surface_stage_test.itinerary_flow_ledger:
+  path: '/surface-test/itinerary/{id}/flow-ledger'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip and its ledger row'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'update'
+    _surface_flow:
+      steps:
+        - where
+        - when
+        - { resource: stage_test.ledger, operation: update, arguments: { id: row } }
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# Two groups of the update, then my module's settings, which ask a
+# permission of their own at the third step.
+surface_stage_test.itinerary_flow_settings:
+  path: '/surface-test/itinerary/{id}/flow-settings'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip and my settings'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'update'
+    _surface_flow:
+      steps: [where, when, { resource: my_module.settings, operation: configure }]
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# Refused: the vault is kept in State, which a stage does not apply to.
+surface_stage_test.itinerary_flow_vault:
+  path: '/surface-test/itinerary/{id}/flow-vault'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip and the vault'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'update'
+    _surface_flow:
+      steps: [where, { resource: tool_test.vault, operation: configure }]
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# Refused: a step over another resource that creates.
+surface_stage_test.itinerary_flow_ledger_create:
+  path: '/surface-test/itinerary/{id}/flow-ledger-create'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip and add a ledger row'
+    _surface_resource: 'stage_test.itinerary'
+    _surface_operation: 'update'
+    _surface_flow:
+      steps: [where, { resource: stage_test.ledger, operation: create }]
   requirements:
     id: '[a-z0-9_-]+'
 

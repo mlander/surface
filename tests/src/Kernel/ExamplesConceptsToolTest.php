@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the tool calls of examples 7 to 18, and the README quoting them.
+ * Tests the tool calls of examples 7 to 19, and the README quoting them.
  *
  * Makes every call ConceptCalls writes down, on the settings the module
  * ships, the way each example's panel makes it, with example 10's
@@ -172,6 +172,9 @@ class ExamplesConceptsToolTest extends SurfaceKernelTestBase {
     foreach (array_keys(ConceptCalls::CALLS['event.catering']) as $name) {
       $this->assertSame($answers['event.catering'][$name], $answers['event.catering.method'][$name], sprintf('The same keys declared with calls answer %s the same.', $name));
     }
+    $this->assertStringStartsWith('Success: Dry run of Set up the event: the values were accepted and prepared, and nothing was written.', $answers['event.setup']['set_up']);
+    $this->assertSame("Failed: The values were refused:\n" . '/date: Write the date as YYYY-MM-DD, such as 2026-10-17.', $first($answers['event.setup']['bad_date']));
+    $this->assertStringContainsString('"banner":"Doors open at six.","show_banner":true', $answers['event.notices']['banner']);
     $pages = $this->container->get('class_resolver')->getInstanceFromDefinition(Retitle::class)->ids();
     $this->assertStringContainsString(sprintf('titles: [{"node":%d,"old":"volunteer briefing for the night shift","new":"Volunteer Briefing for the Night Shift"},{"node":%d,"old":"WHERE TO PARK ON FESTIVAL DAYS","new":"Where to Park on Festival Days"}', $pages['one'], $pages['two']), $answers['ai.retitle']['dry_run'], 'A dry run answers each title it would write.');
     $this->assertSame("Failed: The values were refused:\n" . implode("\n", [

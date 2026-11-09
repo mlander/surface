@@ -14,7 +14,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the confirm page a flow ends in: the stage's writes, and Apply.
+ * Tests the confirm page a flow ends in: the stage's writes, and Save.
  *
  * Over the itinerary's update flow, whose stage is given a second write
  * through the trip's own operations, as any door may write into it.
@@ -75,7 +75,7 @@ class ConfirmStepTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a staged delete makes Apply a danger button, and says so.
+   * Tests a staged delete makes Save a danger button, and says so.
    */
   public function testDeleteIsSaidAndApplyIsDangerous(): void {
     $result = $this->stage($this->stage, 'stage_test.itinerary', ['id' => 'other'], [], 'delete');
@@ -99,28 +99,28 @@ class ConfirmStepTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests Apply makes what the page listed, or nothing.
+   * Tests Save makes what the page listed, or nothing.
    *
    * A write staged after the page was drawn, here a delete from another
-   * door, refuses the Apply posted from that page; the page lists it,
-   * and Apply from the page drawn again makes every write.
+   * door, refuses the Save posted from that page; the page lists it,
+   * and Save from the page drawn again makes every write.
    */
   public function testApplyRefusesWhatThePageDidNotList(): void {
     $listed = $this->confirmPage()['surface_stage_listed']['#value'];
     $result = $this->stage($this->stage, 'stage_test.itinerary', ['id' => 'third'], [], 'delete');
     $this->assertTrue($result->committed, $this->said($result));
-    $state = $this->post([], 'Apply the stage', ['surface_stage_listed' => $listed]);
+    $state = $this->post([], 'Save', ['surface_stage_listed' => $listed]);
     $this->assertSame(['The stage changed since this page was drawn; it is listed again below.'], array_values(array_map('strval', $state->getErrors())));
     $this->assertSame('north', $this->trips()->get('trip')['region'], 'Nothing was applied.');
     $this->assertIsArray($this->trips()->get('third'));
     $this->assertSame(StageStorage::OPEN, $this->stages()->read($this->stage)['status']);
     // The page shown with the error is drawn from the stage as it is now,
-    // and carries what it lists for the next Apply.
+    // and carries what it lists for the next Save.
     $shown = $state->getCompleteForm();
     $this->assertCount(3, $shown['changes']['#rows']);
     $this->assertSame($this->confirmPage()['surface_stage_listed']['#value'], $shown['surface_stage_listed']['#value']);
     $this->assertNotSame($listed, $shown['surface_stage_listed']['#value']);
-    $state = $this->post([], 'Apply the stage', ['surface_stage_listed' => $shown['surface_stage_listed']['#value']]);
+    $state = $this->post([], 'Save', ['surface_stage_listed' => $shown['surface_stage_listed']['#value']]);
     $this->assertSame([], $state->getErrors());
     $this->assertSame('south', $this->trips()->get('trip')['region']);
     $this->assertSame(5, $this->trips()->get('other')['nights']);
@@ -129,7 +129,7 @@ class ConfirmStepTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a voided stage shows why, and offers no Apply.
+   * Tests a voided stage shows why, and offers no Save.
    */
   public function testVoidedStageShowsItsStatus(): void {
     $record = $this->stages()->read($this->stage);
@@ -138,28 +138,27 @@ class ConfirmStepTest extends SurfaceKernelTestBase {
     $record['applied'] = [];
     $this->stages()->write($record);
     $form = $this->confirmPage();
-    $this->assertSame((string) StageStorage::voided($record), (string) $form['status']['#markup']);
-    $this->assertStringContainsString('was voided at position 1', (string) $form['status']['#markup']);
+    $this->assertSame('The stage ' . $this->stage . ' was voided at position 1; writes at and before it were made permanent by a schema change. Cancel removes it.', (string) $form['status']['#markup'], 'The page names its own button, where the tools hear "Discard the stage."');
     $this->assertSame([], $form['applied']['#rows']);
     $this->assertArrayNotHasKey('apply', $form['actions']);
     $this->assertArrayHasKey('discard', $form['actions']);
   }
 
   /**
-   * Tests Apply makes both writes and marks the stage applied.
+   * Tests Save makes both writes and marks the stage applied.
    */
   public function testApplyMakesEveryWrite(): void {
     $this->confirmPage();
-    $state = $this->post([], 'Apply the stage');
+    $state = $this->post([], 'Save');
     $this->assertSame([], $state->getErrors());
     $this->assertNull($state->getRedirect(), 'With no cosmetic layer, the page stays.');
     $this->assertSame(['Applied 2 writes.'], array_map('strval', $this->container->get('messenger')->messagesByType('status')));
     $this->assertSame('south', $this->trips()->get('trip')['region']);
     $this->assertSame(5, $this->trips()->get('other')['nights']);
     $this->assertSame(StageStorage::APPLIED, $this->stages()->read($this->stage)['status']);
-    // The page shows the stage applied, what was made, and no Apply.
+    // The page shows the stage applied, what was made, and no Save.
     $form = $this->confirmPage();
-    $this->assertSame('The stage was applied; its writes were made.', (string) $form['status']['#markup']);
+    $this->assertMatchesRegularExpression('/^This stage was applied \d+ seconds? ago\.$/', (string) $form['status']['#markup']);
     $this->assertCount(2, $form['applied']['#rows']);
     $this->assertArrayNotHasKey('apply', $form['actions']);
   }
@@ -171,7 +170,7 @@ class ConfirmStepTest extends SurfaceKernelTestBase {
     // The trip moves behind the stage's back.
     $this->trips()->set('other', ['id' => 'other', 'region' => 'north', 'day' => 'thu', 'nights' => 2]);
     $this->confirmPage();
-    $state = $this->post([], 'Apply the stage');
+    $state = $this->post([], 'Save');
     $errors = array_map('strval', $state->getErrors());
     $this->assertCount(1, $errors);
     $this->assertStringContainsString('(conflict)', reset($errors));
@@ -180,11 +179,11 @@ class ConfirmStepTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests Discard deletes the stage and starts the flow again.
+   * Tests Cancel deletes the stage and starts the flow again.
    */
   public function testDiscardDeletesTheStage(): void {
     $this->confirmPage();
-    $state = $this->post([], 'Discard the stage');
+    $state = $this->post([], 'Cancel');
     $this->assertSame([], $state->getErrors());
     $this->assertNull($this->stages()->read($this->stage));
     $redirect = $state->getRedirect();

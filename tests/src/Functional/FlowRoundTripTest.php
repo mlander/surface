@@ -11,12 +11,13 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests the content type flow in a browser: three steps, confirm, apply.
+ * Tests two flows over HTTP: three steps, confirm, save.
  *
  * What the kernel tests cannot see: each step's form posts to its own
  * URL, the stage and the step in its query, and each Next lands on the
- * next step's URL. Nothing is written to the content type until the
- * confirm page applies the stage.
+ * next step's URL. Nothing is written until the confirm page saves the
+ * stage. The content type's flow is one resource; example 19's draws a
+ * second resource at its third step.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -25,7 +26,7 @@ class FlowRoundTripTest extends BrowserTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['node', 'surface', 'surface_examples_node_type'];
+  protected static $modules = ['node', 'surface', 'surface_examples_node_type', 'surface_examples'];
 
   /**
    * {@inheritdoc}
@@ -74,7 +75,7 @@ class FlowRoundTripTest extends BrowserTestBase {
     $assert->elementsCount('css', 'table tbody tr', 1);
     $assert->elementTextContains('css', 'table tbody tr', '/title_label, /help, /promote, /display_submitted');
 
-    $this->submitForm([], 'Apply the stage');
+    $this->submitForm([], 'Save');
     // The flow's `redirect`, the content types list.
     $assert->addressEquals('admin/structure/types');
     $assert->pageTextContains('Applied 1 write.');
@@ -98,6 +99,60 @@ class FlowRoundTripTest extends BrowserTestBase {
     ]));
     $this->drupalGet('admin/structure/types/manage/page/surface-flow', ['query' => ['stage' => $stage, 'step' => '2']]);
     $assert->statusCodeEquals(403);
+  }
+
+  /**
+   * Tests example 19: two groups of one resource, then another resource.
+   */
+  public function testTheExampleFlowStagesTwoResources(): void {
+    $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
+    $assert = $this->assertSession();
+    $this->drupalGet('surface-examples/19');
+    $assert->statusCodeEquals(200);
+    $assert->pageTextContains('A flow draws one form over several steps into one stage');
+    $assert->fieldExists('surface[name]');
+    $assert->fieldNotExists('surface[price]');
+    $assert->fieldNotExists('surface[banner]');
+
+    $this->submitForm(['surface[name]' => 'Winter meetup', 'surface[capacity]' => '80'], 'Next');
+    $stage = $this->query()['stage'];
+    $this->assertSame(['stage' => $stage, 'step' => '2'], $this->query());
+    $assert->fieldExists('surface[price]');
+    $assert->fieldNotExists('surface[name]');
+    $this->submitForm(['surface[price]' => '15', 'surface[sales_open]' => TRUE], 'Next');
+    $this->assertSame(['stage' => $stage, 'step' => '3'], $this->query());
+    $assert->fieldExists('surface[banner]');
+    $assert->fieldNotExists('surface[price]');
+    $this->submitForm(['surface[banner]' => 'Doors open at six.', 'surface[show_banner]' => TRUE], 'Next');
+    $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $this->query());
+    $rows = '//table[caption[contains(., "Staged writes")]]/tbody/tr';
+    $assert->elementsCount('xpath', $rows, 2);
+    $assert->elementTextContains('xpath', $rows . '[1]', 'event.setup');
+    $assert->elementTextContains('xpath', $rows . '[2]', 'event.notices');
+    $assert->pageTextContains('A flow draws one form over several steps into one stage');
+    $this->assertSame('Autumn meetup', $this->config('surface_examples.event_setup')->get('name'), 'Nothing is written yet.');
+
+    $this->submitForm([], 'Save');
+    // No `redirect`: the confirm page, showing the stage applied.
+    $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $this->query());
+    $assert->pageTextContains('Applied 2 writes.');
+    $assert->pageTextMatches('/This stage was applied \d+ seconds? ago\./');
+    $assert->linkExists('Start again');
+    $assert->buttonNotExists('Save');
+    \Drupal::configFactory()->reset();
+    $setup = $this->config('surface_examples.event_setup');
+    $this->assertSame('Winter meetup', $setup->get('name'));
+    $this->assertSame(80, $setup->get('capacity'));
+    $this->assertSame(15.0, $setup->get('price'));
+    $this->assertTrue($setup->get('sales_open'));
+    $notices = $this->config('surface_examples.event_notices');
+    $this->assertSame('Doors open at six.', $notices->get('banner'));
+    $this->assertTrue($notices->get('show_banner'));
+
+    // Step 2 asked again with the applied stage goes to its confirm page.
+    $this->drupalGet('surface-examples/19', ['query' => ['stage' => $stage, 'step' => '2']]);
+    $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $this->query());
+    $assert->pageTextMatches('/This stage was applied .+ ago\./');
   }
 
   /**

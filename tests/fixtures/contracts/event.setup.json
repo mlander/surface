@@ -1,0 +1,91 @@
+{
+    "resource": "event.setup",
+    "module": "surface_examples",
+    "contract": 4,
+    "documents": [
+        {
+            "resource": "event.setup",
+            "operation": "configure",
+            "label": "Set up the event",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Set up the event",
+                "description": "Sets the event name, date and capacity, then the ticket price, whether sales are open and a note for buyers.",
+                "x-surface": {
+                    "contract": 4,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Set up the event",
+                        "description": "Sets the event name, date and capacity, then the ticket price, whether sales are open and a note for buyers.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "title": "Event name",
+                        "type": "string",
+                        "maxLength": 128,
+                        "default": "Autumn meetup"
+                    },
+                    "date": {
+                        "title": "Date",
+                        "description": "YYYY-MM-DD.",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date",
+                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
+                        "default": "2026-10-17",
+                        "x-surface": {
+                            "patternMessage": "Write the date as YYYY-MM-DD, such as 2026-10-17."
+                        }
+                    },
+                    "capacity": {
+                        "title": "Capacity",
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "minimum": 1,
+                        "maximum": 5000,
+                        "default": 100
+                    },
+                    "price": {
+                        "title": "Ticket price",
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "minimum": 0,
+                        "default": 25
+                    },
+                    "sales_open": {
+                        "title": "Ticket sales open",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false
+                    },
+                    "note": {
+                        "title": "Note for buyers",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "name"
+                ]
+            }
+        }
+    ]
+}
