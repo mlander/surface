@@ -25,6 +25,8 @@ use Drupal\surface_examples\Resource\BulletinResource;
 use Drupal\surface_examples\Resource\CateringByMethodResource;
 use Drupal\surface_examples\Resource\CateringResource;
 use Drupal\surface_examples\Resource\DoorsResource;
+use Drupal\surface_examples\Resource\EventNoticesResource;
+use Drupal\surface_examples\Resource\EventSetupResource;
 use Drupal\surface_examples\Resource\MailerResource;
 use Drupal\surface_examples\Resource\ProgramResource;
 use Drupal\surface_examples\Resource\RegistrationStep1Resource;
@@ -825,6 +827,17 @@ final class ExamplesController extends ControllerBase {
           $this->t('The keys as properties: @properties lines of code; with calls: @method.', [
             '@properties' => CodeLines::count($this->file(CateringResource::class)),
             '@method' => CodeLines::count($this->file(CateringByMethodResource::class)),
+          ]),
+        ],
+      ],
+      19 => [
+        'title' => $series[19]['title'],
+        'sentence' => $this->t('The event set up in three steps into one stage: two groups of one resource, then another resource, nothing written until the confirm page saves them together.'),
+        'items' => [
+          $this->route('surface_examples.step19'),
+          $this->t('The setup: @setup lines of code; the notices: @notices.', [
+            '@setup' => CodeLines::count($this->file(EventSetupResource::class)),
+            '@notices' => CodeLines::count($this->file(EventNoticesResource::class)),
           ]),
         ],
       ],

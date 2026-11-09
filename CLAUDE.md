@@ -432,21 +432,35 @@ the record of the rework that brought the module to the pattern.
   (`docs/decisions.md#a-door-reads-what-a-run-reports-through-the-pipeline`).
 - **Flow**: several steps a person or an agent takes over one stage,
   ending in its `apply`. Declared on an operation form route,
-  `_surface_flow: { steps: [...], label: ..., redirect: ... }` (`Form\Flow`,
-  internal): the route's one operation drawn a group a step
-  (`buildSurfaceForm(..., $keys)`), keys in no group at the first,
-  `?step=N` and `?stage=<id>` in the query, the first step opening the
-  stage, Next staging a step and Back staging nothing, and a confirm
-  page at `?step=confirm` that lists `changes` as a table, says how many
-  writes cannot be undone, and applies what it listed (a fingerprint it
-  posts back) or discards the stage; once applied it goes to the flow's
-  `redirect` route or stays. The rebuild refuses a malformed
-  `_surface_flow` default and a flow on a route whose `_form` is not the
-  operation form; the match (the access check and the form, through
-  `Flow::refusal()`) refuses an operation a flow cannot stage (a delete,
-  a read-only operation, one a stage does not apply to), an unknown
-  group, a key drawn before a key it is refined by, and a create's
-  required key with no default after the first step. A flow over a
+  `_surface_flow: { steps: [...], label: ..., redirect: ..., keep: ... }`
+  (`Form\Flow`, internal). A step is a group id of the route's
+  operation, or a step over another resource, `{ resource, operation,
+  group?, arguments? }`, served by that resource's operation
+  (`Flow::servedAt()`), its whole surface when `group` is absent; the
+  first step is a group of the route's. Drawn a step at a time
+  (`buildSurfaceForm(..., $keys)`), keys in no group at the first step
+  over their operation, `?step=N` and `?stage=<id>` in the query, the
+  first step opening the stage, Next staging a step, Back staging
+  nothing and Cancel discarding the stage, and a confirm page at
+  `?step=confirm` that lists `changes` of every resource as a table,
+  draws the route's panel, says how many writes cannot be undone, and
+  Save applies what it listed (a fingerprint it posts back); once
+  applied it goes to the flow's `redirect` route or stays. A step asked
+  with an applied or voided stage answers 303 to the confirm page, which
+  says so and links "Start again"; a post into such a stage is judged by
+  each button's submit (`closedGuard()`), which lets Back through, and
+  Cancel on a voided stage. The route's operation gates every
+  page; a step over another resource adds its permission and access.
+  The rebuild refuses a malformed `_surface_flow` default and a flow on
+  a route whose `_form` is not the operation form; the match (the access
+  check and the form, through `Flow::refusal()`, `Flow::stepRefusal()`
+  and `Flow::servedAt()`) refuses an operation a flow cannot stage (a
+  delete, a read-only operation, one a stage does not apply to), a step
+  over another resource that creates or is the route's own operation,
+  an unknown group, a key drawn before a key it is refined by (each per
+  operation, every step over another resource at step 1 before a stage
+  is opened), and a create's required key with no default after the
+  first step. A flow over a
   create writes each later step into its first step's create
   (`Stage::creating()`, internal).
   The form door reads `?stage` on every operation form page, the React
@@ -796,7 +810,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2105, Assertions: 51873, Errors: 0, Failures: 0, Skipped: 3. Classes: 295 of 295, 8 at a time, browser classes 4.
+phpunit: Tests: 2118, Assertions: 52721, Errors: 0, Failures: 0, Skipped: 3. Classes: 295 of 295, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -816,7 +830,7 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1992, Assertions: 47474, Deprecations: 134, Skipped: 3. Classes:
+`Tests: 2004, Assertions: 48210, Deprecations: 134, Skipped: 3. Classes:
 242, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
@@ -1171,9 +1185,14 @@ registered because a resource or structure names them.
 
 The declared flows' fixture is `tests/modules/surface_stage_test`'s
 itinerary (`ItineraryResource`, `ItineraryStorage`, and the flow routes
-in `surface_stage_test.routing.yml`, one of them `keep: short` and one
-of a single step); the example is the content type's
-`surface_examples_node_type.flow` route.
+in `surface_stage_test.routing.yml`, one of them `keep: short`, one
+of a single step, and three with a step over another resource: the
+ledger row, `my_module.settings`, and the refused `tool_test.vault`);
+the examples are the content type's `surface_examples_node_type.flow`
+route, linked "Edit in steps" from the content types list, and
+`surface_examples.step19`, example 19, over `event.setup`'s two groups
+and `event.notices` (`EventSetupResource`, `EventNoticesResource` and
+their storages in `surface_examples`).
 The same module's `Staging\ArrayStageStore` is the second store, in
 memory, which `StageStoreSwapTest` swaps in for `surface.stages`.
 `tests/modules/surface_reserved_test` holds a resource whose operations

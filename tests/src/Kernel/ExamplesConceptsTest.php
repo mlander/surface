@@ -13,6 +13,7 @@ use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Form\SurfaceFormBuilder;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_examples\CodeLines;
 use Drupal\surface_examples\ConceptPanel;
 use Drupal\surface_examples\Controller\ExamplesController;
@@ -24,6 +25,8 @@ use Drupal\surface_examples\Resource\BulletinResource;
 use Drupal\surface_examples\Resource\CateringByMethodResource;
 use Drupal\surface_examples\Resource\CateringResource;
 use Drupal\surface_examples\Resource\DoorsResource;
+use Drupal\surface_examples\Resource\EventNoticesResource;
+use Drupal\surface_examples\Resource\EventSetupResource;
 use Drupal\surface_examples\Resource\InfoDeskResource;
 use Drupal\surface_examples\Resource\MailerResource;
 use Drupal\surface_examples\Resource\PressResource;
@@ -56,6 +59,7 @@ use Symfony\Component\HttpFoundation\Request;
 #[RunTestsInSeparateProcesses]
 class ExamplesConceptsTest extends SurfaceKernelTestBase {
 
+  use StageTestTrait;
   use UserCreationTrait;
 
   /**
@@ -542,7 +546,68 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the panel above examples 7 to 12, 14 and 18, and none above 1 to 3.
+   * Tests example 19's stage, filled without a form, saved on its page.
+   *
+   * A stage opened through the stage resource's tool, and both resources
+   * staged through theirs, as an agent does: step 3 draws the notices with
+   * their panel, the confirm page lists both writes, and Save makes both.
+   */
+  public function testNineteenSavesWhatToolsStaged(): void {
+    $opened = $this->runTool('surface:surface.stage:create', [OperationInputs::VALUES => ['label' => 'Set up the event']]);
+    $this->assertTrue($opened['success'], $opened['message']);
+    $stage = (string) $opened['outputs']['id'];
+    $calls = [
+      'event.setup' => ['name' => 'Winter meetup', 'capacity' => 80],
+      'event.notices' => ['banner' => 'Doors open at six.', 'show_banner' => TRUE],
+    ];
+    foreach ($calls as $resource => $values) {
+      $answer = $this->runTool('surface:' . $resource . ':configure', [
+        OperationInputs::VALUES => $values,
+        OperationInputs::STAGE => $stage,
+      ]);
+      $this->assertTrue($answer['success'], $answer['message']);
+    }
+    $this->assertSame('Autumn meetup', $this->config('surface_examples.event_setup')->get('name'), 'Nothing is written yet.');
+
+    $this->serveStep($stage, '3');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $this->assertSame('Doors open at six.', $form[SurfaceOperationForm::SURFACE_KEY]['banner']['#default_value'], 'Step 3 reads through the stage.');
+    $concept = $form[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $this->assertStringContainsString((string) $this->container->get('surface_examples.concept_panel')->paragraph('event.notices'), (string) $concept['what']['#markup']);
+
+    $this->serveStep($stage, 'confirm');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $this->assertSame(['event.setup', 'event.notices'], array_column($form['changes']['#rows'], 1));
+    $state = (new FormState())->setValues(['op' => 'Save']);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $state);
+    $this->assertSame([], $state->getErrors());
+    $this->container->get('config.factory')->reset();
+    $this->assertSame('Winter meetup', $this->config('surface_examples.event_setup')->get('name'));
+    $this->assertSame(80, $this->config('surface_examples.event_setup')->get('capacity'));
+    $this->assertSame('Doors open at six.', $this->config('surface_examples.event_notices')->get('banner'));
+    $this->assertTrue($this->config('surface_examples.event_notices')->get('show_banner'));
+  }
+
+  /**
+   * Puts example 19's page on the request stack at a step of a stage.
+   *
+   * @param string $stage
+   *   The stage's id.
+   * @param string $step
+   *   The step, or "confirm".
+   */
+  protected function serveStep(string $stage, string $step): void {
+    $route = $this->container->get('router.route_provider')->getRouteByName('surface_examples.step19');
+    $stack = $this->container->get('request_stack');
+    $request = Request::create($route->getPath(), 'GET', ['stage' => $stage, 'step' => $step]);
+    $request->setSession($stack->getSession());
+    $request->attributes->set(RouteObjectInterface::ROUTE_NAME, 'surface_examples.step19');
+    $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
+    $stack->push($request);
+  }
+
+  /**
+   * Tests the panel above examples 7 to 12, 14, 18 and 19, none above 1 to 3.
    */
   public function testThePanelSaysWhatEachShows(): void {
     $panel = $this->formAt('surface_examples.step3')[SurfaceOperationForm::PANEL_KEY];
@@ -561,6 +626,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
       'step14_webhook' => 'event.webhook',
       'step18' => 'event.catering',
       'step18_method' => 'event.catering.method',
+      'step19' => 'event.setup',
     ];
     $order = [ExamplePanels::CONCEPT, ExamplePanels::FILES, ExamplePanels::CONTRACT, ExamplePanels::TODAY];
     foreach ($pages as $route => $id) {
@@ -963,6 +1029,8 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
       MailerResource::class,
       CredentialSources::class,
       WebhookResource::class,
+      EventSetupResource::class,
+      EventNoticesResource::class,
     ];
     foreach ($classes as $class) {
       $lines = CodeLines::count((string) (new \ReflectionClass($class))->getFileName());

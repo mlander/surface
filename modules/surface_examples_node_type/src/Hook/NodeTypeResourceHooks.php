@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface_examples_node_type\Hook;
 
+use Drupal\Core\Access\AccessManagerInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\Core\Hook\Attribute\Hook;
@@ -46,10 +47,14 @@ final class NodeTypeResourceHooks {
    *   The build step, which answers access for an operation of the
    *   content type resource: the one place this module's access answer is
    *   written down.
+   * @param \Drupal\Core\Access\AccessManagerInterface $accessManager
+   *   The access manager, which answers for the flow's route as its own
+   *   access check does.
    */
   public function __construct(
     TranslationInterface $string_translation,
     protected readonly ResourcesInterface $resources,
+    protected readonly AccessManagerInterface $accessManager,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -58,7 +63,8 @@ final class NodeTypeResourceHooks {
    * Implements hook_entity_operation().
    *
    * Puts the resource-driven edit form beside core's in the content type
-   * listing's operations, so the two are one click apart to compare.
+   * listing's operations, so the two are one click apart to compare, and
+   * after it the same edit drawn in steps, the flow route.
    *
    * The link asks exactly what the route it points at asks, and asks it
    * in the one place the question is answered: the content type
@@ -66,7 +72,13 @@ final class NodeTypeResourceHooks {
    * is this module's permission and then the entity's own say over it.
    * So the link is never offered where it would be refused, and it cannot
    * drift from the route or from the form's own write. The answer's
-   * cacheability travels with the listing.
+   * cacheability travels with the listing. The steps link asks the flow
+   * route's own access check through the access manager, at its first
+   * step with no stage: the same operation's access, and the flow's
+   * refusals, none for this route. Its cacheability travels with the
+   * listing too, so the listing varies by `stage` and `step` in the
+   * query, which the flow route's answer varies by, and a refusal of the
+   * flow would keep the listing for one request alone.
    */
   #[Hook('entity_operation')]
   public function entityOperation(EntityInterface $entity, CacheableMetadata $cacheability): array {
@@ -82,13 +94,24 @@ final class NodeTypeResourceHooks {
     if (!$access->isAllowed()) {
       return [];
     }
-    return [
+    $operations = [
       'surface_edit' => [
         'title' => $this->t('Edit (resource)'),
         'url' => Url::fromRoute('surface_examples_node_type.update', ['type' => $entity->id()]),
         'weight' => 30,
       ],
     ];
+    $parameters = ['type' => $entity->id()];
+    $steps = $this->accessManager->checkNamedRoute('surface_examples_node_type.flow', $parameters, NULL, TRUE);
+    $cacheability->addCacheableDependency($steps);
+    if ($steps->isAllowed()) {
+      $operations['surface_flow'] = [
+        'title' => $this->t('Edit in steps'),
+        'url' => Url::fromRoute('surface_examples_node_type.flow', $parameters),
+        'weight' => 31,
+      ];
+    }
+    return $operations;
   }
 
 }

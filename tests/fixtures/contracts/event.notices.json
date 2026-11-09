@@ -1,0 +1,51 @@
+{
+    "resource": "event.notices",
+    "module": "surface_examples",
+    "contract": 4,
+    "documents": [
+        {
+            "resource": "event.notices",
+            "operation": "configure",
+            "label": "Configure the event notices",
+            "schema": {
+                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "title": "Configure the event notices",
+                "description": "Sets the banner shown on the event pages and whether it is shown.",
+                "x-surface": {
+                    "contract": 4,
+                    "operation": {
+                        "id": "configure",
+                        "label": "Configure the event notices",
+                        "description": "Sets the banner shown on the event pages and whether it is shown.",
+                        "kind": "update",
+                        "creates": false,
+                        "destructive": false,
+                        "idempotent": true
+                    },
+                    "version": 1
+                },
+                "type": "object",
+                "properties": {
+                    "banner": {
+                        "title": "Banner",
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 500,
+                        "default": ""
+                    },
+                    "show_banner": {
+                        "title": "Show the banner",
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "default": false
+                    }
+                },
+                "additionalProperties": false
+            }
+        }
+    ]
+}

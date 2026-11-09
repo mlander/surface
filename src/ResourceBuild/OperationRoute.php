@@ -13,6 +13,7 @@ use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\StageRecord;
 use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\Staging\Stageable;
 use Drupal\surface\SurfaceAccess;
@@ -745,7 +746,7 @@ final class OperationRoute {
    *   `does_not_apply` where a stage does not apply to the operation;
    *   else the stage's own access (StageAccess), which is never cached,
    *   or a refusal of a later step of a flow over a create whose create
-   *   is gone from the stage.
+   *   is gone from an open stage.
    *
    * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   At `stage`, when it names no stage; at `step`, when a flow over a
@@ -784,7 +785,10 @@ final class OperationRoute {
       return [$stage, $access];
     }
     $step = $flow->step($request);
-    if ($step === Flow::CONFIRM) {
+    // An applied or voided stage holds no writes, so its create is not
+    // looked for: the form sends the step to the confirm page, which says
+    // what became of the stage.
+    if ($step === Flow::CONFIRM || ($stages->read($stage->id)['status'] ?? NULL) !== StageRecord::OPEN) {
       return [$stage, $access];
     }
     $position = Flow::creating($stages, $stage, $definition->id, $found->id);

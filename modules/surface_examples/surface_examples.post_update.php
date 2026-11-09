@@ -90,3 +90,12 @@ function surface_examples_post_update_venue_slugs(): void {
     $venue->set('slug', $slug)->save();
   }
 }
+
+/**
+ * Creates example 19's event setup and notices on a site that had the module.
+ *
+ * An object the site already has is left as it is.
+ */
+function surface_examples_post_update_install_event_setup(): void {
+  surface_install_missing_config('surface_examples');
+}

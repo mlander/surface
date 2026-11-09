@@ -47,11 +47,13 @@ Refused. `docs/resources.md` says how each part works.
 | [`event.mailer`](#eventmailer) |  | `MailerResource` | none | `configure`, `read` |
 | [`event.mailer.credential.managed`](#eventmailercredentialmanaged) | Managed credential | `ManagedCredentialStructure` | none | none |
 | [`event.mailer.credential.pasted`](#eventmailercredentialpasted) | Pasted credential | `PastedCredentialStructure` | none | none |
+| [`event.notices`](#eventnotices) |  | `EventNoticesResource` | none | `configure`, `read` |
 | [`event.person`](#eventperson) |  | `PersonStructure` | none | none |
 | [`event.press`](#eventpress) |  | `PressResource` | none | `configure`, `read` |
 | [`event.program`](#eventprogram) |  | `ProgramResource` | none | `configure`, `check`, `read` |
 | [`event.review`](#eventreview) |  | `ReviewStructure` | none | none |
 | [`event.sales`](#eventsales) |  | `TicketSalesResource` | none | `configure`, `read` |
+| [`event.setup`](#eventsetup) |  | `EventSetupResource` | none | `configure`, `read` |
 | [`event.spotlight`](#eventspotlight) |  | `SpotlightResource` | none | `configure`, `read` |
 | [`event.ticket_limit`](#eventticket_limit) |  | `TicketLimitStructure` | none | none |
 | [`event.venue`](#eventvenue) |  | `VenueResource` | `id` | `create`, `list`, `reorder`, `update`, `delete`, `read` |
@@ -294,6 +296,23 @@ Refused. `docs/resources.md` says how each part works.
 - Storage: none; its host or its parent stores it
 - Access: the operation's permission alone
 
+## event.notices
+
+`Drupal\surface_examples\Resource\EventNoticesResource`, in `surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\surface_examples\Storage\EventNoticesStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Configure the event notices | nothing | no | `administer site configuration` | yes | `#[Operation] on EventNoticesResource` (`surface_examples`) |
+| `read` | Current values: Configure the event notices | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
+
+- `configure` reaches http `PATCH /surface-api/event.notices`, tool `surface:event.notices:configure`, openapi `event.notices:configure:write`, react `/surface-react/event.notices/configure`.
+- `read` reaches http `GET /surface-api/event.notices`, tool `surface:event.notices:read`, openapi `event.notices:read:read`.
+
 ## event.person
 
 `Drupal\surface_examples\Structure\PersonStructure`, in `surface_examples`.
@@ -366,6 +385,23 @@ Refused. `docs/resources.md` says how each part works.
 
 - `configure` reaches form `/surface-examples/9 (surface_examples.step9)`, http `PATCH /surface-api/event.sales`, tool `surface:event.sales:configure`, openapi `event.sales:configure:write`, react `/surface-react/event.sales/configure`.
 - `read` reaches http `GET /surface-api/event.sales`, tool `surface:event.sales:read`, openapi `event.sales:read:read`.
+
+## event.setup
+
+`Drupal\surface_examples\Resource\EventSetupResource`, in `surface_examples`.
+
+- Kind: resource
+- Identity: none
+- Storage: `Drupal\surface_examples\Storage\EventSetupStorage`
+- Access: the operation's permission alone
+
+| Operation | Label | Needs | Creates | Permission | On its own | Provided by |
+| --- | --- | --- | --- | --- | --- | --- |
+| `configure` | Set up the event | nothing | no | `administer site configuration` | yes | `#[Operation] on EventSetupResource` (`surface_examples`) |
+| `read` | Current values: Set up the event | nothing | no | `administer site configuration` | yes | default read of `configure` (`surface_examples`) |
+
+- `configure` reaches form `/surface-examples/19 (surface_examples.step19)`, http `PATCH /surface-api/event.setup`, tool `surface:event.setup:configure`, openapi `event.setup:configure:write`, react `/surface-react/event.setup/configure`.
+- `read` reaches http `GET /surface-api/event.setup`, tool `surface:event.setup:read`, openapi `event.setup:read:read`.
 
 ## event.spotlight
 

@@ -513,7 +513,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests the operation link, which asks the update operation's access.
+   * Tests the operation links, which ask the update operation's access.
    */
   public function testOperationLinkAsksTheEditOperation(): void {
     NodeType::create(['type' => 'article', 'name' => 'Article'])->save();
@@ -529,7 +529,25 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     $operations = $module_handler->invoke('surface_examples_node_type', 'entity_operation', [$node_type, $cacheability]);
     $this->assertSame('Edit (resource)', (string) $operations['surface_edit']['title']);
     $this->assertSame('/admin/structure/types/manage/article/surface-edit', $operations['surface_edit']['url']->toString());
+    $this->assertSame('Edit in steps', (string) $operations['surface_flow']['title']);
+    $this->assertSame('/admin/structure/types/manage/article/surface-flow', $operations['surface_flow']['url']->toString());
+    $this->assertGreaterThan($operations['surface_edit']['weight'], $operations['surface_flow']['weight']);
     $this->assertContains('user.permissions', $cacheability->getCacheContexts());
+    $this->assertContains('url.query_args:step', $cacheability->getCacheContexts(), 'The flow route\'s answer travels with the listing.');
+
+    // The flow refused alone: the edit link stays, the steps link goes.
+    $provider = $this->container->get('router.route_provider');
+    $route = clone $provider->getRouteByName('surface_examples_node_type.flow');
+    $route->setDefault('_surface_flow', ['steps' => ['submission', 'nothing']]);
+    $this->container->get('database')->update('router')
+      ->fields(['route' => serialize($route)])
+      ->condition('name', 'surface_examples_node_type.flow')
+      ->execute();
+    $provider->reset();
+    $arguments = [$node_type, new CacheableMetadata()];
+    $operations = $module_handler->invoke('surface_examples_node_type', 'entity_operation', $arguments);
+    $this->assertArrayHasKey('surface_edit', $operations);
+    $this->assertArrayNotHasKey('surface_flow', $operations);
   }
 
 }
