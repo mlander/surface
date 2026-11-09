@@ -952,6 +952,7 @@ The defaults:
 | `_surface_fixed` | Optional. A map of key paths to values, each key fixed to its value on this page; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
 | `_surface_defaults` | Optional. A map of key paths to values, each the value its key starts from on this page, for an operation that creates; a value written `'{name}'` is read from the route's path ([below](#a-route-that-fixes-or-fills-keys)). |
 | `_surface_query` | Optional. A map of key paths to query parameter names, each key a link may start from the parameter it names, `?subject=Pricing`, on any operation that draws values ([below](#keys-a-link-or-the-code-starts)). |
+| `_surface_flow` | Optional. A map of `steps`, the operation's group ids drawn one per step; `label`, optional, the stage's label, the operation's label by default; `redirect`, optional, the route the page goes to once the stage is applied, handed this route's own parameters its path takes; and `keep`, optional, `short` (the form cache's lifetime, `form_cache_expiration`) or `long` (the temp store expiry, `tempstore.expire`, the default), how long the stage lives after its last write. The page draws the operation over those steps into one stage, `?step=N` and `?stage=<id>` in its query, and ends in a confirm page at `?step=confirm` that applies it ([Staging: Flows](staging.md#flows)). |
 
 The route's parameters are the operation's, by name, each handed its raw
 value as the path carries it: `update(string $type)` is served by a
@@ -1328,11 +1329,14 @@ form draws, so no prefill starts it."), and the catalog lists it before
 a visitor meets it. A query name no link can use fails the router
 rebuild: an empty one, one in braces (what a link sends is input, never
 a reference), one holding anything but letters, digits, `_` and `-`
-(PHP renames or splits it), one Drupal or this module reads for itself
-on a form page (`destination`, `token`, `_format`, `_wrapper_format`,
-`ajax_form`, `page`, `q`, `dryRun`), and one that is a variable or a
-default of the route, which a link built with `Url::fromRoute()` leaves
-out of its query.
+(PHP renames or splits it), one Drupal or this module reserves for
+itself on a form page (`destination`, `token`, `_format`,
+`_wrapper_format`, `ajax_form`, `page`, `q`, `dryRun`; and `stage`, the
+stage the page writes into, and `step`, the step of the route's flow it
+draws, both read by the form,
+[Staging: The form door](staging.md#the-form-door)), and one that is a variable
+or a default of the route, which a link built with `Url::fromRoute()`
+leaves out of its query.
 
 The code that builds the form may hand it values the same way, for a
 value only the request can give, such as today's date. The route keeps
@@ -1621,9 +1625,12 @@ form class in the module at all.
 Three cases, and the example module is the second one:
 
 1. **The page is not one operation's page.** A form collecting a data
-   surface beside several unrelated things (a confirmation step, a
-   batch, an entity form it rides inside) is a form, and it composes the
-   data surface's container itself.
+   surface beside several unrelated things (a batch, an entity form it
+   rides inside, a confirmation over writes to many things chosen on a
+   listing) is a form, and it composes the data surface's container
+   itself. One operation drawn over several steps, ending in a
+   confirmation that applies them, is a declared flow on the operation
+   form's route ([Staging: Flows](staging.md#flows)).
 2. **The structure and the destination belong to different owners.**
    `surface_examples_plugins` renders the example block's structure into a
    `StateStorage`, which is exactly the claim it exists to make: a

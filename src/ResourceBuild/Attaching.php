@@ -15,6 +15,7 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Pipeline\PipelineGuard;
+use Drupal\surface\Reader\LeafRules;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Resource\SiteList;
 use Drupal\surface\Resource\SiteListInterface;
@@ -27,21 +28,23 @@ use Drupal\surface\Resource\Attribute\Variant;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Attachment;
 use Drupal\surface\Collection;
-use Drupal\surface\Mixin;
 use Drupal\surface\Port;
+use Drupal\surface\Storage\ConfigEntityStorage;
+use Drupal\surface\Storage\ConfigObjectStorage;
+use Drupal\surface\Variants;
 
 /**
- * The attach phase of the build: children, collections, variants, mixins.
+ * The attach phase of the build: children, collections, variants, mounts.
  *
- * Steps 5 and 7 of Resources: each structure mixed in, each structure an
- * alter attached at its own mount, each child at a fixed key, each map of
- * keys from the site, each variant and each collection's item, its ports
- * wired to the parent's keys and its access asked of the access phase.
+ * Steps 2 and 7 of Resources: each structure an alter attached at its own
+ * mount, each child at a fixed key, each map of keys from the site, each
+ * variant and each collection's item, its ports wired to the parent's keys
+ * and its access asked of the access phase.
  *
  * A child is built through the whole sequence again, in its own frame, so
  * this holds the build step and the two of its steps a child re-enters by,
  * buildResource() and buildRead(), handed in as closures since neither is
- * public.
+ * public; the mixing phase builds through them too.
  *
  * Decision: see docs/decisions.md#the-build-is-read-by-phase.
  *
@@ -242,6 +245,11 @@ final class Attaching {
     // it is invoked in, which its access may then narrow to locked or to
     // nothing at all, however it was invoked.
     foreach ($inputs->attachments() as $key => $child) {
+      if ($builder->getDefinition((string) $key) === NULL) {
+        // Brought by a structure mixed in that its access left out, with
+        // its members.
+        continue;
+      }
       // Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
       $reads = $inputs->wiring((string) $key);
       $this->assertWiring($build, NULL, (string) $key, (string) $child, $reads);
@@ -314,7 +322,7 @@ final class Attaching {
    *   frame and ancestry its children are built under.
    * @param string $key
    *   The key the map sits at.
-   * @param array{each: string, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>, to: string|null, bundles: string[]} $each
+   * @param array{each: string|\Drupal\Core\TypedData\DataDefinitionInterface, from: class-string<\Drupal\surface\Resource\SiteListInterface>, default: mixed, child: bool, reads: array<string, string>} $each
    *   What the blueprint recorded for it.
    * @param array<string, array> $maps
    *   Every map of keys from the site the owner declared, by key, as the
@@ -343,7 +351,7 @@ final class Attaching {
     // schema is written from.
     $shell = $builder->getDefinition($key);
     if ($shell !== NULL) {
-      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references())->addEntry($key, $each['each'], $shell->getLabel() ?? $key, $each['default'], $each['to'], $each['bundles']));
+      DefinitionMetadata::setEach($shell, $each['child'] ? $each['each'] : (new ResourceBlueprint(new SurfaceBuilder(), $this->typedDataManager))->useShapes($this->declaring->shapes())->addEntry($key, $each['each'], $shell->getLabel() ?? $key, $each['default']));
     }
     $entries = $keys->entries();
     $map = (new SurfaceBuilder())->setWatchedValueCheck($this->watchedValueCheck);
@@ -398,9 +406,9 @@ final class Attaching {
       }
     }
     else {
-      $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references());
+      $blueprint = (new ResourceBlueprint($map, $this->typedDataManager))->useShapes($this->declaring->shapes());
       foreach ($entries as $id => $entry) {
-        $blueprint->addEntry((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default'], $each['to'], $each['bundles']);
+        $blueprint->addEntry((string) $id, $each['each'], $entry['label'], $entry['default'] ?? $each['default']);
         if ($entry['locked']) {
           $map->hold((string) $id);
         }
@@ -493,7 +501,7 @@ final class Attaching {
       $other = $maps[$sibling] ?? NULL;
       $problem = match (TRUE) {
         $sibling === $key => 'which is the map itself: a port reads a value its container holds beside the entry',
-        $other === NULL => sprintf('which is no map of keys from the site: an entry\'s port reads the entry of the same id in a sibling map, addEach(\'%s\', ..., from: %s::class)', $sibling, $each['from']),
+        $other === NULL => sprintf('which is no map of keys from the site: an entry\'s port reads the entry of the same id in a sibling map, addEach(\'%s\', ..., from: %s::class, label: ...)', $sibling, $each['from']),
         $other['child'] => 'which holds a structure at every entry: a port reads one value',
         $other['from'] !== $each['from'] => sprintf('which lists its keys from %s: an entry\'s port reads the entry of the same id, so both maps list their keys from %s', $other['from'], $each['from']),
         default => NULL,
@@ -513,7 +521,7 @@ final class Attaching {
         }
         if (static::unshaped($ports[$port], $match) !== NULL) {
           $shape = DefinitionMetadata::shapeOf($match);
-          throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", whose "%s" entry is declared with %s, and the port reads the shape %s: the sibling map declares its entries with it, addEach(\'%s\', <shape>::class, ...).', $definition->id, $port, $id, $key, $sibling, $entry, $shape === NULL ? 'a type alone' : 'the shape ' . $shape, $ports[$port]->shape, $sibling));
+          throw new \LogicException(sprintf('%s wires the "%s" port of %s at every entry of "%s" to "%s", whose "%s" entry is declared with %s, and the port reads the shape %s: the sibling map declares its entries with it, addEach(\'%s\', <shape>::class, from: ..., label: ...).', $definition->id, $port, $id, $key, $sibling, $entry, $shape === NULL ? 'a type alone' : 'the shape ' . $shape, $ports[$port]->shape, $sibling));
         }
         $wired[$entry][$port] = Surface::deepClone($match);
       }
@@ -572,9 +580,9 @@ final class Attaching {
    *
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
-   * @param list<string|int> $arguments
+   * @param array $arguments
    *   What its owner bound it to, for a BoundSiteListInterface; none for
-   *   its list().
+   *   its list(). The shape is the provider's.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed.
@@ -598,296 +606,6 @@ final class Attaching {
    */
   protected static function accountContexts(SiteList $list): array {
     return array_values(array_filter($list->getCacheContexts(), static fn (string $context): bool => $context === 'user' || str_starts_with($context, 'user.') || $context === 'session' || str_starts_with($context, 'session.')));
-  }
-
-  /**
-   * Builds each structure mixed in by itself, and settles its members.
-   *
-   * A mixed-in structure's members are the owner's keys already, declared
-   * through its blueprint where mixIn() stands. Here each is checked (its
-   * ports wired to the owner's keys), built by itself in the owner's
-   * context for its def and asked its access: omitted takes its members
-   * back out, locked holds them to what is stored, and what a structure
-   * it mixes in itself answered inside it is read off its own build.
-   *
-   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
-   *
-   * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build: its builder, the owner, its context, its frame
-   *   (with the permission its operation asks), and its input keys, every
-   *   structure's members among them, the keys holding a child or
-   *   variants, and its collection keys.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
-   *   The owner's input blueprint.
-   *
-   * @return array{bind: array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>, members: array<string, string>, guarded: array<string, string>, answeredBy: array<string, string>, ruling: string[]}
-   *   What to bind in the owner's frame, innermost first, each with the
-   *   members still there; every member, and every member of a structure
-   *   with an access answer (an access class, or an alter's), each mapped
-   *   to its structure's id, with what answers for each such structure;
-   *   and the members a structure's coded refiner may rule out.
-   */
-  public function mixIn(Build $build, ResourceBlueprint $inputs): array {
-    $builder = $build->builder;
-    $context = $build->context;
-    $frame = $build->frame;
-    $mixed = ['bind' => [], 'members' => [], 'guarded' => [], 'answeredBy' => [], 'ruling' => []];
-    foreach ($inputs->mixins() as ['class' => $class, 'reads' => $reads, 'blueprint' => $blueprint]) {
-      $structure = $this->registry->getDefinition($class);
-      $this->assertMixinWiring($build, $structure, $blueprint, $reads);
-      $mixed = static::mixedMembers($mixed, $blueprint, $structure, fn (string $name): ResourceDefinition => $this->registry->getDefinition($name));
-      // By itself, as if on its own: what its def is written from, in the
-      // context its owner's hands it, and what its access answers there.
-      $child_context = Resources::childContext($context, $structure->id);
-      [$access, $runtime] = $this->gating->childAccess($structure, NULL, $child_context, $this->gating->account(), $frame['permission'] ?? NULL);
-      if ($access !== NULL) {
-        $builder->addCacheableDependency($access);
-      }
-      if ($access !== NULL && $access->isOmitted()) {
-        foreach ($blueprint->keys() as $key) {
-          $builder->withdraw($key);
-        }
-        continue;
-      }
-      $built = $this->buildResource($structure->name(), $child_context, []);
-      $map = $built->getDefinitions();
-      $locked = $access !== NULL && $access->isLocked();
-      $present = [];
-      foreach ($blueprint->keys() as $key) {
-        if (!$map->has($key)) {
-          // A structure it mixes in itself, which that one's access left
-          // out inside it.
-          $builder->withdraw($key);
-          continue;
-        }
-        if ($locked || $map->isHeld($key)) {
-          $builder->hold($key);
-        }
-        // Decided once the subject is known, here or by a structure it
-        // mixes in itself: marked, built for the account alone.
-        if ($runtime || $map->isRuntimeAccess($key)) {
-          $builder->markRuntimeAccess($key);
-        }
-        $present[] = $key;
-      }
-      $builder->addMixin(new Mixin(new Attachment($built, $structure->name(), $structure->id, label: $structure->label(), description: $structure->description()), $present, $reads));
-      array_push($mixed['bind'], ...$this->mixinBindings($structure, $blueprint, $reads, $present));
-    }
-    return $mixed;
-  }
-
-  /**
-   * Lists a structure's members, and those its access class may take away.
-   *
-   * @param array $mixed
-   *   What mixIn() collects so far.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $blueprint
-   *   The blueprint the structure was declared through.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
-   *   The structure.
-   * @param callable(string): \Drupal\surface\ResourceBuild\ResourceDefinition $definitions
-   *   Reads a structure it mixes in itself.
-   *
-   * @return array
-   *   The same, with this structure's members and those of every
-   *   structure it mixes in.
-   */
-  protected static function mixedMembers(array $mixed, ResourceBlueprint $blueprint, ResourceDefinition $structure, callable $definitions): array {
-    foreach ($blueprint->mixins() as ['class' => $class, 'blueprint' => $inner]) {
-      $mixed = static::mixedMembers($mixed, $inner, $definitions($class), $definitions);
-    }
-    foreach ($blueprint->keys() as $key) {
-      $mixed['members'][$key] ??= $structure->id;
-      if ($structure->answersAccess()) {
-        $mixed['guarded'][$key] ??= $structure->id;
-        $mixed['answeredBy'][$structure->id] = $structure->access !== NULL ? 'an access class' : 'an alter answering its access';
-      }
-    }
-    foreach ($structure->refiners as $refiner) {
-      if ($refiner->mayNotApply) {
-        $mixed['ruling'][] = $refiner->key;
-      }
-    }
-    return $mixed;
-  }
-
-  /**
-   * Lists what to bind in the owner's frame for one structure mixed in.
-   *
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
-   *   The structure.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $blueprint
-   *   The blueprint it was declared through.
-   * @param array<string, string> $reads
-   *   Its ports, wired to the owner's keys.
-   * @param string[] $present
-   *   The members still there.
-   *
-   * @return array<int, array{definition: \Drupal\surface\ResourceBuild\ResourceDefinition, blueprint: \Drupal\surface\ResourceBuild\ResourceBlueprint, reads: array<string, string>, keys: string[]}>
-   *   A structure it mixes in itself first, unless its members are gone,
-   *   then this one.
-   */
-  protected function mixinBindings(ResourceDefinition $structure, ResourceBlueprint $blueprint, array $reads, array $present): array {
-    $bindings = [];
-    foreach ($blueprint->mixins() as ['class' => $class, 'reads' => $inner_reads, 'blueprint' => $inner]) {
-      if (array_diff($inner->keys(), $present) !== []) {
-        continue;
-      }
-      // Its ports are wired to keys of the structure mixing it in, which
-      // are the owner's keys now, under the same names.
-      array_push($bindings, ...$this->mixinBindings($this->registry->getDefinition($class), $inner, $inner_reads, $present));
-    }
-    $bindings[] = [
-      'definition' => $structure,
-      'blueprint' => $blueprint,
-      'reads' => $reads,
-      'keys' => array_values(array_intersect($blueprint->keys(), $present)),
-    ];
-    return $bindings;
-  }
-
-  /**
-   * Refuses a wiring of a mixed-in structure's ports its owner cannot honor.
-   *
-   * Every port is wired, to a plain input of the owner's of the port's
-   * type that the structure did not bring itself: in the owner's frame a
-   * port is read as the key it is wired to, so one left unwired would
-   * have nothing to be read as.
-   *
-   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
-   *
-   * @param \Drupal\surface\ResourceBuild\Build $build
-   *   The owner's build: its builder, the owner, its plain input keys,
-   *   the keys holding a child or variants, and its collection keys.
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $structure
-   *   The structure.
-   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $blueprint
-   *   The blueprint it was declared through.
-   * @param array<string, string> $reads
-   *   The wiring.
-   *
-   * @throws \LogicException
-   *   Naming the owner, the port and what is wrong with the wiring.
-   */
-  protected function assertMixinWiring(Build $build, ResourceDefinition $structure, ResourceBlueprint $blueprint, array $reads): void {
-    $builder = $build->builder;
-    $definition = $build->definition;
-    $input_keys = $build->inputKeys;
-    $attached = $build->attached;
-    $lists = $build->lists;
-    $ports = $blueprint->ports();
-    foreach ($reads as $port => $wired) {
-      if (!isset($ports[$port])) {
-        throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, which %s does not read; it reads %s.', $definition->id, $port, $structure->id, $structure->id, $ports === [] ? 'no port' : implode(', ', array_keys($ports))));
-      }
-      $problem = match (TRUE) {
-        in_array($wired, $blueprint->keys(), TRUE) => sprintf('which %s brought itself: a port reads a key of the owner it is mixed into, and its members are its own', $structure->id),
-        in_array($wired, $attached, TRUE), in_array($wired, $lists, TRUE) => 'which holds a child: a port reads one value',
-        !in_array($wired, $input_keys, TRUE) => sprintf('which %s does not declare as an input: a port reads a key of its owner, by name', $definition->id),
-        default => NULL,
-      };
-      if ($problem !== NULL) {
-        throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, to "%s", %s.', $definition->id, $port, $structure->id, $wired, $problem));
-      }
-      $type = $builder->getDefinition($wired)?->getDataType();
-      if ($ports[$port]->type !== 'any' && $type !== $ports[$port]->type) {
-        throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, which reads %s %s, to "%s", which holds %s %s.', $definition->id, $port, $structure->id, static::article((string) $ports[$port]->type), $ports[$port]->type, $wired, static::article((string) $type), $type));
-      }
-      $unshaped = static::unshaped($ports[$port], $builder->getDefinition($wired));
-      if ($unshaped !== NULL) {
-        throw new \LogicException(sprintf('%s wires the "%s" port of %s, mixed in, to "%s", %s.', $definition->id, $port, $structure->id, $wired, $unshaped));
-      }
-    }
-    foreach ($ports as $port) {
-      if (!isset($reads[$port->name])) {
-        throw new \LogicException(sprintf(
-          '%s mixes %s in without wiring its "%s" port: with(..., reads: [\'%s\' => \'<key>\']) names the key of %s it reads. A mixed-in structure\'s refiners read each port as the owner\'s key it is wired to, so every port is wired, required or not.',
-          $definition->id,
-          $structure->id,
-          $port->name,
-          $port->name,
-          $definition->id,
-        ));
-      }
-    }
-  }
-
-  /**
-   * Refuses what of the owner's names a member it may not depend on.
-   *
-   * A mixed-in structure's members are the owner's keys, so the owner's
-   * refiners and rules, and its alters', may watch them and narrow them
-   * as their own, with two exceptions. Whether a member applies is the
-   * structure's to say: its def, which every owner shares, says where it
-   * is required. And nothing of the owner's may name a member of a
-   * structure that has an access class: what that access may take away
-   * for one account, nothing may depend on for every account.
-   *
-   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
-   *
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
-   *   The owner.
-   * @param array $mixins
-   *   What mixIn() answered.
-   * @param array<int, array{0: object|string, 1: \Drupal\surface\ResourceBuild\RefinerDefinition[], 2: string|null}> $links
-   *   The owner's refiners and its alters'.
-   * @param \Drupal\surface\Refinement\Rule[] $rules
-   *   The owner's rules and its alters'.
-   * @param array<string, array<string, string>> $wirings
-   *   The ports of each child the owner or an alter attached, wired.
-   *
-   * @throws \LogicException
-   *   Naming what names the member, and the structure.
-   */
-  public function assertMixinsUnnamed(ResourceDefinition $definition, array $mixins, array $links, array $rules, array $wirings): void {
-    $guarded = $mixins['guarded'];
-    $guard = static fn (string $what, string $key): \LogicException => new \LogicException(sprintf(
-      '%s names "%s", a member of %s, which is mixed into %s and has %s. What that access may take away for one account, nothing of the owner\'s may depend on: read it inside %s, or drop %s.',
-      $what,
-      $key,
-      $guarded[$key],
-      $definition->id,
-      $mixins['answeredBy'][$guarded[$key]] ?? 'an access class',
-      $guarded[$key],
-      ($mixins['answeredBy'][$guarded[$key]] ?? 'an access class') === 'an access class' ? 'the access class' : 'the alter\'s access',
-    ));
-    $ruled = static fn (string $what, string $key): \LogicException => new \LogicException(sprintf(
-      '%s may answer that "%s", a member of %s mixed into %s, does not apply. Whether a mixed-in structure\'s member applies is the structure\'s to say: its def, which every owner shares, says where it is required.',
-      $what,
-      $key,
-      $mixins['members'][$key],
-      $definition->id,
-    ));
-    foreach ($links as [, $refiners]) {
-      foreach ($refiners as $refiner) {
-        foreach ([$refiner->key, ...$refiner->watched()] as $key) {
-          if (isset($guarded[$key])) {
-            throw $guard($refiner->describe(), $key);
-          }
-        }
-        if ($refiner->mayNotApply && isset($mixins['members'][$refiner->key])) {
-          throw $ruled($refiner->describe(), $refiner->key);
-        }
-      }
-    }
-    foreach ($rules as $rule) {
-      $name = sprintf('narrow("%s") in %s', $rule->key, $definition->id);
-      foreach ([$rule->key, ...($rule->condition()?->keys() ?? [])] as $key) {
-        if (isset($guarded[$key])) {
-          throw $guard($name, $key);
-        }
-      }
-      if ($rule->rulesOut() && isset($mixins['members'][$rule->key])) {
-        throw $ruled($name, $rule->key);
-      }
-    }
-    foreach ($wirings as $at => $reads) {
-      foreach ($reads as $port => $key) {
-        if (isset($guarded[$key])) {
-          throw $guard(sprintf('The "%s" port of the child at "%s"', $port, $at), $key);
-        }
-      }
-    }
   }
 
   /**
@@ -1104,7 +822,7 @@ final class Attaching {
    * @return string|null
    *   Why not, or NULL when it may be.
    */
-  protected static function unshaped(Port $port, ?DataDefinitionInterface $wired): ?string {
+  public static function unshaped(Port $port, ?DataDefinitionInterface $wired): ?string {
     if ($port->shape === NULL || $wired === NULL) {
       return NULL;
     }
@@ -1265,59 +983,7 @@ final class Attaching {
           $by,
         ));
       }
-      // Every structure whose #[Variant] names this class and key is
-      // one of the variants; the parent names none.
-      // Decision: see docs/decisions.md#variants-nothing-declares.
-      $children = $this->registry->getVariants($definition->name(), $key);
-      $labels = [];
-      // The values whose variant the site's list names, not a class.
-      $site = [];
-      // A variant a schema read into the blueprint states, or one a
-      // provider lists from the site: a structure read from its schema,
-      // beside the declared ones, which win for a value both name.
-      // Decision: see
-      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
-      foreach ($inputs->readVariants()[$key] ?? [] as $value => ['name' => $name, 'label' => $label]) {
-        if (!isset($children[(string) $value])) {
-          $site[(string) $value] = TRUE;
-        }
-        $children[(string) $value] ??= $name;
-        if ($label !== NULL) {
-          $labels[(string) $value] = $label;
-        }
-      }
-      $from = $inputs->variantsFrom()[$key] ?? NULL;
-      if ($from !== NULL) {
-        $list = $this->variantsFrom($definition, (string) $key, $from, $inputs->variantsArguments()[$key] ?? []);
-        $builder->addCacheableDependency($list);
-        // A provider that answers an entry's schema when it is read: the
-        // entry is registered by name, its schema read when it is built.
-        $lazy = is_subclass_of($from, EntrySchemasInterface::class);
-        // The defs the entries share, read once for all of them.
-        $shared = $list->defs() === [] ? NULL : SchemaReader::prepared(['$defs' => $list->defs()]);
-        $shared_hash = $shared === NULL ? NULL : ResourceBlueprint::documentHash($shared);
-        foreach ($list->entries() as $value => $entry) {
-          $value = (string) $value;
-          if (isset($children[$value])) {
-            continue;
-          }
-          // A structure the site's code declares is built as declared; any
-          // other is read from its schema.
-          $id = $definition->id . '.' . $key . '.' . $value;
-          $schema = $entry['schema'] ?? [];
-          $reference = is_string($schema['$ref'] ?? NULL) && count($schema) === 1 ? SchemaResolver::defName($schema['$ref']) : NULL;
-          $shared_def = $shared !== NULL && $reference !== NULL && isset($shared['$defs'][$reference]);
-          $pointer = '/$defs/' . str_replace(['~', '/'], ['~0', '~1'], (string) $reference);
-          $children[$value] = match (TRUE) {
-            isset($entry['structure']) => $this->registry->getDefinition($entry['structure'])->name(),
-            $lazy && $entry['schema'] === NULL => $inputs->readListed($id, $from, $value),
-            $shared_def => $inputs->readStructure($id, $shared, $pointer, $shared_hash),
-            default => $inputs->readStructure($id, SchemaReader::prepared($schema + ($list->defs() === [] ? [] : ['$defs' => $list->defs()])), ''),
-          };
-          $labels[$value] = $entry['label'];
-          $site[$value] = TRUE;
-        }
-      }
+      ['children' => $children, 'labels' => $labels, 'site' => $site] = $this->findVariants($definition, $inputs, $builder, (string) $key, $inputs->readVariants()[$key] ?? [], $inputs->variantsFrom()[$key] ?? NULL, $inputs->variantsArguments()[$key] ?? []);
       $variantKeys[$key] = [
         'by' => $by,
         'children' => $children,
@@ -1326,6 +992,95 @@ final class Attaching {
       ];
     }
     return $variantKeys;
+  }
+
+  /**
+   * Finds the variants at one key.
+   *
+   * Discovery's #[Variant] classes for the owner and the key, then what a
+   * schema read into the blueprint states, then what a provider of
+   * variants from the site lists, each of those a read structure by name.
+   *
+   * Decision: see docs/decisions.md#variants-nothing-declares.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The owner, whose #[Variant] classes they are and whose id a listed
+   *   one's starts with.
+   * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
+   *   The owner's input blueprint, which registers what is read.
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   *   The owner's builder, which what a provider read reaches.
+   * @param string $key
+   *   The key the variants sit at, which a #[Variant] names with `at`.
+   * @param array<string, array{name: string, label: string|null}> $read
+   *   The variants a schema read into the blueprint states there.
+   * @param class-string<\Drupal\surface\Resource\SiteListInterface>|null $from
+   *   The provider of variants from the site, if any.
+   * @param array $arguments
+   *   What the provider is bound to. The shape is the provider's.
+   *
+   * @return array{children: array<string, string>, labels: array<string, string|\Stringable>, site: array<string, true>}
+   *   Each value's variant by name, the label a read or listed one gives
+   *   its value, and the values whose variant the site's list names
+   *   rather than a class.
+   *
+   * @throws \LogicException
+   *   When a provider of variants answers what cannot be kept.
+   */
+  public function findVariants(ResourceDefinition $definition, ResourceBlueprint $inputs, SurfaceBuilderInterface $builder, string $key, array $read, ?string $from, array $arguments): array {
+    // Every structure whose #[Variant] names this class and key is
+    // one of the variants; the parent names none.
+    // Decision: see docs/decisions.md#variants-nothing-declares.
+    $children = $this->registry->getVariants($definition->name(), $key);
+    $labels = [];
+    // The values whose variant the site's list names, not a class.
+    $site = [];
+    // A variant a schema read into the blueprint states, or one a
+    // provider lists from the site: a structure read from its schema,
+    // beside the declared ones, which win for a value both name.
+    // Decision: see
+    // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
+    foreach ($read as $value => ['name' => $name, 'label' => $label]) {
+      if (!isset($children[(string) $value])) {
+        $site[(string) $value] = TRUE;
+      }
+      $children[(string) $value] ??= $name;
+      if ($label !== NULL) {
+        $labels[(string) $value] = $label;
+      }
+    }
+    if ($from !== NULL) {
+      $list = $this->variantsFrom($definition, $key, $from, $arguments);
+      $builder->addCacheableDependency($list);
+      // A provider that answers an entry's schema when it is read: the
+      // entry is registered by name, its schema read when it is built.
+      $lazy = is_subclass_of($from, EntrySchemasInterface::class);
+      // The defs the entries share, read once for all of them.
+      $shared = $list->defs() === [] ? NULL : SchemaReader::prepared(['$defs' => $list->defs()]);
+      $shared_hash = $shared === NULL ? NULL : ResourceBlueprint::documentHash($shared);
+      foreach ($list->entries() as $value => $entry) {
+        $value = (string) $value;
+        if (isset($children[$value])) {
+          continue;
+        }
+        // A structure the site's code declares is built as declared; any
+        // other is read from its schema.
+        $id = $definition->id . '.' . $key . '.' . $value;
+        $schema = $entry['schema'] ?? [];
+        $reference = is_string($schema['$ref'] ?? NULL) && count($schema) === 1 ? SchemaResolver::defName($schema['$ref']) : NULL;
+        $shared_def = $shared !== NULL && $reference !== NULL && isset($shared['$defs'][$reference]);
+        $pointer = '/$defs/' . str_replace(['~', '/'], ['~0', '~1'], (string) $reference);
+        $children[$value] = match (TRUE) {
+          isset($entry['structure']) => $this->registry->getDefinition($entry['structure'])->name(),
+          $lazy && $entry['schema'] === NULL => $inputs->readListed($id, $from, $value),
+          $shared_def => $inputs->readStructure($id, $shared, $pointer, $shared_hash),
+          default => $inputs->readStructure($id, SchemaReader::prepared($schema + ($list->defs() === [] ? [] : ['$defs' => $list->defs()])), ''),
+        };
+        $labels[$value] = $entry['label'];
+        $site[$value] = TRUE;
+      }
+    }
+    return ['children' => $children, 'labels' => $labels, 'site' => $site];
   }
 
   /**
@@ -1344,11 +1099,18 @@ final class Attaching {
     $definition = $build->definition;
     $ancestry = $build->ancestry;
     $frame = $build->frame;
+    $this->assertOneFlatKey($build, array_map('strval', array_keys($variantKeys)));
     foreach ($variantKeys as $key => ['by' => $by, 'children' => $children, 'site' => $site]) {
+      if ($builder->getDefinition((string) $key) === NULL) {
+        // Brought by a structure mixed in that its access left out, with
+        // its members.
+        continue;
+      }
       $variants = [];
       $withheld = [];
       $runtime_variant = FALSE;
-      // What every variant the site lists at the key is built in when read.
+      // What every variant the site lists at the key is built in when read,
+      // and, stored flat, what it is checked against then.
       $at = $site === [] ? NULL : new VariantsToSettle(
         $this->resources,
         [...$ancestry, array_replace($frame, ['key' => $key])],
@@ -1357,6 +1119,10 @@ final class Attaching {
         $this->gating->forNoAccount,
         $this->declaring->holdsToSchema,
         $this->gating->forNoAccount ? NULL : $this->gating->underlyingAccount(),
+        static::storedFlat($builder, (string) $key) ? [
+          'own' => static::ownBesideFlat($build, (string) $key),
+          'values' => array_map('strval', array_flip(array_map('strval', array_intersect_key($children, $site)))),
+        ] : NULL,
       );
       foreach ($children as $value => $child) {
         // A variant the site lists is built when read, its wiring checked
@@ -1385,10 +1151,150 @@ final class Attaching {
         $variants[(string) $value] = $attachment;
       }
       $declared = [...array_map('strval', array_keys($variants)), ...$withheld];
-      static::assertListNarrowsVariants($builder, $definition, $key, $by, $declared);
+      static::assertListNarrowsVariants($builder, $definition, sprintf('at "%s"', $key), $by, $declared);
+      if (static::storedFlat($builder, (string) $key)) {
+        $this->assertFlatFits($build, (string) $key, $variants);
+      }
       $builder->attachVariants($key, $by, $variants, $variantKeys[$key]['labels'] + $this->variantLabels($children));
       if ($runtime_variant) {
         $builder->markRuntimeAccess($key);
+      }
+    }
+  }
+
+  /**
+   * Answers whether the variants at a key are stored flat.
+   *
+   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   *   The owner's builder, which holds the key's map.
+   * @param string $key
+   *   The key.
+   *
+   * @return bool
+   *   TRUE when its map says Variants::STORED_AS FLAT.
+   */
+  protected static function storedFlat(SurfaceBuilderInterface $builder, string $key): bool {
+    return $builder->getDefinition($key)?->getSetting(Variants::STORED_AS) === Variants::FLAT;
+  }
+
+  /**
+   * Refuses two keys whose variants are stored flat at one level.
+   *
+   * Read back, every stored key that is not the owner's is gathered under
+   * the flat key (FlatVariantsLayout::fromStorage()), so with two of them
+   * nothing could tell which keys each left behind.
+   *
+   * @param \Drupal\surface\ResourceBuild\Build $build
+   *   The owner's build.
+   * @param string[] $keys
+   *   The keys with variants.
+   *
+   * @throws \LogicException
+   *   Naming both.
+   */
+  protected function assertOneFlatKey(Build $build, array $keys): void {
+    $flat = array_values(array_filter($keys, static fn (string $key): bool => static::storedFlat($build->builder, $key)));
+    if (count($flat) > 1) {
+      throw new \LogicException(sprintf('%s stores the variants at "%s" and at "%s" flat at one level (Variants::STORED_AS). Read back, every key that is not its own is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.', $build->definition->id, $flat[0], $flat[1]));
+    }
+  }
+
+  /**
+   * Refuses variants stored flat that cannot be stored beside the owner.
+   *
+   * The variants' keys are stored among the owner's at its level, so a
+   * variant may declare no key the owner holds there, a member a structure
+   * it mixes in brought among them, and hold no variants stored flat of
+   * its own, which would land at the same level too; and the layout that
+   * stores them so is a config storage's (StorageAdapter), so the storage
+   * that stores the owner is one. That storage is the owner's own, or that
+   * of the nearest parent with one; a structure built on its own names
+   * none, and its host's storage says what it does with the key.
+   *
+   * @param \Drupal\surface\ResourceBuild\Build $build
+   *   The owner's build.
+   * @param string $key
+   *   The flat key.
+   * @param array<string, \Drupal\surface\Attachment> $variants
+   *   The variants built at it, by value; one the site lists is checked
+   *   when a door reads it (Resources::settleVariant()).
+   *
+   * @throws \LogicException
+   *   Naming what does not fit.
+   */
+  protected function assertFlatFits(Build $build, string $key, array $variants): void {
+    $id = $build->definition->id;
+    $own = static::ownBesideFlat($build, $key);
+    foreach ($variants as $value => $variant) {
+      $child = $variant->settledChild();
+      if ($child !== NULL) {
+        static::assertFlatVariantFits($id, $key, (string) $value, $variant->id ?? (string) $value, $child, $own);
+      }
+    }
+    $storage = $build->definition->storage;
+    foreach (array_reverse($build->ancestry) as $parent) {
+      if ($storage !== NULL) {
+        break;
+      }
+      $storage = $this->registry->hasDefinition($parent['class']) ? $this->registry->getDefinition($parent['class'])->storage : NULL;
+    }
+    if ($storage !== NULL && !is_a($storage, ConfigObjectStorage::class, TRUE) && !is_a($storage, ConfigEntityStorage::class, TRUE)) {
+      throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and %s, which stores it, is no config storage: the layout that stores them beside their deciding key is applied to ConfigObjectStorage and ConfigEntityStorage alone. Store them under the key, or lay them out in the storage itself.', $id, $key, $storage));
+    }
+  }
+
+  /**
+   * Lists the owner's keys a variant stored flat beside them may not declare.
+   *
+   * @param \Drupal\surface\ResourceBuild\Build $build
+   *   The owner's build.
+   * @param string $key
+   *   The flat key.
+   *
+   * @return string[]
+   *   Every key the builder holds by now (the inputs, the members a
+   *   structure mixed in brought, the children, the maps and the mounts)
+   *   and the collections, attached after the variants; the flat key
+   *   aside.
+   */
+  protected static function ownBesideFlat(Build $build, string $key): array {
+    return array_values(array_diff(
+      array_unique([...$build->builder->getDefinitionNames(), ...$build->lists]),
+      [$key],
+    ));
+  }
+
+  /**
+   * Refuses one variant stored flat that cannot be stored beside the owner.
+   *
+   * A variant the build holds is checked when the owner is built
+   * (assertFlatFits()); one the site lists, when a door reads it
+   * (Resources::settleVariant()).
+   *
+   * @param string $owner
+   *   The owner's id.
+   * @param string $key
+   *   The flat key.
+   * @param string $value
+   *   The value the variant is for.
+   * @param string $variant
+   *   The variant's id.
+   * @param \Drupal\surface\SurfaceInterface $child
+   *   The variant, built.
+   * @param string[] $own
+   *   The owner's keys at the level (ownBesideFlat()).
+   *
+   * @throws \LogicException
+   *   For a key the owner holds there, or variants stored flat of its own.
+   */
+  public static function assertFlatVariantFits(string $owner, string $key, string $value, string $variant, SurfaceInterface $child, array $own): void {
+    $shared = array_values(array_intersect($child->getDefinitions()->names(), $own));
+    if ($shared !== []) {
+      throw new \LogicException(sprintf('%s stores the variants at "%s" flat beside its own keys (Variants::STORED_AS), and the variant for "%s", %s, declares "%s", which %s declares too. Stored flat, the two would be one key: rename one, or store the variants under "%s".', $owner, $key, $value, $variant, $shared[0], $owner, $key));
+    }
+    foreach ($child->getDefinitions()->entries() as $name => $entry) {
+      if ($entry->variants?->storedFlat()) {
+        throw new \LogicException(sprintf('%s stores the variants at "%s" flat (Variants::STORED_AS), and the variant for "%s", %s, stores the variants at "%s" flat too, at the same level. Read back, every key that is not the owner\'s is gathered under the one flat key, so nothing could tell which keys each left behind: store one of them under its key.', $owner, $key, $value, $variant, $name));
       }
     }
   }
@@ -1412,6 +1318,11 @@ final class Attaching {
     // per delta.
     // Decision: see docs/decisions.md#access-once-per-list.
     foreach ($inputs->lists() as $key => $child) {
+      if ($builder->getDefinition((string) $key) === NULL) {
+        // Brought by a structure mixed in that its access left out, with
+        // its members.
+        continue;
+      }
       // Nothing wires an item's ports yet.
       $this->assertWiring($build, NULL, $key, $child, [], 'collection');
       [$attachment, $access, $child_context, $runtime] = $this->buildChild($build, $child, $key);
@@ -1443,8 +1354,9 @@ final class Attaching {
    *   The key the variants sit at, for the messages.
    * @param class-string<\Drupal\surface\Resource\SiteListInterface> $from
    *   The provider's class.
-   * @param list<string|int> $arguments
-   *   What the owner bound the provider to, if anything.
+   * @param array $arguments
+   *   What the owner bound the provider to, if anything. The shape is the
+   *   provider's.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   What it listed, each entry of a closed provider naming the structure
@@ -1507,8 +1419,8 @@ final class Attaching {
    *   The builder, holding the deciding key as declared and extended.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure being built.
-   * @param string $key
-   *   The key the variants sit at.
+   * @param string $where
+   *   Where the variants are, in words: `at "<key>"`.
    * @param string $by
    *   The deciding key.
    * @param string[] $values
@@ -1518,7 +1430,7 @@ final class Attaching {
    * @throws \LogicException
    *   Naming the key and each value no variant is for.
    */
-  protected static function assertListNarrowsVariants(SurfaceBuilderInterface $builder, ResourceDefinition $definition, string $key, string $by, array $values): void {
+  public static function assertListNarrowsVariants(SurfaceBuilderInterface $builder, ResourceDefinition $definition, string $where, string $by, array $values): void {
     $deciding = $builder->getDefinition($by);
     $set = $deciding === NULL ? NULL : ChoiceSet::of($deciding);
     if ($set === NULL) {
@@ -1527,11 +1439,11 @@ final class Attaching {
     $unfilled = array_values(array_diff(array_map('strval', $set->values), $values));
     if ($unfilled !== []) {
       throw new \LogicException(sprintf(
-        '%s lists %s for "%s", and no variant at "%s" is for %s. A deciding key\'s list narrows the values its variants are for and names no other: declare a #[Variant] for %s, or leave the list out and let the variants say the values.',
+        '%s lists %s for "%s", and no variant %s is for %s. A deciding key\'s list narrows the values its variants are for and names no other: declare a #[Variant] for %s, or leave the list out and let the variants say the values.',
         $definition->id,
         '"' . implode('", "', $unfilled) . '"',
         $by,
-        $key,
+        $where,
         count($unfilled) === 1 ? 'it' : 'them',
         count($unfilled) === 1 ? 'it' : 'each',
       ));
@@ -1541,9 +1453,10 @@ final class Attaching {
   /**
    * Gets what each variant calls its value.
    *
-   * Its #[Variant]'s label, the choice's word, else what the structure
-   * itself is called (ResourceDefinition::label()), so a structure that
-   * names itself is not named again on each #[Variant].
+   * Its #[Variant]'s label, the choice's word, made translatable as every
+   * property attribute's label is (LeafRules::label()), else what the
+   * structure itself is called (ResourceDefinition::label()), so a
+   * structure that names itself is not named again on each #[Variant].
    *
    * Decision: see
    * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
@@ -1556,11 +1469,12 @@ final class Attaching {
    *   The labels, by value; a variant that says none either way is left
    *   out.
    */
-  protected function variantLabels(array $children): array {
+  public function variantLabels(array $children): array {
     $labels = [];
     foreach ($children as $value => $child) {
       $attribute = class_exists($child) ? ((new \ReflectionClass($child))->getAttributes(Variant::class)[0] ?? NULL) : NULL;
-      $label = $attribute?->newInstance()->label ?? ($this->registry->hasDefinition($child) ? $this->registry->getDefinition($child)->label() : NULL);
+      $own = $attribute?->newInstance()->label;
+      $label = $own !== NULL ? LeafRules::label($own) : ($this->registry->hasDefinition($child) ? $this->registry->getDefinition($child)->label() : NULL);
       if ($label !== NULL) {
         $labels[(string) $value] = $label;
       }
@@ -1589,7 +1503,7 @@ final class Attaching {
    * @return \Drupal\surface\SurfaceInterface
    *   The sealed data surface.
    */
-  protected function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE, ?array $siteDefaults = NULL): SurfaceInterface {
+  public function buildResource(string $resource, OperationContext $context, array $ancestry, string|\Stringable|null $locked = NULL, bool $top = FALSE, ?array $siteDefaults = NULL): SurfaceInterface {
     return ($this->buildsResource)($resource, $context, $ancestry, $locked, $top, $siteDefaults);
   }
 
@@ -1608,7 +1522,7 @@ final class Attaching {
    * @return \Drupal\surface\SurfaceInterface
    *   The sealed structure.
    */
-  protected function buildRead(string $name, OperationContext $context, array $ancestry): SurfaceInterface {
+  public function buildRead(string $name, OperationContext $context, array $ancestry): SurfaceInterface {
     return ($this->buildsRead)($name, $context, $ancestry);
   }
 

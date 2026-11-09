@@ -36,8 +36,7 @@ final class LedgerResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('name', 'string', t('Name'))
       ->setRequired(TRUE);
-    $inputs->attach('stamps', TimestampsStructure::class)
-      ->setLabel(t('Stamps'));
+    $inputs->attach('stamps', TimestampsStructure::class, t('Stamps'));
   }
 
 }

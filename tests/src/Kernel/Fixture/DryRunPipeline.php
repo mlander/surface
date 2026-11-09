@@ -121,4 +121,11 @@ final class DryRunPipeline implements SurfacePipelineInterface {
     return $dry;
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  public function outputs(SurfaceInterface $built, SurfaceStorageInterface $storage, SurfaceResult $result): array {
+    return $this->inner->outputs($built, $storage, $result);
+  }
+
 }

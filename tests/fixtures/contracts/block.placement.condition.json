@@ -55,10 +55,10 @@
                                 "$ref": "#/$defs/block.placement.condition.settings.entity_bundle:node"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.condition.settings.request_path"
+                                "$ref": "#/$defs/config_schema:condition.plugin.request_path:own"
                             },
                             {
-                                "$ref": "#/$defs/block.placement.condition.settings.response_status"
+                                "$ref": "#/$defs/config_schema:condition.plugin.response_status:own"
                             },
                             {
                                 "$ref": "#/$defs/block.placement.condition.settings.user_role"
@@ -74,8 +74,8 @@
                             "by": "id",
                             "variants": {
                                 "entity_bundle:node": "#/$defs/block.placement.condition.settings.entity_bundle:node",
-                                "request_path": "#/$defs/block.placement.condition.settings.request_path",
-                                "response_status": "#/$defs/block.placement.condition.settings.response_status",
+                                "request_path": "#/$defs/config_schema:condition.plugin.request_path:own",
+                                "response_status": "#/$defs/config_schema:condition.plugin.response_status:own",
                                 "user_role": "#/$defs/block.placement.condition.settings.user_role"
                             }
                         }
@@ -123,7 +123,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the condition chosen.",
-                                    "$ref": "#/$defs/block.placement.condition.settings.request_path"
+                                    "$ref": "#/$defs/config_schema:condition.plugin.request_path:own"
                                 }
                             }
                         }
@@ -144,7 +144,7 @@
                                 "settings": {
                                     "title": "Settings",
                                     "description": "The settings of the condition chosen.",
-                                    "$ref": "#/$defs/block.placement.condition.settings.response_status"
+                                    "$ref": "#/$defs/config_schema:condition.plugin.response_status:own"
                                 }
                             }
                         }
@@ -210,27 +210,28 @@
                         },
                         "additionalProperties": false
                     },
-                    "block.placement.condition.settings.request_path": {
-                        "title": "block.placement.condition.settings.request_path",
+                    "config_schema:condition.plugin.request_path:own": {
+                        "title": "config_schema:condition.plugin.request_path:own",
                         "type": "object",
                         "properties": {
                             "pages": {
-                                "title": "String",
-                                "type": "string",
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
                                 "default": ""
                             }
                         },
                         "additionalProperties": false
                     },
-                    "block.placement.condition.settings.response_status": {
-                        "title": "block.placement.condition.settings.response_status",
+                    "config_schema:condition.plugin.response_status:own": {
+                        "title": "config_schema:condition.plugin.response_status:own",
                         "type": "object",
                         "properties": {
                             "status_codes": {
-                                "title": "Sequence",
+                                "title": "status_codes",
                                 "type": "array",
                                 "items": {
-                                    "title": "Integer",
                                     "type": "integer",
                                     "oneOf": [
                                         {
@@ -250,7 +251,10 @@
                                 "default": []
                             }
                         },
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "required": [
+                            "status_codes"
+                        ]
                     },
                     "block.placement.condition.settings.user_role": {
                         "title": "block.placement.condition.settings.user_role",

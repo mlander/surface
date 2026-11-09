@@ -181,16 +181,16 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *
    * Decision: see docs/decisions.md#an-alter-attaches-at-its-own-mount.
    */
-  public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
-    static::assertNoShape('attach', $key, $child);
-    $this->assertWithinMixin('attaches ' . $child, NULL);
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+    static::assertNoShape('attach', $key, $structure);
+    $this->assertWithinMixin('attaches ' . $structure, NULL);
     static::assertReads($key, $reads);
     $mount = 'third_party_settings.' . $this->provider;
     if ($key !== $mount) {
       throw new \LogicException(sprintf(
         'The %s alter attaches %s at "%s". An alter attaches under its own mount, and only at the mount itself, %s: at the owner\'s level the structure\'s keys would be the owner\'s, and a structure at a key inside the mount is not built.',
         $this->provider,
-        $child,
+        $structure,
         $key,
         $mount,
       ));
@@ -199,39 +199,25 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
       throw new \LogicException(sprintf(
         'The %s alter attaches %s at %s, where it has %s already. A mount holding a structure holds its keys alone: the alter is then an adapter, and adds no key of its own there.',
         $this->provider,
-        $child,
+        $structure,
         $mount,
         $this->keys !== [] ? 'added ' . implode(', ', $this->keys) : 'attached ' . implode(', ', $this->attachments),
       ));
     }
-    $this->attachments[$key] = $child;
+    $this->attachments[$key] = $structure;
     $this->wirings[$key] = $reads;
-    return $this->builder->reserveThirdPartyMount($this->provider);
+    return static::labeled($this->builder->reserveThirdPartyMount($this->provider), $label);
   }
 
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
     throw new \LogicException(sprintf(
       'The %s alter cannot attach a collection of %s at "%s" yet: an alter attaches a structure at its own mount, third_party_settings.%s, and a collection under the mount is not built.',
       $this->provider,
-      $child,
-      $key,
-      $this->provider,
-    ));
-  }
-
-  /**
-   * {@inheritdoc}
-   *
-   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
-   */
-  public function mixIn(string $structure, array $reads = []): static {
-    throw new \LogicException(sprintf(
-      'The %s alter mixes %s in. Only an owner mixes a structure in: an alter\'s keys live under its own module\'s name, and a mixed-in structure\'s members would be the owner\'s. Attach it at the alter\'s own mount, third_party_settings.%s, instead.',
-      $this->provider,
       $structure,
+      $key,
       $this->provider,
     ));
   }

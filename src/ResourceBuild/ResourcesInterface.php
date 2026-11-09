@@ -9,6 +9,7 @@ use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Staging\Stage;
 
 /**
  * The build step: a class and a context in, a sealed data surface out.
@@ -171,12 +172,37 @@ interface ResourcesInterface {
   /**
    * Builds the context one operation describes.
    *
+   * With a stage, an operation that does not create and takes no
+   * structure (an update, a read or a delete) may name a thing the stage
+   * creates, by the address its create was given: a local id (`-3`) or
+   * the name its caller gave. Its context is then the owner's create
+   * context again, built from what the stage recorded, under this
+   * operation's id, with `creates` still TRUE, so storage rehearses a
+   * create and access answers for one, and knowing the create's position
+   * in the stage, which the stage's storage reads, and which the read and
+   * write tools read to tell a thing a stage creates from a create; a
+   * name its caller gave is fixed, so a write cannot rename the thing.
+   * The position's key is reserved for the stage: an owner's context that
+   * knows it is refused with a \LogicException. It is the one
+   * context whose `creates` differs from its operation's, and it is not
+   * stamped. A create builds that context too when the stage says the
+   * position of the create it writes into (Stage::creating()), which a
+   * flow's later steps over a create do. Any other call, or one that
+   * names no create of the stage, builds as with no stage. The stage is
+   * never on the context.
+   *
+   * Decision: see
+   * docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+   *
    * @param string $resource
    *   The class, or its #[Resource] or #[Structure] id.
    * @param string $operation
    *   The operation id.
    * @param array $arguments
    *   The operation method's arguments, positional or by parameter name.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the call goes through, or NULL for none. Who may use it is
+   *   its own access's answer, which the caller asks first.
    *
    * @return \Drupal\surface\Resource\OperationContext
    *   The context, whose id is the operation id; for the read the build
@@ -186,10 +212,12 @@ interface ResourcesInterface {
    * @throws \InvalidArgumentException
    *   When it has no such operation.
    * @throws \LogicException
-   *   When two providers declare the operation, or it returns something
-   *   other than a context for its own id.
+   *   When two providers declare the operation, it returns something
+   *   other than a context for its own id, or its context knows a key
+   *   reserved for the stage (StagedStorage::POSITION,
+   *   StageStorage::KEEP).
    */
-  public function operation(string $resource, string $operation, array $arguments = []): OperationContext;
+  public function operation(string $resource, string $operation, array $arguments = [], ?Stage $stage = NULL): OperationContext;
 
   /**
    * Builds a resource or structure in one of its operations.
@@ -299,6 +327,16 @@ interface ResourcesInterface {
    *   The account the write is made as, handed to each write verb of
    *   each level's storage, or NULL for the current user: a storage
    *   never reads the current user itself.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the call writes into, its arguments the operation's
+   *   parameters by name, or NULL for storage itself. With one, a load
+   *   answers what the stage holds for the thing before what is stored, a
+   *   prepare rehearses the write as a real one, and a commit writes the
+   *   stage's record and never storage, until the stage is applied. Who
+   *   may use the stage is its own access's answer (`surface.stage`'s
+   *   update), which the caller asks first for the account. A commit
+   *   into it throws a \RuntimeException when the stage expired, was
+   *   discarded or applied, or is held by another request meanwhile.
    *
    * @return \Drupal\surface\Pipeline\SurfaceStorageInterface
    *   The storage, for the pipeline's submit(). Composed along the tree
@@ -309,7 +347,7 @@ interface ResourcesInterface {
    * @throws \LogicException
    *   When it names no storage: its host supplies it.
    */
-  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL): SurfaceStorageInterface;
+  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL, ?Stage $stage = NULL): SurfaceStorageInterface;
 
   /**
    * Reads what a resource holds, as the code that uses it needs it.

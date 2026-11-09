@@ -15,6 +15,7 @@ use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Reference\ReferenceDependencies;
 use Drupal\surface\Reference\ReferenceStorageLayout;
@@ -75,11 +76,30 @@ use Drupal\Core\Session\AccountInterface;
  * in the layout they are stored in, and are written with
  * setThirdPartySetting(), where core keeps them.
  *
+ * A stage takes its writes (TransactionalStorageInterface): commit()
+ * and delete() save and delete config, whose rows are the database's,
+ * and a rolled back apply resets what config keeps beside them, for a
+ * dependent core saves or deletes in a cascade too. A delete whose
+ * cascade removes a field storage changes a table's schema, as does a
+ * subclass that writes one. On a database without transactional schema
+ * changes, such as MySQL and MariaDB, that commits the transaction at
+ * once: apply then voids the stage, saying the writes at and before the
+ * failing one could not be rolled back. PostgreSQL and SQLite roll
+ * schema changes back.
+ *
+ * A subclass whose commit() has effects outside the database, such as
+ * files written or deleted or a call to another service, is not undone
+ * when apply rolls back. Such a subclass should not rely on staging, or
+ * undoes those effects in rolledBack(). PerformanceStorage in
+ * surface_examples_performance is the shipped example: its commit()
+ * deletes the CSS and JavaScript aggregates, which a rollback leaves
+ * deleted, and which the next page that needs them builds again.
+ *
  * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
  *
  * @see docs/storage.md#a-config-entity
  */
-abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface {
+abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsClearableKeysInterface, HeldToConfigSchemaInterface, TransactionalStorageInterface {
 
   use DependencySerializationTrait;
   use HeldToConfigSchemaTrait;
@@ -217,11 +237,12 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
   /**
    * {@inheritdoc}
    *
-   * What each alter's layout says of the keys at its mount, and each
-   * reference to a content entity, stored by uuid.
+   * What each alter's layout says of the keys at its mount, each
+   * reference to a content entity, stored by uuid, and each key whose
+   * variants are stored flat.
    */
   public function translatedKeys(SurfaceInterface $built): array {
-    return static::mountedLayouts($built) + ReferenceStorageLayout::storedSchemaOf($built);
+    return static::mountedLayouts($built) + ReferenceStorageLayout::storedSchemaOf($built) + FlatVariantsLayout::storedSchemaOf($built);
   }
 
   /**
@@ -409,6 +430,22 @@ abstract class ConfigEntityStorage implements DeletableStorageInterface, KnowsCl
     $id = $prepared[(string) $this->entityType()->getKey('id')] ?? NULL;
     $entity = is_string($id) ? $this->storage()->load($id) : NULL;
     $entity?->delete();
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Nothing to drop here: apply resets what config keeps beside the
+   * database (the config factory's objects, the `cache.config` bin, the
+   * entity memory cache) for every config name the apply saved, deleted
+   * or renamed, whoever wrote it, so a subclass that saves more config
+   * needs nothing either.
+   *
+   * Decision: see
+   * docs/decisions.md#config-is-staged-and-apply-resets-what-its-rollback-leaves-behind.
+   */
+  public function rolledBack(): void {
+    // Apply resets config's caches for every config name it wrote.
   }
 
   /**

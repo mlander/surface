@@ -6,6 +6,7 @@ namespace Drupal\surface\ResourceBuild;
 
 use Drupal\Core\Config\TypedConfigManagerInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
@@ -785,7 +786,7 @@ final class Declaring {
    *   The blueprint, which names a structure mixed in by discovery's id.
    */
   public function blueprint(SurfaceBuilderInterface $builder, ResourceDefinition $definition, bool $outputs = FALSE): ResourceBlueprint {
-    return (new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name()))->useShapes($this->shapes())->useReferences($this->references());
+    return (new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name()))->useShapes($this->shapes());
   }
 
   /**
@@ -799,7 +800,7 @@ final class Declaring {
   }
 
   /**
-   * Gets what builds a key that refers to an entity, for a blueprint.
+   * Gets what checks a key that refers to an entity, for the build.
    *
    * @return \Drupal\surface\Reference\References
    *   The service.
@@ -899,7 +900,7 @@ final class Declaring {
       }
       $instance = $this->alter($alter->class);
       if ($instance instanceof AltersInputsInterface) {
-        $blueprint = $additions[$alter->module] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, described: $described))->useShapes($this->shapes())->useReferences($this->references());
+        $blueprint = $additions[$alter->module] ??= (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module, described: $described))->useShapes($this->shapes());
         PipelineGuard::onBehalf(PipelineGuard::ALTER, $alter->class, 'alterInputs', static fn () => $instance->alterInputs($blueprint));
       }
       if ($instance instanceof AltersStorageLayoutInterface) {
@@ -923,6 +924,8 @@ final class Declaring {
    * so it is read here, after the owner and every alter: each names an
    * entity type the site has and is typed as its id, and one that refers
    * to a content entity type is marked for the storage that keeps a uuid.
+   * The definition an addEach() entry is copied from is checked as a key
+   * is, before the build copies it for every entry the site lists.
    *
    * Decision: see docs/decisions.md#a-reference-is-a-constraint-on-a-value.
    *
@@ -939,6 +942,14 @@ final class Declaring {
     foreach ($blueprints as $prefix => $blueprint) {
       foreach ($blueprint->definitions() as $key => $declared) {
         $references->settle($who, $prefix . $key, $declared);
+      }
+      if (!$blueprint instanceof ResourceBlueprint) {
+        continue;
+      }
+      foreach ($blueprint->fromSite() as $key => $each) {
+        if (!$each['child'] && $each['each'] instanceof DataDefinitionInterface) {
+          $references->settle($who, $prefix . $key, $each['each'], TRUE);
+        }
       }
     }
   }

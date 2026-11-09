@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface_reference_test\Resource;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Resource\Attribute\Operation;
 use Drupal\surface\Resource\Attribute\Resource;
@@ -42,21 +43,16 @@ final class ReferenceSettingsResource implements ResourceInterface {
       ->setSetting(References::STORED_AS, References::BY_ID);
     $inputs->add('role', 'string', 'Role')
       ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'user_role']);
-    $inputs->attach('thing', ContentEntityStructure::class)
-      ->setLabel('Thing');
-    $inputs->attach('kept_thing', ContentEntityStructure::class)
-      ->setLabel('Thing kept by id')
+    $inputs->attach('thing', ContentEntityStructure::class, 'Thing');
+    $inputs->attach('kept_thing', ContentEntityStructure::class, 'Thing kept by id')
       ->setSetting(References::STORED_AS, References::BY_ID);
-    $inputs->attach('nested', AuthorStructure::class)
-      ->setLabel('Nested');
-    $inputs->attachList('items', ItemStructure::class, max: 5)
-      ->setLabel('Items');
+    $inputs->attach('nested', AuthorStructure::class, 'Nested');
+    $inputs->attachList('items', ItemStructure::class, 'Items', max: 5);
 
-    $inputs->addEach('pages', NULL, from: ReferenceSlots::class, to: 'node')
-      ->setLabel('Pages');
+    $inputs->addEach('pages', DataDefinition::create('integer')
+      ->addConstraint('SurfaceValidReference', ['entityTypeId' => 'node']), from: ReferenceSlots::class, label: 'Pages');
 
-    $inputs->attachEach('authors', AuthorStructure::class, from: ReferenceSlots::class)
-      ->setLabel('Authors');
+    $inputs->attachEach('authors', AuthorStructure::class, from: ReferenceSlots::class, label: 'Authors');
   }
 
 }

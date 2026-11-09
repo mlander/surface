@@ -29,7 +29,8 @@ final class Constraint {
    * @param array $options
    *   Its options.
    * @param bool $item
-   *   TRUE to constrain each item of a list rather than the list.
+   *   TRUE to constrain each item of a list rather than the list, or, on
+   *   an #[Each] property, each entry rather than the map.
    */
   public function __construct(
     public readonly string $name,

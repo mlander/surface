@@ -44,6 +44,11 @@ final class VariantsToSettle {
    *   Whether it is held to its config schema.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account it was for; NULL for no account.
+   * @param array{own: string[], values: array<string, string>}|null $flat
+   *   For variants stored flat beside their deciding key
+   *   (Variants::STORED_AS), the owner's keys at that level, which none of
+   *   them may declare, and each one's value, by name; NULL for variants
+   *   stored under the key.
    */
   public function __construct(
     private ?Resources $resources,
@@ -53,6 +58,7 @@ final class VariantsToSettle {
     public readonly bool $declaring,
     public readonly bool $holdsToSchema,
     public readonly ?AccountInterface $account,
+    public readonly ?array $flat = NULL,
   ) {
   }
 
@@ -151,6 +157,7 @@ final class VariantsToSettle {
       'declaring' => $this->declaring,
       'holdsToSchema' => $this->holdsToSchema,
       'account' => $this->account,
+      'flat' => $this->flat,
     ];
   }
 
@@ -168,6 +175,7 @@ final class VariantsToSettle {
     $this->declaring = $data['declaring'];
     $this->holdsToSchema = $data['holdsToSchema'];
     $this->account = $data['account'];
+    $this->flat = $data['flat'] ?? NULL;
   }
 
   /**

@@ -36,8 +36,7 @@ final class ArchiveStructure implements StructureInterface {
         ],
       ]);
     $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'circle']);
-    $inputs->attach('stamps', TimestampsStructure::class)
-      ->setLabel(t('Archive stamps'));
+    $inputs->attach('stamps', TimestampsStructure::class, t('Archive stamps'));
   }
 
 }

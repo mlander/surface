@@ -206,7 +206,7 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
     $catalog = $this->container->get('surface.site_catalog');
     $kitchen = array_column($catalog->describe()['entity.content:node.kitchen']['operations'], 'doors', 'id');
     $this->assertStringContainsString('/surface-test/node/kitchen/add (surface_route_test.add_node)', $kitchen['create'][SiteCatalog::FORM]);
-    $refused = array_values(array_filter($catalog->refused(), static fn (array $refusal): bool => $refusal['stage'] === SiteCatalog::ROUTE && str_starts_with((string) $refusal['resource'], 'entity.content:')));
+    $refused = array_values(array_filter($catalog->refused(), static fn (array $refusal): bool => $refusal['phase'] === SiteCatalog::ROUTE && str_starts_with((string) $refusal['resource'], 'entity.content:')));
     $this->assertSame([
       [
         'entity.content:node.page',

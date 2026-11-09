@@ -126,7 +126,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertTrue($page->hasOutputs());
 
     $operations = $this->registry()->getOperations('entity.content:node.page');
-    $this->assertSame(['create', 'update', 'read'], array_keys($operations));
+    $this->assertSame(['create', 'update', 'read', 'delete'], array_keys($operations));
     $this->assertTrue($operations['read']->readsOne());
     $this->assertSame([], $operations['create']->parameters);
     $this->assertSame(['key $id'], array_map(static fn ($parameter): string => $parameter->describe(), $operations['update']->parameters));
@@ -159,7 +159,7 @@ class ContentEntityDerivationTest extends SurfaceKernelTestBase {
     $this->assertSame(FieldItemStructures::class, $item->deriver);
     $this->assertSame(FieldItemAccess::class, $item->access);
     $this->assertNull($item->storage);
-    $this->assertSame(['create', 'update', 'read'], array_keys($this->registry()->getOperations('field.item:node.page.body')));
+    $this->assertSame(['create', 'update', 'read', 'delete'], array_keys($this->registry()->getOperations('field.item:node.page.body')));
   }
 
   /**

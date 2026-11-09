@@ -84,8 +84,7 @@ final class ExampleBlockStructure implements StructureInterface {
       ->setDescription(t('How the items are laid out.'))
       ->setRequired(TRUE);
 
-    $inputs->attachVariants('presentation_settings', by: 'presentation')
-      ->setLabel(t('Presentation settings'))
+    $inputs->attachVariants('presentation_settings', by: 'presentation', label: t('Presentation settings'))
       ->setDescription(t('What the chosen presentation needs.'));
   }
 

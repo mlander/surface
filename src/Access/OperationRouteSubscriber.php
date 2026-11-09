@@ -6,6 +6,7 @@ namespace Drupal\surface\Access;
 
 use Drupal\Core\Routing\RouteSubscriberBase;
 use Drupal\Core\Routing\RoutingEvents;
+use Drupal\surface\Form\Flow;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Symfony\Component\Routing\RouteCollection;
 
@@ -25,11 +26,21 @@ use Symfony\Component\Routing\RouteCollection;
  * (SpecialAttributesRouteSubscriber): a `{name}` in the resource's id or
  * a reference that is no variable of the path, or one nothing bounds; one
  * key both fixed and filled; a query map no link can use; keys fixed on a
- * React page (OperationRoute::assertWritten()). The refusal stops the
- * router's rebuild, so no route of the site is written until the routing
- * file is corrected. Everything else a route may get wrong needs the
- * operation it serves or the resource built, and is refused when the
- * route is matched.
+ * React page (OperationRoute::assertWritten()); a flow (`_surface_flow`)
+ * that is no map of distinct group ids with an optional non-empty label
+ * and redirect, or that is declared on a route naming no operation or on
+ * one whose `_form` is not the operation form (Flow::assertWritten()).
+ * The refusal stops the router's rebuild, so no route of the site is
+ * written until the routing file is corrected. Everything else a route
+ * may get wrong needs the operation it serves or the resource built, and
+ * is refused when the route is matched: for a flow, an operation a flow
+ * cannot stage (a delete, a read-only operation, or one a stage does not
+ * apply to), a group the operation does not have, a step order the
+ * refinements contradict, and a create's required key drawn after the
+ * first step (Flow::refusal()).
+ *
+ * Decision: see
+ * docs/decisions.md#a-step-order-is-checked-against-the-refiner-graph-and-a-creates-required-keys-at-match-time.
  *
  * Decision: see
  * docs/decisions.md#the-surface-was-counted-and-cut.
@@ -55,6 +66,11 @@ final class OperationRouteSubscriber extends RouteSubscriberBase {
   protected function alterRoutes(RouteCollection $collection): void {
     foreach ($collection as $name => $route) {
       if (!$route->hasDefault(OperationRoute::RESOURCE) || !$route->hasDefault(OperationRoute::OPERATION)) {
+        // A flow draws an operation's form, so a route declaring one
+        // names the operation.
+        if ($route->hasDefault(Flow::ROUTE)) {
+          Flow::assertWritten($route, (string) $name);
+        }
         continue;
       }
       OperationRoute::assertWritten($route, (string) $name);

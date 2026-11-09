@@ -57,8 +57,7 @@ final class JournalResource implements ResourceInterface {
     $inputs->add('revision', 'integer', t('Revision'), default: 1)
       ->addConstraint('Range', ['min' => 1]);
     $inputs->add('published', 'boolean', t('Published'), default: FALSE);
-    $inputs->attach('archive', ArchiveStructure::class)
-      ->setLabel(t('Archive'));
+    $inputs->attach('archive', ArchiveStructure::class, t('Archive'));
     // The owner's rules read and narrow members the timestamps brought:
     // they are the journal's own keys now.
     $inputs->narrow('revision')

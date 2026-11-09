@@ -19,6 +19,7 @@ use Drupal\surface_property_test\OutsideDiscovery\MapNamesNoClass;
 use Drupal\surface_property_test\OutsideDiscovery\NoAttribute;
 use Drupal\surface_property_test\OutsideDiscovery\NoKeyType;
 use Drupal\surface_property_test\OutsideDiscovery\OutputWithoutInterface;
+use Drupal\surface_property_test\OutsideDiscovery\TwoKinds;
 use Drupal\surface_property_test\OutsideDiscovery\UnknownGroup;
 use Drupal\surface_property_test\Plugin\Block\PropertyNoteBlock;
 use Drupal\surface_property_test\Structure\EntryPropertiesStructure;
@@ -49,9 +50,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * and each effect (`require:`, `doesNotApply:`, `constrain:`, with and
  * without `because:`); #[Map] with a nested class, plain and needing a
  * frame; #[Attach] by the property's type and by argument, wired with
- * `reads:`; #[AttachList] with a minimum and a maximum; #[Variants] with
+ * `reads:`; #[AttachList] with a minimum and a maximum; #[AttachVariants] with
  * two #[Variant] children; #[Each] and #[AttachEach] from a
- * SiteListInterface provider, wired with `reads:`; #[Port] typed and of
+ * SiteListInterface provider, wired with `reads:`, and #[Each] of a
+ * reference, its constraint on each entry, `item: TRUE`; #[Port] typed and of
  * `any`, required and not; #[Computed] with `when:`, never required by
  * inference; #[MixIn] with `reads:`; #[Output] of a value and of a list
  * whose item is a plain class; a #[RefinesInput] method beside the
@@ -160,7 +162,7 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
     }
     $this->assertSame([
       ['add', ['seats', 'integer', 'Seats', 1]],
-      ['attach', ['row', EntryPropertiesStructure::class, []]],
+      ['attach', ['row', EntryPropertiesStructure::class, 'Row', []]],
     ], $readings[1]);
     $this->assertSame($readings[1], $readings[2]);
   }
@@ -191,16 +193,44 @@ class PropertyDeclarationTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests a constraint on an #[Each] property's item lands on every entry.
+   *
+   * The entry is the definition the map copies for every entry the site
+   * lists, and the build checks its type against the entity type's id as
+   * it checks any reference key.
+   */
+  public function testEachItemConstraintIsOnEveryEntry(): void {
+    $resources = $this->container->get('surface.resources');
+    $roles = $resources->buildStatic('property_test.children.properties', new OperationContext('configure'))->getDefinitions()->entry('roles')?->attachment?->child;
+    $this->assertNotNull($roles);
+    $this->assertSame(['alpha', 'beta'], $roles->getDefinitions()->names());
+    foreach (['alpha' => 'Alpha', 'beta' => 'Beta'] as $entry => $label) {
+      $definition = $roles->getDefinition($entry);
+      $this->assertSame('string', $definition?->getDataType());
+      $this->assertSame($label, (string) $definition->getLabel());
+      $this->assertSame(['entityTypeId' => 'user_role'], $definition->getConstraints()['SurfaceValidReference'] ?? NULL);
+    }
+    try {
+      $resources->buildStatic('property_test.broken.mistyped_roles', new OperationContext('configure'));
+      $this->fail('An entry typed as no id of its entity type was not refused.');
+    }
+    catch (\LogicException $e) {
+      $this->assertSame('property_test.broken.mistyped_roles declares each entry of "roles" as a reference to user_role with the integer type, and an id of user_role is a string: declare it addEach(\'roles\', DataDefinition::create(\'string\')->addConstraint(\'SurfaceValidReference\', [...]), from: ..., label: ...), or #[Each(\'string\', ...)].', $e->getMessage());
+    }
+  }
+
+  /**
    * Tests what the verbs cannot know is refused, naming the property and fix.
    */
   public function testWhatTheVerbsCannotKnowIsRefused(): void {
     $refused = [
-      NoAttribute::class => NoAttribute::class . '::$loose carries no attribute that says what it is. Mark it #[Input], #[Output], #[Port], #[Computed], #[Map], #[Attach], #[AttachList], #[Variants], #[Each] or #[AttachEach], or make it static or protected, which the reader leaves alone.',
+      NoAttribute::class => NoAttribute::class . '::$loose carries no attribute that says what it is. Mark it #[Input], #[Output], #[Port], #[Computed], #[Map], #[Attach], #[AttachList], #[AttachVariants], #[Each] or #[AttachEach], or make it static or protected, which the reader leaves alone.',
+      TwoKinds::class => TwoKinds::class . '::$contact carries #[Input] and #[Attach], which each say what it is. A property is one key of one kind: keep one of them.',
       UnknownGroup::class => UnknownGroup::class . '::$aside is drawn in the group "side", which no #[Group] on the class declares. Declare it on the class, #[Group(\'side\', \'<label>\')], or name one it declares: main.',
       NoKeyType::class => NoKeyType::class . '::$tags is typed array, which is no key type and no shape. Type it string, int, float, bool or a shape\'s class, or say the key type on its attribute with type:; a list is #[Input(list:)].',
       AttachNamesNoClass::class => AttachNamesNoClass::class . '::$contact carries #[Attach] and names no class. Type the property with the class, or name it on the attribute with structure:.',
       MapNamesNoClass::class => MapNamesNoClass::class . '::$where carries #[Map] and names no class. Type the property with the class, or name it on the attribute with of:.',
-      ItemConstraintOnValue::class => ItemConstraintOnValue::class . '::$name puts #[Constraint(\'Length\')] on its item, `item: TRUE`, but the key is no list. Drop `item:`, or declare a list with #[Input(list:)].',
+      ItemConstraintOnValue::class => ItemConstraintOnValue::class . '::$name puts #[Constraint(\'Length\')] on its item, `item: TRUE`, but the key is no list and no #[Each]. Drop `item:`, or declare a list with #[Input(list:)].',
       OutputWithoutInterface::class => OutputWithoutInterface::class . ' marks the property $total #[Output], but the class does not implement Drupal\surface\Resource\DefinesOutputsInterface, so nothing reads its outputs. Implement it: the trait answers defineOutputs().',
     ];
     foreach ($refused as $class => $message) {

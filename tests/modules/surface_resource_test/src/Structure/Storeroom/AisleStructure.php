@@ -20,8 +20,7 @@ final class AisleStructure implements StructureInterface {
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('label', 'string', 'Label', default: 'Aisle');
-    $inputs->attachList('shelves', ShelfStructure::class, max: 2)
-      ->setLabel('Shelves');
+    $inputs->attachList('shelves', ShelfStructure::class, 'Shelves', max: 2);
   }
 
 }

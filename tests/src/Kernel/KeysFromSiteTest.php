@@ -392,11 +392,11 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     $blueprint = fn (): ResourceBlueprint => new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'));
     $refusals = [
       'a structure where a value belongs' => [
-        static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', BenchStructure::class, from: WorkshopBenches::class),
+        static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', BenchStructure::class, from: WorkshopBenches::class, label: 'Rows'),
         'addEach("rows") was handed Drupal\surface_resource_test\Structure\Workshop\BenchStructure, a resource or structure: an entry that is a group of keys is a child, attachEach(\'rows\', ...).',
       ],
       'a class that is no shape' => [
-        static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', WorkshopBenches::class, from: WorkshopBenches::class),
+        static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', WorkshopBenches::class, from: WorkshopBenches::class, label: 'Rows'),
         'addEach("rows") was handed Drupal\surface_resource_test\Keys\WorkshopBenches, which is no typed data type and no shape',
       ],
       'a shape where a child belongs' => [
@@ -404,13 +404,13 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
         'attachEach("rows") was handed Drupal\surface_resource_test\Shape\Sku, a shape',
       ],
       'a provider that is none' => [
-        static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', 'boolean', from: BenchStructure::class),
+        static fn (ResourceBlueprint $inputs) => $inputs->addEach('rows', 'boolean', from: BenchStructure::class, label: 'Rows'),
         'addEach("rows") names Drupal\surface_resource_test\Structure\Workshop\BenchStructure as where its keys come from, which does not implement Drupal\surface\Resource\SiteListInterface',
       ],
       'a key taken' => [
         static function (ResourceBlueprint $inputs) {
           $inputs->add('rows', 'string', 'Rows');
-          $inputs->addEach('rows', 'boolean', from: WorkshopBenches::class);
+          $inputs->addEach('rows', 'boolean', from: WorkshopBenches::class, label: 'Rows');
         },
         'The input "rows" was already added to this blueprint.',
       ],
@@ -426,7 +426,7 @@ class KeysFromSiteTest extends SurfaceKernelTestBase {
     }
     $outputs = new ResourceBlueprint(new SurfaceBuilder(), $this->container->get('typed_data_manager'), TRUE);
     try {
-      $outputs->addEach('rows', 'boolean', from: WorkshopBenches::class);
+      $outputs->addEach('rows', 'boolean', from: WorkshopBenches::class, label: 'Rows');
       $this->fail('Outputs hold no keys from the site.');
     }
     catch (\LogicException $e) {

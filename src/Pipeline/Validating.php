@@ -68,6 +68,15 @@ final class Validating {
   protected array $frame = ['', [], []];
 
   /**
+   * Whether the last validate() was for a write that creates the thing.
+   *
+   * A computed key is held to what accept() computed for it, which for a
+   * thing being created follows its sources (Computed::recomputes()).
+   * Every validate() sets it again.
+   */
+  protected bool $creates = FALSE;
+
+  /**
    * Constructs the validate verb.
    *
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
@@ -104,14 +113,17 @@ final class Validating {
    *   The accepted values.
    * @param array $current
    *   The stored values, in input layout.
+   * @param bool $creates
+   *   TRUE when the write creates the thing.
    *
    * @return \Drupal\surface\Pipeline\ViolationSet
    *   The violations, any stale entries held to one side.
    *
    * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::validate()
    */
-  public function validate(SurfaceInterface $surface, array $values, array $current = []): ViolationSet {
+  public function validate(SurfaceInterface $surface, array $values, array $current = [], bool $creates = FALSE): ViolationSet {
     $this->frame = ['', [], []];
+    $this->creates = $creates;
     return new ViolationSet($this->validateLevel($surface, $values, $current));
   }
 
@@ -364,7 +376,7 @@ final class Validating {
    */
   protected function notComputed(SurfaceInterface $surface, Entry $entry, Computed $computed, array $values, array $current): ?Violation {
     $name = $entry->name;
-    $held = $computed->value($name, $values, $current, $entry->definition);
+    $held = $computed->value($name, $values, $current, $entry->definition, $this->creates);
     try {
       $held = $this->accepting->acceptValue($entry->definition, $held, $held, $name);
     }

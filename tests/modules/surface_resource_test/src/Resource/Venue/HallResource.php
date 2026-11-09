@@ -48,8 +48,7 @@ final class HallResource implements ResourceInterface {
     $inputs->add('guests', 'integer', t('Guests'), default: 200)
       ->setRequired(TRUE)
       ->addConstraint('Range', ['min' => 1, 'max' => 2000]);
-    $inputs->attach('chairs', SeatingStructure::class, reads: ['layout' => 'arrangement'])
-      ->setLabel(t('Chairs'));
+    $inputs->attach('chairs', SeatingStructure::class, t('Chairs'), reads: ['layout' => 'arrangement']);
   }
 
 }

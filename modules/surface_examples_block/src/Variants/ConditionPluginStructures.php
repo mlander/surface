@@ -13,6 +13,7 @@ use Drupal\Core\Plugin\Context\ContextRepositoryInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\surface\Contract\ConfigSchemaDocument;
+use Drupal\surface\Reader\ConfigSchemaReader;
 use Drupal\surface\Resource\Attribute\UsesStructure;
 use Drupal\surface\Resource\SiteList;
 use Drupal\surface\Resource\SiteListInterface;
@@ -26,12 +27,20 @@ use Drupal\surface\Resource\SiteListInterface;
  * has one. Each is offered under its label, in the order of their ids.
  *
  * Each one's settings are its declared structure, when its class names
- * one, or what `condition.plugin.<id>` says, less the keys the condition
- * entry holds itself (its id and whether it is negated), with its
- * defaults; and, for a condition that reads a context, a `context_mapping`
- * of one key per context it reads, each offering the contexts the site
- * has that fit it, the first of them its default, as the block layout
- * assigns it.
+ * one, or the structure `condition.plugin.<id>` is, read straight from
+ * the schema (ConfigSchemaReader) in its `:own` form: less the keys of
+ * `condition.plugin`, which the condition entry holds itself (its id and
+ * whether it is negated) or which this provider writes (the context
+ * mapping), the condition's own defaults laid over it.
+ *
+ * A condition that reads a context is the exception. Its settings add a
+ * `context_mapping` of one key per context it reads, each offering the
+ * contexts the site has that fit it, the first of them its default, as
+ * the block layout assigns it. Which contexts the site has is site state,
+ * which no schema says, and a read structure takes no keys besides what
+ * its schema says, so such a condition's settings are written as JSON
+ * Schema (ConfigSchemaDocument) with the mapping added, for the schema
+ * reader.
  *
  * Decision: see docs/decisions.md#a-placed-block-is-a-resource.
  */
@@ -45,6 +54,11 @@ final class ConditionPluginStructures implements SiteListInterface {
   public const BASE = ['id', 'negate', 'context_mapping', 'uuid'];
 
   /**
+   * The type whose keys every condition has: what a variant leaves out.
+   */
+  public const FALLBACK = 'condition.plugin';
+
+  /**
    * The conditions never offered: a block's theme is its placement's.
    */
   protected const NEVER = ['current_theme'];
@@ -53,6 +67,13 @@ final class ConditionPluginStructures implements SiteListInterface {
    * The list, once read in this request.
    */
   protected ?SiteList $list = NULL;
+
+  /**
+   * What each structure in the list was read from: its type and defaults.
+   *
+   * @var list<array{0: string, 1: array}>
+   */
+  protected array $read = [];
 
   /**
    * Constructs the provider.
@@ -65,8 +86,11 @@ final class ConditionPluginStructures implements SiteListInterface {
    *   Matches a condition's contexts with the site's.
    * @param \Drupal\Core\Language\LanguageManagerInterface $languageManager
    *   Says whether the site has more than one language.
+   * @param \Drupal\surface\Reader\ConfigSchemaReader $reader
+   *   Reads a condition's schema into the structure it is.
    * @param \Drupal\surface\Contract\ConfigSchemaDocument $schemas
-   *   Writes a condition's schema as JSON Schema.
+   *   Writes the schema of a condition that reads a context as JSON
+   *   Schema.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
    */
@@ -75,6 +99,7 @@ final class ConditionPluginStructures implements SiteListInterface {
     protected readonly ContextRepositoryInterface $contextRepository,
     protected readonly ContextHandlerInterface $contextHandler,
     protected readonly LanguageManagerInterface $languageManager,
+    protected readonly ConfigSchemaReader $reader,
     protected readonly ConfigSchemaDocument $schemas,
     TranslationInterface $string_translation,
   ) {
@@ -86,6 +111,13 @@ final class ConditionPluginStructures implements SiteListInterface {
    */
   public function list(): SiteList {
     if ($this->list !== NULL) {
+      // A structure read from config schema is held by the registry only
+      // once registered, and a build answered from the cache registers it
+      // again from this list: registered at every call, as the list is
+      // asked at every build.
+      foreach ($this->read as [$type, $defaults]) {
+        $this->reader->structure($type, '', self::FALLBACK, $defaults);
+      }
       return $this->list;
     }
     $list = (new SiteList())->addCacheTags(['config:core.extension', 'config:configurable_language_list']);
@@ -104,11 +136,16 @@ final class ConditionPluginStructures implements SiteListInterface {
         $list->add($id, $label, structure: $structure);
         continue;
       }
-      $schema = $this->schemas->object('condition.plugin.' . $id, self::BASE, $this->defaults($id));
       $mapping = $this->contextMapping($definition['context_definitions'] ?? [], $available);
-      if ($mapping !== NULL) {
-        $schema['properties'] = (array) $schema['properties'] + ['context_mapping' => $mapping];
+      if ($mapping === NULL) {
+        $type = $this->reader->determine('condition.plugin.' . $id) ?? self::FALLBACK;
+        $defaults = $this->defaults($id);
+        $this->read[] = [$type, $defaults];
+        $list->add($id, $label, structure: $this->reader->structure($type, '', self::FALLBACK, $defaults));
+        continue;
       }
+      $schema = $this->schemas->object('condition.plugin.' . $id, self::BASE, $this->defaults($id));
+      $schema['properties'] = (array) $schema['properties'] + ['context_mapping' => $mapping];
       $list->add($id, $label, schema: $schema);
     }
     return $this->list = $list;

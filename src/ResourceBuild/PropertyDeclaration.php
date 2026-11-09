@@ -10,12 +10,14 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Reader\LeafRules;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\Rule as DeclaredRule;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\Attribute\Attach;
 use Drupal\surface\Resource\Attribute\AttachEach;
 use Drupal\surface\Resource\Attribute\AttachList;
+use Drupal\surface\Resource\Attribute\AttachVariants;
 use Drupal\surface\Resource\Attribute\Computed;
 use Drupal\surface\Resource\Attribute\Constraint;
 use Drupal\surface\Resource\Attribute\Describe;
@@ -29,7 +31,6 @@ use Drupal\surface\Resource\Attribute\Output;
 use Drupal\surface\Resource\Attribute\Port;
 use Drupal\surface\Resource\Attribute\Rule;
 use Drupal\surface\Resource\Attribute\Setting;
-use Drupal\surface\Resource\Attribute\Variants;
 use Drupal\surface\Resource\Attribute\Widget;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\DefinesOutputsInterface;
@@ -42,10 +43,10 @@ use Drupal\surface\Resource\ShapeInterface;
  * blueprint's verbs, called with what the property says, in declaration
  * order, so what the verbs refuse is refused the same way, since it is
  * they that run. This class refuses only what the verbs cannot know: a
- * property with no attribute saying what it is, a group no #[Group]
- * declares, a property type that is no key type, a child or map that
- * names no class, an item constraint on a key that is no list, and an
- * output on a class that declares none.
+ * property with no attribute saying what it is, or with two, a group no
+ * #[Group] declares, a property type that is no key type, a child or map
+ * that names no class, an item constraint on a key that is no list, and
+ * an output on a class that declares none.
  *
  * It is pure. Nothing instantiates the class or reads a property's
  * value: only the types, the initializers and the attributes are read,
@@ -57,8 +58,8 @@ use Drupal\surface\Resource\ShapeInterface;
  * carry an attribute of the Attribute namespace, so a plugin class that
  * is its own structure keeps its protected properties to itself. The
  * order is: every property in declaration order, each one's describe()
- * right after it, then each #[MixIn] on the class, then each #[Rule], in
- * the order of the properties carrying them.
+ * right after it, then each #[MixIn] on the class, then each #[Rule],
+ * in the order of the properties carrying them.
  *
  * Decision: see docs/decisions.md#a-class-may-declare-its-keys-as-properties.
  *
@@ -80,6 +81,22 @@ final class PropertyDeclaration {
    * The namespace of the attributes a property declares itself with.
    */
   private const NAMESPACE = 'Drupal\\surface\\Resource\\Attribute\\';
+
+  /**
+   * The attributes that each say what kind of member a property is.
+   */
+  private const KINDS = [
+    Input::class,
+    Output::class,
+    Port::class,
+    Computed::class,
+    Map::class,
+    Attach::class,
+    AttachList::class,
+    AttachVariants::class,
+    Each::class,
+    AttachEach::class,
+  ];
 
   /**
    * Fills the input blueprint from the class's properties.
@@ -128,6 +145,7 @@ final class PropertyDeclaration {
     $groups = self::groups($reflection);
     $rules = [];
     foreach (self::properties($reflection) as $property) {
+      self::assertOneKind($property);
       $is_output = $property->getAttributes(Output::class) !== [];
       if ($is_output && !$reflection->implementsInterface(DefinesOutputsInterface::class)) {
         throw new \LogicException(sprintf('%s marks the property $%s #[Output], but the class does not implement %s, so nothing reads its outputs. Implement it: the trait answers defineOutputs().', $class, $property->getName(), DefinesOutputsInterface::class));
@@ -186,6 +204,32 @@ final class PropertyDeclaration {
   }
 
   /**
+   * Refuses a property that carries two attributes saying what it is.
+   *
+   * The method declare() calls the verb of the first such attribute it
+   * looks for, in a fixed order, so any other would be dropped without a
+   * word.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   *
+   * @throws \LogicException
+   *   Naming the property and each such attribute it carries.
+   */
+  private static function assertOneKind(\ReflectionProperty $property): void {
+    $kinds = [];
+    foreach ($property->getAttributes() as $attribute) {
+      if (in_array($attribute->getName(), self::KINDS, TRUE)) {
+        $kinds[] = '#[' . substr($attribute->getName(), strlen(self::NAMESPACE)) . ']';
+      }
+    }
+    if (count($kinds) > 1) {
+      $last = array_pop($kinds);
+      throw new \LogicException(sprintf('%s::$%s carries %s and %s, which each say what it is. A property is one key of one kind: keep one of them.', $property->getDeclaringClass()->getName(), $property->getName(), implode(', ', $kinds), $last));
+    }
+  }
+
+  /**
    * Calls the one verb the property's attribute stands for.
    *
    * @param \ReflectionProperty $property
@@ -208,32 +252,35 @@ final class PropertyDeclaration {
     }
     if ($computed = self::attribute($property, Computed::class)) {
       $definition = $blueprint->compute($key, $computed->type ?? self::type($property), self::label($computed->label), $computed->from, $computed->using, $computed->when);
-      self::word($definition, NULL, $computed->description);
+      self::word($definition, $computed->description);
       return $definition;
     }
     if ($attach = self::attribute($property, Attach::class)) {
-      $definition = $blueprint->attach($key, $attach->structure ?? self::classType($property, 'Attach', 'structure'), $attach->reads);
-      self::word($definition, $attach->label, $attach->description);
+      $definition = $blueprint->attach($key, $attach->structure ?? self::classType($property, 'Attach', 'structure'), self::text($attach->label), $attach->reads);
+      self::word($definition, $attach->description);
       return $definition;
     }
     if ($list = self::attribute($property, AttachList::class)) {
-      $definition = $blueprint->attachList($key, $list->structure, $list->min, $list->max);
-      self::word($definition, $list->label, $list->description);
+      $definition = $blueprint->attachList($key, $list->structure, self::text($list->label), $list->min, $list->max);
+      self::word($definition, $list->description);
       return $definition;
     }
-    if ($variants = self::attribute($property, Variants::class)) {
-      $definition = $blueprint->attachVariants($key, $variants->by, $variants->from, $variants->arguments);
-      self::word($definition, $variants->label, $variants->description);
+    if ($variants = self::attribute($property, AttachVariants::class)) {
+      $definition = $blueprint->attachVariants($key, by: $variants->by, label: self::text($variants->label), from: $variants->from, arguments: $variants->arguments);
+      self::word($definition, $variants->description);
       return $definition;
     }
     if ($each = self::attribute($property, Each::class)) {
-      $definition = $blueprint->addEach($key, $each->type, $each->from, $each->default, $each->to, $each->bundles);
-      self::word($definition, $each->label, $each->description);
+      // An entry a constraint is laid on, `item: TRUE`, is a definition,
+      // which decorate() reaches through the map.
+      $entry = self::constrainsItem($property) ? DataDefinition::create($each->type) : $each->type;
+      $definition = $blueprint->addEach($key, $entry, $each->from, self::label($each->label), $each->default);
+      self::word($definition, $each->description);
       return $definition;
     }
     if ($each = self::attribute($property, AttachEach::class)) {
-      $definition = $blueprint->attachEach($key, $each->structure, $each->from, $each->reads);
-      self::word($definition, $each->label, $each->description);
+      $definition = $blueprint->attachEach($key, $each->structure, $each->from, self::text($each->label), $each->reads);
+      self::word($definition, $each->description);
       return $definition;
     }
     if ($map = self::attribute($property, Map::class)) {
@@ -241,11 +288,11 @@ final class PropertyDeclaration {
       $definition = $blueprint->addMap($key, self::label($map->label), static function (BlueprintInterface $inner) use ($of): void {
         self::inputs($of, $inner);
       });
-      self::word($definition, NULL, $map->description);
+      self::word($definition, $map->description);
       return $definition;
     }
     $attribute = self::attribute($property, $outputs ? Output::class : Input::class)
-      ?? throw new \LogicException(sprintf('%s::$%s carries no attribute that says what it is. Mark it #[Input], #[Output], #[Port], #[Computed], #[Map], #[Attach], #[AttachList], #[Variants], #[Each] or #[AttachEach], or make it static or protected, which the reader leaves alone.', $property->getDeclaringClass()->getName(), $key));
+      ?? throw new \LogicException(sprintf('%s::$%s carries no attribute that says what it is. Mark it #[Input], #[Output], #[Port], #[Computed], #[Map], #[Attach], #[AttachList], #[AttachVariants], #[Each] or #[AttachEach], or make it static or protected, which the reader leaves alone.', $property->getDeclaringClass()->getName(), $key));
     if ($attribute->list !== NULL) {
       $item = class_exists($attribute->list) && !is_subclass_of($attribute->list, ShapeInterface::class)
         ? self::itemMap($attribute->list)
@@ -255,7 +302,7 @@ final class PropertyDeclaration {
     else {
       $definition = $blueprint->add($key, $attribute->type ?? self::type($property), self::label($attribute->label), $default);
     }
-    self::word($definition, NULL, $attribute->description);
+    self::word($definition, $attribute->description);
     if ($attribute->required ?? self::required($property)) {
       $definition->setRequired(TRUE);
     }
@@ -274,11 +321,16 @@ final class PropertyDeclaration {
     foreach ($property->getAttributes() as $attribute) {
       $instance = $attribute->newInstance();
       if ($instance instanceof Constraint) {
-        if ($instance->item && !$definition instanceof ListDataDefinition) {
-          throw new \LogicException(sprintf('%s::$%s puts #[Constraint(\'%s\')] on its item, `item: TRUE`, but the key is no list. Drop `item:`, or declare a list with #[Input(list:)].', $property->getDeclaringClass()->getName(), $property->getName(), $instance->name));
+        $constrained = $definition;
+        if ($instance->item) {
+          // A list's item, or on an #[Each] property each entry: the
+          // definition the map copies for every entry the site lists.
+          $constrained = $definition instanceof ListDataDefinition ? $definition->getItemDefinition() : DefinitionMetadata::eachOf($definition);
+          if (!$constrained instanceof DataDefinitionInterface) {
+            throw new \LogicException(sprintf('%s::$%s puts #[Constraint(\'%s\')] on its item, `item: TRUE`, but the key is no list and no #[Each]. Drop `item:`, or declare a list with #[Input(list:)].', $property->getDeclaringClass()->getName(), $property->getName(), $instance->name));
+          }
         }
-        ($definition instanceof ListDataDefinition && $instance->item ? $definition->getItemDefinition() : $definition)
-          ->addConstraint($instance->name, $instance->options);
+        $constrained->addConstraint($instance->name, $instance->options);
       }
       elseif ($instance instanceof Examples) {
         DefinitionMetadata::setExamples($definition, $instance->values);
@@ -409,7 +461,7 @@ final class PropertyDeclaration {
       if ($key->required ?? self::required($property)) {
         $definition->setRequired(TRUE);
       }
-      self::word($definition, NULL, $key->description);
+      self::word($definition, $key->description);
       self::decorate($property, $definition);
       $map->setPropertyDefinition($property->getName(), $definition);
     }
@@ -481,21 +533,19 @@ final class PropertyDeclaration {
   }
 
   /**
-   * Sets a label and a description where the attribute gives them.
+   * Sets a description where the attribute gives one.
+   *
+   * The label is the verb's to take, with the key; the description is
+   * the core setter's, on what the verb returned.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   What a verb declared.
-   * @param string|\Stringable|null $label
-   *   The label, or NULL to leave it.
    * @param string|\Stringable|null $description
    *   The description, or NULL to leave it.
    */
-  private static function word(DataDefinitionInterface $definition, string|\Stringable|null $label, string|\Stringable|null $description): void {
+  private static function word(DataDefinitionInterface $definition, string|\Stringable|null $description): void {
     if (!$definition instanceof DataDefinition) {
       return;
-    }
-    if ($label !== NULL) {
-      $definition->setLabel(self::label($label));
     }
     if ($description !== NULL) {
       $definition->setDescription(self::label($description));
@@ -503,22 +553,17 @@ final class PropertyDeclaration {
   }
 
   /**
-   * Makes a text of an attribute translatable, as the module writes one.
+   * Makes a text of an attribute translatable, as every reader does.
    *
    * @param string|\Stringable $text
    *   A bare string, or a text already made.
    *
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup|string
    *   A bare string wrapped in TranslatableMarkup, a TranslatableMarkup as
-   *   it came, any other text as a string.
+   *   it came, any other text as a string (LeafRules::label()).
    */
   private static function label(string|\Stringable $text): TranslatableMarkup|string {
-    return match (TRUE) {
-      // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-      is_string($text) => new TranslatableMarkup($text),
-      $text instanceof TranslatableMarkup => $text,
-      default => (string) $text,
-    };
+    return LeafRules::label($text);
   }
 
   /**
@@ -550,6 +595,24 @@ final class PropertyDeclaration {
   private static function attribute(\ReflectionProperty $property, string $attribute): ?object {
     $found = $property->getAttributes($attribute);
     return $found === [] ? NULL : $found[0]->newInstance();
+  }
+
+  /**
+   * Answers whether a property lays a constraint on its item.
+   *
+   * @param \ReflectionProperty $property
+   *   The property.
+   *
+   * @return bool
+   *   TRUE when a #[Constraint] it carries says `item: TRUE`.
+   */
+  private static function constrainsItem(\ReflectionProperty $property): bool {
+    foreach ($property->getAttributes(Constraint::class) as $attribute) {
+      if ($attribute->newInstance()->item) {
+        return TRUE;
+      }
+    }
+    return FALSE;
   }
 
 }

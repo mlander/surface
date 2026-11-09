@@ -1171,7 +1171,7 @@ final class Gating {
       foreach ($definition->alters as $alter) {
         $instance = $this->declaring->alter($alter->class);
         if ($instance instanceof AltersInputsInterface) {
-          $instance->alterInputs($blueprints[] = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->declaring->shapes())->useReferences($this->declaring->references()));
+          $instance->alterInputs($blueprints[] = (new ResourceBlueprintAdditions($builder, $this->typedDataManager, $alter->module))->useShapes($this->declaring->shapes()));
         }
       }
     }

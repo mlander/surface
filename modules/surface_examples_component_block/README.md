@@ -50,10 +50,8 @@ block's id:
 
 ```php
 $inputs->add('component', 'string', t('Component'));
-$inputs->attachVariants('props', by: 'component', from: ComponentProps::class)
-  ->setLabel(t('Props'));
-$inputs->attachVariants('slots', by: 'component', from: ComponentSlots::class)
-  ->setLabel(t('Slots'));
+$inputs->attachVariants('props', by: 'component', label: t('Props'), from: ComponentProps::class);
+$inputs->attachVariants('slots', by: 'component', label: t('Slots'), from: ComponentSlots::class);
 ```
 
 `ComponentProps` is the main module's provider

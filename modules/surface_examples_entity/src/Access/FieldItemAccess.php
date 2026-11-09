@@ -31,7 +31,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * it.
  *
  * A context that does not say which field of which entity type, as one
- * the item inherits when neither of its operations can be invoked (a
+ * the item inherits when none of its operations can be invoked (a
  * tool's static definition, built before any subject), has nothing to
  * ask about, and says nothing: the field is described as it may be, and
  * the definition per call, built in the real context, asks. Saying

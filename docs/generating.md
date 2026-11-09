@@ -1,5 +1,12 @@
 # Generating a resource
 
+**Experimental.** Generating a resource (the drush generator) is one of
+this module's bolder ideas, not a settled part of the pattern. Its PHP
+API, its stored shape and what its doors answer may change in any
+commit, and nothing is migrated.
+[What is promised](evolution.md#what-is-promised) says what the module
+does promise.
+
 Read this page after you have written
 [Your first resource](first-resource.md) by hand, when you want a
 command to write the same files for the next one. The command asks for

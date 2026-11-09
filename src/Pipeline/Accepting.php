@@ -81,6 +81,15 @@ final class Accepting {
   protected array $unmatched = [];
 
   /**
+   * Whether the last accept() was for a write that creates the thing.
+   *
+   * A computed key of a thing being created is computed from its sources
+   * whatever its level holds, unless it takes a sent value
+   * (Computed::recomputes()). Every accept() sets it again.
+   */
+  protected bool $creates = FALSE;
+
+  /**
    * Constructs the accept verb.
    *
    * @param \Drupal\surface\Options\SurfaceOptions $options
@@ -107,6 +116,8 @@ final class Accepting {
    *   Raw input keyed by data surface key; may be partial.
    * @param array $current
    *   The stored values, in input layout.
+   * @param bool $creates
+   *   TRUE when the write creates the thing.
    *
    * @return array
    *   The accepted values: every data surface key present, each in its
@@ -123,9 +134,10 @@ final class Accepting {
    *
    * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::accept()
    */
-  public function accept(SurfaceInterface $surface, array $input, array $current = []): array {
+  public function accept(SurfaceInterface $surface, array $input, array $current = [], bool $creates = FALSE): array {
     $this->notTaken = [];
     $this->unmatched = [];
+    $this->creates = $creates;
     return $this->acceptLevel($surface, $input, $current, '');
   }
 
@@ -362,8 +374,9 @@ final class Accepting {
    * Accepts a computed key: the value it holds, whatever was sent.
    *
    * Computed from the accepted values of the keys it names while storage
-   * holds nothing for it, and on every write that changes one of them
-   * when it says so; else what is stored. A value sent for it is read as
+   * holds nothing for it, on every write that creates the thing, and on
+   * every write that changes one of them when it says so; else what is
+   * stored. A value sent for it is read as
    * though it were open: the value it holds is noted and not taken, as a
    * locked key's is; any other stays, for validate() to refuse with the
    * code `computed`, naming the keys it is computed from, as a value sent
@@ -400,7 +413,7 @@ final class Accepting {
       $fallback = array_key_exists($name, $current) ? $current[$name] : NULL;
       return $this->acceptValue($entry->definition, $input[$name], $fallback, $path);
     }
-    $value = $computed->value($name, $values, $current, $entry->definition);
+    $value = $computed->value($name, $values, $current, $entry->definition, $this->creates);
     $held = $this->acceptValue($entry->definition, $value, $value, $path);
     if (!array_key_exists($name, $input) || $computed->takesSent()) {
       return $held;

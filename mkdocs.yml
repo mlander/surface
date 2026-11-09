@@ -48,6 +48,7 @@ nav:
       - Value semantics: semantics.md
       - Outputs: outputs.md
       - Storage: storage.md
+      - Staging: staging.md
   - Forms:
       - Generated forms: forms.md
       - Widgets: widgets.md

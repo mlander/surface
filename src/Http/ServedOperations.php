@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Http;
 
-use Drupal\Component\Utility\Crypt;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\Core\Site\Settings;
 use Drupal\surface\SurfaceAccess;
 use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Pipeline\Fingerprint;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\ValueState;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\Resource\StageResource;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\Stageable;
+use Drupal\surface\Staging\StageStoreInterface;
+use Drupal\surface\Storage\StageStorage;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
@@ -29,7 +33,11 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  * Everything after that is what SurfaceOperationForm does for a
  * route: the operation builds the context, the resource is built in it,
  * its storage composed for it, and the current values are what the
- * storage loads over the built resource's defaults.
+ * storage loads over the built resource's defaults. A request that names
+ * a stage has the storage handed it, so the values are the thing as it
+ * stands in the stage, and a write is kept there.
+ *
+ * @internal
  */
 final class ServedOperations {
 
@@ -40,10 +48,13 @@ final class ServedOperations {
    *   What discovery found.
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, which also resolves the operation's arguments.
+   * @param \Drupal\surface\Staging\StageStoreInterface $stages
+   *   Where the stages are kept, which a request's stage is read from.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly ResourcesInterface $resources,
+    protected readonly StageStoreInterface $stages,
   ) {}
 
   /**
@@ -71,16 +82,62 @@ final class ServedOperations {
    * Builds the operation an API request names.
    *
    * @param \Drupal\surface\Http\ServedTarget $target
-   *   What the path and the method named.
+   *   What the path and the method named, and the stage its header named.
    *
    * @return \Drupal\surface\Http\ServedOperation
-   *   The operation, built.
+   *   The operation, built through the stage, when one is named, and its
+   *   storage handed it.
    *
    * @throws \InvalidArgumentException
-   *   When a parameter names nothing.
+   *   When a parameter names nothing, or the header names no stage
+   *   (NamesNothingException).
    */
   public function fromTarget(ServedTarget $target): ServedOperation {
-    return $this->resolve($target->definition->name(), $target->operation->id, $target->parameters);
+    return $this->resolve($target->definition->name(), $target->operation->id, $target->parameters, $this->stage($target->stage, $target->parameters));
+  }
+
+  /**
+   * Gets the stage a request's header names.
+   *
+   * Decision: see
+   * docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+   *
+   * @param string|null $id
+   *   The header's value, or NULL when it is not sent.
+   * @param array $parameters
+   *   The operation's parameters, by name, which the stage records beside
+   *   a write.
+   *
+   * @return \Drupal\surface\Staging\Stage|null
+   *   The stage, or NULL when none is named.
+   *
+   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
+   *   When the header names no stage.
+   */
+  public function stage(?string $id, array $parameters = []): ?Stage {
+    return $id === NULL ? NULL : $this->stages->named($id)->withArguments($parameters);
+  }
+
+  /**
+   * Answers whether a stage applies to an operation, by its ids.
+   *
+   * Decision: see
+   * docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+   *
+   * @param string $resource
+   *   The resource's `#[Resource]` id, or its class.
+   * @param string $operation
+   *   The operation id.
+   *
+   * @return bool
+   *   As Stageable::operation() answers.
+   *
+   * @throws \InvalidArgumentException
+   *   When the resource or the operation is not discovered.
+   */
+  public function stageable(string $resource, string $operation): bool {
+    $definition = $this->registry->getDefinition($resource);
+    return Stageable::operation($definition, $this->registry->getOperation($definition->name(), $operation));
   }
 
   /**
@@ -118,6 +175,9 @@ final class ServedOperations {
    *   The operation id.
    * @param array $parameters
    *   The operation's parameters, by name, as raw values.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the request goes through, whose creates its parameters may
+   *   name; NULL for none.
    *
    * @return \Drupal\surface\Resource\OperationContext
    *   The context.
@@ -125,9 +185,9 @@ final class ServedOperations {
    * @throws \InvalidArgumentException
    *   When a parameter the operation needs is missing or names nothing.
    */
-  public function context(string $resource, string $operation, array $parameters): OperationContext {
+  public function context(string $resource, string $operation, array $parameters, ?Stage $stage = NULL): OperationContext {
     $definition = $this->registry->getDefinition($resource);
-    return $this->resources->operation($definition->name(), $operation, $parameters);
+    return $this->resources->operation($definition->name(), $operation, $parameters, $stage);
   }
 
   /**
@@ -191,8 +251,11 @@ final class ServedOperations {
    * @param string $operation
    *   The operation id.
    * @param array $parameters
-   *   The operation's parameters, by name, as raw values: an entity
-   *   parameter takes the entity's id.
+   *   The operation's parameters, by name, as raw values, never objects:
+   *   the operation's storage loads what they name.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the operation is built through and the storage is handed,
+   *   or NULL for permanent storage.
    *
    * @return \Drupal\surface\Http\ServedOperation
    *   The operation, built. The read the build adds is served as the
@@ -202,7 +265,7 @@ final class ServedOperations {
    *   When the resource or operation is not discovered, or a parameter
    *   the operation needs is missing or names nothing.
    */
-  public function resolve(string $resource, string $operation, array $parameters): ServedOperation {
+  public function resolve(string $resource, string $operation, array $parameters, ?Stage $stage = NULL): ServedOperation {
     $definition = $this->registry->getDefinition($resource);
     $found = $this->registry->getOperation($definition->name(), $operation);
     // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
@@ -210,10 +273,10 @@ final class ServedOperations {
       $found = $this->registry->getOperation($definition->name(), $found->reads);
       $operation = $found->id;
     }
-    $context = $this->resources->operation($definition->name(), $operation, $parameters);
+    $context = $this->resources->operation($definition->name(), $operation, $parameters, $stage);
     $built = $this->resources->build($definition->name(), $context);
-    $storage = $definition->storage === NULL ? NULL : $this->resources->storage($definition->name(), $context, $built);
-    return new ServedOperation($definition, $found, $parameters, $context, $built, $storage);
+    $storage = $definition->storage === NULL ? NULL : $this->resources->storage($definition->name(), $context, $built, stage: $stage);
+    return new ServedOperation($definition, $found, $parameters, $context, $built, $storage, $stage);
   }
 
   /**
@@ -317,11 +380,19 @@ final class ServedOperations {
   /**
    * Fingerprints what the storage holds now, for a write to be checked by.
    *
-   * A keyed hash of the stored values the envelope was built from, read
-   * by load(): served as its `ETag`, sent back in a write's `If-Match`,
-   * and compared with what storage holds when the write arrives. Keyed by
-   * the site's hash salt, so it says nothing that could be guessed back
-   * from it, a secret included.
+   * A keyed hash (Fingerprint::of()) of the stored values the envelope
+   * was built from, read by load(): served as its `ETag`, sent back in a
+   * write's `If-Match`, and compared with what storage holds when the
+   * write arrives.
+   *
+   * A stage's `apply` has no keys, so its stored values never move; its
+   * fingerprint also covers the stage's writes (StageStorage::listed()),
+   * so an `If-Match` read before another write was staged is refused,
+   * 412, as the confirm page refuses an Apply of a list it no longer
+   * shows.
+   *
+   * Decision: see
+   * docs/decisions.md#a-flow-ends-in-a-confirmation-page-that-shows-the-stages-changes-and-applies-it.
    *
    * @param \Drupal\surface\Http\ServedOperation $served
    *   The operation.
@@ -334,7 +405,12 @@ final class ServedOperations {
     if ($served->storage === NULL) {
       return NULL;
     }
-    return Crypt::hmacBase64(serialize([$served->definition->id, $this->stored($served)]), Settings::getHashSalt());
+    $stored = $this->stored($served);
+    $id = $served->context->known['id'] ?? NULL;
+    if ($served->definition->id === StageResource::ID && $served->operation->id === 'apply' && is_string($id) && ($record = $this->stages->read($id)) !== NULL) {
+      $stored = ['listed' => StageStorage::listed($record)] + $stored;
+    }
+    return Fingerprint::of($served->definition->id, $stored);
   }
 
   /**
@@ -351,7 +427,9 @@ final class ServedOperations {
    * its derived resource lives at `update` with `{id: <its new id>}`, which
    * its `id` output says, the create operation knowing only that it had
    * none; a field added to a bundle lives at `update` with the entity
-   * type, the bundle and the field name the write accepted.
+   * type, the bundle and the field name the write accepted. A create
+   * staged under the stage header lives at `update` with its local id,
+   * `{id: -3}`, in that stage alone: each candidate is built through it.
    *
    * @param \Drupal\surface\Http\ServedOperation $served
    *   The operation that wrote.
@@ -365,7 +443,9 @@ final class ServedOperations {
    *   or NULL when the operation does not create or nothing answers.
    */
   public function created(ServedOperation $served, array $values, array $outputs): ?array {
-    if (!$served->context->creates) {
+    // Decision: see
+    // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+    if (!$served->operation->creates) {
       return NULL;
     }
     // An identity key the write left empty (an id storage gives on save)
@@ -389,17 +469,15 @@ final class ServedOperations {
           continue 2;
         }
       }
-      if ($parameters === []) {
-        // An operation asked for with nothing is not where one thing lives.
+      if ($parameters === [] || $candidate->creates) {
+        // An operation asked for with nothing is not where one thing lives,
+        // nor is one that creates another.
         continue;
       }
       try {
-        $context = $this->resources->operation($served->definition->name(), (string) $id, $parameters);
+        $context = $this->resources->operation($served->definition->name(), (string) $id, $parameters, $served->stage);
       }
       catch (\InvalidArgumentException) {
-        continue;
-      }
-      if ($context->creates) {
         continue;
       }
       foreach (array_intersect_key($identity, $context->known) as $key => $value) {

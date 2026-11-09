@@ -941,6 +941,10 @@ final class ContractEmitter {
         $properties[$name] = $flat[$name];
         continue;
       }
+      if (static::childAsDeclared($advertised, $name, $flat[$name], $members[$name], $subschemas)) {
+        $properties[$name] = TRUE;
+        continue;
+      }
       $narrowing = is_array($flat[$name]) ? $this->propertySchema->narrowing($flat[$name], $members[$name], $subschemas->transient) : $flat[$name];
       $properties[$name] = $narrowing === [] ? TRUE : $narrowing;
     }
@@ -955,6 +959,45 @@ final class ContractEmitter {
     $composed['allOf'] = [...$references, ...$conditions];
     $composing = ['type', 'properties', 'additionalProperties', 'required', 'allOf'];
     return $composed + array_diff_key($schema, array_flip($composing));
+  }
+
+  /**
+   * Answers whether a member holding a child is here what its def says.
+   *
+   * A child a mixin brings is the owner's child at the key, the same
+   * child the mixin's own build holds, and variants it holds at a key are
+   * the owner's there, the same variants; so the owner's frame and the
+   * def each name them by reference. The def is
+   * read flat, its references followed, so the member is followed too
+   * before the two are compared: the same, it says nothing the def does
+   * not.
+   *
+   * Decision: see docs/decisions.md#a-mixin-is-merged-flat.
+   *
+   * @param \Drupal\surface\DefinitionMap $advertised
+   *   The frame's definitions.
+   * @param string $name
+   *   The member.
+   * @param mixed $property
+   *   What the frame, described flat, says of it.
+   * @param array $def
+   *   What the def says of it, read flat.
+   * @param \Drupal\surface\Contract\Subschemas $subschemas
+   *   The defs written so far, the child's among them.
+   *
+   * @return bool
+   *   TRUE for a member holding a child or variants that the frame states
+   *   as its def does; FALSE otherwise, a plain member among them.
+   */
+  protected static function childAsDeclared(DefinitionMap $advertised, string $name, mixed $property, array $def, Subschemas $subschemas): bool {
+    $entry = $advertised->entry($name);
+    if (!is_array($property) || ($entry?->attachment === NULL && $entry?->list === NULL && $entry?->variants === NULL)) {
+      return FALSE;
+    }
+    // Followed as a property, as the def's is: a union of variants is
+    // what the conditionals state, and read flat it is not said.
+    $followed = SchemaResolver::inline(['properties' => [$name => $property]], ['$defs' => $subschemas->all()])['properties'][$name] ?? NULL;
+    return is_array($followed) && Subschemas::same($followed, $def);
   }
 
   /**

@@ -20,7 +20,7 @@ final class EntryPortUnreadStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('lights', 'boolean', from: WorkshopBenches::class);
+    $inputs->addEach('lights', 'boolean', from: WorkshopBenches::class, label: t('Lights'));
     $inputs->attachEach('benches', BenchStructure::class, from: WorkshopBenches::class, reads: ['lit' => 'lights']);
   }
 

@@ -29,8 +29,9 @@ interface BoundSiteListInterface extends SiteListInterface {
   /**
    * Lists the things for the arguments an owner bound, one entry each.
    *
-   * @param list<string|int> $arguments
-   *   What the owner bound, in order.
+   * @param array $arguments
+   *   What the owner bound. The shape is the provider's: a list read by
+   *   position, or keys read by name.
    *
    * @return \Drupal\surface\Resource\SiteList
    *   The entries, in order, with the cacheability of what they were read

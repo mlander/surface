@@ -105,6 +105,8 @@ final class DefinitionMetadata {
    * Written by the build step on the map addEach() or attachEach()
    * declared: the entries are the site's, so a reader that describes the
    * map whatever the site lists (its config schema) reads the entry here.
+   * addEach() handed a definition writes it at the declaration, where a
+   * property's constraint on its item reaches it.
    */
   protected const EACH_KEY = 'surface_each';
 

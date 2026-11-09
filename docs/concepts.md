@@ -114,6 +114,7 @@ refused.
 | `Attach` | `use Drupal\surface\Resource\Attribute\Attach;` |
 | `AttachEach` | `use Drupal\surface\Resource\Attribute\AttachEach;` |
 | `AttachList` | `use Drupal\surface\Resource\Attribute\AttachList;` |
+| `AttachVariants` | `use Drupal\surface\Resource\Attribute\AttachVariants;` |
 | `BaseFieldOverrideStorage` | `use Drupal\surface\Pipeline\Storage\BaseFieldOverrideStorage;` |
 | `BlueprintAdditionsInterface` | `use Drupal\surface\Resource\BlueprintAdditionsInterface;` |
 | `BlueprintInterface` | `use Drupal\surface\Resource\BlueprintInterface;` |
@@ -192,7 +193,6 @@ refused.
 | `TypedFormatterBase` | `use Drupal\surface\Plugin\Field\FieldFormatter\TypedFormatterBase;` |
 | `UsesStructure` | `use Drupal\surface\Resource\Attribute\UsesStructure;` |
 | `Variant` | `use Drupal\surface\Resource\Attribute\Variant;` |
-| `Variants` | `use Drupal\surface\Resource\Attribute\Variants;` |
 | `Violation` | `use Drupal\surface\Pipeline\Violation;` |
 | `ViolationSet` | `use Drupal\surface\Pipeline\ViolationSet;` |
 | `Widget` | `use Drupal\surface\Resource\Attribute\Widget;` |

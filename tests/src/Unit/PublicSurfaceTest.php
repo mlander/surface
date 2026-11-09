@@ -52,6 +52,36 @@ use PHPUnit\Framework\Attributes\Group;
  * (docs/decisions.md#a-class-may-declare-its-keys-as-properties): 27
  * attributes, 112 arguments. #[Output] extends #[Input], so its five
  * arguments are counted with it.
+ * Grown on 2026-11-05 by one blueprint method, `mixInVariants()`, the
+ * structure a sibling key chooses mixed in flat, as config schema stores
+ * a type chosen by a key inside its own value, and its attribute,
+ * #[MixInVariants], with its three arguments
+ * (docs/decisions.md#a-mixin-may-be-chosen-by-a-sibling-key): 18
+ * methods, 28 attributes, 115 arguments.
+ * Unchanged on 2026-11-06 by a rename, #[Variants] to #[AttachVariants],
+ * and by mixIn() and mixInVariants() moving from the add-only interface to
+ * BlueprintInterface, which this test counts together.
+ * Cut on 2026-11-06 by two arguments, #[Each(to:, bundles:)]: a reference
+ * per entry is the entry's definition with the reference constraint,
+ * #[Constraint(..., item: TRUE)] beside #[Each]
+ * (docs/decisions.md#a-reference-is-a-constraint-on-a-value): 113
+ * arguments.
+ * Cut on 2026-11-06 by the blueprint method `mixInVariants()` and its
+ * attribute, #[MixInVariants], with its three arguments: a tagged union
+ * has one blueprint form, attachVariants() at a key, and storing the
+ * chosen keys beside the deciding key is a setting on that key,
+ * Variants::STORED_AS, which the engine's layout reads: 17 methods, 27
+ * attributes, 110 arguments.
+ * Grown on 2026-11-07 by one interface outside `src/Resource/`,
+ * TransactionalStorageInterface in `src/Pipeline/`, with its one method,
+ * rolledBack(): a storage declares that a database transaction undoes
+ * its writes whole, and only such a storage may be staged; a class list
+ * of what to refuse could not hold, since any storage may save config or
+ * write State in its own code
+ * (docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection).
+ * The four counts above are unchanged; the storage interfaces of
+ * `src/Pipeline/` are pinned beside them, by name and method, from this
+ * date.
  *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
@@ -73,9 +103,19 @@ class PublicSurfaceTest extends UnitTestCase {
    */
   protected const PINNED = [
     'attributes' => 27,
-    'attribute arguments' => 112,
+    'attribute arguments' => 110,
     'blueprint methods' => 17,
     'interfaces' => 22,
+  ];
+
+  /**
+   * The interfaces a storage implements in `src/Pipeline/`, with their methods.
+   */
+  protected const PIPELINE_STORAGE = [
+    'CreatingStorageInterface' => ['creates'],
+    'DeletingStorageInterface' => ['deletes'],
+    'SurfaceStorageInterface' => ['commit', 'load', 'prepare'],
+    'TransactionalStorageInterface' => ['rolledBack'],
   ];
 
   /**
@@ -119,6 +159,30 @@ class PublicSurfaceTest extends UnitTestCase {
         implode(', ', $counted[$kind]),
       ));
     }
+  }
+
+  /**
+   * Tests the storage interfaces of the pipeline are the ones pinned.
+   *
+   * Each is a promise a storage class makes, and each method its own:
+   * one added or removed fails here until this test says why.
+   */
+  public function testThePipelineStorageInterfacesArePinned(): void {
+    $found = [];
+    foreach (glob(__DIR__ . '/../../../src/Pipeline/*StorageInterface.php') ?: [] as $file) {
+      $name = basename($file, '.php');
+      $reflection = new \ReflectionClass('Drupal\\surface\\Pipeline\\' . $name);
+      $methods = [];
+      foreach ($reflection->getMethods() as $method) {
+        if ($method->getDeclaringClass()->getName() === $reflection->getName()) {
+          $methods[] = $method->getName();
+        }
+      }
+      sort($methods);
+      $found[$name] = $methods;
+    }
+    ksort($found);
+    $this->assertSame(self::PIPELINE_STORAGE, $found, 'Say why a storage interface of the pipeline changed, and pin it here and in docs/decisions.md#the-surface-was-counted-and-cut.');
   }
 
 }

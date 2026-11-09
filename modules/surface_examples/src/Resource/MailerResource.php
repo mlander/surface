@@ -42,8 +42,7 @@ final class MailerResource implements ResourceInterface {
     $inputs->add('source', 'string', t('Credential source'), default: 'pasted')
       ->setRequired(TRUE);
 
-    $inputs->attachVariants('credential', by: 'source', from: CredentialSources::class)
-      ->setLabel(t('Credential'));
+    $inputs->attachVariants('credential', by: 'source', label: t('Credential'), from: CredentialSources::class);
   }
 
 }

@@ -22,8 +22,7 @@ final class VenueReorderStructure implements StructureInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->attachList('venues', VenueOrderStructure::class, min: 1)
-      ->setLabel(t('Venues'))
+    $inputs->attachList('venues', VenueOrderStructure::class, t('Venues'), min: 1)
       ->setDescription(t('Each venue to move, once, with its new weight; a venue left out keeps its own.'))
       ->setRequired(TRUE);
   }

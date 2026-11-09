@@ -22,7 +22,7 @@ final class ThemeReadingKeysResource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->addEach('shown', 'boolean', from: ThemeReadingKeys::class, default: FALSE);
+    $inputs->addEach('shown', 'boolean', from: ThemeReadingKeys::class, label: t('Shown'), default: FALSE);
   }
 
 }

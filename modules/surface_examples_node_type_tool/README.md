@@ -57,7 +57,8 @@ reads the content type resource's `create` operation and derives
   `InputDefinitions`, and an optional `dry_run` boolean that
   stops the pipeline after prepare, where the content type is built and
   held to its config schema, and answers with what would be stored as
-  `prepared`. Because the create operation needs
+  `prepared`, then an optional `stage`, the id of a stage the create is
+  kept in until the stage is applied. Because the create operation needs
   nothing, that map is the exact contract in the static plugin
   definition: every consumer, `drush tool:info` and the AI connector's
   deriver included, sees the extras module's settings.

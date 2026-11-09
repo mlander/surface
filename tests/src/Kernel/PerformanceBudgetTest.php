@@ -61,8 +61,8 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
    * context, and a read an owner declares (the content entity
    * resources') builds its own. And one more for the outputs of each
    * operation that needs nothing and creates, built in the bare context:
-   * the two bundles' `create` and the entity type's. Before the derivation
-   * memo it was about 1.6 per tool, read tools included.
+   * the two bundles' `create`, the entity type's and the stage's. Before
+   * the derivation memo it was about 1.6 per tool, read tools included.
    */
   public function testDerivingEveryToolBuildsEachOperationOnce(): void {
     $this->resources()->forgetBuilds();
@@ -75,9 +75,9 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
       $separator = (int) strrpos($id, ':');
       return !$registry->getOperation(substr($id, strlen('surface:'), $separator - strlen('surface:')), substr($id, $separator + 1))->isDefaultRead();
     });
-    $this->assertCount(15, $operations);
-    $this->assertCount(13, $own, 'Ten writes and the three reads the content entity resources declare.');
-    $this->assertLessThanOrEqual(count($own) + 3, $built);
+    $this->assertCount(24, $operations);
+    $this->assertCount(21, $own, 'Thirteen writes, ten that take values and the three deletes the content entity resources declare, their three reads, and the stage\'s five declared operations; its one read is the one the build adds.');
+    $this->assertLessThanOrEqual(count($own) + 4, $built);
   }
 
   /**
@@ -85,7 +85,8 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
    *
    * The index holds a name, an id, a kind, a module and a base per
    * definition, and the shapes; an entry holds one definition. Bounds a
-   * third or more above what the fixture measures, so a definition that
+   * third or more above what the fixture measures (a field item, with its
+   * four operations, 7168 bytes on 2026-11-07), so a definition that
    * starts carrying what it should not (a built surface, a field's whole
    * definition) fails here.
    */
@@ -97,7 +98,7 @@ class PerformanceBudgetTest extends SurfaceKernelTestBase {
     $this->assertNotFalse($index);
     $names = $index->data['names'];
     $this->assertLessThan(400 * count($names), strlen(serialize($index->data)), 'The index stays under 400 bytes a definition.');
-    $bounds = ['class' => 8 * 1024, 'entity.content' => 12 * 1024, 'field.item' => 6 * 1024];
+    $bounds = ['class' => 8 * 1024, 'entity.content' => 12 * 1024, 'field.item' => 10 * 1024];
     foreach ($names as $name => $indexed) {
       $entry = $bin->get('surface:resources:entry:' . $hash . ':' . $name);
       $this->assertNotFalse($entry, $name . ' has an entry.');

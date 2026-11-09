@@ -27,6 +27,12 @@ use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\WatchedValueCheckInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\ResourceStorageInterface;
+use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\StagedStorage;
+use Drupal\surface\Staging\StageRecord;
+use Drupal\surface\Staging\StageStoreInterface;
+use Drupal\surface\Storage\SecretCodecInterface;
+use Drupal\surface\Storage\StageStorage;
 use Drupal\surface\Storage\ConfigEntityStorage;
 use Drupal\surface\Storage\ConfigObjectStorage;
 
@@ -58,11 +64,11 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  *    added to its key and held to the narrowing check; each identity key
  *    the context knows becomes that key's default and is locked, which is
  *    the engine's lock: the value fixed to the declared default.
- * 5. Each structure mixed in (Attaching::mixIn()): its ports' wiring
+ * 5. Each structure mixed in (Mixing::mixIn()): its ports' wiring
  *    checked, built by itself for its def and its access, which holds its
  *    members to what is stored or takes them back out; then what of the
  *    owner's names its members is checked
- *    (Attaching::assertMixinsUnnamed()), and its refiners, rules and
+ *    (Mixing::assertMixinsUnnamed()), and its refiners, rules and
  *    alters are bound in the owner's frame first (Binding::bindMixin()).
  * 6. The refiners. Every #[RefinesInput] method is checked against the
  *    shape, then bound: the keys it watches become the engine's
@@ -120,9 +126,11 @@ use Drupal\surface\Storage\ConfigObjectStorage;
  * - Declaring: steps 1 to 4, the blueprint filled from the class, its
  *   alters, the site's defaults and the context, and the context a child
  *   is invoked in.
- * - Attaching: steps 5 and 7, each child, collection, variant, map of keys
- *   from the site, structure mixed in and structure at an alter's mount,
- *   each built through this class again in its own frame.
+ * - Mixing: step 5, each structure mixed in, built by itself, its
+ *   members settled, and what of the owner's names them checked.
+ * - Attaching: steps 2 and 7, each child, collection, variant, map of keys
+ *   from the site and structure at an alter's mount, each built through
+ *   this class again in its own frame.
  * - Binding: step 6, the refiners and rules each contributor declared.
  * - Gating: who may ask and what they may see, the permission, the gates,
  *   the access classes and the alters answering access, at the top and
@@ -155,9 +163,14 @@ final class Resources implements ResourcesInterface {
   protected Gating $gating;
 
   /**
-   * The children, collections, variants, site lists, mixins and mounts.
+   * The children, collections, variants, site lists and mounts.
    */
   protected Attaching $attaching;
+
+  /**
+   * The structures mixed in.
+   */
+  protected Mixing $mixing;
 
   /**
    * How many sealed builds are kept, the least recently asked let go.
@@ -265,7 +278,7 @@ final class Resources implements ResourcesInterface {
    *   The account an access question is about when none is named.
    * @param \Drupal\surface\ResourceBuild\OperationArguments $operationArguments
    *   What turns a route's or a tool's values into an operation's
-   *   arguments, an entity's id into the entity among them.
+   *   arguments, an entity into its id among them.
    * @param \Drupal\surface\Refinement\WatchedValueCheckInterface $watchedValueCheck
    *   What a watched value passes before a refiner is handed it, sealed
    *   into every data surface and every child this step builds.
@@ -300,7 +313,7 @@ final class Resources implements ResourcesInterface {
   }
 
   /**
-   * Constructs the four phases over this build step's services.
+   * Constructs the five phases over this build step's services.
    *
    * Called again by withRegistry() on the build step it makes, once that
    * one holds the references it was handed.
@@ -310,6 +323,7 @@ final class Resources implements ResourcesInterface {
     $this->binding = new Binding($this->typedDataManager, $this->declaring);
     $this->gating = new Gating($this->registry, $this->typedDataManager, $this->classResolver, $this->currentUser, $this->permissionsHashGenerator, $this->declaring, $this);
     $this->attaching = new Attaching($this->registry, $this->typedDataManager, $this->watchedValueCheck, $this->declaring, $this->binding, $this->gating, $this, $this->buildResource(...), $this->buildRead(...));
+    $this->mixing = new Mixing($this->registry, $this->gating, $this->attaching);
   }
 
   /**
@@ -962,7 +976,7 @@ final class Resources implements ResourcesInterface {
     // owner's may name what that access may take away, or rule a member
     // out.
     // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
-    $mixins = $this->attaching->mixIn($build, $inputs);
+    $mixins = $this->mixing->mixIn($build, $inputs);
     $owned_rules = [$inputs->rules()];
     $wirings = [];
     foreach (array_keys($inputs->attachments()) as $key) {
@@ -974,7 +988,7 @@ final class Resources implements ResourcesInterface {
         $wirings[(string) $key] = $blueprint->wiring((string) $key);
       }
     }
-    $this->attaching->assertMixinsUnnamed($definition, $mixins, $links, array_merge(...$owned_rules), $wirings);
+    $this->mixing->assertMixinsUnnamed($definition, $mixins, $links, array_merge(...$owned_rules), $wirings);
     $input_keys = array_values(array_filter($input_keys, static fn (string $key): bool => $builder->getDefinition($key) !== NULL));
     $build = $build->withInputKeys($input_keys);
     // Each alter's structure at its own mount, built before any refiner or
@@ -1065,7 +1079,9 @@ final class Resources implements ResourcesInterface {
    * In the build it was held in: for no account, for the account alone
    * or with every answer, for the account that build was for, and held to
    * its config schema as that build was; what the variant's own build
-   * refuses is refused here, its wiring among it.
+   * refuses is refused here, its wiring among it, and, for variants
+   * stored flat, a key the owner holds at their level or variants stored
+   * flat of its own (Attaching::assertFlatVariantFits()).
    *
    * Decision: see
    * docs/decisions.md#the-static-build-is-cached-the-rest-is-per-request.
@@ -1118,6 +1134,9 @@ final class Resources implements ResourcesInterface {
       $built = $read
         ? $this->buildRead($name, $context, $ancestry)
         : $this->buildResource($name, $context, $ancestry, $locked);
+      if ($at->flat !== NULL) {
+        Attaching::assertFlatVariantFits($this->registry->getDefinition($parent['class'])->id, $at->key, $at->flat['values'][$name] ?? $name, $this->registry->getDefinition($name)->id, $built, $at->flat['own']);
+      }
     }
     finally {
       [
@@ -1230,15 +1249,25 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function operation(string $resource, string $operation, array $arguments = []): OperationContext {
+  public function operation(string $resource, string $operation, array $arguments = [], ?Stage $stage = NULL): OperationContext {
     $found = $this->registry->getOperation($resource, $operation);
     // The read the build adds is asked in the context of the update it
     // reads, so its access and its keys are the update's.
     // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
     if ($found->reads !== NULL) {
-      return $this->operation($resource, $found->reads, $arguments);
+      return $this->operation($resource, $found->reads, $arguments, $stage);
     }
     $resolved = $this->operationArguments->resolve($found, $arguments);
+    $created = match (TRUE) {
+      $stage === NULL || $found->structure !== NULL => NULL,
+      // A create through the stage adds a thing, unless the stage says
+      // which create it writes into (Stage::creating()).
+      $found->creates => $stage->creating === NULL ? NULL : $this->stagedCreate($resource, $found, $resolved, $stage),
+      default => $this->stagedCreate($resource, $found, $resolved, $stage),
+    };
+    if ($created !== NULL) {
+      return $created;
+    }
     // One on the class is its attribute's facts and nothing else.
     // Decision: see docs/decisions.md#an-operation-on-the-class.
     if ($found->isBare()) {
@@ -1258,8 +1287,76 @@ final class Resources implements ResourcesInterface {
         OperationContext::class,
       ));
     }
+    // The stage's storage reads these keys, one to tell a thing a stage
+    // creates and one for a new stage's lifetime, so no owner's context
+    // may know them.
+    // Decision: see docs/decisions.md#known-keys-that-are-not-identity.
+    if (array_key_exists(StagedStorage::POSITION, $context->known)) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation of %s knows the key "%s", which is reserved for the stage: the stage\'s storage reads it to tell a thing a stage creates.',
+        $found->id,
+        $resource,
+        StagedStorage::POSITION,
+      ));
+    }
+    if (array_key_exists(StageStorage::KEEP, $context->known)) {
+      throw new \LogicException(sprintf(
+        'The "%s" operation of %s knows the key "%s", which is reserved for the stage: the stage\'s storage reads it for how long a new stage is kept.',
+        $found->id,
+        $resource,
+        StageStorage::KEEP,
+      ));
+    }
     // Decision: see docs/decisions.md#a-contexts-id-is-the-operation-id.
     return $found->stamp($context);
+  }
+
+  /**
+   * Builds the context of a thing a stage creates, for a later operation.
+   *
+   * The owner's own create context, from the operation and the arguments
+   * the stage recorded, so what it holds stands (a creatable bundle, a
+   * known empty id), under the asked operation's id and still creating,
+   * knowing the create's position, and fixing each name the caller gave.
+   * Not stamped: OperationDefinition::stamp() would refuse a context that
+   * creates under an operation that does not. The asked id stays, because
+   * the storage deletes by the kind of the context's operation
+   * (storageFor()).
+   *
+   * Decision: see
+   * docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+   *
+   * @param string $resource
+   *   The class, or its #[Resource] or #[Structure] id.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $found
+   *   The operation asked: one that does not create, or a create the
+   *   stage says the position of (Stage::creating()).
+   * @param array<string, mixed> $arguments
+   *   Its arguments, by name.
+   * @param \Drupal\surface\Staging\Stage $stage
+   *   The stage.
+   *
+   * @return \Drupal\surface\Resource\OperationContext|null
+   *   The context, or NULL when the stage creates no thing of the resource
+   *   under the arguments, or at the position it says.
+   */
+  protected function stagedCreate(string $resource, OperationDefinition $found, array $arguments, Stage $stage): ?OperationContext {
+    $definition = $this->registry->getDefinition($resource);
+    $stages = $this->classResolver->getInstanceFromDefinition(StageStoreInterface::class);
+    $entry = $found->creates
+      ? $stages->createdAt($stage, $definition->id, (int) $stage->creating)
+      : $stages->created($stage, $definition->id, $arguments);
+    if ($entry === NULL) {
+      return NULL;
+    }
+    $create = $this->operation($definition->name(), (string) $entry['operation'], (array) $entry['arguments']);
+    $context = $create->withId($found->id, TRUE)->withKnown([StagedStorage::POSITION => (int) $entry['position']]);
+    foreach (StageRecord::address($entry) as $key => $name) {
+      if (!array_key_exists($key, $create->known)) {
+        $context = $context->withConstraint($key, 'Choice', ['choices' => [$name], 'surface_fixed' => TRUE]);
+      }
+    }
+    return $context;
   }
 
   /**
@@ -1303,7 +1400,7 @@ final class Resources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL): SurfaceStorageInterface {
+  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL, ?Stage $stage = NULL): SurfaceStorageInterface {
     $definition = $this->registry->getDefinition($resource);
     if ($definition->storage === NULL) {
       throw new \LogicException(sprintf(
@@ -1313,7 +1410,19 @@ final class Resources implements ResourcesInterface {
         $definition->id,
       ));
     }
-    return $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context), $account ?? $this->currentUser, $this->gating->itemGates($definition, $context));
+    $adapter = $this->storageFor($definition, $context, $built ?? $this->build($definition->name(), $context), $account ?? $this->currentUser, $this->gating->itemGates($definition, $context));
+    if ($stage === NULL) {
+      return $adapter;
+    }
+    // The operation's parameter names, what a write records as its
+    // arguments when the stage was handed none.
+    $operation = $this->registry->getOperations($definition->id)[$context->id] ?? NULL;
+    $parameters = $operation === NULL ? [] : array_map(static fn (OperationParameter $parameter): string => $parameter->name, $operation->parameters);
+    // Decision: see
+    // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+    $codec = $this->classResolver->getInstanceFromDefinition('surface.secret_codec');
+    assert($codec instanceof SecretCodecInterface);
+    return new StagedStorage($adapter, $stage, $this->classResolver->getInstanceFromDefinition(StageStoreInterface::class), $definition->id, $context, get_class($this->storageInstance($definition->name())), $definition->identity, $parameters, $codec);
   }
 
   /**

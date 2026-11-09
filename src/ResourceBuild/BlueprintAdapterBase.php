@@ -14,7 +14,6 @@ use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\Reference\References;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resolve;
 use Drupal\surface\Resource\Arrangement;
@@ -95,11 +94,6 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   protected ?Shapes $shapes = NULL;
 
   /**
-   * What builds a key that refers to an entity; NULL declares none.
-   */
-  protected ?References $references = NULL;
-
-  /**
    * Constructs a blueprint over a builder.
    *
    * @param \Drupal\surface\SurfaceBuilderInterface $builder
@@ -127,19 +121,6 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    */
   public function useShapes(?Shapes $shapes): static {
     $this->shapes = $shapes;
-    return $this;
-  }
-
-  /**
-   * Hands the blueprint what builds a key that refers to an entity.
-   *
-   * @param \Drupal\surface\Reference\References|null $references
-   *   The service; NULL refuses a reference key.
-   *
-   * @return $this
-   */
-  public function useReferences(?References $references): static {
-    $this->references = $references;
     return $this;
   }
 
@@ -198,65 +179,34 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * Declares one entry of a map of keys from the site.
    *
-   * As add() declares a key, unless addEach() named the entity type each
-   * entry refers to: the id then typed as the entity type keeps it, with
-   * the constraint naming the type and the bundles (References::definition()).
+   * As add() declares a key of a type, or, for the definition addEach()
+   * was handed, as addDefinition() declares a copy of it: every entry has
+   * its own label and starts from its own default.
    *
    * @param string $key
    *   The entry's key.
-   * @param string $type
-   *   The type addEach() was handed; ignored for a reference.
+   * @param string|\Drupal\Core\TypedData\DataDefinitionInterface $type
+   *   What addEach() was handed.
    * @param string|\Stringable $label
    *   The entry's label.
    * @param mixed $default
    *   What it starts from.
-   * @param string|null $to
-   *   The entity type an entry refers to, or NULL for an entry of a type.
-   * @param string[] $bundles
-   *   The bundles it may name; none for every bundle.
    *
-   * @return \Drupal\Core\TypedData\DataDefinition
+   * @return \Drupal\Core\TypedData\DataDefinitionInterface
    *   The entry's definition.
    *
    * @internal
    *   For the build step alone.
    */
-  public function addEntry(string $key, string $type, string|\Stringable $label, mixed $default = NULL, ?string $to = NULL, array $bundles = []): DataDefinition {
-    return $to === NULL
-      ? $this->add($key, $type, $label, $default)
-      : $this->addReference($key, $to, $bundles, $label, $default);
-  }
-
-  /**
-   * Adds a key that holds one entity's id.
-   *
-   * @param string $key
-   *   The key.
-   * @param string $to
-   *   The entity type it refers to.
-   * @param string[] $bundles
-   *   The bundles it may name; none for every bundle.
-   * @param string|\Stringable $label
-   *   The label.
-   * @param mixed $default
-   *   The id it starts from, or NULL.
-   *
-   * @return \Drupal\Core\TypedData\DataDefinition
-   *   The key's definition: the id, typed as the entity type's id key,
-   *   with the constraint naming the type and the bundles.
-   *
-   * @throws \LogicException
-   *   When the blueprint cannot build one, or the entity type is none the
-   *   site has.
-   */
-  protected function addReference(string $key, string $to, array $bundles, string|\Stringable $label, mixed $default): DataDefinition {
-    if ($this->references === NULL) {
-      throw new \LogicException(sprintf('addEach() declares "%s" as a reference to %s where nothing builds one: a reference per thing the site has is declared by a resource or a structure.', $key, $to));
+  public function addEntry(string $key, string|DataDefinitionInterface $type, string|\Stringable $label, mixed $default = NULL): DataDefinitionInterface {
+    if (is_string($type)) {
+      return $this->add($key, $type, $label, $default);
     }
-    $definition = $this->references->definition($key, $to, $bundles);
-    $definition->setLabel($label);
-    $this->addKey($key, $definition, $default);
-    return $definition;
+    $entry = clone $type;
+    if ($entry instanceof DataDefinition) {
+      $entry->setLabel($label);
+    }
+    return $this->addKey($key, $entry, $default, 'addEach');
   }
 
   /**
@@ -302,8 +252,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $map = MapDataDefinition::create();
     $map->setLabel($label);
     $inner = $this->mapBlueprint($map, $key)
-      ->useShapes($this->shapes)
-      ->useReferences($this->references);
+      ->useShapes($this->shapes);
     $define($inner);
     $this->addKey($key, $map, $inner->defaults() === [] ? NULL : $inner->defaults());
     return $map;
@@ -487,13 +436,13 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attach(string $key, string $child, array $reads = []): MapDataDefinition {
-    static::assertNoShape('attach', $key, $child);
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition {
+    static::assertNoShape('attach', $key, $structure);
     static::assertReads($key, $reads);
     $shell = $this->reserveChild('attach', $key);
-    $this->attachments[$key] = $child;
+    $this->attachments[$key] = $structure;
     $this->wirings[$key] = $reads;
-    return $shell;
+    return static::labeled($shell, $label);
   }
 
   /**
@@ -543,8 +492,8 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * {@inheritdoc}
    */
-  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
-    static::assertNoShape('attachList', $key, $child);
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition {
+    static::assertNoShape('attachList', $key, $structure);
     if (($min !== NULL && $min < 0) || ($max !== NULL && $max < 0) || ($min !== NULL && $max !== NULL && $min > $max)) {
       throw new \InvalidArgumentException(sprintf(
         'attachList() was given %s to %s items for "%s": a collection holds from none upwards, and its fewest cannot be more than its most.',
@@ -569,8 +518,8 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       $shell->addConstraint('Count', $count);
     }
     $this->declare($key, $shell, NULL);
-    $this->lists[$key] = $child;
-    return $shell;
+    $this->lists[$key] = $structure;
+    return static::labeled($shell, $label);
   }
 
   /**
@@ -845,9 +794,10 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *
    * The child is built after the context is applied, so the key is
    * declared now as an empty map: that keeps it where defineInputs()
-   * put it, and is what attach() and attachVariants() hand back for the owner
-   * to label and describe with the core setters. The engine keeps that
-   * same map as the shell the child is advertised in.
+   * put it, labeled with what the verb was given, and is what attach()
+   * and attachVariants() hand back for the owner to describe with the
+   * core setters. The engine keeps that same map as the shell the child
+   * is advertised in.
    *
    * @param string $verb
    *   attach or attachVariants, for the message.
@@ -874,6 +824,31 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
     $shell = MapDataDefinition::create();
     $this->declare($key, $shell, NULL);
     return $shell;
+  }
+
+  /**
+   * Labels what a verb declared at a key, where the verb was given a label.
+   *
+   * A verb that declares a key takes its label with it; NULL leaves the
+   * definition as declared, which for a child is the structure's own.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinition $definition
+   *   What the verb declared.
+   * @param string|\Stringable|null $label
+   *   The label, or NULL to leave it.
+   *
+   * @return \Drupal\Core\TypedData\DataDefinition
+   *   The definition, labeled where a label was given.
+   *
+   * @template T of \Drupal\Core\TypedData\DataDefinition
+   * @phpstan-param T $definition
+   * @phpstan-return T
+   */
+  protected static function labeled(DataDefinition $definition, string|\Stringable|null $label): DataDefinition {
+    if ($label !== NULL) {
+      $definition->setLabel($label);
+    }
+    return $definition;
   }
 
   /**

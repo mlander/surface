@@ -62,7 +62,11 @@ the record of the rework that brought the module to the pattern.
   more (the default; no method); on a static method returning an
   `OperationContext` when it needs more, the attribute's id and
   `creates` stamped on it and a context saying otherwise refused
-  (`docs/decisions.md#an-operation-on-the-class`); only ever on its
+  (`docs/decisions.md#an-operation-on-the-class`), the one exception an
+  update, read or delete of a thing a stage creates, which
+  `ResourcesInterface::operation(..., $stage)` builds as the create's
+  context under the asked id, unstamped and still creating
+  (`docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates`); only ever on its
   resource's or structure's own class. Its parameters are values, never
   objects: a method's is typed with a scalar named for a key of its
   resource (`string $id`), a class type refused at discovery
@@ -120,7 +124,7 @@ the record of the rework that brought the module to the pattern.
   (`BlueprintInterface`); an alter gets the add-only
   `BlueprintAdditionsInterface`. A class may instead declare its keys as
   properties, each carrying the attribute of the verb it stands for
-  (`#[Input]`, `#[Attach]`, `#[Rule]`, eighteen in `src/Resource/Attribute/`),
+  (`#[Input]`, `#[Attach]`, `#[Rule]`, nineteen in `src/Resource/Attribute/`),
   with `DeclaresByProperties`, whose `defineInputs()` and
   `defineOutputs()` call the same verbs in property order
   (`ResourceBuild\PropertyDeclaration`, which reads no value): a second
@@ -135,8 +139,9 @@ the record of the rework that brought the module to the pattern.
   (`docs/decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader`).
   An object is declared only by a method that is one JSON Schema
   construct: `attach()` / `attachList()` (`$ref`), `addMap()` (inline
-  object), `mixIn()` (`allOf`), the variants (`if`/`then`), `addEach()`
-  / `attachEach()` (an object keyed by the site), `addList()` (array);
+  object), `mixIn()` (`allOf`), the variants (`if`/`then`),
+  `addEach()` / `attachEach()` (an object keyed by the site), `addList()`
+  (array);
   `addDefinition()` takes one value and refuses a map or a list
   (`docs/decisions.md#a-blueprint-takes-no-complex-data-types`).
 - **Anonymous map**: `addMap($key, $label, fn (BlueprintInterface $map)
@@ -176,15 +181,25 @@ the record of the rework that brought the module to the pattern.
 - **Mixin**: a structure whose members are merged into the owner's own
   keys, `$inputs->mixIn(TimestampsStructure::class, reads: [...])`:
   stored flat, refined in the owner's frame, emitted as `allOf` of its
-  def and the owner's properties; the owner's only, never an alter's.
+  def and the owner's properties; the owner's only, never an alter's. A
+  child it attaches at a fixed key or in a collection is the owner's
+  child at that key, nothing wiring its ports.
   Nest for a thing of its own, mix in for shared members that are part
   of this thing (`docs/resources.md#mixins`).
 - **Variants**: a tagged union whose tag is a sibling key: structures
   that key chooses between, attached at one key,
   `attachVariants($key, by: $sibling)`. Always open: the parent names
   none, any module may declare one.
+- **Stored flat**: variants whose chosen keys the storage keeps flat
+  beside the deciding key, `->setSetting(Variants::STORED_AS,
+  Variants::FLAT)` on the map `attachVariants()` returns (`#[Setting]`
+  beside `#[AttachVariants]`), applied by `Storage\FlatVariantsLayout`
+  for the config storages; the contract is unchanged
+  (`docs/resources.md#stored-flat`,
+  `docs/decisions.md#variants-stored-flat-are-a-layout`).
 - **Variant**: one structure (or resource) among the variants, for one
-  value of the deciding key, `#[Variant(of:, at:, for:)]`.
+  value of the deciding key, `#[Variant(of:, at:, for:)]`; `at` is the
+  key the variants sit at.
 - **Variants from the site**: variants a provider lists rather than
   classes declare, `attachVariants($key, by: $sibling, from:
   Provider::class)`; the provider is the one keys from the site name, a
@@ -232,13 +247,36 @@ the record of the rework that brought the module to the pattern.
   declaration reads back to itself (`SchemaRoundTripTest`)
   (`docs/reading-a-schema.md`,
   `docs/decisions.md#a-schema-can-be-read-back-into-a-structure`).
+- **Reader**: a class that reads a definition written elsewhere into
+  the blueprint's verbs, `Reader\DeclarationReaderInterface`:
+  `ConfigSchemaReader`, a config schema type read straight, with no
+  JSON Schema between (registered as `config_schema:<type>`, `:own` for
+  its keys less those of its frame type, the type itself or one it
+  extends, matched by keys; a caller's defaults laid over as a second
+  source; a type chosen by its own key, `condition.plugin.[id]`, the
+  fallback's keys and the chosen type's at `configuration`, stored flat
+  beside the own key), and `TypedDataReader`, a typed data definition;
+  `LeafRules` holds what both share and `Reading` what no verb took, by
+  path. A key
+  either reads no shape for is declared **open**, `any` held whole to
+  nothing (`LeafRules::open()`), since a derived structure is closed.
+  `Variants\ConfigSchemaTypes` lists the variants a type named through
+  another key chooses, bound by keyed arguments (`['type' =>
+  'block.block.*', 'path' => 'settings']`, `['type' =>
+  'condition.plugin.[id]']`, `'by'` optional, checked when given), a
+  plugin's `#[UsesStructure]` before its schema where a plugin manager
+  gives the values (`docs/reading-a-schema.md#config-schema`).
 - **Collection**: a list of child instances at a key, `attachList()`.
 - **Keys from the site**: one key per thing the site has, in a map at a
-  key, `addEach('forms', 'boolean', from: Provider::class)` (a value of
-  a type or shape per thing; a reference per thing naming its entity
-  type, `addEach('pages', NULL, from: Provider::class, to: 'node', bundles:
-  [...])`) or `attachEach('rows', Row::class, from:
-  ...)` (a structure per thing); the provider is a service implementing
+  key, `addEach('forms', 'boolean', from: Provider::class, label:
+  t('Forms'))` (a value of a type or shape per thing, its label
+  required, or of an entry definition as `addList()` takes an item; a
+  reference per thing is that definition with the reference constraint,
+  `addEach('pages', DataDefinition::create('integer')->addConstraint(
+  'SurfaceValidReference', ['entityTypeId' => 'node']), from:
+  Provider::class, label: t('Pages'))`, `#[Each('integer', ...)]` with
+  `#[Constraint(..., item: TRUE)]` as a property) or `attachEach('rows',
+  Row::class, from: ..., label: ...)` (a structure per thing); the provider is a service implementing
   `SiteListInterface`, whose `list()` answers a `SiteList` (id, label,
   optional start and lock, and the cacheability of what it read; an id
   with a dot or a colon, a schema or a structure refused), asked at
@@ -253,7 +291,8 @@ the record of the rework that brought the module to the pattern.
   'bundles' => ['article']])`, the type checked against the entity
   type's id at build (`References::settle()`, from
   `Declaring::settleReferences()`, which also marks a content entity's
-  key, `References::CONTENT`). A reference to any entity type is a
+  key, `References::CONTENT`, and checks the definition an `addEach()`
+  entry is copied from). A reference to any entity type is a
   structure the example declares (`surface_examples_references`'
   `AnyEntityStructure`, one subclass per filter naming its entity types
   in `ENTITY_TYPES`): `entity_type` with `SurfaceReferenceableType`, `id`
@@ -275,7 +314,7 @@ the record of the rework that brought the module to the pattern.
   A content entity's reference field's `target_id` is one, answered by
   the field's own selection handler and settings
   (`References::definition(handler:, handlerSettings:)`, the helper for
-  code that derives a reference key, and for `addEach(to:)`), drawn with the
+  code that derives a reference key), drawn with the
   autocomplete where its form display uses core's
   (`docs/decisions.md#a-reference-field-is-a-reference-key`).
 - **Computed key**: a key of a resource whose value nobody types,
@@ -313,6 +352,123 @@ the record of the rework that brought the module to the pattern.
   structure's own applied wherever a resource holds it, by the
   structure's own paths (example 14's webhook and `WebhookSigner`,
   `docs/decisions.md#a-key-may-stand-for-another-at-use`).
+- **Stage**: a set of writes kept until they are applied together, or
+  discarded: the base module's one resource, `surface.stage`
+  (`Resource\StageResource`), its id a UUID, its record one row of the
+  expirable key-value collection `surface.stage` (`Staging\StageStore`,
+  the `surface.stages` service, typed `Staging\StageStoreInterface`,
+  which a site may swap), kept for its lifetime `keep` after its last
+  write (long, `tempstore.expire`, unless a flow says `keep: short`,
+  `form_cache_expiration`), its owner the only account its access lets in
+  (`Access\StageAccess`). Code writes into one by handing a
+  `Staging\Stage` to `ResourcesInterface::storage()`, which wraps the
+  storage in a `Staging\StagedStorage`: load answers the stage first,
+  prepare is the storage's, commit writes the record. `changes` lists
+  the writes; `apply` (`Storage\StageStorage`) rehearses them all in
+  prepare and makes them in commit, in order, in one transaction, and
+  keeps the record marked applied. A stage takes creates, updates and
+  deletes where one rule, `Staging\Stageable`, says a stage applies,
+  asked at every door: the resource's storage class implements
+  `Pipeline\TransactionalStorageInterface` (a transaction undoes its
+  writes whole; `rolledBack()` drops what it cached after an apply rolls
+  back), the content entity storage and both config storages among
+  them, every routed child's does too (prepare alone checks that), and
+  the operation names a thing
+  (it creates, the resource has no identity keys, or its parameters name
+  one; `event.venue:reorder` names none), any other refused at prepare,
+  the header on such a call 422 (`docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door`);
+  after a rolled back apply, `Staging\ConfigWrites`
+  (`surface.config_writes`) resets what config kept beside the database
+  for every config name the apply wrote, and on a database without
+  transactional schema changes (MySQL, MariaDB) a schema change makes
+  the writes at and before the failing one permanent: apply marks the
+  stage `voided` (`StageStorage::VOIDED`), which takes no write and no
+  apply, only a discard
+  (`docs/decisions.md#config-is-staged-and-apply-resets-what-its-rollback-leaves-behind`);
+  two identity-less entries of one storage class are one thing
+  (`docs/decisions.md#two-identity-less-entries-of-one-storage-class-are-one-thing`);
+  every secret in an entry is sealed with `surface.secret_codec`, its
+  path recorded under `sealed`, a cleared one under `cleared`, opened by
+  those paths alone at a staged read and at apply (`Staging\StagedSecrets`,
+  `docs/decisions.md#a-secret-is-sealed-in-the-stage-record-by-its-recorded-paths`); a create is an entry of kind
+  `create`, always appended whole with no token, a caller-named name
+  unique per storage class in the stage (`taken`), and named by a local
+  id, its `address`: `-position` for an id storage gives (`id: -3` in
+  every answer), the caller's name otherwise; an update, read or delete
+  handed the stage and naming it is built as the create's context,
+  knowing `StagedStorage::POSITION`, and merges into the entry or drops
+  it, so apply only sees whole creates; a local id names nothing
+  without its stage (`docs/staging.md#a-staged-create`,
+  `docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it`); a delete is an entry of kind
+  `delete`, values `[]` and `changed: ['']`, replacing an update of the
+  thing at its position, and a later write to the thing is refused
+  `not_found` (`docs/staging.md#a-staged-delete`)
+  (`docs/decisions.md#a-stage-is-a-resource-of-the-base-module-kept-in-an-expirable-key-value-collection`,
+  `docs/decisions.md#apply-builds-for-the-current-user-and-writes-as-the-owner`).
+  The doors name one only where a stage applies: the **stage input**,
+  `stage` (`OperationInputs::STAGE`), last on every write tool (after
+  `dry_run`), read tool and narrowing tool, default `''` so the `values`
+  refiner still fires, resolved by `ResourceOperationToolBase::stage()`
+  (a missing id `notFound()`, another account's `accessRefused()`),
+  asked before the thing's context, which is built through it
+  (`ResourceOperationToolBase::staged()`); and
+  the **stage header**, `X-Surface-Stage` (`ServedPaths::STAGE_HEADER`),
+  read in `target()` into `ServedTarget::$stage`, resolved in
+  `ServedOperations::fromTarget()` (404 naming nothing), another
+  account's 403 at `ServedOperationAccessCheck`, before the thing's
+  context, 400 on the stage's own
+  paths, 422 on a call a stage does not apply to, ignored by `GET
+  .../schema`, OpenAPI's `SurfaceStage`; a read,
+  a narrowing and a write's `contract` and `ETag` are the staged view;
+  the `ETag` of the stage's own `apply` also covers its writes
+  (`StageStorage::listed()`, the confirm page's fingerprint), so `PATCH
+  :apply` with a stale `If-Match` is 412
+  (`docs/staging.md`,
+  `docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context`).
+  What a run reports (a stage's id after `create`, `items`, `applied`)
+  is read through the pipeline, `SurfacePipelineInterface::outputs($built,
+  $storage, $result)`, at every door that reads them; the adapter's
+  `OutputsStorageInterface` stays internal
+  (`docs/decisions.md#a-door-reads-what-a-run-reports-through-the-pipeline`).
+- **Flow**: several steps a person or an agent takes over one stage,
+  ending in its `apply`. Declared on an operation form route,
+  `_surface_flow: { steps: [...], label: ..., redirect: ... }` (`Form\Flow`,
+  internal): the route's one operation drawn a group a step
+  (`buildSurfaceForm(..., $keys)`), keys in no group at the first,
+  `?step=N` and `?stage=<id>` in the query, the first step opening the
+  stage, Next staging a step and Back staging nothing, and a confirm
+  page at `?step=confirm` that lists `changes` as a table, says how many
+  writes cannot be undone, and applies what it listed (a fingerprint it
+  posts back) or discards the stage; once applied it goes to the flow's
+  `redirect` route or stays. The rebuild refuses a malformed
+  `_surface_flow` default and a flow on a route whose `_form` is not the
+  operation form; the match (the access check and the form, through
+  `Flow::refusal()`) refuses an operation a flow cannot stage (a delete,
+  a read-only operation, one a stage does not apply to), an unknown
+  group, a key drawn before a key it is refined by, and a create's
+  required key with no default after the first step. A flow over a
+  create writes each later step into its first step's create
+  (`Stage::creating()`, internal).
+  The form door reads `?stage` on every operation form page, the React
+  page reads it too (its app sends the header), and any other page
+  served by an operation refuses it
+  (`OperationRoute::stageRequested()`: the stageable rule, the stage,
+  its access, then the thing's), says what was staged as the tool door
+  does, skips the cosmetics' message and redirect, and varies by
+  `url.query_args:stage` and `:step`, max-age 0 under a stage
+  (`docs/staging.md#the-form-door`, `docs/staging.md#flows`,
+  `docs/decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource`).
+  The entity example's bulk delete from the content list stays
+  hand-built, a `system.action` that stages one delete per selected node
+  and a confirm page over the stage that applies it, since it spans many
+  things (`docs/staging.md#a-flow-by-hand-bulk-delete-from-the-content-list`,
+  `docs/decisions.md#a-destructive-bulk-operation-stages-then-confirms-over-the-stage`).
+  The examples around a stage: the entity example's preview of one
+  staged node (`/surface-entity/stage/{stage}/preview/{id}`,
+  `ContentEntityStorage::preview()`, `docs/staging.md#preview`), an ECA
+  model as optional config in `surface_examples`, shipped disabled
+  (`eca.eca.surface_stage_walkthrough`, `docs/staging.md#eca`), and a
+  drush walk-through (`docs/staging.md#walk-through-with-drush`).
 - **Contract**: the JSON Schema a built resource or structure emits.
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
@@ -500,7 +656,7 @@ hand-written `field_add` / `field_update` are gone.
 that opens one names it, a `CatalogDoorsInterface` service tagged
 `surface.catalog_doors`; a route's `form` or `react` line says
 what it pins, fixes, fills and starts) and every build refusal and
-route written wrong (stage `route`), which `drush
+route written wrong (phase `route`), which `drush
 surface:catalog` prints and the page `/admin/config/development/surfaces`
 shows, its doors linked (`Controller\CatalogController`,
 `docs/catalog-command.md`); `docs/catalog.md`
@@ -515,8 +671,13 @@ traits, which the module's own matrix and round trip tests use.
 Attached structures are `attach()` (a fixed child, by class) and
 `attachVariants()` (variants a sibling key chooses between, always
 open: every `#[Variant]` at the key is one, and the parent names none).
-Both return the map at the key, which the owner labels with the core
-setters; `describe()` rewords a key for an alter that does not own it,
+Every verb that declares a key takes its label with the key, after what
+fills it: optional on `attach()`, `attachList()`, `attachVariants()`
+and `attachEach()`, NULL leaving the structure's own, required on
+`addEach()`, whose values have none to borrow
+(`docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for`).
+Each returns the core definition at the key, which the owner describes
+with the core setters; `describe()` rewords a key for an alter that does not own it,
 and arranges a key (group, weight, placeholder, prefix, suffix, help)
 for its owner or an alter, after the key is declared; a second alter
 setting a fact another alter set on the key is refused at build.
@@ -533,9 +694,10 @@ site, on the container's `allOf`, never in the structure's def
 (`docs/resources.md#ports`). `mixIn()` mixes a structure in: its
 members are the owner's own keys, its refiners and rules bound in the
 owner's frame on its members and its ports, its access locking or
-omitting its members (`docs/resources.md#mixins`). `attachList()` is a collection: a list of
-child instances, the list (its Count) the parent's, each item the
-child's, its entry a `Collection` (`docs/resources.md#collections`).
+omitting its members (`docs/resources.md#mixins`). `attachList()` is a
+collection: a list of child instances, the list (its Count) the
+parent's, each item the child's, its entry a `Collection`
+(`docs/resources.md#collections`).
 
 Keys one resource asks per thing the site has (a checkbox per form) are
 `addEach()` or `attachEach()` with a provider, not a deriver
@@ -558,8 +720,11 @@ storage or identity keys is a resource, any other a structure.
 (`entity.content:*`) and a structure per field (`field.item:*`), with
 field access as each field child's access, and a resource per entity
 type, `entity.content:node`, whose `bundle` chooses the bundle's fields
-as variants under `fields` (`docs/entities.md`); whether `create` takes
-`id` is read from the id field (a serial integer, or a default, is
+as variants under `fields` (`docs/entities.md`); each has `create`,
+`update`, `read` and `delete`, the delete asking core's delete access
+and removing the entity with every translation and revision
+(`ContentEntityStorage` implements `DeletableStorageInterface`);
+whether `create` takes `id` is read from the id field (a serial integer, or a default, is
 computed; a string with no default is the caller's to name, required,
 and refused at `id` when taken;
 `docs/decisions.md#an-entity-types-id-is-computed-or-named-by-the-caller`). A
@@ -631,7 +796,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 1851, Assertions: 43909, Errors: 0, Failures: 0, Skipped: 3. Classes: 260 of 260, 8 at a time, browser classes 4.
+phpunit: Tests: 2105, Assertions: 51873, Errors: 0, Failures: 0, Skipped: 3. Classes: 295 of 295, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -651,8 +816,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 1743, Assertions: 39760, Skipped: 3, Deprecations: 130. Classes:
-211, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 1992, Assertions: 47474, Deprecations: 134, Skipped: 3. Classes:
+242, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -757,7 +922,13 @@ which answers a URL that names nothing as the form's route does; a
 module's own route serves the same page with `ResourceReactPage::served()`
 and `servedTitle()`, handing the app `seeds.defaults` and `prefill`, the
 values the app starts from over the stored ones, and fixing nothing
-(`modules/surface_examples_react/README.md`).
+(`modules/surface_examples_react/README.md`). Either page reads
+`?stage=<id>`, gated as the form door gates it, and hands the app
+`stage` and `stageLabel`; the app then sends `X-Surface-Stage` on every
+API request (never on the token's fetch), says a write was staged, keeps
+the stage in the page a staged create moves to, links the stage's own
+`changes` and `apply` pages, and draws any run's `outputs`, a list of
+maps as a table.
 `docs/served-contract.md` has the format, with children and variants
 as `$defs` that the properties reference; `docs/decisions.md` (Served
 contract) has the points it settled.
@@ -895,22 +1066,43 @@ See `docs/declaring-a-resource.md` for all four in full.
 src/                     Data surface, builder (internal), definition map, host trait;
                          Computed and Resolve, a computed key's and a
                          resolved key's metadata.
+src/Reader/              Readers into the blueprint: ConfigSchemaReader,
+                         TypedDataReader, LeafRules and Reading.
 src/Resource/            The authoring API and attributes (Attribute/), the
                          property attributes among them, and
                          DeclaresByProperties, which reads them
-                         (ResourceBuild/PropertyDeclaration.php).
+                         (ResourceBuild/PropertyDeclaration.php); also the
+                         base module's one resource, StageResource.
+src/Structure/           The base module's two structures, the stage's:
+                         StageChangesStructure and StageAppliedStructure.
 src/ResourceBuild/       Discovery pass, registry, build step, adapters,
                          derived variants, catalog, operation routes.
                          The build step is Resources.php, the order and
-                         the caches, over its four phases: Declaring.php,
-                         Attaching.php, Binding.php, Gating.php.
-src/Access/              The operation route's access check.
+                         the caches, over its five phases: Declaring.php,
+                         Mixing.php, Attaching.php, Binding.php, Gating.php.
+src/Access/              The operation route's access check; StageAccess,
+                         the stage's.
 src/Hook/                #[UsesStructure] into plugin definitions.
 src/Pipeline/            Access, accept, validate, prepare, commit; results.
                          SurfacePipeline.php keeps the write path and
                          the document, over its three verbs: Accepting.php,
-                         Validating.php, Conforming.php.
+                         Validating.php, Conforming.php. The storage
+                         interfaces; TransactionalStorageInterface is
+                         what a storage implements to be staged.
 src/Storage/             Where accepted values are written; settings layouts.
+src/Staging/             The store contract (StageStoreInterface, and
+                         the optional ListsStagesInterface), the
+                         shipped store (StageStore), the record's shape
+                         and lookups every store shares (StageRecord,
+                         public), the staged-storage wrapper
+                         (StagedStorage), the Stage it is handed, and
+                         StageRaceException,
+                         public, which a staged write, an apply or a
+                         stage operation throws on a race; the one
+                         rule of where a stage applies (Stageable),
+                         the sealing of a record's secrets
+                         (StagedSecrets) and what records and resets
+                         the config an apply wrote (ConfigWrites).
 src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
                          walks the frames, PropertySchema writes each key,
                          Conditionals the if/then, DocumentHead the top;
@@ -919,7 +1111,8 @@ src/Drush/               Drush commands (the site's catalog, the contract diff, 
                          config schema) and the resource generator, drush
                          generate surface:resource.
 src/Form/                Form builder, host traits, the operation form
-                         and its contract panel (ContractPanel.php).
+                         and its contract panel (ContractPanel.php);
+                         Flow.php, a route's declared flow (internal).
                          The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
                          Drawing.php, Extracting.php and Refreshing.php.
@@ -937,7 +1130,8 @@ src/Plugin/tool/ src/Plugin/Derivative/
                          the tool module's plugin manager.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
-src/Variants/            Variants from the site: ComponentProps and ComponentSlots.
+src/Variants/            Variants from the site: ComponentProps and ComponentSlots;
+                         ConfigSchemaTypes, a config schema type's.
 src/Refinement/          Narrowing and choice sets.
 modules/                 Nineteen example submodules, each with its own README,
                          in two groups (below).
@@ -974,3 +1168,21 @@ structures in `src/Structure/`, shapes in `src/Shape/`, alters in
 `src/Alter/`, storage classes in `src/Storage/` and access classes in
 `src/Access/`; only the first four are scanned, and the rest are
 registered because a resource or structure names them.
+
+The declared flows' fixture is `tests/modules/surface_stage_test`'s
+itinerary (`ItineraryResource`, `ItineraryStorage`, and the flow routes
+in `surface_stage_test.routing.yml`, one of them `keep: short` and one
+of a single step); the example is the content type's
+`surface_examples_node_type.flow` route.
+The same module's `Staging\ArrayStageStore` is the second store, in
+memory, which `StageStoreSwapTest` swaps in for `surface.stages`.
+`tests/modules/surface_reserved_test` holds a resource whose operations
+know the stage's reserved keys, which `StageStoreTest` enables to pin
+the refusals of `Resources::operation()`.
+
+`surface_examples_entity` also holds the hand-built flow: the bulk
+action in `src/Plugin/Action/` (`StageDeleteAction`), its confirm page
+and the delete form's cosmetics in `src/Form/`
+(`StageDeleteConfirmForm`, `EntityFormCosmetics`), the shipped
+`system.action` in `config/install/`, and its hand-written action
+configuration schema in `config/schema/`, which no generator writes.

@@ -21,6 +21,8 @@ use Drupal\surface\ResourceBuild\OperationParameter;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Http\ServedPaths;
+use Drupal\surface\Staging\Stage;
+use Drupal\surface\Staging\Stageable;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
 use Drupal\tool\TypedData\ListOutputDefinition;
@@ -33,15 +35,17 @@ use Drupal\tool\TypedData\OutputDefinition;
  *
  * The whole of a generated tool's contract, from the static layer:
  *
- * - **One input per operation parameter**, named as the parameter is. A
- *   scalar parameter is an input of its type; a parameter typed with an
- *   entity class or interface is the entity's id, as a string, resolved
- *   to the entity when the tool runs, because a tool's caller sends ids
- *   and an operation takes the thing.
+ * - **One input per operation parameter**, named as the parameter is.
+ *   Every parameter is a value: one named for a plain key of the
+ *   resource is an input of that key's definition, any other an input of
+ *   its scalar type. The tool hands the raw value to the operation, and
+ *   the resource's storage loads what it names.
  * - **`values`**, a map: the resource's keys, as InputDefinitions
  *   converts them, less the identity keys the operation knows, which
  *   are locked and so are not inputs at all.
  * - **`dry_run`**, which stops the pipeline after prepare.
+ * - **`stage`**, last, for an operation a stage applies to: the id of a
+ *   stage the write is kept in until the stage is applied.
  * - Outputs: the accepted `values`, as the read tool would answer them,
  *   whether anything was `committed`, and the resource's own outputs,
  *   from defineOutputs().
@@ -109,6 +113,18 @@ final class OperationInputs {
    * The input asking for a dry run.
    */
   public const DRY_RUN = 'dry_run';
+
+  /**
+   * The input naming a stage the call writes into or reads through.
+   *
+   * Taken by every write, read and narrowing tool of an operation a stage
+   * applies to (Stageable::operation()), and reserved: no operation
+   * parameter takes the name.
+   *
+   * Decision: see
+   * docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
+   */
+  public const STAGE = 'stage';
 
   /**
    * The output saying whether nothing was refused.
@@ -210,12 +226,13 @@ final class OperationInputs {
    *   The operation.
    *
    * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
-   *   The parameters' inputs, then `values` and `dry_run`.
+   *   The parameters' inputs, then `values` and `dry_run`, then `stage`
+   *   for an operation a stage applies to.
    *
    * @throws \LogicException
-   *   When a parameter cannot be an input (it takes an object that is
-   *   no single entity type's, or has the name of one of the tool's own
-   *   inputs) or the resource cannot be built.
+   *   When a parameter cannot be an input (it has a name the resource
+   *   tools reserve for inputs of their own) or the resource cannot be
+   *   built.
    */
   public function inputs(ResourceDefinition $resource, OperationDefinition $operation): array {
     $neutral = $this->neutral($resource, $operation, TRUE);
@@ -239,7 +256,7 @@ final class OperationInputs {
       required: FALSE,
       default_value: FALSE,
     );
-    return $inputs;
+    return $inputs + $this->stageInput($resource, $operation);
   }
 
   /**
@@ -251,13 +268,56 @@ final class OperationInputs {
    *   The operation.
    *
    * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
-   *   One input per parameter, exactly as the write tool declares it.
+   *   One input per parameter, exactly as the write tool declares it, then
+   *   `stage` for an operation a stage applies to.
    *
    * @throws \LogicException
    *   When a parameter cannot be an input, as inputs() says.
    */
   public function parameters(ResourceDefinition $resource, OperationDefinition $operation): array {
-    return $this->parameterInputs($resource, $operation, $this->neutral($resource, $operation, TRUE));
+    return $this->parameterInputs($resource, $operation, $this->neutral($resource, $operation, TRUE)) + $this->stageInput($resource, $operation);
+  }
+
+  /**
+   * Gets the `stage` input, for an operation a stage applies to.
+   *
+   * Only where Stageable::operation() says a stage applies: the
+   * resource's declared storage class implements
+   * TransactionalStorageInterface (a content entity, a config object, a
+   * config entity), and the operation names one thing. So the input is
+   * never on the stage's own tools, a State-backed resource's, or an
+   * operation over several things such as the venues' reorder.
+   *
+   * Its default is the empty string, not NULL: the Tool API fires a
+   * refiner only when every input it depends on is non-NULL
+   * (TypedInputsTrait::refinerDependenciesResolved()), and `values`
+   * depends on `stage`, so a NULL default would stop the refinement of
+   * `values` on every call without a stage.
+   *
+   * Decision: see
+   * docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
+   *   The input, by name; empty where a stage does not apply.
+   */
+  protected function stageInput(ResourceDefinition $resource, OperationDefinition $operation): array {
+    if (!Stageable::operation($resource, $operation)) {
+      return [];
+    }
+    return [
+      self::STAGE => new InputDefinition(
+        data_type: 'string',
+        label: $this->t('Stage'),
+        description: $this->t('The id of a stage, from surface:surface.stage:create. With it, the write is kept in the stage until the stage is applied, and a read or a schema answers the thing as it stands there. A create staged with it answers a negative local id, which names the thing only with this stage. Empty: no stage, permanent storage.'),
+        required: FALSE,
+        default_value: '',
+      ),
+    ];
   }
 
   /**
@@ -313,12 +373,15 @@ final class OperationInputs {
    *   The built resource, in the context.
    * @param \Drupal\surface\Resource\OperationContext $context
    *   The context, which changes a thing that exists.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the read goes through, which answers what it holds for
+   *   the thing before what is stored; NULL for what is stored.
    *
    * @return array
    *   The stored values, keyed by resource key.
    */
-  public function stored(ResourceDefinition $resource, SurfaceInterface $built, OperationContext $context): array {
-    $stored = $this->resources->storage($resource->name(), $context, $built)->load($built);
+  public function stored(ResourceDefinition $resource, SurfaceInterface $built, OperationContext $context, ?Stage $stage = NULL): array {
+    $stored = $this->resources->storage($resource->name(), $context, $built, stage: $stage)->load($built);
     // What any door may answer: nothing the build left out, no secret,
     // nothing that does not apply to what is stored (storage still keeps
     // it). The write tool answers its accepted values the same way.
@@ -335,7 +398,9 @@ final class OperationInputs {
    * what its storage loads now and, as its listing does, requires none,
    * each key the resource requires saying so in its description; one that
    * creates has nothing stored, and keeps the declared defaults and the
-   * keys the resource requires.
+   * keys the resource requires. Which is read off the operation, so a
+   * write to a thing a stage creates, whose context creates, defaults to
+   * what the stage holds for it.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -343,17 +408,22 @@ final class OperationInputs {
    *   The built resource, in the context.
    * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the call names, whose view of the thing the properties
+   *   default to; NULL for what is stored.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map: the resource's keys less the identity keys the context
    *   knows, each required as the resource says on a create.
    */
-  public function values(ResourceDefinition $resource, SurfaceInterface $built, OperationContext $context): MapInputDefinition {
+  public function values(ResourceDefinition $resource, SurfaceInterface $built, OperationContext $context, ?Stage $stage = NULL): MapInputDefinition {
     $operation = NULL;
     foreach ($resource->operations as $declared) {
       $operation = $declared->id === $context->id ? $declared : $operation;
     }
-    $stored = $context->creates ? NULL : $this->resources->storage($resource->name(), $context, $built)->load($built);
+    // Decision: see
+    // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+    $stored = ($operation->creates ?? $context->creates) ? NULL : $this->resources->storage($resource->name(), $context, $built, stage: $stage)->load($built);
     $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context), $operation, stored: $stored), $built);
     if ($stored !== NULL) {
       // Decision: see
@@ -436,7 +506,7 @@ final class OperationInputs {
     if ($operation->needsNothing()) {
       $context = $this->resources->operation($resource->name(), $operation->id);
       $built = $this->listed($resource, $context, $declared);
-      $values = $stored && !$context->creates && $this->inputDefinitions->anyDeferred($built)
+      $values = $stored && !$operation->creates && $this->inputDefinitions->anyDeferred($built)
         ? $this->resources->storage($resource->name(), $context, $built)->load($built)
         : NULL;
       $map = $this->map($resource, $built, $this->knownIdentity($resource, $context), $operation, !$input, $values);
@@ -692,8 +762,8 @@ final class OperationInputs {
   protected function parameterInputs(ResourceDefinition $resource, OperationDefinition $operation, ?SurfaceInterface $neutral): array {
     $inputs = [];
     foreach ($operation->parameters as $parameter) {
-      if (in_array($parameter->name, [self::VALUES, self::DRY_RUN], TRUE)) {
-        throw new \LogicException(sprintf('The "%s" operation of the %s resource takes $%s, which is the name of an input every resource tool has.', $operation->id, $resource->id, $parameter->name));
+      if (in_array($parameter->name, [self::VALUES, self::DRY_RUN, self::STAGE], TRUE)) {
+        throw new \LogicException(sprintf('The "%s" operation of the %s resource takes $%s, which is a name the resource tools reserve for an input of their own.', $operation->id, $resource->id, $parameter->name));
       }
       $inputs[$parameter->name] = $this->parameterInput($parameter, $resource, $operation, $neutral);
     }
@@ -821,7 +891,7 @@ final class OperationInputs {
       self::COMMITTED => new OutputDefinition(
         data_type: 'boolean',
         label: $this->t('Committed'),
-        description: $this->t('Whether the values were written; false for a dry run, a refusal and an operation that writes nothing.'),
+        description: $this->t('Whether the values were written: to storage, or to the stage when one is named; false for a dry run, a refusal and an operation that writes nothing.'),
       ),
       self::CHANGED => new OutputDefinition(
         data_type: 'boolean',
@@ -830,7 +900,7 @@ final class OperationInputs {
       ),
       self::CHANGES => new ListOutputDefinition(
         label: $this->t('Changes'),
-        description: $this->t('The JSON Pointer of each stored value the write changed, or a dry run would change, a list as a whole. Empty when it changes nothing, and then nothing is saved: writing back what the read tool returned changes nothing.'),
+        description: $this->t('The JSON Pointer of each stored value the write changed, or a dry run would change, a list as a whole. Empty when it changes nothing, and then nothing is saved: writing back what the read tool returned changes nothing. Against the view of the stage when one is named: what this call moved since the last staged write.'),
         item_definition: new OutputDefinition(
           data_type: 'string',
           label: $this->t('Path'),
@@ -902,7 +972,9 @@ final class OperationInputs {
    * The operation's own description first, what a call does to what, or
    * its label where it says none; then one line of call rules for its
    * kind: what a key left out does, and for an update that the read tool
-   * returns what is there. No literal quotes, which a bridge that escapes
+   * returns what is there. An update over a structure that declares no
+   * keys says instead that it takes none, so nobody is told to send keys
+   * that do not exist. No literal quotes, which a bridge that escapes
    * the text would turn into entities. When an access answer at the top
    * is decided once the subject is known, so that every key is marked, a
    * last sentence says so once, and no key says it again
@@ -926,9 +998,31 @@ final class OperationInputs {
       OperationDefinition::READ => $this->t('@description Read only: nothing is written; a key left out is checked at its current value.', $arguments),
       OperationDefinition::CREATE => $this->t('@description Create: a key left out takes its default, and every key marked required must be sent.', $arguments),
       OperationDefinition::DELETE => $this->t('@description Delete: send only what names it; the values it held are answered, and a dry run removes nothing.', $arguments),
-      default => $this->t('@description Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.', $arguments),
+      default => $this->takesNoKeys($resource, $operation)
+        ? $this->t('@description Takes no values: send values {}.', $arguments)
+        : $this->t('@description Update: send only the keys to change; a key left out keeps its value, null clears it, and values {} changes nothing. The read tool returns the current values.', $arguments),
     };
     return $this->runtimeAccessWhole($resource, $operation) ? $this->withRuntimeAccessWhole($description) : $description;
+  }
+
+  /**
+   * Answers whether an operation's data surface declares no keys at all.
+   *
+   * Read off the build its tool's `values` is made from (declaredValues()),
+   * which a derivation makes once for both.
+   *
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
+   *   The resource.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
+   *   The operation.
+   *
+   * @return bool
+   *   TRUE for an operation over a structure with no keys, such as the
+   *   stage's apply.
+   */
+  protected function takesNoKeys(ResourceDefinition $resource, OperationDefinition $operation): bool {
+    $context = $operation->needsNothing() ? $this->resources->operation($resource->name(), $operation->id) : new OperationContext($operation->contextId());
+    return $this->listed($resource, $context, TRUE)->getDefinitions()->toArray() === [];
   }
 
   /**
@@ -1031,17 +1125,17 @@ final class OperationInputs {
    *
    * @return array<string, \Drupal\tool\TypedData\InputDefinitionInterface>
    *   One input per parameter, exactly as the write tool declares it, then
-   *   `values`.
+   *   `values`, then `stage` for an operation a stage applies to.
    */
   public function schemaInputs(ResourceDefinition $resource, OperationDefinition $operation): array {
-    return $this->parameters($resource, $operation) + [
+    return $this->parameterInputs($resource, $operation, $this->neutral($resource, $operation, TRUE)) + [
       self::VALUES => new MapInputDefinition(
         label: $this->t('What you have so far'),
         description: $this->t('As the write tool takes them: a key that chooses (a component, a plugin) decides which keys the answer states beside it. Any key may be left out; {} asks for the schema as the operation opens.'),
         required: FALSE,
         property_definitions: [],
       ),
-    ];
+    ] + $this->stageInput($resource, $operation);
   }
 
   /**

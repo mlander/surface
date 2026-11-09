@@ -20,7 +20,7 @@ and shows variants on the placed block.
 
 The module has four more ways: a collection (a list), a mixin, a port
 and keys from the site. [Which way to compose](../resources.md#which-way-to-compose)
-puts all six side by side, with the question each one answers.
+puts all seven side by side, with the question each one answers.
 
 ## Variants: a placed block's settings
 
@@ -36,8 +36,7 @@ $inputs->add('plugin', 'string', t('Block'))
   ->setDescription(t('What the block shows: a block plugin the block layout offers. A block that reads a context, such as the node of the page, is not offered yet.'))
   ->setRequired(TRUE);
 
-$inputs->attachVariants('settings', by: 'plugin', from: BlockPluginStructures::class)
-  ->setLabel(t('Settings'))
+$inputs->attachVariants('settings', by: 'plugin', label: t('Settings'), from: BlockPluginStructures::class)
   ->setDescription(t('The settings of the block chosen, as its plugin declares them.'));
 ```
 

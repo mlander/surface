@@ -50,7 +50,7 @@ class ExamplesSpotlightAjaxTest extends ExamplesWebDriverTestBase {
     $overlay->setValue('60');
     $page->pressButton('Save');
     // The press returns before the saved page has loaded: wait for it.
-    $this->assertNotNull($assert->waitForText('The changes have been saved.'));
+    $this->assertTrue($assert->waitForText('The changes have been saved.'));
 
     $stored = $this->config('surface_examples.spotlight');
     $this->assertSame('surface_examples:hero', $stored->get('component'));

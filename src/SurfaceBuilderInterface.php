@@ -47,6 +47,14 @@ interface SurfaceBuilderInterface {
   public function getDefinition(string $name): ?DataDefinitionInterface;
 
   /**
+   * Gets the name of every definition the builder holds so far.
+   *
+   * @return string[]
+   *   The definition keys, in the order they were added.
+   */
+  public function getDefinitionNames(): array;
+
+  /**
    * Adds or replaces a definition.
    *
    * The owner's verb: an alter adding keys mounts them under its

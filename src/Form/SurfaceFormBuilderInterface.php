@@ -255,12 +255,17 @@ interface SurfaceFormBuilderInterface {
    *   The form state of the containing form.
    * @param string $wrapper_key
    *   A stable identifier for the AJAX wrapper, unique within the page.
+   * @param string[] $keys
+   *   The top level keys to draw, which a step of a flow names; empty to
+   *   draw every key. A key not drawn has no element, so extraction says
+   *   nothing about it, and accept keeps what it holds.
    *
    * @return array
    *   A container render array with one widget-built element per
-   *   definition, keyed by data surface key.
+   *   definition drawn, keyed by data surface key; a group is drawn when
+   *   a key in it is.
    */
-  public function buildSurfaceForm(SurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'surface'): array;
+  public function buildSurfaceForm(SurfaceInterface $surface, array $values, FormStateInterface $form_state, string $wrapper_key = 'surface', array $keys = []): array;
 
   /**
    * Names the in-progress input a rebuild has just invalidated.

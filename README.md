@@ -82,6 +82,10 @@ install command and what it opens are in
 [Installation](docs/installation.md#experimental-submodules); what each
 shows and its page on a site are in [Examples](docs/examples/index.md).
 
+Five ideas of the base module are marked experimental on their own pages
+as well; [What is promised](docs/evolution.md#what-is-promised) lists
+them.
+
 ## Experimental submodules
 
 Every submodule is an example: see [The examples](#the-examples).

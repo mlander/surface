@@ -376,6 +376,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
       ['$ref' => '#/components/parameters/DryRun'],
       ['$ref' => '#/components/parameters/SurfaceStale'],
       ['$ref' => '#/components/parameters/IfMatch'],
+      ['$ref' => '#/components/parameters/SurfaceStage'],
     ], $patch['parameters']);
     foreach (['403', '404', '412', '422', '400', '415'] as $status) {
       $this->assertSame(SchemaComponents::POINTER . 'ProblemDetails', $patch['responses'][$status]['content']['application/problem+json']['schema']['$ref'], $status);
@@ -424,6 +425,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
       ['$ref' => '#/components/parameters/CsrfToken'],
       ['$ref' => '#/components/parameters/DryRun'],
       ['$ref' => '#/components/parameters/IfMatch'],
+      ['$ref' => '#/components/parameters/SurfaceStage'],
     ], array_map(static fn (array $parameter): array => array_intersect_key($parameter, array_flip([
       'name',
       'in',
@@ -764,7 +766,7 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
     $this->assertArrayHasKey('entity.content:node.page:update', $description->operations);
     $item = $document['paths']['/surface-api/entity.content:node.page/{id}'] ?? NULL;
     $this->assertNotNull($item);
-    $this->assertSame(['get', 'patch'], array_keys($item));
+    $this->assertSame(['get', 'patch', 'delete'], array_keys($item));
     foreach ($item as $call) {
       $id = array_values(array_filter($call['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
       $this->assertCount(1, $id);
@@ -786,6 +788,81 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
         }
       }
     }
+  }
+
+  /**
+   * Tests the stage header is offered where a resource's storage is staged.
+   *
+   * A shared header parameter, `SurfaceStage`, referenced from the
+   * envelope, the narrowing and every write of an operation a stage
+   * applies to (its storage implements TransactionalStorageInterface, a
+   * config object's among them, and it names one thing), never from its
+   * full schema, which reads nothing stored, nor from any call of the
+   * stage itself or of a State resource.
+   */
+  public function testTheStageHeaderIsOfferedWhereStorageCanBeStaged(): void {
+    $this->enableModules(array_diff(self::ENTITY_MODULES, static::$modules));
+    $this->installEntityFixture();
+    $this->container->get('router.builder')->rebuild();
+    $document = $this->decoded();
+    $this->assertSame([], $document['x-surface']['unavailable']);
+    $this->assertSame([
+      'name' => 'X-Surface-Stage',
+      'in' => 'header',
+      'required' => FALSE,
+      'description' => 'The id of a stage, from POST /surface-api/surface.stage: a write is kept in the stage until it is applied, and an envelope or a narrowing answers the thing as it stands there.',
+      'schema' => ['type' => 'string', 'format' => 'uuid'],
+    ], $document['components']['parameters']['SurfaceStage']);
+    $staged = [];
+    foreach ($document['paths'] as $path => $item) {
+      foreach ($item as $verb => $call) {
+        if (in_array(['$ref' => '#/components/parameters/SurfaceStage'], $call['parameters'] ?? [], TRUE)) {
+          $staged[] = strtoupper($verb) . ' ' . $path;
+        }
+      }
+    }
+    foreach (['entity.content:node.page', 'entity.content:node'] as $resource) {
+      $base = '/surface-api/' . $resource;
+      $calls = [
+        'GET ' . $base,
+        'POST ' . $base,
+        'POST ' . $base . '/schema',
+        'GET ' . $base . '/{id}',
+        'PATCH ' . $base . '/{id}',
+        'POST ' . $base . '/{id}/schema',
+      ];
+      foreach ($calls as $call) {
+        $this->assertContains($call, $staged, $call . ': the envelope, the narrowing and the write.');
+      }
+      $this->assertNotContains('GET ' . $base . '/schema', $staged, 'The full schema reads nothing stored.');
+      $this->assertNotContains('GET ' . $base . '/{id}/schema', $staged, 'The full schema reads nothing stored.');
+      // A create under the header is staged: 200, its local id, created
+      // naming it in the stage, no Location.
+      $create = $document['paths'][$base]['post'];
+      $this->assertStringContainsString('under the X-Surface-Stage header, the create is staged instead, 200 with no Location, and nothing is created until the stage is applied: outputs.id is a negative local id, or the name the caller gave, which names the thing only with that stage, and created names the update that reaches it there.', $create['description']);
+      $this->assertStringContainsString('A create staged under the X-Surface-Stage header: the result, then outputs, its id the local id, contract and created, which names the thing by its local id in that stage', $create['responses']['200']['description']);
+      // A path's id may be a local id, with the header.
+      $id = array_values(array_filter($document['paths'][$base . '/{id}']['patch']['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
+      $this->assertStringEndsWith('With the X-Surface-Stage header, a negative integer names a thing that stage creates.', $id[0]['description']);
+      // The read takes the header too.
+      $read = array_values(array_filter($document['paths'][$base . '/{id}']['get']['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
+      $this->assertStringEndsWith('With the X-Surface-Stage header, a negative integer names a thing that stage creates.', $read[0]['description']);
+      // The full schema takes no header, so its id names no staged create.
+      $full = array_values(array_filter($document['paths'][$base . '/{id}/schema']['get']['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
+      $this->assertStringNotContainsString('X-Surface-Stage', $full[0]['description']);
+      $narrowed = array_values(array_filter($document['paths'][$base . '/{id}/schema']['post']['parameters'], static fn (array $parameter): bool => ($parameter['name'] ?? NULL) === 'id'));
+      $this->assertStringEndsWith('With the X-Surface-Stage header, a negative integer names a thing that stage creates.', $narrowed[0]['description']);
+    }
+    $this->assertStringEndsWith('and under the X-Surface-Stage header, since a staged create is read only with the header.', $document['components']['headers']['Location']['description']);
+    // A config object's envelope and write take it; its full schema not.
+    $this->assertContains('GET /surface-api/first.newsletter', $staged, 'A config object can be staged.');
+    $this->assertContains('PATCH /surface-api/first.newsletter', $staged, 'A config object can be staged.');
+    $this->assertNotContains('GET /surface-api/first.newsletter/schema', $staged, 'The full schema reads nothing stored.');
+    $other = array_filter($staged, static fn (string $call): bool => str_contains($call, ' /surface-api/surface.stage') || str_contains($call, ' /surface-api/tool_test.'));
+    $this->assertSame([], array_values($other), 'No call of the stage or of a State resource takes the header.');
+    $this->assertArrayHasKey('/surface-api/surface.stage/{id}', $document['paths']);
+    $this->assertArrayHasKey('/surface-api/first.newsletter', $document['paths']);
+    $this->assertArrayHasKey('/surface-api/tool_test.logbook', $document['paths']);
   }
 
   /**

@@ -9,6 +9,7 @@ use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
+use Drupal\surface\Staging\Stage;
 
 /**
  * One operation of one resource, as a request named it, built and bound.
@@ -16,8 +17,11 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
  * What the page and the three endpoints all start from: the resource and
  * the operation the path named, the context the operation built from
  * the parameters the request carried, the resource built in that context
- * and the storage composed for it. Asked afresh on every request, as the
- * operation form asks afresh at every stage.
+ * and the storage composed for it, and the stage its header named. Asked
+ * afresh on every request, as the operation form asks afresh at every
+ * stage.
+ *
+ * @internal
  */
 final class ServedOperation {
 
@@ -37,6 +41,9 @@ final class ServedOperation {
    *   The built resource, in that context.
    * @param \Drupal\surface\Pipeline\SurfaceStorageInterface|null $storage
    *   The storage composed for it, or NULL when the resource names none.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the request goes through, which built the context and was
+   *   handed the storage, or NULL for none.
    */
   public function __construct(
     public readonly ResourceDefinition $definition,
@@ -45,6 +52,7 @@ final class ServedOperation {
     public readonly OperationContext $context,
     public readonly SurfaceInterface $surface,
     public readonly ?SurfaceStorageInterface $storage,
+    public readonly ?Stage $stage = NULL,
   ) {}
 
 }

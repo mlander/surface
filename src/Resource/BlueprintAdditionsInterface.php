@@ -13,8 +13,9 @@ use Drupal\surface\Refinement\Rule;
 /**
  * What anyone may do to a blueprint: add to it.
  *
- * Handed to alterInputs(). The owner gets
- * BlueprintInterface, which adds attachVariants().
+ * Handed to alterInputs(). The owner gets BlueprintInterface, which adds
+ * attachVariants(), addEach(), attachEach(), mixIn(), reads(), compute()
+ * and addCacheableDependency().
  *
  * Neither the owner nor an alter may add a key twice: adding is never
  * replacing, so nothing an owner declared can be changed by adding. The
@@ -173,10 +174,13 @@ interface BlueprintAdditionsInterface {
   /**
    * Adds a key, the long form.
    *
-   * For a definition add() and addList() do not build: a map, say. Every
-   * value inside is held to the types add() takes. Like every declaring
-   * verb, it returns what it declared, for the owner to go on labeling
-   * with the core setters.
+   * For one value whose definition the caller builds: a DataDefinition of
+   * one of the types add() takes, with settings or constraints of its
+   * own. A map or a list is refused, naming the verb that declares it
+   * (addMap() or attach(), addList()), so every object a blueprint holds
+   * is declared by a verb that is one JSON Schema construct. Like every
+   * declaring verb, it returns what it declared, for the owner to go on
+   * labeling with the core setters.
    *
    * @param string $key
    *   The key.
@@ -193,8 +197,8 @@ interface BlueprintAdditionsInterface {
    * @phpstan-return T
    *
    * @throws \LogicException
-   *   When the key is declared already, or a value inside is of a type
-   *   add() refuses.
+   *   When the key is declared already, when the definition is a map or a
+   *   list, or when its type is one add() refuses.
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface;
 
@@ -219,8 +223,7 @@ interface BlueprintAdditionsInterface {
    * text emptied where the owner gave one is refused.
    *
    * @code
-   * $inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class)
-   *   ->setLabel(t('Punctuation'));
+   * $inputs->addEach('punctuation', PunctuationAction::class, from: PunctuationCharacters::class, label: t('Punctuation'));
    * $inputs->describe('punctuation', group: ArrangementGroup::details('punctuation', t('Punctuation'), collapsed: TRUE));
    * @endcode
    *
@@ -299,18 +302,21 @@ interface BlueprintAdditionsInterface {
    * they allow stays the structure's.
    *
    * Returns the map definition at the key, as add() returns its
-   * definition, so the owner labels and describes it with the core
-   * setters. The child fills its properties when it is built.
+   * definition, so the owner describes it with the core setters. The
+   * child fills its properties when it is built.
    *
    * @code
-   * $inputs->attach('compliance', ComplianceStructure::class, reads: ['capacity' => 'seats']);
+   * $inputs->attach('compliance', ComplianceStructure::class, t('Compliance'), reads: ['capacity' => 'seats']);
    * @endcode
    *
    * @param string $key
    *   The key the child sits at; for an alter, its own mount,
    *   `third_party_settings.<module>`.
-   * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface> $child
+   * @param class-string<\Drupal\surface\Resource\DefinesInputsInterface> $structure
    *   The child's class.
+   * @param string|\Stringable|null $label
+   *   The map's label, or NULL to leave the structure's (an alter's
+   *   mount keeps the module's name).
    * @param array<string, string> $reads
    *   The child's ports, each mapped to the container's key it reads: an
    *   owner's key by its name.
@@ -324,7 +330,7 @@ interface BlueprintAdditionsInterface {
    *   wiring is checked when the parent is built: see
    *   docs/resources.md#ports.
    */
-  public function attach(string $key, string $child, array $reads = []): MapDataDefinition;
+  public function attach(string $key, string $structure, string|\Stringable|null $label = NULL, array $reads = []): MapDataDefinition;
 
   /**
    * A collection at a key: a list whose every item is the child.
@@ -344,16 +350,15 @@ interface BlueprintAdditionsInterface {
    * method on the key, and its value is a list of item maps, in order.
    *
    * Returns the list definition at the key, whose item is the child's
-   * map, as attach() returns the map: the owner labels and describes it
-   * with the core setters, and may add list constraints of its own.
-   *
-   * A list whose every item chooses its own child (attachListBy()) is not
-   * built.
+   * map, as attach() returns the map: the owner describes it with the
+   * core setters, and may add list constraints of its own.
    *
    * @param string $key
    *   The key the collection sits at.
-   * @param string $child
+   * @param string $structure
    *   What every item is: its class, or a derived resource's id.
+   * @param string|\Stringable|null $label
+   *   The list's label, or NULL to leave the structure's.
    * @param int|null $min
    *   The fewest items, or NULL for no bound.
    * @param int|null $max
@@ -369,55 +374,7 @@ interface BlueprintAdditionsInterface {
    * @throws \InvalidArgumentException
    *   When a bound is negative, or $min is above $max.
    */
-  public function attachList(string $key, string $child, ?int $min = NULL, ?int $max = NULL): ListDataDefinition;
-
-  /**
-   * Mixes a structure in: its members become this blueprint's own keys.
-   *
-   * Where attach() nests a structure under a key, behind the wall, this
-   * merges its members into the owner's keys at this point of the
-   * declaration: stored flat, described by the owner's config schema,
-   * refined in the owner's frame, drawn and accepted as the owner's own.
-   * The structure keeps what makes it reusable: its coded refiners and
-   * declared rules (which narrow only its own members and read only its
-   * members and its ports), its alters, its access class (which locks or
-   * omits its members) and its def, one id however many owners mix it in.
-   * What it reads of the owner it declares as ports
-   * (BlueprintInterface::reads()), which $reads wires to the owner's
-   * keys, as attach() wires them; every port is wired.
-   *
-   * Nest for a thing of its own inside this one (a contact, a ticket);
-   * mix in for shared members that are part of this thing (timestamps,
-   * ownership, publishing flags).
-   *
-   * Owner only: an alter's keys live under its own module's name, so an
-   * alter's call is refused; an alter attaches a structure at its own
-   * mount instead.
-   *
-   * @code
-   * $inputs->mixIn(TimestampsStructure::class);
-   * $inputs->mixIn(OwnershipStructure::class, reads: ['audience' => 'visibility']);
-   * @endcode
-   *
-   * @param string $structure
-   *   The structure's class: an ordinary #[Structure], holding keys and
-   *   maps, no child of its own.
-   * @param array<string, string> $reads
-   *   Its ports, each mapped to the owner's key it reads, by name.
-   *
-   * @return $this
-   *
-   * @throws \LogicException
-   *   For an alter, for outputs, for a class that is no resource or
-   *   structure, for a structure mixed into itself (directly or through
-   *   another), for one holding a child, and when one of its members is a
-   *   key this blueprint, or another structure mixed in, declares already.
-   *   The structure, its access and the wiring are checked when the owner
-   *   is built: see docs/resources.md#mixins.
-   *
-   * @see docs/decisions.md#a-mixin-is-merged-flat
-   */
-  public function mixIn(string $structure, array $reads = []): static;
+  public function attachList(string $key, string $structure, string|\Stringable|null $label = NULL, ?int $min = NULL, ?int $max = NULL): ListDataDefinition;
 
   /**
    * Offers more values on a key someone else declared, as an alter.

@@ -32,11 +32,9 @@ final class PlanterStructure implements StructureInterface {
 
     $inputs->add('kind', 'string', t('Kind'), default: 'clay');
 
-    $inputs->attachVariants('pot', by: 'kind')
-      ->setLabel(t('Pot'));
+    $inputs->attachVariants('pot', by: 'kind', label: t('Pot'));
 
-    $inputs->attach('soil', SoilStructure::class)
-      ->setLabel(t('Soil'));
+    $inputs->attach('soil', SoilStructure::class, t('Soil'));
   }
 
 }

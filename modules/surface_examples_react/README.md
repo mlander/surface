@@ -14,7 +14,7 @@ The path is the resource and the method is the operation (contract 3):
 | Fetch per choice | `GET .../schema?choose=/props=<value>` | The full schema with each choice of a `deferred` key stated in full, as under the limit: once per `choose`, a nested key named with the choice on the way (`choose=/settings=surface_component&choose=/settings/props=<value>`); 404 naming the pointer for a choice of nothing ([the fetch per choice](../../docs/served-contract.md#the-fetch-per-choice)). |
 | Narrowing | `POST .../schema` | The envelope narrowed for in-progress values, the body a values document: the AJAX rebuild's equivalent. Writes nothing. |
 | Update | `PATCH /surface-api/{resource}[/{id}]` | The default update, the body a values document (`application/merge-patch+json` or JSON): the one result shape every door answers, `{ok, committed, changed, changes, values, violations, notes, stale}`, then `outputs`, `contract` and `created`, and the new `ETag`. |
-| Create | `POST /surface-api/{resource}` | The default create: 201 with the created thing's `Location`. |
+| Create | `POST /surface-api/{resource}` | The default create: 201 with the created thing's `Location`, without a stage; with one, 200, its local id in `created` and no `Location` ([under a stage](#under-a-stage)). |
 | Delete | `DELETE /surface-api/{resource}/{id}` | The default delete, an operation that says `deletes: TRUE` (`block.placement:delete`): no body, 200 with the values the thing held and no envelope or `ETag`. |
 | Any other | `GET` and `POST .../{x}:{operation}` | An operation that is not a default, by name: `event.program:check`. |
 | Lookup | `GET .../{x}:lookup?key=/venue&q=riv` | The candidates of one key that refers to an entity, of the operation `GET` serves at the path, by label, for the account: `{key, entityType, bundles, items}`, each item `{id, label}`; `type` names the entity type for a key of any type. What the app's autocomplete asks past the limit ([the lookup](../../docs/served-contract.md#a-lookup)). |
@@ -218,7 +218,13 @@ request after it
   from `node.type`) moves to the page where it now lives,
   `/surface-react/node.type/update?type=…`. `If-Match` is on by default
   (`SEND_FINGERPRINT` in `api.ts`); a page turns it off with
-  `sendFingerprint: false` in its `drupalSettings.surfaceReact`.
+  `sendFingerprint: false` in its `drupalSettings.surfaceReact`. What a
+  run answers beside its values, its `outputs`, is drawn below the
+  summary: a list of maps as a table, its columns the maps' keys, a list
+  inside a cell joined with commas; anything else as a term and its
+  value. A read that answers outputs says "Listed." instead of "Valid".
+  Under a stage a write says it was staged
+  ([below](#under-a-stage)).
 
 Below the form, collapsed, the contract: the line on the last change, a
 row per key, as the PHP contract panel shows it, then the JSON of the
@@ -227,6 +233,37 @@ last envelope served and of the full schema.
 `drush surface:catalog` lists, per operation, the method and path that
 run it and its React page, then each page a module serves it at, beside
 its other doors ([The site's catalog](../../docs/catalog-command.md)).
+
+## Under a stage
+
+`?stage=<id>` on the page, at `/surface-react/{resource}/{operation}` or
+at a module's route, names a stage
+([Staging](../../docs/staging.md#the-stage-query-on-a-page)). The
+route's access check asks whether a stage applies to the operation,
+whether it exists and whether it is the account's, and the page hands
+the app `stage` and `stageLabel` in `drupalSettings.surfaceReact`. The
+app then:
+
+- sends `X-Surface-Stage` on every request to the API, the envelope's
+  `GET`, the full schema, the narrowing, the writes and the lookup, so
+  the envelope and its `ETag` are the staged view's; never on the CSRF
+  token's fetch;
+- says "Staged: the values are kept in the stage until it is applied."
+  after a write, and after a staged create "Staged: nothing is created
+  until the stage is applied; the stage names it by -1.", then moves to
+  `?id=-1&stage=<id>`, where the page names the staged create;
+- draws a bar above the form, "Stage <label>. Writes here go to the
+  stage.", linking the stage's own pages:
+  `/surface-react/surface.stage/changes?id=<id>`, whose Submit lists the
+  staged writes as a table, and `/surface-react/surface.stage/apply?id=<id>`,
+  whose Submit sends `{}` with the `ETag` its envelope was served with
+  and draws what was applied. That `ETag` covers the stage's writes, so
+  an Apply after another write was staged is a 412.
+
+The full schema and the lookup read nothing stored, so they ignore the
+header at a stored id. At `-1` they read it, since only the stage names
+that id: the full schema is the create's, and the lookup's candidates
+are what is stored, never a thing the stage creates.
 
 ## The app
 
@@ -254,6 +291,8 @@ the page's and the app's, since the app is what they serve.
 | --- | --- |
 | `Kernel\ServedContractTest` | The main module's emitter over examples 1 to 3, the content type resource and the example block structure: labels, `oneOf` titles, bounds, the venue to room dependency, the ticket variants' conditional, the locked machine name on edit, the widget hints off by default and on for the HTTP door's endpoint; each part defined once under `$defs` and referred to, one def per class attached twice, a site narrowing its def only where it differs, and each document's verdicts on example 3 held to the pipeline's; every schema checked by opis/json-schema (draft 2020-12) and against the vendored draft-07 meta-schema. |
 | `Functional\ServedContractEndpointsTest` | The envelope's shape, `ETag`, `Link` and `HEAD`; 403 and 404 as problem details; the page's `endpoints`; the full schema as `application/schema+json`, cacheable and the same across two stored states; `POST .../schema` narrowing the room by the venue, the stale room round-tripped in `X-Surface-Stale`, a partial document; a dry run refusing a wrong room and a capacity over the room's (422) and accepting a valid document, nothing written; the landing page's React links. |
+| `Kernel\ReactStageTest` | `?stage=` on the page and at a module's route: `stage` and `stageLabel` handed to the app, the page varying by the query's stage and never cached under one, `?id=-1&stage=` naming the staged create and nothing without it; the access check refusing another account's stage, a stage on one of the stage's own pages (`does_not_apply`), and answering a stage that names nothing with a page not found. |
+| `FunctionalJavascript\ReactStageJsTest` | In a browser: example 3's page under a stage writes nothing to config and puts the write in the stage (two fetches, the read and the write), the stage bar's link to the stage's `changes` page lists it, and its `apply` page applies it. |
 | `Kernel\ReactRoutePageTest` | The page at a module's route: the route's defaults by key path and a link's prefill handed to the app, a value its key refuses left out, a URL that names nothing a 404, the request's own dispatch through the HTTP kernel (200, 404, 403), the route's parameters, the title from the operation's label, and the catalog listing the route under the `react` door. `Kernel\RouteAccessTest` holds the page and the operation form's route to one answer for a URL that names nothing. |
 | `Functional\ServedSubmitEndpointTest` | `PATCH` writing example 2 and answering the fresh envelope and `ETag`, by JSON Pointer; a wrong room refused (422) with nothing written; anonymous, token-less, malformed and wrong-media-type writes, and a `POST` on a singleton (405); a stale `If-Match` refused (412), a weakened tag and `*` matching, and none meaning the last write wins; a content type created with `POST` (201, `Location`), read and edited at its path, a locked key's note. |
 | `Kernel\ResultPointersTest` | Every path a result carries is a JSON Pointer at every door: the tool's result and its text, an HTTP result and problem details, the envelope's `stale` and `notes`, a narrowing's `discarded` and the `X-Surface-Stale` header; RFC 6901 escaping and its reading back. |
@@ -262,4 +301,4 @@ the page's and the app's, since the app is what they serve.
 | `app/src/test/narrow.test.ts` | The page's narrowing held to recorded narrowing answers (`fixtures/refine-*.json`) for chains of changes on example 2 and example 3, compliance off and on: schema, values and stale paths equal keyword for keyword, each local step continuing from the last; the changes asked named by key and marker; a stale value only the server knows, and frames it cannot read, asked. Example 4's declared license rule as the compliance full schema states it, its `if` read by JSON Schema's rules, and narrowed here for a license and a room change (`fixtures/refine-example3-license.json`) once the stewards' `refine` marker is set aside. Example 12 past the site list limit (`fixtures/deferred-spotlight.json`): a deferred key naming the URL to fetch for the value chosen (its `deferred.fetch`), the hero narrowed here from the fetched schema as the server narrows it, a map of keys from the site asked, and a template filled and joined. A key a runtime access answer marks `live`: what the server settled stands, left out or locked, and a change it depends on is asked. Every schema narrowed here is written as the server writes contract 4's, each keyword only where it says something. |
 | `app/src/test/contract.test.ts` | The resolver: a reference with keywords beside it, an `allOf` narrowing, a def inside a def, two sites sharing one def, a recursive reference kept, the JSON Pointer escaping; example 3's served contract defining its parts once and read inline; contract 4: a document or a bare full schema of another version refused, each `within` entry put back at its pointer (a property left out and a `true` made an object again), the conditionals `rules` lists marked declared, a key's union of its variants and a def's own title dropped. |
 | `app/src/test/widgets.test.tsx` | Each widget from a schema fragment, the empty option rule, locked, choosing a variant and locking it with its key, the list; a placed fieldset drawn after the sibling it names, its values sent under its group; the panel's message for each constraint only the server checks. |
-| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server, keyed by method and path, serving the emitter's own contracts: the envelope and the full schema fetched once, together; narrowing here with no request (example 2's venue and room, example 3's venue and pricing), the orphaned room stale and sent back by its path, example 3 with compliance asking on the venue and the license, the panel's line; with no full schema, a narrowing on a dependency, the stale room in `X-Surface-Stale` as pointers, a dry run with `dryRun=true` and its inline and summary messages; a write's success with stale warnings and the re-render, a 422 refusal, the `ETag` sent as `If-Match` and the 412, the toggle off, and the move to a created thing's page on a 201; every path answered read from a JSON Pointer; example 3's parts drawn from their defs, the paid ticket on a pricing change, a refusal on the contact's email shown on that field, and its Compliance fieldset right after the capacity; contract 4 only: an envelope, a full schema, a narrowing, a write or a problem of another contract refused, by the document or by the `Contract-Version` header, and shown as the form's error; a key deferred for its size fetched with `choose` rather than narrowed, each fetch kept for the page, and asked of the narrowing when the fetch fails; a page at a module's route starting from the envelope's values, then the route's defaults, then a link's prefill, by key path, narrowing for a started value here or asking the server, and a started value taking the place of a stale stored one. |
+| `app/src/test/SurfaceForm.test.tsx` | The app against a mocked server, keyed by method and path, serving the emitter's own contracts: the envelope and the full schema fetched once, together; narrowing here with no request (example 2's venue and room, example 3's venue and pricing), the orphaned room stale and sent back by its path, example 3 with compliance asking on the venue and the license, the panel's line; with no full schema, a narrowing on a dependency, the stale room in `X-Surface-Stale` as pointers, a dry run with `dryRun=true` and its inline and summary messages; a write's success with stale warnings and the re-render, a 422 refusal, the `ETag` sent as `If-Match` and the 412, the toggle off, and the move to a created thing's page on a 201; every path answered read from a JSON Pointer; example 3's parts drawn from their defs, the paid ticket on a pricing change, a refusal on the contact's email shown on that field, and its Compliance fieldset right after the capacity; contract 4 only: an envelope, a full schema, a narrowing, a write or a problem of another contract refused, by the document or by the `Contract-Version` header, and shown as the form's error; a key deferred for its size fetched with `choose` rather than narrowed, each fetch kept for the page, and asked of the narrowing when the fetch fails; a page at a module's route starting from the envelope's values, then the route's defaults, then a link's prefill, by key path, narrowing for a started value here or asking the server, and a started value taking the place of a stale stored one; under a stage, `X-Surface-Stage` on every request kind and not on the token's fetch, the staged messages, the stage bar's links, the move to `?id=-1&stage=`, a `changes` result drawn as a table and the apply page's `If-Match` from its envelope. |

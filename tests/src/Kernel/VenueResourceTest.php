@@ -275,12 +275,22 @@ class VenueResourceTest extends SurfaceKernelTestBase {
   public function testTheToolsPageFilterAndLeaveOutWhatMayNotBeRead(): void {
     $tools = $this->container->get('plugin.manager.tool');
     $expected = [
-      'create' => [ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
+      'create' => [
+        ToolOperation::Write,
+        FALSE,
+        [OperationInputs::VALUES, OperationInputs::DRY_RUN, OperationInputs::STAGE],
+      ],
+      // A listing writes nothing, and a reorder names no one venue: no
+      // stage applies to either.
       'list' => [ToolOperation::Read, FALSE, [OperationInputs::VALUES]],
       'reorder' => [ToolOperation::Write, FALSE, [OperationInputs::VALUES, OperationInputs::DRY_RUN]],
-      'update' => [ToolOperation::Write, FALSE, ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN]],
-      'read' => [ToolOperation::Read, FALSE, ['id']],
-      'delete' => [ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN]],
+      'update' => [
+        ToolOperation::Write,
+        FALSE,
+        ['id', OperationInputs::VALUES, OperationInputs::DRY_RUN, OperationInputs::STAGE],
+      ],
+      'read' => [ToolOperation::Read, FALSE, ['id', OperationInputs::STAGE]],
+      'delete' => [ToolOperation::Write, TRUE, ['id', OperationInputs::DRY_RUN, OperationInputs::STAGE]],
     ];
     foreach ($expected as $operation => [$kind, $destructive, $inputs]) {
       $definition = $tools->getDefinition(self::TOOL . $operation);

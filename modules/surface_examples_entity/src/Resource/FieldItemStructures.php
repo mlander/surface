@@ -31,11 +31,14 @@ use Drupal\surface_examples_entity\Structure\Attribute\FieldItemStructure;
  * for a field type someone wrote one for, from the class marked
  * #[FieldItemStructure(type:)], whose static #[RefinesInput] methods refine
  * it. Either way the field's own facts stay derived: its label, and its
- * three operations, `create`, `update` and `read`, which the content
- * entity resource invokes it through by name. Each knows the entity type,
- * the bundle and the field, and `update` and `read` the entity's id,
- * which is what its access class asks field access with: open, locked,
- * or omitted, and for a read open or omitted.
+ * four operations, `create`, `update`, `read` and `delete`, which the
+ * content entity resource invokes it through by name. Each knows the
+ * entity type, the bundle and the field, and `update`, `read` and
+ * `delete` the entity's id, which is what its access class asks field
+ * access with: open, locked, or omitted, and for a read open or omitted.
+ * A delete is asked as a write, as an update is, so a delete answers the
+ * values an update of the same entity would carry, and no field the
+ * account may not see.
  *
  * Such a structure has no storage: its parent, the content entity
  * resource, stores it under the field's name. So it is never a tool on
@@ -112,6 +115,18 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
                 ['id'],
                 readOnly: TRUE,
                 description: $this->t('Reads the @field field of a @bundle item, named by its id.', [
+                  '@field' => $field->getLabel(),
+                  '@bundle' => $bundle,
+                ]),
+              ),
+              new DerivedOperation(
+                'delete',
+                $this->t('Delete @field with its item', ['@field' => $field->getLabel()]),
+                new ResourceCallable(self::class, 'delete', $bound),
+                ['id'],
+                destructive: TRUE,
+                deletes: TRUE,
+                description: $this->t('Deletes the @field field with the @bundle item it belongs to, named by its id.', [
                   '@field' => $field->getLabel(),
                   '@bundle' => $bundle,
                 ]),
@@ -239,6 +254,31 @@ final class FieldItemStructures implements ResourceDeriverInterface, KnowsDeriva
    */
   public static function read(array $arguments, string $entity_type_id, string $bundle, string $field_name): OperationContext {
     return new OperationContext('read', known: [
+      'entity_type' => $entity_type_id,
+      'bundle' => $bundle,
+      'field_name' => $field_name,
+      'id' => $arguments['id'],
+    ]);
+  }
+
+  /**
+   * The item on an entity that exists, being deleted.
+   *
+   * @param array{id: int|string} $arguments
+   *   The entity's id, which the parent's delete operation knows.
+   * @param string $entity_type_id
+   *   The entity type id.
+   * @param string $bundle
+   *   The bundle.
+   * @param string $field_name
+   *   The field.
+   *
+   * @return \Drupal\surface\Resource\OperationContext
+   *   A context knowing which field of which entity, which its access
+   *   class asks field access with as for a write, edit then view.
+   */
+  public static function delete(array $arguments, string $entity_type_id, string $bundle, string $field_name): OperationContext {
+    return new OperationContext('delete', known: [
       'entity_type' => $entity_type_id,
       'bundle' => $bundle,
       'field_name' => $field_name,

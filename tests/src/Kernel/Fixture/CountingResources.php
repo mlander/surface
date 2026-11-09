@@ -10,6 +10,7 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\Staging\Stage;
 
 /**
  * The build step, counting what it is asked to build.
@@ -79,8 +80,8 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function operation(string $resource, string $operation, array $arguments = []): OperationContext {
-    return $this->inner->operation($resource, $operation, $arguments);
+  public function operation(string $resource, string $operation, array $arguments = [], ?Stage $stage = NULL): OperationContext {
+    return $this->inner->operation($resource, $operation, $arguments, $stage);
   }
 
   /**
@@ -114,8 +115,8 @@ final class CountingResources implements ResourcesInterface {
   /**
    * {@inheritdoc}
    */
-  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL): SurfaceStorageInterface {
-    return $this->inner->storage($resource, $context, $built, $account);
+  public function storage(string $resource, OperationContext $context, ?SurfaceInterface $built = NULL, ?AccountInterface $account = NULL, ?Stage $stage = NULL): SurfaceStorageInterface {
+    return $this->inner->storage($resource, $context, $built, $account, $stage);
   }
 
   /**

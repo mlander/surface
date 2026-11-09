@@ -189,7 +189,7 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     $identity = array_values(array_filter($refused, static fn (array $refusal): bool => $refusal['resource'] === 'resource_test.broken.identity'));
     $this->assertCount(1, $identity);
     [$refusal] = $identity;
-    $this->assertSame(SiteCatalog::BUILD, $refusal['stage']);
+    $this->assertSame(SiteCatalog::BUILD, $refusal['phase']);
     $this->assertNull($refusal['operation']);
     $this->assertStringContainsString('ghost', $refusal['message']);
     $this->assertSame('modules/custom/surface/tests/modules/surface_resource_test/src/Resource/Broken/UndeclaredIdentityResource.php', $refusal['file']);

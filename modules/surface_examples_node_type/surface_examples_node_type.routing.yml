@@ -35,3 +35,19 @@ surface_examples_node_type.update:
     _surface_resource: 'Drupal\surface_examples_node_type\Resource\NodeTypeResource'
     _surface_operation: 'update'
     _surface_cosmetics: 'surface_examples_node_type.form_cosmetics'
+
+# The update again, drawn over three steps into a stage: one group a
+# step, the name and description (in no group) at the first, then the
+# confirm page, which lists the staged write and applies it. The first
+# step opens the stage; Back and Next keep it in the query, and the page
+# writes nothing to the content type until the stage is applied. Once
+# applied, the page goes to the content types list (`redirect`).
+surface_examples_node_type.flow:
+  path: '/admin/structure/types/manage/{type}/surface-flow'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit content type, step by step (resource)'
+    _surface_resource: 'Drupal\surface_examples_node_type\Resource\NodeTypeResource'
+    _surface_operation: 'update'
+    _surface_cosmetics: 'surface_examples_node_type.form_cosmetics'
+    _surface_flow: { steps: [submission, workflow, display], redirect: entity.node_type.collection }

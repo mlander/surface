@@ -82,8 +82,8 @@ final class LarderResource implements ResourceInterface {
   public static function defineInputs(BlueprintInterface $inputs): void {
     $inputs->add('larder', 'string', 'Larder')->setRequired(TRUE);
     $inputs->add('note', 'string', 'Note');
-    $inputs->attach('rack', SpiceRackResource::class)->setLabel('Spice rack');
-    $inputs->attach('spare_rack', SpiceRackResource::class)->setLabel('Spare spice rack');
+    $inputs->attach('rack', SpiceRackResource::class, 'Spice rack');
+    $inputs->attach('spare_rack', SpiceRackResource::class, 'Spare spice rack');
   }
 
 }
