@@ -904,9 +904,13 @@ the pipeline runs unchanged over it. Nothing is written to storage.
 ## Flows
 
 A flow draws one operation's form over several steps into one stage,
-one group a step, and ends in a confirm page that applies the stage. It
-is declared on the operation form route, never on the resource: the
-build, the tools and the HTTP door do not see it.
+one group a step, and ends in a confirm page that applies the stage. A
+step may also draw another resource's operation, so one flow writes
+several settings objects together. It is declared on the operation
+form route, never on the resource: the build, the tools and the HTTP
+door do not see it. Example 19 (`/surface-examples/19`,
+[the examples' README](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-19-one-stage-several-steps))
+draws two groups of one resource, then another resource.
 
 ```yaml
 surface_examples_node_type.flow:
@@ -920,8 +924,25 @@ surface_examples_node_type.flow:
     _surface_flow: { steps: [submission, workflow, display], redirect: entity.node_type.collection }
 ```
 
-- **Steps.** `steps` lists group ids of the route's operation, the
-  order they are drawn in. `label`, optional, is the stage's label, the
+- **Steps.** `steps` lists the steps in the order they are drawn,
+  each in one of two shapes. A string is a group id of the route's
+  operation. A map is a step over another resource:
+
+  ```yaml
+  _surface_flow:
+    steps:
+      - basics
+      - tickets
+      - { resource: event.notices, operation: configure }
+      - { resource: example.row, operation: update, group: notes, arguments: { id: first } }
+  ```
+
+  `resource` is its id or class, `operation` one of its operations,
+  `group`, optional, one of that operation's groups, drawn whole when
+  left out, and `arguments`, optional, literal values for the
+  operation's parameters, none when left out. The first step is a group
+  of the route's operation, since its submit opens the stage.
+  `label`, optional, is the stage's label, the
   operation's label by default. `redirect`, optional, is the route the
   page goes to once the stage is applied, handed the flow route's own
   parameters its path takes; without it the page stays on the confirm
@@ -931,19 +952,42 @@ surface_examples_node_type.flow:
   finishes in one sitting, or `long`, the temp store expiry
   (`tempstore.expire`, a week by default), the default. The first step
   also draws every key in no group (here the name, the machine name and
-  the description). A key in a group no step names
+  the description); the first step over another operation draws that
+  operation's keys in no group. A key in a group no step names
   is never drawn and keeps what it holds.
-  Every step writes through the route's one operation: a stage refuses
+  Every group step writes through the route's one operation, and every
+  step over another resource through that resource's: a stage refuses
   a second operation on one thing.
+- **A step over another resource.** It is served by that resource's
+  operation, built from the step's `arguments` and written into the
+  route's stage. At this step the form id, the title and the panel stay
+  the route's; the route's fixed values, defaults, `_surface_query` and
+  cosmetic layer do not apply. The panel is handed the step's
+  operation. Its write is listed on the confirm page beside the route's,
+  under its own resource id. Two resources of one storage class whose
+  contexts know no identity are one thing to the stage, as
+  `event.catering` and `event.catering.method` are: the second write is
+  refused `conflict` when it is staged
+  ([What is refused](#what-is-refused)), not when the route is matched.
+  Two storage classes over one config object are not detected, so give
+  each resource its own config object.
+- **Access.** The route's operation gates every page of the flow: its
+  permission, then its access for its context. At a step over another
+  resource, that resource's operation adds its own permission and its
+  access for the step's context; an account without them is refused at
+  that step and let in at the others.
 - **The query.** `?step=N` names the step, from 1, and `?stage=<id>`
   the stage. The first step needs no stage: its submit opens one as the
   current user and stages the step's keys into it. Every later step
   needs the stage; without one it is refused, and a step the flow does
   not have is a page not found.
-- **Next and Back.** Next stages the step's keys through the pipeline
-  and goes to the next step, with the stage kept, or to the confirm page
-  after the last. Back goes to the step before and stages nothing. A
-  `destination` in the query is ignored: Next, Back, Discard and Apply
+- **Next, Back and Cancel.** Next stages the step's keys through the
+  pipeline and goes to the next step, with the stage kept, or to the
+  confirm page after the last. Back, from the second step on, goes to
+  the step before and stages nothing. Cancel deletes the stage through
+  its `delete` and goes to the first step with no stage; on the first
+  step with no stage yet it writes nothing and starts the page again. A
+  `destination` in the query is ignored: Next, Back, Cancel and Save
   go where the flow says. A key the step does not draw says nothing,
   and the staged load overlays what earlier steps staged, so a later
   step sees earlier values, and apply sends only the keys that moved.
@@ -956,25 +1000,45 @@ surface_examples_node_type.flow:
   discards the stage.
 - **The confirm page**, `?step=confirm`, lists the stage's `changes` as
   a table: each write's position, resource, operation, kind, parameters
-  and the keys it moved. It says "Each is checked again when it is
-  made. They are made together or not at all." When a write is a delete,
-  or its operation is destructive, it says "One of these cannot be undone
-  once applied." and Apply is a danger button. Back goes to the last
-  step. "Discard the stage" deletes the stage through its `delete` and
-  goes back to the first step with no stage; it is a button, since a
-  link may not delete. "Apply the stage" applies what the page listed:
+  and the keys it moved, every resource's writes alike. It says "Each is
+  checked again when it is made. They are made together or not at all."
+  and draws the route's panel after the buttons, as every step does, so
+  an example's explanation shows there too. When a write is a delete, or its operation is destructive, it says
+  "One of these cannot be undone once applied." and Save is a danger
+  button. Back goes to the last step. Cancel deletes the stage through
+  its `delete` and goes back to the first step with no stage; it is a
+  button, since a link may not delete. Save applies what the page listed:
   the page posts back a fingerprint of the stage's writes as it drew
   them, and when the stage holds other writes by then, written from
-  another tab or another door, Apply is refused, "The stage changed
+  another tab or another door, Save is refused, "The stage changed
   since this page was drawn; it is listed again below.", and the page
   lists them. Otherwise it rehearses the apply when the page is
   submitted, each refusal said on the page and nothing written, then
   applies it through the stage's `apply`: "Applied 2 writes.", and the
   page goes to the flow's `redirect`, or stays and shows the stage
   applied. The cosmetic layer's redirect is not asked: it is handed an
-  operation's result, not the stage's apply. An applied or voided stage
-  shows its status and what apply made, and no Apply. This page is how a form door shows a run's outputs:
-  `changes` before the apply, `applied` after.
+  operation's result, not the stage's apply. This page is how a form
+  door shows a run's outputs: `changes` before the apply, `applied`
+  after.
+- **A closed stage.** An applied stage's confirm page says "This stage
+  was applied 2 min ago." and a voided one why it was voided, each over
+  the table of what apply made, with no Save. Both link "Start again",
+  the first step with no stage, and the flow's `redirect` when it names
+  one, as "Continue"; a voided stage keeps Cancel, and its sentence ends
+  "Cancel removes it.". A step asked for with a closed stage answers 303
+  to the confirm page, in a flow over a create too. What is posted from
+  a page drawn before, as the browser's Back after Save shows it, is
+  judged by the button's submit, not by validation: Back goes to the
+  step before, and Cancel on a voided stage deletes it. Anything else,
+  Next, Save, Cancel on an applied stage ("This stage was applied; there
+  is nothing to cancel."), or a post naming a button the page no longer
+  draws, writes nothing, says the sentence and the "Start again" link as
+  an error message, and goes to the confirm page. Core takes a post
+  naming no drawn button for the first button drawn, so a Save from a
+  stale confirm page of a voided stage would otherwise be its Cancel.
+- **The browser's Back to step 1.** Step 1's URL names no stage, so
+  after Save, the browser's Back to step 1 and Next there open a new
+  stage.
 - **What a flow can stage.** Updates, and creates whose required keys
   with no default are all drawn at the first step: each step is
   validated as the whole write, as every staged write is
@@ -983,11 +1047,14 @@ surface_examples_node_type.flow:
 What is refused, and where:
 
 - **When the router is rebuilt**, what the route alone shows: a
-  `_surface_flow` that is no map of `steps`, `label` and `redirect`, a
-  `label` or `redirect` that is no non-empty string, steps that are no
-  list of distinct group ids, a flow on a route that names no operation,
-  and a flow on a route whose `_form` is not the operation form. The
-  rebuild stops, naming the route.
+  `_surface_flow` that is no map of `steps`, `label`, `redirect` and
+  `keep`, a `label` or `redirect` that is no non-empty string, steps
+  that are neither group ids nor maps of `resource`, `operation`, an
+  optional `group` and optional `arguments`, a first step over another
+  resource, a group listed twice for one operation, a step with no group
+  beside another step over the same operation, a flow on a route that
+  names no operation, and a flow on a route whose `_form` is not the
+  operation form. The rebuild stops, naming the route.
 - **When the route is matched**, by its access check and by the form,
   what needs the resource built, each refused saying why: an operation a
   flow cannot stage, a delete, a read-only operation, or one a stage
@@ -999,6 +1066,28 @@ What is refused, and where:
   first step, naming the key. A key a rule requires only for some values
   cannot be seen before values exist, so it is not checked there: the
   pipeline refuses the step that leaves it empty.
+- **When the route is matched, for each step over another resource**:
+  at every page, a resource or operation that is not discovered; the
+  route's own operation, "... as a step over another resource at step 2:
+  its keys are drawn by the route's group steps, so write it as a
+  group."; a group listed twice or a step with no group beside another
+  over the same operation, compared by resource id, so a resource named
+  by its id at one step and its class at another is one resource; an
+  operation that creates, "... a step over another resource updates a
+  stored thing or configures a settings object; a create is drawn only by
+  the route's own operation.", since a create's local id does not cross
+  resources ([Limits](#limits)); a delete or a read-only operation; and
+  one a stage does not apply to, naming `does_not_apply`. At the step
+  itself, its operation's permission is asked first. Then at the step,
+  and at the first step while no stage is named for every step over
+  another resource, so nothing is staged for a flow that cannot be
+  finished: its arguments naming nothing is a page not found, and its
+  groups and refiner order are checked over the steps drawn from its
+  operation, as the route's are over the route's: a refiner never
+  crosses resources. Only the route's
+  operation may create, so the required keys check is its alone. The
+  catalog (`docs/catalog.md`) lists a form only for the route's own
+  resource, not for steps over another resource.
 
 (why: [decision](decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource),
 [decision](decisions.md#a-step-order-is-checked-against-the-refiner-graph-and-a-creates-required-keys-at-match-time),
@@ -1338,7 +1427,7 @@ access meets core's own refusal, an exception from its predelete hook,
   holds two, one staged through another door, is refused at the flow's
   steps, naming both positions: open the flow without a stage. Its
   confirm page still applies or discards it.
-- **A stage gone before Apply or Discard.** A stage that expired or was
+- **A stage gone before Save or Cancel.** A stage that expired or was
   discarded before its confirm page is posted is a page not found, as
   the page is when it is drawn: the stage is read before any button's
   handler runs.

@@ -816,7 +816,7 @@ renames sit in A because they are cheapest before new code exists.
    - The "Right now" wording for a key both narrowed and under a
      runtime rule. DONE: "narrowed, and checked at runtime", in the
      contract panel and the React page
-     (`docs/decisions.md#a-panel-inside-the-operation-form`).
+     (`docs/decisions.md#a-panel-after-the-operation-forms-buttons`).
    - From the open points, DONE the same day: a read only operation
      writes nothing at any door (its pipeline stops after prepare and
      refuses `commit()`;

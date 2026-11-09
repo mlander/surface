@@ -21,6 +21,9 @@
 # Example 18 is the same keys declared twice, served the same way, each page
 # with the same panel: as properties of the class, and with calls in
 # defineInputs(), both saving to one config object.
+# Example 19 is a flow: the event setup's two groups as two steps, then the
+# event notices, another resource, as a third, all into one stage that its
+# confirm page applies.
 
 surface_examples.index:
   path: '/surface-examples'
@@ -253,3 +256,16 @@ surface_examples.step18_method:
     _surface_resource: 'Drupal\surface_examples\Resource\CateringByMethodResource'
     _surface_operation: 'configure'
     _surface_panel: 'surface_examples.panels'
+
+surface_examples.step19:
+  path: '/surface-examples/19'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 19: one stage, several steps'
+    _surface_resource: 'Drupal\surface_examples\Resource\EventSetupResource'
+    _surface_operation: 'configure'
+    _surface_panel: 'surface_examples.panels'
+    _surface_flow:
+      steps: [basics, tickets, { resource: event.notices, operation: configure }]
+      label: 'Set up the event'
+      keep: short

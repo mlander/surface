@@ -202,6 +202,13 @@ class SurfaceFormBuilder implements SurfaceFormBuilderInterface, TrustedCallback
   /**
    * {@inheritdoc}
    */
+  public function placeRefreshedBeside(array $form, string $container_key, string $key, array $element): array {
+    return $this->refreshing->placeRefreshedBeside($form, $container_key, $key, $element);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public static function refreshSurface(array &$form, FormStateInterface $form_state): AjaxResponse|array {
     return Refreshing::refreshSurface($form, $form_state);
   }

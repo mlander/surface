@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface_examples;
 
 /**
- * The tool calls examples 7 to 18 show, written down once.
+ * The tool calls examples 7 to 19 show, written down once.
  *
  * None leaves anything written: every call is a dry run, which accepts,
  * validates and prepares the values, answers with what would be stored
@@ -399,6 +399,28 @@ final class ConceptCalls {
     ],
     'event.catering' => self::CATERING,
     'event.catering.method' => self::CATERING,
+    'event.setup' => [
+      'set_up' => [
+        'label' => 'The winter meetup, its tickets on sale',
+        'values' => [
+          'name' => 'Winter meetup',
+          'date' => '2026-12-05',
+          'capacity' => 80,
+          'price' => 15.0,
+          'sales_open' => TRUE,
+        ],
+      ],
+      'bad_date' => [
+        'label' => 'A date written the other way round: refused',
+        'values' => ['name' => 'Winter meetup', 'date' => '05/12/2026'],
+      ],
+    ],
+    'event.notices' => [
+      'banner' => [
+        'label' => 'A banner, shown',
+        'values' => ['banner' => 'Doors open at six.', 'show_banner' => TRUE],
+      ],
+    ],
     'event.sponsorship' => [
       'valid' => [
         'label' => 'A venue, a contact, an article and a node of any content type: accepted',

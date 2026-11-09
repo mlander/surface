@@ -191,7 +191,7 @@ class ExamplesWorkflowTest extends SurfaceKernelTestBase {
     $request->attributes->set(RouteObjectInterface::ROUTE_OBJECT, $route);
     $stack->push($request);
     $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
-    $panel = $form[SurfaceOperationForm::SURFACE_KEY][SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
+    $panel = $form[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONCEPT];
     $this->assertStringContainsString('surface_examples_workflow', (string) $panel['workflow']['#markup']);
     $this->assertStringContainsString('see event fees', (string) $panel['workflow']['#markup']);
     $accounts = json_decode((string) $panel['accounts']['content']['#code'], TRUE);

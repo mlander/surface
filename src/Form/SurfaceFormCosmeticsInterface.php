@@ -63,7 +63,9 @@ interface SurfaceFormCosmeticsInterface {
    *
    * @param array $form
    *   The complete form, with the data surface container under its own
-   *   key and the actions element already in place.
+   *   key, the actions element already in place, and the route's panel,
+   *   if it names one, after the actions under
+   *   SurfaceOperationForm::PANEL_KEY.
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The data surface the elements were built from.
    * @param \Drupal\Core\Form\FormStateInterface $form_state

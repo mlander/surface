@@ -522,7 +522,7 @@ class FullSubmitTest extends SurfaceKernelTestBase {
     $this->assertSame([
       $this->wrapperSelector($container['room']),
       $this->wrapperSelector($container['capacity']),
-      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     // The venue has a wrapper, as every trigger does, but its value was
     // accepted and its options did not move, so neither it nor the
@@ -599,7 +599,7 @@ class FullSubmitTest extends SurfaceKernelTestBase {
     $replaced = $this->ajaxSelectors($response, 'replaceWith');
     $this->assertSame([
       $this->wrapperSelector($container['capacity']),
-      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]),
     ], $replaced);
     // The room has a wrapper, being a target of the venue, and it is the
     // trigger here, so it is the one wrapper that must not be named.
@@ -637,7 +637,7 @@ class FullSubmitTest extends SurfaceKernelTestBase {
 
     $this->assertSame([
       $this->wrapperSelector($container['ticket']),
-      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertNotContains($this->wrapperSelector($container['pricing']), $this->ajaxSelectors($response, 'replaceWith'));
     // The paid variant's keys, and not the free one's.
@@ -661,7 +661,7 @@ class FullSubmitTest extends SurfaceKernelTestBase {
     $this->assertSame([
       $this->wrapperSelector($container['room']),
       $this->wrapperSelector($container['capacity']),
-      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
   }
 
@@ -719,7 +719,7 @@ class FullSubmitTest extends SurfaceKernelTestBase {
     $this->assertSame($held . '--capacity', $container['capacity'][SurfaceFormBuilderInterface::REFRESH_ID_KEY]);
     // Every trigger sends it back on the next request too.
     $this->assertSame($held, $container['venue']['#ajax']['submit'][SurfaceFormBuilderInterface::WRAPPER_INPUT]);
-    $this->assertSame(['#' . $held . '--capacity', '#' . $held . '--surface-panel'], $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
+    $this->assertSame(['#' . $held . '--capacity', '#' . $held . '__beside-surface-panel'], $this->ajaxSelectors($this->ajaxResponse($state), 'replaceWith'));
 
     foreach (['other-form-wrapper', 'surface-configure-wrapper"><b>'] as $forged) {
       $state = $this->postStepTwo(

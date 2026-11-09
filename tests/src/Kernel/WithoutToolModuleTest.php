@@ -93,7 +93,7 @@ class WithoutToolModuleTest extends SurfaceKernelTestBase {
     $this->assertSame('item', $container['title']['#type']);
     $this->assertSame('Welcome', $container['title']['#value']);
 
-    $panel = $container[SurfaceOperationForm::PANEL_KEY];
+    $panel = $form[SurfaceOperationForm::PANEL_KEY];
     $this->assertNotEmpty($panel['keys']['#rows']);
     $this->assertStringContainsString('"const": "Welcome"', $panel['contract']['json']['#code']);
     $this->assertSame('The full schema, for any answers', (string) $panel['full']['#title']);

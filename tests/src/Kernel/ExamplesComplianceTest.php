@@ -483,7 +483,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     $this->assertSame([
       $this->wrapperSelector($container['capacity']),
       $this->wrapperSelector($stewards),
-      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $capacity = $this->ajaxMarkup($response, $this->wrapperSelector($container['capacity']));
     $this->assertStringContainsString('max="400"', $capacity);
@@ -499,7 +499,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     $response = $this->ajaxResponse($state);
     $this->assertSame([
       $this->wrapperSelector($stewards),
-      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]),
     ], $this->ajaxSelectors($response, 'replaceWith'));
     $this->assertStringContainsString('At least 1 steward for 20 attendees.', $this->ajaxMarkup($response, $this->wrapperSelector($stewards)));
     // The license triggers a rebuild and is no target, yet has a wrapper
@@ -602,7 +602,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     $this->assertSame([
       $this->wrapperSelector($container['capacity']),
       $this->wrapperSelector($container['third_party_settings'][self::MODULE]['stewards']),
-      $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]),
+      $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]),
       $this->wrapperSelector($license),
     ], $this->ajaxSelectors($response, 'replaceWith'));
 
@@ -621,7 +621,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     $this->assertSame([], $this->container->get('messenger')->all());
     $said = 0;
     foreach ($response->getCommands() as $command) {
-      if (($command['selector'] ?? NULL) !== $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY])) {
+      if (($command['selector'] ?? NULL) !== $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY])) {
         $said += substr_count((string) ($command['data'] ?? ''), $message);
         $this->assertStringNotContainsString('is not in the right format', (string) ($command['data'] ?? ''));
       }
@@ -629,7 +629,7 @@ class ExamplesComplianceTest extends SurfaceKernelTestBase {
     $this->assertSame(1, $said);
     // The panel explains the license by the same sentence, never by its
     // pattern.
-    $panel = $this->ajaxMarkup($response, $this->wrapperSelector($container[SurfaceOperationForm::PANEL_KEY]));
+    $panel = $this->ajaxMarkup($response, $this->wrapperSelector($state->getCompleteForm()[SurfaceOperationForm::PANEL_KEY]));
     $this->assertMatchesRegularExpression('#surface-key="' . preg_quote(self::LICENSE, '#') . '">(?:(?!</tr>).)*<td>' . preg_quote($message, '#') . '</td>#s', $panel);
 
     // Fixed, and sent with the marker the replaced license carries.

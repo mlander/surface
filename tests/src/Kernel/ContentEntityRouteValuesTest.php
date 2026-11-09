@@ -99,7 +99,8 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
    * The title is drawn fixed, the body starts filled, both stated and saved.
    */
   public function testTheTitleIsFixedAndTheBodyFilled(): void {
-    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class)[SurfaceOperationForm::SURFACE_KEY];
+    $built = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $form = $built[SurfaceOperationForm::SURFACE_KEY];
     $this->assertSame('item', $form['title']['value']['#type']);
     $this->assertSame('Welcome', $form['title']['value']['#value']);
     $this->assertSame('Start here.', $form['body']['value']['#default_value']);
@@ -107,7 +108,7 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
     // The contract panel beside the form states what the form draws, in
     // the field's structure: the fixed key `const`, its label under
     // `x-surface.fixed`, and the filled key's default.
-    $panel = $form[SurfaceOperationForm::PANEL_KEY];
+    $panel = $built[SurfaceOperationForm::PANEL_KEY];
     foreach (['contract', 'full'] as $document) {
       $json = $panel[$document]['json']['#code'];
       $this->assertStringContainsString('"const": "Welcome"', $json, $document);

@@ -35,7 +35,7 @@ drush state:set surface_examples_workflow.state published
 Reload `/surface-examples/10`: the program is shown and fixed, with no
 Save. `drush state:delete surface_examples_workflow.state`, or
 Reset to defaults on the examples' landing page, takes it back. The
-panel above the form says what the module answers and makes its call.
+panel under the form says what the module answers and makes its call.
 
 ## Gates
 

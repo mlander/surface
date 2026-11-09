@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\Access\AccessResultReasonInterface;
+use Drupal\Core\Cache\CacheableDependencyInterface;
+use Drupal\Core\Cache\CacheableResponseInterface;
+use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteBuildEvent;
 use Drupal\Core\Url;
@@ -12,6 +16,8 @@ use Drupal\surface\Access\OperationRouteSubscriber;
 use Drupal\surface\Form\Flow;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Staging\StageStore;
+use Drupal\surface\Storage\StageStorage;
+use Drupal\surface_stage_test\Resource\LedgerResource;
 use Drupal\surface_stage_test\Storage\ItineraryStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -24,9 +30,10 @@ use Symfony\Component\Routing\RouteCollection;
 /**
  * Tests a flow: one operation drawn a group a step, into one stage.
  *
- * Over the itinerary of surface_stage_test, whose routes declare two
- * flows that hold and two the match refuses, and over the content type
- * example's flow route. Each step is submitted as a programmed form, so
+ * Over the itinerary of surface_stage_test, whose routes declare flows
+ * that hold and flows the match refuses, some with a step over another
+ * resource, and over the content type example's flow route. Each step is
+ * submitted as a programmed form, so
  * where it goes next is read from the redirect it set.
  */
 #[Group('surface')]
@@ -51,6 +58,8 @@ class FlowFormTest extends SurfaceKernelTestBase {
     'tool',
     'surface',
     'surface_stage_test',
+    'surface_tool_test',
+    'my_module',
     'surface_examples_node_type',
   ];
 
@@ -61,7 +70,7 @@ class FlowFormTest extends SurfaceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('user');
     $this->installEntitySchema('node');
-    $this->installConfig(['field', 'node']);
+    $this->installConfig(['field', 'node', 'my_module']);
     $this->setUpCurrentUser(admin: TRUE);
     $this->setUpCurrentUser([], [
       'keep the ledger',
@@ -274,10 +283,21 @@ class FlowFormTest extends SurfaceKernelTestBase {
       '_surface_resource' => 'stage_test.itinerary',
       '_surface_operation' => 'update',
     ];
-    $shape = 'The bad route\'s "_surface_flow" is a map of "steps", a list of the group ids drawn one per step, an optional "label", an optional "redirect", a route name, and an optional "keep", short or long, as { steps: [where, when] }';
+    $shape = 'The bad route\'s "_surface_flow" is a map of "steps", a list of the steps drawn in order, an optional "label", an optional "redirect", a route name, and an optional "keep", short or long, as { steps: [where, when] }';
+    $ledger = ['resource' => 'stage_test.ledger', 'operation' => 'update'];
+    $notes = $ledger + ['group' => 'notes'];
     $cases = [
-      $shape . ': "steps" lists at least one group id, each a non-empty string.' => $base + [
+      $shape . ': "steps" lists at least one step, each a group id of the route\'s operation, a non-empty string, or a step over another resource, a map of "resource" and "operation", each a non-empty string, an optional "group", a non-empty string, and optional "arguments", a map of values by parameter name, as { resource: example.settings, operation: configure }.' => $base + [
         '_surface_flow' => ['steps' => []],
+      ],
+      'The bad route\'s "_surface_flow" starts with a step over another resource: the first step\'s submit opens the stage for the route\'s own operation, so list one of its group ids first.' => $base + [
+        '_surface_flow' => ['steps' => [$ledger, 'where']],
+      ],
+      'The bad route\'s "_surface_flow" lists the group "notes" of the "update" operation of stage_test.ledger twice: each group is drawn at one step.' => $base + [
+        '_surface_flow' => ['steps' => ['where', $notes, $notes]],
+      ],
+      'The bad route\'s "_surface_flow" draws the "update" operation of stage_test.ledger at more than one step, and one of them names no group: a step with no group draws the whole operation, so give each step over it a group.' => $base + [
+        '_surface_flow' => ['steps' => ['where', $ledger, $notes]],
       ],
       $shape . '.' => $base + [
         '_surface_flow' => ['steps' => ['where'], 'groups' => []],
@@ -313,6 +333,19 @@ class FlowFormTest extends SurfaceKernelTestBase {
       catch (\InvalidArgumentException $e) {
         $this->assertSame($message, $e->getMessage());
       }
+    }
+    // A step over another resource is held to its keys as the empty list
+    // is held to having one.
+    $collection = new RouteCollection();
+    $collection->add('bad', new Route('/bad/{id}', $base + [
+      '_surface_flow' => ['steps' => ['where', $ledger + ['step' => 2]]],
+    ], ['id' => '[a-z]+']));
+    try {
+      (new OperationRouteSubscriber())->onAlterRoutes(new RouteBuildEvent($collection));
+      $this->fail('The rebuild did not refuse a step over another resource with a key it does not take.');
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertStringStartsWith($shape . ': "steps" lists at least one step', $e->getMessage());
     }
     // A flow built in code is held to the same two lifetimes.
     try {
@@ -396,6 +429,409 @@ class FlowFormTest extends SurfaceKernelTestBase {
       2 => ['additional_settings', 'status', 'promote', 'sticky', 'new_revision'],
       3 => ['additional_settings', 'display_submitted'],
     ], $drawn);
+  }
+
+  /**
+   * Tests a step over another resource draws and stages that resource.
+   *
+   * The itinerary's two groups, then the ledger row's update: one stage
+   * holds both writes, the confirm page lists both resources, and Save
+   * makes both.
+   */
+  public function testStepOverAnotherResourceStagesIt(): void {
+    $this->ledger('row', 'First row');
+    $this->visit('/surface-test/itinerary/trip/flow-ledger');
+    [, $redirect] = $this->submitStep(['region' => 'south']);
+    $stage = $redirect->getOption('query')['stage'];
+    $this->visit('/surface-test/itinerary/trip/flow-ledger?stage=' . $stage . '&step=2');
+    [, $redirect] = $this->submitStep(['day' => 'tue', 'nights' => '3']);
+    $this->assertSame(['stage' => $stage, 'step' => '3'], $redirect->getOption('query'));
+    $this->visit('/surface-test/itinerary/trip/flow-ledger?stage=' . $stage . '&step=3');
+    $form = $this->surfaceForm();
+    $drawn = $this->drawn($form);
+    $keys = ['id', 'title', 'note', 'tags', 'region', 'day', 'guide'];
+    $this->assertSame(['id', 'title', 'note', 'tags'], array_values(array_intersect($drawn, $keys)), 'The third step draws the ledger row\'s keys, and none of the trip\'s.');
+    $this->assertSame('First row', $form['title']['#default_value']);
+    $this->container->get('messenger')->deleteAll();
+    [$state, $redirect] = $this->submitStep(['title' => 'Renamed row']);
+    $this->assertSame([], $state->getErrors());
+    $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $redirect->getOption('query'));
+    $this->assertStringStartsWith('Edit a ledger row: the values were accepted and staged in', $this->statusMessage());
+    $writes = $this->stages()->read($stage)['writes'];
+    $this->assertSame(['stage_test.itinerary', 'stage_test.ledger'], array_column($writes, 'resource'));
+    $this->assertSame(['id' => 'row'], $writes[1]['arguments']);
+    $this->assertSame('First row', $this->row('row')['title'], 'Nothing is written to the row.');
+
+    $this->visit('/surface-test/itinerary/trip/flow-ledger?stage=' . $stage . '&step=confirm');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $this->assertSame(['stage_test.itinerary', 'stage_test.ledger'], array_column($form['changes']['#rows'], 1), 'The confirm page lists both resources.');
+    $state = (new FormState())->setValues(['op' => 'Save']);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $state);
+    $this->assertSame([], $state->getErrors());
+    $this->assertSame('south', $this->trip()['region']);
+    $this->assertSame('Renamed row', $this->row('row')['title']);
+    $this->assertSame(StageStorage::APPLIED, $this->stages()->read($stage)['status']);
+  }
+
+  /**
+   * Tests a step over another resource asks that resource's access.
+   *
+   * The route's operation gates every page; the third step, my module's
+   * settings, adds its own permission, which the account lacks.
+   */
+  public function testStepOverAnotherResourceAsksItsAccess(): void {
+    $this->visit('/surface-test/itinerary/trip/flow-settings');
+    $this->assertTrue($this->stepAccess()->isAllowed(), 'Step 1 is the trip\'s alone.');
+    [, $redirect] = $this->submitStep(['region' => 'south']);
+    $stage = $redirect->getOption('query')['stage'];
+    $this->visit('/surface-test/itinerary/trip/flow-settings?stage=' . $stage . '&step=2');
+    $this->assertTrue($this->stepAccess()->isAllowed(), 'So is step 2.');
+    $this->submitStep(['day' => 'tue', 'nights' => '3']);
+    $this->visit('/surface-test/itinerary/trip/flow-settings?stage=' . $stage . '&step=3');
+    $access = $this->stepAccess();
+    $this->assertTrue($access->isForbidden(), 'Step 3 asks my module\'s permission.');
+    $this->assertStringContainsString('administer my_module', (string) ($access instanceof AccessResultReasonInterface ? $access->getReason() : ''));
+    $this->assertInstanceOf(CacheableDependencyInterface::class, $access);
+    $this->assertSame([0, TRUE, TRUE], [
+      $access->getCacheMaxAge(),
+      in_array('url.query_args:stage', $access->getCacheContexts(), TRUE),
+      in_array('url.query_args:step', $access->getCacheContexts(), TRUE),
+    ], 'The refusal varies by the stage and the step, for this request alone.');
+    try {
+      $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+      $this->fail('The form did not refuse step 3.');
+    }
+    catch (AccessDeniedHttpException) {
+      // The form asks the same.
+    }
+    // An account with both permissions is let in, and draws the settings.
+    $this->setUpCurrentUser([], ['keep the ledger', 'administer my_module']);
+    $stage = $this->open('Settings');
+    $this->stage($stage, 'stage_test.itinerary', ['id' => 'trip'], ['region' => 'south']);
+    $this->visit('/surface-test/itinerary/trip/flow-settings?stage=' . $stage . '&step=3');
+    $this->assertTrue($this->stepAccess()->isAllowed());
+    $this->assertSame(['title', 'items_per_page', 'show_author', 'notify_email', 'layout'], $this->drawn($this->surfaceForm()));
+  }
+
+  /**
+   * Tests the match refuses a step over another resource it cannot draw.
+   */
+  public function testTheMatchRefusesStepsOverAnotherResource(): void {
+    $this->visit('/surface-test/itinerary/trip/flow-vault');
+    $this->assertRefused('The surface_stage_test.itinerary_flow_vault route\'s flow draws step 2 through the "configure" operation of tool_test.vault, and a stage does not apply to it (does_not_apply): a stage applies to an operation that writes one thing of a resource whose storage is transactional.');
+    $this->visit('/surface-test/itinerary/trip/flow-ledger-create');
+    $this->assertRefused('The surface_stage_test.itinerary_flow_ledger_create route\'s flow draws step 2 through the "create" operation of stage_test.ledger, which creates: a step over another resource updates a stored thing or configures a settings object; a create is drawn only by the route\'s own operation.');
+    // A group the other resource does not have is refused at its step.
+    $this->ledger('row', 'First row');
+    $route = clone $this->container->get('router.route_provider')->getRouteByName('surface_stage_test.itinerary_flow');
+    $step = [
+      'resource' => 'stage_test.ledger',
+      'operation' => 'update',
+      'group' => 'notes',
+      'arguments' => ['id' => 'row'],
+    ];
+    $route->setDefault('_surface_flow', ['steps' => ['where', $step]]);
+    $this->serveBuilt('example.flow', $route, ['id' => 'trip'], ['stage' => $this->open(), 'step' => '2']);
+    $this->assertRefused('The example.flow route\'s flow draws the group "notes" of the "update" operation of stage_test.ledger at step 2, and the operation has no such group: name one of its groups, and it declares none, or leave "group" out to draw it whole.');
+  }
+
+  /**
+   * Tests the match asks steps over another resource by resolved id.
+   *
+   * The rebuild compares a step's resource as written; the match names
+   * each by its id, so a resource named by id at one step and by class at
+   * another is one resource, and a step over the route's own operation is
+   * refused. Arguments are compared as values: TRUE and "1" are two.
+   */
+  public function testTheMatchAsksStepsByTheirResolvedResource(): void {
+    $this->ledger('row', 'First row');
+    $route = clone $this->container->get('router.route_provider')->getRouteByName('surface_stage_test.itinerary_flow');
+    $whole = ['resource' => 'stage_test.ledger', 'operation' => 'update', 'arguments' => ['id' => 'row']];
+    $by_class = ['group' => 'notes', 'resource' => LedgerResource::class] + $whole;
+    $route->setDefault('_surface_flow', ['steps' => ['where', $whole, $by_class]]);
+    Flow::assertWritten($route, 'example.flow');
+    $this->serveBuilt('example.flow', $route, ['id' => 'trip']);
+    $this->assertRefused('The example.flow route\'s "_surface_flow" draws the "update" operation of stage_test.ledger at more than one step, and one of them names no group: a step with no group draws the whole operation, so give each step over it a group.');
+
+    $own = ['resource' => 'stage_test.itinerary', 'operation' => 'update', 'group' => 'when'];
+    $route->setDefault('_surface_flow', ['steps' => ['where', $own]]);
+    Flow::assertWritten($route, 'example.flow');
+    $this->serveBuilt('example.flow', $route, ['id' => 'trip']);
+    $this->assertRefused('The example.flow route\'s flow draws the route\'s own operation, "update" of stage_test.itinerary, as a step over another resource at step 2: its keys are drawn by the route\'s group steps, so write it as a group.');
+
+    $one = ['resource' => 'stage_test.ledger', 'operation' => 'update'];
+    $true = $one + ['arguments' => ['id' => TRUE]];
+    $text = $one + ['arguments' => ['id' => '1']];
+    $route->setDefault('_surface_flow', ['steps' => ['where', $true, $text]]);
+    Flow::assertWritten($route, 'example.flow');
+    $route->setDefault('_surface_flow', ['steps' => ['where', $text, $text]]);
+    $this->expectExceptionMessage('draws the "update" operation of stage_test.ledger at more than one step');
+    Flow::assertWritten($route, 'example.flow');
+  }
+
+  /**
+   * Tests the first step asks every step over another resource.
+   *
+   * Before anything is staged: a third step whose arguments name nothing
+   * makes step 1 a page not found, and one naming a group its operation
+   * does not have refuses step 1.
+   */
+  public function testTheFirstStepAsksEveryStepOverAnotherResource(): void {
+    $route = clone $this->container->get('router.route_provider')->getRouteByName('surface_stage_test.itinerary_flow');
+    $gone = ['resource' => 'stage_test.ledger', 'operation' => 'update', 'arguments' => ['id' => 'gone']];
+    $route->setDefault('_surface_flow', ['steps' => ['where', 'when', $gone]]);
+    $this->serveBuilt('example.flow', $route, ['id' => 'trip']);
+    $this->assertTrue($this->stepAccess()->isAllowed(), 'Let through in the dispatch, for the form to answer.');
+    try {
+      $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+      $this->fail('Step 1 was served.');
+    }
+    catch (NotFoundHttpException) {
+      // The third step names nothing.
+    }
+
+    $this->ledger('row', 'First row');
+    $notes = ['group' => 'notes', 'arguments' => ['id' => 'row']] + $gone;
+    $route->setDefault('_surface_flow', ['steps' => ['where', 'when', $notes]]);
+    $this->serveBuilt('example.flow', $route, ['id' => 'trip']);
+    $this->assertRefused('The example.flow route\'s flow draws the group "notes" of the "update" operation of stage_test.ledger at step 3, and the operation has no such group: name one of its groups, and it declares none, or leave "group" out to draw it whole.');
+    $this->assertSame([], $this->container->get('keyvalue.expirable')->get(StageStore::COLLECTION)->getAll(), 'No stage was opened.');
+  }
+
+  /**
+   * Tests a closed stage on a step page goes to the confirm page.
+   *
+   * A step asked for with an applied stage redirects to the confirm page,
+   * which says when it was applied and links to the first step without a
+   * stage. A Save posted after the apply, and a Next posted from step 2
+   * drawn before it, as the browser's Back shows it, are refused with the
+   * same sentence, write nothing, and go to the confirm page.
+   */
+  public function testClosedStageGoesToTheConfirmPage(): void {
+    $stage = $this->applied();
+    $this->visit('/surface-test/itinerary/trip/flow?stage=' . $stage . '&step=2');
+    $this->assertGoesToConfirm($stage);
+
+    $this->visit('/surface-test/itinerary/trip/flow?stage=' . $stage . '&step=confirm');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $this->assertMatchesRegularExpression('/^This stage was applied \d+ seconds? ago\.$/', (string) $form['status']['#markup']);
+    $this->assertCount(1, $form['applied']['#rows']);
+    $this->assertArrayNotHasKey('apply', $form['actions']);
+    $this->assertArrayNotHasKey('discard', $form['actions']);
+    $this->assertSame('Start again', (string) $form['actions']['start']['#title']);
+    $this->assertSame('/surface-test/itinerary/trip/flow', $form['actions']['start']['#url']->toString());
+    $this->assertArrayNotHasKey('redirect', $form['actions'], 'The flow names no redirect.');
+    $sentence = '/^This stage was applied \d+ seconds? ago\. <a href="\/surface-test\/itinerary\/trip\/flow">Start again<\/a>\.$/';
+    // The page draws no button now, so a Save posted is no button.
+    $this->assertMatchesRegularExpression($sentence, $this->postClosed(['op' => 'Save'], $stage));
+
+    $this->visit('/surface-test/itinerary/trip/flow?stage=' . $stage . '&step=2');
+    $values = ['day' => 'sun', 'nights' => '4'];
+    $posted = [SurfaceOperationForm::SURFACE_KEY => $values, 'op' => 'Next'];
+    $this->assertMatchesRegularExpression($sentence, $this->postClosed($posted, $stage));
+    $this->assertSame('mon', $this->trip()['day'], 'Nothing was written.');
+    $this->assertSame(StageStorage::APPLIED, $this->stages()->read($stage)['status']);
+  }
+
+  /**
+   * Tests Cancel and Back pressed on a step page of an applied stage.
+   *
+   * Cancel, really pressed on step 2 drawn before the apply, keeps the
+   * record of what the stage made and goes to the confirm page. Back is
+   * let through, to the step before, which goes to the confirm page.
+   */
+  public function testCancelKeepsAnAppliedStage(): void {
+    $stage = $this->applied();
+    $this->visit('/surface-test/itinerary/trip/flow?stage=' . $stage . '&step=2');
+    $posted = [SurfaceOperationForm::SURFACE_KEY => [], 'op' => 'Cancel'];
+    $this->assertSame('This stage was applied; there is nothing to cancel.', $this->postClosed($posted, $stage));
+    $this->assertSame(StageStorage::APPLIED, $this->stages()->read($stage)['status'], 'The record survives.');
+
+    [$state, $redirect] = $this->submitStep([], 'Back');
+    $this->assertSame([], $state->getErrors());
+    $this->assertSame(['stage' => $stage, 'step' => '1'], $redirect->getOption('query'));
+    $this->assertSame([], $this->container->get('messenger')->messagesByType('error'));
+    $this->visit('/surface-test/itinerary/trip/flow?stage=' . $stage . '&step=1');
+    $this->assertGoesToConfirm($stage);
+  }
+
+  /**
+   * Tests a voided stage's confirm page, and what is posted into it.
+   *
+   * The page keeps Cancel, draws no Save, and links to the first step. A
+   * Save posted from the page drawn before the stage was voided names no
+   * button the page draws now, so core takes it for Cancel: it is refused,
+   * and the record survives. Cancel pressed removes the stage.
+   */
+  public function testVoidedStageKeepsCancel(): void {
+    $stage = $this->firstStep();
+    $record = $this->stages()->read($stage);
+    $record['status'] = StageStorage::VOIDED;
+    $record['voided'] = ['position' => 1];
+    $record['applied'] = [];
+    $record['writes'] = [];
+    $this->stages()->write($record);
+    $this->visit('/surface-test/itinerary/trip/flow?stage=' . $stage . '&step=confirm');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $voided = 'The stage ' . $stage . ' was voided at position 1; writes at and before it were made permanent by a schema change. Cancel removes it.';
+    $this->assertSame($voided, (string) $form['status']['#markup']);
+    $this->assertSame('Cancel', (string) $form['actions']['discard']['#value']);
+    $this->assertArrayNotHasKey('apply', $form['actions']);
+    $this->assertSame('Start again', (string) $form['actions']['start']['#title']);
+
+    $this->assertSame($voided . ' <a href="/surface-test/itinerary/trip/flow">Start again</a>.', $this->postClosed(['op' => 'Save'], $stage));
+    $this->assertSame(StageStorage::VOIDED, $this->stages()->read($stage)['status'], 'The record survives.');
+
+    $state = (new FormState())->setValues(['op' => 'Cancel']);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $state);
+    $this->assertSame([], $state->getErrors());
+    $this->assertNull($this->stages()->read($stage), 'Cancel pressed removes a voided stage.');
+  }
+
+  /**
+   * Tests a closed stage's confirm page links to the flow's `redirect`.
+   */
+  public function testClosedStageLinksToTheRedirect(): void {
+    NodeType::create(['type' => 'page', 'name' => 'Basic page'])->save();
+    $stage = $this->open('Content type');
+    $record = $this->stages()->read($stage);
+    $record['status'] = StageStorage::APPLIED;
+    $record['applied_at'] = $this->container->get('datetime.time')->getRequestTime();
+    $record['applied'] = [];
+    $record['writes'] = [];
+    $this->stages()->write($record);
+    $this->visit('/admin/structure/types/manage/page/surface-flow?stage=' . $stage . '&step=confirm');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $this->assertSame('Continue', (string) $form['actions']['redirect']['#title']);
+    $this->assertSame('/admin/structure/types', $form['actions']['redirect']['#url']->toString());
+    $this->assertSame('Start again', (string) $form['actions']['start']['#title']);
+  }
+
+  /**
+   * Tests a flow over a create sends a closed stage's step to the confirm.
+   *
+   * Apply empties the stage's writes, so the create is not looked for:
+   * the step is let in, and the form answers the redirect.
+   */
+  public function testClosedCreateFlowGoesToTheConfirmPage(): void {
+    $this->visit('/surface-test/itinerary/plan');
+    [, $redirect] = $this->submitStep(['id' => 'fresh', 'day' => 'fri']);
+    $stage = $redirect->getOption('query')['stage'];
+    $this->visit('/surface-test/itinerary/plan?stage=' . $stage . '&step=confirm');
+    $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $state = (new FormState())->setValues(['op' => 'Save']);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $state);
+    $this->assertSame([], $state->getErrors());
+    $this->assertSame(StageStorage::APPLIED, $this->stages()->read($stage)['status']);
+    $this->visit('/surface-test/itinerary/plan?stage=' . $stage . '&step=2');
+    $this->assertTrue($this->stepAccess()->isAllowed(), 'Not refused for want of the create.');
+    $this->assertGoesToConfirm($stage, '/surface-test/itinerary/plan');
+  }
+
+  /**
+   * Tests the flow's buttons: Next, Back and Cancel; Save on the confirm.
+   *
+   * Cancel discards the stage and starts again; on the first step with no
+   * stage it writes nothing and starts again.
+   */
+  public function testTheButtonsSayWhatTheyDo(): void {
+    $this->visit('/surface-test/itinerary/trip/flow');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $this->assertSame('Next', (string) $form['actions']['submit']['#value']);
+    $this->assertSame('Cancel', (string) $form['actions']['discard']['#value']);
+    $this->assertArrayNotHasKey('back', $form['actions']);
+    [$state, $redirect] = $this->submitStep(['region' => 'south'], 'Cancel');
+    $this->assertSame([], $state->getErrors());
+    $this->assertSame('surface_stage_test.itinerary_flow', $redirect->getRouteName());
+    $this->assertSame([], $redirect->getOption('query'));
+    $this->assertSame([], $this->container->get('keyvalue.expirable')->get(StageStore::COLLECTION)->getAll(), 'No stage was opened.');
+
+    $stage = $this->firstStep();
+    $this->visit('/surface-test/itinerary/trip/flow?stage=' . $stage . '&step=confirm');
+    $form = $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $buttons = [$form['actions']['apply'], $form['actions']['back'], $form['actions']['discard']];
+    $this->assertSame(['Save', 'Back', 'Cancel'], array_map(static fn (array $button): string => (string) $button['#value'], $buttons));
+    $this->assertArrayNotHasKey('#button_type', $form['actions']['discard'], 'Cancel is no danger button.');
+    $this->visit('/surface-test/itinerary/trip/flow?stage=' . $stage . '&step=2');
+    [$state, $redirect] = $this->submitStep([], 'Cancel');
+    $this->assertSame([], $state->getErrors());
+    $this->assertSame([], $redirect->getOption('query'));
+    $this->assertNull($this->stages()->read($stage), 'Cancel discards the stage.');
+  }
+
+  /**
+   * Opens the itinerary's flow, stages its first step, and applies it.
+   *
+   * @return string
+   *   The stage's id.
+   */
+  protected function applied(): string {
+    $stage = $this->firstStep();
+    $this->visit('/surface-test/itinerary/trip/flow?stage=' . $stage . '&step=confirm');
+    $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+    $state = (new FormState())->setValues(['op' => 'Save']);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $state);
+    $this->assertSame([], $state->getErrors());
+    $this->assertSame(StageStorage::APPLIED, $this->stages()->read($stage)['status']);
+    $this->container->get('messenger')->deleteAll();
+    return $stage;
+  }
+
+  /**
+   * Asserts the step page on the stack answers a 303 to its confirm page.
+   *
+   * @param string $stage
+   *   The stage's id.
+   * @param string $path
+   *   The flow route's path.
+   */
+  protected function assertGoesToConfirm(string $stage, string $path = '/surface-test/itinerary/trip/flow'): void {
+    try {
+      $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+      $this->fail('The step page did not redirect.');
+    }
+    catch (EnforcedResponseException $e) {
+      $response = $e->getResponse();
+      $this->assertSame(303, $response->getStatusCode());
+      $this->assertStringEndsWith($path . '?stage=' . $stage . '&step=confirm', $response->headers->get('Location'));
+      $this->assertInstanceOf(CacheableResponseInterface::class, $response);
+      $this->assertSame(0, $response->getCacheableMetadata()->getCacheMaxAge());
+    }
+  }
+
+  /**
+   * Posts into a closed stage, asserting it is refused to the confirm page.
+   *
+   * @param array $values
+   *   The values posted, `op` among them.
+   * @param string $stage
+   *   The stage's id.
+   *
+   * @return string
+   *   The error messages, as one line.
+   */
+  protected function postClosed(array $values, string $stage): string {
+    $this->container->get('messenger')->deleteAll();
+    $state = (new FormState())->setValues($values);
+    $this->container->get('form_builder')->submitForm(SurfaceOperationForm::class, $state);
+    $this->assertSame([], $state->getErrors(), 'Refused as a message, by the submit handler.');
+    $state->setProgrammed(FALSE);
+    $redirect = $state->getRedirect();
+    $this->assertInstanceOf(Url::class, $redirect);
+    $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $redirect->getOption('query'));
+    $messages = $this->container->get('messenger')->messagesByType('error');
+    $this->container->get('messenger')->deleteAll();
+    return implode(' ', array_map('strval', $messages));
+  }
+
+  /**
+   * Asks the route on the stack's access check, with the request.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The answer.
+   */
+  protected function stepAccess(): mixed {
+    return $this->container->get('surface.operation_access')->access($this->container->get('current_route_match'), $this->container->get('current_user'), $this->container->get('request_stack')->getCurrentRequest());
   }
 
   /**

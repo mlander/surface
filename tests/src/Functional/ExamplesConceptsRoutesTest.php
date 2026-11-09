@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests examples 7 to 12, 14 and 18 over HTTP, as the video shows them.
+ * Tests examples 7 to 12, 14, 18 and 19 over HTTP, as the video shows them.
  *
  * On a fresh site with only the examples enabled: every route answers an
  * administrator and refuses anonymous, the landing page lists each, and
@@ -51,6 +51,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
     'surface-examples/14/webhook' => 'Two resources call a service with a credential',
     'surface-examples/18' => 'The keys of this resource are properties of its class',
     'surface-examples/18/method' => 'The keys of this resource are calls in',
+    'surface-examples/19' => 'A flow draws one form over several steps into one stage',
   ];
 
   /**
@@ -85,6 +86,7 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
       'Example 14: an optional extension',
       'Example 15: a config entity of your own',
       'Example 18: declared as properties',
+      'Example 19: one stage, several steps',
     ] as $title) {
       $assert->pageTextContains($title);
     }
@@ -103,11 +105,18 @@ class ExamplesConceptsRoutesTest extends BrowserTestBase {
       $assert->pageTextContains('Ask the tool');
       $assert->pageTextContains('Behind the scenes: the contract, as it stands');
       $this->assertFilesPanel((int) explode('/', $path)[1]);
-      // A check changes nothing, so its button says what it does.
-      $this->submitForm(self::SAVED_WITH[$path] ?? [], $path === 'surface-examples/10/check' ? 'Check a program' : 'Save');
-      $assert->pageTextContains($path === 'surface-examples/10/check'
-        ? 'The values were accepted. Check a program changes nothing, so nothing was written.'
-        : 'The changes have been saved.');
+      // A check changes nothing, so its button says what it does; a
+      // flow's first step stages, and its button says Next.
+      $this->submitForm(self::SAVED_WITH[$path] ?? [], match ($path) {
+        'surface-examples/10/check' => 'Check a program',
+        'surface-examples/19' => 'Next',
+        default => 'Save',
+      });
+      $assert->pageTextContains(match ($path) {
+        'surface-examples/10/check' => 'The values were accepted. Check a program changes nothing, so nothing was written.',
+        'surface-examples/19' => 'Set up the event: the values were accepted',
+        default => 'The changes have been saved.',
+      });
     }
 
     // The panel's calls are made as it is drawn, and their answers shown.

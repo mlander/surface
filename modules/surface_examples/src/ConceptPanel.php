@@ -47,7 +47,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
- * Says what one of examples 7 to 18 shows, above its contract panel.
+ * Says what one of examples 7 to 19 shows, above its contract panel.
  *
  * Each of those examples is one small resource for one or two concepts,
  * so its page says in one paragraph what it shows and where the
@@ -121,6 +121,8 @@ final class ConceptPanel {
     ],
     'event.catering' => self::CATERING_DOCS,
     'event.catering.method' => self::CATERING_DOCS,
+    'event.setup' => self::FLOW_DOCS,
+    'event.notices' => self::FLOW_DOCS,
     'event.venue' => [
       'docs/storage.md#a-config-entity',
       'docs/resources.md#an-operation-that-takes-keys-of-its-own',
@@ -163,6 +165,16 @@ final class ConceptPanel {
     '/surface-api/event.sponsorship:lookup?key=/contact&q=adm',
     '/surface-api/event.sponsorship:lookup?key=/thing/id&type=node&q=Sponsor',
     '/surface-api/event.sponsorship:lookup?key=/setting&type=node&q=Sponsor',
+  ];
+
+  /**
+   * Example 19: the docs pages both its resources point at.
+   */
+  protected const FLOW_DOCS = [
+    'docs/staging.md#flows',
+    'docs/staging.md#walk-through-with-drush',
+    'docs/staging.md#the-x-surface-stage-header',
+    'docs/decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource',
   ];
 
   /**
@@ -293,7 +305,7 @@ final class ConceptPanel {
    *
    * @return array|null
    *   A render array, or NULL for a resource that is none of examples 7 to
-   *   12 and 14 to 18.
+   *   12 and 14 to 19.
    */
   public function build(OperationRoute $served, SurfaceInterface $declared, array $values): ?array {
     $id = $this->registry->getDefinition($served->resource)->id;
@@ -308,6 +320,7 @@ final class ConceptPanel {
       'event.sponsorship' => $this->references($served),
       'ai.retitle' => $this->gates($served),
       'event.catering', 'event.catering.method' => $this->twoSpellings($served, $id),
+      'event.setup', 'event.notices' => $this->withoutForm(),
       default => NULL,
     };
     if ($blocks === NULL) {
@@ -354,6 +367,7 @@ final class ConceptPanel {
       'event.catering' => $this->t("The keys of this resource are properties of its class, each carrying the attribute of the blueprint verb it stands for: <code>#[Input]</code> for <code>add()</code>, <code>#[Attach]</code> for <code>attach()</code>, <code>#[Rule]</code> for <code>narrow()->when()</code>. Nothing is new to the series: a choice list, bounds, a pattern, a widget, a group, a rule and a port each appear in an earlier example, declared with calls in <code>defineInputs()</code>. Here the class uses <code>DeclaresByProperties</code>, whose <code>defineInputs()</code> reads the properties in order and calls the same verbs, so the contract is the one the calls would give. PHP says what it can: the key's name, its type, its default (the initializer), and whether it must be given (a type that is not nullable, with no initializer: <code>provider</code> and <code>headcount</code>). The labels and descriptions are bare strings, which the reader makes translatable; the dietary labels sit inside a constraint's options, which the reader hands to core as they are, so they are written <code>new TranslatableMarkup()</code>. Show the caterer and the rule asks when food is served, and the person's own rule, reading the port the contact wires to <code>public</code>, asks for its email. The same keys declared with calls in <code>defineInputs()</code>, as examples 1 to 17 write them, are at /surface-examples/18/method, saving to the same config object; both documents of the two are the same."),
       'event.catering.method' => $this->t("The keys of this resource are calls in <code>defineInputs()</code>, written as examples 1 to 17 write them: <code>add()</code> with its chained setters, <code>describe()</code> for the group, the placeholder and the suffix, <code>addList()</code> with a constraint on its item, <code>attach()</code> with the port wired, and <code>narrow()->when()</code> for the rule. They are the keys of /surface-examples/18, which declares them as properties of its class, each carrying the attribute of the verb it stands for, and both save to the same config object. The properties reader calls these same verbs, so both documents of the two are the same, byte for byte once the id is made the same. Show the caterer and the rule asks when food is served, and the person's own rule, reading the port the contact wires to <code>public</code>, asks for its email."),
       'ai.retitle' => $this->t("A resource of your own may act on things another module owns. The retitle has its own keys, a list of nodes and a style, its own storage and its own permission, <code>retitle nodes</code>, and may retitle only a node the account may update and whose title it may edit. It does not copy those checks: it names them as gates, <code>gate: ['entity:node:update', 'field:node.title:edit']</code> on its <code>#[Operation]</code>, and each is core's answer through node's access handler, with every module that alters it, asked of each node in the list. Field access does not include entity access, which is why node's own form asks both, and so does the retitle. A node a gate refuses is refused on its own item, <code>/items/0/node</code>, with the owner's reason, and the storage never sees it. The retitle's permission is static and the tool listing declares it; whether each node may be retitled is settled per node, so the full schema marks the list <code>live</code>. A gate may also name another resource's operation, <code>entity.content:node.page:update</code>, answered whole. The new titles come from a rewriter that is no model: title case, sentence case or a prefix, the same every time, which a dry run answers before anything is written."),
+      'event.setup', 'event.notices' => $this->t("A flow draws one form over several steps into one stage, and nothing is written until the stage is applied. Steps 1 and 2 are the two groups of the event setup, <code>basics</code> and <code>tickets</code>; step 3 is another resource, the event notices, drawn whole. The route declares it, <code>_surface_flow: { steps: [basics, tickets, { resource: event.notices, operation: configure }] }</code>, and nothing in either resource knows it is drawn in steps. Each Next stages the keys of its step and goes on. Back shows what an earlier step staged, because every step reads through the stage; what you typed on this page is kept only when you press Next. The confirm page lists every change the stage holds, of both resources, and Save applies them together or not at all, each checked again as it is made; Cancel discards the stage. Here the stage lives for the form cache's lifetime, six hours after its last write by default (<code>keep: short</code>), since a flow like this one is finished in one sitting."),
       default => $this->t('Not an example of this series.'),
     };
   }
@@ -734,6 +748,29 @@ final class ConceptPanel {
         'defaults' => $defaults,
         'allOf' => $full['allOf'] ?? [],
       ])),
+    ];
+  }
+
+  /**
+   * Example 19: the same stage without a form, as an agent uses it.
+   *
+   * @return array
+   *   The blocks.
+   */
+  protected function withoutForm(): array {
+    $commands = implode("\n", [
+      "drush tool:run surface:surface.stage:create --uid=1 --json --input='{\"values\":{\"label\":\"Set up the event\"}}'",
+      "drush tool:run surface:event.setup:configure --uid=1 --json --input='{\"stage\":\"<id>\",\"values\":{\"name\":\"Winter meetup\",\"date\":\"2026-12-05\"}}'",
+      "drush tool:run surface:event.notices:configure --uid=1 --json --input='{\"stage\":\"<id>\",\"values\":{\"banner\":\"Doors open at six.\",\"show_banner\":true}}'",
+      "drush tool:run surface:surface.stage:changes --uid=1 --json --input='{\"id\":\"<id>\",\"values\":{}}'",
+      "drush tool:run surface:surface.stage:apply --uid=1 --json --input='{\"id\":\"<id>\",\"values\":{}}'",
+    ]);
+    return [
+      'without' => $this->details(
+        $this->t('The same stage without a form'),
+        $this->t("An agent writes into the same stage through the tools: it opens one with <code>surface:surface.stage:create</code>, calls the tools of these two resources with that stage's id as <code>stage</code>, reads what the stage holds with <code>surface:surface.stage:changes</code>, and applies it with <code>surface:surface.stage:apply</code>. Over HTTP the same calls name the stage in the <code>X-Surface-Stage</code> header. A stage is its owner's, so the account the agent acts as can open this page's confirm step with that id, <code>/surface-examples/19?stage=&lt;id&gt;&amp;step=confirm</code>, and review what the agent staged before it is saved, or cancel it. The commands below are not run when this page is drawn; <code>docs/staging.md#walk-through-with-drush</code> walks through them with their answers."),
+        $this->code($commands, 'bash'),
+      ),
     ];
   }
 
@@ -1262,6 +1299,7 @@ final class ConceptPanel {
       'event.press', 'event.desk' => ['event.press', 'event.desk'],
       'event.mailer', 'event.webhook' => ['event.mailer', 'event.webhook'],
       'event.catering', 'event.catering.method' => ['event.catering', 'event.catering.method'],
+      'event.setup', 'event.notices' => ['event.setup', 'event.notices'],
       default => [$id],
     };
     // Example 15's calls write a fourth venue and remove it again, unless

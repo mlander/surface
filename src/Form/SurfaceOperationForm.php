@@ -8,9 +8,13 @@ use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\NestedArray;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Cache\Cache;
+use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\DependencyInjection\ClassResolverInterface;
+use Drupal\Core\Form\EnforcedResponseException;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Routing\LocalRedirectResponse;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Routing\RouteProviderInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
@@ -75,8 +79,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * the first of the operation's parameters that is a variable of the
  * route's path; a parameter a plain default pins is never the subject
  * (OperationRoute). A panel, named the same way by the optional
- * `_surface_panel` default, is placed inside the data surface
- * container and rebuilt with it (SurfaceFormPanelInterface). The
+ * `_surface_panel` default, is drawn after the buttons, beside the data
+ * surface container, and rebuilt with it (SurfaceFormPanelInterface). The
  * leading underscore keeps each of these defaults out of the route
  * match's parameters and out of what `_title` substitutes; no converter
  * runs for one, since none is declared for it under `options.parameters`,
@@ -116,12 +120,15 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * confirmation says nothing is removed until the stage is applied.
  *
  * A route that declares `_surface_flow` (Flow) draws the operation one
- * group per step, `?step=N`: the first step opens a stage when the query
+ * group per step, `?step=N`, and a step over another resource draws that
+ * resource's operation: the first step opens a stage when the query
  * names none, each step's Next stages its keys and goes on, Back goes
- * back staging nothing, and the confirm page after the last step,
- * `?step=confirm`, lists the stage's writes and applies what it listed,
- * then goes to the flow's `redirect` route or stays. Only this form
- * reads `stage`: any other page served by an operation refuses it.
+ * back staging nothing, Cancel discards the stage, and the confirm page
+ * after the last step, `?step=confirm`, lists the stage's writes and
+ * Save applies what it listed, then goes to the flow's `redirect` route
+ * or stays. A step asked for with a stage already applied or voided goes
+ * to the confirm page, which says so. Only this form reads `stage`: any
+ * other page served by an operation refuses it.
  *
  * Decision: see
  * docs/decisions.md#a-flow-ends-in-a-confirmation-page-that-shows-the-stages-changes-and-applies-it.
@@ -162,12 +169,23 @@ class SurfaceOperationForm extends FormBase {
   public const PANEL = '_surface_panel';
 
   /**
-   * The key the panel is placed at inside the data surface container.
+   * The key the panel is placed at in the form, beside SURFACE_KEY.
    *
-   * Not a data surface key: extraction reads the data surface's own keys
-   * only, so nothing placed here is ever taken for a value.
+   * Outside the data surface container: extraction reads the data
+   * surface's own keys only, so nothing placed here is ever taken for a
+   * value.
    */
   public const PANEL_KEY = 'surface_panel';
+
+  /**
+   * The weight the panel is drawn at: after the actions, which are at 100.
+   *
+   * The buttons act on the fields and the panel describes them, so Save
+   * or Next sits right under what the person filled in.
+   *
+   * Decision: see docs/decisions.md#a-panel-after-the-operation-forms-buttons.
+   */
+  protected const PANEL_WEIGHT = 1000;
 
   /**
    * The temporary form state value the validated dry run is kept under.
@@ -183,7 +201,7 @@ class SurfaceOperationForm extends FormBase {
    * The confirm page's hidden element holding what it listed.
    *
    * A fingerprint of the stage's writes as the page drew them, posted
-   * back with Apply, so Apply makes what the page listed or nothing.
+   * back with Save, so Save makes what the page listed or nothing.
    */
   protected const LISTED = 'surface_stage_listed';
 
@@ -206,6 +224,8 @@ class SurfaceOperationForm extends FormBase {
    *   The stages, which name the stage the query names.
    * @param \Drupal\Core\Routing\RouteProviderInterface $routeProvider
    *   The route provider, which says what a flow's `redirect` route takes.
+   * @param \Drupal\Core\Datetime\DateFormatterInterface $dateFormatter
+   *   The date formatter, which says how long ago a stage was applied.
    */
   public function __construct(
     protected readonly ClassResolverInterface $classResolver,
@@ -215,6 +235,7 @@ class SurfaceOperationForm extends FormBase {
     protected readonly KeyPaths $keyPaths,
     protected readonly StageStoreInterface $stages,
     protected readonly RouteProviderInterface $routeProvider,
+    protected readonly DateFormatterInterface $dateFormatter,
   ) {
   }
 
@@ -234,6 +255,7 @@ class SurfaceOperationForm extends FormBase {
       $container->get('surface.key_paths'),
       $container->get('surface.stages'),
       $container->get('router.route_provider'),
+      $container->get('date.formatter'),
     );
   }
 
@@ -309,9 +331,21 @@ class SurfaceOperationForm extends FormBase {
     $operation = $served->operation->id;
     $flow = $this->flow();
     $step = $flow?->step($this->getRequest());
+    $first = !$form_state->isProgrammed() && $form_state->getUserInput() === [];
     if ($flow !== NULL && $step === Flow::CONFIRM) {
-      return $this->stagedPage($this->confirmStep($form, $served, $flow), $served);
+      return $this->stagedPage($this->confirmStep($form, $served, $flow, $surface, $storage), $served);
     }
+    if ($flow !== NULL && $first && $this->closed($served->stage) !== NULL) {
+      // A step of a stage already applied or voided, reached by a link or
+      // by the browser's Back: the confirm page says what became of it.
+      $this->getRequest()->query->remove('destination');
+      $response = new LocalRedirectResponse($this->flowUrl($served->stage?->id, Flow::CONFIRM)->setAbsolute()->toString(), 303);
+      $response->addCacheableDependency((new CacheableMetadata())->setCacheMaxAge(0));
+      throw new EnforcedResponseException($response);
+    }
+    // A step over another resource draws that resource's operation, and
+    // nothing of the route's own: no prefill, no cosmetic layer.
+    $foreign = $flow !== NULL && is_int($step) && $flow->over($step) !== NULL;
     if ($served->operation->kind() === OperationDefinition::DELETE) {
       return $this->stagedPage($this->confirmForm($form, $served, $surface, $form_state), $served);
     }
@@ -319,14 +353,14 @@ class SurfaceOperationForm extends FormBase {
       // Step 1 with no stage asks the store, so the answer is this
       // account's and this request's.
       $form['#cache']['max-age'] = 0;
-      if (!$form_state->isProgrammed() && $form_state->getUserInput() === []) {
+      if ($first) {
         $this->offerResume($flow, $served, $this->stages);
       }
     }
     // Decision: see
     // docs/decisions.md#defaults-follow-the-definitions-under-a-stored-value.
     $values = $this->surfaceFormValues($surface, $surface->withDefaults($this->storedSurfaceValues($surface, $storage)), $form_state);
-    if (!$form_state->isProgrammed() && $form_state->getUserInput() === []) {
+    if ($first && !$foreign) {
       // The first draw, which no submission, rebuild or validation round
       // is: input sent after it stands for itself, and an element it leaves
       // out takes what is stored or declared, never the prefill again.
@@ -342,7 +376,8 @@ class SurfaceOperationForm extends FormBase {
       $this->surfaceWrapperKey($operation, $served->subject),
       $flow === NULL ? [] : $flow->keys($surface, (int) $step),
     );
-    $group = $flow === NULL ? NULL : SurfaceFormBuilderInterface::GROUP_PREFIX . $flow->steps[(int) $step - 1];
+    $group = $flow?->group((int) $step);
+    $group = $group === NULL ? NULL : SurfaceFormBuilderInterface::GROUP_PREFIX . $group;
     if ($group !== NULL && isset($form[static::SURFACE_KEY][$group])) {
       // The step's own group, drawn open: it is what the step asks.
       $form[static::SURFACE_KEY][$group]['#open'] = TRUE;
@@ -357,13 +392,14 @@ class SurfaceOperationForm extends FormBase {
     }
     $panel = $this->surfacePanel();
     if ($panel !== NULL) {
-      // Inside the container and placed as refreshed, so every rebuild a
-      // refinement triggers replaces the panel beside the elements it
-      // describes, whichever key moved.
-      $form[static::SURFACE_KEY] = $builder->placeRefreshed(
-        $form[static::SURFACE_KEY],
+      // After the actions, and placed as refreshed beside the container,
+      // so every rebuild a refinement triggers replaces the panel with
+      // the elements it describes, whichever key moved.
+      $form = $builder->placeRefreshedBeside(
+        $form,
+        static::SURFACE_KEY,
         static::PANEL_KEY,
-        $panel->buildPanel($served, $surface, $values),
+        ['#weight' => static::PANEL_WEIGHT] + $panel->buildPanel($served, $surface, $values),
       );
     }
     // Locked whole: every element is drawn disabled by its key's lock,
@@ -371,6 +407,8 @@ class SurfaceOperationForm extends FormBase {
     // changes nothing saves nothing either: its button says what it does.
     // Decision: see docs/decisions.md#locked-at-the-top.
     $locked = $surface->lockedWhole();
+    $buttons = ($flow !== NULL && $step !== 1 ? ['back' => $this->flowButton($this->t('Back'), 'back', '::flowBack')] : [])
+      + ($flow === NULL ? [] : ['discard' => $this->flowButton($this->t('Cancel'), 'discard', '::flowDiscard')]);
     $form[$locked === NULL ? 'actions' : 'locked'] = $locked === NULL ? [
       '#type' => 'actions',
       '#weight' => 100,
@@ -382,12 +420,12 @@ class SurfaceOperationForm extends FormBase {
           default => $this->t('Save'),
         },
       ] + ($flow === NULL ? [] : ['#button_type' => 'primary']),
-    ] + ($flow !== NULL && $step !== 1 ? ['back' => $this->flowButton($this->t('Back'), 'back', '::flowBack')] : []) : [
+    ] + $buttons : [
       '#type' => 'item',
       '#weight' => -100,
       '#markup' => $this->t('This may be seen and not changed: @reason', ['@reason' => $locked]),
     ];
-    $cosmetics = $this->surfaceCosmetics();
+    $cosmetics = $foreign ? NULL : $this->surfaceCosmetics();
     return $this->stagedPage($cosmetics === NULL
       ? $form
       : $cosmetics->alterSurfaceForm($form, $surface, $form_state, $operation, $served->subject), $served);
@@ -398,9 +436,17 @@ class SurfaceOperationForm extends FormBase {
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
     [$served, $surface, $storage, $access] = $this->operationServed();
-    // Back and Discard stage nothing, so nothing is judged; Apply is
+    // Back and Cancel stage nothing, so nothing is judged; Save is
     // rehearsed whole, on the confirm page.
-    $button = $form_state->getTriggeringElement()[self::FLOW_BUTTON] ?? NULL;
+    $trigger = $form_state->getTriggeringElement();
+    $button = $trigger[self::FLOW_BUTTON] ?? NULL;
+    if ($this->flow() !== NULL && $this->closed($served->stage) !== NULL) {
+      // Nothing is judged against a stage that takes no more writes: the
+      // submit handler refuses or allows what was pressed (closedGuard()),
+      // since an error set here is dropped for a button that limits its
+      // validation errors to none, as Back and Cancel do.
+      return;
+    }
     if ($button === 'apply' && $this->listedStill($served, $form, $form_state)) {
       $this->rehearseApply($served, $form_state);
     }
@@ -451,6 +497,9 @@ class SurfaceOperationForm extends FormBase {
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
     [$served, $surface, $storage, $access] = $this->operationServed();
+    if ($this->closedGuard($form_state, $served->stage, 'next')) {
+      return;
+    }
     $flow = $this->flow();
     $stage = $served->stage;
     $opened = FALSE;
@@ -668,7 +717,9 @@ class SurfaceOperationForm extends FormBase {
    *
    * @return array{0: \Drupal\surface\ResourceBuild\OperationRoute, 1: \Drupal\surface\SurfaceInterface, 2: \Drupal\surface\Pipeline\SurfaceStorageInterface, 3: \Drupal\Core\Access\AccessResultInterface}
    *   The operation and its context, the resource built in it, the storage
-   *   composed for it, and the access answer for the current user.
+   *   composed for it, and the access answer for the current user. At a
+   *   flow's step over another resource, that resource's operation
+   *   (Flow::servedAt()), and the route's access and its own together.
    *
    * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
    *   When a value the URL carries names nothing.
@@ -697,15 +748,31 @@ class SurfaceOperationForm extends FormBase {
     catch (NamesNothingException $e) {
       throw new NotFoundHttpException($e->getMessage(), $e);
     }
-    $refusal = $this->flow()?->refusedAt($served, $this->resources, $this->surfaceRegistry, $name, $this->getRequest(), $staged !== NULL);
+    $flow = $this->flow();
+    $refusal = $flow?->refusedAt($served, $this->resources, $this->surfaceRegistry, $name, $this->getRequest(), $staged !== NULL);
     if ($refusal === FALSE) {
       throw new NotFoundHttpException('This flow has no such step.');
     }
     if (is_string($refusal)) {
       throw new AccessDeniedHttpException($refusal);
     }
-    $surface = $this->resources->build($served->resource, $served->context);
+    // The route's operation gates every page of a flow; a step over
+    // another resource adds that resource's own access.
     $access = $this->resources->access($served->resource, $served->context);
+    try {
+      $at = $flow?->servedAt($served, $this->resources, $this->surfaceRegistry, $name, $this->getRequest()) ?? $served;
+    }
+    catch (NamesNothingException $e) {
+      throw new NotFoundHttpException($e->getMessage(), $e);
+    }
+    catch (\InvalidArgumentException $e) {
+      throw new AccessDeniedHttpException($e->getMessage(), $e);
+    }
+    if ($at !== $served) {
+      $served = $at;
+      $access = $access->andIf($this->resources->access($served->resource, $served->context));
+    }
+    $surface = $this->resources->build($served->resource, $served->context);
     return [
       $served,
       $surface,
@@ -718,10 +785,11 @@ class SurfaceOperationForm extends FormBase {
    * Gets the flow the route declares, if it declares one.
    *
    * @return \Drupal\surface\Form\Flow|null
-   *   The flow, or NULL.
+   *   The flow, each step over another resource naming its resource by
+   *   id (Flow::resolved()), or NULL.
    */
   protected function flow(): ?Flow {
-    return Flow::onRoute($this->getRouteMatch()->getRouteObject(), (string) $this->getRouteMatch()->getRouteName());
+    return Flow::onRoute($this->getRouteMatch()->getRouteObject(), (string) $this->getRouteMatch()->getRouteName())?->resolved($this->surfaceRegistry);
   }
 
   /**
@@ -863,6 +931,53 @@ class SurfaceOperationForm extends FormBase {
   }
 
   /**
+   * Refuses what a flow's page posts into a stage that takes no more writes.
+   *
+   * Asked first by each of the flow's submit handlers, and not by
+   * validation: core drops an error set there for a button that limits its
+   * validation errors to none, as Back and Cancel do. Back is let through
+   * on an applied or a voided stage, and Cancel on a voided one, when the
+   * button pressed is the one the page drew. Everything else is refused:
+   * a post whose `op` names a button the page no longer draws (core takes
+   * it for the first button it does draw, so a Save posted from a confirm
+   * page drawn before the stage was voided would count as Cancel), Next,
+   * Save, and Cancel on an applied stage, which would delete the record of
+   * what it made. A refusal is said as a message and the page goes to the
+   * stage's confirm page.
+   *
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage the page writes into, or NULL for none.
+   * @param string $does
+   *   What the submit handler does: next, back, discard or apply.
+   *
+   * @return bool
+   *   TRUE when refused: the handler does nothing more.
+   */
+  protected function closedGuard(FormStateInterface $form_state, ?Stage $stage, string $does): bool {
+    $record = $this->flow() === NULL || $stage === NULL ? NULL : $this->stages->read($stage->id);
+    $closed = $record === NULL ? NULL : $this->closedSaying($record);
+    if ($stage === NULL || $record === NULL || $closed === NULL) {
+      return FALSE;
+    }
+    $pressed = $form_state->getUserInput()['op'] ?? NULL;
+    $asked = $pressed === NULL || (string) $pressed === (string) ($form_state->getTriggeringElement()['#value'] ?? '');
+    $voided = $record['status'] === StageStorage::VOIDED;
+    if ($asked && ($does === 'back' || ($does === 'discard' && $voided))) {
+      return FALSE;
+    }
+    $this->messenger()->addError($asked && $does === 'discard'
+      ? $this->t('This stage was applied; there is nothing to cancel.')
+      : $this->t('@closed <a href=":start">Start again</a>.', [
+        '@closed' => $closed,
+        ':start' => $this->flowUrl(NULL, NULL)->toString(),
+      ]));
+    $this->flowRedirect($form_state, $this->flowUrl($stage->id, Flow::CONFIRM));
+    return TRUE;
+  }
+
+  /**
    * Goes back one step, staging nothing: Back's submit.
    *
    * @param array $form
@@ -873,7 +988,7 @@ class SurfaceOperationForm extends FormBase {
   public function flowBack(array &$form, FormStateInterface $form_state): void {
     $flow = $this->flow();
     [$served] = $this->operationServed();
-    if ($flow === NULL || $served->stage === NULL) {
+    if ($flow === NULL || $served->stage === NULL || $this->closedGuard($form_state, $served->stage, 'back')) {
       return;
     }
     $step = $flow->step($this->getRequest());
@@ -881,10 +996,13 @@ class SurfaceOperationForm extends FormBase {
   }
 
   /**
-   * Discards the stage and starts the flow again: Discard's submit.
+   * Discards the stage and starts the flow again: Cancel's submit.
    *
    * Through the stage's `delete`, with the owner's access, as every door
-   * discards one.
+   * discards one. On the first step with no stage yet, nothing is
+   * written: the page starts again with no stage. An applied stage is
+   * kept, with what it made; a voided one may be discarded
+   * (closedGuard()).
    *
    * @param array $form
    *   The form.
@@ -894,6 +1012,10 @@ class SurfaceOperationForm extends FormBase {
   public function flowDiscard(array &$form, FormStateInterface $form_state): void {
     [$served] = $this->operationServed();
     if ($served->stage === NULL) {
+      $this->flowRedirect($form_state, $this->flowUrl(NULL, NULL));
+      return;
+    }
+    if ($this->closedGuard($form_state, $served->stage, 'discard')) {
       return;
     }
     try {
@@ -920,7 +1042,7 @@ class SurfaceOperationForm extends FormBase {
   }
 
   /**
-   * Applies the stage: Apply's submit.
+   * Applies the stage: Save's submit on the confirm page.
    *
    * Through the stage's `apply` for the current user, its owner: every
    * write is checked again and all are made in one transaction, or none.
@@ -937,7 +1059,7 @@ class SurfaceOperationForm extends FormBase {
    */
   public function flowApply(array &$form, FormStateInterface $form_state): void {
     [$served] = $this->operationServed();
-    if ($served->stage === NULL) {
+    if ($served->stage === NULL || $this->closedGuard($form_state, $served->stage, 'apply')) {
       return;
     }
     try {
@@ -963,9 +1085,7 @@ class SurfaceOperationForm extends FormBase {
     $this->messenger()->addStatus($this->formatPlural(count($applied), 'Applied 1 write.', 'Applied @count writes.'));
     $to = $this->flow()?->redirect;
     if ($to !== NULL) {
-      $variables = $this->routeProvider->getRouteByName($to)->compile()->getVariables();
-      $parameters = array_intersect_key($this->getRouteMatch()->getRawParameters()->all(), array_flip($variables));
-      $this->flowRedirect($form_state, Url::fromRoute($to, $parameters));
+      $this->flowRedirect($form_state, $this->redirectUrl($to));
     }
   }
 
@@ -997,9 +1117,9 @@ class SurfaceOperationForm extends FormBase {
    *
    * The page posts back the fingerprint of the writes it drew
    * (listed()). When the stage holds other writes now, written from
-   * another tab or another door, Apply is refused with an error and the
+   * another tab or another door, Save is refused with an error and the
    * page, drawn in this request from the stage as it is, lists them
-   * again, carrying their fingerprint for the next Apply.
+   * again, carrying their fingerprint for the next Save.
    *
    * @param \Drupal\surface\ResourceBuild\OperationRoute $served
    *   The operation and its context, through the stage.
@@ -1209,15 +1329,18 @@ class SurfaceOperationForm extends FormBase {
   }
 
   /**
-   * Builds the confirm page of a flow: the stage's writes, and Apply.
+   * Builds the confirm page of a flow: the stage's writes, and Save.
    *
    * The stage's `changes`, read through the pipeline, as a table: each
    * write's position, resource, operation, kind, parameters and the keys
-   * it moved. They are made together or not at all. When one of them is a
-   * delete, or its operation is destructive, the page says how many cannot
-   * be undone and Apply is a danger button. Back goes to the last step,
-   * Discard deletes the stage and starts again. An applied or voided stage
-   * shows its status and what apply made, and no Apply. What a form door
+   * it moved, every resource's writes alike. They are made together or not
+   * at all. When one of them is a delete, or its operation is destructive,
+   * the page says how many cannot be undone and Save is a danger button.
+   * Back goes to the last step, Cancel deletes the stage and starts again.
+   * An applied stage says when it was applied and shows what apply made; a
+   * voided one says why and keeps Cancel; neither has Save, and both link
+   * to the first step with no stage, and to the flow's `redirect` when it
+   * names one. The route's panel is drawn here too. What a form door
    * shows of a run's outputs is this page: `changes` before the apply,
    * `applied` after.
    *
@@ -1230,11 +1353,15 @@ class SurfaceOperationForm extends FormBase {
    *   The operation and its context, through the stage.
    * @param \Drupal\surface\Form\Flow $flow
    *   The flow.
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The route's resource, built, for its panel.
+   * @param \Drupal\surface\Pipeline\SurfaceStorageInterface $storage
+   *   Its storage through the stage, for its panel.
    *
    * @return array
    *   The form.
    */
-  protected function confirmStep(array $form, OperationRoute $served, Flow $flow): array {
+  protected function confirmStep(array $form, OperationRoute $served, Flow $flow, SurfaceInterface $surface, SurfaceStorageInterface $storage): array {
     $stage = $served->stage;
     $record = $stage === NULL ? NULL : $this->stages->read($stage->id);
     if ($stage === NULL || $record === NULL) {
@@ -1254,10 +1381,15 @@ class SurfaceOperationForm extends FormBase {
       '#markup' => $this->t('%label (@id)', ['%label' => $stage->label ?? $flow->label ?? '', '@id' => $stage->id]),
     ];
     $form['actions'] = ['#type' => 'actions', '#weight' => 100];
-    if ($record['status'] !== StageStorage::OPEN) {
+    $panel = $this->surfacePanel();
+    if ($panel !== NULL) {
+      $form[static::PANEL_KEY] = ['#weight' => static::PANEL_WEIGHT] + $panel->buildPanel($served, $surface, $surface->withDefaults($this->storedSurfaceValues($surface, $storage)));
+    }
+    $closed = $this->closedSaying($record);
+    if ($closed !== NULL) {
       $form['status'] = [
         '#type' => 'item',
-        '#markup' => StageStorage::voided($record) ?? $this->t('The stage was applied; its writes were made.'),
+        '#markup' => $closed,
       ];
       $form['applied'] = [
         '#type' => 'table',
@@ -1266,7 +1398,21 @@ class SurfaceOperationForm extends FormBase {
         '#rows' => array_map(fn (array $write): array => array_slice($this->changeRow($write), 0, 5), (array) $record['applied']),
         '#empty' => $this->t('No write was made.'),
       ];
-      $form['actions']['discard'] = $this->flowButton($this->t('Discard the stage'), 'discard', '::flowDiscard');
+      if ($record['status'] === StageStorage::VOIDED) {
+        $form['actions']['discard'] = $this->flowButton($this->t('Cancel'), 'discard', '::flowDiscard');
+      }
+      $form['actions']['start'] = [
+        '#type' => 'link',
+        '#title' => $this->t('Start again'),
+        '#url' => $this->flowUrl(NULL, NULL),
+      ];
+      if ($flow->redirect !== NULL) {
+        $form['actions']['redirect'] = [
+          '#type' => 'link',
+          '#title' => $this->t('Continue'),
+          '#url' => $this->redirectUrl($flow->redirect),
+        ];
+      }
       return $form;
     }
     [, $outputs] = $this->stageRun('changes', $stage->id);
@@ -1289,19 +1435,73 @@ class SurfaceOperationForm extends FormBase {
         '#markup' => $this->formatPlural($destructive, 'One of these cannot be undone once applied.', '@count of these cannot be undone once applied.'),
       ];
     }
-    $form['actions']['back'] = $this->flowButton($this->t('Back'), 'back', '::flowBack');
     if ($items !== []) {
-      // What the page lists, posted back with Apply: a write that arrives
+      // What the page lists, posted back with Save: a write that arrives
       // after the page was drawn, a destructive one among them, refuses
       // the apply (listedStill()).
       $form[self::LISTED] = ['#type' => 'hidden', '#default_value' => static::listed($record)];
-      $form['actions']['apply'] = $this->flowButton($this->t('Apply the stage'), 'apply', '::flowApply') + [
+      $form['actions']['apply'] = $this->flowButton($this->t('Save'), 'apply', '::flowApply') + [
         '#button_type' => $destructive > 0 ? 'danger' : 'primary',
         '#weight' => -10,
       ];
     }
-    $form['actions']['discard'] = $this->flowButton($this->t('Discard the stage'), 'discard', '::flowDiscard');
+    $form['actions']['back'] = $this->flowButton($this->t('Back'), 'back', '::flowBack');
+    $form['actions']['discard'] = $this->flowButton($this->t('Cancel'), 'discard', '::flowDiscard');
     return $form;
+  }
+
+  /**
+   * Says what became of a stage that takes no more writes.
+   *
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage, or NULL for none.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|null
+   *   When it was applied, or why it was voided; NULL for an open stage,
+   *   one that is gone, or none.
+   */
+  protected function closed(?Stage $stage): ?TranslatableMarkup {
+    $record = $stage === NULL ? NULL : $this->stages->read($stage->id);
+    return $record === NULL ? NULL : $this->closedSaying($record);
+  }
+
+  /**
+   * Says what became of a stage's record that takes no more writes.
+   *
+   * @param array $record
+   *   The record.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup|null
+   *   "This stage was applied 5 min ago.", or why it was voided, ending
+   *   with what the page's Cancel does where StageStorage::voided(), said
+   *   to the tools, ends "Discard the stage."; NULL for an open stage.
+   */
+  protected function closedSaying(array $record): ?TranslatableMarkup {
+    return match ($record['status'] ?? NULL) {
+      StageStorage::VOIDED => $this->t('The stage @stage was voided at position @position; writes at and before it were made permanent by a schema change. Cancel removes it.', [
+        '@stage' => $record['id'],
+        '@position' => (int) ($record['voided']['position'] ?? 0),
+      ]),
+      StageStorage::APPLIED => $this->t('This stage was applied @ago ago.', [
+        '@ago' => (string) $this->dateFormatter->formatTimeDiffSince((int) ($record['applied_at'] ?? 0)),
+      ]),
+      default => NULL,
+    };
+  }
+
+  /**
+   * Builds the URL of a flow's `redirect` route.
+   *
+   * @param string $route
+   *   The route's name.
+   *
+   * @return \Drupal\Core\Url
+   *   The URL, handed the flow route's own parameters its path takes.
+   */
+  protected function redirectUrl(string $route): Url {
+    $variables = $this->routeProvider->getRouteByName($route)->compile()->getVariables();
+    $parameters = array_intersect_key($this->getRouteMatch()->getRawParameters()->all(), array_flip($variables));
+    return Url::fromRoute($route, $parameters);
   }
 
   /**
