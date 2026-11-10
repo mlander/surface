@@ -1,9 +1,10 @@
 # Surface API examples: React
 
 An example client of the HTTP door: a resource's form, rendered in React
-from the contract the base module serves, written in JavaScript against
-the API alone. The page and the app are this example's; the API is the
-base module's ([the served contract](../../docs/served-contract.md#the-api)).
+from the contract the submodule `surface_http` serves, written in
+JavaScript against the API alone. The page and the app are this
+example's; the API is `surface_http`'s, which this example depends on
+([the served contract](../../docs/served-contract.md#the-api)).
 The path is the resource and the method is the operation (contract 3):
 
 | | Method and path | What it does |
@@ -55,7 +56,7 @@ the same gate (`OperationGate`;
 A POST, a PATCH or a DELETE wants the session's CSRF token from `/session/token`
 in an `X-CSRF-Token` header.
 
-The contract is the base module's: its HTTP door asks
+The contract is the base module's: the HTTP door, `surface_http`, asks
 `surface.contract_emitter` for it with the widget hints
 (`x-surface.widget`) this app draws from, which the canonical contract
 leaves out. The contract format, the API's bodies and headers and the
@@ -135,7 +136,7 @@ such a route under the `react` door, after the operation's own page.
 
 ## What it does and does not
 
-The HTTP API, the base module's, is a door: it reads the request (the path, the method, the
+The HTTP API, `surface_http`, is a door: it reads the request (the path, the method, the
 body, `?dryRun`, `If-Match`) and turns it into a context, values and the
 current user as the account, and nothing the operation runs reads the
 request after it
@@ -284,8 +285,10 @@ Run them on the host, not inside ddev. The library
 
 ## Tests
 
-The HTTP door's tests are the base module's; they are listed here with
-the page's and the app's, since the app is what they serve.
+The HTTP door's tests are `surface_http`'s (`ServedContractEndpointsTest`,
+`ServedSubmitEndpointTest`, `ServedPathsTest`) and the base module's;
+they are listed here with the page's and the app's, since the app is
+what they serve.
 
 | Test | Covers |
 | --- | --- |

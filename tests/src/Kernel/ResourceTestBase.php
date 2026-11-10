@@ -84,6 +84,7 @@ abstract class ResourceTestBase extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
   ];
 
   /**

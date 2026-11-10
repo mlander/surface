@@ -11,9 +11,9 @@ and what a working module looks like.
 
 [Installation](../installation.md) lists the requirements, the Composer
 and Drush commands, and the example modules. The form needs only
-the base module, and so do HTTP and the OpenAPI document. The tool
-needs the `tool` module, and the React page is the
-`surface_examples_react` example.
+the base module. HTTP is the submodule `surface_http`, and the OpenAPI
+document `surface_openapi`. The tool needs the `tool` module, and the
+React page is the `surface_examples_react` example.
 
 ## Build your first resource
 

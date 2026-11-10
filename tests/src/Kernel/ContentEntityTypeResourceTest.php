@@ -62,7 +62,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_string_id_test'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_openapi', 'surface_string_id_test'];
 
   /**
    * An entity type whose id is a string, which nothing assigns.

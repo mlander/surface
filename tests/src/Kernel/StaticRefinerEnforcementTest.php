@@ -56,6 +56,7 @@ class StaticRefinerEnforcementTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_test',
     'surface_resource_test',
     'surface_examples',

@@ -136,6 +136,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples',
     'surface_resource_test',
     'surface_tool_test',

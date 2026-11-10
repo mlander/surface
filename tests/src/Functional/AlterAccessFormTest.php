@@ -31,6 +31,7 @@ class AlterAccessFormTest extends BrowserTestBase {
    */
   protected static $modules = [
     'surface',
+    'surface_http',
     'surface_resource_test',
   ];
 

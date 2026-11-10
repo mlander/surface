@@ -12,8 +12,8 @@ use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
 use Drupal\surface\Form\CompiledFlow;
-use Drupal\surface\Http\ServedOperations;
-use Drupal\surface\Http\ServedPaths;
+use Drupal\surface_http\ServedOperations;
+use Drupal\surface_http\ServedPaths;
 use Drupal\surface\ResourceBuild\KeyPaths;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationArguments;
@@ -90,11 +90,11 @@ final class ResourceReactPage implements ContainerInjectionInterface {
   /**
    * Constructs a ResourceReactPage.
    *
-   * @param \Drupal\surface\Http\ServedOperations $servedOperations
+   * @param \Drupal\surface_http\ServedOperations $servedOperations
    *   What reads an operation off a request.
    * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found, for the title.
-   * @param \Drupal\surface\Http\ServedPaths $servedPaths
+   * @param \Drupal\surface_http\ServedPaths $servedPaths
    *   What writes the operation's paths on the API.
    * @param \Drupal\surface\ResourceBuild\OperationArguments $arguments
    *   What maps a module's route's parameters onto the operation's.
@@ -118,8 +118,15 @@ final class ResourceReactPage implements ContainerInjectionInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+   *   When surface_http is not installed, so a module's route this page
+   *   serves answers 404 rather than failing on a missing service.
    */
   public static function create(ContainerInterface $container): static {
+    if (!$container->get('module_handler')->moduleExists('surface_http')) {
+      throw new NotFoundHttpException('The React page needs the HTTP door, which the surface_http module serves and this site has not installed.');
+    }
     $instance = new static(
       $container->get('surface.served_operations'),
       $container->get('surface.resource_registry'),

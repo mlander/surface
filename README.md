@@ -2,8 +2,9 @@
 
 You describe once what a thing on your site accepts: each value, its
 type, and what it allows. From that one description the module makes
-the settings form, a Tool API tool, the command line (`drush tool:run`),
-and an HTTP API with its OpenAPI document; an example module adds a
+the settings form, a Tool API tool and the command line
+(`drush tool:run`); two submodules add an HTTP API (`surface_http`) and
+its OpenAPI document (`surface_openapi`), and an example module adds a
 React page. All of them accept the same values, because they all read
 the same description.
 Everything that runs Tool API tools can run that one tool: the command
@@ -32,6 +33,12 @@ composer require drupal/surface
 drush pm:install surface
 ```
 
+For the HTTP API and its OpenAPI document:
+
+```
+drush pm:install surface_http surface_openapi
+```
+
 The submodules, the optional integrations and the production settings
 are in [Installation](docs/installation.md).
 
@@ -56,8 +63,9 @@ Every term the module uses has one sense, defined in
 
 ## The examples
 
-The base module, `surface`, is the project and the only thing meant to
-ship. Every submodule under `modules/` is an example: read it, install
+The base module, `surface`, with its two submodules `surface_http` and
+`surface_openapi`, is the project and the only thing meant to ship.
+Every other submodule under `modules/` is an example: read it, install
 it and remove it as you like. The base module depends on none of them.
 They come in two groups:
 
@@ -76,7 +84,7 @@ They come in two groups:
   are not part of the project and will not ship in this form. Read them
   as a proof of concept.
 
-Every submodule is `lifecycle: experimental`: supported, but its API and
+Every example is `lifecycle: experimental`: supported, but its API and
 its configuration may change without a deprecation path. Each one's
 install command and what it opens are in
 [Installation](docs/installation.md#experimental-submodules); what each
@@ -88,7 +96,8 @@ them.
 
 ## Experimental submodules
 
-Every submodule is an example: see [The examples](#the-examples).
+Every submodule but `surface_http` and `surface_openapi` is an example:
+see [The examples](#the-examples).
 
 ## Development
 

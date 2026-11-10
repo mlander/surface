@@ -19,6 +19,7 @@ use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use Drupal\surface\ResourceBuild\ServedPathsInterface;
 use Drupal\surface\Entry;
 use Drupal\tool\Normalizer\ToolDefinitionSerializer;
 use Drupal\tool\Tool\ToolManager;
@@ -57,7 +58,9 @@ use Drupal\tool\Tool\ToolManager;
  * lists only the keys of the one the stored values choose. Only that
  * third block needs the Tool API: on a site without the tool module the
  * container hands the panel no tool manager and no serializer, and it
- * shows the contract and the full schema alone.
+ * shows the contract and the full schema alone. The contract's note says
+ * the HTTP door serves the same document only where surface_http is
+ * installed, which provides the API's paths (ServedPathsInterface).
  *
  * Everything here is read from the two data surfaces the form already
  * holds, the one built in the operation's context and the same one
@@ -92,6 +95,9 @@ final class ContractPanel implements SurfaceFormPanelInterface {
    *   The string translation service.
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step, for the full schema built for the account alone.
+   * @param \Drupal\surface\ResourceBuild\ServedPathsInterface|null $servedPaths
+   *   The API's paths, or NULL on a site that does not serve the API,
+   *   where the panel names no path it is served at.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
@@ -101,6 +107,7 @@ final class ContractPanel implements SurfaceFormPanelInterface {
     protected readonly ?ToolDefinitionSerializer $definitionSerializer,
     TranslationInterface $string_translation,
     protected readonly ResourcesInterface $resources,
+    protected readonly ?ServedPathsInterface $servedPaths = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -148,7 +155,10 @@ final class ContractPanel implements SurfaceFormPanelInterface {
       '#open' => FALSE,
       '#title' => $this->t('The schema for these answers'),
       'note' => [
-        '#markup' => '<p>' . $this->t('What the resource states for the answers as they stand, as JSON Schema: each part a shape of its own defined once under <code>$defs</code> and referred to where it is used, each set of variants as one conditional per variant on the key that chooses between them, allowed values with their labels, under <code>x-surface</code> what each key depends on, and a locked key <code>readOnly</code>. A key another answer narrows is shown as narrowed, so this describes these answers and no others. It is the document the HTTP door serves at <code>/surface-api</code>, less the widget hints a renderer asks for.') . '</p>',
+        '#markup' => '<p>' . $this->t('What the resource states for the answers as they stand, as JSON Schema: each part a shape of its own defined once under <code>$defs</code> and referred to where it is used, each set of variants as one conditional per variant on the key that chooses between them, allowed values with their labels, under <code>x-surface</code> what each key depends on, and a locked key <code>readOnly</code>. A key another answer narrows is shown as narrowed, so this describes these answers and no others.') . ($this->servedPaths === NULL ? '' : ' ' . $this->t('It is the document the HTTP door serves at <code>/surface-api</code>, less the widget hints a renderer asks for.')) . '</p>',
+        // Whether surface_http is installed decides the second sentence,
+        // and installing a module invalidates this tag.
+        '#cache' => ['tags' => ['config:core.extension']],
       ],
       'json' => $this->json($contract->document['schema']),
     ];

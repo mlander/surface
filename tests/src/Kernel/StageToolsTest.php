@@ -57,6 +57,7 @@ class StageToolsTest extends SurfaceKernelTestBase {
     ...self::ENTITY_MODULES,
     'surface_stage_test',
     'surface_tool_test',
+    'surface_http',
     'surface_examples',
     'my_module',
   ];

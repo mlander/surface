@@ -46,6 +46,8 @@ class IdentityPathsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
+    'surface_openapi',
     'surface_examples_address',
     'surface_examples_field',
     'surface_resource_test',

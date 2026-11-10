@@ -18,7 +18,7 @@ use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface_examples_node_type\Resource\NodeTypeResource;
-use Drupal\surface\Http\ServedOperationAccessCheck;
+use Drupal\surface_http\Access\ServedOperationAccessCheck;
 use Drupal\surface_examples_react\Controller\ResourceReactPage;
 use Drupal\surface_resource_test\Resource\RecipeResource;
 use Drupal\node\Entity\Node;
@@ -76,6 +76,7 @@ class RouteAccessTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples_entity',
     'surface_examples_node_type',
     'surface_examples_react',

@@ -7,10 +7,12 @@ namespace Drupal\surface;
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\DependencyInjection\ServiceProviderInterface;
 use Drupal\surface\ResourceBuild\ResourceCollectorPass;
+use Drupal\surface\ResourceBuild\ServedPathsInterface;
 use Drupal\surface\Tool\InputDefinitions;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Tool\ToolDefinitionsInvalidator;
 use Drupal\surface\Tool\ToolDoors;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Reference;
 
 /**
@@ -53,11 +55,12 @@ final class SurfaceServiceProvider implements ServiceProviderInterface {
 
     // What a tool generated for one operation of one resource takes and
     // answers with; the deriver writes it statically, the tool refines it.
+    // The API's paths only where surface_http serves it.
     $container->register('surface.operation_inputs', OperationInputs::class)
       ->addArgument(new Reference('surface.resources'))
       ->addArgument(new Reference('surface.input_definitions'))
       ->addArgument(new Reference('string_translation'))
-      ->addArgument(new Reference('surface.served_paths'));
+      ->addArgument(new Reference(ServedPathsInterface::class, ContainerInterface::NULL_ON_INVALID_REFERENCE));
 
     // The derived tools are kept by the Tool API until the next cache
     // rebuild; this clears them when what they were derived from changes.

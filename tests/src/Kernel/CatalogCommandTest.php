@@ -9,6 +9,11 @@ use Drupal\surface\ResourceBuild\SiteCatalog;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Console\Tester\CommandTester;
+use Drupal\surface_openapi\OpenApiDoors;
+use Drupal\surface_http\HttpDoors;
+use Drupal\surface_examples_react\ReactDoors;
+use Drupal\surface\Tool\ToolDoors;
+use Drupal\surface\ResourceBuild\FormRouteDoors;
 
 /**
  * Tests `drush surface:catalog`: the live map, one resource, the refusals.
@@ -35,6 +40,8 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
+    'surface_openapi',
     'surface_examples_react',
     'surface_examples_first',
     'surface_resource_test',
@@ -90,19 +97,19 @@ class CatalogCommandTest extends SurfaceKernelTestBase {
     $configure = $decoded['resources']['first.store']['operations'][0];
     $this->assertSame('configure', $configure['id']);
     $this->assertSame([
-      SiteCatalog::FORM => '/admin/config/services/surface-store (surface_examples_first.store)',
-      SiteCatalog::HTTP => 'PATCH /surface-api/first.store',
-      SiteCatalog::TOOL => 'surface:first.store:configure',
-      SiteCatalog::OPENAPI => 'first.store:configure:write',
-      SiteCatalog::REACT => '/surface-react/first.store/configure',
+      FormRouteDoors::DOOR => '/admin/config/services/surface-store (surface_examples_first.store)',
+      HttpDoors::DOOR => 'PATCH /surface-api/first.store',
+      ToolDoors::TOOL => 'surface:first.store:configure',
+      OpenApiDoors::DOOR => 'first.store:configure:write',
+      ReactDoors::DOOR => '/surface-react/first.store/configure',
     ], $configure['doors']);
     // The read is an operation of its own, its doors its own.
     $read = $decoded['resources']['first.store']['operations'][1];
     $this->assertSame(['read', 'configure'], [$read['id'], $read['default']]);
     $this->assertSame([
-      SiteCatalog::HTTP => 'GET /surface-api/first.store',
-      SiteCatalog::TOOL => 'surface:first.store:read',
-      SiteCatalog::OPENAPI => 'first.store:read:read',
+      HttpDoors::DOOR => 'GET /surface-api/first.store',
+      ToolDoors::TOOL => 'surface:first.store:read',
+      OpenApiDoors::DOOR => 'first.store:read:read',
     ], $read['doors']);
     $this->assertNotSame([], $decoded['refused']);
     // A structure read from a schema, a variant the poster's provider

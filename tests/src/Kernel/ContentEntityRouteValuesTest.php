@@ -17,6 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Drupal\surface\ResourceBuild\FormRouteDoors;
 
 /**
  * A basic page's add page with its title fixed and its body filled.
@@ -166,8 +167,8 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
       $resource = $registry->getDefinition('entity.content:node.' . $bundle);
       $definition = $registry->getOperation($resource->name(), $operation);
       return [
-        $forms->doors($resource, $definition, TRUE)[SiteCatalog::FORM] ?? '',
-        $forms->links($resource, $definition, TRUE)[SiteCatalog::FORM] ?? NULL,
+        $forms->doors($resource, $definition, TRUE)[FormRouteDoors::DOOR] ?? '',
+        $forms->links($resource, $definition, TRUE)[FormRouteDoors::DOOR] ?? NULL,
       ];
     };
     foreach (['page', 'kitchen'] as $bundle) {
@@ -206,7 +207,7 @@ class ContentEntityRouteValuesTest extends SurfaceKernelTestBase {
     // node no node is as refused, as every visitor is refused.
     $catalog = $this->container->get('surface.site_catalog');
     $kitchen = array_column($catalog->describe()['entity.content:node.kitchen']['operations'], 'doors', 'id');
-    $this->assertStringContainsString('/surface-test/node/kitchen/add (surface_route_test.add_node)', $kitchen['create'][SiteCatalog::FORM]);
+    $this->assertStringContainsString('/surface-test/node/kitchen/add (surface_route_test.add_node)', $kitchen['create'][FormRouteDoors::DOOR]);
     $refused = array_values(array_filter($catalog->refused(), static fn (array $refusal): bool => $refusal['phase'] === SiteCatalog::ROUTE && str_starts_with((string) $refusal['resource'], 'entity.content:')));
     $this->assertSame([
       [

@@ -7,8 +7,8 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\surface\Http\ServedOperationAccessCheck;
-use Drupal\surface\Http\ServedPaths;
+use Drupal\surface_http\Access\ServedOperationAccessCheck;
+use Drupal\surface_http\ServedPaths;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
@@ -45,7 +45,15 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'user', 'serialization', 'tool', 'surface', 'surface_stage_test'];
+  protected static $modules = [
+    'system',
+    'user',
+    'serialization',
+    'tool',
+    'surface',
+    'surface_http',
+    'surface_stage_test',
+  ];
 
   /**
    * {@inheritdoc}

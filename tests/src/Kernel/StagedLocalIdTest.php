@@ -8,8 +8,8 @@ use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
-use Drupal\surface\Http\ServedOperationAccessCheck;
-use Drupal\surface\Http\ServedPaths;
+use Drupal\surface_http\Access\ServedOperationAccessCheck;
+use Drupal\surface_http\ServedPaths;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\Staging\StagedStorage;
@@ -72,7 +72,7 @@ class StagedLocalIdTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_stage_test'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_stage_test'];
 
   /**
    * The account that owns the stages.

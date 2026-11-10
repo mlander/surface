@@ -18,9 +18,10 @@ An operation that can be asked "on its own" belongs to a resource that
 names storage and is no plugin's configuration, and every `%key`
 placeholder in its permission can be supplied by one of its parameters.
 Such an operation reaches the doors the installed modules open: a form
-route a module declares, the HTTP path and the OpenAPI operation (the
-base module), the tool `surface:<id>:<operation>` (the base module,
-with `tool` installed) and the React page (`surface_examples_react`).
+route a module declares, the HTTP path (`surface_http`) and the
+OpenAPI operation (`surface_openapi`), the tool
+`surface:<id>:<operation>` (the base module, with `tool` installed) and
+the React page (`surface_examples_react`).
 Every resource with a default update that can be asked on its own can
 be read: by a `read` its owner declares, or by the one the build adds,
 provided by "default read of" the update it reads, asked as that update
