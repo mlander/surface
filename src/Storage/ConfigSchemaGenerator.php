@@ -123,6 +123,8 @@ final class ConfigSchemaGenerator {
 
   /**
    * The constraints a schema carries, and the options of each it keeps.
+   *
+   * Which ids config schema holds, not their keywords (ConstraintKeywords).
    */
   protected const CARRIED = [
     'Length' => ['min', 'max'],

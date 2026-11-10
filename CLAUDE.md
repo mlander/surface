@@ -243,7 +243,16 @@ the record of the rework that brought the module to the pattern.
   keyword says is a **foreign constraint**: the part left over, a
   `JsonSchema` constraint on the key, or on the frame
   (`DefinitionMap::frameConstraints()`), checked with opis and named
-  under `checkedOnServer` with its schema. The full schema of a
+  under `checkedOnServer` with its schema. A constraint and its keywords
+  are one table, read both ways (`Contract\ConstraintKeywords`, a row per
+  constraint in `Contract\Keywords\`: `Range`, `Length`, `Count`,
+  `UniqueItems`, `NotBlank`, `Email`, `Regex`, `Uuid`, `Sequentially`,
+  `AtLeastOneOf`; `@internal`, closed), whose one type guard,
+  `appliesTo()`, holds both ways: a row that does not apply, or cannot
+  state its options, is `checkedOnServer` on write and kept in the
+  `JsonSchema` constraint on read
+  (`docs/decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways`).
+  The full schema of a
   declaration reads back to itself (`SchemaRoundTripTest`)
   (`docs/reading-a-schema.md`,
   `docs/decisions.md#a-schema-can-be-read-back-into-a-structure`).
@@ -882,7 +891,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2175, Assertions: 53941, Errors: 0, Failures: 0, Skipped: 3. Classes: 304 of 304, 8 at a time, browser classes 4.
+phpunit: Tests: 2201, Assertions: 54284, Errors: 0, Failures: 0, Skipped: 3. Classes: 306 of 306, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -902,8 +911,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2061, Assertions: 49396, Skipped: 3, Deprecations: 135. Classes:
-251, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2087, Assertions: 49739, Skipped: 3, Deprecations: 139. Classes:
+253, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1214,7 +1223,9 @@ src/Staging/             The store contract (StageStoreInterface, and
 src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
                          walks the frames, PropertySchema writes each key,
                          Conditionals the if/then, DocumentHead the top;
-                         the contract diff.
+                         the contract diff; the schema reader; the two
+                         tables both read, LeafTypes and ConstraintKeywords,
+                         whose rows are in Keywords/.
 src/Drush/               Drush commands (the site's catalog, the contract diff, the
                          config schema, surface:run) and the resource
                          generator, drush generate surface:resource.

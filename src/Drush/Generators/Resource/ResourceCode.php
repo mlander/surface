@@ -60,7 +60,8 @@ final class ResourceCode {
    *
    * The build holds a resource stored in a config object to these where
    * its schema states them (HeldToConfigSchemaTrait), so one left out is
-   * refused until it is written.
+   * refused until it is written. Which ids, not their keywords
+   * (ConstraintKeywords).
    */
   protected const HELD = ['Regex', 'Length', 'Range', 'Choice', 'Count', 'NotBlank', 'Email'];
 

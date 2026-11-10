@@ -1093,7 +1093,7 @@ which is how example 2 started, because each one is code a reader must
 open to learn what a key allows, where a type string or a stock
 constraint says it.
 (`PropertySchema::STATED`, `PropertySchema::keywords()`,
-`SurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
+`ConstraintKeywords`, `SurfaceOptions::isStatedByList()`, `RegistrationStep2Resource`,
 `EventVenueRoomConstraint`, `UniqueItemsConstraint`)
 
 ### Our options answer core's question
@@ -10258,8 +10258,121 @@ the one checked. Each part's message is the server's to say; only a
 key's own Regex fills `x-surface.patternMessage`. Symfony's `All`
 applies its constraints to each item of a collection, not all of them
 to one value, and core registers no `All` plugin, so it is not read as
-an `allOf`. (`PropertySchema::parts()`,
+an `allOf`. (`Keywords\CompositeRow`,
 `AdvertisedSchemaAcceptanceTest::testCompositesAreTheirParts()`)
+
+### One table maps a constraint to its keywords, both ways
+
+Decided 2026-11-10: the constraints the contract states in keywords,
+and how, are one table, `Contract\ConstraintKeywords`, which the emitter,
+the config schema document and the schema reader all read. Why: the
+mapping was written four times (`PropertySchema::keywords()`,
+`SchemaReader::constraints()` with its bounds, the reader's reading of a
+rule, `ConfigSchemaDocument::constraints()`) and had drifted: a `Range`
+on a string and a `Choice` whose values a callback gives were dropped
+with no keyword and no entry, `format: uuid` was read and never
+written, `exactly` was dropped, each site guarded a different set of
+types, and `NotBlank` was tested in no direction.
+
+- **A row per constraint.** `Range`, `Length`, `Count`, `UniqueItems`,
+  `NotBlank`, `Email`, `Regex`, `Uuid`, and the composites `Sequentially`
+  and `AtLeastOneOf`, which write and read their parts through the table.
+  A row is a small class behind `Keywords\ConstraintRowInterface`: the ids
+  it maps, the keywords it reads, whether it applies to a value's JSON
+  types, `write()` and `read()`. What each row writes and reads is in
+  the class's docblock and in [Served contract](served-contract.md#the-schema)
+  and [Reading a schema](reading-a-schema.md).
+- **One type guard, both ways.** `appliesTo()` is the only guard: `Range`
+  on an integer or a number, `Length`, `NotBlank`, `Email`, `Regex` and
+  `Uuid` on a string, `Count` and `UniqueItems` on an array. A row that
+  does not apply writes no keyword: the emitter names the constraint
+  under `x-surface.checkedOnServer`, and the reader keeps the row's
+  keywords in the `JsonSchema` constraint.
+- **Merging is the table's rule, not the order.** A lower bound
+  (`minimum`, `minLength`, `minItems`) merges by the larger, an upper
+  bound by the smaller, an `allOf` by its parts in order. So `NotBlank`
+  and `Length` with `min: 0` give `minLength: 1` in either order. Any
+  other keyword two rows write differently is decided by the table's
+  row order, never by the order the constraints were added: `Email`
+  stands before `Uuid`, so a key with both writes `format: idn-email`
+  and names `Uuid` under `checkedOnServer`, whichever came first. What
+  the key's type writes already (`format: date` for a string drawn as a
+  date) comes before any row. `uniqueItems` is written last, where the
+  reader reads it.
+- **Nothing is dropped silently.** A constraint whose options its row
+  cannot state (a `Range` bound that is no number, a `Length` that counts
+  otherwise than JSON Schema, a `Uuid` that is not strict) is named under
+  `checkedOnServer`; one stated in part (a `Range` with a bound from
+  another property, a `Uuid` of some versions) writes what it can and is
+  named besides. A `Choice` whose `oneOf` is not written for the key is
+  named too: one from a callback, one with `match: false` (it refuses
+  its values, so no consumer draws them as a pick list: the options
+  service reads no list from it), one on a list definition, and one
+  with `multiple`. The lists themselves stay the resolvers'.
+  [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server)
+  lists every case. A key with no JSON type (`any`, a map with no
+  properties) states no constraint in keywords, so each is named under
+  `checkedOnServer`: a known narrowing of what a client checks, though no
+  shipped declaration loses a check a client made before.
+- **`exactly` is both bounds.** `Length` and `Count` with `exactly`
+  write the two bounds, equal, where neither `min` nor `max` is given.
+  Beside either, Symfony ignores `exactly`, and so does the row, which
+  writes `min` and `max`; `ConstraintTableTest` holds values to the
+  constraint and to the keywords, so the two cannot drift. Two bounds
+  read back as `min` and `max`, never `exactly`, which Symfony checks the
+  same, so written again they are the same keywords.
+- **Two readings differ on purpose.** `NotBlank` is written
+  `minLength: 1` and read back as `Length` with `min: 1`, the literal
+  reading of the keyword: the document is stable, the constraint id is
+  not. `Email` is written `format: idn-email` and read back as the
+  `email` leaf type, whose data type carries core's `Email`
+  ([One table of leaf types](#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)).
+- **A pattern and a pattern it must not match** on one property read as
+  two `Regex` constraints, of which a definition holds one, so the pair
+  is kept whole in the `JsonSchema` constraint, with a note. A `not`
+  beside a `format` read as a `Regex` (`date`, `time`) is the
+  definition's `Regex`, and the format's pattern is kept as a `pattern`
+  in the `JsonSchema` constraint, noted.
+- **One `JsonSchema` constraint.** A definition holds one. Where the
+  reader reads one from `checkedOnServer` and keeps keywords besides, or
+  a site keeps keywords beside its shape's, the constraint's schema is
+  the `allOf` of the two, so neither is lost.
+- **Reading is stricter in one case.** `format: uuid` reads back as
+  core's `Uuid` with no options, whose strict check refuses the nil UUID
+  and any variant other than RFC 4122's; JSON Schema's `uuid` format
+  allows both, and is an annotation by default. Recorded here: the
+  [never stricter audit](audit-never-stricter.md) is of the emitter, and
+  keeps no open list. Written, `format: uuid` is weaker than `Uuid`,
+  which is allowed.
+- **What reads nothing back.** A `format` on a type the row does not
+  apply to (`format: uuid` on an integer) is an annotation, and is not
+  kept, with no note. A composite with a part no row reads back
+  (`Email`, which the leaf type reads) is written whole and read back
+  as the `JsonSchema` constraint; a `NotBlank` part reads back as
+  `Length`, as `NotBlank` alone does. On an integer, `exclusiveMaximum`
+  is read as `(int) ceil($value) - 1`, which is wrong for a float past
+  the integer range (`1e20`); not fixed, the case is contrived.
+- **A round trip that now differs.** The langcode of a config object
+  takes its `Choice` from a callback. It read back "same" before only
+  because the emitter dropped the constraint; it is named under
+  `checkedOnServer` now, which a reader does not read back, so
+  `ConfigSchemaReaderTest::testKeyNoShapeIsReadForIsOpen` reads
+  "differs", the rest of the document the same.
+- **A rule reads a part of the table.** The reader reads a conditional's
+  `then` as a declared rule's effects through the same rows, keeping only
+  the constraints and options `Rule::CONSTRAINTS` names and refusing an
+  exclusive bound, so it reads no more than before.
+- **Closed for now.** The table is `@internal`: no tag, hook or plugin
+  type adds a row. A row is a class behind one interface so the table
+  can open without reshaping: a service tag that collects rows, or the
+  optional interface on the constraint class
+  ([core gaps 1.2](core-gaps.md#12-constraints-as-json-schema-keywords)),
+  answered by a row that asks the constraint for its keywords.
+
+(`ConstraintKeywords`, `Keywords\`, `PropertySchema::keywords()`,
+`SchemaReader::constraints()`, `SchemaReader::holdTo()`,
+`ConfigSchemaDocument::constraints()`, `SurfaceOptions::readers()`,
+`ConstraintKeywordsTest`, `ConstraintTableTest`)
 
 ### A machine document carries plain text
 

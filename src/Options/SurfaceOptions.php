@@ -10,6 +10,8 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
 use Drupal\surface\Pipeline\PipelineGuard;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Validator\Constraint;
+use Symfony\Component\Validator\Constraints\Choice;
 
 /**
  * Turns a definition's constraints into the list of values it allows.
@@ -131,12 +133,7 @@ final class SurfaceOptions {
         $this->reportUnregisteredConstraint((string) $name);
         continue;
       }
-      foreach ($this->resolvers() as $resolver) {
-        // Decision: see
-        // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
-        if (!PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'applies', static fn (): bool => $resolver->applies($constraint))) {
-          continue;
-        }
+      foreach ($this->readers($constraint) as $resolver) {
         $set = PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'resolve', static fn (): OptionSet => $resolver->resolve($constraint, $definition));
         $resolved = $resolved === NULL ? $set : $resolved->intersect($set);
       }
@@ -193,6 +190,60 @@ final class SurfaceOptions {
     foreach ($forget as $definition) {
       unset($this->resolved[$definition]);
     }
+  }
+
+  /**
+   * Answers whether a resolver reads a list of values from a constraint.
+   *
+   * A Choice whose values a callback gives when it validates (core's
+   * AllowedValues) names no list a definition alone can read, and one with
+   * `match` FALSE names the values it refuses, so the schema states no
+   * `oneOf` for either.
+   *
+   * @param string $name
+   *   The constraint plugin ID.
+   * @param mixed $options
+   *   Its options.
+   *
+   * @return bool
+   *   TRUE when a resolver applies to it.
+   */
+  public function readsAsList(string $name, mixed $options): bool {
+    try {
+      $constraint = $this->constraintManager->create($name, $options);
+    }
+    catch (PluginNotFoundException) {
+      return FALSE;
+    }
+    return $this->readers($constraint) !== [];
+  }
+
+  /**
+   * Gets the resolvers that read a list of values from a constraint.
+   *
+   * A Choice with `match` FALSE allows every value but those it lists, so
+   * no resolver reads its list as the values allowed, for any consumer:
+   * the schema's `oneOf`, a form's options, a refusal's "Choose ...".
+   *
+   * @param \Symfony\Component\Validator\Constraint $constraint
+   *   The constraint.
+   *
+   * @return \Drupal\surface\Options\SurfaceOptionsResolverInterface[]
+   *   The resolvers that apply to it.
+   */
+  protected function readers(Constraint $constraint): array {
+    if ($constraint instanceof Choice && !$constraint->match) {
+      return [];
+    }
+    $readers = [];
+    foreach ($this->resolvers() as $id => $resolver) {
+      // Decision: see
+      // docs/decisions.md#nothing-an-operation-runs-reads-the-request.
+      if (PipelineGuard::onBehalf(PipelineGuard::OPTIONS, get_class($resolver), 'applies', static fn (): bool => $resolver->applies($constraint))) {
+        $readers[$id] = $resolver;
+      }
+    }
+    return $readers;
   }
 
   /**
