@@ -159,8 +159,12 @@ which serves the real contract.
    2020-12, labeled options as `oneOf` const/title, variants as `if`/
    `then` on their deciding sibling, dependency edges and locking under
    `x-surface`, widget hints only when a renderer asks
-   (`docs/served-contract.md`). Still open: the constraints it knows
-   are a list in the emitter, not yet a plugin type. Original spec:
+   (`docs/served-contract.md`). The constraints it knows are one
+   table, read in both directions, closed for now
+   (`Contract\ConstraintKeywords`; [decision](docs/decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)).
+   Still open: opening it, as a plugin type, a service tag, or the
+   optional interface on the constraint class
+   ([core gaps 1.2](docs/core-gaps.md#12-constraints-as-json-schema-keywords)). Original spec:
    per-constraint schema normalizers, ordered, matched by constraint
    (by `instanceof`, not plugin id, which also resolves the Tool API
    normalizer thread), so third

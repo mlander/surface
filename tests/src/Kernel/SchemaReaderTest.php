@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaReader;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\Violation;
@@ -535,6 +537,108 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame(['tags is_not_unique'], $this->refused($read, ['tags' => ['a', 'b', 'a']]));
     $this->assertSame(['rows is_not_unique'], $this->refused($read, ['rows' => [['n' => 1], ['n' => 1]]]), 'Two items of a collection with the same values.');
     $this->assertSame([], $this->refused($read, ['tags' => ['1', 'a'], 'any' => ['a', 'a']]));
+  }
+
+  /**
+   * Tests the readings the table of constraints and keywords documents.
+   *
+   * `minLength: 1` is Length, never NotBlank; `format: uuid` is Uuid and
+   * written back as it; a pattern beside one it must not match is kept
+   * whole; a row's keyword on a type it says nothing of is kept. Written,
+   * a row that does not apply, or a list no resolver reads, is named under
+   * `checkedOnServer`, never dropped.
+   *
+   * @see docs/decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways
+   */
+  public function testConstraintTable(): void {
+    $read = $this->read(static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "id": {"type": "string", "format": "uuid"},
+        "code": {"type": "string", "pattern": "^[a-z]+$", "not": {"pattern": "^x"}},
+        "seats": {"type": "integer", "minLength": 2},
+        "pin": {"type": "string", "minLength": 4, "maxLength": 4}
+      }}
+      JSON));
+    $type = ['NotNull' => TRUE, 'PrimitiveType' => TRUE];
+    $constraints = static fn (string $key): array => array_diff_key($read->getDefinition($key)->getConstraints(), $type);
+    $this->assertSame(['Length' => ['min' => 1]], $constraints('name'), 'minLength: 1 is the literal Length.');
+    $this->assertSame(['Uuid' => []], $constraints('id'));
+    $this->assertSame(['JsonSchema' => ['schema' => ['pattern' => '^[a-z]+$', 'not' => ['pattern' => '^x']]]], $constraints('code'), 'Two Regex constraints, of which a definition holds one: kept whole.');
+    $this->assertSame(['JsonSchema' => ['schema' => ['minLength' => 2]]], $constraints('seats'), 'A length says nothing of an integer: kept.');
+    $this->assertSame(['Length' => ['min' => 4, 'max' => 4]], $constraints('pin'), 'Two equal bounds are min and max.');
+    $notes = $this->reader()->notes(static::json('{"type": "object", "additionalProperties": false, "properties": {"code": {"type": "string", "pattern": "^a$", "not": {"pattern": "^b"}}}}'));
+    $this->assertEqualsCanonicalizing(['/properties/code/pattern', '/properties/code/not'], array_keys($notes));
+
+    $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
+    $this->assertSame(1, $full['properties']['name']['minLength']);
+    $this->assertSame('uuid', $full['properties']['id']['format'], 'Uuid is written back as format: uuid.');
+    $this->assertSame([4, 4], [$full['properties']['pin']['minLength'], $full['properties']['pin']['maxLength']]);
+
+    $short = ['min' => 0, 'max' => 8];
+    $callback = ['callback' => [static::class, 'choices']];
+    $surface = (new SurfaceBuilder())
+      ->setDefinition('when', DataDefinition::create('string')->setLabel('When')->addConstraint('Range', ['min' => 1]))
+      ->setDefinition('size', DataDefinition::create('integer')->setLabel('Size')->addConstraint('Length', ['max' => 3]))
+      ->setDefinition('word', DataDefinition::create('string')->setLabel('Word')->addConstraint('NotBlank', [])->addConstraint('Length', $short))
+      ->setDefinition('code', DataDefinition::create('string')->setLabel('Code')->addConstraint('Length', ['exactly' => 6]))
+      ->setDefinition('pick', DataDefinition::create('string')->setLabel('Pick')->addConstraint('Choice', $callback))
+      ->seal();
+    $emitted = $this->container->get('surface.contract_emitter')->emitFull($surface, 'test.table')->document['schema']['properties'];
+    $checked = static fn (string $key): array => array_column($emitted[$key][ContractEmitter::EXTENSION]['checkedOnServer'] ?? [], 'constraint');
+    $this->assertSame(['Range'], $checked('when'), 'A Range on a string is checked on the server, not dropped.');
+    $this->assertArrayNotHasKey('minimum', $emitted['when']);
+    $this->assertSame(['Length'], $checked('size'));
+    $this->assertArrayNotHasKey('maxLength', $emitted['size']);
+    $this->assertSame([1, 8], [$emitted['word']['minLength'], $emitted['word']['maxLength']], 'NotBlank and Length merge to the larger lower bound.');
+    $this->assertSame([], $checked('word'));
+    $this->assertSame([6, 6], [$emitted['code']['minLength'], $emitted['code']['maxLength']], 'exactly is both bounds.');
+    $this->assertSame(['Choice'], $checked('pick'), 'A Choice of a callback no resolver reads is checked on the server.');
+    $this->assertArrayNotHasKey('oneOf', $emitted['pick']);
+  }
+
+  /**
+   * Tests a schema kept for a value beside one it carries: both are held.
+   *
+   * A definition holds one JsonSchema constraint: one read from
+   * `x-surface.checkedOnServer` and the keywords kept for the value are
+   * one constraint, the `allOf` of the two, on a value and on a list. A
+   * format read as a Regex beside a pattern it must not match is kept as
+   * a `pattern`, as a definition holds one Regex.
+   */
+  public function testKeptSchemasAreBothHeld(): void {
+    $read = $this->read(static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "code": {"type": "string", "pattern": "^a$", "not": {"pattern": "^b"},
+          "x-surface": {"checkedOnServer": [{"constraint": "JsonSchema", "schema": {"minLength": 3}}]}},
+        "tags": {"type": "array", "items": {"type": "string"}, "minLength": 2,
+          "x-surface": {"checkedOnServer": [{"constraint": "JsonSchema", "schema": {"maxItems": 3}}]}},
+        "day": {"type": "string", "format": "date", "not": {"pattern": "^1"}}
+      }}
+      JSON));
+    $code = $read->getDefinition('code')->getConstraints()['JsonSchema']['schema'];
+    $this->assertSame(['allOf' => [['minLength' => 3], ['pattern' => '^a$', 'not' => ['pattern' => '^b']]]], $code);
+    $tags = $read->getDefinition('tags')->getConstraints()['JsonSchema']['schema'];
+    $this->assertSame(['allOf' => [['maxItems' => 3], ['minLength' => 2]]], $tags);
+    $this->assertNotSame([], $this->refused($read, ['code' => 'a']), 'The carried minLength still holds.');
+    $this->assertNotSame([], $this->refused($read, ['code' => 'b']), 'The kept pattern still holds.');
+
+    $day = $read->getDefinition('day')->getConstraints();
+    $this->assertSame(['pattern' => '/^1/D', 'match' => FALSE], $day['Regex']);
+    $this->assertSame(['pattern' => '^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$'], $day['JsonSchema']['schema']);
+    $this->assertNotSame([], $this->refused($read, ['day' => '1999-11-10']), 'The pattern it must not match holds.');
+    $this->assertNotSame([], $this->refused($read, ['day' => 'tomorrow']), 'The format holds.');
+    $this->assertSame([], $this->refused($read, ['day' => '2026-11-10']), 'A date it does not match is accepted.');
+  }
+
+  /**
+   * Gives the values of the callback Choice testConstraintTable() names.
+   *
+   * @return string[]
+   *   The values.
+   */
+  public static function choices(): array {
+    return ['a', 'b'];
   }
 
   /**

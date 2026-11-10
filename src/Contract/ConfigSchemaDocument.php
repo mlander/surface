@@ -21,11 +21,13 @@ use Drupal\Core\TypedData\Type\StringInterface;
  * is an object closed to the keys it declares, a sequence an array, a
  * string, integer, float or boolean its JSON type, `nullable` a null
  * beside it, and the label each one's title. What the schema says of a
- * value that JSON Schema says too is carried: a Choice as an enum, Range,
- * Length and Count as their bounds, NotBlank as a string of one character
- * at least. Anything else it states is left to the schema itself, which
- * storage holds the whole placed block to before anything is written, so
- * what is written here is never stricter than what is stored.
+ * value that JSON Schema says too is carried: a Choice as an enum, and
+ * what the table of constraints and keywords maps (ConstraintKeywords),
+ * Range, Length and Count as their bounds and NotBlank as a string of
+ * one character at least among them. Anything else it states is left to
+ * the schema itself, which storage holds the whole placed block to
+ * before anything is written, so what is written here is never stricter
+ * than what is stored.
  *
  * A type the schema cannot resolve without a value (one named through a
  * sibling) is a value of any type. No key is required: a plugin's own
@@ -288,6 +290,12 @@ final class ConfigSchemaDocument {
   /**
    * Writes what the schema's constraints say that JSON Schema says too.
    *
+   * A Choice of a list of values is an `enum`, and ValidKeys that infers
+   * its keys from the mapping is what a closed object says already
+   * (carries()). Every other constraint the table of constraints and
+   * keywords maps is written by it (ConstraintKeywords::state()), but a
+   * Regex, which only document() writes.
+   *
    * @param array $constraints
    *   The constraints, by name.
    * @param string $type
@@ -301,84 +309,60 @@ final class ConfigSchemaDocument {
    */
   protected function constraints(array $constraints, string $type, string $path = ''): array {
     $keywords = [];
+    $table = array_filter($constraints, static fn (mixed $options, int|string $name): bool => ConstraintKeywords::row((string) $name) !== NULL, ARRAY_FILTER_USE_BOTH);
+    $accepted = ConstraintKeywords::accepted(array_map(static fn (mixed $options): array => is_array($options) ? $options : [], $table), [$type]);
     foreach ($constraints as $name => $options) {
+      $name = (string) $name;
       $options = is_array($options) ? $options : [];
-      $carried = TRUE;
-      switch ((string) $name) {
-        case 'Choice':
-          if (isset($options['choices']) && is_array($options['choices']) && !isset($options['multiple'])) {
-            $keywords['enum'] = array_values($options['choices']);
-          }
-          else {
-            $carried = FALSE;
-          }
-          break;
-
-        case 'Range':
-          if (in_array($type, ['integer', 'number'], TRUE)) {
-            if (isset($options['min']) && is_numeric($options['min'])) {
-              $keywords['minimum'] = $options['min'] + 0;
-            }
-            if (isset($options['max']) && is_numeric($options['max'])) {
-              $keywords['maximum'] = $options['max'] + 0;
-            }
-          }
-          break;
-
-        case 'Length':
-          if ($type === 'string') {
-            if (isset($options['min']) && is_numeric($options['min'])) {
-              $keywords['minLength'] = (int) $options['min'];
-            }
-            if (isset($options['max']) && is_numeric($options['max'])) {
-              $keywords['maxLength'] = (int) $options['max'];
-            }
-          }
-          break;
-
-        case 'Count':
-          if ($type === 'array') {
-            if (isset($options['min']) && is_numeric($options['min'])) {
-              $keywords['minItems'] = (int) $options['min'];
-            }
-            if (isset($options['max']) && is_numeric($options['max'])) {
-              $keywords['maxItems'] = (int) $options['max'];
-            }
-          }
-          break;
-
-        case 'NotBlank':
-          if ($type === 'string' && empty($options['allowNull'])) {
-            $keywords['minLength'] = max(1, (int) ($keywords['minLength'] ?? 0));
-          }
-          break;
-
-        case 'ValidKeys':
-          // Keys inferred from the mapping: what a closed object says.
-          $carried = $type === 'object' && ($options['allowedKeys'] ?? NULL) === '<infer>';
-          break;
-
-        case 'Regex':
-          $pattern = $this->whole && $type === 'string' && is_string($options['pattern'] ?? NULL) ? PatternTranslation::ecma($options['pattern']) : NULL;
-          if ($pattern === NULL) {
-            $carried = FALSE;
-          }
-          elseif (($options['match'] ?? TRUE) === FALSE) {
-            $keywords['not'] = ['pattern' => $pattern];
-          }
-          else {
-            $keywords['pattern'] = $pattern;
-          }
-          break;
-
-        default:
-          $carried = FALSE;
+      $carried = match ($name) {
+        'ValidKeys' => $type === 'object' && self::carries($name, $options),
+        'Regex' => $this->whole,
+        default => self::carries($name, $options),
+      };
+      if ($carried && $name === 'Choice') {
+        $keywords['enum'] = array_values($options['choices']);
+      }
+      elseif ($carried && $name !== 'ValidKeys') {
+        // Two rows writing one keyword differently: the table's order
+        // decides which is written, as it does for a definition.
+        $stated = in_array($name, $accepted, TRUE) ? ConstraintKeywords::state([$name => $options], [$type], $keywords) : NULL;
+        $keywords = $stated['keywords'] ?? $keywords;
+        $carried = $stated !== NULL && $stated['left'] === [];
       }
       if (!$carried && $this->whole) {
-        $this->left[$path]['constraints'][(string) $name] = $options;
+        $this->left[$path]['constraints'][$name] = $options;
       }
     }
     return $keywords;
+  }
+
+  /**
+   * Answers whether object() writes a constraint of a config schema.
+   *
+   * A Choice of a list of values, one value each (no `multiple`), that
+   * allows those values (`match` is not FALSE), as an `enum`; ValidKeys
+   * that infers its keys from the mapping, on a mapping, which is closed;
+   * and a constraint the table of constraints and keywords maps, but a
+   * Regex, which only document() writes. A row's constraint is written
+   * where its row applies to the value's type and its options can be
+   * stated; this answers for the constraint, not for one value.
+   *
+   * @param string $name
+   *   The constraint plugin id.
+   * @param mixed $options
+   *   Its options.
+   *
+   * @return bool
+   *   TRUE when object() writes it.
+   */
+  public static function carries(string $name, mixed $options): bool {
+    $options = is_array($options) ? $options : [];
+    return match ($name) {
+      'Choice' => is_array($options['choices'] ?? NULL) && !isset($options['multiple']) && ($options['match'] ?? TRUE),
+      'ValidKeys' => ($options['allowedKeys'] ?? NULL) === '<infer>',
+      'Regex' => FALSE,
+      default => ConstraintKeywords::row($name) !== NULL,
+    };
   }
 
   /**

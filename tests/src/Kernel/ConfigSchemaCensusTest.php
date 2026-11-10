@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\surface\Contract\ConfigSchemaDocument;
 use Drupal\surface\Reader\ConfigSchemaReader;
-use Drupal\surface\Reader\LeafRules;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Variants\ConfigSchemaTypes;
@@ -103,6 +103,7 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
       'keys' => 0,
       'carried' => [],
       'dropped' => 0,
+      'routed' => [],
       'leaves' => [],
       'forms' => [],
       'resolved' => [],
@@ -166,7 +167,10 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
         foreach ([...array_keys($own), ...array_keys($item)] as $name) {
           $tally['carried'][$name] = ($tally['carried'][$name] ?? 0) + 1;
           $options = $own[$name] ?? $item[$name] ?? [];
-          if (!in_array($name, LeafRules::JSON_CARRIED, TRUE) || ($name === 'Choice' && !is_array($options['choices'] ?? NULL))) {
+          // What the JSON Schema route writes (ConfigSchemaDocument).
+          $routed = ConfigSchemaDocument::carries((string) $name, $options);
+          $tally['routed'][$name][$routed ? 'carried' : 'dropped'] = TRUE;
+          if (!$routed) {
             $tally['dropped']++;
           }
         }
@@ -371,7 +375,8 @@ class ConfigSchemaCensusTest extends SurfaceKernelTestBase {
     $lines[] = '| Constraint | Keys | JSON route |';
     $lines[] = '|---|---|---|';
     foreach ($tally['carried'] as $name => $count) {
-      $lines[] = sprintf('| %s | %d | %s |', $name, $count, in_array($name, LeafRules::JSON_CARRIED, TRUE) ? 'carried' : 'dropped');
+      $routed = $tally['routed'][$name] ?? [];
+      $lines[] = sprintf('| %s | %d | %s |', $name, $count, count($routed) === 2 ? 'in part' : (string) array_key_first($routed));
     }
     $lines[] = '';
     $lines[] = '**Leaf types met (the schema\'s name beside the blueprint\'s type)**';

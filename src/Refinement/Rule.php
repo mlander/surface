@@ -60,6 +60,10 @@ final class Rule {
 
   /**
    * The constraints a rule may add or tighten, and the options each takes.
+   *
+   * The bounds and the Regex are rows of the table of constraints and
+   * keywords (ConstraintKeywords), which the reader reads a rule's
+   * effects through; the lists are the options resolvers'.
    */
   public const CONSTRAINTS = [
     'Range' => ['min', 'max', 'message'],
