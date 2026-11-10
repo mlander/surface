@@ -70,6 +70,13 @@ services:
     factory: ['@cache_factory', 'get']
     arguments: [surface_build]
   Drupal\surface\ResourceBuild\ResourcesInterface: '@surface.resources'
+  # The one service that runs an operation: the permission, the stage, the
+  # context, the access, the build and the storage, the pipeline and the
+  # outputs, in one order, under one identity.
+  surface.runner:
+    class: Drupal\surface\Operation\OperationRunner
+    arguments: ['@surface.resource_registry', '@surface.resources', '@surface.pipeline', '@surface.stages', '@surface.operation_arguments', '@account_switcher', '@current_user', '@entity_type.manager', '@logger.channel.surface']
+  Drupal\surface\Operation\OperationRunnerInterface: '@surface.runner'
   # The stages: one record per stage in the expirable key-value collection
   # surface.stage, each write under a lock named for the stage, kept for the
   # record's own lifetime (keep) after the last, or the temp store expiry. A

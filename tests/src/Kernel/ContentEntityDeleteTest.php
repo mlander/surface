@@ -142,6 +142,7 @@ class ContentEntityDeleteTest extends SurfaceKernelTestBase {
     $this->assertFalse($rehearsed->committed);
     $this->assertSame([''], $rehearsed->changes, 'The whole thing goes: the empty pointer.');
     $this->assertSame(['entity_type' => 'node', 'bundle' => 'page', 'id' => (string) $node->id()], array_map('strval', (array) $rehearsed->prepared?->artifact), 'What delete() is handed.');
+    $this->assertSame((int) $node->id(), $rehearsed->prepared?->artifact['id'] ?? NULL, 'The id is an integer, as the output declares it.');
     $this->assertNotNull($this->stored($node->id()));
 
     $sent = $this->submitted($built, $storage, ['title' => ['value' => 'Ignored']]);

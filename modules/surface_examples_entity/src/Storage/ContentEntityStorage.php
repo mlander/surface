@@ -389,10 +389,12 @@ final class ContentEntityStorage implements DeletableStorageInterface, Transacti
       $nothing = new Violation('', '', $this->t('Nothing is stored under this id, so nothing was removed.'), Violation::NOT_FOUND);
       throw new StorageViolationsException(new ViolationSet([$nothing]));
     }
+    // The id as its output declares it: SQL storage loads an integer id
+    // as a string.
     return [
       'entity_type' => $entity->getEntityTypeId(),
       'bundle' => $entity->bundle(),
-      'id' => $entity->id(),
+      'id' => $this->derivation->idType($entity->getEntityTypeId()) === 'integer' ? (int) $entity->id() : (string) $entity->id(),
     ];
   }
 

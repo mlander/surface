@@ -302,6 +302,17 @@ which the interface pin does not count; `PublicSurfaceTest` pins them by
 name and method from this date. The pins are 28 attributes and 114
 arguments since.
 
+*Grown 2026-11-09,* by the runner in `src/Operation/`:
+`OperationRunnerInterface` and `OperationRunner` with `gate()` and
+`run()`, the value they answer, `OperationRun`, `Refusal`,
+`RefusalCategory` and `RefusalDetail`, and `Door`
+([One runner runs an operation](#one-runner-runs-an-operation)). The
+four pins count `src/Resource/` alone, so they are unchanged;
+`PublicSurfaceTest` pins the classes of `src/Operation/` by name,
+public method, public property and public constant, an enum by its
+cases, from this date; a method marked `@internal`, such as
+`OperationRun`'s named constructors, is the runner's and is not pinned.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -6361,6 +6372,165 @@ A route or tool addressing an operation reads a neutral answer as a
 refusal (`SurfaceAccess::decisive()`). Asked on its own, an
 operation has no parent to allow it, so nothing else is going to.
 (`ResourceOperationTool`, `OperationAccessCheck`)
+
+### One runner runs an operation
+
+Decided 2026-11-09. One service runs an operation for every caller,
+`Operation\OperationRunner` (`surface.runner`, typed
+`OperationRunnerInterface`), in one order:
+
+1. the resource and the operation are known, else the call names
+   nothing;
+2. the operation's permission, asked from the two ids before anything
+   is loaded (a `%key` permission with the arguments as given, read by
+   the operation's own parameter names);
+3. with a stage: a stage applies to the operation (`Staging\Stageable`),
+   it exists, and the account may write into it (the stage resource's
+   own access for `update`);
+4. the arguments are values of the types the parameters declare, and
+   the context, `ResourcesInterface::operation()` with the arguments and
+   the stage;
+5. the access class, `ResourcesInterface::access()`, made decisive
+   (`SurfaceAccess::decisive()`) and ANDed with the stage's answer;
+6. the resource names a storage, the build, and the storage composed
+   with the stage;
+7. `SurfacePipelineInterface::submit()` with that access answer, as a
+   dry run when asked;
+8. the outputs, read through the pipeline; the stage resource's held to
+   the outputs its surface declares (`conformOutput()`), every
+   `NotEmitted` key left out, as the HTTP and tool doors hold them today.
+
+`gate()` stops after 5; `run()` with no values stops after 6, a prepare;
+`run()` with values goes to 8. Both answer an `OperationRun`, which says
+how far the call got and holds what each step made; reading a step it
+did not reach throws a `\BadMethodCallException` that says why. `gate()`
+builds nothing itself; an access class that judges by the built
+resource (its variants, its children) builds it, as `Gating::access()`
+does for a resource holding a variant that may refuse.
+
+- **One identity.** No account means the current user. An explicit
+  account that differs from the current user, in its id or in its
+  roles, is run as: core's account switcher makes it the current user
+  before step 1 and switches back in a `finally`, an uncaught throwable
+  included. A call refused at step 1 or 2 still switches. Before the
+  switch, an explicit account that is not anonymous is refused when its
+  user is blocked or does not exist: a user entity is read as it is,
+  and any other account (a `UserSession`) is checked against the user
+  its id loads. The switch is required: the build, the access class's
+  gates and a runtime refiner read the current user, not an argument.
+  An account with the current user's id and fewer roles is another
+  account, or the access check would ask it while the build answered as
+  the current user.
+- **An install hook does not use it.** The runner is for a caller
+  acting for an account. An install hook is the module's own code, with
+  no account acting, so `SpotlightBlockHooks::place()` calls the
+  pipeline directly, as it did before the runner.
+- **Failures are results.** An unknown resource or operation, a refused
+  permission or access, a stage that does not apply, is gone or is
+  another account's, arguments that name nothing or are not the values
+  the parameters take (an array, an object, a string for an integer),
+  and a resource with no storage of its own are a `Refusal`; values the
+  pipeline refuses are a run whose result is not valid. Step 4 catches
+  every `\InvalidArgumentException` from `ResourcesInterface::operation()`
+  and nothing else, as the doors do around the same call. What can still
+  leave `run()` is a `StageRaceException`, which a door answers with "try
+  again"; `gate()` throws nothing a caller can cause. Anything else
+  thrown is a bug.
+- **Nothing is thrown after a commit.** Outputs are held to the
+  declaration only for the stage resource, as at the doors; widening it
+  belongs to the changes that move those doors onto the runner. A
+  mismatch is logged on the `surface` channel with the resource, the
+  operation and the violations, and the outputs are answered as the
+  storage gave them; `OperationRun::conformed()` says whether they were
+  held to the declaration.
+- **The disclosure rule, once.** A `Refusal`'s public fields
+  (`category`, `code`, `reason`, `cacheability`, `access`) and its
+  `violation()` are what the account may hear. Past the permission, an
+  account that does not hold it (for an operation that declares none,
+  every account) hears one refusal whatever refused: category `Access`,
+  code `access`, `Refusal::WITHHELD` ("The operation cannot be run by
+  this account with these parameters.", the tool door's sentence), max-age
+  0 and the permission's cache contexts. No field tells "names nothing"
+  from "refused by the access class". Heard in full by everyone: an
+  unknown resource or operation, the permission itself, and a stage that
+  does not apply, which the ids alone decide; and, by an account that
+  holds the permission, what the arguments name. The true category,
+  code, reason and cacheability are kept under `Refusal::actual()`, a
+  `RefusalDetail`, for the server's own decisions and logs, never to be
+  rendered to the account. A refused run holds its context only for an
+  account that may hear why: the context holds what the arguments name.
+- **The stage rule.** A stage that is gone and a stage that is another
+  account's are the same withheld refusal for every account, the
+  permission held or not, so a stage id never says whether a stage
+  exists. It is the HTTP door's rule today, and the strict one; the tool
+  door names the stage and the form route says "The stage is another
+  account's.", which stays until the form door moves onto the runner and
+  reads `actual()`. A refusal by access under a stage keeps the stage's
+  max-age 0, whether or not access allowed.
+- **The caller names itself with a value.** `Door`, an id and any enum
+  cases as capabilities, `php` by default; `drush surface:run` passes
+  `drush`. The runner records it and reads it nowhere yet; it is
+  reserved for the audit record and for the first capability, which is
+  added when a shipped door first needs the runner to treat it
+  differently.
+
+Why: each door and five example classes wrote these steps out by hand,
+in slightly different orders, with the account passed unevenly and the
+disclosure rule written twice. The Tool API had the same problem for
+tool calls and solved it with `ToolRunner`, one final service whose
+docblock states the sequence, one identity per call through the account
+switcher, failures as a result value with named constructors, and an
+`Invoker` value in place of a service per caller. The runner copies
+that shape. It marks where an audit record, an at-most-once claim and a
+destructive confirmation belong, and builds none of them.
+
+Where it departs from `ToolRunner` and from the doors it replaces, on
+purpose:
+
+- the blocked check and the switch come before step 1, where
+  `ToolRunner` switches after the permission, so the registry and the
+  permission are asked as the account run as;
+- a neutral access answer is refused with `OperationRunner::NOT_ALLOWED`,
+  where the form's own run of the stage said "This stage may not be used
+  by this account."; `StageAccess` never answers neutral, so no page
+  changed;
+- the example bulk action (`StageDeleteAction`) hears the permission
+  before what an id names, so an account without it is told "you may not
+  delete it" for a node that names nothing too;
+- `drush surface:run` follows `tool:run` but is a Symfony command with
+  no alias, says "There is no user N." and "The user N is blocked.", and
+  prints a sentence and the document where `tool:run` prints one or the
+  other. Without `--values` it prepares and writes nothing; a
+  destructive operation asks for confirmation, which `--yes` answers,
+  unless it is a dry run. The person at the command line is the site's
+  operator, so it prints the refusal as it was (`actual()`), `--json`
+  included, and every failure exits 1.
+
+Recorded, not changed:
+
+- `StagePreviewController::access()` hands the route check's account to
+  the runner, so asking the preview's access for another account (for
+  example `Url::access($other)`) switches accounts inside an access
+  check; core's account switcher is made for that.
+- `StageDeleteAction` asks each node's delete access twice, once through
+  `gate()` and again in the staged `run()`.
+- Every `drush surface:run` failure exits 1, a refusal, a bad option and
+  a bug alike, and `--json` prints the full reason to whoever runs drush.
+- The runner does not check the create position a flow stages
+  (`CompiledFlow::creating()`); no caller needs it until the form door
+  moves onto the runner.
+
+What moved onto it on 2026-11-09: the form's own runs of the stage's
+operations (`SurfaceOperationForm::stageRun()`: `changes`, `apply`,
+`delete`), the examples that ran an operation by hand for an account
+(`StageDeleteConfirmForm`, `StageDeleteAction`,
+`StagePreviewController::item()`), and the new `drush surface:run`. The
+shipped doors keep their own sequence until they move, each in a later
+change: the HTTP door, the tool door, and the operation form's own
+build, validate and submit.
+
+(`OperationRunner`, `OperationRun`, `Refusal`, `RefusalDetail`, `Door`,
+`Drush\Commands\RunCommand`, `OperationRunnerTest`, `RunCommandTest`)
 
 ## Tools
 

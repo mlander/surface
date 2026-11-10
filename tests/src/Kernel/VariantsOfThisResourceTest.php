@@ -18,6 +18,7 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * The cabinet's code lock answers access, so asking about the cabinet
  * builds it to find the lock chosen; the vault holds no such variant, and
  * asking about it builds nothing, though the cabinet is on the same site.
+ * The runner's gate() builds exactly what that access builds.
  *
  * Decision: see docs/decisions.md#a-chosen-variant-may-refuse.
  */
@@ -91,6 +92,28 @@ class VariantsOfThisResourceTest extends SurfaceKernelTestBase {
     $this->assertSame([CabinetResource::class => TRUE], $this->container->get('surface.resource_registry')->getRefusingVariantHolders());
     $this->assertSame(1, $this->buildsForAccess(CabinetResource::class, 'update'));
     $this->assertSame(0, $this->buildsForAccess(VaultResource::class, 'configure'));
+  }
+
+  /**
+   * Tests the runner's gate() builds what the access it asks builds.
+   *
+   * The gate builds nothing itself: asking about the cabinet builds it,
+   * for its lock; asking about the vault builds nothing.
+   *
+   * @see docs/decisions.md#one-runner-runs-an-operation
+   */
+  public function testTheRunnersGateBuildsOnlyForAccess(): void {
+    $runner = $this->container->get('surface.runner');
+    $cases = [[CabinetResource::class, 'update', 1], [VaultResource::class, 'configure', 0]];
+    foreach ($cases as [$resource, $operation, $builds]) {
+      $resources = $this->resources();
+      $resources->forgetBuilds();
+      $before = $resources->buildCounts()['built'];
+      $run = $runner->gate($resource, $operation);
+      $this->assertFalse($run->isRefused(), $resource);
+      $this->assertFalse($run->hasBuilt(), 'The run holds no built surface.');
+      $this->assertSame($builds, $resources->buildCounts()['built'] - $before, $resource);
+    }
   }
 
 }

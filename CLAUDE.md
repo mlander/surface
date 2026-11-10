@@ -562,6 +562,39 @@ the record of the rework that brought the module to the pattern.
   (`OperationDefinition::staticPermission()`); narrowing a key's values
   by account is a runtime refiner, not access
   (`docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability`).
+- **Runner**: the one service that runs an operation,
+  `Operation\OperationRunner` (`surface.runner`, typed
+  `OperationRunnerInterface`), modeled on the Tool API's `ToolRunner`:
+  the resource and operation known, the permission from the two ids, the
+  stage (`Stageable`, it exists, the account may write into it), the
+  context, the access class made decisive and ANDed with the stage's,
+  then the build and the storage with the stage, `submit()`, and the
+  outputs, the stage resource's held to the surface (`conformOutput()`,
+  `NotEmitted` stripped; a mismatch logged, never thrown after a
+  commit, `OperationRun::conformed()`). `gate()` stops after the access
+  and builds nothing itself, `run(values: NULL)` after the build. No
+  account is the current user; another, by id or by roles, is run as
+  through core's account switcher, switched back in a `finally`, a
+  blocked or missing user refused first. What a caller can cause is a
+  `Refusal` on the `OperationRun`, never an exception; only a
+  `StageRaceException` and a bug are thrown. A `Refusal`'s fields
+  (`category`, `code`, `reason`, `cacheability`, `access`) are what the
+  account may hear: past the permission, an account without it hears
+  one refusal, `Refusal::WITHHELD`, whatever refused, and a stage gone
+  and another account's read the same for everyone; `actual()`, a
+  `RefusalDetail`, keeps the truth for the server, never shown. A
+  caller names itself with a `Door` (an id and enum capabilities, none
+  defined yet, read nowhere yet): `php` by default, `drush` for `drush
+  surface:run <resource> <operation>` (`--arguments`, `--values`,
+  `--stage`, `--dry-run`, `--uid`, anonymous by default, `--json`),
+  which prints the `ResultDocument` with `outputs`, prepares only
+  without `--values`, and confirms a destructive run (`--yes`). On it
+  so far: the form's runs of the stage's own operations (`stageRun()`)
+  and the examples that ran one by hand for an account; an install hook
+  acts for none and calls the pipeline; the HTTP, tool and form doors
+  keep their own sequence until they move
+  (`docs/resources.md#running-an-operation-from-php`,
+  `docs/decisions.md#one-runner-runs-an-operation`).
 
 "Data surface" names the project, and the sealed object the build step
 makes (`SurfaceInterface`); it is not a third kind. "Shape" is the
@@ -849,7 +882,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2152, Assertions: 53403, Errors: 0, Failures: 0, Skipped: 3. Classes: 302 of 302, 8 at a time, browser classes 4.
+phpunit: Tests: 2175, Assertions: 53941, Errors: 0, Failures: 0, Skipped: 3. Classes: 304 of 304, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -869,8 +902,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2038, Assertions: 48858, Skipped: 3, Deprecations: 135. Classes:
-249, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2061, Assertions: 49396, Skipped: 3, Deprecations: 135. Classes:
+251, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1183,8 +1216,13 @@ src/Contract/            The served contract's emitter (JSON Schema): ContractEm
                          Conditionals the if/then, DocumentHead the top;
                          the contract diff.
 src/Drush/               Drush commands (the site's catalog, the contract diff, the
-                         config schema) and the resource generator, drush
-                         generate surface:resource.
+                         config schema, surface:run) and the resource
+                         generator, drush generate surface:resource.
+src/Operation/           The runner: OperationRunnerInterface and
+                         OperationRunner, the OperationRun it answers,
+                         Refusal (what the account may hear) with
+                         RefusalCategory and RefusalDetail (the truth,
+                         for the server), and Door.
 src/Flow/                A flow written as a class: the interfaces a flow
                          class implements and declares into
                          (FlowInterface, StepsInterface, StepInterface,
