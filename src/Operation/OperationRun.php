@@ -428,9 +428,10 @@ final readonly class OperationRun {
    * Gets what the run reports, beside its result.
    *
    * Read through the pipeline (SurfacePipelineInterface::outputs()).
-   * Held to the outputs the surface declares, with every NotEmitted key
-   * left out, when conformed() says so; otherwise as the storage gave
-   * them.
+   * Every NotEmitted key is left out, at every depth, whether or not they
+   * conform: leaving it out does not depend on conformance. Held to the
+   * outputs the surface declares when conformed() says so; otherwise as
+   * the storage gave them, less those keys.
    *
    * @return array
    *   The outputs, keyed by output name; empty for a result that is not

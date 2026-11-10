@@ -8,6 +8,7 @@ use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Cache\CacheableMetadata;
+use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountProxyInterface;
@@ -85,13 +86,19 @@ use Psr\Log\LoggerInterface;
  * access check alone would leave them answering for someone else. The
  * account is also handed to every call that takes one, and kept on the
  * run, so submit() runs as the account the run was prepared for. An
- * explicit account that is not anonymous is refused before the switch
- * when its user is blocked or does not exist: core's account switcher
- * takes any AccountInterface, which cannot say it is blocked, so one
- * that is not a user entity is checked against the user its id loads.
- * gate(), run() and submit() go through the one wrapper that makes this
- * check and the switch (asAccount()), so a submit() for an account
- * blocked since its prepare is refused, and nothing is written.
+ * account the runner switches to that is not anonymous is refused before
+ * the switch when its user is blocked or does not exist: core's account
+ * switcher takes any AccountInterface, which cannot say it is blocked,
+ * so one that is not a user entity is checked against the user its id
+ * loads. An explicit account that is the current user, by id and roles,
+ * is taken as no account and is not checked: core vouches for the
+ * current user (the session loads only an active user, and a caller that
+ * switched accounts vouched for the one it switched to), so a door that
+ * hands on the account it was handed and one that passes none answer the
+ * current user alike. gate(), run() and submit() go through the one
+ * wrapper that makes this check and the switch (asAccount()), so a
+ * submit() for a run-as account blocked since its prepare is refused,
+ * and nothing is written.
  *
  * Security model: run-as is a delegation, not a privilege escalation.
  * Code that can call this service can call the account switcher
@@ -108,7 +115,8 @@ use Psr\Log\LoggerInterface;
  * values of a resource with no storage of its own are an OperationRun
  * with a Refusal; values the pipeline refuses are a run whose result is
  * not valid. Nothing is thrown after the write: outputs that do not hold
- * to the declaration are logged and answered as the storage gave them. A
+ * to the declaration are logged and answered as the storage gave them,
+ * less every NotEmitted key. A
  * StageRaceException is thrown, which a door answers as "try again";
  * submit() handed a run it cannot submit to throws a
  * \BadMethodCallException, a bug in the door; anything else thrown is a
@@ -289,9 +297,11 @@ final class OperationRunner implements OperationRunnerInterface {
   /**
    * Makes a call as an account: the one door gate(), run() and submit() use.
    *
-   * An explicit account that may not be run as (unusable()) is refused
-   * before anything else; one that is not the current user is switched
-   * to, and back in a `finally` on every path.
+   * An explicit account that is the current user (isCurrentUser()) is
+   * taken as no account: it is neither checked nor switched to. Any other
+   * explicit account is run as: refused before anything else when it may
+   * not be (unusable()), else switched to, and back in a `finally` on
+   * every path.
    *
    * @param \Drupal\surface\Operation\Door $door
    *   The door, for a refusal.
@@ -304,13 +314,16 @@ final class OperationRunner implements OperationRunnerInterface {
    *   What the call answered, or the refusal of the account.
    */
   private function asAccount(Door $door, ?AccountInterface $account, \Closure $call): OperationRun {
-    $unusable = $account === NULL ? NULL : $this->unusable($account);
+    // Run-as only: the current user is core's to vouch for.
+    // Decision: see docs/decisions.md#one-runner-runs-an-operation.
+    $runAs = $account !== NULL && !$this->isCurrentUser($account) ? $account : NULL;
+    $unusable = $runAs === NULL ? NULL : $this->unusable($runAs);
     if ($unusable !== NULL) {
       return OperationRun::refused($door, Refusal::told(new RefusalDetail(RefusalCategory::Access, Violation::ACCESS, $unusable, (new CacheableMetadata())->setCacheMaxAge(0))));
     }
     $switched = FALSE;
-    if ($account !== NULL && !$this->isCurrentUser($account)) {
-      $this->accountSwitcher->switchTo($account);
+    if ($runAs !== NULL) {
+      $this->accountSwitcher->switchTo($runAs);
       $switched = TRUE;
     }
     try {
@@ -328,7 +341,7 @@ final class OperationRunner implements OperationRunnerInterface {
   }
 
   /**
-   * Says why an explicit account may not be run as, if it may not.
+   * Says why an account the runner would switch to may not be run as.
    *
    * Anonymous may always be run as: the anonymous user entity has status
    * 0, so it is told apart before the status is read. Any other account
@@ -499,6 +512,11 @@ final class OperationRunner implements OperationRunnerInterface {
       $cacheability = CacheableMetadata::createFromObject($access);
       if ($stageAccess !== NULL) {
         $cacheability = $cacheability->merge(CacheableMetadata::createFromObject($stageAccess));
+        // The answer a door hands on says the same as the refusal's own
+        // cacheability, so no door has to merge the two.
+        if ($access instanceof RefinableCacheableDependencyInterface) {
+          $access = (clone $access)->addCacheableDependency($stageAccess);
+        }
       }
       $refusal = $this->told(new RefusalDetail(RefusalCategory::Access, Violation::ACCESS, self::reason($access), $cacheability, $access), $held, $heard);
       // The context holds what the arguments name, so a refusal keeps it
@@ -672,12 +690,13 @@ final class OperationRunner implements OperationRunnerInterface {
   /**
    * Holds the outputs to what the surface declares, where the doors do.
    *
-   * The doors hold the stage's outputs alone today (the HTTP door through
-   * this runner, ResourceOperationTool::execute()); holding every
-   * resource's belongs to the slices that move the other doors onto the
-   * runner. A mismatch is a bug in the storage, found after the
-   * write: it is logged, and the outputs are answered as the storage gave
-   * them, so nothing is thrown after a commit.
+   * The doors hold the stage's outputs alone today (the HTTP and tool
+   * doors, through this runner); holding every resource's belongs to the
+   * slice that moves the form door onto the runner. A mismatch is a bug
+   * in the storage, found after the write: it is logged, and the outputs
+   * are answered as the storage gave them, so nothing is thrown after a
+   * commit. Every NotEmitted key is left out whether or not they were
+   * held or conform: it says a key is not emitted, which no door answers.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
@@ -689,12 +708,12 @@ final class OperationRunner implements OperationRunnerInterface {
    *   The outputs, as the pipeline read them.
    *
    * @return array{0: array, 1: bool}
-   *   The outputs, and whether they were held to the declaration; when
-   *   they were, every NotEmitted key is left out.
+   *   The outputs, every NotEmitted key left out, and whether they were
+   *   held to the declaration and conform to it.
    */
   private function conformed(ResourceDefinition $definition, OperationDefinition $operation, SurfaceInterface $built, array $outputs): array {
     if ($definition->id !== StageResource::ID) {
-      return [$outputs, FALSE];
+      return [NotEmitted::strip($outputs), FALSE];
     }
     if ($outputs === []) {
       return [[], TRUE];
@@ -706,7 +725,7 @@ final class OperationRunner implements OperationRunnerInterface {
         '@operation' => $operation->id,
         '@violations' => ViolationSummary::fromViolations($violations),
       ]);
-      return [$outputs, FALSE];
+      return [NotEmitted::strip($outputs), FALSE];
     }
     return [NotEmitted::strip($outputs), TRUE];
   }

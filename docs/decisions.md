@@ -1921,7 +1921,11 @@ assemble.
   parameters as sent: an account holding `administer node fields`
   hears `field_name "nope" names no field of the node entity type.`, at
   the tool and over HTTP (404); any other account gets the one fixed
-  refusal, as before.
+  refusal, as before. *Amended 2026-11-10:* both doors ask the runner,
+  which fills the permission from the arguments as sent and withholds
+  its refusal; the tool's `execute()` called directly now answers such
+  an account code `access` too, where it answered `permission`
+  ([One runner runs an operation](#one-runner-runs-an-operation)).
 - **What it closed.** The fetch a tool names carries every parameter,
   `GET /surface-api/field.instance/{entity_type}/{bundle}/schema?choose=/settings={field_type}`,
   where it named the path without them and answered 400 (the open
@@ -1941,7 +1945,7 @@ parent's, never asked in the child, would drop them.
 `ResourceDefinition::namesWholeThing()`, `ServedPaths::depth()`,
 `ServedPaths::defaults()`, `OpenApiDocument::operationParameters()`,
 `OperationInputs::schemaPath()`,
-`ResourceOperationToolBase::sentPermissionAccess()`,
+`OperationRunner`,
 `ServedOperationAccessCheck::access()`, `FieldInstanceResourceTest`,
 `IdentityPathsTest`)
 
@@ -4721,7 +4725,7 @@ resolves only with the header.
 
 (`Staging\StagedStorage`, `Staging\StageStore::created()`,
 `Storage\StageStorage::described()`, `Resources::operation()`,
-`ResourceOperationToolBase::staged()`, `ServedOperationAccessCheck`,
+`OperationRunner`, `ServedOperationAccessCheck`,
 `ResourceApiController::write()`, `StagedLocalIdTest`,
 `StagedCallerNamedCreateTest`, `StageToolsTest`, `StageOwnershipTest`)
 
@@ -4753,6 +4757,11 @@ only for it.
   the entry `StageStore::createdAt()` finds at the position, so each
   step writes into the one create instead of adding a second. A create
   through a stage that names no position adds a thing.
+  *Amended 2026-11-10:* every door builds such a context through the
+  runner, which asks the stage (it applies, it exists, it is the
+  account's) before it builds the context through it; the tool's access
+  check no longer drops a stage the account may not use and answers the
+  thing without it.
 - **The stage decides a context, and is still never on one.** "A stage
   input is a door argument handed to storage, never context" holds for
   the stage itself: no context carries it, and no build is keyed by
@@ -4805,7 +4814,12 @@ stage applies, which also asks that the operation name a thing,
   `not_found`; another account's stage is refused by the stage's own
   `update` access, code `access`, the message naming the stage. The
   refined `values` and the read are the staged view, and a staged
-  write's message says "staged in" the stage.
+  write's message says "staged in" the stage. *Amended 2026-11-10:* the
+  tool hands the id to the runner, which asks it after the permission
+  and before the context; another account's stage is answered with the
+  stage access's reason, "The stage is another account's.", where the
+  message named the stage, and a value that is not a string is the
+  tool's own `not_found`.
 - **The HTTP door.** The request header `X-Surface-Stage`
   (`ServedPaths::STAGE_HEADER`), read in `ServedPaths::target()` into
   `ServedTarget::$stage` so the route's access check sees it too; the
@@ -4831,7 +4845,10 @@ An id that names no stage on the stage's own tools and paths, whose
 operations declare no permission, gets the door's fixed refusal at
 both access checks, as for any operation that declares none, and not
 the `not_found` this entry's draft expected; only a tool called from
-PHP, which runs no access check, answers `not_found` there.
+PHP, which runs no access check, answers `not_found` there. *Amended
+2026-11-10:* the runner tells it to every account, so both doors answer
+`not_found` (HTTP 404) through their access checks too
+([One runner runs an operation](#one-runner-runs-an-operation)).
 
 *Amended 2026-11-07, with local ids:* the stage is never on the context,
 and it decides which context `operation()` builds for a thing it
@@ -4844,11 +4861,14 @@ access, so a header that names nothing is let through to the 404 before
 any thing is asked about; the tool's access check builds the context
 through the stage only when the stage exists and the account may use
 it, and lets a call through when the stage names nothing, for
-`not_found`.
+`not_found`. *Amended 2026-11-10:* the tool's access check asks the
+runner too, in the route check's order: a stage that does not apply, is
+gone, or is another account's is let through for the call alone,
+whatever the thing would answer, and the call answers it with its code.
 
 (`ResourcesInterface::storage()`, `Resources::storage()`,
 `Staging\Stage`, `Staging\StagedStorage`, `Tool\OperationInputs`,
-`ResourceOperationToolBase::stage()`, `surface_http`'s `ServedPaths`,
+`ResourceOperationToolBase::gate()`, `surface_http`'s `ServedPaths`,
 `ServedOperations` and `Access\ServedOperationAccessCheck`,
 `StagedUpdateTest`, `StageToolsTest`, `StageOwnershipTest`,
 `StageApiTest`)
@@ -6005,8 +6025,8 @@ leaves a secret out" are promises about every door, or about none.
   does not by the reasons it hears, so it is told plainly: the call is
   let through and answers "Not found: ..." as input to correct, not
   "access denied", which an agent reads as final (decided 2026-10-20,
-  B13; `ResourceOperationToolBase::notFound()`). Every other account
-  still hears the one fixed reason. *Amended 2026-10-29:* the operation
+  B13; `ResourceOperationToolBase::refusal()` since 2026-11-10). Every
+  other account still hears the one fixed reason. *Amended 2026-10-29:* the operation
   form's route asks in the same order, and both page doors, it and the
   React page, let an account the permission lets in through to a 404
   for a value of the URL that names nothing, in the request's own
@@ -6024,6 +6044,20 @@ leaves a secret out" are promises about every door, or about none.
   type, as a value that names nothing, a page not found for an account
   that holds the permission
   ([One runner runs an operation](#one-runner-runs-an-operation)).
+  *Amended again 2026-11-10:* the tool door asks through the runner at
+  its access hook and in `execute()` alike, so `execute()` called
+  directly asks the permission before it reads a parameter, and no
+  longer tells an account without it that an id names nothing; an
+  account holding it hears the access class's own reason from
+  `execute()` too, where it heard "You do not have permission to do
+  this.", which the permission and every withheld refusal still say.
+  For an operation that declares no permission, every content-entity
+  operation, no account holds it, so no account hears that an id names
+  nothing: `execute()` answers `access`, as the access hook and the Tool
+  API's runner did, where it answered `not_found` to every account. A
+  resource that wants holders to hear it declares a permission on its
+  operations ([One runner runs an operation](#one-runner-runs-an-operation),
+  the disclosure rule).
 - **A refusal no input can change is access.** The write tool answers a
   permission refusal, an access refusal inside the pipeline and a
   resource locked whole in the Tool API's `Access` failure category,
@@ -6139,7 +6173,20 @@ moves with the site's language and its alters.
   tool is the one answering, `execute()` called directly as a PHP
   caller, ECA or a page does, the same refusal is answered in the
   shape, each violation by its path in `values` with a code, `required`
-  for a property left out.
+  for a property left out. *Amended 2026-11-10:* a refusal from the
+  tool's access hook is the same kind of place, "Access denied for tool
+  ..." with no document; so the hook lets a refusal the caller can
+  correct (an id that names nothing, to an account that may hear it) or
+  one about its stage through for the call alone, and `execute()`
+  answers it in the shape with its code
+  (`ResourceOperationToolBase::answer()`). *Amended again 2026-11-10:*
+  only a refusal of the inputs, before the tool's run hook ran, is
+  answered so, a document that says nothing was accepted or committed.
+  The Tool API's check of the outputs, after the run hook, is never
+  rewritten into one: its failure carries the run hook's document, so a
+  committed write says `committed: true`
+  ([One runner runs an operation](#one-runner-runs-an-operation),
+  nothing is thrown after a commit).
 
 (`Pipeline\Violation`, `Pipeline\ResultDocument`,
 `SurfaceResult::document()`, `ResourceOperationTool::doExecute()`,
@@ -6426,8 +6473,8 @@ Decided 2026-11-09. One service runs an operation for every caller,
    dry run when asked;
 8. the outputs, read through the pipeline; the stage resource's held to
    the outputs its surface declares (`conformOutput()`), every
-   `NotEmitted` key left out, as the tool door holds them and the HTTP
-   door, through the runner, does.
+   `NotEmitted` key left out, as the tool and HTTP doors, through the
+   runner, do.
 
 `gate()` stops after 5; `run()` with no values stops after 6, a prepare;
 `run()` with values goes to 8; `submit()` runs 7 and 8 on a prepare.
@@ -6443,10 +6490,10 @@ does for a resource holding a variant that may refuse.
   roles, is run as: core's account switcher makes it the current user
   before step 1 and switches back in a `finally`, an uncaught throwable
   included. A call refused at step 1 or 2 still switches. Before the
-  switch, an explicit account that is not anonymous is refused when its
-  user is blocked or does not exist: a user entity is read as it is,
-  and any other account (a `UserSession`) is checked against the user
-  its id loads. The switch is required: the build, the access class's
+  switch, an account switched to that is not anonymous is refused when
+  its user is blocked or does not exist: a user entity is read as it
+  is, and any other account (a `UserSession`) is checked against the
+  user its id loads. The switch is required: the build, the access class's
   gates and a runtime refiner read the current user, not an argument.
   An account with the current user's id and fewer roles is another
   account, or the access check would ask it while the build answered as
@@ -6455,6 +6502,16 @@ does for a resource holding a variant that may refuse.
   (`OperationRunner::asAccount()`), so a `submit()` for an account
   blocked since its prepare is a refused run and writes nothing
   (*amended 2026-11-10*; `submit()` first switched without the check).
+  *Amended again 2026-11-10:* the check is for run-as only. An explicit
+  account that is the current user, by id and roles, is taken as no
+  account and is not checked: the current user is core's to vouch for
+  (the session loads only an active user, and a caller that switched
+  accounts vouched for the one it switched to: `ToolRunner` checks a
+  blocked account itself, and `ConceptPanel` switches to a session of no
+  saved user on purpose). Before, a door that hands on the account it
+  was handed (the tool's access hook, the HTTP route check) refused a
+  current user that is blocked or no saved user, which a door that
+  passes none (the tool's `execute()`) ran for.
 - **An install hook does not use it.** The runner is for a caller
   acting for an account. An install hook is the module's own code, with
   no account acting, so `SpotlightBlockHooks::place()` calls the
@@ -6478,7 +6535,10 @@ does for a resource holding a variant that may refuse.
   mismatch is logged on the `surface` channel with the resource, the
   operation and the violations, and the outputs are answered as the
   storage gave them; `OperationRun::conformed()` says whether they were
-  held to the declaration. *Amended 2026-11-10:* the HTTP door's re-read
+  held to the declaration. Every `NotEmitted` key is left out of the
+  outputs whether or not they conform (*amended 2026-11-10*; a mismatch
+  first kept them, which the Tool API's check of the outputs then
+  refused after the write). *Amended 2026-11-10:* the HTTP door's re-read
   after a committed write is a second prepare, which asks the
   permission and the access again; a write can close them (an access
   class that reads a status or an owner the write changed), or change
@@ -6487,7 +6547,16 @@ does for a resource holding a variant that may refuse.
   (200, or 201 with `Location` for a create), its `outputs` and
   `created`, `contract: null` and no `ETag`. Before, it was a 403 or a
   404 problem after the write, which a client reads as "nothing written"
-  and may retry.
+  and may retry. *Amended again 2026-11-10:* at the tool door, a
+  committed write is never answered as a refusal. When the outputs were
+  not held or do not conform, the write tool answers only those the Tool
+  API's own check of the outputs takes (declared, and of the declared
+  type), logs the rest and names them in its message. A failure of that
+  check after the write (a required output left out) carries the
+  write's document, `committed: true`; the tool rewrites only a refusal
+  of the inputs, before the write, into a document that says nothing
+  was accepted. Before, a committed stage apply whose outputs did not
+  conform was answered `ok: false, committed: false`.
 - **The disclosure rule, once.** A `Refusal`'s public fields
   (`category`, `code`, `reason`, `cacheability`, `access`) and its
   `violation()` are what the account may hear. What the two ids alone
@@ -6510,6 +6579,15 @@ does for a resource holding a variant that may refuse.
   `RefusalDetail`, for the server's own decisions and logs, never to be
   rendered to the account. A refused run holds its context only for an
   account that may hear why: the context holds what the arguments name.
+  *Recorded 2026-11-10:* an operation that declares no permission
+  (every content-entity operation, `tool_test.cabinet`'s) tells no
+  account that an id names nothing, at every door. The tool's
+  `execute()` called directly answered `not_found` there to every
+  account until the tool door moved onto the runner; it answers
+  `access`, as its access hook and the Tool API's runner already did.
+  The cost: an account with full access is refused the `not_found` it
+  could act on, too. A resource that wants holders to hear it declares a
+  permission on its operations.
 - **The stage rule.** Each refusal of the stage a call goes through is
   told, to every account past the permission, in the order applies,
   exists, owner: a stage that does not apply is category `Stage`, code
@@ -6538,8 +6616,10 @@ does for a resource holding a variant that may refuse.
   HTTP, `GET /surface-api/surface.stage/<gone>` and its `:apply`,
   `:changes` and `DELETE` answer 404, and another account's stage 403
   with "The stage is another account's.", as the tool's run already
-  answered; the tool's own access check, which does not call the runner
-  yet, still withholds both. `SurfaceOperationForm::stageRun()` and the entity example's
+  answered. The tool's own access check withheld both until the tool
+  door moved onto the runner the same day; it now lets a gone id
+  through for the call to answer `not_found`, and refuses another
+  account's stage with that reason. `SurfaceOperationForm::stageRun()` and the entity example's
   `StageDeleteConfirmForm` read the public fields again.
 - **A resource with no storage is prepared, never run.** Its host or its
   parent stores it. A prepare (`run(values: NULL)`) builds it with no
@@ -6674,13 +6754,54 @@ the check's cache contexts and max-ages. A refusal that had to read an
 argument, a `%key` permission's among them, is withheld from an account
 that does not hold the permission, in the runner, for every door.
 
-Still to move: the tool door, and the operation form's own build,
-validate and submit.
+*Moved 2026-11-10: the tool door.* The write, read and narrowing tools
+call the runner, as the door `tool` (the narrowing tool `schema tool`,
+`ToolDoors`). The access hook, `checkAccess()`, calls `gate()` once with
+the account it is handed and turns the run into an access answer from
+the refusal's public fields (`ResourceOperationToolBase::answer()`); a
+refusal the caller can correct, or one about its stage, is let through
+for the call alone, max-age 0, so `execute()` answers it with its code,
+since a refusal from the access hook reaches a caller through the Tool
+API's runner as "Access denied for tool ..." with no document.
+`execute()` is complete on its own, as a PHP caller, ECA or a page
+calls it: the write tool's run hook is one `run()` with the values and
+the dry run, the read and narrowing tools prepare (`run()` with no
+values) and read the surface and the storage off the run, and the
+`values` refiner prepares too. One method turns a refusal into the
+tool's result (`ResourceOperationToolBase::refusal()`). The tool keeps
+only what is the Tool API's: reading inputs into arguments, values, a
+stage and a dry run; the result, its message and its category; the
+refined input definitions. The door converged on the runner where no
+decision kept its own way: the order permission, stage, context,
+access, so `execute()` called directly no longer tells an account
+without the permission that an id names nothing, and a stage problem
+is answered before the thing's access, whatever it says; a `%key`
+permission the account does not hold is withheld at `execute()` too,
+code `access` where it was `permission`; the stage's own tools tell a
+gone id and another account's stage to every account, as HTTP does; a
+blocked account handed to `access()` that is not the current user is
+refused, as run-as; an argument of the
+wrong type names nothing, where it was a `\TypeError`; another
+account's stage, and an access class that refuses, are answered with
+their own reason ("The stage is another account's.", "The kitchen is
+closed.", `OperationRunner::NOT_ALLOWED`), where the tool said "You do
+not have permission to use the stage ..." and "You do not have
+permission to do this."; the permission and every withheld refusal keep
+"You do not have permission to do this.". The plugin's own outputs
+check went: the runner holds the stage's outputs and logs a mismatch.
+Kept, as recorded: a stage input that is not a string, which the Tool
+API lets through to a PHP caller, is answered by the tool (`not_found`,
+or `does_not_apply` on a tool that takes no stage), after the runner's
+gate without it.
+
+Still to move: the operation form's own build, validate and submit.
 
 (`OperationRunner`, `OperationRun`, `Refusal`, `RefusalDetail`, `Door`,
 `Drush\Commands\RunCommand`, `OperationRunnerTest`, `RunCommandTest`,
 `surface_http`'s `ServedOperations`, `Access\ServedOperationAccessCheck`,
-`Controller\ResourceApiController`, `ControllerAsksAccessTest`)
+`Controller\ResourceApiController`, `ControllerAsksAccessTest`,
+`ResourceOperationToolBase`, `ToolDoorRunnerTest`,
+`ToolOutputsAfterCommitTest`)
 
 ## Tools
 

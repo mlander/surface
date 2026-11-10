@@ -177,7 +177,18 @@ class FieldToolsAccessTest extends SurfaceKernelTestBase {
     $tool->execute();
 
     $this->assertFalse($tool->getResult()->isSuccess());
-    $this->assertStringContainsString('permission', (string) $tool->getResultMessage());
+    // The account holds the operation's permission, so it hears the
+    // access class's own reason.
+    $this->assertSame('The gated test field type does not allow its settings to be configured.', (string) $tool->getResultMessage());
+    // The read tool hears the same reason: it is asked in the update's
+    // context.
+    $read = $this->toolManager->createInstance('surface:field.instance:read');
+    $read->setInputValue('entity_type', 'entity_test');
+    $read->setInputValue('bundle', 'entity_test');
+    $read->setInputValue('field_name', 'field_gated');
+    $read->execute();
+    $this->assertFalse($read->getResult()->isSuccess());
+    $this->assertSame('The gated test field type does not allow its settings to be configured.', (string) $read->getResultMessage());
     // Nothing reached storage: the stored settings are what they were.
     $this->container->get('entity_field.manager')->clearCachedFieldDefinitions();
     $stored = FieldConfig::loadByName('entity_test', 'entity_test', 'field_gated');

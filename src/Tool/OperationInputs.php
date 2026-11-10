@@ -15,13 +15,13 @@ use Drupal\surface\Contract\Choices;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SettledCacheability;
 use Drupal\surface\Pipeline\Outbound;
+use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\ServedPathsInterface;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\OperationParameter;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Staging\Stage;
 use Drupal\surface\Staging\Stageable;
 use Drupal\tool\TypedData\InputDefinition;
 use Drupal\tool\TypedData\InputDefinitionInterface;
@@ -375,15 +375,16 @@ final class OperationInputs {
    *   The built resource, in the context.
    * @param \Drupal\surface\Resource\OperationContext $context
    *   The context, which changes a thing that exists.
-   * @param \Drupal\surface\Staging\Stage|null $stage
-   *   The stage the read goes through, which answers what it holds for
-   *   the thing before what is stored; NULL for what is stored.
+   * @param \Drupal\surface\Pipeline\SurfaceStorageInterface $storage
+   *   The storage the runner composed for the read
+   *   (OperationRun::storage()), with the stage the read goes through,
+   *   which answers what it holds for the thing before what is stored.
    *
    * @return array
    *   The stored values, keyed by resource key.
    */
-  public function stored(ResourceDefinition $resource, SurfaceInterface $built, OperationContext $context, ?Stage $stage = NULL): array {
-    $stored = $this->resources->storage($resource->name(), $context, $built, stage: $stage)->load($built);
+  public function stored(ResourceDefinition $resource, SurfaceInterface $built, OperationContext $context, SurfaceStorageInterface $storage): array {
+    $stored = $storage->load($built);
     // What any door may answer: nothing the build left out, no secret,
     // nothing that does not apply to what is stored (storage still keeps
     // it). The write tool answers its accepted values the same way.
@@ -410,22 +411,23 @@ final class OperationInputs {
    *   The built resource, in the context.
    * @param \Drupal\surface\Resource\OperationContext $context
    *   The context.
-   * @param \Drupal\surface\Staging\Stage|null $stage
-   *   The stage the call names, whose view of the thing the properties
-   *   default to; NULL for what is stored.
+   * @param \Drupal\surface\Pipeline\SurfaceStorageInterface $storage
+   *   The storage the runner composed for the call
+   *   (OperationRun::storage()), with the stage the call names, whose view
+   *   of the thing the properties default to.
    *
    * @return \Drupal\tool\TypedData\MapInputDefinition
    *   The map: the resource's keys less the identity keys the context
    *   knows, each required as the resource says on a create.
    */
-  public function values(ResourceDefinition $resource, SurfaceInterface $built, OperationContext $context, ?Stage $stage = NULL): MapInputDefinition {
+  public function values(ResourceDefinition $resource, SurfaceInterface $built, OperationContext $context, SurfaceStorageInterface $storage): MapInputDefinition {
     $operation = NULL;
     foreach ($resource->operations as $declared) {
       $operation = $declared->id === $context->id ? $declared : $operation;
     }
     // Decision: see
     // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
-    $stored = ($operation->creates ?? $context->creates) ? NULL : $this->resources->storage($resource->name(), $context, $built, stage: $stage)->load($built);
+    $stored = ($operation->creates ?? $context->creates) ? NULL : $storage->load($built);
     $map = $this->inputDefinitions->withDependencies($this->map($resource, $built, $this->knownIdentity($resource, $context), $operation, stored: $stored), $built);
     if ($stored !== NULL) {
       // Decision: see

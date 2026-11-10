@@ -547,22 +547,22 @@ class StagedConfigTest extends SurfaceKernelTestBase {
     $this->assertSame(' (does_not_apply): event.venue cannot be staged through the reorder operation: it names no thing, since it creates nothing and its parameters name none of the identity keys (id).', $this->said($result));
     $this->assertSame([], $this->stages()->read($id)['writes']);
 
-    // A stage handed to the tool anyway, as an adapter that passes
-    // undeclared inputs through would: refused, never written for real.
+    // A stage handed to the tool's run hook anyway, as an adapter that
+    // passes undeclared inputs through would: refused by the runner, a
+    // stage does not apply, never written for real.
     $tool = $tools->createInstance('surface:event.venue:reorder');
-    $inputs = [OperationInputs::STAGE => $id, OperationInputs::VALUES => ['venues' => []]];
-    $staged = (fn (array $values): mixed => $this->staged($values))->call($tool, $inputs);
-    $this->assertInstanceOf(ExecutableResult::class, $staged);
+    $inputs = [
+      OperationInputs::STAGE => $id,
+      OperationInputs::VALUES => ['venues' => [['id' => 'riverside', 'weight' => 3]]],
+    ];
+    $before = $this->container->get('config.factory')->get('surface_examples.event_venue.riverside')->getRawData();
+    $staged = (fn (array $values): ExecutableResult => $this->doExecute($values))->call($tool, $inputs);
     $this->assertFalse($staged->isSuccess());
     $this->assertSame(FailureCategory::Input, $staged->getFailureCategory());
     $this->assertSame('A stage does not apply to this operation.', (string) $staged->getMessage());
-    try {
-      (fn (array $values): mixed => $this->stage($values, []))->call($tool, $inputs);
-      $this->fail('A stage the tool does not take is refused.');
-    }
-    catch (\InvalidArgumentException $e) {
-      $this->assertSame('A stage does not apply to this operation: its tool takes no stage input.', $e->getMessage());
-    }
+    $this->assertSame(Violation::DOES_NOT_APPLY, $staged->getContextValues()['violations'][0]['code']);
+    $this->assertSame($before, $this->container->get('config.factory')->get('surface_examples.event_venue.riverside')->getRawData(), 'Nothing was written.');
+    $this->assertSame([], $this->stages()->read($id)['writes']);
   }
 
   /**
