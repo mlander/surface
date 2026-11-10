@@ -8,11 +8,15 @@ namespace Drupal\surface\Operation;
  * Says which door a call to the runner comes through, and what it needs.
  *
  * A value, never a service: an id, such as `php` (the default) or
- * `drush`, and the capabilities the door asks for. A capability is any
- * enum case, so a module that opens a door may define its own. This
- * module defines no capability yet: every door that runs through the
- * runner today asks for the same thing, and an enum is added when a
- * shipped door first needs the runner to treat it differently.
+ * `drush`, and the capabilities the door asks for. A shipped door's id is
+ * its key in the site catalog's doors (ResourceBuild\CatalogDoorsInterface):
+ * `http` for the API (surface_http's HttpDoors::DOOR), and the key of the
+ * door whose route a page serves, such as `react` for the React example's
+ * page. A capability is any enum case, so a module that opens a door may
+ * define its own. This module defines no capability yet: every door that
+ * runs through the runner today asks for the same thing, and an enum is
+ * added when a shipped door first needs the runner to treat it
+ * differently.
  *
  * Nothing reads it yet: the runner records it on the OperationRun and
  * does not branch on it. It is reserved for the audit record the runner

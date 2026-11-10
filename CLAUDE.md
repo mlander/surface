@@ -422,11 +422,14 @@ the record of the rework that brought the module to the pattern.
   asked before the thing's context, which is built through it
   (`ResourceOperationToolBase::staged()`); and
   the **stage header**, `X-Surface-Stage` (`ServedPaths::STAGE_HEADER`),
-  read in `target()` into `ServedTarget::$stage`, resolved in
-  `ServedOperations::fromTarget()` (404 naming nothing), another
-  account's 403 at `ServedOperationAccessCheck`, before the thing's
-  context, 400 on the stage's own
-  paths, 422 on a call a stage does not apply to, ignored by `GET
+  read in `target()` into `ServedTarget::$stage`, asked by the runner
+  in the route check and the controller alike, before the thing's
+  context: 422 on a call a stage does not apply to (whatever stage it
+  names), then 404 naming nothing, then another account's 403 "The
+  stage is another account's."; 400 on the stage's own
+  paths, from the controller, whose own refusals (an id naming no stage
+  404, another account's 403 with its reason) every account hears;
+  ignored by `GET
   .../schema`, OpenAPI's `SurfaceStage`; a read,
   a narrowing and a write's `contract` and `ETag` are the staged view;
   the `ETag` of the stage's own `apply` also covers its writes
@@ -577,20 +580,36 @@ the record of the rework that brought the module to the pattern.
   the resource and operation known, the permission from the two ids, the
   stage (`Stageable`, it exists, the account may write into it), the
   context, the access class made decisive and ANDed with the stage's,
-  then the build and the storage with the stage, `submit()`, and the
-  outputs, the stage resource's held to the surface (`conformOutput()`,
-  `NotEmitted` stripped; a mismatch logged, never thrown after a
-  commit, `OperationRun::conformed()`). `gate()` stops after the access
-  and builds nothing itself, `run(values: NULL)` after the build. No
-  account is the current user; another, by id or by roles, is run as
-  through core's account switcher, switched back in a `finally`, a
-  blocked or missing user refused first. What a caller can cause is a
-  `Refusal` on the `OperationRun`, never an exception; only a
-  `StageRaceException` and a bug are thrown. A `Refusal`'s fields
-  (`category`, `code`, `reason`, `cacheability`, `access`) are what the
-  account may hear: past the permission, an account without it hears
-  one refusal, `Refusal::WITHHELD`, whatever refused, and a stage gone
-  and another account's read the same for everyone; `actual()`, a
+  then the build and the storage with the stage, the pipeline's
+  `submit()`, and the outputs, the stage resource's held to the surface
+  (`conformOutput()`, `NotEmitted` stripped; a mismatch logged, never
+  thrown after a commit, `OperationRun::conformed()`). `gate()` stops
+  after the access and builds nothing itself, `run(values: NULL)` after
+  the build (a resource with no storage of its own is built with none,
+  `hasStorage()` FALSE, and refused when run with values), and the
+  runner's `submit($prepared, $values, $dryRun)` runs the rest on that
+  prepare, its surface and storage, as the account it was prepared for
+  (`OperationRun::account()`), so a door that reads the storage first
+  builds once; `run()` with values is a prepare, then `submit()`. A
+  prepare is written through once: after a submit that committed, a
+  second `submit()` to it throws (a `\WeakMap` of spent prepares); a dry
+  run or a refused submit leaves it usable. No account is the current
+  user; another, by id or by roles, is run as through core's account
+  switcher, switched back in a `finally`, a blocked or missing user
+  refused first, by the one wrapper `gate()`, `run()` and `submit()` go
+  through (`asAccount()`). What a caller can cause is a `Refusal` on the
+  `OperationRun`, never an exception; only a `StageRaceException`, a
+  `\BadMethodCallException` from `submit()` handed what it cannot
+  submit to, and a bug are thrown. A `Refusal`'s fields (`category`,
+  `code`, `reason`, `cacheability`, `access`) are what the account may
+  hear: what the two ids decide is told to anyone; a refusal that had
+  to read an argument, a `%key` permission's among them, is withheld
+  from an account without the permission, which hears one refusal,
+  `Refusal::WITHHELD`, whatever refused; the stage a call goes through
+  is told to every account past the permission (category `Stage`:
+  `does_not_apply`, gone `not_found`, another account's `access` with
+  its reason), and so is every refusal of the stage resource's own
+  operations (a stage id is a random UUID); `actual()`, a
   `RefusalDetail`, keeps the truth for the server, never shown. A
   caller names itself with a `Door` (an id and enum capabilities, none
   defined yet, read nowhere yet): `php` by default, `drush` for `drush
@@ -598,10 +617,15 @@ the record of the rework that brought the module to the pattern.
   `--stage`, `--dry-run`, `--uid`, anonymous by default, `--json`),
   which prints the `ResultDocument` with `outputs`, prepares only
   without `--values`, and confirms a destructive run (`--yes`). On it
-  so far: the form's runs of the stage's own operations (`stageRun()`)
-  and the examples that ran one by hand for an account; an install hook
-  acts for none and calls the pipeline; the HTTP, tool and form doors
-  keep their own sequence until they move
+  so far: the HTTP door (its route check calls `gate()`, door `http`, or
+  the route's `_surface_door` default, `react` for the React page; the
+  controller gates the full schema, prepares every other action and
+  submits a write to its prepare; a committed write whose re-read the
+  runner refuses answers `contract: null` and no `ETag`, never a 403 or
+  404 after the commit), the form's runs of the stage's own
+  operations (`stageRun()`) and the examples that ran one by hand for an
+  account; an install hook acts for none and calls the pipeline; the
+  tool and form doors keep their own sequence until they move
   (`docs/resources.md#running-an-operation-from-php`,
   `docs/decisions.md#one-runner-runs-an-operation`).
 
@@ -891,7 +915,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2201, Assertions: 54284, Errors: 0, Failures: 0, Skipped: 3. Classes: 306 of 306, 8 at a time, browser classes 4.
+phpunit: Tests: 2210, Assertions: 54616, Errors: 0, Failures: 0, Skipped: 3. Classes: 307 of 307, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -911,8 +935,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2087, Assertions: 49739, Skipped: 3, Deprecations: 139. Classes:
-253, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2096, Assertions: 50067, Skipped: 3, Deprecations: 139. Classes:
+254, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1261,7 +1285,9 @@ src/Variants/            Variants from the site: ComponentProps and ComponentSlo
 src/Refinement/          Narrowing and choice sets.
 modules/surface_http/     The HTTP door, Drupal\surface_http: ServedPaths
                          (which implements ResourceBuild\ServedPathsInterface)
-                         and ServedOperations, Controller\ResourceApiController,
+                         and ServedOperations, which asks the runner, its
+                         ServedOperation and RefusedException,
+                         Controller\ResourceApiController,
                          Access\ServedOperationAccessCheck, the two
                          EventSubscriber\ classes (problem details, the
                          schema's tag), problem details, and its catalog

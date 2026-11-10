@@ -237,10 +237,9 @@ final class StageDeleteConfirmForm extends ConfirmFormBase {
       $form_state->setRebuild();
       return;
     }
-    // The refusal as it was, for the page's own decision: the stage's
-    // operations declare no permission, so what the account may hear is
-    // the same whether the stage is gone or refused.
-    if ($run->refusal()?->actual()->category === RefusalCategory::NamesNothing) {
+    // The runner tells every refusal of the stage's own operations, so a
+    // gone stage and a refused one are told apart by the public fields.
+    if ($run->refusal()?->category === RefusalCategory::NamesNothing) {
       $this->store()->delete(StageDeleteAction::KEY);
       $this->messenger()->addError($this->t('The stage of this selection expired or was discarded, so nothing was deleted: select the content again.'));
       $form_state->setRedirectUrl($this->getCancelUrl());
@@ -345,10 +344,9 @@ final class StageDeleteConfirmForm extends ConfirmFormBase {
    */
   protected function ask(string $operation, string $id): array|false|null|SurfaceResult {
     $run = $this->runner->run(StageResource::ID, $operation, ['id' => $id], values: [], account: $this->currentUser);
-    // The refusal as it was, for the page's own decision: the stage's
-    // operations declare no permission, so what the account may hear is
-    // the same whether the stage is gone or refused.
-    if ($run->refusal()?->actual()->category === RefusalCategory::NamesNothing) {
+    // The runner tells every refusal of the stage's own operations, so a
+    // gone stage and a refused one are told apart by the public fields.
+    if ($run->refusal()?->category === RefusalCategory::NamesNothing) {
       return NULL;
     }
     // Refused by access before the run.

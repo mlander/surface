@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Drupal\surface_http;
 
 use Drupal\Component\Utility\NestedArray;
-use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\surface\SurfaceAccess;
+use Drupal\surface\Operation\Door;
+use Drupal\surface\Operation\OperationRun;
+use Drupal\surface\Operation\OperationRunnerInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\Fingerprint;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\ValueState;
-use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
@@ -30,12 +30,15 @@ use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
  * a structure's `#[Structure]` id) and the operation id, in the path, and
  * its parameters by the operation method's parameter names, in the query
  * string; the API by what ServedPaths reads off its path and method.
- * Everything after that is what SurfaceOperationForm does for a
- * route: the operation builds the context, the resource is built in it,
- * its storage composed for it, and the current values are what the
- * storage loads over the built resource's defaults. A request that names
- * a stage has the storage handed it, so the values are the thing as it
- * stands in the stage, and a write is kept there.
+ * Everything after that is the runner's (surface.runner): the permission,
+ * the stage, the context, the access, the build and the storage, then the
+ * pipeline and the outputs, in its one order. What is left here is the
+ * door's: the read the build adds served as the update it reads, the
+ * current values (what the storage loads over the built resource's
+ * defaults), the fingerprint a write is checked by, where a created thing
+ * lives, the body, and the stale values a write keeps. A request that
+ * names a stage has the storage handed it, so the values are the thing as
+ * it stands in the stage, and a write is kept there.
  *
  * @internal
  */
@@ -50,51 +53,15 @@ final class ServedOperations {
    *   The build step, which also resolves the operation's arguments.
    * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   Where the stages are kept, which a request's stage is read from.
+   * @param \Drupal\surface\Operation\OperationRunnerInterface $runner
+   *   The runner, which runs the operation's sequence.
    */
   public function __construct(
     protected readonly ResourceRegistry $registry,
     protected readonly ResourcesInterface $resources,
     protected readonly StageStoreInterface $stages,
+    protected readonly OperationRunnerInterface $runner,
   ) {}
-
-  /**
-   * Builds the operation a page names by its ids.
-   *
-   * @param string $resource
-   *   The resource's `#[Resource]` id, or its class.
-   * @param string $operation
-   *   The operation id.
-   * @param \Symfony\Component\HttpFoundation\Request $request
-   *   The request, whose query string carries the operation's parameters.
-   *
-   * @return \Drupal\surface_http\ServedOperation
-   *   The operation, built.
-   *
-   * @throws \InvalidArgumentException
-   *   When the resource or operation is not discovered, or a parameter
-   *   the operation needs is missing or names nothing.
-   */
-  public function fromRequest(string $resource, string $operation, Request $request): ServedOperation {
-    return $this->resolve($resource, $operation, $this->parameters($resource, $operation, $request));
-  }
-
-  /**
-   * Builds the operation an API request names.
-   *
-   * @param \Drupal\surface_http\ServedTarget $target
-   *   What the path and the method named, and the stage its header named.
-   *
-   * @return \Drupal\surface_http\ServedOperation
-   *   The operation, built through the stage, when one is named, and its
-   *   storage handed it.
-   *
-   * @throws \InvalidArgumentException
-   *   When a parameter names nothing, or the header names no stage
-   *   (NamesNothingException).
-   */
-  public function fromTarget(ServedTarget $target): ServedOperation {
-    return $this->resolve($target->definition->name(), $target->operation->id, $target->parameters, $this->stage($target->stage, $target->parameters));
-  }
 
   /**
    * Gets the stage a request's header names.
@@ -141,60 +108,10 @@ final class ServedOperations {
   }
 
   /**
-   * Gets the context of the operation a page names, building nothing.
-   *
-   * What the access check asks with: the operation's context, its subject
-   * loaded from the parameters, and no build, so a response the page cache
-   * would answer pays no build for its access check.
-   *
-   * Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
-   *
-   * @param string $resource
-   *   The resource's `#[Resource]` id, or its class.
-   * @param string $operation
-   *   The operation id.
-   * @param \Symfony\Component\HttpFoundation\Request $request
-   *   The request.
-   *
-   * @return \Drupal\surface\Resource\OperationContext
-   *   The context.
-   *
-   * @throws \InvalidArgumentException
-   *   As fromRequest() does.
-   */
-  public function contextFromRequest(string $resource, string $operation, Request $request): OperationContext {
-    return $this->context($resource, $operation, $this->parameters($resource, $operation, $request));
-  }
-
-  /**
-   * Gets the context of an operation for its parameters, building nothing.
-   *
-   * @param string $resource
-   *   The resource's `#[Resource]` id, or its class.
-   * @param string $operation
-   *   The operation id.
-   * @param array $parameters
-   *   The operation's parameters, by name, as raw values.
-   * @param \Drupal\surface\Staging\Stage|null $stage
-   *   The stage the request goes through, whose creates its parameters may
-   *   name; NULL for none.
-   *
-   * @return \Drupal\surface\Resource\OperationContext
-   *   The context.
-   *
-   * @throws \InvalidArgumentException
-   *   When a parameter the operation needs is missing or names nothing.
-   */
-  public function context(string $resource, string $operation, array $parameters, ?Stage $stage = NULL): OperationContext {
-    $definition = $this->registry->getDefinition($resource);
-    return $this->resources->operation($definition->name(), $operation, $parameters, $stage);
-  }
-
-  /**
    * Reads the operation's parameters off a page's query string.
    *
-   * What the page's context is built from, and what its access check
-   * fills a `%key` permission from when the context cannot be built.
+   * What the page's operation is run with, and what the runner fills a
+   * `%key` permission from before the context is built.
    *
    * @param string $resource
    *   The resource's `#[Resource]` id, or its class.
@@ -222,29 +139,67 @@ final class ServedOperations {
   }
 
   /**
-   * Answers an operation's static permission, before anything is read.
+   * Names the resource and the operation a request is served as.
+   *
+   * The read the build adds is served as the update it reads: its
+   * envelope, its schema and its access are the update's.
+   *
+   * Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
    *
    * @param string $resource
    *   The resource's `#[Resource]` id, or its class.
    * @param string $operation
    *   The operation id.
-   * @param \Drupal\Core\Session\AccountInterface|null $account
-   *   The account, or NULL for the current user.
-   * @param \Drupal\surface\Resource\OperationContext|null $context
-   *   The context, once built, whose identity fills a `%key`.
    *
-   * @return \Drupal\Core\Access\AccessResultInterface|null
-   *   As ResourcesInterface::permissionAccess() answers.
+   * @return array{0: \Drupal\surface\ResourceBuild\ResourceDefinition, 1: \Drupal\surface\ResourceBuild\OperationDefinition}
+   *   The resource, and the operation it is served as.
    *
    * @throws \InvalidArgumentException
    *   When the resource or the operation is not discovered.
    */
-  public function permissionAccess(string $resource, string $operation, ?AccountInterface $account = NULL, ?OperationContext $context = NULL): ?AccessResultInterface {
-    return $this->resources->permissionAccess($resource, $operation, $account, $context);
+  public function servedAs(string $resource, string $operation): array {
+    $definition = $this->registry->getDefinition($resource);
+    $found = $this->registry->getOperation($definition->name(), $operation);
+    if ($found->reads !== NULL) {
+      $found = $this->registry->getOperation($definition->name(), $found->reads);
+    }
+    return [$definition, $found];
   }
 
   /**
-   * Builds one operation from its parameters.
+   * Asks the runner whether an operation may be served, building nothing.
+   *
+   * The runner's gate(): the permission, the stage, the context and the
+   * access, for the operation it is served as (servedAs()). What the
+   * route's access check asks, and the full schema, which reads nothing
+   * stored.
+   *
+   * @param string $resource
+   *   The resource's `#[Resource]` id, or its class.
+   * @param string $operation
+   *   The operation id.
+   * @param array $parameters
+   *   The operation's parameters, by name, as raw values.
+   * @param \Drupal\surface\Staging\Stage|string|null $stage
+   *   The stage the request names, or its id; NULL for none.
+   * @param \Drupal\surface\Operation\Door|string $door
+   *   The door: HttpDoors::DOOR for the API, the key of a page's door.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account; NULL for the current user.
+   *
+   * @return \Drupal\surface\Operation\OperationRun
+   *   Refused, or gated.
+   */
+  public function gate(string $resource, string $operation, array $parameters, Stage|string|null $stage = NULL, Door|string $door = HttpDoors::DOOR, ?AccountInterface $account = NULL): OperationRun {
+    [$resource, $operation] = $this->ids($resource, $operation);
+    return $this->runner->gate($resource, $operation, $parameters, $door, $stage, $account);
+  }
+
+  /**
+   * Asks the runner to prepare an operation: built, its storage composed.
+   *
+   * The runner's run() with no values, for the operation it is served as
+   * (servedAs()), as the current user: nothing is submitted or written.
    *
    * @param string $resource
    *   The resource's `#[Resource]` id, or its class.
@@ -253,34 +208,100 @@ final class ServedOperations {
    * @param array $parameters
    *   The operation's parameters, by name, as raw values, never objects:
    *   the operation's storage loads what they name.
-   * @param \Drupal\surface\Staging\Stage|null $stage
+   * @param \Drupal\surface\Staging\Stage|string|null $stage
    *   The stage the operation is built through and the storage is handed,
-   *   or NULL for permanent storage.
+   *   or its id; NULL for permanent storage.
+   * @param \Drupal\surface\Operation\Door|string $door
+   *   The door: HttpDoors::DOOR for the API, the key of a page's door.
+   *
+   * @return \Drupal\surface\Operation\OperationRun
+   *   Refused, or prepared.
+   */
+  public function prepare(string $resource, string $operation, array $parameters, Stage|string|null $stage = NULL, Door|string $door = HttpDoors::DOOR): OperationRun {
+    [$resource, $operation] = $this->ids($resource, $operation);
+    return $this->runner->run($resource, $operation, $parameters, NULL, $door, $stage);
+  }
+
+  /**
+   * Builds one operation from its parameters, through the runner.
+   *
+   * @param string $resource
+   *   The resource's `#[Resource]` id, or its class.
+   * @param string $operation
+   *   The operation id.
+   * @param array $parameters
+   *   The operation's parameters, by name, as raw values, never objects:
+   *   the operation's storage loads what they name.
+   * @param \Drupal\surface\Staging\Stage|string|null $stage
+   *   The stage the operation is built through and the storage is handed,
+   *   or its id; NULL for permanent storage.
+   * @param \Drupal\surface\Operation\Door|string $door
+   *   The door: HttpDoors::DOOR for the API, the key of a page's door.
    *
    * @return \Drupal\surface_http\ServedOperation
    *   The operation, built. The read the build adds is served as the
    *   update it reads: its envelope and its schema are the update's.
    *
-   * @throws \InvalidArgumentException
-   *   When the resource or operation is not discovered, or a parameter
-   *   the operation needs is missing or names nothing.
+   * @throws \Drupal\surface_http\RefusedException
+   *   When the runner refused it: a resource, operation or parameter that
+   *   names nothing, the permission, the stage or the access.
    */
-  public function resolve(string $resource, string $operation, array $parameters, ?Stage $stage = NULL): ServedOperation {
-    $definition = $this->registry->getDefinition($resource);
-    $found = $this->registry->getOperation($definition->name(), $operation);
-    // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
-    if ($found->reads !== NULL) {
-      $found = $this->registry->getOperation($definition->name(), $found->reads);
-      $operation = $found->id;
+  public function resolve(string $resource, string $operation, array $parameters, Stage|string|null $stage = NULL, Door|string $door = HttpDoors::DOOR): ServedOperation {
+    $run = $this->prepare($resource, $operation, $parameters, $stage, $door);
+    $refusal = $run->refusal();
+    if ($refusal !== NULL) {
+      throw new RefusedException($refusal);
     }
-    $context = $this->resources->operation($definition->name(), $operation, $parameters, $stage);
-    $built = $this->resources->build($definition->name(), $context);
-    $storage = $definition->storage === NULL ? NULL : $this->resources->storage($definition->name(), $context, $built, stage: $stage);
-    return new ServedOperation($definition, $found, $parameters, $context, $built, $storage, $stage);
+    return new ServedOperation($run, $parameters);
   }
 
   /**
-   * Builds a served operation for what the account alone decides.
+   * Submits values to a served operation, through the runner.
+   *
+   * To the surface and the storage the operation was prepared with, as
+   * the account it was prepared for (OperationRunnerInterface::submit()).
+   *
+   * @param \Drupal\surface_http\ServedOperation $served
+   *   The operation, prepared, with a storage.
+   * @param array $values
+   *   The values, keyed by resource key.
+   * @param bool $dryRun
+   *   TRUE to stop after prepare.
+   *
+   * @return \Drupal\surface\Operation\OperationRun
+   *   The run: the pipeline's result and the outputs.
+   *
+   * @throws \Drupal\surface\Staging\StageRaceException
+   *   When the stage moved meanwhile.
+   */
+  public function submit(ServedOperation $served, array $values, bool $dryRun = FALSE): OperationRun {
+    return $this->runner->submit($served->run, $values, $dryRun);
+  }
+
+  /**
+   * Names the ids the runner is asked with: the operation served as.
+   *
+   * @param string $resource
+   *   The resource, as the request named it.
+   * @param string $operation
+   *   The operation, as the request named it.
+   *
+   * @return array{0: string, 1: string}
+   *   The resource and the operation; as named, when discovery has
+   *   neither, for the runner to refuse.
+   */
+  protected function ids(string $resource, string $operation): array {
+    try {
+      [$definition, $found] = $this->servedAs($resource, $operation);
+    }
+    catch (\InvalidArgumentException) {
+      return [$resource, $operation];
+    }
+    return [$definition->name(), $found->id];
+  }
+
+  /**
+   * Builds a gated operation for what the account alone decides.
    *
    * What the full schema is emitted from: the resource built in the same
    * context, its static access answers applied and its runtime ones set
@@ -290,55 +311,14 @@ final class ServedOperations {
    * Decision: see
    * docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
    *
-   * @param \Drupal\surface_http\ServedOperation $served
-   *   The operation.
+   * @param \Drupal\surface\Operation\OperationRun $gated
+   *   The operation, gated.
    *
    * @return \Drupal\surface\SurfaceInterface
    *   The resource, built for the account alone.
    */
-  public function declared(ServedOperation $served): SurfaceInterface {
-    return $this->resources->buildStatic($served->definition->name(), $served->context);
-  }
-
-  /**
-   * Answers whether an account may use a served operation.
-   *
-   * The operation's permission, then the resource's access class, as the
-   * operation form and its route answer it: no host stands behind the
-   * operation, so an answer with no opinion is a refusal.
-   *
-   * @param \Drupal\surface_http\ServedOperation $served
-   *   The operation.
-   * @param \Drupal\Core\Session\AccountInterface|null $account
-   *   The account, or NULL for the current user.
-   *
-   * @return \Drupal\Core\Access\AccessResultInterface
-   *   Allowed or forbidden, never neutral.
-   */
-  public function access(ServedOperation $served, ?AccountInterface $account = NULL): AccessResultInterface {
-    return $this->contextAccess($served->definition->name(), $served->context, $account);
-  }
-
-  /**
-   * Answers whether an account may use an operation in a context.
-   *
-   * As access() answers, for a context no build was made for.
-   *
-   * @param string $resource
-   *   The resource's `#[Resource]` id, or its class.
-   * @param \Drupal\surface\Resource\OperationContext $context
-   *   The operation's context.
-   * @param \Drupal\Core\Session\AccountInterface|null $account
-   *   The account, or NULL for the current user.
-   *
-   * @return \Drupal\Core\Access\AccessResultInterface
-   *   Allowed or forbidden, never neutral.
-   */
-  public function contextAccess(string $resource, OperationContext $context, ?AccountInterface $account = NULL): AccessResultInterface {
-    return SurfaceAccess::decisive(
-      $this->resources->access($this->registry->getDefinition($resource)->name(), $context, $account),
-      'The resource this page serves may not be written by this account.',
-    );
+  public function declared(OperationRun $gated): SurfaceInterface {
+    return $this->resources->buildStatic($gated->definition()->name(), $gated->context());
   }
 
   /**

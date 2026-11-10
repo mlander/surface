@@ -10,11 +10,14 @@ use Drupal\surface\Staging\Stage;
 /**
  * Runs one operation through the one sequence every door follows.
  *
- * The gate asks whether a call may be made; run() makes it. Both answer
- * an OperationRun, refused or not: a failure the caller can cause is a
- * result, never an exception. What can still leave them: run() throws a
- * StageRaceException when a stage moved meanwhile; gate() throws
- * nothing a caller can cause. Anything else thrown by either is a bug.
+ * The gate asks whether a call may be made; run() makes it, or prepares
+ * it; submit() submits values to a prepared run. Each answers an
+ * OperationRun, refused or not: a failure the caller can cause is a
+ * result, never an exception. What can still leave them: run() and
+ * submit() throw a StageRaceException when a stage moved meanwhile;
+ * gate() throws nothing a caller can cause; submit() handed a run it
+ * cannot submit to throws a \BadMethodCallException. Anything else
+ * thrown is a bug.
  * The sequence, the identity rule, the disclosure rule and the security
  * model are stated on OperationRunner.
  *
@@ -71,7 +74,10 @@ interface OperationRunnerInterface {
    *   The values to submit, keyed by input key; `[]` runs an operation
    *   that takes none (a delete, an apply, a read). NULL prepares: the
    *   surface is built and its storage composed with the stage, and
-   *   nothing is submitted or written.
+   *   nothing is submitted or written. A prepare of a resource that names
+   *   no storage of its own builds it with none (hasStorage()); a run of
+   *   it with values is refused. With values, run() is a prepare, then
+   *   submit().
    * @param \Drupal\surface\Operation\Door|string $door
    *   The door the call comes through, or its id.
    * @param \Drupal\surface\Staging\Stage|string|null $stage
@@ -99,5 +105,45 @@ interface OperationRunnerInterface {
     bool $dryRun = FALSE,
     ?AccountInterface $account = NULL,
   ): OperationRun;
+
+  /**
+   * Submits values to a prepared run: the pipeline, then the outputs.
+   *
+   * For a door that reads the prepared surface and storage before it
+   * writes, the HTTP door's fingerprint (`If-Match`) and the stale values
+   * it keeps, and the operation form's stored values: the values go to
+   * that same surface and storage, which a second run() would build
+   * again. Run as the account the run was prepared for
+   * (OperationRun::account()), through the same wrapper as gate() and
+   * run(): an account blocked or deleted since the prepare is refused
+   * and nothing is written; one that is not the current user is switched
+   * to, and back in a `finally`.
+   *
+   * A prepare is written through once. A dry run, or a submit whose
+   * result is not valid or commits nothing, leaves it usable, so a door
+   * may validate, then write. After a submit that committed, the
+   * prepare's surface and stored values are from before the write, so a
+   * second submit to it throws: prepare the operation again.
+   *
+   * @param \Drupal\surface\Operation\OperationRun $prepared
+   *   What run() with no values answered: not refused, built, with a
+   *   storage, and not run or committed through.
+   * @param array $values
+   *   The values to submit, keyed by input key; `[]` for an operation
+   *   that takes none.
+   * @param bool $dryRun
+   *   TRUE to prepare the write and skip it.
+   *
+   * @return \Drupal\surface\Operation\OperationRun
+   *   The run: the pipeline's result and the outputs; or refused, when the
+   *   account may no longer be run as.
+   *
+   * @throws \BadMethodCallException
+   *   When the run was refused, only gated, names no storage, already
+   *   ran, or a submit to it committed: the door's bug, not the caller's.
+   * @throws \Drupal\surface\Staging\StageRaceException
+   *   From a storage under a stage, as run() throws it.
+   */
+  public function submit(OperationRun $prepared, array $values, bool $dryRun = FALSE): OperationRun;
 
 }

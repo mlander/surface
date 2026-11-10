@@ -5,10 +5,15 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface_http\Kernel;
 
 use Drupal\Component\Utility\Crypt;
+use Drupal\Core\Access\AccessResult;
+use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\Site\Settings;
+use Drupal\surface\Operation\Door;
+use Drupal\surface\Operation\OperationRun;
 use Drupal\surface\Pipeline\Fingerprint;
 use Drupal\surface_paths_test\Resource\BoardResource;
 use Drupal\surface_paths_test\Storage\NoteStorage;
+use Drupal\surface_http\ServedOperation;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Tests\surface\Kernel\SurfaceKernelTestBase;
@@ -50,7 +55,7 @@ class FingerprintTest extends SurfaceKernelTestBase {
   public function testTheEtagIsByteIdentical(): void {
     \Drupal::state()->set(NoteStorage::KEY, ['note' => 'Pinned']);
     $served_operations = $this->container->get('surface.served_operations');
-    $served = $served_operations->resolve(BoardResource::class, 'update', []);
+    $served = $this->served();
     $stored = $served_operations->stored($served);
     $this->assertSame(['note' => 'Pinned'], $stored);
 
@@ -61,6 +66,27 @@ class FingerprintTest extends SurfaceKernelTestBase {
     // What storage holds is what the token covers.
     \Drupal::state()->set(NoteStorage::KEY, ['note' => 'Moved']);
     $this->assertNotSame($etag, $served_operations->fingerprint($served));
+  }
+
+  /**
+   * Builds the board's update as the door serves it, past its access.
+   *
+   * The board declares no permission and no access class, which no
+   * account passes; the token is the subject here, so the run is made as
+   * the runner makes a prepare that access allowed.
+   *
+   * @return \Drupal\surface_http\ServedOperation
+   *   The operation, built, its storage composed.
+   */
+  protected function served(): ServedOperation {
+    $registry = $this->container->get('surface.resource_registry');
+    $resources = $this->container->get('surface.resources');
+    $definition = $registry->getDefinition(BoardResource::class);
+    $operation = $registry->getOperation(BoardResource::class, 'update');
+    $context = $resources->operation(BoardResource::class, 'update');
+    $built = $resources->build(BoardResource::class, $context);
+    $gated = OperationRun::gated(new Door('test'), $definition, $operation, NULL, $context, AccessResult::allowed(), new AnonymousUserSession());
+    return new ServedOperation(OperationRun::prepared($gated, $built, $resources->storage(BoardResource::class, $context, $built)), []);
   }
 
 }

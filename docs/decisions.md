@@ -313,6 +313,11 @@ public method, public property and public constant, an enum by its
 cases, from this date; a method marked `@internal`, such as
 `OperationRun`'s named constructors, is the runner's and is not pinned.
 
+*Grown 2026-11-10,* by three methods of the runner, for the HTTP door
+moved onto it: `submit()` on `OperationRunnerInterface` and its class,
+`OperationRun::hasStorage()` and `OperationRun::account()`. The four
+pins are unchanged.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -1299,7 +1304,7 @@ account alone.
 
 The route access check of the React page and the contract endpoints
 builds nothing: it asks access with the operation's context alone
-(`ServedOperations::contextFromRequest()`), so a response the dynamic
+(the runner's `gate()` since 2026-11-10), so a response the dynamic
 page cache answers pays the access answer and no build. Not from the
 static permission alone, which `permissionAccess()` now allows: an
 access class or an alter may answer at run time, and only the context
@@ -4807,7 +4812,13 @@ stage applies, which also asks that the operation name a thing,
   check asks the stage's `update` access once the thing's allows, so
   another account's stage is 403 before anything is built, and lets a
   header that names nothing through for the controller's 404
-  (`ServedOperations::fromTarget()`). The full schema and a lookup
+  (`ServedOperations::fromTarget()` until 2026-11-10, the runner's
+  refusal since). *Amended 2026-11-10:* the runner
+  asks the stage, in the check and the controller alike, after the
+  permission and before the thing's context: another account's stage is
+  403 with the stage's own reason, "The stage is another account's.", on
+  a call a stage applies to
+  ([One runner runs an operation](#one-runner-runs-an-operation)). The full schema and a lookup
   ignore it, since they read nothing stored, but at a local id, which
   only the stage names; on a path of the stage itself it is 400,
   answered by the controller, since an access check can only allow or
@@ -5053,8 +5064,13 @@ than the read of one thing, a listing, reads no one thing.
   with `X-Surface-Stage` on a call a stage does not apply to, a read
   included, answers 422 with one violation at no path, code
   `does_not_apply`, "A stage does not apply to this operation.", from
-  `ResourceApiController::served()`, beside the 400 on the stage's own
-  paths, before the stage is read.
+  `ResourceApiController::served()` (`problem()` since 2026-11-10),
+  beside the 400 on the stage's own
+  paths, before the stage is read. *Amended 2026-11-10:* the runner asks
+  whether a stage applies before whether the stage exists and whose it
+  is, so the header naming another account's stage on such a call is 422
+  too, where the route's check answered 403 first; the controller
+  answers it from the runner's refusal (`ResourceApiController::problem()`).
 - **A stage in a form page's query is forbidden where it does not
   apply.** The route's access check can only allow or forbid, so a
   `?stage` on a form whose operation the rule rules out is forbidden,
@@ -5067,7 +5083,7 @@ than the read of one thing, a listing, reads no one thing.
   No shipped resource routes a child under a storage a stage takes.
 
 (`Staging\Stageable`, `Tool\OperationInputs`, `surface_openapi`'s `OpenApiDocument`,
-`surface_http`'s `Controller\ResourceApiController::served()`, `ResourceBuild\OperationRoute::stageRequested()`,
+`surface_http`'s `Controller\ResourceApiController::problem()`, `ResourceBuild\OperationRoute::stageRequested()`,
 `Staging\StagedStorage::prepare()`, `StagedConfigTest`, `StageToolsTest`,
 `OpenApiDocumentTest`, `StagedFormTest`)
 
@@ -5997,6 +6013,17 @@ leaves a secret out" are promises about every door, or about none.
   dispatch alone, through one gate (`OperationGate`; [A route may fill
   or fix what an operation asks
   for](#a-route-may-fill-or-fix-what-an-operation-asks-for)).
+  *Amended 2026-11-10:* the HTTP door's check and the React page ask
+  through the runner, so the one fixed reason is the runner's, "The
+  operation cannot be run by this account with these parameters."
+  (`Refusal::WITHHELD`), the tool door's sentence, where they said
+  "served"; an access class that gives no reason is refused with
+  `OperationRunner::NOT_ALLOWED`, where the page said "The resource this
+  page serves may not be written by this account."; and the React page
+  answers a parameter the operation cannot use, missing or of another
+  type, as a value that names nothing, a page not found for an account
+  that holds the permission
+  ([One runner runs an operation](#one-runner-runs-an-operation)).
 - **A refusal no input can change is access.** The write tool answers a
   permission refusal, an access refusal inside the pipeline and a
   resource locked whole in the Tool API's `Access` failure category,
@@ -6383,7 +6410,7 @@ Decided 2026-11-09. One service runs an operation for every caller,
    nothing;
 2. the operation's permission, asked from the two ids before anything
    is loaded (a `%key` permission with the arguments as given, read by
-   the operation's own parameter names);
+   the operation's own parameter names, its refusal withheld);
 3. with a stage: a stage applies to the operation (`Staging\Stageable`),
    it exists, and the account may write into it (the stage resource's
    own access for `update`);
@@ -6392,16 +6419,19 @@ Decided 2026-11-09. One service runs an operation for every caller,
    the stage;
 5. the access class, `ResourcesInterface::access()`, made decisive
    (`SurfaceAccess::decisive()`) and ANDed with the stage's answer;
-6. the resource names a storage, the build, and the storage composed
-   with the stage;
+6. the build, and the storage composed with the stage (a resource that
+   names no storage of its own is built with none for a prepare, and a
+   run of it with values is refused before the build);
 7. `SurfacePipelineInterface::submit()` with that access answer, as a
    dry run when asked;
 8. the outputs, read through the pipeline; the stage resource's held to
    the outputs its surface declares (`conformOutput()`), every
-   `NotEmitted` key left out, as the HTTP and tool doors hold them today.
+   `NotEmitted` key left out, as the tool door holds them and the HTTP
+   door, through the runner, does.
 
 `gate()` stops after 5; `run()` with no values stops after 6, a prepare;
-`run()` with values goes to 8. Both answer an `OperationRun`, which says
+`run()` with values goes to 8; `submit()` runs 7 and 8 on a prepare.
+Each answers an `OperationRun`, which says
 how far the call got and holds what each step made; reading a step it
 did not reach throws a `\BadMethodCallException` that says why. `gate()`
 builds nothing itself; an access class that judges by the built
@@ -6420,7 +6450,11 @@ does for a resource holding a variant that may refuse.
   gates and a runtime refiner read the current user, not an argument.
   An account with the current user's id and fewer roles is another
   account, or the access check would ask it while the build answered as
-  the current user.
+  the current user. `gate()`, `run()` and `submit()` go through the one
+  wrapper that makes the blocked check and the switch
+  (`OperationRunner::asAccount()`), so a `submit()` for an account
+  blocked since its prepare is a refused run and writes nothing
+  (*amended 2026-11-10*; `submit()` first switched without the check).
 - **An install hook does not use it.** The runner is for a caller
   acting for an account. An install hook is the module's own code, with
   no account acting, so `SpotlightBlockHooks::place()` calls the
@@ -6429,44 +6463,108 @@ does for a resource holding a variant that may refuse.
   permission or access, a stage that does not apply, is gone or is
   another account's, arguments that name nothing or are not the values
   the parameters take (an array, an object, a string for an integer),
-  and a resource with no storage of its own are a `Refusal`; values the
-  pipeline refuses are a run whose result is not valid. Step 4 catches
+  and a run with values of a resource with no storage of its own are a
+  `Refusal`; values the pipeline refuses are a run whose result is not
+  valid. Step 4 catches
   every `\InvalidArgumentException` from `ResourcesInterface::operation()`
   and nothing else, as the doors do around the same call. What can still
-  leave `run()` is a `StageRaceException`, which a door answers with "try
-  again"; `gate()` throws nothing a caller can cause. Anything else
-  thrown is a bug.
+  leave `run()` and `submit()` is a `StageRaceException`, which a door
+  answers with "try again"; `submit()` handed a run it cannot submit to
+  throws a `\BadMethodCallException`, the door's bug; `gate()` throws
+  nothing a caller can cause. Anything else thrown is a bug.
 - **Nothing is thrown after a commit.** Outputs are held to the
   declaration only for the stage resource, as at the doors; widening it
   belongs to the changes that move those doors onto the runner. A
   mismatch is logged on the `surface` channel with the resource, the
   operation and the violations, and the outputs are answered as the
   storage gave them; `OperationRun::conformed()` says whether they were
-  held to the declaration.
+  held to the declaration. *Amended 2026-11-10:* the HTTP door's re-read
+  after a committed write is a second prepare, which asks the
+  permission and the access again; a write can close them (an access
+  class that reads a status or an owner the write changed), or change
+  what the parameters name. A refused re-read never fails the response:
+  the committed write is answered with the status it would have had
+  (200, or 201 with `Location` for a create), its `outputs` and
+  `created`, `contract: null` and no `ETag`. Before, it was a 403 or a
+  404 problem after the write, which a client reads as "nothing written"
+  and may retry.
 - **The disclosure rule, once.** A `Refusal`'s public fields
   (`category`, `code`, `reason`, `cacheability`, `access`) and its
-  `violation()` are what the account may hear. Past the permission, an
-  account that does not hold it (for an operation that declares none,
+  `violation()` are what the account may hear. What the two ids alone
+  decide may be told to anyone; a refusal that had to read an argument
+  is withheld from an account that does not hold the permission. Past
+  the permission, such an account (for an operation that declares none,
   every account) hears one refusal whatever refused: category `Access`,
   code `access`, `Refusal::WITHHELD` ("The operation cannot be run by
   this account with these parameters.", the tool door's sentence), max-age
   0 and the permission's cache contexts. No field tells "names nothing"
-  from "refused by the access class". Heard in full by everyone: an
-  unknown resource or operation, the permission itself, and a stage that
-  does not apply, which the ids alone decide; and, by an account that
-  holds the permission, what the arguments name. The true category,
+  from "refused by the access class". A `%key` permission's refusal is
+  withheld the same way, with the permission's cacheability and max-age
+  0: which permission it names was filled from an argument (*decided
+  2026-11-10*; it was told by the runner and withheld by the HTTP check,
+  which no longer decides it). Heard in full by everyone: an unknown
+  resource or operation, a static permission, and a stage that does not
+  apply, which the ids alone decide; and, by an account that holds the
+  permission, what the arguments name. The true category,
   code, reason and cacheability are kept under `Refusal::actual()`, a
   `RefusalDetail`, for the server's own decisions and logs, never to be
   rendered to the account. A refused run holds its context only for an
   account that may hear why: the context holds what the arguments name.
-- **The stage rule.** A stage that is gone and a stage that is another
-  account's are the same withheld refusal for every account, the
-  permission held or not, so a stage id never says whether a stage
-  exists. It is the HTTP door's rule today, and the strict one; the tool
-  door names the stage and the form route says "The stage is another
-  account's.", which stays until the form door moves onto the runner and
-  reads `actual()`. A refusal by access under a stage keeps the stage's
-  max-age 0, whether or not access allowed.
+- **The stage rule.** Each refusal of the stage a call goes through is
+  told, to every account past the permission, in the order applies,
+  exists, owner: a stage that does not apply is category `Stage`, code
+  `does_not_apply`; a stage that is gone is `Stage`, `not_found`; a
+  stage that is another account's is `Stage`, `access`, with the stage
+  access's reason ("The stage is another account's."). None is kept past
+  the request. A refusal by access under a stage keeps the stage's
+  max-age 0, whether or not access allowed. *Amended 2026-11-10:* the
+  rule first written here made a stage that is gone and one that is
+  another account's one withheld refusal for every account, and called
+  that the HTTP door's rule. It was no door's: every door told the two
+  apart by recorded decision (HTTP 404 against 403, the tool `not_found`
+  against `access`, the form a page not found against "The stage is
+  another account's.", `StageOwnershipTest`). A stage id is a random
+  UUID (`StageStorage` asks core's `uuid` service), so an account can
+  only ask about an id it was handed, and a client or an agent needs to
+  know its stage expired so it opens another. *Amended again
+  2026-11-10:* the same holds when the stage is named by its own path or
+  id, an operation of `StageResource::ID`, and the doors disagreed there
+  (the tool's run `not_found`, the forms reading `actual()`, HTTP
+  withholding both as 403). Every account now hears the refusals of the stage
+  resource's own operations past the permission step as an account
+  holding the permission would: an id that names no stage is
+  `NamesNothing`, `not_found`, with its reason; a stage the account may
+  not use is `Access`, `access`, with the stage access's reason. Over
+  HTTP, `GET /surface-api/surface.stage/<gone>` and its `:apply`,
+  `:changes` and `DELETE` answer 404, and another account's stage 403
+  with "The stage is another account's.", as the tool's run already
+  answered; the tool's own access check, which does not call the runner
+  yet, still withholds both. `SurfaceOperationForm::stageRun()` and the entity example's
+  `StageDeleteConfirmForm` read the public fields again.
+- **A resource with no storage is prepared, never run.** Its host or its
+  parent stores it. A prepare (`run(values: NULL)`) builds it with no
+  storage, `OperationRun::hasStorage()` FALSE and `storage()` a
+  `\BadMethodCallException`, as the HTTP door serves its schema and its
+  read; a run with values is refused before the build, as before.
+  Decided 2026-11-10.
+- **Submitting to a prepared run.** `OperationRunnerInterface::submit(
+  OperationRun $prepared, array $values, bool $dryRun = FALSE)` runs
+  steps 7 and 8 on a prepare, to its surface and its storage, as the
+  account the run was prepared for (`OperationRun::account()`), switched
+  to and back in a `finally` as `run()` switches. A door that reads the
+  prepared storage before it writes (the HTTP door's `If-Match` and the
+  stale values it keeps; the form's stored values, when the form door
+  moves) builds once; calling `run()` twice would build twice. `run()`
+  with values is a prepare, then `submit()`. A run that is refused, only
+  gated, has no storage, or already ran is the door's bug, a
+  `\BadMethodCallException`. Decided 2026-11-10. A prepare is written
+  through once: a dry run, or a submit whose result is not valid or
+  commits nothing, leaves it usable (a form validates, then writes);
+  after a submit that committed, its surface and stored values are from
+  before the write, so a second `submit()` to it is a
+  `\BadMethodCallException` saying to prepare again. The runner keeps
+  the spent prepares in a `\WeakMap`. *Amended 2026-11-10*: a prepare
+  could first be submitted to twice, which wrote twice.
 - **The caller names itself with a value.** `Door`, an id and any enum
   cases as capabilities, `php` by default; `drush surface:run` passes
   `drush`. The runner records it and reads it nowhere yet; it is
@@ -6519,18 +6617,70 @@ Recorded, not changed:
 - The runner does not check the create position a flow stages
   (`CompiledFlow::creating()`); no caller needs it until the form door
   moves onto the runner.
+- A `PATCH` over HTTP asks the access class three times (the route's
+  check, the prepare, the re-read after the commit), where it asked
+  twice before 2026-11-10. Keeping a gated run from the route's check
+  for the controller is out of scope.
+- A known limit of the `%key` rule: the permission is filled from the
+  arguments as given, and whether "names nothing" is told depends on
+  it. An operation whose `%key` is filled by one argument while another
+  names the thing (`edit %bundle items` with `(bundle, id)`) would let
+  an account that holds the permission for bundle A send bundle A with
+  an id of bundle B, and learn whether that id exists. No shipped
+  resource has that shape: the recipe's kitchen and the field instance's
+  entity type and bundle are identity of what the call names.
+- A page's `?stage` that is not a string runs the whole gate (context
+  and access class) without the stage, to know whether to answer its
+  refusal, for a request that ends as a 404.
+- `OperationRun`'s named constructors are public PHP marked `@internal`:
+  code in the same process can build a run with an allowed answer and
+  submit it. That is inside the security model above: such code can
+  call the account switcher.
 
 What moved onto it on 2026-11-09: the form's own runs of the stage's
 operations (`SurfaceOperationForm::stageRun()`: `changes`, `apply`,
 `delete`), the examples that ran an operation by hand for an account
 (`StageDeleteConfirmForm`, `StageDeleteAction`,
-`StagePreviewController::item()`), and the new `drush surface:run`. The
-shipped doors keep their own sequence until they move, each in a later
-change: the HTTP door, the tool door, and the operation form's own
-build, validate and submit.
+`StagePreviewController::item()`), and the new `drush surface:run`.
+
+*Moved 2026-11-10: the HTTP door.* `ServedOperationAccessCheck` reads
+the request and calls `gate()` once, with the account it is handed and
+the door `http` (the React page's route names `react` in its
+`_surface_door` default), and turns the run into an access answer from
+the refusal's public fields. `ServedOperations` calls the runner for
+every action and keeps only what is the door's: the read the build adds
+served as the update it reads, applied before the runner is called; the
+current values; the fingerprint; where a created thing lives; the body
+and the stale values a write keeps. The controller no longer relies on
+the route check having run: the full schema is gated, a read, a
+narrowing, a lookup and a listing prepared, a write prepared, checked
+against `If-Match`, then submitted, the re-read after a commit a second
+prepare whose refusal never fails the response; one method (`ResourceApiController::problem()`) turns a
+refusal into the status the check answers. The door converged on the
+runner where no decision kept its own way: one withheld sentence,
+`Refusal::WITHHELD` (`ServedOperationAccessCheck::REFUSED` keeps the
+name); one fallback sentence when the access class gives no reason,
+`OperationRunner::NOT_ALLOWED`; the order permission, stage applies,
+exists, owner, context, access, so another account's stage on a call a
+stage does not apply to is 422, not 403; a page parameter the runner
+cannot use is a page not found for an account that holds the
+permission, as a value that names nothing is; another account's stage
+is told with its reason. The controller's own outputs check went: a
+mismatch is logged, never a 500 after a commit. Kept, as recorded: the
+header on a path of the stage itself is 400 from the controller and
+ignored by the check; the schema and a lookup read the header only at a
+local id; a path that names nothing is the controller's to answer; and
+the check's cache contexts and max-ages. A refusal that had to read an
+argument, a `%key` permission's among them, is withheld from an account
+that does not hold the permission, in the runner, for every door.
+
+Still to move: the tool door, and the operation form's own build,
+validate and submit.
 
 (`OperationRunner`, `OperationRun`, `Refusal`, `RefusalDetail`, `Door`,
-`Drush\Commands\RunCommand`, `OperationRunnerTest`, `RunCommandTest`)
+`Drush\Commands\RunCommand`, `OperationRunnerTest`, `RunCommandTest`,
+`surface_http`'s `ServedOperations`, `Access\ServedOperationAccessCheck`,
+`Controller\ResourceApiController`, `ControllerAsksAccessTest`)
 
 ## Tools
 

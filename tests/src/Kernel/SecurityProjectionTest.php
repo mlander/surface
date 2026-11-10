@@ -18,6 +18,7 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\PreparedValues;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_examples_workflow\Alter\FeesWorkflowAlter;
+use Drupal\surface\Operation\OperationRunner;
 use Drupal\surface_http\Access\ServedOperationAccessCheck;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Plugin\tool\Tool\ResourceOperationToolBase;
@@ -397,10 +398,26 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
     // parameter naming nothing is let through, for the page to answer
     // 404, as the API and the operation form's route answer it.
     $holder = $this->createUser(['administer surface examples content types']);
-    $this->assertSame([FALSE, 'The resource this page serves may not be written by this account.'], $this->reactAccess('node.type', 'update', ['type' => 'article'], $holder));
+    $this->assertSame([FALSE, OperationRunner::NOT_ALLOWED], $this->reactAccess('node.type', 'update', ['type' => 'article'], $holder));
     $this->assertSame([TRUE, ''], $this->reactAccess('node.type', 'update', ['type' => 'nothing_here'], $holder));
     $admin = $this->createUser(['administer surface examples content types', 'administer content types']);
     $this->assertTrue($this->reactAccess('node.type', 'update', ['type' => 'article'], $admin)[0]);
+
+    // A parameter left out, or one that is not a value the operation
+    // takes, names nothing to the holder too: let through in the request's
+    // own dispatch, for the page to answer 404.
+    $this->assertSame([TRUE, ''], $this->reactAccess('node.type', 'update', [], $holder));
+    $this->assertSame([TRUE, ''], $this->reactAccess('node.type', 'update', ['type' => ['article']], $holder));
+
+    // A `?stage` that names no one stage: the gate without it answers its
+    // refusal as it is, the access class's to the holder and the withheld
+    // one for a `%key` permission the account lacks; names nothing only
+    // when the gate allows.
+    $unstaged = ['type' => 'article', 'stage' => ['x']];
+    $this->assertSame([FALSE, OperationRunner::NOT_ALLOWED], $this->reactAccess('node.type', 'update', $unstaged, $holder));
+    $keyed = $field + ['field_name' => 'field_note', 'stage' => ['x']];
+    $this->assertSame([FALSE, ServedOperationAccessCheck::REFUSED], $this->reactAccess('field.instance', 'update', $keyed));
+    $this->assertSame([TRUE, ''], $this->reactAccess('node.type', 'update', $unstaged, $admin));
   }
 
   /**

@@ -14,17 +14,17 @@ use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\ServedContract;
 use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\Contract\UnknownChoiceException;
+use Drupal\surface\Operation\OperationRun;
+use Drupal\surface\Operation\Refusal;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Reference\References;
-use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
-use Drupal\surface\Pipeline\ViolationSummary;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
-use Drupal\surface\Staging\Stageable;
+use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -76,9 +76,13 @@ use Drupal\surface_http\ProblemDetails;
  * names the staged create with the header alone. The answer names no
  * stage: the caller did.
  *
- * Access is the route's requirement, the operation's permission then the
- * resource's access class; the pipeline is handed the same answer, as the
- * operation form hands it to its submit. Every answer carries the
+ * Every action runs through the runner (surface.runner), as the route's
+ * access check does, so the controller asks access itself and serves
+ * nothing to a request the check would refuse: the full schema is gated,
+ * a read, a narrowing, a lookup and a listing prepared, and a write
+ * prepared, checked against `If-Match`, then submitted to the same
+ * surface and storage. A refusal is problem details, with the status the
+ * check would answer (problem()). Every answer carries the
  * `Contract-Version` header, the version of the wire format its documents
  * are written in (ContractEmitter::CONTRACT), so a client refuses a
  * document it does not know before reading it.
@@ -188,7 +192,11 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * @throws \Drupal\surface_http\ProblemException
    *   For a path that names nothing (404), a method it does not answer
    *   (405), a contract 2 path (410), a stale `If-Match` (412), a body of
-   *   another media type (415) and a refusal (422); ProblemDetailsSubscriber
+   *   another media type (415) and values refused (422); and for what the
+   *   runner refuses (problem()): the permission, the access class,
+   *   another account's stage and the one withheld refusal (403), what
+   *   names nothing and a stage that is gone (404), and a stage header on
+   *   a call a stage does not apply to (422). ProblemDetailsSubscriber
    *   writes each.
    */
   public function handle(Request $request, string $resource, string $s1 = '', string $s2 = '', string $s3 = '', string $s4 = '', string $s5 = ''): Response {
@@ -216,10 +224,10 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   schema, `rel="describedby"`.
    */
   public function read(ServedTarget $target): JsonResponse {
-    $served = $this->served($target);
+    $served = $this->prepared($target);
     $response = $this->respond($this->envelope($this->emit($served, $this->servedOperations->current($served))));
     $this->tag($response, $served);
-    $response->headers->set('Link', sprintf('<%s>; rel="describedby"', $this->location($served, TRUE)->getGeneratedUrl()));
+    $response->headers->set('Link', sprintf('<%s>; rel="describedby"', $this->location($served->definition, $served->operation, $served->parameters, TRUE)->getGeneratedUrl()));
     return $response;
   }
 
@@ -246,22 +254,26 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   `rel="describedby"`.
    *
    * @throws \Drupal\surface_http\ProblemException
-   *   422 for a value refused, 403 for a refusal by access.
+   *   422 for a value refused; 404 for a resource with no storage; and
+   *   what the runner refuses, as problem() answers it: 403 for the
+   *   permission, the access class, another account's stage and the one
+   *   withheld refusal, 404 for what names nothing and a stage that is
+   *   gone, 422 for a stage header on a call a stage does not apply to.
    */
   public function listing(Request $request, ServedTarget $target): JsonResponse {
-    $served = $this->served($target);
+    $served = $this->prepared($target);
     if ($served->storage === NULL) {
       $detail = (string) $this->t('The @resource resource names no storage, so there is nothing to list.', ['@resource' => $served->definition->id]);
       throw new ProblemException(404, $detail);
     }
     $values = array_diff_key($request->query->all(), $target->parameters, [ServedPaths::DRY_RUN => TRUE]);
-    $result = $this->pipeline->submit($served->surface, $values, $served->storage, access: $this->servedOperations->access($served));
+    $run = $this->submitted($served, $values);
+    $result = $run->result();
     if (!$result->isValid()) {
       throw $this->refused($result->document($this->values($served, $result->held()), machine: FALSE));
     }
-    $outputs = $this->pipeline->outputs($served->surface, $served->storage, $result);
-    $response = $this->respond($outputs);
-    $response->headers->set('Link', sprintf('<%s>; rel="describedby"', $this->location($served, TRUE)->getGeneratedUrl()));
+    $response = $this->respond($run->outputs());
+    $response->headers->set('Link', sprintf('<%s>; rel="describedby"', $this->location($served->definition, $served->operation, $served->parameters, TRUE)->getGeneratedUrl()));
     return $response;
   }
 
@@ -294,7 +306,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   type given is not one a bare key allows.
    */
   public function lookup(Request $request, ServedTarget $target): JsonResponse {
-    $served = $this->served($target);
+    $served = $this->prepared($target);
     $key = (string) $request->query->get('key', '');
     $pointer = str_starts_with($key, '/') ? $key : '/' . $key;
     $path = array_map(static fn (string $segment): string => str_replace(['~1', '~0'], ['/', '~'], $segment), explode('/', substr($pointer, 1)));
@@ -353,24 +365,27 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   no key whose list the site decides, or no value of its list.
    */
   public function schema(ServedTarget $target, ?Request $request = NULL): CacheableJsonResponse {
-    $served = $this->served($target);
+    // Gated, never built in full: the schema reads nothing stored.
+    $gated = $this->gated($target);
+    $definition = $gated->definition();
+    $operation = $gated->operation();
     // Built for the account alone: the full schema varies by the
     // account's static access answers and by nothing a runtime one read.
     // Decision: see
     // docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability.
-    $id = $this->location($served, TRUE);
-    $declared = $this->servedOperations->declared($served);
-    $choices = $this->choices($request, $served, $declared);
+    $id = $this->location($definition, $operation, $target->parameters, TRUE);
+    $declared = $this->servedOperations->declared($gated);
+    $choices = $this->choices($request, $definition->id, $declared);
     $url = $id->getGeneratedUrl();
     $chosen = $choices->isEmpty() ? $url : $url . (str_contains($url, '?') ? '&' : '?') . Choices::query($choices->all());
-    $full = $this->emitter->emitFull($declared, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $chosen, choices: $choices, schema_url: $url);
+    $full = $this->emitter->emitFull($declared, $definition->id, $operation->id, $operation->label, widgets: TRUE, operation: $operation->facts(), id: $chosen, choices: $choices, schema_url: $url);
     $response = new CacheableJsonResponse($full->document['schema']);
     $response->setEncodingOptions(JsonResponse::DEFAULT_ENCODING_OPTIONS | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     $response->headers->set('Content-Type', self::SCHEMA_TYPE);
     $response->headers->set(self::VERSION_HEADER, (string) ContractEmitter::CONTRACT);
     $response->addCacheableDependency($full);
     $response->addCacheableDependency($id);
-    $response->addCacheableDependency($this->servedOperations->access($served));
+    $response->addCacheableDependency($gated->access());
     $response->getCacheableMetadata()->addCacheContexts(['url.query_args', 'languages:language_interface']);
     return $response;
   }
@@ -380,8 +395,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *
    * @param \Symfony\Component\HttpFoundation\Request|null $request
    *   The request: each `choose` of its query string, as it arrived.
-   * @param \Drupal\surface_http\ServedOperation $served
-   *   The operation.
+   * @param string $resource
+   *   The resource's id.
    * @param \Drupal\surface\SurfaceInterface $declared
    *   The data surface the full schema is emitted from.
    *
@@ -393,13 +408,13 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   pointer for one Choices::resolve() refuses, with the list's values
    *   when there are no more of them than the site list limit.
    */
-  protected function choices(?Request $request, ServedOperation $served, SurfaceInterface $declared): Choices {
+  protected function choices(?Request $request, string $resource, SurfaceInterface $declared): Choices {
     try {
       return Choices::resolve($declared, Choices::fromQuery((string) $request?->server->get('QUERY_STRING', '')));
     }
     catch (UnknownChoiceException $e) {
       $arguments = [
-        '@resource' => $served->definition->id,
+        '@resource' => $resource,
         '@pointer' => $e->pointer,
         '@value' => (string) $e->value,
         '@by' => (string) $e->by,
@@ -437,7 +452,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   each answer the new choices orphaned.
    */
   public function narrow(Request $request, ServedTarget $target): JsonResponse {
-    $served = $this->served($target);
+    $served = $this->prepared($target);
     $this->assertMediaType($request, ['application/json']);
     $body = $this->servedOperations->body($request);
     $current = $this->servedOperations->current($served);
@@ -473,21 +488,31 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The one result shape, `{ok, committed, changed, changes, values,
    *   violations, notes, stale}` (ResultDocument), then this door's own
    *   `outputs`, the resource's outputs as the storage reads them back,
-   *   `contract`, the envelope rebuilt from what is stored now, and
-   *   `created`, for an operation that creates, the operation the created
-   *   thing now lives at; a dry run adds `x-surface-dry-run: true`. 200,
-   *   or 201 with `Location` for a written create (200 and no `Location`
-   *   for a staged one, `created` naming its local id in the stage); the
-   *   `ETag` of what is now stored for a written update.
+   *   `contract`, the envelope rebuilt from what is stored now (NULL when
+   *   the runner refuses that re-read: the write closed the account's
+   *   access, or changed what the parameters name), and `created`, for an
+   *   operation that creates, the operation the created thing now lives
+   *   at; a dry run adds `x-surface-dry-run: true`. 200, or 201 with
+   *   `Location` for a written create (200 and no `Location` for a staged
+   *   one, `created` naming its local id in the stage); the `ETag` of what
+   *   is now stored for a written update whose re-read was not refused.
    *
    * @throws \Drupal\surface_http\ProblemException
    *   412 when `If-Match` no longer names what is stored, 415 for a body
-   *   of another media type, 405 for a resource with no storage, and for
-   *   a refusal 422 (403 for a refusal by access, 404 for a subject that
-   *   names nothing), each error a JSON Pointer.
+   *   of another media type, 405 for a resource with no storage, 422 for
+   *   values refused, each error a JSON Pointer; and, before anything is
+   *   written, what the runner refuses, as problem() answers it: 403 for
+   *   the permission, the access class, another account's stage and the
+   *   one withheld refusal, 404 for what names nothing and a stage that is
+   *   gone, 422 for a stage header on a call a stage does not apply to.
+   * @throws \Drupal\surface\Staging\StageRaceException
+   *   When the stage moved while the write was kept in it, as every door
+   *   lets it through: a server error, and nothing written.
    */
   public function write(Request $request, ServedTarget $target): JsonResponse {
-    $served = $this->served($target);
+    // Prepared, then checked against `If-Match` and its stale values kept
+    // from that same storage, then submitted to it: one build.
+    $served = $this->prepared($target);
     if ($served->storage === NULL) {
       $detail = (string) $this->t('The @resource resource names no storage, so there is nothing to write to.', [
         '@resource' => $served->definition->id,
@@ -506,13 +531,8 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // Decision: see docs/decisions.md#a-fingerprint-is-opt-in.
     $this->assertMatches($request, $served);
     $input = $this->servedOperations->keepStale($body, $this->servedOperations->current($served), $this->stalePaths($request));
-    $result = $this->pipeline->submit(
-      $served->surface,
-      $input,
-      $served->storage,
-      dry_run: $dry,
-      access: $this->servedOperations->access($served),
-    );
+    $run = $this->submitted($served, $input, $dry);
+    $result = $run->result();
     // A person's door: messages as the form renders them, labels alone;
     // the paths and codes are the tool's.
     // Decision: see docs/decisions.md#one-result-at-every-door.
@@ -524,7 +544,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     if ($dry || $served->surface->changesNothing()) {
       // A read, and a dry run, answer what its prepare answered.
       // Decision: see docs/decisions.md#who-produces-outputs.
-      $answer['outputs'] = (object) $this->conformed($served, $this->pipeline->outputs($served->surface, $served->storage, $result));
+      $answer['outputs'] = (object) $run->outputs();
     }
     if ($dry) {
       return $this->respond($answer + [self::DRY_RUN => TRUE]);
@@ -535,10 +555,17 @@ final class ResourceApiController implements ContainerInjectionInterface {
       // Decision: see docs/decisions.md#a-placed-block-is-a-resource.
       return $this->respond($answer);
     }
-    $outputs = $this->conformed($served, $this->pipeline->outputs($served->surface, $served->storage, $result));
-    // Built afresh: what was written is what the resource now refines
-    // against and what the storage now loads.
-    $fresh = $this->served($target);
+    // As the storage read them back, the stage's held to what its
+    // structures declare (OperationRun::conformed()); a mismatch is the
+    // runner's to log, never a failure after the commit.
+    $outputs = $run->outputs();
+    // Prepared afresh: what was written is what the resource now refines
+    // against and what the storage now loads. Nothing refuses after the
+    // commit: a re-read the runner refuses (the write closed the access,
+    // or changed what the parameters name) answers the committed write
+    // with no `contract` and no `ETag`.
+    // Decision: see docs/decisions.md#one-runner-runs-an-operation.
+    $fresh = $this->reread($target);
     // A create staged under the stage header created nothing: it lives at
     // its local id in the stage alone, which `created` names, and it
     // answers 200 with no Location, which has to resolve without a header.
@@ -546,7 +573,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
     // docs/decisions.md#a-staged-create-is-named-by-a-local-id-and-a-later-write-merges-into-it.
     $created = $this->servedOperations->created($served, $result->values, $outputs);
     $answer['outputs'] = (object) $outputs;
-    $answer['contract'] = $this->envelope($this->emit($fresh, $this->servedOperations->current($fresh)));
+    $answer['contract'] = $fresh === NULL ? NULL : $this->envelope($this->emit($fresh, $this->servedOperations->current($fresh)));
     $answer['created'] = $created;
     if ($served->operation->creates && $served->stage === NULL) {
       $response = $this->respond($answer, 201);
@@ -557,79 +584,146 @@ final class ResourceApiController implements ContainerInjectionInterface {
       return $response;
     }
     $response = $this->respond($answer);
-    $this->tag($response, $fresh);
+    if ($fresh !== NULL) {
+      $this->tag($response, $fresh);
+    }
     return $response;
   }
 
   /**
-   * Holds the stage's own outputs to what its structures declare.
-   *
-   * The stage's `changes` and `apply` answer lists of maps, and a dry run
-   * of apply marks the id it cannot know NotEmitted: what the declaration
-   * does not hold is a fault of the stage, and what is not emitted is left
-   * out. Any other resource's outputs are answered as read.
-   *
-   * @param \Drupal\surface_http\ServedOperation $served
-   *   The operation.
-   * @param array $outputs
-   *   The outputs the storage read back.
-   *
-   * @return array
-   *   The outputs, every key not emitted left out.
-   *
-   * @throws \LogicException
-   *   When the stage's do not hold to the declaration.
-   */
-  protected function conformed(ServedOperation $served, array $outputs): array {
-    if ($served->definition->id !== StageResource::ID) {
-      return $outputs;
-    }
-    $violations = $this->pipeline->conformOutput($served->surface, $outputs);
-    if (!$violations->isEmpty()) {
-      throw new \LogicException('The stage answered outputs its structure does not declare: ' . ViolationSummary::fromViolations($violations));
-    }
-    return NotEmitted::strip($outputs);
-  }
-
-  /**
-   * Builds the operation a target names.
+   * Prepares the operation a target names, through the runner.
    *
    * @param \Drupal\surface_http\ServedTarget $target
    *   The target.
    *
    * @return \Drupal\surface_http\ServedOperation
-   *   The operation.
+   *   The operation, built, its storage composed.
    *
    * @throws \Drupal\surface_http\ProblemException
-   *   404 when a parameter, or the `X-Surface-Stage` header, names
-   *   nothing. The access check lets such a request through only for an
-   *   account holding the operation's permission. 400 for the header on
-   *   a path of the stage itself; 422 for the header on any other call a
-   *   stage does not apply to, one violation at no path, code
-   *   `does_not_apply`.
+   *   400 for the header on a path of the stage itself; a refusal as
+   *   problem() answers it.
    */
-  protected function served(ServedTarget $target): ServedOperation {
-    // Refused here and not in the access check, which can only allow or
-    // forbid: a stage is never written into a stage, and the caller needs
-    // the reason to drop the header.
+  protected function prepared(ServedTarget $target): ServedOperation {
+    $this->assertNotStaged($target);
+    $run = $this->servedOperations->prepare($target->definition->name(), $target->operation->id, $target->parameters, $target->stage);
+    $refusal = $run->refusal();
+    if ($refusal !== NULL) {
+      throw $this->problem($refusal);
+    }
+    return new ServedOperation($run, $target->parameters);
+  }
+
+  /**
+   * Submits values to a prepared operation, through the runner.
+   *
+   * @param \Drupal\surface_http\ServedOperation $served
+   *   The operation, prepared, with a storage.
+   * @param array $values
+   *   The values.
+   * @param bool $dryRun
+   *   TRUE to stop before the write.
+   *
+   * @return \Drupal\surface\Operation\OperationRun
+   *   The run: the pipeline's result and the outputs.
+   *
+   * @throws \Drupal\surface_http\ProblemException
+   *   A refusal as problem() answers it: the account may no longer be run
+   *   as (OperationRunnerInterface::submit()), and nothing was written.
+   */
+  protected function submitted(ServedOperation $served, array $values, bool $dryRun = FALSE): OperationRun {
+    $run = $this->servedOperations->submit($served, $values, $dryRun);
+    $refusal = $run->refusal();
+    if ($refusal !== NULL) {
+      throw $this->problem($refusal);
+    }
+    return $run;
+  }
+
+  /**
+   * Prepares the operation a target names again, after a committed write.
+   *
+   * @param \Drupal\surface_http\ServedTarget $target
+   *   The target, whose write committed.
+   *
+   * @return \Drupal\surface_http\ServedOperation|null
+   *   The operation as it is now, or NULL when the runner refuses it: the
+   *   write is committed, so a refusal here never fails the response.
+   */
+  protected function reread(ServedTarget $target): ?ServedOperation {
+    $run = $this->servedOperations->prepare($target->definition->name(), $target->operation->id, $target->parameters, $target->stage);
+    return $run->isRefused() ? NULL : new ServedOperation($run, $target->parameters);
+  }
+
+  /**
+   * Asks the runner whether the operation a target names may be served.
+   *
+   * @param \Drupal\surface_http\ServedTarget $target
+   *   The target.
+   *
+   * @return \Drupal\surface\Operation\OperationRun
+   *   The run, gated: its context and its access, nothing built.
+   *
+   * @throws \Drupal\surface_http\ProblemException
+   *   400 for the header on a path of the stage itself; a refusal as
+   *   problem() answers it.
+   */
+  protected function gated(ServedTarget $target): OperationRun {
+    $this->assertNotStaged($target);
+    $run = $this->servedOperations->gate($target->definition->name(), $target->operation->id, $target->parameters, $target->stage);
+    $refusal = $run->refusal();
+    if ($refusal !== NULL) {
+      throw $this->problem($refusal);
+    }
+    return $run;
+  }
+
+  /**
+   * Refuses the stage header on a path of the stage itself.
+   *
+   * Refused here and not in the access check, which can only allow or
+   * forbid: a stage is never written into a stage, and the caller needs
+   * the reason to drop the header.
+   *
+   * @param \Drupal\surface_http\ServedTarget $target
+   *   The target.
+   *
+   * @throws \Drupal\surface_http\ProblemException
+   *   400.
+   */
+  protected function assertNotStaged(ServedTarget $target): void {
     if ($target->stage !== NULL && $target->definition->id === StageResource::ID) {
       $detail = (string) $this->t('The @header header names a stage to write into or read through, and a stage is not staged: send this request without it.', ['@header' => ServedPaths::STAGE_HEADER]);
       throw new ProblemException(400, $detail);
     }
-    // A header the call cannot honor is refused, reads included, rather
-    // than read through a stage that could never hold a write of it.
-    // Decision: see
-    // docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
-    if ($target->stage !== NULL && !Stageable::operation($target->definition, $target->operation)) {
-      $refusal = new Violation('', '', $this->t('A stage does not apply to this operation.'), Violation::DOES_NOT_APPLY);
-      throw $this->refused(ResultDocument::refused([], $refusal));
-    }
-    try {
-      return $this->servedOperations->fromTarget($target);
-    }
-    catch (\InvalidArgumentException $e) {
-      throw new ProblemException(404, $e->getMessage());
-    }
+  }
+
+  /**
+   * Answers a refusal of the runner as problem details.
+   *
+   * The one place a refusal becomes a status, read from what the account
+   * may hear: the status the route's access check answers for the same
+   * request. 403 for the permission, the access class, another account's
+   * stage, and the one withheld refusal, its one error the whole call's,
+   * as the pipeline's own refusal of a run reads (Refusal::violation());
+   * 404 for what names nothing, a stage that is gone among it; and 422 for
+   * a stage header on a call a stage does not apply to, one violation at
+   * no path, code `does_not_apply`, so the caller drops the header.
+   *
+   * Decision: see
+   * docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
+   *
+   * @param \Drupal\surface\Operation\Refusal $refusal
+   *   The refusal.
+   *
+   * @return \Drupal\surface_http\ProblemException
+   *   The problem.
+   */
+  protected function problem(Refusal $refusal): ProblemException {
+    return match ($refusal->code) {
+      Violation::DOES_NOT_APPLY => $this->refused(ResultDocument::refused([], new Violation('', '', $this->t('A stage does not apply to this operation.'), Violation::DOES_NOT_APPLY))),
+      Violation::NOT_FOUND => new ProblemException(404, $refusal->reason),
+      default => $this->refused(ResultDocument::refused([], $refusal->violation())),
+    };
   }
 
   /**
@@ -670,9 +764,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The contract, `$id` the path the envelope is read at.
    */
   protected function emit(ServedOperation $served, array $values): ServedContract {
-    $id = $this->location($served);
+    $id = $this->location($served->definition, $served->operation, $served->parameters);
     // A deferred key's `fetch` is written against the full schema's URL.
-    $schema = $this->location($served, TRUE);
+    $schema = $this->location($served->definition, $served->operation, $served->parameters, TRUE);
     $contract = $this->emitter->emit($served->surface, $values, $served->definition->id, $served->operation->id, $served->operation->label, widgets: TRUE, operation: $served->operation->facts(), id: $id->getGeneratedUrl(), schema_url: $schema->getGeneratedUrl());
     $contract->cacheability->addCacheableDependency($id);
     $contract->cacheability->addCacheableDependency($schema);
@@ -682,8 +776,12 @@ final class ResourceApiController implements ContainerInjectionInterface {
   /**
    * Names the URL a served operation's envelope or schema is read at.
    *
-   * @param \Drupal\surface_http\ServedOperation $served
-   *   The operation.
+   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
+   *   The resource.
+   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
+   *   The operation it is served as.
+   * @param array $parameters
+   *   The operation's parameters, as the request gave them.
    * @param bool $schema
    *   TRUE for its schema's.
    *
@@ -691,9 +789,9 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   The URL, absolute, its identity in the path and the operation's
    *   other parameters in the query string; and what it depends on.
    */
-  protected function location(ServedOperation $served, bool $schema = FALSE): GeneratedUrl {
-    $named = !$this->servedPaths->readsPlain($served->definition, $served->operation);
-    return $this->servedPaths->url($served->definition, $served->operation, array_filter($served->parameters, 'is_scalar'), $named, $schema, ['absolute' => TRUE]);
+  protected function location(ResourceDefinition $definition, OperationDefinition $operation, array $parameters, bool $schema = FALSE): GeneratedUrl {
+    $named = !$this->servedPaths->readsPlain($definition, $operation);
+    return $this->servedPaths->url($definition, $operation, array_filter($parameters, 'is_scalar'), $named, $schema, ['absolute' => TRUE]);
   }
 
   /**
@@ -703,21 +801,23 @@ final class ResourceApiController implements ContainerInjectionInterface {
    *   Where it lives (ServedOperations::created()).
    *
    * @return string|null
-   *   The absolute URL, or NULL when the operation cannot be built.
+   *   The absolute URL, or NULL when discovery has no such operation.
+   *   Nothing is built or asked: ServedOperations::created() built the
+   *   operation's context to find it.
    */
   protected function createdAt(array $created): ?string {
     try {
-      $served = $this->servedOperations->resolve($created['resource'], $created['operation'], $created['parameters']);
+      [$definition, $operation] = $this->servedOperations->servedAs($created['resource'], $created['operation']);
     }
     catch (\InvalidArgumentException) {
       return NULL;
     }
     // Where GET at the thing's path reads it, that path is where it lives.
     // Decision: see docs/decisions.md#a-read-is-an-operation-of-the-resource.
-    if ($this->servedPaths->readsThingAt($served->definition, $served->operation)) {
-      return $this->servedPaths->url($served->definition, $served->operation, array_filter($served->parameters, 'is_scalar'), FALSE, FALSE, ['absolute' => TRUE])->getGeneratedUrl();
+    if ($this->servedPaths->readsThingAt($definition, $operation)) {
+      return $this->servedPaths->url($definition, $operation, array_filter($created['parameters'], 'is_scalar'), FALSE, FALSE, ['absolute' => TRUE])->getGeneratedUrl();
     }
-    return $this->location($served)->getGeneratedUrl();
+    return $this->location($definition, $operation, $created['parameters'])->getGeneratedUrl();
   }
 
   /**

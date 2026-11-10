@@ -105,6 +105,14 @@ use PHPUnit\Framework\Attributes\Group;
  * which Refusal::actual() keeps for the server, and
  * OperationRun::conformed().
  *
+ * Grown on 2026-11-10 by three methods of the runner, for the HTTP door
+ * moved onto it (docs/decisions.md#one-runner-runs-an-operation):
+ * OperationRunnerInterface::submit() and its class's, which submits
+ * values to a prepared run, so a door that reads the prepared storage
+ * before it writes builds once; OperationRun::hasStorage(), a prepare of
+ * a resource that names no storage of its own; and OperationRun::account(),
+ * the account submit() runs as. The four counts above are unchanged.
+ *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
 #[Group('surface')]
@@ -160,12 +168,12 @@ class PublicSurfaceTest extends UnitTestCase {
   protected const OPERATION = [
     'Door' => ['$id', '__construct', '__toString', 'from', 'has'],
     'OperationRun' => [
-      'access', 'conformed', 'context', 'definition', 'door', 'hasBuilt',
-      'hasRun', 'isRefused', 'operation', 'outputs', 'refusal', 'result',
-      'stage', 'storage', 'surface',
+      'access', 'account', 'conformed', 'context', 'definition', 'door',
+      'hasBuilt', 'hasRun', 'hasStorage', 'isRefused', 'operation',
+      'outputs', 'refusal', 'result', 'stage', 'storage', 'surface',
     ],
-    'OperationRunner' => ['__construct', 'const NOT_ALLOWED', 'gate', 'run'],
-    'OperationRunnerInterface' => ['gate', 'run'],
+    'OperationRunner' => ['__construct', 'const NOT_ALLOWED', 'gate', 'run', 'submit'],
+    'OperationRunnerInterface' => ['gate', 'run', 'submit'],
     'Refusal' => [
       '$access', '$cacheability', '$category', '$code', '$reason', 'actual',
       'const WITHHELD', 'violation',
