@@ -15,8 +15,9 @@ use Drupal\surface_examples\Storage\EventNoticesStorage;
  * Example 19: the event's notices, the third step of its setup flow.
  *
  * A resource of its own, in a config object of its own: the flow at
- * /surface-examples/19 draws it whole as its third step, into the same
- * stage as the event setup's two groups.
+ * /surface-examples/19 draws it whole as its third step, while ticket
+ * sales are open or a banner is shown, into the same stage as the event
+ * setup's two steps.
  */
 #[Resource('event.notices', storage: EventNoticesStorage::class)]
 #[Operation('configure',

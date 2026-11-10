@@ -12,7 +12,8 @@ use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\surface\Form\Flow;
+use Drupal\surface\Flow\FlowRegistry;
+use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationArguments;
 use Drupal\surface\ResourceBuild\OperationRoute;
@@ -64,14 +65,15 @@ use Symfony\Component\Routing\Route;
  *     refusal saying nothing for one no permission sorts, since the
  *     operation declares none; any other refusal is the route's, saying
  *     why;
- *   - on a route that declares a flow (Flow), what the flow needs of the
- *     built resource (Flow::refusal()) and of each step over another
- *     resource (Flow::stepRefusal()), refused saying why; a step the
- *     flow does not have, a page not found; a step after the first with
- *     no stage, refused; at a step over another resource, its
- *     operation's permission, then that resource's operation
- *     (Flow::servedAt()), whose arguments naming nothing is a page not
- *     found;
+ *   - on a route that declares a flow (CompiledFlow), what the flow
+ *     needs of the built resource (CompiledFlow::refusal()) and of each
+ *     step over another resource (CompiledFlow::stepRefusal()), refused
+ *     saying why; a step the flow does not have, a page not found; a step
+ *     after the first with no stage, refused; at a step over another
+ *     resource, its operation's permission, then that resource's
+ *     operation (CompiledFlow::servedAt()), whose arguments naming
+ *     nothing is a page not found. A step's `when` is not asked here: the
+ *     form passes over a step it skips;
  *   - the access class, for that context, and with the stage's answer;
  *     at a step over another resource, that resource's access too, so
  *     the route's operation gates every page and the step adds its own.
@@ -110,6 +112,8 @@ final class OperationAccessCheck implements AccessInterface {
    * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
    *   The request stack, whose current request stands in for the one
    *   core hands in no request for: access asked about a link.
+   * @param \Drupal\surface\Flow\FlowRegistry $flows
+   *   The flow classes, for a route that names one.
    */
   public function __construct(
     protected readonly ResourcesInterface $resources,
@@ -118,6 +122,7 @@ final class OperationAccessCheck implements AccessInterface {
     protected readonly OperationGate $gate,
     protected readonly StageStoreInterface $stages,
     protected readonly RequestStack $requestStack,
+    protected readonly FlowRegistry $flows,
   ) {}
 
   /**
@@ -170,7 +175,7 @@ final class OperationAccessCheck implements AccessInterface {
     // docs/decisions.md#one-rule-says-where-a-stage-applies-at-every-door.
     $query = $request ?? $this->linkQuery($route_match);
     try {
-      $staged = $query === NULL ? NULL : OperationRoute::stageRequested($route_match, $query, $this->stages, $this->resources, $this->registry, $account);
+      $staged = $query === NULL ? NULL : OperationRoute::stageRequested($route_match, $query, $this->stages, $this->resources, $this->registry, $account, $this->flows);
     }
     catch (NamesNothingException) {
       return $this->gate->namesNothing($request, answersNotFound: static::answersNotFound($route));
@@ -210,12 +215,21 @@ final class OperationAccessCheck implements AccessInterface {
     catch (\InvalidArgumentException $e) {
       return AccessResult::forbidden($e->getMessage());
     }
-    $flow = Flow::onRoute($route, (string) $route_match->getRouteName())?->resolved($this->registry);
+    try {
+      $flow = CompiledFlow::onRoute($route, (string) $route_match->getRouteName(), $this->flows)?->resolved($this->registry);
+    }
+    catch (\LogicException | \ReflectionException $e) {
+      // A flow class the route no longer matches, written wrong, or gone
+      // since the router was rebuilt (an \InvalidArgumentException is a
+      // \LogicException): refused for this request, as a map written
+      // wrong is above.
+      return AccessResult::forbidden($e->getMessage())->setCacheMaxAge(0);
+    }
     $at = $served;
     // Every answer at a flow's page varies by the step and the stage.
     $varies = (new CacheableMetadata())->addCacheContexts([
-      'url.query_args:' . Flow::STAGE,
-      'url.query_args:' . Flow::STEP,
+      'url.query_args:' . CompiledFlow::STAGE,
+      'url.query_args:' . CompiledFlow::STEP,
     ]);
     if ($flow !== NULL) {
       $refusal = $flow->refusedAt($served, $this->resources, $this->registry, (string) $route_match->getRouteName(), $query, $staged !== NULL);

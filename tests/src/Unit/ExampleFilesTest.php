@@ -55,6 +55,7 @@ class ExampleFilesTest extends UnitTestCase {
     'Keys',
     'Variants',
     'Alter',
+    'Flow',
     'Plugin',
     'Hook',
   ];
@@ -144,10 +145,12 @@ class ExampleFilesTest extends UnitTestCase {
           $parts[] = $base . 'config/schema/' . basename($file) . '#' . $key;
         }
       }
-      // A route an operation form serves; the others are this page's.
+      // A route an operation form serves, or a flow class names the
+      // operation of; the others are this page's.
       $routing = self::ROOT . '/' . $base . $module . '.routing.yml';
       foreach (is_file($routing) ? self::keys($routing) : [] as $key) {
-        if (str_contains((string) FirstResourceDocsTest::entry($routing, $key), '_surface_resource:')) {
+        $entry = (string) FirstResourceDocsTest::entry($routing, $key);
+        if (str_contains($entry, '_surface_resource:') || str_contains($entry, '_surface_flow:')) {
           $parts[] = $base . $module . '.routing.yml#' . $key;
         }
       }
@@ -171,8 +174,8 @@ class ExampleFilesTest extends UnitTestCase {
    * A class it imports from the examples' parts or the main module's
    * providers by an earlier example or the same one; its storage, and when
    * the storage names a config object, both its settings and its schema,
-   * and a variant of it by the same one; and a route's resource with the
-   * route.
+   * and a variant of it by the same one; and a route's resource, or the
+   * flow class it names, with the route.
    */
   public function testWhatEachFileNamesIsListedWithIt(): void {
     $listed = self::listed();
@@ -216,9 +219,17 @@ class ExampleFilesTest extends UnitTestCase {
           }
         }
         if ($key !== NULL && str_ends_with($path, '.routing.yml')) {
-          $this->assertMatchesRegularExpression('/_surface_resource: \'([\w\\\\]+)\'/', $source);
-          preg_match('/_surface_resource: \'([\w\\\\]+)\'/', $source, $resource);
-          $this->assertArrayHasKey((string) self::path($resource[1]), $example['files'], sprintf('Example %d lists the route %s without its resource.', $number, $key));
+          if (preg_match('/_surface_flow: ([\w.]+)$/m', $source, $flow) && !str_contains($source, '_surface_resource:')) {
+            // A route that names a flow class takes its resource from it.
+            $classes = array_filter(array_keys($listed), static fn (string $listed): bool => str_ends_with($listed, '.php') && str_contains(self::source($listed), "#[Flow('" . $flow[1] . "'"));
+            $this->assertCount(1, $classes, sprintf('Example %d lists the route %s, and no listed class declares its flow %s.', $number, $key, $flow[1]));
+            $this->assertArrayHasKey((string) reset($classes), $example['files'], sprintf('Example %d lists the route %s without its flow class.', $number, $key));
+          }
+          else {
+            $this->assertMatchesRegularExpression('/_surface_resource: \'([\w\\\\]+)\'/', $source);
+            preg_match('/_surface_resource: \'([\w\\\\]+)\'/', $source, $resource);
+            $this->assertArrayHasKey((string) self::path($resource[1]), $example['files'], sprintf('Example %d lists the route %s without its resource.', $number, $key));
+          }
           $this->assertContains($key, $example['routes'], sprintf('Example %d lists the route %s, which is not one of its pages.', $number, $key));
         }
       }

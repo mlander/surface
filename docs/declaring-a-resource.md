@@ -705,6 +705,16 @@ value; the storage loads what it names
 ([Derived resources](resources.md#derived-resources),
 [decision](decisions.md#a-parameter-names-a-key)).
 
+## Declaring a flow
+
+A flow, the steps a person takes over one stage, is not declared on a
+resource. It is a class of its own in a module's `src/Flow`, carrying
+`#[Flow(id, label, keep, redirect)]` and implementing `FlowInterface`,
+whose `defineSteps()` lists each step's resource, operation and keys. An
+operation form route names it by its id in `_surface_flow`. It is
+experimental, as every flow is
+([Staging: A flow class](staging.md#a-flow-class)).
+
 ## Names
 
 Four naming rules, so that a reader who has only a grep finds the rest

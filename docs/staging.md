@@ -367,7 +367,8 @@ the store lists, the first step of a flow with no stage in the query
 says "You have an open stage for this: resume it or start again." for
 the account's newest open stage whose first write is the route's
 operation of its resource under the same arguments, linking to the next
-step in that stage, or the confirm page of a one-step flow. The page is
+step drawn in that stage, or the confirm page when no later step is
+drawn. The page is
 then not cached.
 
 The test module `surface_stage_test` ships `Staging\ArrayStageStore`, an
@@ -476,7 +477,7 @@ at the doors and prepare; the flow refuses its route):
 - the `?stage` query of the operation form and of a React page served
   at a module's route (`OperationRoute::stageRequested()`);
 - the React page's access check (`ServedOperations::stageable()`);
-- the flow's own check (`Flow::refusal()`);
+- the flow's own check (`CompiledFlow::refusal()`);
 - the staged storage's prepare (`Stageable::storage()`,
   `Stageable::namesThing()`).
 
@@ -904,13 +905,169 @@ the pipeline runs unchanged over it. Nothing is written to storage.
 ## Flows
 
 A flow draws one operation's form over several steps into one stage,
-one group a step, and ends in a confirm page that applies the stage. A
-step may also draw another resource's operation, so one flow writes
-several settings objects together. It is declared on the operation
-form route, never on the resource: the build, the tools and the HTTP
-door do not see it. Example 19 (`/surface-examples/19`,
+and ends in a confirm page that applies the stage. A step may also draw
+another resource's operation, so one flow writes several settings
+objects together. A flow is written as a class, or as a map on the
+route, its short form; both compile to the same flow. A route names it,
+an operation form route: the build, the tools and the HTTP door do not
+see it. Example 19 (`/surface-examples/19`,
 [the examples' README](https://github.com/mlander/surface/blob/main/modules/surface_examples/README.md#example-19-one-stage-several-steps))
-draws two groups of one resource, then another resource.
+is a class that splits one resource's keys over two steps, then draws
+another resource while ticket sales are open or a banner is shown.
+
+### A flow class
+
+A class in a module's `src/Flow` carrying `#[Flow]` and implementing
+`FlowInterface`. Discovery finds it as it finds resources,
+and the class resolver builds it, so its constructor may take services:
+
+```php
+namespace Drupal\surface_examples\Flow;
+
+use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+use Drupal\Core\StringTranslation\TranslationInterface;
+use Drupal\surface\Flow\ChecksBeforeApplyInterface;
+use Drupal\surface\Flow\FlowInterface;
+use Drupal\surface\Flow\StagedInterface;
+use Drupal\surface\Flow\StepsInterface;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Resource\Attribute\Flow;
+
+#[Flow('event.setup_flow', label: new TranslatableMarkup('Set up the event'), keep: 'short')]
+final class EventSetupFlow implements FlowInterface, ChecksBeforeApplyInterface {
+
+  use StringTranslationTrait;
+
+  /**
+   * Constructs an EventSetupFlow.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
+   *   The string translation service.
+   */
+  public function __construct(TranslationInterface $string_translation) {
+    $this->stringTranslation = $string_translation;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function defineSteps(StepsInterface $steps): void {
+    $steps->step('basics', 'event.setup', 'configure')
+      ->keys('name', 'date', 'capacity')
+      ->label($this->t('The event'))
+      ->description($this->t('What the event is called, when it is, and how many people it holds.'));
+
+    $steps->step('tickets', 'event.setup', 'configure')
+      ->keys('price', 'sales_open', 'note')
+      ->label($this->t('Tickets'));
+
+    $steps->step('notices', 'event.notices', 'configure')
+      ->label($this->t('Notices'))
+      ->description($this->t('Drawn while ticket sales are open or a banner is shown.'))
+      ->when(static fn (StagedInterface $staged): bool => $staged->value('event.setup', 'sales_open') === TRUE || $staged->value('event.notices', 'show_banner') === TRUE);
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function beforeApply(StagedInterface $staged): array {
+    if ($staged->value('event.notices', 'show_banner') === TRUE && $staged->value('event.setup', 'sales_open') !== TRUE) {
+      return [new Violation('', '', $this->t('The notices show a banner while ticket sales are closed; open sales or hide the banner.'), 'banner_while_sales_closed')];
+    }
+    return [];
+  }
+
+}
+```
+
+`#[Flow]` takes the flow's `id`, which a route names; `label`, the
+stage's label; `keep`, optional, `short` or `long` as below; and
+`redirect`, optional, as below. `defineSteps()` adds each step with
+`step(id, resource, operation, arguments)`: the id, distinct among the
+steps; the resource's id or class; one of its operations; and literal
+values for its parameters, none on the first step. Each step then says:
+
+- **What it draws.** `keys(...)` lists keys of the operation's top
+  level, or `group(id)` names one of its groups; with neither, the step
+  draws the whole operation. Not both on one step.
+- **Its heading.** `label()` and `description()` are drawn above the
+  step's fields. No step counter is drawn.
+- **When it is drawn.** `when()` takes a callable handed a
+  `StagedInterface` and answering whether the step is drawn. Not on the
+  first step, which opens the stage.
+
+The first step is the route's operation. A later step over the same
+resource and operation, with no arguments, is a step of the route's
+operation too, whichever way it names the resource; any other step is a
+step over another resource.
+
+`defineSteps()` runs when the router is rebuilt, to write the route's
+resource and operation, and again on every page of the flow: nothing
+compiled is kept between requests, in a long-lived process too. It
+declares and does nothing else: no request, stage or stored value is
+read there, and the callables `when()` takes are stored and called on
+each page.
+
+The route names the flow by its id, and may leave out the resource and
+the operation, which the router's rebuild writes from the first step:
+
+```yaml
+surface_examples.step19:
+  path: '/surface-examples/19'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Example 19: one stage, several steps'
+    _surface_panel: 'surface_examples.panels'
+    _surface_flow: event.setup_flow
+```
+
+A route that writes `_surface_resource` and `_surface_operation` beside
+a flow class must write the first step's. The first step takes its
+arguments from the route, its path parameters or plain defaults, as any
+operation route's operation does.
+
+- **`when` and what the stage holds.** The condition is asked on every
+  page, with what the stage holds. `StagedInterface::value(resource,
+  key, arguments)` reads one value as the step's form reads it: what the
+  stage holds for the thing, else what is stored, a create the first
+  step staged included. `resource` is the route's, one a step is drawn
+  over, or any other, read through its `read`; `arguments`, left out,
+  are the route's for its own resource, the first step's over another,
+  and none for one no step draws; `key` may be a dotted path. Values are
+  read as the system, with no account's access asked, so a key `read`
+  would hide is answered and a `beforeApply()` message must not repeat
+  one; a secret is never answered, and reads as NULL. A condition that
+  throws is an error in the flow class, and surfaces as one. Next goes
+  to the next step drawn, Back to the one before that is drawn, and a
+  link to a step passed over answers 303 to the next step drawn, or the
+  confirm page. A post into a step passed over, from a page drawn
+  before the stage changed, stages nothing: the page says "This step is
+  not part of the flow as it stands." and goes on to the next step
+  drawn. The route's access check does not ask the condition: it judges
+  the step as written, and the form passes over it.
+- **`when` does not change the stage.** What a step staged before its
+  condition turned false stays in the stage, is listed on the confirm
+  page and is applied with the rest. In example 19, stage a banner's
+  text with ticket sales open and the banner hidden, then go Back to the
+  tickets and close sales: the notices are no longer drawn, and the text
+  is still staged.
+- **`beforeApply()`.** A flow class that also implements
+  `ChecksBeforeApplyInterface` answers violations from
+  `beforeApply(StagedInterface $staged)` when Save is pressed on the
+  confirm page, after the apply is rehearsed. Each is said on the page,
+  as a refusal of the rehearsal is, and nothing is applied. It is the
+  place to refuse a stage across steps or resources, as example 19
+  refuses the banner without open sales: "The notices show a banner
+  while ticket sales are closed; open sales or hide the banner." The
+  notices are drawn while a banner is shown, so the step that hides it
+  is always reachable. It is the form door's check alone: the stage's `apply` tool and its HTTP
+  path never see a flow.
+
+### The map, its short form
+
+The map is the short form, with no condition and no check. The content
+type example's flow is one:
 
 ```yaml
 surface_examples_node_type.flow:
@@ -925,39 +1082,50 @@ surface_examples_node_type.flow:
 ```
 
 - **Steps.** `steps` lists the steps in the order they are drawn,
-  each in one of two shapes. A string is a group id of the route's
-  operation. A map is a step over another resource:
+  each in one of three shapes. A string is a group id of the route's
+  operation. A map of `keys` lists keys of the route's operation. A map
+  with `resource` is a step over another resource. An illustration of
+  the three shapes, not a route of the examples:
 
   ```yaml
   _surface_flow:
     steps:
-      - basics
+      - { keys: [name, date, capacity] }
       - tickets
       - { resource: event.notices, operation: configure }
       - { resource: example.row, operation: update, group: notes, arguments: { id: first } }
   ```
 
   `resource` is its id or class, `operation` one of its operations,
-  `group`, optional, one of that operation's groups, drawn whole when
-  left out, and `arguments`, optional, literal values for the
-  operation's parameters, none when left out. The first step is a group
-  of the route's operation, since its submit opens the stage.
-  `label`, optional, is the stage's label, the
-  operation's label by default. `redirect`, optional, is the route the
+  `keys` or `group`, optional, the keys it draws or one of that
+  operation's groups, drawn whole when both are left out, and
+  `arguments`, optional, literal values for the operation's parameters,
+  none when left out. The first step is the route's operation, since its
+  submit opens the stage. The route names its resource and operation.
+
+- **Label, redirect and keep.** `label`, optional, is the stage's
+  label, the operation's label by default. `redirect`, optional, is the route the
   page goes to once the stage is applied, handed the flow route's own
   parameters its path takes; without it the page stays on the confirm
   page. `keep`, optional, is how long the stage the first step opens
   lives after its last write: `short`, the form cache's lifetime
   (`form_cache_expiration`, six hours by default), for a flow a person
   finishes in one sitting, or `long`, the temp store expiry
-  (`tempstore.expire`, a week by default), the default. The first step
-  also draws every key in no group (here the name, the machine name and
-  the description); the first step over another operation draws that
-  operation's keys in no group. A key in a group no step names
-  is never drawn and keeps what it holds.
-  Every group step writes through the route's one operation, and every
-  step over another resource through that resource's: a stage refuses
-  a second operation on one thing.
+  (`tempstore.expire`, a week by default), the default. A flow class
+  says the same three on `#[Flow]`.
+
+Either spelling:
+
+- **Which step draws a key.** A key a step lists is drawn at that step.
+  A key in no group and listed by no step is drawn at the first step
+  over its operation (in the content type's flow, the name, the machine
+  name and the description); when that step is passed over for its
+  `when`, such a key is drawn at no step. A key in a group is drawn at the step that
+  names the group; one in a group no step names is never drawn and
+  keeps what it holds. Every step of the route's operation writes
+  through that one operation, and every step over another resource
+  through that resource's: a stage refuses a second operation on one
+  thing.
 - **A step over another resource.** It is served by that resource's
   operation, built from the step's `arguments` and written into the
   route's stage. At this step the form id, the title and the panel stay
@@ -982,9 +1150,9 @@ surface_examples_node_type.flow:
   needs the stage; without one it is refused, and a step the flow does
   not have is a page not found.
 - **Next, Back and Cancel.** Next stages the step's keys through the
-  pipeline and goes to the next step, with the stage kept, or to the
-  confirm page after the last. Back, from the second step on, goes to
-  the step before and stages nothing. Cancel deletes the stage through
+  pipeline and goes to the next step drawn, with the stage kept, or to
+  the confirm page after the last. Back, from the second step on, goes
+  to the step drawn before and stages nothing. Cancel deletes the stage through
   its `delete` and goes to the first step with no stage; on the first
   step with no stage yet it writes nothing and starts the page again. A
   `destination` in the query is ignored: Next, Back, Cancel and Save
@@ -1005,7 +1173,7 @@ surface_examples_node_type.flow:
   and draws the route's panel after the buttons, as every step does, so
   an example's explanation shows there too. When a write is a delete, or its operation is destructive, it says
   "One of these cannot be undone once applied." and Save is a danger
-  button. Back goes to the last step. Cancel deletes the stage through
+  button. Back goes to the last step drawn. Cancel deletes the stage through
   its `delete` and goes back to the first step with no stage; it is a
   button, since a link may not delete. Save applies what the page listed:
   the page posts back a fingerprint of the stage's writes as it drew
@@ -1013,8 +1181,9 @@ surface_examples_node_type.flow:
   another tab or another door, Save is refused, "The stage changed
   since this page was drawn; it is listed again below.", and the page
   lists them. Otherwise it rehearses the apply when the page is
-  submitted, each refusal said on the page and nothing written, then
-  applies it through the stage's `apply`: "Applied 2 writes.", and the
+  submitted, and asks a flow class's `beforeApply()`, each refusal said
+  on the page and nothing written, then applies it through the stage's
+  `apply`: "Applied 2 writes.", and the
   page goes to the flow's `redirect`, or stays and shows the stage
   applied. The cosmetic layer's redirect is not asked: it is handed an
   operation's result, not the stage's apply. This page is how a form
@@ -1047,19 +1216,32 @@ surface_examples_node_type.flow:
 What is refused, and where:
 
 - **When the router is rebuilt**, what the route alone shows: a
-  `_surface_flow` that is no map of `steps`, `label`, `redirect` and
-  `keep`, a `label` or `redirect` that is no non-empty string, steps
-  that are neither group ids nor maps of `resource`, `operation`, an
-  optional `group` and optional `arguments`, a first step over another
-  resource, a group listed twice for one operation, a step with no group
-  beside another step over the same operation, a flow on a route that
-  names no operation, and a flow on a route whose `_form` is not the
-  operation form. The rebuild stops, naming the route.
+  `_surface_flow` that is neither a flow class's id nor a map of
+  `steps`, `label`, `redirect` and `keep`, a `label` or `redirect` that
+  is no non-empty string, steps that are neither group ids, maps of
+  `keys`, nor maps of `resource`, `operation`, optional `keys` or an
+  optional `group` and optional `arguments`, an empty list of keys,
+  which would draw every key, a step with both keys and a group, a
+  first step over another resource, a group or a key listed twice for
+  one operation, a step with neither keys nor a group beside another
+  step over the same operation, a flow on a route that names no
+  operation, and a flow on a route whose `_form` is not the operation
+  form. For a flow class, also: a class written wrong (an empty id or
+  label on `#[Flow]`, no `FlowInterface`, no step, a first step that
+  carries arguments or a condition), a step declared wrong (an id given
+  twice, an empty id, resource or operation, arguments given as a list,
+  keys and a group together, no key in `keys()`, a key twice, `keys()`,
+  `group()` or `when()` called twice), and a route whose resource and
+  operation are not the first step's. The rebuild stops, naming the
+  route or the class. An id that no class or two classes give depends
+  on what is installed, not on the route: the rebuild closes that route
+  (`_access: 'FALSE'`) and writes every other.
 - **When the route is matched**, by its access check and by the form,
   what needs the resource built, each refused saying why: an operation a
   flow cannot stage, a delete, a read-only operation, or one a stage
-  does not apply to; a step that names a group the operation does not
-  have; a key drawn before a key
+  does not apply to; a step that names a group or a key the operation
+  does not have, or that draws no key since every key it would draw is
+  drawn at another step; a key drawn before a key
   its refinement depends on, "... draws "guide" at step 1, before
   "region" at step 2, and "guide" is refined by the value of "region"
   ..."; and for a create, a required key with no default drawn after the
@@ -1069,9 +1251,10 @@ What is refused, and where:
 - **When the route is matched, for each step over another resource**:
   at every page, a resource or operation that is not discovered; the
   route's own operation, "... as a step over another resource at step 2:
-  its keys are drawn by the route's group steps, so write it as a
-  group."; a group listed twice or a step with no group beside another
-  over the same operation, compared by resource id, so a resource named
+  the route's own operation takes its arguments from the route's path,
+  so in a map write the step as a group or { keys }, with no "resource"
+  or "operation", and in a class give the step no arguments."; a group or a key listed twice, or a step with neither keys
+  nor a group beside another over the same operation, compared by resource id, so a resource named
   by its id at one step and its class at another is one resource; an
   operation that creates, "... a step over another resource updates a
   stored thing or configures a settings object; a create is drawn only by
@@ -1082,14 +1265,15 @@ What is refused, and where:
   and at the first step while no stage is named for every step over
   another resource, so nothing is staged for a flow that cannot be
   finished: its arguments naming nothing is a page not found, and its
-  groups and refiner order are checked over the steps drawn from its
+  groups, keys and refiner order are checked over the steps drawn from its
   operation, as the route's are over the route's: a refiner never
   crosses resources. Only the route's
   operation may create, so the required keys check is its alone. The
   catalog (`docs/catalog.md`) lists a form only for the route's own
   resource, not for steps over another resource.
 
-(why: [decision](decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource),
+(why: [decision](decisions.md#a-flow-is-a-class-and-the-map-is-its-short-form),
+[decision](decisions.md#a-flow-is-declared-on-the-route-that-draws-it-not-a-resource),
 [decision](decisions.md#a-step-order-is-checked-against-the-refiner-graph-and-a-creates-required-keys-at-match-time),
 [decision](decisions.md#a-flow-ends-in-a-confirmation-page-that-shows-the-stages-changes-and-applies-it))
 

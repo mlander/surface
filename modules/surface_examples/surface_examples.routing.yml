@@ -262,10 +262,5 @@ surface_examples.step19:
   defaults:
     _form: 'Drupal\surface\Form\SurfaceOperationForm'
     _title: 'Example 19: one stage, several steps'
-    _surface_resource: 'Drupal\surface_examples\Resource\EventSetupResource'
-    _surface_operation: 'configure'
     _surface_panel: 'surface_examples.panels'
-    _surface_flow:
-      steps: [basics, tickets, { resource: event.notices, operation: configure }]
-      label: 'Set up the event'
-      keep: short
+    _surface_flow: event.setup_flow

@@ -10,7 +10,7 @@ use Drupal\Core\Config\Development\ConfigSchemaChecker;
 use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Config\Schema\SchemaIncompleteException;
 use Drupal\Core\Routing\RouteMatch;
-use Drupal\surface\Form\Flow;
+use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Http\ServedOperationAccessCheck;
 use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Pipeline\TransactionalStorageInterface;
@@ -671,7 +671,7 @@ class StagedConfigTest extends SurfaceKernelTestBase {
    * HTTP door (ResourceApiController), the operation form and a React
    * page served at a module's route (OperationRoute::stageRequested()),
    * the React page's access check (ServedOperations::stageable()), the
-   * flow's own check (Flow::refusal()) and the staged storage's prepare
+   * flow's own check (CompiledFlow::refusal()) and the staged storage's prepare
    * (Stageable::storage(), Stageable::namesThing()). For each operation
    * of the site with a tool, each is asked on its own terms but the flow,
    * which FlowFormTest covers:
@@ -898,7 +898,7 @@ class StagedConfigTest extends SurfaceKernelTestBase {
     assert($check instanceof ServedOperationAccessCheck);
     $raw = ['resource' => $resource, 'operation' => $operation];
     $route_match = new RouteMatch('surface_examples_react.page', new Route('/surface-react/{resource}/{operation}'), $raw, $raw);
-    $request = Request::create('/surface-react/' . $resource . '/' . $operation, 'GET', [Flow::STAGE => $stage]);
+    $request = Request::create('/surface-react/' . $resource . '/' . $operation, 'GET', [CompiledFlow::STAGE => $stage]);
     try {
       $answer = $check->access($route_match, $this->container->get('current_user'), $request);
     }
