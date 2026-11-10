@@ -131,8 +131,9 @@ read by the emitter, the config schema document and the schema reader
 `src/Contract/Keywords/`; why: [decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)).
 A `Choice` is written as its values, by the options resolvers. Every
 other constraint, and one whose row does not apply to the value's type
-or cannot state its options, is named under `x-surface.checkedOnServer`
-with what it checks, so a client knows a server-side rule exists. A
+or cannot state its options, is named under `portable-check`, with
+what it checks under `x-portable-messages`, so a client knows a
+server-side rule exists. A
 `Regex` is written only when every construct in its pattern is on an
 allowlist of those PHP and JavaScript read alike, and is otherwise left
 to the server (`src/Contract/PatternTranslation.php`; why: [decision](decisions.md#a-pattern-both-engines-read-alike)).
@@ -614,7 +615,7 @@ writes two JSON Schema 2020-12 documents by one code path
   key as declared, and every dependency whose cases can be listed
   written as `if`/`then` on the parent (one per venue). A validator, or
   an agent planning its values, reads this one. Where a rule cannot be
-  stated it stays at the declared width and says why: `checkedOnServer`
+  stated it stays at the declared width and says why: `portable-check`
   names a constraint with no keyword, `refine` a dependency on a value
   whose cases cannot be listed (free text, or more combinations than a
   cap), `live` a rule that reads site state, such as a lookup.

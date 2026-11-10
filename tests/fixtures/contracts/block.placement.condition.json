@@ -1,16 +1,16 @@
 {
     "resource": "block.placement.condition",
     "module": "surface_examples_block",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "block.placement.condition",
             "operation": null,
             "label": null,
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "version": 1
                 },
                 "type": "object",

@@ -69,7 +69,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * Each the part of a schema document read into the frame that no key
    * and no rule could say (SchemaReader), held to the frame's accepted
    * values by the pipeline and named under the frame's own
-   * `x-surface.checkedOnServer`.
+   * `portable-check`.
    *
    * @var array<int, array>
    */

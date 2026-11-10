@@ -118,7 +118,7 @@ the resource's contract:
 
 ```json
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$schema": "https://portable-schema.dev/v1/schema",
     "title": "Registration settings, example 1",
     "type": "object",
     "properties": {
@@ -415,7 +415,7 @@ the venues' list tag, so a venue added through example 15 is offered
 here at the next request with no cache rebuild, and its rooms with it.
 The resolver says its list is the whole of the constraint
 (`exact: TRUE`), as a `Choice`'s is, so both documents state the rooms
-as a `oneOf` and name nothing under `checkedOnServer` for the room. The full
+as a `oneOf` and name nothing under `portable-check` for the room. The full
 schema states each venue's rooms as a conditional per venue the
 reference lists.
 
@@ -4646,7 +4646,7 @@ While the site has at most 50 candidates, the setting
 select on the form, a `oneOf` with their labels in both documents, an
 enum in the tool listing. Past it, the key is an id: core's
 `entity_autocomplete` element on the form, `x-surface.widget:
-autocomplete` and the constraint under `checkedOnServer` in both
+autocomplete` and the constraint under `portable-check` in both
 documents, and a sentence in the tool listing naming where to look one
 up: the resource's lookup, `GET
 /surface-api/event.sponsorship:lookup?key=/contact&q=adm`, which answers

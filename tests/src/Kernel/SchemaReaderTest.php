@@ -8,6 +8,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
@@ -136,8 +137,8 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         "count": {"type": "integer", "title": "Count", "default": 3},
         "ratio": {"type": ["number", "null"], "title": "Ratio"},
         "open": {"type": "boolean", "title": "Open", "default": true},
-        "mail": {"type": "string", "format": "idn-email", "title": "Mail"},
-        "old_mail": {"type": "string", "format": "email", "title": "Old mail"},
+        "mail": {"type": "string", "format": "email", "title": "Mail"},
+        "old_mail": {"type": "string", "format": "idn-email", "title": "Old mail"},
         "home": {"type": "string", "format": "uri", "title": "Home"},
         "when": {"type": "string", "format": "date-time", "title": "When"},
         "plain": {"type": "string"}
@@ -193,7 +194,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         "above": {"type": "integer", "exclusiveMinimum": 0, "exclusiveMaximum": 10},
         "share": {"type": "number", "exclusiveMinimum": 0},
         "code": {"type": "string", "minLength": 2, "maxLength": 8, "pattern": "^[A-Z]{2}\\d*$",
-          "x-surface": {"patternMessage": "Two capitals, then digits."}},
+          "x-portable-messages": {"pattern": "Two capitals, then digits."}},
         "loose": {"type": "string", "pattern": "^.+$"},
         "not_digits": {"type": "string", "not": {"pattern": "^\\d+$"}},
         "day": {"type": "string", "format": "date"},
@@ -420,16 +421,11 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
 
     // Both documents name them, with the keywords and the schema itself.
     $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
-    $this->assertSame([
-      [
-        'constraint' => 'JsonSchema',
-        'message' => 'Checked on the server against the schema it was read from: contains.',
-        'schema' => ['contains' => ['const' => 'news']],
-      ],
-    ], $full['properties']['tags'][ContractEmitter::EXTENSION]['checkedOnServer']);
+    $this->assertSame(['drupal:JsonSchema' => ['schema' => ['contains' => ['const' => 'news']]]], $full['properties']['tags']['portable-check']);
+    $this->assertSame(['check.drupal:JsonSchema' => 'Checked on the server against the schema it was read from: contains.'], $full['properties']['tags']['x-portable-messages']);
     $this->assertSame(
       'Checked on the server against the schema it was read from: patternProperties, dependentRequired.',
-      $full[ContractEmitter::EXTENSION]['checkedOnServer'][0]['message'],
+      $full['x-portable-messages']['check.drupal:JsonSchema'],
     );
 
     // And the pipeline checks them.
@@ -441,11 +437,98 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests an identifier below the root is dropped, with a note.
+   *
+   * What a structure keeps of a schema is served again under
+   * `portable-check`, below the root, where the dialect's registry refuses
+   * a `$id` or a `$schema`.
+   */
+  public function testIdentifiersBelowTheRootAreDropped(): void {
+    $document = static::json(<<<'JSON'
+      {"$schema": "https://portable-schema.dev/v1/schema", "$id": "https://example.com/thing",
+       "type": "object", "additionalProperties": false, "properties": {
+        "name": {"$id": "https://example.com/name", "type": "string"},
+        "own": {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "string"},
+        "odd": {"type": "integer", "not": {"$id": "https://example.com/odd", "multipleOf": 2}},
+        "tags": {"type": "array", "items": {"type": "string"}, "contains": {"$anchor": "news", "const": "news"}}
+      }}
+      JSON);
+    $read = $this->read($document);
+    $constraints = static fn (string $key): array => $read->getDefinition($key)->getConstraints();
+    $this->assertArrayNotHasKey('JsonSchema', $constraints('name'));
+    $this->assertArrayNotHasKey('JsonSchema', $constraints('own'));
+    $this->assertSame(['schema' => ['not' => ['multipleOf' => 2]]], $constraints('odd')['JsonSchema']);
+    $this->assertSame(['schema' => ['contains' => ['const' => 'news']]], $constraints('tags')['JsonSchema']);
+    $notes = $this->reader()->notes($document);
+    $dropped = 'Dropped: an identifier, which a Portable Schema document holds at its root alone.';
+    $pointers = [
+      '/properties/name/$id',
+      '/properties/own/$schema',
+      '/properties/odd/not/$id',
+      '/properties/tags/contains/$anchor',
+    ];
+    foreach ($pointers as $pointer) {
+      $this->assertSame($dropped, $notes[$pointer] ?? NULL, $pointer);
+    }
+    $this->assertArrayNotHasKey('/$id', $notes, 'The root keeps its own.');
+  }
+
+  /**
+   * Tests a frame's several kept schemas are one check, read back as one.
+   *
+   * What the root leaves over and the root's own `portable-check` are two
+   * JsonSchema constraints on the frame: written as one check, the `allOf`
+   * of both, whose message names what each says; read back, that check
+   * writes the same document again.
+   */
+  public function testSeveralFrameChecksAreOneCheck(): void {
+    $read = $this->read(static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false,
+       "properties": {"a": {"type": "string"}},
+       "patternProperties": {"^x-": {"type": "string"}},
+       "portable-check": {"drupal:JsonSchema": {"schema": {"minProperties": 1}}}}
+      JSON));
+    $this->assertCount(2, $read->getDefinitions()->frameConstraints());
+    $emitter = $this->container->get('surface.contract_emitter');
+    $full = $emitter->emitFull($read, 'test.read')->document['schema'];
+    $this->assertSame(['allOf' => [['minProperties' => 1], ['patternProperties' => ['^x-' => ['type' => 'string']]]]], $full['portable-check']['drupal:JsonSchema']['schema']);
+    $this->assertSame('Checked on the server against the schema it was read from: minProperties, patternProperties.', $full['x-portable-messages']['check.drupal:JsonSchema']);
+    $again = $emitter->emitFull($this->read(static::json((string) json_encode($full)), 'test.again'), 'test.read')->document['schema'];
+    $this->assertSame(json_encode($full), json_encode($again), 'Read back, the same document.');
+  }
+
+  /**
+   * Tests what contract 4 said under `x-surface` is read as it was.
+   *
+   * A document served before contract 5 named a constraint only the server
+   * checks under `x-surface.checkedOnServer` and a Regex's message under
+   * `x-surface.patternMessage`: read as `portable-check` and
+   * `x-portable-messages` are, so the pipeline checks the same.
+   */
+  public function testContract4SpellingsAreRead(): void {
+    $read = $this->read(static::json(<<<'JSON'
+      {"$schema": "https://json-schema.org/draft/2020-12/schema", "type": "object", "additionalProperties": false, "properties": {
+        "tags": {"type": "array", "items": {"type": "string"},
+          "x-surface": {"checkedOnServer": [{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: contains.", "schema": {"contains": {"const": "news"}}}]}},
+        "code": {"type": "string", "pattern": "^[a-z]+$", "x-surface": {"patternMessage": "Lower case letters only."}},
+        "other": {"type": "string", "not": {"pattern": "^x"}, "x-surface": {"patternMessage": "Not starting with x.", "widget": "textarea"}}
+      }}
+      JSON));
+    $constraints = static fn (string $key): array => $read->getDefinition($key)->getConstraints();
+    $this->assertSame(['schema' => ['contains' => ['const' => 'news']]], $constraints('tags')['JsonSchema']);
+    $this->assertSame('Lower case letters only.', $constraints('code')['Regex']['message']);
+    $this->assertSame('Not starting with x.', $constraints('other')['Regex']['message']);
+    $this->assertFalse($constraints('other')['Regex']['match']);
+    $this->assertTrue($read->getDefinition('other')->getSetting('multiline'), 'The rest of its x-surface is read as before.');
+    $this->assertSame(['tags not_valid'], $this->refused($read, ['tags' => ['a']]));
+  }
+
+  /**
    * Tests draft-04, -06 and -07 are converted before they are read.
    */
   public function testUpconvert(): void {
     $this->assertSame(static::json(<<<'JSON'
-      {"$schema": "https://json-schema.org/draft/2020-12/schema",
+      {"$schema": "https://portable-schema.dev/v1/schema",
        "$id": "https://example.com/thing",
        "type": "object",
        "properties": {
@@ -506,7 +589,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
    * Tests `uniqueItems` is the stock UniqueItems constraint, both ways.
    *
    * On a list and on a collection: read into the constraint, named under
-   * no `checkedOnServer`, written back as the keyword, and checked by the
+   * no `portable-check`, written back as the keyword, and checked by the
    * pipeline as a standard validator checks the keyword. `false`, what an
    * array says with no keyword, reads as nothing.
    */
@@ -528,7 +611,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
     foreach (['tags', 'rows'] as $key) {
       $this->assertTrue($full['properties'][$key]['uniqueItems'], $key);
-      $this->assertArrayNotHasKey('checkedOnServer', (array) ($full['properties'][$key][ContractEmitter::EXTENSION] ?? []), $key . ': stated, so not named as checked on the server.');
+      $this->assertArrayNotHasKey('portable-check', $full['properties'][$key], $key . ': stated, so not named as checked on the server.');
     }
     $said = array_diff_key($full['properties']['tags'], array_flip(['title', 'description', ContractEmitter::EXTENSION]));
     $this->assertSame(['type', 'items', 'minItems', 'uniqueItems'], array_keys($said));
@@ -546,7 +629,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
    * written back as it; a pattern beside one it must not match is kept
    * whole; a row's keyword on a type it says nothing of is kept. Written,
    * a row that does not apply, or a list no resolver reads, is named under
-   * `checkedOnServer`, never dropped.
+   * `portable-check`, never dropped.
    *
    * @see docs/decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways
    */
@@ -585,7 +668,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       ->setDefinition('pick', DataDefinition::create('string')->setLabel('Pick')->addConstraint('Choice', $callback))
       ->seal();
     $emitted = $this->container->get('surface.contract_emitter')->emitFull($surface, 'test.table')->document['schema']['properties'];
-    $checked = static fn (string $key): array => array_column($emitted[$key][ContractEmitter::EXTENSION]['checkedOnServer'] ?? [], 'constraint');
+    $checked = static fn (string $key): array => array_column(PortableKeywords::checks($emitted[$key]), 'constraint');
     $this->assertSame(['Range'], $checked('when'), 'A Range on a string is checked on the server, not dropped.');
     $this->assertArrayNotHasKey('minimum', $emitted['when']);
     $this->assertSame(['Length'], $checked('size'));
@@ -601,7 +684,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
    * Tests a schema kept for a value beside one it carries: both are held.
    *
    * A definition holds one JsonSchema constraint: one read from
-   * `x-surface.checkedOnServer` and the keywords kept for the value are
+   * `portable-check` and the keywords kept for the value are
    * one constraint, the `allOf` of the two, on a value and on a list. A
    * format read as a Regex beside a pattern it must not match is kept as
    * a `pattern`, as a definition holds one Regex.
@@ -610,9 +693,9 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $read = $this->read(static::json(<<<'JSON'
       {"type": "object", "additionalProperties": false, "properties": {
         "code": {"type": "string", "pattern": "^a$", "not": {"pattern": "^b"},
-          "x-surface": {"checkedOnServer": [{"constraint": "JsonSchema", "schema": {"minLength": 3}}]}},
+          "portable-check": {"drupal:JsonSchema": {"schema": {"minLength": 3}}}},
         "tags": {"type": "array", "items": {"type": "string"}, "minLength": 2,
-          "x-surface": {"checkedOnServer": [{"constraint": "JsonSchema", "schema": {"maxItems": 3}}]}},
+          "portable-check": {"drupal:JsonSchema": {"schema": {"maxItems": 3}}}},
         "day": {"type": "string", "format": "date", "not": {"pattern": "^1"}}
       }}
       JSON));
@@ -672,11 +755,11 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
         "badge": {"type": "string", "enum": ["a", "b"], "default": "a", "x-surface": {"widget": "radios"}},
         "notes": {"type": ["string", "null"], "x-surface": {"widget": "textarea"}},
         "kept": {"type": ["array", "null"], "items": {"type": "string"},
-          "x-surface": {"checkedOnServer": [{"constraint": "JsonSchema", "message": "", "schema": {"uniqueItems": true}}]}}
+          "portable-check": {"drupal:JsonSchema": {"schema": {"uniqueItems": true}}}}
       },
       "$defs": {
         "person": {"type": "object", "additionalProperties": false,
-          "properties": {"email": {"type": ["string", "null"], "format": "idn-email", "title": "Email"}},
+          "properties": {"email": {"type": ["string", "null"], "format": "email", "title": "Email"}},
           "x-surface": {"ports": {"shown": {"type": "boolean", "required": true}}}}
       },
       "allOf": [

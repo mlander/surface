@@ -11,7 +11,7 @@ namespace Drupal\surface\Contract\Keywords;
  * options. A Uuid that is not `strict` accepts spellings `uuid` refuses,
  * and one with a `normalizer` accepts what it changes first, so neither
  * is stated; one limited to some `versions` is stated, and named under
- * `checkedOnServer` besides.
+ * `portable-check` besides.
  *
  * @internal
  */

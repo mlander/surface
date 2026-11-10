@@ -243,13 +243,15 @@ the record of the rework that brought the module to the pattern.
   keyword says is a **foreign constraint**: the part left over, a
   `JsonSchema` constraint on the key, or on the frame
   (`DefinitionMap::frameConstraints()`), checked with opis and named
-  under `checkedOnServer` with its schema. A constraint and its keywords
+  under `portable-check` as `drupal:JsonSchema` with its schema. A
+  constraint and its keywords
   are one table, read both ways (`Contract\ConstraintKeywords`, a row per
   constraint in `Contract\Keywords\`: `Range`, `Length`, `Count`,
   `UniqueItems`, `NotBlank`, `Email`, `Regex`, `Uuid`, `Sequentially`,
   `AtLeastOneOf`; `@internal`, closed), whose one type guard,
   `appliesTo()`, holds both ways: a row that does not apply, or cannot
-  state its options, is `checkedOnServer` on write and kept in the
+  state its options, is named under `portable-check` on write and kept
+  in the
   `JsonSchema` constraint on read
   (`docs/decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways`).
   The full schema of a
@@ -534,7 +536,23 @@ the record of the rework that brought the module to the pattern.
   model as optional config in `surface_examples`, shipped disabled
   (`eca.eca.surface_stage_walkthrough`, `docs/staging.md#eca`), and a
   drush walk-through (`docs/staging.md#walk-through-with-drush`).
-- **Contract**: the JSON Schema a built resource or structure emits.
+- **Contract**: the JSON Schema a built resource or structure emits, a
+  Portable Schema document since contract 5.
+- **Portable Schema**: the dialect every served document is written in,
+  `$schema` `https://portable-schema.dev/v1/schema`
+  (`ContractEmitter::DIALECT`): JSON Schema 2020-12 with a profile, fixed
+  rules where the standard leaves a choice, and a vocabulary of its own,
+  the package `fago/portable-schema` (`PortableSchema\`, required by the
+  module). Two of its keywords are written beside the standard ones,
+  before `x-surface`, by `Contract\PortableKeywords`: **`portable-check`**,
+  what only the server checks, a map from `drupal:<constraint plugin id>`
+  to its options (`{}`, or `{"schema": ...}` for `drupal:JsonSchema`);
+  and **`x-portable-messages`**, a message per error code, a Regex's
+  under `pattern` (or `not`), then each check's under
+  `check.drupal:<id>`. They stay on their node below an applicator,
+  where `x-surface` moves to `within`. `format: email`, not `idn-email`,
+  which the profile refuses
+  (`docs/decisions.md#the-served-document-is-a-portable-schema-document`).
 - **Markers**: what a key's `x-surface` says of how far the schema holds
   it, and what an invoker does: `enumerated`, stated in full, narrow
   locally; `deferred`, a list the site decides left out for its size,
@@ -542,8 +560,8 @@ the record of the rework that brought the module to the pattern.
   key's `deferred.fetch` template filled) and cache, or ask the narrowing;
   `refine`, a static rule that cannot be written out, ask the narrowing
   with values; `live`, a runtime rule or a runtime access answer, ask
-  per request and never cache;
-  `checkedOnServer`, a constraint only the server checks
+  per request and never cache; beside them, the dialect's
+  `portable-check`, a constraint only the server checks
   (`docs/served-contract.md#what-a-key-marked-says-and-what-to-do`,
   `docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined`).
 - **Version**: `#[Resource(version:)]` or `#[Structure(version:)]`, from
@@ -929,7 +947,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2218, Assertions: 54878, Errors: 0, Failures: 0, Skipped: 3. Classes: 309 of 309, 8 at a time, browser classes 4.
+phpunit: Tests: 2226, Assertions: 55247, Errors: 0, Failures: 0, Skipped: 3. Classes: 311 of 311, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -949,8 +967,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2104, Assertions: 50329, Skipped: 3, Deprecations: 139. Classes:
-256, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2112, Assertions: 50698, Skipped: 3, Deprecations: 151. Classes:
+258, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -964,14 +982,18 @@ site install and a browser test a Chrome session, which is most of the
 full lane's time. Existing functional tests convert as units touch them
 (ROADMAP.md, Maintenance).
 
-The suite needs two packages a site may not have: the Tool Belt module
+The suite needs three packages a site may not have: the Tool Belt module
 (`drupal/tool_belt`, under `require-dev` in `composer.json`), which the
-two tool comparison tests install, and `opis/json-schema`, which
-`ServedContractTest` validates the emitted schemas with and which the
-module itself needs at runtime, under `require`, to check what a
-structure read from a JSON Schema keeps of it (the `JsonSchema`
-constraint). On a site where this module is a checkout and not a
-Composer package, require both at the site root. Without them those
+two tool comparison tests install; `opis/json-schema`, which the
+contract tests validate values with and which the module itself needs
+at runtime, under `require`, to check what a structure read from a JSON
+Schema keeps of it (the `JsonSchema` constraint); and
+`fago/portable-schema` (`dev-main`, under `require`), the dialect,
+whose registry and validator `ServedContractTest`,
+`PortableDocumentTest` and `PortableServedContractTest` load every
+document in, and whose `Schema` `ServedContract::schema()` answers. On
+a site where this module is a checkout and not a Composer package,
+require them at the site root. Without them those
 tests error; they do not skip.
 
 There are no open findings. The flaky
@@ -1016,8 +1038,9 @@ npx --yes cspell@8 --config /tmp/merged.json --no-progress --no-summary "**"
 
 The served contract's emitter is the main module's:
 `Contract\ContractEmitter` (`surface.contract_emitter`) turns a
-sealed data surface and its values into JSON Schema 2020-12 with an
-`x-surface` keyword per property, variants as an `allOf` of `if`/`then`
+sealed data surface and its values into a Portable Schema document (a
+dialect of JSON Schema 2020-12, contract 5) with an `x-surface` keyword
+per property, variants as an `allOf` of `if`/`then`
 on their deciding sibling. That is the schema as it stands, for one set
 of values; `emitFull()` is the second document, the full schema, which
 reads no value: every key as declared, every listable dependency as
@@ -1035,8 +1058,8 @@ variants, and is what `tool:info` prints). The HTTP door, the submodule
 `surface_http` (`modules/surface_http/`, route `surface.api`, namespace
 `Drupal\surface_http`), serves it with the widget hints on
 an API where the path is the resource and the method the operation
-(contract 3's paths, `ServedPaths`, both documents in contract 4's
-keywords): `GET /surface-api/{resource}[/{id}]` the read's
+(contract 3's paths, `ServedPaths`, both documents in contract 5's
+keywords, `Contract-Version: 5`): `GET /surface-api/{resource}[/{id}]` the read's
 envelope, its `ETag` the stored values' fingerprint (the read the build
 adds served as its update, `ServedOperations::resolve()`, so the
 envelope is the update's); `GET .../schema` the
@@ -1050,7 +1073,9 @@ changed since, a refusal 422 problem details, every path a JSON Pointer
 and every contract 2 path a 410. The submodule `surface_openapi`
 (`modules/surface_openapi/`, routes `surface.openapi.*`, namespace
 `Drupal\surface_openapi`, depends on `surface_http`) describes that API
-as an OpenAPI 3.1 document at `/surface-api/openapi.json`, with Swagger
+as an OpenAPI 3.1 document at `/surface-api/openapi.json`
+(`jsonSchemaDialect` 2020-12, `OpenApiDocument::JSON_SCHEMA_DIALECT`,
+each component keeping the dialect's `$schema`), with Swagger
 UI and Redoc over it (`docs/served-contract.md#an-openapi-document`).
 Neither is installed with the base module, which works at the form and
 tool doors without them (`WithoutHttpModuleTest`) and reaches a served
@@ -1258,9 +1283,14 @@ src/Staging/             The store contract (StageStoreInterface, and
                          the sealing of a record's secrets
                          (StagedSecrets) and what records and resets
                          the config an apply wrote (ConfigWrites).
-src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
+src/Contract/            The served contract's emitter (a Portable Schema
+                         document): ContractEmitter
                          walks the frames, PropertySchema writes each key,
-                         Conditionals the if/then, DocumentHead the top;
+                         Conditionals the if/then, DocumentHead the top,
+                         PortableKeywords the dialect's portable-check and
+                         x-portable-messages; ServedContract, the
+                         document, whose schema() and outputs() answer
+                         it as a PortableSchema\Builder\Schema;
                          the contract diff; the schema reader; the two
                          tables both read, LeafTypes and ConstraintKeywords,
                          whose rows are in Keywords/.

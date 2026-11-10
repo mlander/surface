@@ -1,18 +1,18 @@
 {
     "resource": "event.bulletin",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.bulletin",
             "operation": "configure",
             "label": "Configure the bulletin",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure the bulletin",
                 "description": "Sets how often the event bulletin goes out, the day it is sent and how many items an issue holds.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the bulletin",

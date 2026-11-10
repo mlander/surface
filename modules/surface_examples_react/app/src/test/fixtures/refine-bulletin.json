@@ -1,11 +1,11 @@
 {
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "$id": "http://localhost/surface-api/resource_test.bulletin/schema",
         "title": "Configure the bulletin",
         "description": "Configures the bulletin, whose settings always exist.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the bulletin",
@@ -110,12 +110,12 @@
         "operation": "configure",
         "label": "Configure the bulletin",
         "schema": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$schema": "https://portable-schema.dev/v1/schema",
             "$id": "http://localhost/surface-api/resource_test.bulletin",
             "title": "Configure the bulletin",
             "description": "Configures the bulletin, whose settings always exist.",
             "x-surface": {
-                "contract": 4,
+                "contract": 5,
                 "operation": {
                     "id": "configure",
                     "label": "Configure the bulletin",
@@ -214,12 +214,12 @@
                 "operation": "configure",
                 "label": "Configure the bulletin",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/resource_test.bulletin",
                     "title": "Configure the bulletin",
                     "description": "Configures the bulletin, whose settings always exist.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the bulletin",
@@ -292,12 +292,12 @@
                 "operation": "configure",
                 "label": "Configure the bulletin",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/resource_test.bulletin",
                     "title": "Configure the bulletin",
                     "description": "Configures the bulletin, whose settings always exist.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the bulletin",
@@ -401,12 +401,12 @@
                 "operation": "configure",
                 "label": "Configure the bulletin",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/resource_test.bulletin",
                     "title": "Configure the bulletin",
                     "description": "Configures the bulletin, whose settings always exist.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the bulletin",
@@ -479,12 +479,12 @@
                 "operation": "configure",
                 "label": "Configure the bulletin",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/resource_test.bulletin",
                     "title": "Configure the bulletin",
                     "description": "Configures the bulletin, whose settings always exist.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure the bulletin",

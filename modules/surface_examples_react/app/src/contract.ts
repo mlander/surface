@@ -1,6 +1,7 @@
-// The served contract, as the main module's ContractEmitter writes it:
-// JSON Schema 2020-12 with an `x-surface` keyword on every property, each
-// child defined once under `$defs` and referred to where it is used.
+// The served contract, as the main module's ContractEmitter writes it: a
+// Portable Schema document (a dialect of JSON Schema 2020-12) with an
+// `x-surface` keyword on every property, each child defined once under
+// `$defs` and referred to where it is used.
 // The app reads it through inlineSchema(), once per contract, so nothing
 // else here follows a reference.
 
@@ -12,7 +13,7 @@
  * document of any other version is refused, never read as if it were
  * this one.
  */
-export const CONTRACT = 4;
+export const CONTRACT = 5;
 
 /** A document or an answer of a contract version this app does not read. */
 export class ContractRefused extends Error {
@@ -126,10 +127,6 @@ export interface Extension {
   variants?: Record<string, string>;
   /** On a key with variants: the variant the deciding key chose; absent while none is. */
   chosen?: string;
-  /** Each constraint only the server checks, and what it checks, as plain text. */
-  checkedOnServer?: { constraint: string; message: string }[];
-  /** A Regex's own message: how a person is told what `pattern` allows. */
-  patternMessage?: string;
   /** On a key that refers to an entity: what it refers to. Its value is the id. */
   reference?: Reference;
   /**
@@ -272,6 +269,17 @@ export interface Schema {
   readOnly?: boolean;
   writeOnly?: boolean;
   const?: unknown;
+  /**
+   * The dialect's: each constraint only the server checks, by its name
+   * (`drupal:<plugin id>`), to its options.
+   */
+  'portable-check'?: Record<string, object>;
+  /**
+   * The dialect's: a message per error code, plain text: a Regex's under
+   * `pattern` (or `not`, for a pattern the value must not match), each
+   * check's under `check.<name>`.
+   */
+  'x-portable-messages'?: Record<string, string>;
   'x-surface'?: Extension;
 }
 

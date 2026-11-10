@@ -3,9 +3,9 @@
     "operation": null,
     "label": null,
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "version": 1,
             "within": {
                 "/allOf/6/then/properties/slots/allOf/1/properties/actions/allOf/1": {

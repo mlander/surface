@@ -204,7 +204,10 @@ final class ConfigSchemaPanel {
   }
 
   /**
-   * Lists the JSON Schema keywords a property schema states.
+   * Lists the keywords a property schema states.
+   *
+   * JSON Schema's, and the dialect's own (`portable-check`,
+   * `x-portable-messages`), which say what a value is checked by.
    *
    * @param array $schema
    *   The property's schema.

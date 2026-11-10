@@ -3,11 +3,11 @@
     "operation": "configure",
     "label": "Configure the sponsorship",
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the sponsorship",
         "description": "Sets the sponsor's venue, contact and announcement, and what the sponsor is featured beside, linked to and credited on.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sponsorship",
@@ -40,6 +40,12 @@
                     }
                 ],
                 "default": "riverside",
+                "portable-check": {
+                    "drupal:SurfaceValidReference": {}
+                },
+                "x-portable-messages": {
+                    "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                },
                 "x-surface": {
                     "widget": "select",
                     "reference": {
@@ -48,13 +54,7 @@
                     "emptyOption": {
                         "show": false,
                         "label": "- Select -"
-                    },
-                    "checkedOnServer": [
-                        {
-                            "constraint": "SurfaceValidReference",
-                            "message": "Refers to an entity the account may reference"
-                        }
-                    ]
+                    }
                 }
             },
             "contact": {
@@ -81,6 +81,12 @@
                         "const": null
                     }
                 ],
+                "portable-check": {
+                    "drupal:SurfaceValidReference": {}
+                },
+                "x-portable-messages": {
+                    "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                },
                 "x-surface": {
                     "widget": "select",
                     "reference": {
@@ -89,13 +95,7 @@
                     "emptyOption": {
                         "show": true,
                         "label": "- None -"
-                    },
-                    "checkedOnServer": [
-                        {
-                            "constraint": "SurfaceValidReference",
-                            "message": "Refers to an entity the account may reference"
-                        }
-                    ]
+                    }
                 }
             },
             "page": {
@@ -118,6 +118,12 @@
                         "const": null
                     }
                 ],
+                "portable-check": {
+                    "drupal:SurfaceValidReference": {}
+                },
+                "x-portable-messages": {
+                    "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                },
                 "x-surface": {
                     "widget": "select",
                     "reference": {
@@ -129,13 +135,7 @@
                     "emptyOption": {
                         "show": true,
                         "label": "- None -"
-                    },
-                    "checkedOnServer": [
-                        {
-                            "constraint": "SurfaceValidReference",
-                            "message": "Refers to an entity the account may reference"
-                        }
-                    ]
+                    }
                 }
             },
             "thing": {

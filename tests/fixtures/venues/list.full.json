@@ -3,11 +3,11 @@
     "operation": "list",
     "label": "List the venues",
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "List the venues",
         "description": "Answers a page of the venues, lighter first, each one the account may read, and how many the filter matched.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "list",
                 "label": "List the venues",
@@ -55,7 +55,7 @@
         "additionalProperties": false
     },
     "outputs": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "type": "object",
         "properties": {
             "items": {

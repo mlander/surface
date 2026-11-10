@@ -32,9 +32,12 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
 /**
  * Turns a sealed data surface and its values into the served contract.
  *
- * The contract is JSON Schema 2020-12 for the inputs, with one extension
- * keyword, `x-surface`, on every property for what JSON Schema has no
- * word for, plus the values the schema describes right now. It is the
+ * The contract is a Portable Schema document for the inputs (DIALECT, a
+ * dialect of JSON Schema 2020-12), with one extension keyword,
+ * `x-surface`, on every property for what neither has a word for, plus
+ * the values the schema describes right now. What only the server checks
+ * and a message for an error code are the dialect's own keywords,
+ * `portable-check` and `x-portable-messages` (PortableKeywords). It is the
  * module's canonical contract, and its own emitter rather than the Tool
  * API's, so it can say what a Tool API context definition cannot carry:
  *
@@ -146,8 +149,14 @@ final class ContractEmitter {
 
   /**
    * The dialect every schema this emitter writes declares.
+   *
+   * Portable Schema, a dialect of JSON Schema 2020-12: its profile of the
+   * standard keywords and its own vocabulary, of which the documents use
+   * `portable-check` and `x-portable-messages` (PortableKeywords).
+   * Decision: see
+   * docs/decisions.md#the-served-document-is-a-portable-schema-document.
    */
-  public const DIALECT = 'https://json-schema.org/draft/2020-12/schema';
+  public const DIALECT = 'https://portable-schema.dev/v1/schema';
 
   /**
    * The extension keyword carrying what JSON Schema cannot say.
@@ -164,11 +173,15 @@ final class ContractEmitter {
    * them. Contract 1 is what the module served until 2026-10-20, contract
    * 2 until 2026-10-22, contract 3 (the operation is the method, every
    * path a JSON Pointer) until 2026-10-24; contract 4 cut the `x-surface`
-   * keywords that said nothing or said it twice, and moved no path.
+   * keywords that said nothing or said it twice, and moved no path, until
+   * 2026-11-11; contract 5 is a Portable Schema document, what only the
+   * server checks and a message for an error code in the dialect's own
+   * keywords, and an email address `format: email`.
    * Decision: see
-   * docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire.
+   * docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire,
+   * docs/decisions.md#the-served-document-is-a-portable-schema-document.
    */
-  public const CONTRACT = 4;
+  public const CONTRACT = 5;
 
   /**
    * The most conditionals one key is enumerated into.
@@ -386,11 +399,12 @@ final class ContractEmitter {
    *   entry is still left out;
    * - `x-surface` carries only what holds for any values: `dependsOn`,
    *   `enumerated`, `deferred`, `refine`, `live`, the variants' `by` and
-   *   `variants`, `group`, `after`, `patternMessage`, `checkedOnServer`,
-   *   and the widget hints when asked for, each only where it says
-   *   something. What is only true of a moment (`refined`, `stale`,
-   *   `emptyOption`, the variants' `chosen`) is not written, and there is
-   *   no `values` and no `stale` beside the schema.
+   *   `variants`, `group`, `after`, and the widget hints when asked for,
+   *   each only where it says something; `portable-check` and
+   *   `x-portable-messages` beside it hold for any values too. What is
+   *   only true of a moment (`refined`, `stale`, `emptyOption`, the
+   *   variants' `chosen`) is not written, and there is no `values` and no
+   *   `stale` beside the schema.
    *
    * Decision: see
    * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
@@ -870,7 +884,11 @@ final class ContractEmitter {
       // which no keyword here states: checked by the pipeline.
       // Decision: see
       // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
-      $schema[self::EXTENSION]['checkedOnServer'] = array_map(fn (array $foreign): array => static::foreign($foreign, $this->stringTranslation), $advertised->frameConstraints());
+      // Several are one check, their schemas held together, named by what
+      // all of them say, so reading the document back reads that check.
+      $frame = $advertised->frameConstraints();
+      $together = count($frame) === 1 ? reset($frame) : ['allOf' => array_values($frame)];
+      $schema = PortableKeywords::before($schema, PortableKeywords::write([static::foreign($together, $this->stringTranslation)]));
     }
     if ($advertised->mixins() !== []) {
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
@@ -1460,7 +1478,7 @@ final class ContractEmitter {
       $this->site = $around;
     }
     $definition = $current->definition;
-    [$schema, $extras] = $this->propertySchema->listKeywords($definition);
+    [$schema, $checks] = $this->propertySchema->listKeywords($definition);
     $schema['items'] = $items;
     if (DefinitionMetadata::hasDefaultValue($definition) && !$declaring) {
       $schema['default'] = DefinitionMetadata::getDefaultValue($definition);
@@ -1468,7 +1486,8 @@ final class ContractEmitter {
     if ($locked) {
       $schema['readOnly'] = TRUE;
     }
-    $schema[self::EXTENSION] = $this->propertySchema->extension('list', $depends, $this->propertySchema->signature($entry->definition) !== $this->propertySchema->signature($definition)) + ['collection' => TRUE] + $extras;
+    $schema += $checks;
+    $schema[self::EXTENSION] = $this->propertySchema->extension('list', $depends, $this->propertySchema->signature($entry->definition) !== $this->propertySchema->signature($definition)) + ['collection' => TRUE];
 
     $shown = NULL;
     $held = $values[$entry->name] ?? $declared->getDefault($entry->name);
@@ -1945,10 +1964,14 @@ final class ContractEmitter {
    *   The string translation service, for the message.
    *
    * @return array{constraint: string, message: string, schema: array|\stdClass}
-   *   The entry: `checkedOnServer`'s, with the schema beside the message.
+   *   The entry, with the schema beside the message, which
+   *   PortableKeywords::write() writes as the check `drupal:JsonSchema`.
    */
   public static function foreign(array $schema, TranslationInterface $translation): array {
-    $keywords = JsonSchemaConstraint::keywords($schema);
+    // Schemas held together as an `allOf` alone are named by what each
+    // says: the message a frame's several schemas were written with.
+    $together = array_keys($schema) === ['allOf'] && is_array($schema['allOf']) && array_is_list($schema['allOf']) && array_filter($schema['allOf'], 'is_array') === $schema['allOf'];
+    $keywords = $together ? array_values(array_unique(array_merge(...array_map(JsonSchemaConstraint::keywords(...), $schema['allOf'])))) : JsonSchemaConstraint::keywords($schema);
     return [
       'constraint' => 'JsonSchema',
       'message' => PlainText::of(new TranslatableMarkup('Checked on the server against the schema it was read from: @keywords.', ['@keywords' => implode(', ', $keywords)], [], $translation)),

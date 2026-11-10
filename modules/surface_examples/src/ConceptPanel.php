@@ -502,7 +502,7 @@ final class ConceptPanel {
       ),
       'past' => $this->details(
         $this->t('The same keys past the limit'),
-        $this->t('Emitted with the limit held at @limit for this request, as <code>ddev drush config:set surface.settings reference_list_limit @limit</code> would set it: no <code>oneOf</code>, <code>x-surface.widget: autocomplete</code>, and the constraint named under <code>checkedOnServer</code>.', ['@limit' => self::LOWERED]),
+        $this->t('Emitted with the limit held at @limit for this request, as <code>ddev drush config:set surface.settings reference_list_limit @limit</code> would set it: no <code>oneOf</code>, <code>x-surface.widget: autocomplete</code>, and the constraint named under <code>portable-check</code>.', ['@limit' => self::LOWERED]),
         $this->json($past),
       ),
       'listing' => $this->details(

@@ -1,18 +1,18 @@
 {
     "resource": "event.desk",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.desk",
             "operation": "configure",
             "label": "Configure the information desk",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure the information desk",
                 "description": "Sets the information desk: its phone, whether it is listed in the printed program, where it stands, its lead and up to four volunteers.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the information desk",
@@ -33,8 +33,8 @@
                         "$ref": "#/$defs/event.phone",
                         "title": "Desk phone",
                         "type": "string",
-                        "x-surface": {
-                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        "x-portable-messages": {
+                            "pattern": "Write the number in digits, such as +1 555 0100."
                         }
                     },
                     "in_program": {
@@ -151,7 +151,7 @@
                                     "string",
                                     "null"
                                 ],
-                                "format": "idn-email",
+                                "format": "email",
                                 "x-surface": {
                                     "dependsOn": [
                                         "listed"
@@ -161,8 +161,8 @@
                             "phone": {
                                 "$ref": "#/$defs/event.phone",
                                 "title": "Phone",
-                                "x-surface": {
-                                    "patternMessage": "Write the number in digits, such as +1 555 0100."
+                                "x-portable-messages": {
+                                    "pattern": "Write the number in digits, such as +1 555 0100."
                                 }
                             }
                         },
@@ -190,8 +190,8 @@
                         "examples": [
                             "+1 555 0100"
                         ],
-                        "x-surface": {
-                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        "x-portable-messages": {
+                            "pattern": "Write the number in digits, such as +1 555 0100."
                         }
                     }
                 }

@@ -102,7 +102,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     // docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire.
     $full = $this->decoded($response, 200, 'application/schema+json');
     $this->assertSame(['$schema', '$id', 'title'], array_slice(array_keys($full), 0, 3));
-    $this->assertSame(4, $full['x-surface']['contract']);
+    $this->assertSame(5, $full['x-surface']['contract']);
     $this->assertSame('configure', $full['x-surface']['operation']['id']);
     $this->assertStringEndsWith('/surface-api/registration.step2/schema', $full['$id']);
     $room = $full['properties']['room'];
@@ -168,8 +168,8 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame(['resource', 'operation', 'label', 'schema', 'values', 'stale', 'notes'], array_keys($envelope));
     $this->assertSame('registration.step2', $envelope['resource']);
     $this->assertSame('configure', $envelope['operation']);
-    $this->assertSame('https://json-schema.org/draft/2020-12/schema', $envelope['schema']['$schema']);
-    $this->assertSame(4, $envelope['schema']['x-surface']['contract']);
+    $this->assertSame('https://portable-schema.dev/v1/schema', $envelope['schema']['$schema']);
+    $this->assertSame(5, $envelope['schema']['x-surface']['contract']);
     $this->assertStringEndsWith('/surface-api/registration.step2', $envelope['schema']['$id']);
     $this->assertSame(['venue'], $envelope['schema']['properties']['room']['x-surface']['dependsOn']);
     $this->assertSame('riverside', $envelope['values']['venue']);
@@ -306,7 +306,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $site = $refined['schema']['properties']['third_party_settings']['properties']['surface_examples_compliance'];
     $schema = SchemaResolver::inline($site, $refined['schema'])['properties']['license'];
     $this->assertSame('^\\d{4}$', $schema['pattern']);
-    $this->assertSame('A license number is four digits, such as 2048.', $schema['x-surface']['patternMessage']);
+    $this->assertSame('A license number is four digits, such as 2048.', $schema['x-portable-messages']['pattern']);
   }
 
   /**

@@ -3,10 +3,10 @@
     "operation": "configure",
     "label": "Configure the workshop",
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the workshop",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "version": 1
         },
         "type": "object",
@@ -231,22 +231,22 @@
                     "lathe": {
                         "$ref": "#/$defs/resource_test.sku",
                         "title": "Lathe",
-                        "x-surface": {
-                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                        "x-portable-messages": {
+                            "pattern": "A stock code is two capitals and digits, such as AB12."
                         }
                     },
                     "press": {
                         "$ref": "#/$defs/resource_test.sku",
                         "title": "Drill press",
-                        "x-surface": {
-                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                        "x-portable-messages": {
+                            "pattern": "A stock code is two capitals and digits, such as AB12."
                         }
                     },
                     "saw": {
                         "$ref": "#/$defs/resource_test.sku",
                         "title": "Band saw",
-                        "x-surface": {
-                            "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                        "x-portable-messages": {
+                            "pattern": "A stock code is two capitals and digits, such as AB12."
                         }
                     }
                 },
@@ -264,8 +264,8 @@
                 "examples": [
                     "AB12"
                 ],
-                "x-surface": {
-                    "patternMessage": "A stock code is two capitals and digits, such as AB12."
+                "x-portable-messages": {
+                    "pattern": "A stock code is two capitals and digits, such as AB12."
                 }
             }
         }

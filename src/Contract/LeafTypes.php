@@ -48,13 +48,15 @@ final class LeafTypes {
    *
    * Read in order to read a JSON type back: `integer` before `timestamp`.
    * A string key drawn as a date is `format: date` besides, which the
-   * emitter adds (DateWidget::draws()). Drupal's email validator admits a
-   * non-ASCII local part, which `email` (RFC 5321) refuses and
-   * `idn-email` (RFC 6531) admits.
+   * emitter adds (DateWidget::draws()). `email` is the dialect's (RFC
+   * 5321, ASCII only); Drupal's email validator also admits a non-ASCII
+   * local part, a known difference the pipeline's own check decides.
+   * Decision: see
+   * docs/decisions.md#the-served-document-is-a-portable-schema-document.
    */
   public const ROWS = [
     'string' => ['type' => 'string'],
-    'email' => ['type' => 'string', 'format' => 'idn-email'],
+    'email' => ['type' => 'string', 'format' => 'email'],
     'uri' => ['type' => 'string', 'format' => 'uri'],
     'datetime_iso8601' => ['type' => 'string', 'format' => 'date-time'],
     'integer' => ['type' => 'integer'],
@@ -66,10 +68,11 @@ final class LeafTypes {
   /**
    * Formats read as a type whose row writes another, by format.
    *
-   * `email` is read as Drupal's email, written back as `idn-email`.
+   * `idn-email`, which documents before contract 5 wrote for an email
+   * address, is read as Drupal's email, written back as `email`.
    */
   public const READ_FORMATS = [
-    'email' => 'email',
+    'idn-email' => 'email',
   ];
 
   /**

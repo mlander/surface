@@ -1,18 +1,18 @@
 {
     "resource": "event.press",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.press",
             "operation": "configure",
             "label": "Configure the press page",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure the press page",
                 "description": "Sets the press page: whether it is shown, the press contact, and who last reviewed it and when.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the press page",
@@ -101,7 +101,7 @@
                                     "string",
                                     "null"
                                 ],
-                                "format": "idn-email",
+                                "format": "email",
                                 "x-surface": {
                                     "dependsOn": [
                                         "listed"
@@ -111,8 +111,8 @@
                             "phone": {
                                 "$ref": "#/$defs/event.phone",
                                 "title": "Phone",
-                                "x-surface": {
-                                    "patternMessage": "Write the number in digits, such as +1 555 0100."
+                                "x-portable-messages": {
+                                    "pattern": "Write the number in digits, such as +1 555 0100."
                                 }
                             }
                         },
@@ -142,8 +142,8 @@
                                 ],
                                 "format": "date",
                                 "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-                                "x-surface": {
-                                    "patternMessage": "Write the date as YYYY-MM-DD, such as 2026-10-19."
+                                "x-portable-messages": {
+                                    "pattern": "Write the date as YYYY-MM-DD, such as 2026-10-19."
                                 }
                             },
                             "reviewed_by": {
@@ -203,8 +203,8 @@
                         "examples": [
                             "+1 555 0100"
                         ],
-                        "x-surface": {
-                            "patternMessage": "Write the number in digits, such as +1 555 0100."
+                        "x-portable-messages": {
+                            "pattern": "Write the number in digits, such as +1 555 0100."
                         }
                     }
                 }

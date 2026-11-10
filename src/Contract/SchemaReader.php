@@ -25,8 +25,10 @@ use Drupal\surface\ResourceBuild\ResourceRegistry;
 /**
  * Reads a JSON Schema document into a blueprint: the emitter run backwards.
  *
- * ContractEmitter writes a sealed data surface as JSON Schema 2020-12;
- * this reads such a document, or one written anywhere else, into the keys,
+ * ContractEmitter writes a sealed data surface as a Portable Schema
+ * document, a dialect of JSON Schema 2020-12; this reads such a document,
+ * one written as plain JSON Schema 2020-12 alike (nothing here reads
+ * `$schema`), or one written anywhere else, into the keys,
  * children and rules a blueprint declares, so it is built, validated,
  * drawn, served and called as a structure declared in code is. Each
  * keyword is read as what the emitter writes it from:
@@ -64,9 +66,11 @@ use Drupal\surface\ResourceBuild\ResourceRegistry;
  *   attached, reading the keys its ports are wired to, the child's rule on
  *   those ports;
  * - our own `x-surface` keywords, read back where they say something a
- *   key holds: `ports`, `reads`, `by` and `variants`, `collection`,
- *   `patternMessage`, the widget a key asks for, and `checkedOnServer`
- *   entries of a JsonSchema constraint.
+ *   key holds: `ports`, `reads`, `by` and `variants`, `collection`, and
+ *   the widget a key asks for; and the dialect's: a Regex's message from
+ *   `x-portable-messages` under its keyword's code, and the
+ *   `drupal:JsonSchema` check of `portable-check`, a JsonSchema
+ *   constraint.
  *
  * What none of these can say (`not`, `patternProperties`, `contains`,
  * `dependentSchemas`, `multipleOf`, a type that is several types, a
@@ -74,10 +78,10 @@ use Drupal\surface\ResourceBuild\ResourceRegistry;
  * another document) is kept, not refused: the part of the schema left
  * over is a JsonSchema constraint, on the key, or on the frame for what
  * is said of the object, checked by the pipeline against that part and
- * named under `checkedOnServer`. A keyword that only annotates (`$comment`,
+ * named under `portable-check`. A keyword that only annotates (`$comment`,
  * `deprecated`, `contentMediaType`, another vendor's `x-` keyword) is
- * dropped, and so is what only the server knew (`refine`, `live`, a
- * constraint named under `checkedOnServer`) and a list left out for its
+ * dropped, and so is what only the server knew (`refine`, `live`, any
+ * other check of `portable-check`) and a list left out for its
  * size (`deferred`); each is noted, by its JSON
  * pointer. A document the reader cannot read at all (no object at its
  * root or at a def, a key holding a dot, a reference to a def it does not
@@ -166,6 +170,20 @@ final class SchemaReader {
   ];
 
   /**
+   * The keywords that identify a schema, which only a document's root has.
+   *
+   * A schema below the root of a Portable Schema document holds no `$id`
+   * and no `$schema`; an anchor names a place by an `$id`'s base. The
+   * reader drops them below the root, with a note (kept()).
+   */
+  protected const IDENTIFIERS = ['$id', '$schema', '$anchor', '$dynamicAnchor'];
+
+  /**
+   * The note on an identifier dropped below the root.
+   */
+  protected const IDENTIFIER_DROPPED = 'Dropped: an identifier, which a Portable Schema document holds at its root alone.';
+
+  /**
    * The keywords a frame reads as its own, the rest of a frame left over.
    */
   protected const FRAME = [
@@ -181,6 +199,8 @@ final class SchemaReader {
     'unevaluatedProperties',
     'allOf',
     ContractEmitter::EXTENSION,
+    PortableKeywords::CHECK,
+    PortableKeywords::MESSAGES,
     'readOnly',
   ];
 
@@ -202,6 +222,8 @@ final class SchemaReader {
     'uniqueItems',
     'default',
     ContractEmitter::EXTENSION,
+    PortableKeywords::CHECK,
+    PortableKeywords::MESSAGES,
   ];
 
   /**
@@ -217,6 +239,8 @@ final class SchemaReader {
     'readOnly',
     'writeOnly',
     ContractEmitter::EXTENSION,
+    PortableKeywords::CHECK,
+    PortableKeywords::MESSAGES,
   ];
 
   /**
@@ -232,6 +256,8 @@ final class SchemaReader {
     '$comment',
     'deprecated',
     ContractEmitter::EXTENSION,
+    PortableKeywords::CHECK,
+    PortableKeywords::MESSAGES,
   ];
 
   /**
@@ -268,6 +294,7 @@ final class SchemaReader {
     'writeOnly',
     'meta:enum',
     ContractEmitter::EXTENSION,
+    PortableKeywords::MESSAGES,
   ];
 
   /**
@@ -436,7 +463,8 @@ final class SchemaReader {
    *
    * Read as JSON decodes it, objects as arrays; upconverted
    * (upconvert()); its `x-surface` markers put back where the
-   * emitter wrote them (SchemaResolver::restored()), and each rule a
+   * emitter wrote them (SchemaResolver::restored()), and read in contract
+   * 5's spelling where contract 4 wrote them (respelled()); each rule a
    * container states for a child it wires ports to moved into the child's
    * def, in the child's own words (localized()).
    *
@@ -467,7 +495,7 @@ final class SchemaReader {
       static::decodesToItself($document) => $document,
       default => json_decode($json, TRUE),
     };
-    $prepared = static::localized(SchemaResolver::restored(static::upconvert(is_array($decoded) ? $decoded : [])));
+    $prepared = static::localized(static::respelled(SchemaResolver::restored(static::upconvert(is_array($decoded) ? $decoded : []))));
     if ($key !== NULL) {
       self::$prepared[$key] = $prepared;
       if (count(self::$prepared) > self::PREPARED_KEPT) {
@@ -586,7 +614,9 @@ final class SchemaReader {
    *   The schema.
    *
    * @return array
-   *   The schema in JSON Schema 2020-12, `$schema` saying so at its root.
+   *   The schema in JSON Schema 2020-12, `$schema` naming the dialect the
+   *   emitter writes (ContractEmitter::DIALECT), a profile of it, at its
+   *   root; a document that named 2020-12 itself reads as the same.
    */
   public static function upconvert(array $document): array {
     $converted = static::upconverted($document);
@@ -655,18 +685,34 @@ final class SchemaReader {
       }
       $schema = static::renamedKeyword($schema, 'dependencies', $split);
     }
+    return static::eachSubschema($schema, static::upconverted(...));
+  }
+
+  /**
+   * Converts each subschema directly inside a schema.
+   *
+   * @param array $schema
+   *   The schema.
+   * @param \Closure(array): array $convert
+   *   What converts one subschema, and every subschema inside it.
+   *
+   * @return array
+   *   The schema, each subschema converted; the same array where nothing
+   *   changed.
+   */
+  protected static function eachSubschema(array $schema, \Closure $convert): array {
     foreach ($schema as $keyword => $value) {
       if (!is_array($value)) {
         continue;
       }
       if (in_array($keyword, self::SINGLE, TRUE) && !array_is_list($value)) {
-        $converted = static::upconverted($value);
+        $converted = $convert($value);
         if ($converted !== $value) {
           $schema[$keyword] = $converted;
         }
       }
       elseif (in_array($keyword, self::LISTS, TRUE) && array_is_list($value)) {
-        $converted = array_map(static fn (mixed $member): mixed => is_array($member) ? static::upconverted($member) : $member, $value);
+        $converted = array_map(static fn (mixed $member): mixed => is_array($member) ? $convert($member) : $member, $value);
         if ($converted !== $value) {
           $schema[$keyword] = $converted;
         }
@@ -674,7 +720,7 @@ final class SchemaReader {
       elseif (in_array($keyword, self::MAPS, TRUE)) {
         foreach ($value as $name => $member) {
           if (is_array($member)) {
-            $converted = static::upconverted($member);
+            $converted = $convert($member);
             if ($converted !== $member) {
               $schema[$keyword][$name] = $converted;
             }
@@ -683,6 +729,62 @@ final class SchemaReader {
       }
     }
     return $schema;
+  }
+
+  /**
+   * Reads what contract 4 said under `x-surface` in the dialect's keywords.
+   *
+   * A document served before contract 5 named a constraint only the server
+   * checks under `x-surface.checkedOnServer`, a list of `{constraint,
+   * message, schema}`, and a Regex's message under
+   * `x-surface.patternMessage`. They are read as `portable-check` and
+   * `x-portable-messages` say them now (PortableKeywords::write()), the
+   * pattern's message under the code of the keyword it goes with, so such
+   * a document is checked as it was. Applied at every depth, after the
+   * markers are back in place (SchemaResolver::restored()).
+   *
+   * Decision: see
+   * docs/decisions.md#the-served-document-is-a-portable-schema-document.
+   *
+   * @param array $schema
+   *   A subschema.
+   *
+   * @return array
+   *   The same, in contract 5's spelling.
+   */
+  protected static function respelled(array $schema): array {
+    $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;
+    if (is_array($extension) && (array_key_exists('checkedOnServer', $extension) || array_key_exists('patternMessage', $extension))) {
+      $entries = [];
+      foreach (is_array($extension['checkedOnServer'] ?? NULL) ? $extension['checkedOnServer'] : [] as $entry) {
+        if (is_array($entry) && is_string($entry['constraint'] ?? NULL) && $entry['constraint'] !== '') {
+          $message = is_string($entry['message'] ?? NULL) ? $entry['message'] : '';
+          $held = is_array($entry['schema'] ?? NULL) ? ['schema' => $entry['schema']] : [];
+          $entries[] = ['constraint' => $entry['constraint'], 'message' => $message] + $held;
+        }
+      }
+      $code = match (TRUE) {
+        array_key_exists('pattern', $schema) => 'pattern',
+        array_key_exists('not', $schema) => 'not',
+        default => NULL,
+      };
+      $messages = $code !== NULL && is_string($extension['patternMessage'] ?? NULL) ? [$code => $extension['patternMessage']] : [];
+      unset($extension['checkedOnServer'], $extension['patternMessage']);
+      $schema[ContractEmitter::EXTENSION] = $extension;
+      if ($extension === []) {
+        unset($schema[ContractEmitter::EXTENSION]);
+      }
+      $said = PortableKeywords::write($entries, $messages + (is_array($schema[PortableKeywords::MESSAGES] ?? NULL) ? $schema[PortableKeywords::MESSAGES] : []));
+      if (isset($said[PortableKeywords::CHECK])) {
+        // As JSON decodes a check's options, an object as an array.
+        $said[PortableKeywords::CHECK] = array_map(static fn (array|\stdClass $options): array => (array) $options, $said[PortableKeywords::CHECK]);
+      }
+      if (is_array($schema[PortableKeywords::CHECK] ?? NULL)) {
+        $said[PortableKeywords::CHECK] = $schema[PortableKeywords::CHECK] + ($said[PortableKeywords::CHECK] ?? []);
+      }
+      $schema = PortableKeywords::before($schema, $said);
+    }
+    return static::eachSubschema($schema, static::respelled(...));
   }
 
   /**
@@ -1067,6 +1169,14 @@ final class SchemaReader {
       $this->note(static::below($pointer, 'additionalProperties'), 'Read closed: a structure holds the keys it declares, and a key the schema leaves open is refused.');
     }
     $this->frameExtension($extension, $pointer, $inputs);
+    foreach (PortableKeywords::checks($schema) as $check) {
+      if ($check['constraint'] === 'JsonSchema' && is_array($check['options']['schema'] ?? NULL)) {
+        $inputs->constrainFrame($this->kept($check['options']['schema'], static::below($pointer, PortableKeywords::CHECK, PortableKeywords::PROVIDER . 'JsonSchema', 'schema')));
+      }
+      else {
+        $this->note(static::below($pointer, PortableKeywords::CHECK, PortableKeywords::PROVIDER . $check['constraint']), 'Not read: a constraint the server checks is known by its plugin alone.');
+      }
+    }
 
     // The frame's allOf: structures mixed in, variants' conditionals,
     // rules, and what is left over.
@@ -1090,7 +1200,7 @@ final class SchemaReader {
         $conditionals[$i] = $member;
         continue;
       }
-      $left['allOf'][] = static::plain($member);
+      $left['allOf'][] = $this->kept($member, $at);
       $this->note($at, 'Kept as a JsonSchema constraint on the frame: no key or rule says it.');
     }
 
@@ -1119,7 +1229,8 @@ final class SchemaReader {
           $mixed[$structure] = TRUE;
           $inputs->mixInRead($this->structureAt($inputs, $structure, $root, static::below('', '$defs', $structure)));
         }
-        if (is_array($property) && array_diff(array_keys($property), [ContractEmitter::EXTENSION]) !== []) {
+        $said = [ContractEmitter::EXTENSION, ...PortableKeywords::KEYWORDS];
+        if (is_array($property) && array_diff(array_keys($property), $said) !== []) {
           $this->note($at, 'Not read: what an owner narrows of a member of a structure mixed in is said where the owner declares it.');
         }
         continue;
@@ -1172,7 +1283,7 @@ final class SchemaReader {
         $this->note($at, 'Dropped: what a whole frame starts from is each key\'s own default.');
         continue;
       }
-      $left[(string) $keyword] = static::plain($value);
+      $left[(string) $keyword] = $this->kept($value, $at);
       $this->note($at, 'Kept as a JsonSchema constraint on the frame: no key or rule says it.');
     }
     if (($schema['readOnly'] ?? FALSE) === TRUE) {
@@ -1204,14 +1315,6 @@ final class SchemaReader {
         $this->note(static::below($at, 'ports', (string) $port, 'shape'), 'Read as the shape\'s type: the site has no shape of that id.');
       }
       $inputs->reads((string) $port, $shape ?? $declared['type'], (bool) ($declared['required'] ?? FALSE));
-    }
-    foreach (is_array($extension['checkedOnServer'] ?? NULL) ? $extension['checkedOnServer'] : [] as $i => $checked) {
-      if (is_array($checked) && ($checked['constraint'] ?? NULL) === 'JsonSchema' && is_array($checked['schema'] ?? NULL)) {
-        $inputs->constrainFrame($checked['schema']);
-      }
-      else {
-        $this->note(static::below($at, 'checkedOnServer', $i), 'Not read: a constraint the server checks is known by its plugin alone.');
-      }
     }
     if (is_int($extension['version'] ?? NULL) && $extension['version'] > 1) {
       $this->note(static::below($at, 'version'), 'Not read: a version counts the changes made to stored values, which are the declaring class\'s.');
@@ -2119,8 +2222,8 @@ final class SchemaReader {
     if ($type === 'string' && $format !== NULL) {
       if (LeafTypes::readsFormat($format)) {
         $type = (string) LeafTypes::read('string', $format);
-        if ($format === 'email') {
-          $this->note(static::below($pointer, 'format'), 'Read as an email address, which Drupal holds to RFC 6531: written back as idn-email.');
+        if ($format === 'idn-email') {
+          $this->note(static::below($pointer, 'format'), 'Read as an email address: written back as email, the dialect\'s format.');
         }
       }
       elseif (!isset(self::FORMAT_PATTERNS[$format]) && !ConstraintKeywords::readsFormat($format)) {
@@ -2171,7 +2274,7 @@ final class SchemaReader {
   protected function foreignValue(array $property, string $pointer, array $root): DataDefinition {
     $definition = DataDefinition::create('any');
     DefinitionMetadata::setHeldWhole($definition);
-    $kept = static::plain(array_diff_key($property, array_flip(self::WHOLE)));
+    $kept = $this->kept(array_diff_key($property, array_flip(self::WHOLE)), $pointer);
     if ($kept !== []) {
       $definition->addConstraint('JsonSchema', ['schema' => $this->withDefs($kept, $root)]);
       $this->note($pointer, sprintf('Kept as a JsonSchema constraint: %s, which no data type says.', implode(', ', array_keys($kept))));
@@ -2271,7 +2374,7 @@ final class SchemaReader {
       }
       foreach ($back->kept as $keyword => $value) {
         $taken[$keyword] = TRUE;
-        $foreign[$keyword] = static::plain($value);
+        $foreign[$keyword] = $this->kept($value, static::below($pointer, (string) $keyword));
         if ($back->note !== NULL) {
           $this->note(static::below($pointer, (string) $keyword), $back->note);
         }
@@ -2289,7 +2392,7 @@ final class SchemaReader {
           $choice = $this->choice($property, $keyword);
           if ($choice === NULL) {
             if ($keyword !== 'const' || ($property['readOnly'] ?? FALSE) !== TRUE) {
-              $foreign[$keyword] = static::plain($value);
+              $foreign[$keyword] = $this->kept($value, $at);
             }
             break;
           }
@@ -2299,14 +2402,22 @@ final class SchemaReader {
           break;
 
         case ContractEmitter::EXTENSION:
-          foreach (is_array($value['checkedOnServer'] ?? NULL) ? $value['checkedOnServer'] : [] as $i => $checked) {
-            if (is_array($checked) && ($checked['constraint'] ?? NULL) === 'JsonSchema' && is_array($checked['schema'] ?? NULL)) {
-              $read[] = new ReadBack('JsonSchema', ['schema' => $checked['schema']], [$keyword]);
+          break;
+
+        case PortableKeywords::CHECK:
+          foreach (PortableKeywords::checks($property) as $check) {
+            if ($check['constraint'] === 'JsonSchema' && is_array($check['options']['schema'] ?? NULL)) {
+              $read[] = new ReadBack('JsonSchema', ['schema' => $this->kept($check['options']['schema'], static::below($at, PortableKeywords::PROVIDER . 'JsonSchema', 'schema'))], [$keyword]);
             }
             else {
-              $this->note(static::below($at, 'checkedOnServer', $i), 'Not read: a constraint the server checks is known by its plugin alone.');
+              $this->note(static::below($at, PortableKeywords::PROVIDER . $check['constraint']), 'Not read: a constraint the server checks is known by its plugin alone.');
             }
           }
+          break;
+
+        case '$id':
+        case '$schema':
+          $this->note($at, self::IDENTIFIER_DROPPED);
           break;
 
         default:
@@ -2317,7 +2428,7 @@ final class SchemaReader {
             $this->note($at, 'Dropped: an annotation, which checks nothing.');
             break;
           }
-          $foreign[$keyword] = static::plain($value);
+          $foreign[$keyword] = $this->kept($value, $at);
           $this->note($at, 'Kept as a JsonSchema constraint: no constraint of the vocabulary says it.');
       }
     }
@@ -2459,7 +2570,7 @@ final class SchemaReader {
       $condition = static::condition($if);
       $effects = $condition === NULL ? NULL : $this->effects($then, $properties);
       if ($condition === NULL || $effects === NULL) {
-        $left['allOf'][] = static::plain(['if' => $conditional['if'], 'then' => $conditional['then']]);
+        $left['allOf'][] = $this->kept(['if' => $conditional['if'], 'then' => $conditional['then']], $at);
         $this->note($at, 'Kept as a JsonSchema constraint on the frame: its condition or its effect is outside the vocabulary of declared rules.');
         continue;
       }
@@ -2654,7 +2765,7 @@ final class SchemaReader {
    * Holds a definition to a schema, beside a schema it is held to already.
    *
    * A definition holds one JsonSchema constraint. One read from
-   * `x-surface.checkedOnServer`, or a shape's, and the keywords kept for
+   * `portable-check`, or a shape's, and the keywords kept for
    * the value are both checked: one constraint whose schema is the
    * `allOf` of the two, their defs beside it.
    *
@@ -2723,7 +2834,8 @@ final class SchemaReader {
         }
         continue;
       }
-      if ($keyword !== ContractEmitter::EXTENSION && !in_array($keyword, ['const', 'default', 'examples', 'enum'], TRUE)) {
+      $data = ['const', 'default', 'examples', 'enum', ...PortableKeywords::KEYWORDS];
+      if ($keyword !== ContractEmitter::EXTENSION && !in_array($keyword, $data, TRUE)) {
         $this->referred($value, $root, $needed);
       }
     }
@@ -2732,21 +2844,57 @@ final class SchemaReader {
   /**
    * Strips what only this module says from a schema left over.
    *
+   * And what identifies a schema (IDENTIFIERS): what is left over is
+   * served again under `portable-check`, below the document's root, where
+   * the dialect allows no `$id` and no `$schema` (Portable Schema's
+   * Registry refuses the document).
+   *
    * @param mixed $schema
    *   A schema, or anything inside one.
+   * @param string[]|null $dropped
+   *   Collects the pointer of each identifier dropped.
+   * @param string $pointer
+   *   The schema's pointer, for those.
    *
    * @return mixed
-   *   The same, with no `x-surface` at any depth.
+   *   The same, with no `x-surface`, `portable-check`,
+   *   `x-portable-messages` or identifier at any depth.
    */
-  protected static function plain(mixed $schema): mixed {
+  protected static function plain(mixed $schema, ?array &$dropped = NULL, string $pointer = ''): mixed {
     if (!is_array($schema)) {
       return $schema;
     }
-    unset($schema[ContractEmitter::EXTENSION]);
+    unset($schema[ContractEmitter::EXTENSION], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES]);
+    foreach (self::IDENTIFIERS as $identifier) {
+      if (is_string($schema[$identifier] ?? NULL)) {
+        unset($schema[$identifier]);
+        $dropped[] = static::below($pointer, $identifier);
+      }
+    }
     foreach ($schema as $keyword => $value) {
       if (is_array($value) && !in_array($keyword, ['const', 'default', 'examples', 'enum'], TRUE)) {
-        $schema[$keyword] = static::plain($value);
+        $schema[$keyword] = static::plain($value, $dropped, static::below($pointer, (string) $keyword));
       }
+    }
+    return $schema;
+  }
+
+  /**
+   * Strips a schema left over as plain() does, noting each identifier.
+   *
+   * @param mixed $schema
+   *   A schema, or anything inside one.
+   * @param string $pointer
+   *   Its pointer.
+   *
+   * @return mixed
+   *   The same, plain.
+   */
+  protected function kept(mixed $schema, string $pointer): mixed {
+    $dropped = [];
+    $schema = static::plain($schema, $dropped, $pointer);
+    foreach ($dropped as $at) {
+      $this->note($at, self::IDENTIFIER_DROPPED);
     }
     return $schema;
   }

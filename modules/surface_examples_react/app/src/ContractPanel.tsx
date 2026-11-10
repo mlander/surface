@@ -51,12 +51,15 @@ function allows(schema: Schema): Phrase[] {
   if (schema.format === 'email' || schema.format === 'idn-email') {
     phrases.push('an email address');
   }
+  const messages = schema['x-portable-messages'] ?? {};
   if (schema.pattern !== undefined) {
-    const message = schema['x-surface']?.patternMessage;
-    phrases.push(message ?? { words: 'matches a required format: ', code: schema.pattern });
+    phrases.push(messages.pattern ?? { words: 'matches a required format: ', code: schema.pattern });
   }
-  for (const checked of schema['x-surface']?.checkedOnServer ?? []) {
-    phrases.push(`checked on the server: ${checked.message}`);
+  if (messages.not !== undefined) {
+    phrases.push(messages.not);
+  }
+  for (const check of Object.keys(schema['portable-check'] ?? {})) {
+    phrases.push(`checked on the server: ${messages[`check.${check}`] ?? check}`);
   }
   return phrases.length === 0 ? ['anything of its type'] : phrases;
 }

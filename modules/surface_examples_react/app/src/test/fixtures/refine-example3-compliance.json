@@ -1,11 +1,11 @@
 {
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "$id": "http://localhost/surface-api/registration.step3/schema",
         "title": "Configure registration (step 3)",
         "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure registration (step 3)",
@@ -573,7 +573,7 @@
                     "email": {
                         "title": "Email",
                         "type": "string",
-                        "format": "idn-email",
+                        "format": "email",
                         "x-surface": {
                             "widget": "email"
                         }
@@ -601,9 +601,11 @@
                     "license": {
                         "$ref": "#/$defs/event.license",
                         "title": "Event license",
+                        "x-portable-messages": {
+                            "pattern": "A license number is four digits, such as 2048."
+                        },
                         "x-surface": {
-                            "widget": "text",
-                            "patternMessage": "A license number is four digits, such as 2048."
+                            "widget": "text"
                         }
                     },
                     "stewards": {
@@ -642,8 +644,8 @@
                 "examples": [
                     "2048"
                 ],
-                "x-surface": {
-                    "patternMessage": "A license number is four digits, such as 2048."
+                "x-portable-messages": {
+                    "pattern": "A license number is four digits, such as 2048."
                 }
             }
         }
@@ -653,12 +655,12 @@
         "operation": "configure",
         "label": "Configure registration (step 3)",
         "schema": {
-            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$schema": "https://portable-schema.dev/v1/schema",
             "$id": "http://localhost/surface-api/registration.step3",
             "title": "Configure registration (step 3)",
             "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
             "x-surface": {
-                "contract": 4,
+                "contract": 5,
                 "operation": {
                     "id": "configure",
                     "label": "Configure registration (step 3)",
@@ -989,7 +991,7 @@
                         "email": {
                             "title": "Email",
                             "type": "string",
-                            "format": "idn-email",
+                            "format": "email",
                             "x-surface": {
                                 "widget": "email"
                             }
@@ -1017,9 +1019,11 @@
                         "license": {
                             "$ref": "#/$defs/event.license",
                             "title": "Event license",
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
+                            },
                             "x-surface": {
-                                "widget": "text",
-                                "patternMessage": "A license number is four digits, such as 2048."
+                                "widget": "text"
                             }
                         },
                         "stewards": {
@@ -1058,8 +1062,8 @@
                     "examples": [
                         "2048"
                     ],
-                    "x-surface": {
-                        "patternMessage": "A license number is four digits, such as 2048."
+                    "x-portable-messages": {
+                        "pattern": "A license number is four digits, such as 2048."
                     }
                 }
             }
@@ -1104,12 +1108,12 @@
                 "operation": "configure",
                 "label": "Configure registration (step 3)",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/registration.step3",
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -1440,7 +1444,7 @@
                                 "email": {
                                     "title": "Email",
                                     "type": "string",
-                                    "format": "idn-email",
+                                    "format": "email",
                                     "x-surface": {
                                         "widget": "email"
                                     }
@@ -1468,9 +1472,11 @@
                                 "license": {
                                     "$ref": "#/$defs/event.license",
                                     "title": "Event license",
+                                    "x-portable-messages": {
+                                        "pattern": "A license number is four digits, such as 2048."
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
-                                        "patternMessage": "A license number is four digits, such as 2048."
+                                        "widget": "text"
                                     }
                                 },
                                 "stewards": {
@@ -1509,8 +1515,8 @@
                             "examples": [
                                 "2048"
                             ],
-                            "x-surface": {
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
                             }
                         }
                     }
@@ -1559,12 +1565,12 @@
                 "operation": "configure",
                 "label": "Configure registration (step 3)",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/registration.step3",
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -1945,7 +1951,7 @@
                                 "email": {
                                     "title": "Email",
                                     "type": "string",
-                                    "format": "idn-email",
+                                    "format": "email",
                                     "x-surface": {
                                         "widget": "email"
                                     }
@@ -1973,9 +1979,11 @@
                                 "license": {
                                     "$ref": "#/$defs/event.license",
                                     "title": "Event license",
+                                    "x-portable-messages": {
+                                        "pattern": "A license number is four digits, such as 2048."
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
-                                        "patternMessage": "A license number is four digits, such as 2048."
+                                        "widget": "text"
                                     }
                                 },
                                 "stewards": {
@@ -2014,8 +2022,8 @@
                             "examples": [
                                 "2048"
                             ],
-                            "x-surface": {
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
                             }
                         }
                     }
@@ -2075,12 +2083,12 @@
                 "operation": "configure",
                 "label": "Configure registration (step 3)",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/registration.step3",
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -2461,7 +2469,7 @@
                                 "email": {
                                     "title": "Email",
                                     "type": "string",
-                                    "format": "idn-email",
+                                    "format": "email",
                                     "x-surface": {
                                         "widget": "email"
                                     }
@@ -2489,9 +2497,11 @@
                                 "license": {
                                     "$ref": "#/$defs/event.license",
                                     "title": "Event license",
+                                    "x-portable-messages": {
+                                        "pattern": "A license number is four digits, such as 2048."
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
-                                        "patternMessage": "A license number is four digits, such as 2048."
+                                        "widget": "text"
                                     }
                                 },
                                 "stewards": {
@@ -2530,8 +2540,8 @@
                             "examples": [
                                 "2048"
                             ],
-                            "x-surface": {
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
                             }
                         }
                     }
@@ -2591,12 +2601,12 @@
                 "operation": "configure",
                 "label": "Configure registration (step 3)",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/registration.step3",
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -2974,7 +2984,7 @@
                                 "email": {
                                     "title": "Email",
                                     "type": "string",
-                                    "format": "idn-email",
+                                    "format": "email",
                                     "x-surface": {
                                         "widget": "email"
                                     }
@@ -3002,9 +3012,11 @@
                                 "license": {
                                     "$ref": "#/$defs/event.license",
                                     "title": "Event license",
+                                    "x-portable-messages": {
+                                        "pattern": "A license number is four digits, such as 2048."
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
-                                        "patternMessage": "A license number is four digits, such as 2048."
+                                        "widget": "text"
                                     }
                                 },
                                 "stewards": {
@@ -3043,8 +3055,8 @@
                             "examples": [
                                 "2048"
                             ],
-                            "x-surface": {
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
                             }
                         }
                     }
@@ -3101,12 +3113,12 @@
                 "operation": "configure",
                 "label": "Configure registration (step 3)",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/registration.step3",
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -3413,7 +3425,7 @@
                                 "email": {
                                     "title": "Email",
                                     "type": "string",
-                                    "format": "idn-email",
+                                    "format": "email",
                                     "x-surface": {
                                         "widget": "email"
                                     }
@@ -3441,9 +3453,11 @@
                                 "license": {
                                     "$ref": "#/$defs/event.license",
                                     "title": "Event license",
+                                    "x-portable-messages": {
+                                        "pattern": "A license number is four digits, such as 2048."
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
-                                        "patternMessage": "A license number is four digits, such as 2048."
+                                        "widget": "text"
                                     }
                                 },
                                 "stewards": {
@@ -3482,8 +3496,8 @@
                             "examples": [
                                 "2048"
                             ],
-                            "x-surface": {
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
                             }
                         }
                     }
@@ -3529,12 +3543,12 @@
                 "operation": "configure",
                 "label": "Configure registration (step 3)",
                 "schema": {
-                    "$schema": "https://json-schema.org/draft/2020-12/schema",
+                    "$schema": "https://portable-schema.dev/v1/schema",
                     "$id": "http://localhost/surface-api/registration.step3",
                     "title": "Configure registration (step 3)",
                     "description": "Sets the event registration: its title, whether it is open, the venue and room, the capacity, the pricing with its ticket, and the contact.",
                     "x-surface": {
-                        "contract": 4,
+                        "contract": 5,
                         "operation": {
                             "id": "configure",
                             "label": "Configure registration (step 3)",
@@ -3841,7 +3855,7 @@
                                 "email": {
                                     "title": "Email",
                                     "type": "string",
-                                    "format": "idn-email",
+                                    "format": "email",
                                     "x-surface": {
                                         "widget": "email"
                                     }
@@ -3869,9 +3883,11 @@
                                 "license": {
                                     "$ref": "#/$defs/event.license",
                                     "title": "Event license",
+                                    "x-portable-messages": {
+                                        "pattern": "A license number is four digits, such as 2048."
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
-                                        "patternMessage": "A license number is four digits, such as 2048."
+                                        "widget": "text"
                                     }
                                 },
                                 "stewards": {
@@ -3910,8 +3926,8 @@
                             "examples": [
                                 "2048"
                             ],
-                            "x-surface": {
-                                "patternMessage": "A license number is four digits, such as 2048."
+                            "x-portable-messages": {
+                                "pattern": "A license number is four digits, such as 2048."
                             }
                         }
                     }

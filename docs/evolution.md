@@ -181,8 +181,8 @@ Every wire change waiting for a version moves together, once, so a
 client moves once.
 
 **How a server states it.** Both documents carry it first under the top
-`x-surface`, `"contract": 4`, and every answer of the `/surface-api`
-API carries the response header `Contract-Version: 4`, so a client can
+`x-surface`, `"contract": 5`, and every answer of the `/surface-api`
+API carries the response header `Contract-Version: 5`, so a client can
 tell before it reads a body. A
 document that states none is of contract 1.
 
@@ -190,7 +190,7 @@ document that states none is of contract 1.
 `x-surface.contract`, first, and refuses a version it does not know
 rather than guess at it: a key read by its old name finds nothing, and
 a marker read where it no longer sits says nothing, so a guess fails
-quietly. The React app reads contract 4 only, and refuses another by
+quietly. The React app reads contract 5 only, and refuses another by
 the header or by the document. A full schema cached in another contract
 version is fetched again, as one of another resource version is.
 
@@ -318,9 +318,9 @@ note on its `configure` and breaking on its `create`, each reported on its
 own document. A change to a key's union of its
 variants is a note, since the conditionals that state each variant are
 judged themselves, and so is one to `$id`, `rules` or `within`, which
-say where a thing is, not what is accepted. `checkedOnServer` is
-compared by constraint, and a change to what one says it checks is a
-note. Each breaking change is then:
+say where a thing is, not what is accepted. `portable-check` is
+compared by check, and a change to a check's options, or to a message
+under `x-portable-messages`, is a note. Each breaking change is then:
 
 - **versioned**, when the version of the id that owns it was raised
   (the document's resource or structure, or the structure whose def the

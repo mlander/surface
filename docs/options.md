@@ -338,7 +338,7 @@ stock `SurfaceUnique`, which the build adds where the storage can
 say whether a thing exists ("A venue named riverside already exists.";
 [A title and its machine name](declaring-a-resource.md#a-title-and-its-machine-name)),
 so no resource writes one. The cost: the
-schema can only name it under `x-surface.checkedOnServer`, it does not
+schema can only name it under `portable-check`, it does not
 read back from the schema, the React page cannot narrow on it, and a
 caller learns the rule when a call is refused. When you write a
 constraint, at this step or for a kind at step 2, extend the stock
@@ -347,7 +347,7 @@ code come with it. Example 2's room constraint extends `Choice`: a room
 no venue has is refused in `Choice`'s words,
 naming the rooms, and its resolver says its list is the whole of the
 constraint ([below](#writing-a-resolver)), so both documents state the
-rooms as a `oneOf` and name nothing under `checkedOnServer`.
+rooms as a `oneOf` and name nothing under `portable-check`.
 
 **Example 2, before and after.** Its venue was a string with a
 constraint of its own, a `Choice` subclass, a validator that read the
@@ -542,11 +542,11 @@ between tags, which travel into a shared cache, and contexts, which mean
 
 **A list that is the whole constraint.** Both documents state a
 resolved list as `oneOf`, and name the constraint under
-`x-surface.checkedOnServer` besides, since the schema cannot know the
+`portable-check` besides, since the schema cannot know the
 constraint checks nothing more. A resolver whose list is every value its
 constraint accepts and nothing else, as a `Choice`'s is, says so with
 `exact: TRUE` on its attribute, and the constraint, and every subclass of
-it the resolver reads, is then named under no `checkedOnServer`. Example
+it the resolver reads, is then named under no `portable-check`. Example
 2's room does: its constraint is a `Choice` whose list is the rooms of
 the venues the site has, read by `EventVenueRoomOptions`
 (why: [decision](decisions.md#a-listing-is-a-read-only-operation-with-outputs-a-reorder-is-an-update-over-the-collection)).

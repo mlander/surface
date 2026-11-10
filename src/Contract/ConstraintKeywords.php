@@ -31,7 +31,7 @@ use Drupal\surface\Contract\Keywords\Written;
  * | Count | array | `minItems`, `maxItems` | Count |
  * | UniqueItems | array | `uniqueItems: true`, last | UniqueItems |
  * | NotBlank | string | `minLength: 1` | Length, `min: 1` |
- * | Email | string | `format: idn-email` | the `email` type |
+ * | Email | string | `format: email` | the `email` type |
  * | Regex | string | `pattern`, `not: {pattern}` | Regex |
  * | Uuid | string | `format: uuid` | Uuid |
  * | Sequentially | its parts' | `allOf` of its parts | Sequentially |
@@ -43,7 +43,7 @@ use Drupal\surface\Contract\Keywords\Written;
  *
  * Nothing is dropped silently: a constraint with a row that does not
  * apply to the value's type, or whose options its keywords cannot state,
- * is left to the caller, which names it under `x-surface.checkedOnServer`;
+ * is left to the caller, which names it under `portable-check`;
  * the reader keeps a row's keywords it cannot read in the JsonSchema
  * constraint. A constraint with no row is the caller's too: a list of
  * values is the options resolvers' `oneOf`, and the rest are checked on
@@ -193,11 +193,11 @@ final class ConstraintKeywords {
    *   constraints' keywords are merged into.
    *
    * @return array{keywords: array, extras: array, left: list<array{0: string, 1: mixed, 2: bool}>}
-   *   The keywords, those given first; what goes under `x-surface` beside
-   *   them; and each constraint the keywords do not state whole, in
-   *   order, with its options and whether a row maps it. A row's
-   *   constraint left here is checked on the server; one with no row is
-   *   the caller's to decide.
+   *   The keywords, those given first; what goes beside them (a Regex's
+   *   message by code, under `messages`); and each constraint the
+   *   keywords do not state whole, in order, with its options and whether
+   *   a row maps it. A row's constraint left here is checked on the
+   *   server; one with no row is the caller's to decide.
    */
   public static function state(iterable $constraints, array $types, array $keywords = []): array {
     $extras = [];
@@ -217,7 +217,10 @@ final class ConstraintKeywords {
         continue;
       }
       $keywords = $merged;
-      $extras += $written->extras;
+      foreach ($written->extras as $extra => $value) {
+        // A map (the messages by code) gains what it does not hold yet.
+        $extras[$extra] = is_array($value) && is_array($extras[$extra] ?? NULL) ? $extras[$extra] + $value : $extras[$extra] ?? $value;
+      }
       if (!$written->whole || $written->keywords === []) {
         $left[] = [$id, $options, TRUE];
       }

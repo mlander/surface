@@ -1,16 +1,16 @@
 {
     "resource": "registration.compliance",
     "module": "surface_examples_compliance",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "registration.compliance",
             "operation": null,
             "label": null,
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "version": 1,
                     "ports": {
                         "capacity": {
@@ -24,8 +24,8 @@
                     "license": {
                         "$ref": "#/$defs/event.license",
                         "title": "Event license",
-                        "x-surface": {
-                            "patternMessage": "A license number is four digits, such as 2048."
+                        "x-portable-messages": {
+                            "pattern": "A license number is four digits, such as 2048."
                         }
                     },
                     "stewards": {
@@ -55,8 +55,8 @@
                         "examples": [
                             "2048"
                         ],
-                        "x-surface": {
-                            "patternMessage": "A license number is four digits, such as 2048."
+                        "x-portable-messages": {
+                            "pattern": "A license number is four digits, such as 2048."
                         }
                     }
                 }

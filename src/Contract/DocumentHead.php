@@ -43,7 +43,15 @@ final class DocumentHead {
   /**
    * The keywords a schema holds data under, never a subschema.
    */
-  protected const DATA = ['const', 'default', 'examples', 'enum', self::EXTENSION];
+  protected const DATA = [
+    'const',
+    'default',
+    'examples',
+    'enum',
+    self::EXTENSION,
+    PortableKeywords::CHECK,
+    PortableKeywords::MESSAGES,
+  ];
 
   /**
    * The JSON type each keyword only one type reads is about.

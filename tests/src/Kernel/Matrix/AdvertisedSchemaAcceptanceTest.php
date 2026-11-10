@@ -1309,10 +1309,14 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       $emitter = $this->container->get('surface.contract_emitter');
       $property = $this->decoded($emitter->emitFull($surface, 'audit')->document['schema'])['properties']['k'];
       $this->assertSame($pattern, $property['pattern'] ?? NULL, $regex);
-      $this->assertSame('As it says.', $property['x-surface']['patternMessage'] ?? NULL, $regex . ': the message is carried either way.');
       if ($pattern === NULL) {
-        // Each named with what it checks: here, its own message.
-        $this->assertSame([['constraint' => 'Regex', 'message' => 'As it says.']], $property['x-surface']['checkedOnServer'], $regex);
+        // Each named with what it checks: here, its own message, the
+        // check's, since no keyword is written to give it under.
+        $this->assertSame(['drupal:Regex' => []], $property['portable-check'], $regex);
+        $this->assertSame(['check.drupal:Regex' => 'As it says.'], $property['x-portable-messages'], $regex);
+      }
+      else {
+        $this->assertSame(['pattern' => 'As it says.'], $property['x-portable-messages'], $regex . ': the message, under the keyword it goes with.');
       }
     }
 
@@ -1579,7 +1583,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
    * Case 7: constraints JSON Schema has no keyword for.
    *
    * A constraint with no keyword and no options resolver is named under
-   * checkedOnServer and changes nothing else. One with a resolver is
+   * portable-check and changes nothing else. One with a resolver is
    * stated as `oneOf` read from the source its validator reads; a
    * PluginExists that allows a fallback accepts any id, so it offers no
    * list and the schema stays as wide as the validator. UniqueItems, which
@@ -1600,9 +1604,10 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       $property = $full($this->surface([
         'k' => DataDefinition::create('string')->setLabel('K')->addConstraint($name, []),
       ]))['properties']['k'];
-      $this->assertSame([$name], array_column($property['x-surface']['checkedOnServer'], 'constraint'), $name);
-      $this->assertNotSame('', $property['x-surface']['checkedOnServer'][0]['message'], $name . ': what it checks is said.');
-      $this->assertSame(array_diff_key($bare, ['x-surface' => TRUE]), array_diff_key($property, ['x-surface' => TRUE]), $name . ': no keyword.');
+      $this->assertSame(['drupal:' . $name], array_keys($property['portable-check']), $name);
+      $this->assertNotSame('', $property['x-portable-messages']['check.drupal:' . $name], $name . ': what it checks is said.');
+      $said = ['x-surface' => TRUE, 'portable-check' => TRUE, 'x-portable-messages' => TRUE];
+      $this->assertSame(array_diff_key($bare, $said), array_diff_key($property, $said), $name . ': no keyword.');
     }
 
     // Each item once: a keyword, as narrow as the validator.
@@ -1611,7 +1616,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     ]);
     $schema = $full($unique);
     $this->assertTrue($schema['properties']['k']['uniqueItems']);
-    $this->assertArrayNotHasKey('checkedOnServer', (array) ($schema['properties']['k']['x-surface'] ?? []));
+    $this->assertArrayNotHasKey('portable-check', $schema['properties']['k']);
     $this->assertTrue($this->pipeline()->validate($unique, ['k' => ['a', 'b']])->isEmpty());
     $this->assertTrue($this->validates($schema, ['k' => ['a', 'b']]));
     $this->assertFalse($this->pipeline()->validate($unique, ['k' => ['a', 'b', 'a']])->isEmpty());
@@ -1705,7 +1710,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       ['Regex' => ['pattern' => '/^(name|pass|website)$/', 'match' => FALSE, 'message' => $common]],
     ]);
     $property = $this->decoded($emitter->emitFull($as_written, 'audit')->document['schema'])['properties']['element_name'];
-    $this->assertSame(['Sequentially'], array_column($property['x-surface']['checkedOnServer'], 'constraint'));
+    $this->assertSame(['drupal:Sequentially'], array_keys($property['portable-check']));
     $this->assertArrayNotHasKey('allOf', $property);
 
     $carried = $name([
@@ -1719,7 +1724,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       ['pattern' => '^[a-zA-Z][-_a-zA-Z0-9]+$'],
       ['not' => ['pattern' => '^(name|pass|website)$']],
     ], $property['allOf']);
-    $this->assertArrayNotHasKey('checkedOnServer', $property['x-surface'] ?? []);
+    $this->assertArrayNotHasKey('portable-check', $property);
     foreach (['as written' => $as_written, 'carried' => $carried] as $which => $surface) {
       // Left to the server, a refused name is accepted by both schemas.
       $wide = $which === 'as written';
@@ -1760,7 +1765,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     ]);
     $property = $this->decoded($emitter->emitFull($unstated, 'audit')->document['schema'])['properties']['code'];
     $this->assertArrayNotHasKey('anyOf', $property);
-    $this->assertSame(['AtLeastOneOf'], array_column($property['x-surface']['checkedOnServer'], 'constraint'));
+    $this->assertSame(['drupal:AtLeastOneOf'], array_keys($property['portable-check']));
   }
 
   /**

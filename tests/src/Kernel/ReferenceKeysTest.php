@@ -316,9 +316,8 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     // Past it: an id, looked up.
     $this->assertArrayNotHasKey('oneOf', $past['properties']['venue']);
     $this->assertSame('autocomplete', $past['properties']['venue']['x-surface']['widget']);
-    $this->assertSame([
-      ['constraint' => 'SurfaceValidReference', 'message' => 'Refers to an entity the account may reference'],
-    ], $past['properties']['venue']['x-surface']['checkedOnServer']);
+    $this->assertEquals(['drupal:SurfaceValidReference' => new \stdClass()], $past['properties']['venue']['portable-check']);
+    $this->assertSame(['check.drupal:SurfaceValidReference' => 'Refers to an entity the account may reference'], $past['properties']['venue']['x-portable-messages']);
     // The marker, in both documents and either way.
     foreach ([$under, $past, $all['under']['emit']['schema'], $all['past']['emit']['schema']] as $schema) {
       $this->assertSame(['entityType' => 'event_venue'], $schema['properties']['venue']['x-surface']['reference']);

@@ -1,16 +1,16 @@
 {
     "resource": "event.review",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.review",
             "operation": null,
             "label": null,
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "version": 1,
                     "rules": [
                         0
@@ -27,8 +27,8 @@
                         ],
                         "format": "date",
                         "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
-                        "x-surface": {
-                            "patternMessage": "Write the date as YYYY-MM-DD, such as 2026-10-19."
+                        "x-portable-messages": {
+                            "pattern": "Write the date as YYYY-MM-DD, such as 2026-10-19."
                         }
                     },
                     "reviewed_by": {
