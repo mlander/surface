@@ -1,7 +1,7 @@
-# The itinerary drawn over steps, one group a step, into a stage: what a
-# flow is checked against. Six flows hold and five are refused when the
+# The itinerary drawn over steps into a stage: what a flow is checked
+# against. Six flows written as maps hold and five are refused when the
 # route is matched, each saying why; three of them draw a step over
-# another resource.
+# another resource. The last two routes name a flow class.
 
 # An update over its three groups in order.
 surface_stage_test.itinerary_flow:
@@ -161,5 +161,29 @@ surface_stage_test.itinerary_delete:
     _title: 'Cancel a trip'
     _surface_resource: 'stage_test.itinerary'
     _surface_operation: 'delete'
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# The itinerary's update as a flow class (ItineraryFlow), named by its id:
+# the route writes no resource or operation, and takes the first step's.
+surface_stage_test.itinerary_flow_class:
+  path: '/surface-test/itinerary/{id}/flow-class'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip in steps'
+    _surface_flow: stage_test.itinerary_flow
+  requirements:
+    id: '[a-z0-9_-]+'
+
+# The same flow class, on a route that writes the first step's resource
+# and operation, by the resource's class.
+surface_stage_test.itinerary_flow_class_written:
+  path: '/surface-test/itinerary/{id}/flow-class-written'
+  defaults:
+    _form: 'Drupal\surface\Form\SurfaceOperationForm'
+    _title: 'Edit a trip in steps'
+    _surface_resource: 'Drupal\surface_stage_test\Resource\ItineraryResource'
+    _surface_operation: 'update'
+    _surface_flow: stage_test.itinerary_flow
   requirements:
     id: '[a-z0-9_-]+'

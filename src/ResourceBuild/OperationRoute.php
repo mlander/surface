@@ -7,7 +7,8 @@ namespace Drupal\surface\ResourceBuild;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\surface\Form\Flow;
+use Drupal\surface\Flow\FlowRegistry;
+use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\OperationContext;
@@ -134,7 +135,7 @@ final class OperationRoute {
    * not clean, and a dry run. And the two the operation form reads for a
    * stage: `stage`, the id of the stage the page writes into
    * (stageRequested()), and `step`, the step of the route's flow the page
-   * draws (Flow::step()).
+   * draws (CompiledFlow::step()).
    */
   public const RESERVED_QUERY = [
     'destination',
@@ -409,7 +410,7 @@ final class OperationRoute {
    * does): a `{name}` a resource's id or a reference holds that is no
    * variable of the path, or one nothing bounds; one key both fixed and
    * filled; a query map no link can use; keys fixed on a React page; a
-   * `_surface_flow` written wrong (Flow::assertWritten()). Each
+   * `_surface_flow` written wrong (CompiledFlow::assertWritten()). Each
    * is one check, which both ask, so the rebuild and the match agree.
    * What needs the resource built, a path that names no key or a value
    * its key refuses, is judged at match alone.
@@ -428,8 +429,8 @@ final class OperationRoute {
     static::assertFixedOrFilled($route, $name);
     static::query($route, $name);
     static::assertFixedWhereHeld($route, $name);
-    if ($route->hasDefault(Flow::ROUTE)) {
-      Flow::assertWritten($route, $name);
+    if ($route->hasDefault(CompiledFlow::ROUTE)) {
+      CompiledFlow::assertWritten($route, $name);
     }
   }
 
@@ -715,7 +716,7 @@ final class OperationRoute {
    * `X-Surface-Stage` header of every request it sends.
    *
    * A flow over a create writes each step after its first into the
-   * create its first step staged (Flow::creating()), so the stage is
+   * create its first step staged (CompiledFlow::creating()), so the stage is
    * handed on saying that create's position. That is asked only once
    * the account may write into the stage, so no other account hears
    * what the stage holds, and not at the confirm page, which writes
@@ -738,6 +739,9 @@ final class OperationRoute {
    *   What discovery found.
    * @param \Drupal\Core\Session\AccountInterface|null $account
    *   The account, or NULL for the current user.
+   * @param \Drupal\surface\Flow\FlowRegistry|null $flows
+   *   The flow classes, which a route naming one by its id needs: NULL
+   *   only where no such route is served.
    *
    * @return array{0: \Drupal\surface\Staging\Stage|null, 1: \Drupal\Core\Access\AccessResultInterface}|null
    *   NULL when the query names no stage. Otherwise the stage, and the
@@ -746,7 +750,8 @@ final class OperationRoute {
    *   `does_not_apply` where a stage does not apply to the operation;
    *   else the stage's own access (StageAccess), which is never cached,
    *   or a refusal of a later step of a flow over a create whose create
-   *   is gone from an open stage.
+   *   is gone from an open stage, or of a flow class the route names
+   *   that refuses it (FlowRegistry::onRoute()).
    *
    * @throws \Drupal\surface\ResourceBuild\NamesNothingException
    *   At `stage`, when it names no stage; at `step`, when a flow over a
@@ -755,23 +760,23 @@ final class OperationRoute {
    *   When a flow over a create finds more than one create of it in the
    *   stage, or as named() throws.
    */
-  public static function stageRequested(RouteMatchInterface $route_match, Request $request, StageStoreInterface $stages, ResourcesInterface $resources, ResourceRegistry $registry, ?AccountInterface $account = NULL): ?array {
-    $id = $request->query->all()[Flow::STAGE] ?? NULL;
+  public static function stageRequested(RouteMatchInterface $route_match, Request $request, StageStoreInterface $stages, ResourcesInterface $resources, ResourceRegistry $registry, ?AccountInterface $account = NULL, ?FlowRegistry $flows = NULL): ?array {
+    $id = $request->query->all()[CompiledFlow::STAGE] ?? NULL;
     if ($id === NULL || $id === '') {
       return NULL;
     }
     if (!static::operationForm($route_match->getRouteObject()) && !static::reactPage($route_match->getRouteObject())) {
-      $refusal = sprintf('A stage does not apply to this page: only an operation form or a React page reads the "%s" query.', Flow::STAGE);
+      $refusal = sprintf('A stage does not apply to this page: only an operation form or a React page reads the "%s" query.', CompiledFlow::STAGE);
       return [NULL, AccessResult::forbidden($refusal)->setCacheMaxAge(0)];
     }
     if (!is_string($id)) {
-      throw new NamesNothingException('The "stage" in the query names a stage by its id, one value.', Flow::STAGE);
+      throw new NamesNothingException('The "stage" in the query names a stage by its id, one value.', CompiledFlow::STAGE);
     }
     [$resource, $operation] = static::named($route_match, $registry);
     $definition = $registry->getDefinition($resource);
     $found = $registry->getOperation($definition->name(), $operation);
     if (!Stageable::operation($definition, $found)) {
-      $refusal = sprintf('A stage does not apply to the "%s" operation of %s (%s), so this page takes no "%s" in its query.', $found->id, $definition->id, Violation::DOES_NOT_APPLY, Flow::STAGE);
+      $refusal = sprintf('A stage does not apply to the "%s" operation of %s (%s), so this page takes no "%s" in its query.', $found->id, $definition->id, Violation::DOES_NOT_APPLY, CompiledFlow::STAGE);
       return [NULL, AccessResult::forbidden($refusal)->setCacheMaxAge(0)];
     }
     $stage = $stages->named($id);
@@ -780,7 +785,14 @@ final class OperationRoute {
       'This stage may not be written into by this account.',
     );
     $route = (string) $route_match->getRouteName();
-    $flow = $found->creates ? Flow::onRoute($route_match->getRouteObject(), $route) : NULL;
+    try {
+      $flow = $found->creates ? CompiledFlow::onRoute($route_match->getRouteObject(), $route, $flows) : NULL;
+    }
+    catch (\LogicException | \ReflectionException $e) {
+      // A flow class the route no longer matches, written wrong, or gone
+      // since the router was rebuilt: refused, never thrown.
+      return [$stage, AccessResult::forbidden($e->getMessage())->setCacheMaxAge(0)];
+    }
     if ($flow === NULL || !$access->isAllowed()) {
       return [$stage, $access];
     }
@@ -788,10 +800,10 @@ final class OperationRoute {
     // An applied or voided stage holds no writes, so its create is not
     // looked for: the form sends the step to the confirm page, which says
     // what became of the stage.
-    if ($step === Flow::CONFIRM || ($stages->read($stage->id)['status'] ?? NULL) !== StageRecord::OPEN) {
+    if ($step === CompiledFlow::CONFIRM || ($stages->read($stage->id)['status'] ?? NULL) !== StageRecord::OPEN) {
       return [$stage, $access];
     }
-    $position = Flow::creating($stages, $stage, $definition->id, $found->id);
+    $position = CompiledFlow::creating($stages, $stage, $definition->id, $found->id);
     if ($position === NULL && $step !== 1) {
       $refusal = sprintf('The %s route draws step %d of its flow into the create its first step staged, and its create was taken out of the stage; start the flow again.', $route, $step);
       return [$stage, AccessResult::forbidden($refusal)->setCacheMaxAge(0)];

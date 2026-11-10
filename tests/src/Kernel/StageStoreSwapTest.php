@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Form\FormState;
-use Drupal\surface\Form\Flow;
+use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Http\ResourceApiController;
 use Drupal\surface\Staging\ListsStagesInterface;
@@ -208,7 +208,8 @@ class StageStoreSwapTest extends SurfaceKernelTestBase {
    *
    * The newest open stage of the account whose first write is the
    * route's operation of its resource under the same arguments, linked
-   * at step 2, or at the confirm page of a one-step flow. A stage whose
+   * at the next step drawn, or at the confirm page of a one-step flow. A
+   * stage whose
    * first write is another operation, a stage with no writes and another
    * thing's stage are passed over. Only the
    * first draw of step 1 offers it: a submission and a rebuild do not,
@@ -266,7 +267,18 @@ class StageStoreSwapTest extends SurfaceKernelTestBase {
     // A one-step flow over the same operation links its confirm page.
     $this->visit('/surface-test/itinerary/trip/flow-one');
     $this->surfaceForm();
-    $this->assertSame([$link('/surface-test/itinerary/trip/flow-one', $stage, Flow::CONFIRM)], $offers());
+    $this->assertSame([$link('/surface-test/itinerary/trip/flow-one', $stage, CompiledFlow::CONFIRM)], $offers());
+    $messenger->deleteAll();
+
+    // A flow class whose second step is passed over for what the stage
+    // holds links the next step drawn. That step is over the ledger row,
+    // which the flow's checks at the match build.
+    $this->ledger('row', 'First row');
+    $route = clone $this->container->get('router.route_provider')->getRouteByName('surface_stage_test.itinerary_flow_class');
+    $route->setDefault(CompiledFlow::ROUTE, 'stage_test.skips_second_step');
+    $this->serveBuilt('surface_stage_test.itinerary_flow_class', $route, ['id' => 'trip']);
+    $this->surfaceForm();
+    $this->assertSame([$link('/surface-test/itinerary/trip/flow-class', $stage, '3')], $offers(), 'Two nights pass over the ledger row at step 2.');
     $messenger->deleteAll();
 
     // The same operation with no flow offers nothing.

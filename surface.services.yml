@@ -45,6 +45,11 @@ services:
   surface.resource_registry:
     class: Drupal\surface\ResourceBuild\ResourceRegistry
     arguments: ['%surface.resource_classes%', '@cache.discovery', '@surface.resource_plugins', '@class_resolver', '@entity_type.manager']
+  # The flow classes found in src/Flow by ResourceCollectorPass, each
+  # compiled for a route that names it by its id.
+  surface.flows:
+    class: Drupal\surface\Flow\FlowRegistry
+    arguments: ['%surface.resource_classes%', '@class_resolver', '@surface.resource_registry']
   # A derived resource is read from site state; when its cache tags are
   # invalidated, the registry this request already read forgets it.
   surface.resource_registry_invalidator:
@@ -123,7 +128,7 @@ services:
   # operation's permission, then the resource's access class.
   surface.operation_access:
     class: Drupal\surface\Access\OperationAccessCheck
-    arguments: ['@surface.resources', '@surface.resource_registry', '@surface.operation_arguments', '@surface.operation_gate', '@surface.stages', '@request_stack']
+    arguments: ['@surface.resources', '@surface.resource_registry', '@surface.operation_arguments', '@surface.operation_gate', '@surface.stages', '@request_stack', '@surface.flows']
     tags:
       - { name: access_check, applies_to: _surface_operation_access }
   # Adds that access check to every route naming a resource and an
@@ -131,6 +136,7 @@ services:
   # in a way the route alone shows, which stops the router's rebuild.
   surface.operation_route_subscriber:
     class: Drupal\surface\Access\OperationRouteSubscriber
+    arguments: ['@surface.flows']
     tags:
       - { name: event_subscriber }
   # Turns a sealed data surface and its values into the served contract: JSON

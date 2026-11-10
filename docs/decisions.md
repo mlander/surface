@@ -228,7 +228,7 @@ label, the `committed` output's title, now "Committed" (A6).
 | Attributes | 11 | 11 |
 | Attribute arguments | 42 | 39 |
 | Blueprint methods | 17 | 15 |
-| Interfaces an author implements or names | 24 | 20 |
+| Interfaces an author implements or names | 24 | 20; since 2026-11-09 also the five of `src/Flow/` (FlowInterface, StepsInterface, StepInterface, StagedInterface, ChecksBeforeApplyInterface), pinned apart |
 | `OperationContext` public methods | 9 | 8, beside `constraints()`, the build's; 9 since 2026-10-28 |
 | Settings | 2 | 2 |
 | `x-surface` keywords | 35 | 35, 30 since contract 4 |
@@ -292,6 +292,15 @@ writes whole may be staged
 It is in `src/Pipeline/`, which the four pins do not count, so they are
 unchanged; `PublicSurfaceTest` pins the storage interfaces of
 `src/Pipeline/` by name and method from this date.
+
+*Grown 2026-11-09,* by one attribute and its four arguments,
+`#[Flow(id, label, keep, redirect)]`, a flow written as a class
+([A flow is a class, and the map is its short form](#a-flow-is-a-class-and-the-map-is-its-short-form)).
+Its five interfaces, `FlowInterface`, `StepsInterface`, `StepInterface`,
+`StagedInterface` and `ChecksBeforeApplyInterface`, are in `src/Flow/`,
+which the interface pin does not count; `PublicSurfaceTest` pins them by
+name and method from this date. The pins are 28 attributes and 114
+arguments since.
 
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
@@ -5121,16 +5130,18 @@ must carry before one is declared.
 
 ### A flow is declared on the route that draws it, not a resource
 
-Decided 2026-11-08, amended 2026-11-09. A flow is the default
-`_surface_flow: { steps: [...], label: ... }` on an operation form
-route, drawn one step at a time into one stage, `?step=N` and
+Decided 2026-11-08, amended 2026-11-09 twice. A flow is the default
+`_surface_flow` on an operation form route, a flow class's id or the
+map `{ steps: [...], label: ... }`, its short form
+([A flow is a class, and the map is its short form](#a-flow-is-a-class-and-the-map-is-its-short-form)), drawn one step at a time into one stage, `?step=N` and
 `?stage=<id>` in the query, ending in a confirm page that `steps` does
-not list. A step is one of two shapes: a group id of the route's
-operation, or a map `{ resource, operation, group, arguments }`, a step
-over another resource's operation, its whole surface when `group` is
-left out, its parameters the literal `arguments`. The first step is a
-group of the route's operation. The keys in no group are drawn at the
-first step over their operation, and the route's first step opens a
+not list. A step of the map is a group id of the route's operation, a
+map `{ keys }` of the route's operation's keys, or a map `{ resource,
+operation, keys or group, arguments }`, a step over another resource's
+operation, its whole surface when `keys` and `group` are left out, its
+parameters the literal `arguments`. The first step is the route's
+operation. A key a step lists is drawn there; the keys in no group and
+listed by no step are drawn at the first step over their operation, and the route's first step opens a
 stage when the query names none. Next stages a step's keys and goes on;
 Back goes back and stages nothing; Cancel discards the stage.
 `SurfaceFormBuilderInterface::buildSurfaceForm()` takes the keys to draw,
@@ -5146,7 +5157,7 @@ load overlays what earlier steps staged.
   confirm page, `changes` and apply are about all of them, so a flow
   across settings objects, the registration case the stage design named,
   needs only a step that names another resource. Such a step is
-  served by that resource's operation (`Form\Flow::servedAt()`): the
+  served by that resource's operation (`Form\CompiledFlow::servedAt()`): the
   route's operation still gates every page, and the step adds its own
   permission, access and the rule of where a stage applies, refused at
   match. It may not create, since a create's local id does not cross
@@ -5170,30 +5181,127 @@ load overlays what earlier steps staged.
   whole write.
 
 The content type example's flow draws the update's three groups over
-three steps (`/admin/structure/types/manage/{type}/surface-flow`).
-Example 19 (`/surface-examples/19`) draws two groups of `event.setup`,
-then `event.notices` as a step over another resource.
+three steps (`/admin/structure/types/manage/{type}/surface-flow`), the
+map. Example 19 (`/surface-examples/19`) is a flow class that splits the
+keys of `event.setup` over two steps, then draws `event.notices` as a
+step over another resource while ticket sales are open or a banner is
+shown.
 
-(`Form\Flow`, `Form\SurfaceOperationForm`, `Form\Drawing`,
+(`Form\CompiledFlow`, `Form\SurfaceOperationForm`, `Form\Drawing`,
 `surface_stage_test`'s `Resource\ItineraryResource` and its routes,
 `surface_examples_node_type.routing.yml`, `surface_examples.routing.yml`,
 `FlowFormTest`, `FlowRoundTripTest`)
 
+### A flow is a class, and the map is its short form
+
+Decided 2026-11-09. A flow may be written as a class: `#[Flow(id,
+label, keep, redirect)]` on a class in a module's `src/Flow`
+implementing `Flow\FlowInterface`, whose `defineSteps(StepsInterface
+$steps)` adds each step with `step(id, resource, operation, arguments)`
+and says what it draws with `keys(...)` or `group(id)`, its heading with
+`label()` and `description()`, and when it is drawn with `when()`. A
+route names it, `_surface_flow: <id>`, and may leave out
+`_surface_resource` and `_surface_operation`: the router's rebuild
+(`Access\OperationRouteSubscriber`) writes them from the first step. The
+map stays as the short form and gains `keys` per step. Both compile to
+one `Form\CompiledFlow`, so the access check, the form, the stage
+opening, the confirm page and apply read one object. A class flow may
+also implement `Flow\ChecksBeforeApplyInterface`, whose
+`beforeApply(StagedInterface $staged)` answers violations that refuse
+Save. Experimental, as every flow is.
+
+- **Sequence is code.** The module declares resources as classes with
+  verbs; the flow, the one thing with an order of steps in it, was a
+  map on a route. A class can hold a condition and a check across
+  resources, which a map cannot, and it is found the way resources are
+  (`ResourceBuild\ResourceCollectorPass` lists it, `Flow\FlowRegistry`
+  builds it through the class resolver, so it may take services).
+- **A route names it.** Every form door in the module is declared by a
+  route, so a flow has no path of its own. The route takes its resource
+  and operation from the first step at the rebuild, so every reader of a
+  route's operation (`OperationRoute::named()`, the access check,
+  `stageRequested()`, the catalog's form door, the resume offer) reads it
+  as on any operation route. Deriving the operation in each reader
+  instead was rejected: one reader missed would leave a route with no
+  access requirement. A route that writes the two must write the first
+  step's. The first step takes no literal arguments, since the route's
+  operation takes its arguments from the route's path and plain
+  defaults. A flow id that no class or two classes give depends on what
+  is installed, not on the route, so it closes that route alone
+  (`_access: 'FALSE'`) and the rebuild writes every other, as discovery
+  reports a resource written wrong where it is read, never by a
+  container that will not compile. A route its flow class no longer
+  matches, or a class gone since the rebuild, is refused at the access
+  check and the form for the request, never thrown.
+- **defineSteps() declares only.** It runs at the rebuild and again on
+  every page, so it reads no request, stage or stored value; the
+  callables `when()` takes are stored and called on each page.
+  `Flow\FlowRegistry` keeps nothing compiled between calls, so a
+  long-lived process reads each request's label; the form keeps the flow
+  and one reader per stage for its own request, and serializes neither.
+- **Keys make a split the flow's own.** A step that lists `keys` draws
+  them, before any group is looked at, so a resource needs no groups to
+  be drawn in steps; example 19's setup lost its two groups. A key in no
+  group and listed by no step is drawn at the first step over its
+  operation, a key in a group no step draws is not drawn, and a step
+  that would draw no key is refused, since an empty list of keys draws
+  every key. Keys and a group on one step are refused.
+- **`when` decides what is drawn, not what the stage holds.** It is
+  asked on every page with a `Flow\StagedInterface` over the stage,
+  whose `value(resource, key, arguments)` reads through
+  `StagedStorage::load()` as the step's form does: staged, else stored,
+  the record never read directly. It reads as the system, with no
+  account's access asked, and never answers a secret; a resource no step
+  draws is read through its `read`. Next and Back pass over a step whose
+  condition fails, a link to it answers 303 to the next step drawn, and
+  a post into it stages nothing. The access check does
+  not ask it, since it would read the stage before the stage's own
+  access; it judges the step as written. Not allowed on the first step,
+  which opens the stage. What a step staged before its condition turned
+  false stays in the stage and is applied with the rest, listed on the
+  confirm page as any write: dropping it would make a condition delete
+  writes nobody asked to remove. `beforeApply()` is where a flow refuses
+  such a stage.
+- **`beforeApply()` is the form door's.** It runs in the confirm page's
+  validation after the apply is rehearsed, each violation said as a
+  refusal of the rehearsal is. The stage's `apply` tool and its HTTP
+  path never see a flow, so a check that must hold at every door belongs
+  to a resource's own rules.
+- **A heading, no counter.** A step's label and description are drawn
+  above its fields. No "step N of M" is drawn: a step passed over would
+  make it count wrong.
+
+Not built: a flow that derives its own route or page, and conditions in
+the map spelling.
+
+(`Resource\Attribute\Flow`, `Flow\FlowInterface`, `Flow\StepsInterface`,
+`Flow\StepInterface`, `Flow\StagedInterface`,
+`Flow\ChecksBeforeApplyInterface`, `Flow\FlowRegistry`, `Flow\Staged`,
+`Form\CompiledFlow`, `surface_examples`' `Flow\EventSetupFlow`,
+`surface_stage_test`'s `Flow\ItineraryFlow`, `FlowClassTest`,
+`FlowRoundTripTest`)
+
 ### A step order is checked against the refiner graph and a create's required keys at match time
 
-Decided 2026-11-08. Four refusals need the resource built, so they run
+Decided 2026-11-08, amended 2026-11-09. Four refusals need the resource built, so they run
 when the route is matched, as a forbidden access answer naming the
-problem, through one `Form\Flow::refusal()` the route's access check and
+problem, through one `Form\CompiledFlow::refusal()` the route's access check and
 the form both ask: an operation a flow cannot stage, a delete, a
 read-only operation, or one a stage does not apply to; a step that names
-a group the operation's top level does not have, naming it; a key drawn
+a group the operation's top level does not have, or a key it does not
+have, or that draws no key since every key it would draw is drawn at
+another step, naming it; a key drawn
 at a step before a key its
 refinement depends on (`DefinitionMap::refinements()`), naming both; and
 for a create, a required key with no default drawn after the first
 step, naming it. The router's rebuild checks only the route's shape: a
-`_surface_flow` that is no map of distinct steps with an optional
-non-empty `label` and `redirect`, a flow on a route that names no
-operation, or one whose `_form` is not the operation form.
+`_surface_flow` that is neither a flow class's id nor a map of distinct
+steps with an optional non-empty `label` and `redirect`, a step with
+both keys and a group, an empty list of keys, a group or a key listed
+twice, a flow on a route that names no operation, or one whose `_form`
+is not the operation form; and of a flow class, what its steps say
+without the resource built
+([A flow is a class, and the map is its short form](#a-flow-is-a-class-and-the-map-is-its-short-form)).
 
 - **Not at the rebuild.** The stage design put the refiner-order
   refusal at route registration. Nothing is built there, and a derived
@@ -5210,18 +5318,18 @@ operation, or one whose `_form` is not the operation form.
   resource. A refiner cannot cross resources, so the unknown group and
   the refiner order are asked over the steps drawn from one operation:
   the route's in `refusal()` at every page, another resource's in
-  `Form\Flow::servedAt()` at its own step, and for every step over
+  `Form\CompiledFlow::servedAt()` at its own step, and for every step over
   another resource at the first step while no stage is named, so a flow
   that cannot be served is refused before anything is staged. What the
   registry alone shows of each step over another resource, an operation
   not discovered, the route's own operation, one that creates, deletes
   or is read-only, one a stage does not apply to (`does_not_apply`), and
   the duplicate checks of the rebuild asked again over resolved resource
-  ids, `Form\Flow::stepRefusal()` asks at every page.
+  ids, `Form\CompiledFlow::stepRefusal()` asks at every page.
   Only the route's operation may create, so the required keys check is
   its alone.
 
-(`Form\Flow::refusal()`, `Form\Flow::stepRefusal()`, `Form\Flow::servedAt()`, `Form\Flow::assertWritten()`,
+(`Form\CompiledFlow::refusal()`, `Form\CompiledFlow::stepRefusal()`, `Form\CompiledFlow::servedAt()`, `Form\CompiledFlow::assertWritten()`,
 `Access\OperationAccessCheck`, `Access\OperationRouteSubscriber`,
 `FlowFormTest`)
 
@@ -5337,7 +5445,7 @@ wizard finished in one sitting, or `long`, the temp store expiry
 
 (`Staging\StageStoreInterface`, `Staging\ListsStagesInterface`,
 `Staging\StageRecord`, `Staging\StageStore`, `Storage\StageStorage::KEEP`,
-`Form\Flow`, `Form\SurfaceOperationForm::offerResume()`,
+`Form\CompiledFlow`, `Form\SurfaceOperationForm::offerResume()`,
 `surface_stage_test`'s `Staging\ArrayStageStore`, `StageStoreSwapTest`,
 `StageStoreTest::testKeepIsTheRecordsLifetime()`,
 `FlowFormTest::testKeepIsTheStagesLifetime()`)

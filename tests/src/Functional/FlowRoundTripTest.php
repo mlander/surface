@@ -102,7 +102,14 @@ class FlowRoundTripTest extends BrowserTestBase {
   }
 
   /**
-   * Tests example 19: two groups of one resource, then another resource.
+   * Tests example 19: a flow class over one resource, then another.
+   *
+   * The setup's keys split over steps 1 and 2, each under its heading,
+   * the notices at step 3 while ticket sales are open or a banner is
+   * shown. Back to the tickets to close sales: the notices are still
+   * drawn for the banner, and the confirm page refuses Save while it is
+   * shown. The banner hidden, Next passes over the notices; sales opened
+   * again, Save writes both.
    */
   public function testTheExampleFlowStagesTwoResources(): void {
     $this->drupalLogin($this->drupalCreateUser(['administer site configuration']));
@@ -113,6 +120,9 @@ class FlowRoundTripTest extends BrowserTestBase {
     $assert->fieldExists('surface[name]');
     $assert->fieldNotExists('surface[price]');
     $assert->fieldNotExists('surface[banner]');
+    $assert->elementExists('xpath', '//h2[normalize-space()="The event"]');
+    $assert->elementNotExists('xpath', '//h2[normalize-space()="basics"]');
+    $assert->pageTextContains('What the event is called, when it is, and how many people it holds.');
 
     $this->submitForm(['surface[name]' => 'Winter meetup', 'surface[capacity]' => '80'], 'Next');
     $stage = $this->query()['stage'];
@@ -123,8 +133,41 @@ class FlowRoundTripTest extends BrowserTestBase {
     $this->assertSame(['stage' => $stage, 'step' => '3'], $this->query());
     $assert->fieldExists('surface[banner]');
     $assert->fieldNotExists('surface[price]');
+    $assert->pageTextContains('Drawn while ticket sales are open or a banner is shown.');
     $this->submitForm(['surface[banner]' => 'Doors open at six.', 'surface[show_banner]' => TRUE], 'Next');
     $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $this->query());
+
+    // Back to the tickets, sales closed: the banner shown keeps the
+    // notices drawn, and the check refuses Save while it is shown.
+    $this->submitForm([], 'Back');
+    $this->assertSame(['stage' => $stage, 'step' => '3'], $this->query());
+    $this->submitForm([], 'Back');
+    $this->assertSame(['stage' => $stage, 'step' => '2'], $this->query());
+    $this->submitForm(['surface[sales_open]' => FALSE], 'Next');
+    $this->assertSame(['stage' => $stage, 'step' => '3'], $this->query(), 'The banner shown keeps the notices drawn.');
+    $this->submitForm([], 'Next');
+    $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $this->query());
+    $this->submitForm([], 'Save');
+    $assert->pageTextContains('The notices show a banner while ticket sales are closed; open sales or hide the banner. (banner_while_sales_closed)');
+    $assert->pageTextNotContains('Applied 2 writes.');
+    $this->assertSame('Autumn meetup', $this->config('surface_examples.event_setup')->get('name'), 'Nothing is written.');
+
+    // The banner hidden where the refusal says: the notices are then
+    // passed over, and keep the banner's text they staged.
+    $this->submitForm([], 'Back');
+    $this->assertSame(['stage' => $stage, 'step' => '3'], $this->query());
+    $this->submitForm(['surface[show_banner]' => FALSE], 'Next');
+    $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $this->query());
+    $this->drupalGet('surface-examples/19', ['query' => ['stage' => $stage, 'step' => '3']]);
+    $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $this->query(), 'A link to the notices goes on to the confirm page.');
+    $this->submitForm([], 'Back');
+    $this->assertSame(['stage' => $stage, 'step' => '2'], $this->query(), 'Back passes over the notices.');
+    $this->submitForm(['surface[sales_open]' => TRUE], 'Next');
+    $this->assertSame(['stage' => $stage, 'step' => '3'], $this->query());
+    $assert->fieldValueEquals('surface[banner]', 'Doors open at six.');
+    $this->submitForm(['surface[show_banner]' => TRUE], 'Next');
+    $this->assertSame(['stage' => $stage, 'step' => 'confirm'], $this->query());
+
     $rows = '//table[caption[contains(., "Staged writes")]]/tbody/tr';
     $assert->elementsCount('xpath', $rows, 2);
     $assert->elementTextContains('xpath', $rows . '[1]', 'event.setup');

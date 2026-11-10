@@ -11,7 +11,7 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
-use Drupal\surface\Form\Flow;
+use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Http\ServedOperations;
 use Drupal\surface\Http\ServedPaths;
 use Drupal\surface\ResourceBuild\KeyPaths;
@@ -155,7 +155,7 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    *   apply to, which the route's access check refuses first.
    */
   public function page(Request $request, string $resource, string $operation): array {
-    $queried = $request->query->all()[Flow::STAGE] ?? NULL;
+    $queried = $request->query->all()[CompiledFlow::STAGE] ?? NULL;
     try {
       $parameters = $this->servedOperations->parameters($resource, $operation, $request);
       $stage = NULL;
@@ -326,7 +326,7 @@ final class ResourceReactPage implements ContainerInjectionInterface {
         ],
       ],
     ];
-    $cacheability = CacheableMetadata::createFromObject($token)->addCacheContexts(['url.query_args:' . Flow::STAGE]);
+    $cacheability = CacheableMetadata::createFromObject($token)->addCacheContexts(['url.query_args:' . CompiledFlow::STAGE]);
     foreach ($urls as $url) {
       $cacheability->addCacheableDependency($url);
     }

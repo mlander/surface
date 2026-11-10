@@ -18,6 +18,7 @@ use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\ExampleCalls;
 use Drupal\surface_examples\ExampleModules;
 use Drupal\surface_examples\FilesPanel;
+use Drupal\surface_examples\Flow\EventSetupFlow;
 use Drupal\surface_examples\Form\RegistrationStep1ClassicForm;
 use Drupal\surface_examples\Form\RegistrationStep2ClassicForm;
 use Drupal\surface_examples\Hook\SpotlightBlockHooks;
@@ -832,12 +833,13 @@ final class ExamplesController extends ControllerBase {
       ],
       19 => [
         'title' => $series[19]['title'],
-        'sentence' => $this->t('The event set up in three steps into one stage: two groups of one resource, then another resource, nothing written until the confirm page saves them together.'),
+        'sentence' => $this->t('The event set up in three steps into one stage, a flow written as a class: the keys of one resource split over two steps, then another resource while ticket sales are open or a banner is shown, nothing written until the confirm page checks and saves them together.'),
         'items' => [
           $this->route('surface_examples.step19'),
-          $this->t('The setup: @setup lines of code; the notices: @notices.', [
+          $this->t('The setup: @setup lines of code; the notices: @notices; the flow: @flow.', [
             '@setup' => CodeLines::count($this->file(EventSetupResource::class)),
             '@notices' => CodeLines::count($this->file(EventNoticesResource::class)),
+            '@flow' => CodeLines::count($this->file(EventSetupFlow::class)),
           ]),
         ],
       ],

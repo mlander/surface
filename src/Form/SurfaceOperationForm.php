@@ -19,6 +19,10 @@ use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Routing\RouteProviderInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\Url;
+use Drupal\surface\Flow\ChecksBeforeApplyInterface;
+use Drupal\surface\Flow\FlowRegistry;
+use Drupal\surface\Flow\Staged;
+use Drupal\surface\Flow\StagedInterface;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\SurfaceResult;
 use Drupal\surface\Pipeline\Violation;
@@ -119,15 +123,20 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * redirect, and stays where it is with the stage in the query; a delete's
  * confirmation says nothing is removed until the stage is applied.
  *
- * A route that declares `_surface_flow` (Flow) draws the operation one
- * group per step, `?step=N`, and a step over another resource draws that
- * resource's operation: the first step opens a stage when the query
- * names none, each step's Next stages its keys and goes on, Back goes
- * back staging nothing, Cancel discards the stage, and the confirm page
- * after the last step, `?step=confirm`, lists the stage's writes and
- * Save applies what it listed, then goes to the flow's `redirect` route
- * or stays. A step asked for with a stage already applied or voided goes
- * to the confirm page, which says so. Only this form reads `stage`: any
+ * A route that declares `_surface_flow` (CompiledFlow), a flow class's
+ * id or a map of steps, draws the operation one step at a time,
+ * `?step=N`, each step its keys or its group, and a step over another
+ * resource draws that resource's operation: the first step opens a stage
+ * when the query names none, each step's Next stages its keys and goes
+ * on to the next step drawn, Back goes back staging nothing, Cancel
+ * discards the stage, and the confirm page after the last step,
+ * `?step=confirm`, lists the stage's writes and Save applies what it
+ * listed, once the flow class's beforeApply() finds nothing, then goes
+ * to the flow's `redirect` route or stays. A step a flow class draws
+ * under a condition is passed over while the stage's values say so, and
+ * a request for it goes on to the next step drawn. A step asked for with
+ * a stage already applied or voided goes to the confirm page, which says
+ * so. Only this form reads `stage`: any
  * other page served by an operation refuses it.
  *
  * Decision: see
@@ -206,6 +215,30 @@ class SurfaceOperationForm extends FormBase {
   protected const LISTED = 'surface_stage_listed';
 
   /**
+   * The key a flow step's heading is drawn at, above the fields.
+   */
+  public const STEP_KEY = 'surface_step';
+
+  /**
+   * The flow the route declares, read once per request; FALSE until read.
+   *
+   * Left out of the serialized form (__sleep()): a flow class's steps
+   * hold callables and the class may hold services.
+   */
+  protected CompiledFlow|false|null $compiledFlow = FALSE;
+
+  /**
+   * The readers of what a stage holds, by stage id, built once per request.
+   *
+   * A reader keeps what it read (Staged), so the one of a stage this
+   * request writes into is dropped after the write. Left out of the
+   * serialized form with the flow, which each holds.
+   *
+   * @var array<string, \Drupal\surface\Flow\StagedInterface>
+   */
+  protected array $stagedReaders = [];
+
+  /**
    * Constructs a SurfaceOperationForm.
    *
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
@@ -226,6 +259,8 @@ class SurfaceOperationForm extends FormBase {
    *   The route provider, which says what a flow's `redirect` route takes.
    * @param \Drupal\Core\Datetime\DateFormatterInterface $dateFormatter
    *   The date formatter, which says how long ago a stage was applied.
+   * @param \Drupal\surface\Flow\FlowRegistry $flows
+   *   The flow classes, for a route that names one.
    */
   public function __construct(
     protected readonly ClassResolverInterface $classResolver,
@@ -236,6 +271,7 @@ class SurfaceOperationForm extends FormBase {
     protected readonly StageStoreInterface $stages,
     protected readonly RouteProviderInterface $routeProvider,
     protected readonly DateFormatterInterface $dateFormatter,
+    protected readonly FlowRegistry $flows,
   ) {
   }
 
@@ -256,7 +292,18 @@ class SurfaceOperationForm extends FormBase {
       $container->get('surface.stages'),
       $container->get('router.route_provider'),
       $container->get('date.formatter'),
+      $container->get('surface.flows'),
     );
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * The flow is read again after the form is unserialized: a flow class's
+   * steps hold callables, which do not serialize.
+   */
+  public function __sleep(): array {
+    return array_values(array_diff(parent::__sleep(), ['compiledFlow', 'stagedReaders']));
   }
 
   /**
@@ -320,7 +367,7 @@ class SurfaceOperationForm extends FormBase {
    * {@inheritdoc}
    */
   public function buildForm(array $form, FormStateInterface $form_state): array {
-    [$served, $surface, $storage, $access] = $this->operationServed();
+    [$served, $surface, $storage, $access, $route] = $this->operationServed();
     if (!$access->isAllowed()) {
       // The floor under the route's own requirement: the same answer, for
       // the caller that reached the form another way. The operation is
@@ -332,14 +379,24 @@ class SurfaceOperationForm extends FormBase {
     $flow = $this->flow();
     $step = $flow?->step($this->getRequest());
     $first = !$form_state->isProgrammed() && $form_state->getUserInput() === [];
-    if ($flow !== NULL && $step === Flow::CONFIRM) {
+    if ($flow !== NULL && $step === CompiledFlow::CONFIRM) {
       return $this->stagedPage($this->confirmStep($form, $served, $flow, $surface, $storage), $served);
     }
     if ($flow !== NULL && $first && $this->closed($served->stage) !== NULL) {
       // A step of a stage already applied or voided, reached by a link or
       // by the browser's Back: the confirm page says what became of it.
       $this->getRequest()->query->remove('destination');
-      $response = new LocalRedirectResponse($this->flowUrl($served->stage?->id, Flow::CONFIRM)->setAbsolute()->toString(), 303);
+      $response = new LocalRedirectResponse($this->flowUrl($served->stage?->id, CompiledFlow::CONFIRM)->setAbsolute()->toString(), 303);
+      $response->addCacheableDependency((new CacheableMetadata())->setCacheMaxAge(0));
+      throw new EnforcedResponseException($response);
+    }
+    if ($flow !== NULL && $first && is_int($step) && $this->passedOver($route)) {
+      // A step the flow passes over for what the stage holds, asked for
+      // by a link: the page goes on to the next step drawn.
+      // Decision: see
+      // docs/decisions.md#a-flow-is-a-class-and-the-map-is-its-short-form.
+      $this->getRequest()->query->remove('destination');
+      $response = new LocalRedirectResponse($this->flowUrl($route->stage?->id, $flow->nextDrawn($step, $this->staged($route)))->setAbsolute()->toString(), 303);
       $response->addCacheableDependency((new CacheableMetadata())->setCacheMaxAge(0));
       throw new EnforcedResponseException($response);
     }
@@ -381,6 +438,18 @@ class SurfaceOperationForm extends FormBase {
     if ($group !== NULL && isset($form[static::SURFACE_KEY][$group])) {
       // The step's own group, drawn open: it is what the step asks.
       $form[static::SURFACE_KEY][$group]['#open'] = TRUE;
+    }
+    [$label, $description] = $flow === NULL ? [NULL, NULL] : $flow->heading((int) $step);
+    if ($label !== NULL || $description !== NULL) {
+      // The step's heading, above the fields; no step counter, since a
+      // step passed over would make it count wrong.
+      $form[static::STEP_KEY] = ['#type' => 'container', '#weight' => -90];
+      if ($label !== NULL) {
+        $form[static::STEP_KEY]['label'] = ['#type' => 'html_tag', '#tag' => 'h2', '#value' => $label];
+      }
+      if ($description !== NULL) {
+        $form[static::STEP_KEY]['description'] = ['#type' => 'html_tag', '#tag' => 'p', '#value' => $description];
+      }
     }
     if ($served->query !== []) {
       // The page varies by each query parameter a link may start a key
@@ -435,7 +504,7 @@ class SurfaceOperationForm extends FormBase {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state): void {
-    [$served, $surface, $storage, $access] = $this->operationServed();
+    [$served, $surface, $storage, $access, $route] = $this->operationServed();
     // Back and Cancel stage nothing, so nothing is judged; Save is
     // rehearsed whole, on the confirm page.
     $trigger = $form_state->getTriggeringElement();
@@ -447,8 +516,14 @@ class SurfaceOperationForm extends FormBase {
       // validation errors to none, as Back and Cancel do.
       return;
     }
+    if ($this->passedOver($route)) {
+      // A step the flow passes over takes no values: the submit handler
+      // refuses the post, so nothing is judged here either.
+      return;
+    }
     if ($button === 'apply' && $this->listedStill($served, $form, $form_state)) {
       $this->rehearseApply($served, $form_state);
+      $this->checkBeforeApply($served, $form_state);
     }
     if ($button !== NULL) {
       return;
@@ -496,11 +571,22 @@ class SurfaceOperationForm extends FormBase {
    * {@inheritdoc}
    */
   public function submitForm(array &$form, FormStateInterface $form_state): void {
-    [$served, $surface, $storage, $access] = $this->operationServed();
+    [$served, $surface, $storage, $access, $route] = $this->operationServed();
     if ($this->closedGuard($form_state, $served->stage, 'next')) {
       return;
     }
     $flow = $this->flow();
+    $step = $flow?->step($this->getRequest());
+    if ($flow !== NULL && is_int($step) && $this->passedOver($route)) {
+      // Posted into a step the flow passes over for what the stage holds
+      // (a page drawn before the stage changed, or a post built by hand):
+      // nothing is staged, and the page goes on to the next step drawn.
+      // Decision: see
+      // docs/decisions.md#a-flow-is-a-class-and-the-map-is-its-short-form.
+      $this->messenger()->addError($this->t('This step is not part of the flow as it stands.'));
+      $this->flowRedirect($form_state, $this->flowUrl($route->stage?->id, $flow->nextDrawn($step, $this->staged($route))));
+      return;
+    }
     $stage = $served->stage;
     $opened = FALSE;
     if ($flow !== NULL && $stage === NULL) {
@@ -576,8 +662,11 @@ class SurfaceOperationForm extends FormBase {
       // asked: they say a thing was saved, and go where the stage is not.
       $this->messenger()->addStatus($this->stagedMessage($served, $result, $storage, $stage));
       if ($flow !== NULL) {
-        $step = $flow->step($this->getRequest());
-        $this->flowRedirect($form_state, $this->flowUrl($stage->id, is_int($step) && $step < $flow->count() ? $step + 1 : Flow::CONFIRM));
+        // The next step drawn, judged over the stage as this write left it:
+        // what was read of it before the write is read again.
+        unset($this->stagedReaders[$stage->id]);
+        $staged = $flow->conditional() ? $this->staged($route, $route->stage ?? $stage->withArguments($route->arguments)) : NULL;
+        $this->flowRedirect($form_state, $this->flowUrl($stage->id, is_int($step) ? $flow->nextDrawn($step, $staged) : CompiledFlow::CONFIRM));
       }
       return;
     }
@@ -715,11 +804,12 @@ class SurfaceOperationForm extends FormBase {
    * of the URL that names nothing, or no longer does (the thing was
    * removed between the draw and the save), is a page not found.
    *
-   * @return array{0: \Drupal\surface\ResourceBuild\OperationRoute, 1: \Drupal\surface\SurfaceInterface, 2: \Drupal\surface\Pipeline\SurfaceStorageInterface, 3: \Drupal\Core\Access\AccessResultInterface}
+   * @return array{0: \Drupal\surface\ResourceBuild\OperationRoute, 1: \Drupal\surface\SurfaceInterface, 2: \Drupal\surface\Pipeline\SurfaceStorageInterface, 3: \Drupal\Core\Access\AccessResultInterface, 4: \Drupal\surface\ResourceBuild\OperationRoute}
    *   The operation and its context, the resource built in it, the storage
-   *   composed for it, and the access answer for the current user. At a
-   *   flow's step over another resource, that resource's operation
-   *   (Flow::servedAt()), and the route's access and its own together.
+   *   composed for it, the access answer for the current user, and the
+   *   route's own operation. At a flow's step over another resource, the
+   *   first is that resource's operation (CompiledFlow::servedAt()), and
+   *   the access the route's and its own together.
    *
    * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
    *   When a value the URL carries names nothing.
@@ -730,7 +820,7 @@ class SurfaceOperationForm extends FormBase {
     // The stage the query names, before the thing, as the route's access
     // check asks: the same answer on the way in and on the way out.
     try {
-      $staged = OperationRoute::stageRequested($route_match, $this->getRequest(), $this->stages, $this->resources, $this->surfaceRegistry);
+      $staged = OperationRoute::stageRequested($route_match, $this->getRequest(), $this->stages, $this->resources, $this->surfaceRegistry, NULL, $this->flows);
     }
     catch (NamesNothingException $e) {
       throw new NotFoundHttpException($e->getMessage(), $e);
@@ -768,6 +858,7 @@ class SurfaceOperationForm extends FormBase {
     catch (\InvalidArgumentException $e) {
       throw new AccessDeniedHttpException($e->getMessage(), $e);
     }
+    $route = $served;
     if ($at !== $served) {
       $served = $at;
       $access = $access->andIf($this->resources->access($served->resource, $served->context));
@@ -778,18 +869,72 @@ class SurfaceOperationForm extends FormBase {
       $surface,
       $this->resources->storage($served->resource, $served->context, $surface, NULL, $served->stage),
       $staged === NULL ? $access : $access->andIf($staged[1]),
+      $route,
     ];
   }
 
   /**
    * Gets the flow the route declares, if it declares one.
    *
-   * @return \Drupal\surface\Form\Flow|null
+   * Read once and kept for the request: a flow class's defineSteps() runs
+   * once, whichever handler asks.
+   *
+   * @return \Drupal\surface\Form\CompiledFlow|null
    *   The flow, each step over another resource naming its resource by
-   *   id (Flow::resolved()), or NULL.
+   *   id (CompiledFlow::resolved()), or NULL.
+   *
+   * @throws \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
+   *   When the route's flow refuses it, as its access check does.
    */
-  protected function flow(): ?Flow {
-    return Flow::onRoute($this->getRouteMatch()->getRouteObject(), (string) $this->getRouteMatch()->getRouteName())?->resolved($this->surfaceRegistry);
+  protected function flow(): ?CompiledFlow {
+    if ($this->compiledFlow === FALSE) {
+      try {
+        $this->compiledFlow = CompiledFlow::onRoute($this->getRouteMatch()->getRouteObject(), (string) $this->getRouteMatch()->getRouteName(), $this->flows)?->resolved($this->surfaceRegistry);
+      }
+      catch (\LogicException | \ReflectionException $e) {
+        // As the route's access check refuses it, for the caller that
+        // reached the form another way.
+        throw new AccessDeniedHttpException($e->getMessage(), $e);
+      }
+    }
+    return $this->compiledFlow;
+  }
+
+  /**
+   * Reads what the flow's stage holds, for a step's condition or the check.
+   *
+   * @param \Drupal\surface\ResourceBuild\OperationRoute $route
+   *   The route's own operation.
+   * @param \Drupal\surface\Staging\Stage|null $stage
+   *   The stage, or NULL for the route's.
+   *
+   * @return \Drupal\surface\Flow\StagedInterface|null
+   *   The reader, one per stage for the request (a write into the stage
+   *   drops it, so the next call reads what was just staged); NULL with
+   *   no flow or no stage.
+   */
+  protected function staged(OperationRoute $route, ?Stage $stage = NULL): ?StagedInterface {
+    $flow = $this->flow();
+    $stage ??= $route->stage;
+    if ($flow === NULL || $stage === NULL) {
+      return NULL;
+    }
+    return $this->stagedReaders[$stage->id] ??= new Staged($this->resources, $this->surfaceRegistry, $this->stages, $flow, $route, $stage);
+  }
+
+  /**
+   * Answers whether the page's step is one its flow passes over.
+   *
+   * @param \Drupal\surface\ResourceBuild\OperationRoute $route
+   *   The route's own operation, with the stage it writes into.
+   *
+   * @return bool
+   *   TRUE at a step whose condition fails for what the stage holds.
+   */
+  protected function passedOver(OperationRoute $route): bool {
+    $flow = $this->flow();
+    $step = $flow?->step($this->getRequest());
+    return $flow !== NULL && is_int($step) && $flow->conditional() && !$flow->drawn($step, $this->staged($route));
   }
 
   /**
@@ -809,8 +954,8 @@ class SurfaceOperationForm extends FormBase {
    */
   protected function stagedPage(array $form, OperationRoute $served): array {
     $form['#cache']['contexts'] = Cache::mergeContexts($form['#cache']['contexts'] ?? [], [
-      'url.query_args:' . Flow::STAGE,
-      'url.query_args:' . Flow::STEP,
+      'url.query_args:' . CompiledFlow::STAGE,
+      'url.query_args:' . CompiledFlow::STEP,
     ]);
     if ($served->stage !== NULL) {
       $form['#cache']['max-age'] = 0;
@@ -878,14 +1023,14 @@ class SurfaceOperationForm extends FormBase {
    * @param string|null $stage
    *   The stage's id, or NULL for none.
    * @param int|string|null $step
-   *   The step, Flow::CONFIRM, or NULL for the first.
+   *   The step, CompiledFlow::CONFIRM, or NULL for the first.
    *
    * @return \Drupal\Core\Url
    *   The URL: this route and its parameters, the stage and the step in
    *   the query, nothing else.
    */
   protected function flowUrl(?string $stage, int|string|null $step): Url {
-    $query = array_filter([Flow::STAGE => $stage, Flow::STEP => $step === NULL ? NULL : (string) $step], static fn (?string $value): bool => $value !== NULL);
+    $query = array_filter([CompiledFlow::STAGE => $stage, CompiledFlow::STEP => $step === NULL ? NULL : (string) $step], static fn (?string $value): bool => $value !== NULL);
     return Url::fromRouteMatch($this->getRouteMatch())->setOption('query', $query);
   }
 
@@ -973,12 +1118,12 @@ class SurfaceOperationForm extends FormBase {
         '@closed' => $closed,
         ':start' => $this->flowUrl(NULL, NULL)->toString(),
       ]));
-    $this->flowRedirect($form_state, $this->flowUrl($stage->id, Flow::CONFIRM));
+    $this->flowRedirect($form_state, $this->flowUrl($stage->id, CompiledFlow::CONFIRM));
     return TRUE;
   }
 
   /**
-   * Goes back one step, staging nothing: Back's submit.
+   * Goes back to the step drawn before, staging nothing: Back's submit.
    *
    * @param array $form
    *   The form.
@@ -987,12 +1132,12 @@ class SurfaceOperationForm extends FormBase {
    */
   public function flowBack(array &$form, FormStateInterface $form_state): void {
     $flow = $this->flow();
-    [$served] = $this->operationServed();
+    [$served, , , , $route] = $this->operationServed();
     if ($flow === NULL || $served->stage === NULL || $this->closedGuard($form_state, $served->stage, 'back')) {
       return;
     }
     $step = $flow->step($this->getRequest());
-    $this->flowRedirect($form_state, $this->flowUrl($served->stage->id, $step === Flow::CONFIRM ? $flow->count() : max(1, (int) $step - 1)));
+    $this->flowRedirect($form_state, $this->flowUrl($served->stage->id, $flow->previousDrawn($step, $flow->conditional() ? $this->staged($route) : NULL)));
   }
 
   /**
@@ -1108,6 +1253,34 @@ class SurfaceOperationForm extends FormBase {
       return;
     }
     foreach ($result->violations as $violation) {
+      $form_state->setErrorByName('', $this->said($violation));
+    }
+  }
+
+  /**
+   * Asks the flow class to check the stage before Save applies it.
+   *
+   * Only a flow class that implements ChecksBeforeApplyInterface is
+   * asked, after the rehearsal; each violation it answers is said on the
+   * page, as a refusal of the rehearsal is, and Save applies nothing. The
+   * stage's `apply` tool and its HTTP path never see a flow, so this is
+   * the form door's check alone.
+   *
+   * Decision: see
+   * docs/decisions.md#a-flow-is-a-class-and-the-map-is-its-short-form.
+   *
+   * @param \Drupal\surface\ResourceBuild\OperationRoute $served
+   *   The route's operation and its context, through the stage.
+   * @param \Drupal\Core\Form\FormStateInterface $form_state
+   *   The form state.
+   */
+  protected function checkBeforeApply(OperationRoute $served, FormStateInterface $form_state): void {
+    $declared = $this->flow()?->declared;
+    $staged = $this->staged($served);
+    if (!$declared instanceof ChecksBeforeApplyInterface || $staged === NULL || $served->stage === NULL || $this->stages->read($served->stage->id) === NULL) {
+      return;
+    }
+    foreach ($declared->beforeApply($staged) as $violation) {
       $form_state->setErrorByName('', $this->said($violation));
     }
   }
@@ -1269,18 +1442,18 @@ class SurfaceOperationForm extends FormBase {
    * When the store lists stages (ListsStagesInterface) and the account
    * owns an open stage whose first write is this route's operation of its
    * resource under these arguments: a status message with a link to the
-   * next step in that stage, or the confirm page of a one-step flow. The
+   * next step drawn in that stage, or the confirm page of a one-step flow. The
    * newest such stage is linked. Submitting the step opens a new stage,
    * as it does when there is none.
    *
-   * @param \Drupal\surface\Form\Flow $flow
+   * @param \Drupal\surface\Form\CompiledFlow $flow
    *   The flow.
    * @param \Drupal\surface\ResourceBuild\OperationRoute $served
    *   The operation and its context, with no stage.
    * @param \Drupal\surface\Staging\ListsStagesInterface $stages
    *   The store.
    */
-  protected function offerResume(Flow $flow, OperationRoute $served, ListsStagesInterface $stages): void {
+  protected function offerResume(CompiledFlow $flow, OperationRoute $served, ListsStagesInterface $stages): void {
     $resource = $this->surfaceRegistry->getDefinition($served->resource)->id;
     $owner = (int) $this->currentUser()->id();
     foreach ($stages->openStages($owner) as $id) {
@@ -1289,7 +1462,7 @@ class SurfaceOperationForm extends FormBase {
       // store that lists wrong links no other account's stage.
       if ($record !== NULL && (int) $record['owner'] === $owner && self::startsWith($record, $resource, $served->operation->id, $served->arguments)) {
         $this->messenger()->addStatus($this->t('You have an open stage for this: <a href=":resume">resume it</a> or start again.', [
-          ':resume' => $this->flowUrl($id, $flow->count() > 1 ? 2 : Flow::CONFIRM)->toString(),
+          ':resume' => $this->flowUrl($id, $flow->nextDrawn(1, $flow->conditional() ? $this->staged($served, $this->stages->named($id)->withArguments($served->arguments)) : NULL))->toString(),
         ]));
         return;
       }
@@ -1351,7 +1524,7 @@ class SurfaceOperationForm extends FormBase {
    *   The form.
    * @param \Drupal\surface\ResourceBuild\OperationRoute $served
    *   The operation and its context, through the stage.
-   * @param \Drupal\surface\Form\Flow $flow
+   * @param \Drupal\surface\Form\CompiledFlow $flow
    *   The flow.
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The route's resource, built, for its panel.
@@ -1361,7 +1534,7 @@ class SurfaceOperationForm extends FormBase {
    * @return array
    *   The form.
    */
-  protected function confirmStep(array $form, OperationRoute $served, Flow $flow, SurfaceInterface $surface, SurfaceStorageInterface $storage): array {
+  protected function confirmStep(array $form, OperationRoute $served, CompiledFlow $flow, SurfaceInterface $surface, SurfaceStorageInterface $storage): array {
     $stage = $served->stage;
     $record = $stage === NULL ? NULL : $this->stages->read($stage->id);
     if ($stage === NULL || $record === NULL) {
