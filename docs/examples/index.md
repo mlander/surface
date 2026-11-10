@@ -45,9 +45,10 @@ door serves
 drush pm:install surface_examples_react
 ```
 
-The base module's `/surface-api/openapi.json` describes every
-operation's paths for an OpenAPI client, and the landing page links it
-under example 6.
+`/surface-api/openapi.json`, which the submodule `surface_openapi`
+serves, describes every operation's paths for an OpenAPI client, and
+the landing page links it under example 6 once that module is
+installed.
 
 Which permission each page asks for, and how to reset the examples to
 the shipped settings, are in

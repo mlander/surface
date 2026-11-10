@@ -11,7 +11,7 @@ use Drupal\Core\Config\Entity\ConfigEntityInterface;
 use Drupal\Core\Config\Schema\SchemaIncompleteException;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\surface\Form\CompiledFlow;
-use Drupal\surface\Http\ServedOperationAccessCheck;
+use Drupal\surface_http\Access\ServedOperationAccessCheck;
 use Drupal\surface\Pipeline\StorageViolationsException;
 use Drupal\surface\Pipeline\TransactionalStorageInterface;
 use Drupal\surface\Pipeline\Violation;
@@ -94,6 +94,8 @@ class StagedConfigTest extends SurfaceKernelTestBase {
     'surface_examples_keys',
     'surface_examples_node_type',
     'my_module',
+    'surface_http',
+    'surface_openapi',
   ];
 
   /**

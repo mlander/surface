@@ -1,7 +1,7 @@
 # The page an operation's React form mounts on. It names the resource and
 # the operation by id: /surface-react/registration.step3/configure, its
-# parameters in the query string. The app it mounts calls the base
-# module's HTTP door, /surface-api.
+# parameters in the query string. The app it mounts calls the HTTP door
+# surface_http serves, /surface-api.
 #
 # Its requirement is the API's, the operation's: its permission, then the
 # resource's access class, and no opinion is a refusal.

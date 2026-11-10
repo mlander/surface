@@ -11,10 +11,12 @@ form.
 A resource built in one of its operations, served as a JSON document a
 client with no PHP can render a form from, re-narrow as answers change,
 rehearse a write against before anything is written, and then write
-through. The emitter and the API, where the path is the resource and
-the method the operation, are the base module's; a React app that
-renders from it is an example client, the experimental submodule
-`surface_examples_react`.
+through. The emitter is the base module's. The API, where the path is
+the resource and the method the operation, is the submodule
+`surface_http`, and the OpenAPI document that describes it is
+`surface_openapi` ([Installation](installation.md#the-http-door-and-the-openapi-document)).
+A React app that renders from it is an example client, the experimental
+submodule `surface_examples_react`.
 
 This is the roadmap's "served contract": one operation at a time, read,
 rehearsed and written.
@@ -1808,8 +1810,9 @@ another account's labels
 (and `/surface-api/openapi.yaml`, `application/yaml`) answers an
 OpenAPI 3.1 document of the API above, for every operation that can be
 asked on its own, so an OpenAPI client, a code generator or a UI drives
-a resource from it. It is the base module's own, on a route of its own,
-not the contributed `openapi` module's, and needs nothing contributed
+a resource from it. It is the submodule `surface_openapi`'s, on a route
+of its own, not the contributed `openapi` module's, and needs nothing
+contributed
 (why: [decision](decisions.md#an-openapi-document-is-one-more-door)).
 OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
 dialect both documents are written in. `GET /surface-api/docs` renders
@@ -1820,7 +1823,8 @@ for the path, so a write after someone else's is refused (412);
 `GET /surface-api/redoc` renders Redoc, to read. Both pages need the
 permission `access surface api docs`: each runs a script from a CDN
 on the site (Swagger UI 5.29.1 from cdnjs, Redoc 2.5.1 from jsDelivr,
-each pinned and held to its integrity hash in `surface.libraries.yml`),
+each pinned and held to its integrity hash in
+`surface_openapi.libraries.yml`),
 so a site grants them to the roles it chooses. The document is open.
 
 - **Paths.** One path item per resource path, the methods on it as
@@ -1903,9 +1907,10 @@ so a site grants them to the roles it chooses. The document is open.
 that runs it (`<resource>:<operation>:write`, a listing's `:list`),
 beside its other doors ([The site's catalog](catalog-command.md)).
 `OpenApiDocumentTest` holds the document to the official OpenAPI 3.1
-schema in `tests/fixtures/openapi/`, every reference resolving, the
-components byte for byte the full schemas and outputs, and the examples
-pinned in `tests/fixtures/openapi/examples.json`; `SchemaComponentsTest`
+schema in `modules/surface_openapi/tests/fixtures/openapi/`, every
+reference resolving, the components byte for byte the full schemas and
+outputs, and the examples pinned in
+`modules/surface_openapi/tests/fixtures/openapi/examples.json`; `SchemaComponentsTest`
 the components, their sharing and patches; `OpenApiEndpointTest` the
 same document for an account and for anonymous, as JSON and as YAML,
 and the two pages under their permission, each script pinned with its

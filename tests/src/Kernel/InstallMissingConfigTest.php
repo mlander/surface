@@ -29,6 +29,7 @@ class InstallMissingConfigTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples',
     'config_test',
   ];

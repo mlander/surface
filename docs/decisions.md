@@ -4826,8 +4826,8 @@ it, and lets a call through when the stage names nothing, for
 
 (`ResourcesInterface::storage()`, `Resources::storage()`,
 `Staging\Stage`, `Staging\StagedStorage`, `Tool\OperationInputs`,
-`ResourceOperationToolBase::stage()`, `Http\ServedPaths`,
-`Http\ServedOperations`, `Http\ServedOperationAccessCheck`,
+`ResourceOperationToolBase::stage()`, `surface_http`'s `ServedPaths`,
+`ServedOperations` and `Access\ServedOperationAccessCheck`,
 `StagedUpdateTest`, `StageToolsTest`, `StageOwnershipTest`,
 `StageApiTest`)
 
@@ -5055,8 +5055,8 @@ than the read of one thing, a listing, reads no one thing.
   interface, naming the child (`StorageAdapter::routedStorageClasses()`).
   No shipped resource routes a child under a storage a stage takes.
 
-(`Staging\Stageable`, `Tool\OperationInputs`, `OpenApi\OpenApiDocument`,
-`Http\ResourceApiController::served()`, `ResourceBuild\OperationRoute::stageRequested()`,
+(`Staging\Stageable`, `Tool\OperationInputs`, `surface_openapi`'s `OpenApiDocument`,
+`surface_http`'s `Controller\ResourceApiController::served()`, `ResourceBuild\OperationRoute::stageRequested()`,
 `Staging\StagedStorage::prepare()`, `StagedConfigTest`, `StageToolsTest`,
 `OpenApiDocumentTest`, `StagedFormTest`)
 
@@ -7990,7 +7990,8 @@ why:
   `surface.catalog_doors`: the main module names the form routes
   (any route naming the operation in `_surface_resource`), the
   tool bridge the tool and the read tool it derived, the HTTP door
-  its path, the OpenAPI document its operation, the React example
+  (`surface_http`) its path, the OpenAPI document (`surface_openapi`)
+  its operation, the React example
   (`surface_examples_react`) the page. The
   main module cannot know a submodule's paths, and a door listed where
   its module is off would be a promise nothing keeps. The tool door is
@@ -10691,10 +10692,13 @@ the contract baselines did not move. (`ContractEmitter`,
 
 ### An OpenAPI document is one more door
 
-The base module serves `GET /surface-api/openapi.json` (and
-`.yaml`): an OpenAPI 3.1 document of its HTTP door's API
+`surface_openapi` serves `GET /surface-api/openapi.json` (and
+`.yaml`): an OpenAPI 3.1 document of the HTTP door's API
 for every operation that can be asked on its own, so any OpenAPI
 client, generator or UI drives a resource without reading these pages.
+*Amended 2026-11-09:* until then the base module served it; the
+document and the HTTP door are modules of their own now
+([The HTTP door and the OpenAPI document are their own modules](#the-http-door-and-the-openapi-document-are-their-own-modules)).
 Decided 2026-10-21; its paths are contract 3's since 2026-10-22
 ([Contract 3](#contract-3-the-operation-is-the-method)): one path item
 per resource path, the methods on it, custom methods and `/schema` as
@@ -10825,6 +10829,80 @@ path items of their own.
 
 (`OpenApiDocument`, `SchemaComponents`, `OpenApiController`,
 `OpenApiDocumentTest`, `SchemaComponentsTest`, `OpenApiEndpointTest`)
+
+### The HTTP door and the OpenAPI document are their own modules
+
+Decided 2026-11-09. The HTTP door, `/surface-api` and its route
+`surface.api`, is the submodule `surface_http`. The OpenAPI document,
+its routes `surface.openapi.*` and its two pages are `surface_openapi`,
+which depends on `surface_http`. The base module is the declaration,
+the contract, the pipeline and the form. An API over HTTP and a
+published document are adapters a site may not want: a site that only
+builds forms, or only offers tools to an agent, has no reason to answer
+requests under `/surface-api` or to publish a description of its
+resources. Core keeps `rest` and `jsonapi` apart from `serialization`
+the same way.
+
+- **Nothing a site or a client names changed.** The paths, the route
+  names, the service ids (`surface.served_paths`,
+  `surface.served_operations`, `surface.openapi_document` and the
+  rest), the permission `access surface api docs`, the `X-Surface-Stage`
+  header, and the response and error formats are as they were. The PHP
+  namespaces are `Drupal\surface_http` and `Drupal\surface_openapi`,
+  the controllers under `Controller\`, the access check under
+  `Access\` and the two subscribers under `EventSubscriber\`. The
+  libraries of the two pages moved with them:
+  `surface_openapi/openapi_docs` and `surface_openapi/openapi_reference`.
+- **A site that served the API keeps it.**
+  `surface_post_update_install_http_and_openapi()` installs both
+  modules where they are not installed, and does nothing where they
+  are. It saves every role that holds `access surface api docs` again,
+  so the role depends on `surface_openapi`. A site that deploys
+  configuration lists `surface_http` and `surface_openapi` in
+  `core.extension.yml` in the same commit as the code, or exports after
+  the update; otherwise the next import fails where an example depends
+  on `surface_http`, and uninstalls both modules where none does
+  ([Updating](installation.md#updating-from-a-version-where-the-base-module-served-the-api)).
+- **The tool door stays.** It is registered only when the Tool API
+  module is installed (`SurfaceServiceProvider`), so a site without
+  Tool API already carries none of it.
+- **The base module asks for a served path; it does not import one.**
+  The tool names the URL an operation's full schema is fetched at and
+  the URL of a resource's lookup, and the contract panel says the
+  document is served at `/surface-api`, through
+  `ResourceBuild\ServedPathsInterface`. `surface_http` provides it as
+  the service of that name, implemented by `ServedPaths`. Without it the
+  container has no such service: a tool's description names the
+  narrowing tool alone, the narrowing tool's own says to send values
+  to it, and the panel names no path. With it, every derived tool
+  definition is what it was before the split, byte for byte.
+- **Each catalog door names itself.** `SiteCatalog` no longer lists the
+  door names: its constants `FORM`, `HTTP`, `TOOL`, `SCHEMA_TOOL`,
+  `OPENAPI`, `REACT` and `DOORS` are gone, with no aliases kept. Each
+  provider tagged `surface.catalog_doors` names its doors with a
+  constant of its own class (`FormRouteDoors::DOOR`, `HttpDoors::DOOR`,
+  `ToolDoors::TOOL` and `ToolDoors::SCHEMA_TOOL`, `OpenApiDoors::DOOR`,
+  `ReactDoors::DOOR`), and the catalog lists them in the order of the
+  tag's priority, higher first: form 40, http 30, tool 20, openapi 10,
+  react 5 (`CatalogDoorsInterface` says this for a provider). The
+  catalog finds the form door's routes among the tagged providers, not
+  through an argument of its own, and throws a `LogicException` when
+  none is tagged.
+- **`ReactDoors` takes the HTTP door optionally.** A site updated to
+  this code still has the React example installed and `surface_http`
+  not yet: with a required argument its container cannot compile, so
+  it cannot reach the update that installs `surface_http`. Its
+  priority moved from 25 to 5, so that pure tag order lists it last, as
+  the constant list did.
+- **The examples that call the API depend on it.** `surface_examples`
+  (example 16's lookups) and `surface_examples_react` depend on
+  `surface_http`. The examples' landing page names the OpenAPI
+  document's paths as text until `surface_openapi` is installed.
+
+(`ServedPathsInterface`, `SurfaceServiceProvider`, `SiteCatalog`,
+`CatalogDoorsInterface`, `WithoutHttpModuleTest`,
+`ReactWithoutHttpModuleTest`, `HttpWithoutOpenApiTest`,
+`InstallHttpAndOpenApiUpdateTest`, `KernelTestModulesTest`)
 
 ### A schema can be read back into a structure
 

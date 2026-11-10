@@ -306,7 +306,11 @@ a map of keys from the site names an entry's id, `{id}`, which the full
 schema lists under `x-surface.deferred.entries`. The fetch answers a schema that
 changes only when the site's list does, so an agent keeps it per value;
 the tool answers for the values sent, so it is asked again when a choice
-changes. The narrowing tool's own description says both.
+changes. The narrowing tool's own description says both. The fetch is the HTTP
+door's, so it is named only where `surface_http` is installed; without
+it, each description names the narrowing tool alone, and a key too
+long to list names no lookup URL
+([why](decisions.md#the-http-door-and-the-openapi-document-are-their-own-modules)).
 
 | Narrowing tool | Inputs | Outputs |
 | --- | --- | --- |

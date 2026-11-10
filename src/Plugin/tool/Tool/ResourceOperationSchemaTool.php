@@ -18,8 +18,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * such as a component's props, whatever their count, and a map of keys
  * from the site past the budget,
  * `surface:<resource>:<operation>:schema`: the tool door's
- * `POST /surface-api/{resource}/schema`. An agent chooses the deciding
- * key, sends what it has so far, and reads the chosen variant's keys.
+ * `POST /surface-api/{resource}/schema`, which surface_http serves. An
+ * agent chooses the deciding key, sends what it has so far, and reads
+ * the chosen variant's keys.
  * It carries no #[Tool] of its own: ResourceOperationToolDeriver derives
  * it under the write tool's base plugin id and names this class on the
  * derivative.

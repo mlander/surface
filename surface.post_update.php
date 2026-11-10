@@ -7,6 +7,8 @@
 
 declare(strict_types=1);
 
+use Drupal\Core\StringTranslation\TranslatableMarkup;
+
 /**
  * Adds the limit up to which a reference key lists its targets.
  *
@@ -55,4 +57,32 @@ function surface_post_update_components_offered(): void {
   if ($config->get('components_offered') === NULL) {
     $config->set('components_offered', [])->save();
   }
+}
+
+/**
+ * Installs surface_http and surface_openapi, where they are not installed.
+ *
+ * The HTTP door and the OpenAPI document left this module for these two,
+ * so a site that served the API before keeps serving it. Every role that
+ * holds the documentation pages' permission is saved again, so it depends
+ * on surface_openapi, the module that defines the permission now, and
+ * loses the permission when that module is uninstalled.
+ */
+function surface_post_update_install_http_and_openapi(): ?TranslatableMarkup {
+  $missing = array_values(array_filter(['surface_http', 'surface_openapi'], static fn (string $module): bool => !\Drupal::moduleHandler()->moduleExists($module)));
+  if ($missing === []) {
+    return NULL;
+  }
+  \Drupal::service('module_installer')->install($missing);
+  $entity_type_manager = \Drupal::entityTypeManager();
+  if (in_array('surface_openapi', $missing, TRUE) && $entity_type_manager->hasDefinition('user_role')) {
+    foreach ($entity_type_manager->getStorage('user_role')->loadMultiple() as $role) {
+      if (in_array('access surface api docs', $role->getPermissions(), TRUE)) {
+        $role->save();
+      }
+    }
+  }
+  return t("Installed @modules. Export the site's configuration so core.extension lists them.", [
+    '@modules' => implode(', ', $missing),
+  ]);
 }

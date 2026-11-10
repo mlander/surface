@@ -47,6 +47,7 @@ class SiteListToolDoorTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_resource_test',
   ];
 

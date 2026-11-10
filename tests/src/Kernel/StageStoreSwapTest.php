@@ -8,7 +8,7 @@ use Drupal\Core\DependencyInjection\ContainerBuilder;
 use Drupal\Core\Form\FormState;
 use Drupal\surface\Form\CompiledFlow;
 use Drupal\surface\Form\SurfaceOperationForm;
-use Drupal\surface\Http\ResourceApiController;
+use Drupal\surface_http\Controller\ResourceApiController;
 use Drupal\surface\Staging\ListsStagesInterface;
 use Drupal\surface\Staging\StageStore;
 use Drupal\surface\Staging\StageStoreInterface;
@@ -52,7 +52,7 @@ class StageStoreSwapTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_stage_test', 'my_module'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_stage_test', 'my_module'];
 
   /**
    * {@inheritdoc}

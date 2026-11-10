@@ -51,6 +51,7 @@ class ContractBaselineTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples',
     'surface_examples_compliance',
     'surface_examples_workflow',

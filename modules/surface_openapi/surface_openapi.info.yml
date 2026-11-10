@@ -1,0 +1,7 @@
+name: 'Surface API: OpenAPI'
+type: module
+description: 'Describes the HTTP API under /surface-api as an OpenAPI 3.1 document, at /surface-api/openapi.json and /surface-api/openapi.yaml, with Swagger UI and Redoc pages over it.'
+package: 'Surface API'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface_http

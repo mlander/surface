@@ -42,7 +42,15 @@ class EmptyStructureTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'user', 'serialization', 'tool', 'surface', 'surface_stage_test'];
+  protected static $modules = [
+    'system',
+    'user',
+    'serialization',
+    'tool',
+    'surface',
+    'surface_http',
+    'surface_stage_test',
+  ];
 
   /**
    * {@inheritdoc}

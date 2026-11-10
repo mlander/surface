@@ -45,7 +45,7 @@ class ContentEntityStorageTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_entity_test'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_entity_test'];
 
   /**
    * {@inheritdoc}

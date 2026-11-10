@@ -50,6 +50,7 @@ class EcaStageWalkthroughTest extends SurfaceKernelTestBase {
     'eca_base',
     'eca_user',
     'eca_tool',
+    'surface_http',
     'surface_examples',
   ];
 

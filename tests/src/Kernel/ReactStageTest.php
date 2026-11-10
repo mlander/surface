@@ -7,8 +7,8 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\node\Entity\Node;
-use Drupal\surface\Http\ProblemDetails;
-use Drupal\surface\Http\ResourceApiController;
+use Drupal\surface_http\ProblemDetails;
+use Drupal\surface_http\Controller\ResourceApiController;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface_examples_react\Controller\ResourceReactPage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -33,7 +33,7 @@ use Symfony\Component\Routing\Route;
  * schema and the lookup the app asks at `-1` read the stage header.
  *
  * @see \Drupal\surface_examples_react\Controller\ResourceReactPage
- * @see \Drupal\surface\Http\ServedOperationAccessCheck
+ * @see \Drupal\surface_http\Access\ServedOperationAccessCheck
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -60,7 +60,7 @@ class ReactStageTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_examples_react'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_examples_react'];
 
   /**
    * The stored page's id.

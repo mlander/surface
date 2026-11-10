@@ -1,0 +1,27 @@
+services:
+  # The HTTP door's description: the OpenAPI document of every resource
+  # operation that can be asked on its own, its paths on the API, and its
+  # full schema, built for no account, as components.
+  surface.openapi_document:
+    class: Drupal\surface_openapi\OpenApiDocument
+    arguments:
+      - '@surface.resource_registry'
+      - '@surface.resources'
+      - '@surface.resource_plugins'
+      - '@surface.contract_emitter'
+      - '@surface.pipeline'
+      - '@surface.served_paths'
+      - '@config.factory'
+      - '@module_handler'
+      - '@session_configuration'
+      - '@account_switcher'
+      - '@logger.channel.surface'
+      - '@string_translation'
+      - '@cache.surface_build'
+      - '@cache_contexts_manager'
+  # The OpenAPI operation that runs an operation, for the site catalog.
+  surface.openapi_doors:
+    class: Drupal\surface_openapi\OpenApiDoors
+    arguments: ['@surface.served_paths']
+    tags:
+      - { name: surface.catalog_doors, priority: 10 }

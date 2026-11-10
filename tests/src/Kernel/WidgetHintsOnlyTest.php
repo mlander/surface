@@ -35,6 +35,7 @@ class WidgetHintsOnlyTest extends SurfaceKernelTestBase {
    */
   protected static $modules = [
     ...self::ENTITY_MODULES,
+    'surface_http',
     'surface_examples',
     'surface_examples_first',
     'surface_examples_references',

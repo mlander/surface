@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\surface\ResourceBuild\Resources;
-use Drupal\surface\Http\ServedOperationAccessCheck;
+use Drupal\surface_http\Access\ServedOperationAccessCheck;
 use Drupal\node\Entity\Node;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -34,7 +34,7 @@ class BuildMemoTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http'];
 
   /**
    * {@inheritdoc}

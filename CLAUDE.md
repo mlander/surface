@@ -797,7 +797,8 @@ test errored or failed and every gate passed.
   `SURFACE_CHECK_FAST=1`): unit and kernel tests through phpunit,
   one process per class, `SURFACE_CHECK_CONCURRENCY` at once (one
   process for all of them takes 15 minutes, since every kernel test
-  installs its modules). Each class has its own result cache in the
+  installs its modules), the base module's and those of `surface_http`
+  and `surface_openapi`. Each class has its own result cache in the
   container's `/tmp/surface-phpunit-cache` and runs with
   `--order-by=defects`, so what failed last runs first; classes with a
   defect last time start first, then the slowest. A class's output is
@@ -848,7 +849,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2137, Assertions: 53122, Errors: 0, Failures: 0, Skipped: 3. Classes: 296 of 296, 8 at a time, browser classes 4.
+phpunit: Tests: 2152, Assertions: 53403, Errors: 0, Failures: 0, Skipped: 3. Classes: 302 of 302, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -868,8 +869,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2023, Assertions: 48577, Deprecations: 134, Skipped: 3. Classes:
-243, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2038, Assertions: 48858, Skipped: 3, Deprecations: 135. Classes:
+249, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -950,8 +951,9 @@ It names no widget unless asked
 (`emit(..., widgets: TRUE)`); the contract panel (`Form\ContractPanel`)
 shows it without, beside what the Tool API can advertise where the tool
 module is installed (which flattens
-variants, and is what `tool:info` prints). The base module's HTTP door
-(`src/Http/`, route `surface.api`) serves it with the widget hints on
+variants, and is what `tool:info` prints). The HTTP door, the submodule
+`surface_http` (`modules/surface_http/`, route `surface.api`, namespace
+`Drupal\surface_http`), serves it with the widget hints on
 an API where the path is the resource and the method the operation
 (contract 3's paths, `ServedPaths`, both documents in contract 4's
 keywords): `GET /surface-api/{resource}[/{id}]` the read's
@@ -965,9 +967,26 @@ listed `stale`); `PATCH` the default update, `POST` on the collection
 the default create (201 with `Location`), `:{operation}` any other,
 `?dryRun=true` a run that writes nothing, `If-Match` a 412 when storage
 changed since, a refusal 422 problem details, every path a JSON Pointer
-and every contract 2 path a 410. `src/OpenApi/` describes that API as
-an OpenAPI 3.1 document at `/surface-api/openapi.json`, with Swagger UI
-and Redoc over it (`docs/served-contract.md#an-openapi-document`).
+and every contract 2 path a 410. The submodule `surface_openapi`
+(`modules/surface_openapi/`, routes `surface.openapi.*`, namespace
+`Drupal\surface_openapi`, depends on `surface_http`) describes that API
+as an OpenAPI 3.1 document at `/surface-api/openapi.json`, with Swagger
+UI and Redoc over it (`docs/served-contract.md#an-openapi-document`).
+Neither is installed with the base module, which works at the form and
+tool doors without them (`WithoutHttpModuleTest`) and reaches a served
+path only through `ResourceBuild\ServedPathsInterface`, the service of
+that name `surface_http` provides: the tool's schema and lookup URLs and
+the contract panel's note. A site that had the API gets both from
+`surface_post_update_install_http_and_openapi()`
+(`docs/decisions.md#the-http-door-and-the-openapi-document-are-their-own-modules`).
+Their tests are in each module's `tests/src/`; a test of another
+subject that calls the API stays in the base module and lists
+`surface_http` in its `$modules`. A kernel test resolves no
+dependency, so one that enables `surface_examples` or the React example
+lists `surface_http` too; `KernelTestModulesTest` fails a kernel test
+that lists a module without a `surface*` module it depends on, unless
+the class sets `MODULES_WITHOUT_DEPENDENCIES` to TRUE
+(`ReactWithoutHttpModuleTest`, the state before the update has run).
 The example `surface_examples_react` is a JavaScript client of the door:
 `/surface-react/{resource}/{operation}` renders it with a React app,
 which answers a URL that names nothing as the form's route does; a
@@ -1087,7 +1106,11 @@ so the rule is this sentence. `npm test` is not part of
   16's under `tests/fixtures/references/` by `ReferenceKeysTest` with
   `SURFACE_REFERENCES_WRITE=1`, and example 17's under
   `tests/fixtures/retitle/` by `RetitleExampleTest` with
-  `SURFACE_RETITLE_WRITE=1`. Never edit any of them by hand.
+  `SURFACE_RETITLE_WRITE=1`, and the OpenAPI document's request examples,
+  `modules/surface_openapi/tests/fixtures/openapi/examples.json`, by
+  `OpenApiDocumentTest` with `SURFACE_OPENAPI_EXAMPLES_WRITE=1` (the
+  official OpenAPI 3.1 schema beside it is vendored, not generated).
+  Never edit any of them by hand.
 - Commit messages are one line.
 
 ## Naming
@@ -1175,11 +1198,6 @@ src/Form/                Form builder, host traits, the operation form
                          The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
                          Drawing.php, Extracting.php and Refreshing.php.
-src/Http/                The HTTP door: the /surface-api routes' controller,
-                         ServedPaths and ServedOperations, the access check,
-                         problem details, and its catalog door.
-src/OpenApi/             The HTTP door's OpenAPI document, its controller
-                         and its catalog door.
 src/Tool/                The Tool API door: what a tool takes and answers
                          (OperationInputs, InputDefinitions), its catalog
                          doors and the invalidator, registered by
@@ -1192,16 +1210,32 @@ src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots;
                          ConfigSchemaTypes, a config schema type's.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Nineteen example submodules, each with its own README,
-                         in two groups (below).
+modules/surface_http/     The HTTP door, Drupal\surface_http: ServedPaths
+                         (which implements ResourceBuild\ServedPathsInterface)
+                         and ServedOperations, Controller\ResourceApiController,
+                         Access\ServedOperationAccessCheck, the two
+                         EventSubscriber\ classes (problem details, the
+                         schema's tag), problem details, and its catalog
+                         door, HttpDoors; route surface.api; its tests.
+modules/surface_openapi/  The OpenAPI document, Drupal\surface_openapi:
+                         OpenApiDocument, SchemaComponents,
+                         Controller\OpenApiController, its catalog door,
+                         OpenApiDoors; the surface.openapi.* routes, the
+                         Swagger UI and Redoc libraries and js/, the
+                         permission access surface api docs; its tests
+                         and modules/surface_openapi/tests/fixtures/openapi/.
+modules/                 Besides those two, nineteen example submodules,
+                         each with its own README, in two groups (below).
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```
 
-The base module is the project and the only thing meant to ship: the
+The base module is the project and the only thing meant to ship, with
+`surface_http` and `surface_openapi` (package `Surface API`): the
 framework and its doors, the form, the Tool API tool and with it the
-command line (where the tool module is installed), and HTTP with its
-OpenAPI document. Every submodule is an example, in the package
+command line (where the tool module is installed), and in the two
+submodules HTTP and its OpenAPI document. Every other submodule is an
+example, in the package
 `Surface API examples` and `lifecycle: experimental`, in one of two
 groups, which
 `surface_examples`' `ExampleModules` (the landing page's list),

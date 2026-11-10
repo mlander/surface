@@ -307,7 +307,7 @@ final class InputDefinitions {
    *   The data surface it was converted from.
    * @param string|null $lookup
    *   The resource's lookup, `/surface-api/{resource}:lookup`, or NULL
-   *   when the site serves no API.
+   *   when the site serves no API (surface_http is not installed).
    * @param string $pointer
    *   The JSON Pointer of the map in the values.
    *

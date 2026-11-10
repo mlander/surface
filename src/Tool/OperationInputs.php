@@ -16,11 +16,11 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\SettledCacheability;
 use Drupal\surface\Pipeline\Outbound;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\ResourceBuild\ServedPathsInterface;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\OperationParameter;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Http\ServedPaths;
 use Drupal\surface\Staging\Stage;
 use Drupal\surface\Staging\Stageable;
 use Drupal\tool\TypedData\InputDefinition;
@@ -204,15 +204,17 @@ final class OperationInputs {
    *   The converter from a data surface to the Tool API's definitions.
    * @param \Drupal\Core\StringTranslation\TranslationInterface $string_translation
    *   The string translation service.
-   * @param \Drupal\surface\Http\ServedPaths $servedPaths
+   * @param \Drupal\surface\ResourceBuild\ServedPathsInterface|null $servedPaths
    *   The API's paths: the path a key left out for its size names to
-   *   fetch one of its entries at, and a reference key's lookup.
+   *   fetch one of its entries at, and a reference key's lookup; NULL on
+   *   a site that does not serve the API, where no description names a
+   *   path.
    */
   public function __construct(
     protected readonly ResourcesInterface $resources,
     protected readonly InputDefinitions $inputDefinitions,
     TranslationInterface $string_translation,
-    protected readonly ServedPaths $servedPaths,
+    protected readonly ?ServedPathsInterface $servedPaths = NULL,
   ) {
     $this->stringTranslation = $string_translation;
   }
@@ -820,10 +822,10 @@ final class OperationInputs {
       // A read an owner declares has no narrowing tool of its own; the
       // one the build adds names its update's.
       narrowing: $operation === NULL || ($operation->readsOne() && !$operation->isDefaultRead()) ? NULL : static::narrowingTool($resource, $operation),
-      schema: $operation === NULL ? NULL : $this->schemaPath($resource, $operation),
+      schema: $operation === NULL || $this->servedPaths === NULL ? NULL : $this->servedPaths->schemaPath($resource->id, $operation->id),
       stored: $stored,
     );
-    $this->inputDefinitions->withLookups($map, $built, $operation === NULL ? NULL : $this->lookup($resource, $operation));
+    $this->inputDefinitions->withLookups($map, $built, $operation === NULL ? NULL : $this->servedPaths?->lookupPath($resource->id, $operation->id));
     $this->listedTags = Cache::mergeTags($this->listedTags, $this->inputDefinitions->takeListTags());
     // What each variant built to be listed read, once it is listed.
     // Decision: see
@@ -837,29 +839,6 @@ final class OperationInputs {
     $map->setPropertyDefinitions($properties);
     $map->setRequired(array_filter($properties, static fn (DataDefinitionInterface $property): bool => $property->isRequired()) !== []);
     return $map;
-  }
-
-  /**
-   * Names the resource's lookup on the API.
-   *
-   * `GET /surface-api/{resource}:lookup`, or for an operation whose
-   * parameters name identity `/surface-api/{resource}/{<key>}/...:lookup`,
-   * as the HTTP door serves it (ServedPaths::lookupTemplate()).
-   *
-   * Decision: see
-   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
-   *
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
-   *   The resource.
-   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
-   *   The operation.
-   *
-   * @return string
-   *   The path.
-   */
-  protected function lookup(ResourceDefinition $resource, OperationDefinition $operation): string {
-    [$path] = $this->servedPaths->lookupTemplate($resource, $operation);
-    return $path;
   }
 
   /**
@@ -1148,7 +1127,10 @@ final class OperationInputs {
     return [
       self::SCHEMA => new MapOutputDefinition(
         label: $this->t('Schema for these values'),
-        description: $this->t('JSON Schema 2020-12 for the values sent: each key a choice decides stated for the choice made, its keys and what each allows, as POST /surface-api/{resource}/schema answers it, with no widget hints.'),
+        // Where the site serves the API, the same document is served there.
+        description: $this->servedPaths === NULL
+          ? $this->t('JSON Schema 2020-12 for the values sent: each key a choice decides stated for the choice made, its keys and what each allows, with no widget hints.')
+          : $this->t('JSON Schema 2020-12 for the values sent: each key a choice decides stated for the choice made, its keys and what each allows, as POST /surface-api/{resource}/schema answers it, with no widget hints.'),
         property_definitions: [],
       ),
       self::VALUES => new MapOutputDefinition(
@@ -1174,37 +1156,17 @@ final class OperationInputs {
     $arguments = [
       '@label' => self::operationLabel($operation),
       '@needs' => $this->needs($operation),
-      '@path' => $this->schemaPath($resource, $operation),
     ];
+    // Without the API there is no full schema to fetch: this tool is the
+    // one way.
+    if ($this->servedPaths === NULL) {
+      return $this->t("Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full: send your values here and read the keys the choice offers under schema, again when a choice changes.", $arguments);
+    }
+    $arguments['@path'] = $this->servedPaths->schemaPath($resource->id, $operation->id);
     $arguments['@fetch'] = 'GET ' . $arguments['@path'] . (str_contains($arguments['@path'], '?') ? '&' : '?') . Choices::PARAMETER . '={key}={value}';
     // Decision: see
     // docs/decisions.md#a-list-left-out-for-size-is-deferred-not-refined.
     return $this->t("Answers the schema of @label for the values you have so far, and writes nothing. @needs Some keys of @label depend on a list the site decides, and the write tool does not list them in full, each naming two ways to learn its keys once you choose the key that decides them: fetch @fetch once per value and keep the answer, a schema that changes only when the site's list does; or send your values here and read the keys the choice offers under schema, again when a choice changes.", $arguments);
-  }
-
-  /**
-   * Names the URL an operation's full schema is fetched at.
-   *
-   * On the API: `/surface-api/{resource}[/{key}...]/schema`,
-   * `:{operation}` before `/schema` for an operation `GET` does not serve
-   * at the plain path, each identity segment a `{parameter}`, and each
-   * parameter that is not identity in the query, `?name={name}`: every
-   * parameter the operation takes, so the fetch it names answers once
-   * they are filled in.
-   *
-   * Decision: see docs/decisions.md#a-parameter-is-identity-the-caller-knows.
-   *
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
-   *   The resource.
-   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
-   *   The operation.
-   *
-   * @return string
-   *   The path.
-   */
-  protected function schemaPath(ResourceDefinition $resource, OperationDefinition $operation): string {
-    [$path] = $this->servedPaths->template($resource, $operation, !$this->servedPaths->readsPlain($resource, $operation), TRUE, TRUE);
-    return $path;
   }
 
   /**

@@ -27,14 +27,63 @@ drush pm:install surface
 
 On its own the base module adds the resource and structure model, the
 pipeline, the two plugin types (widgets and options resolvers), the stock
-storage classes, the host adoption layer, and two doors: the form, and
-HTTP at `/surface-api/{resource}` with its OpenAPI 3.1 document at
-`/surface-api/openapi.json`, Swagger UI at `/surface-api/docs` and
-Redoc at `/surface-api/redoc`
-([The served contract](served-contract.md)). It adds no resources or
-structures.
+storage classes, the host adoption layer, and the form door. It adds no
+resources or structures.
 Those come from the modules that declare them. `drush generate surface:resource` writes a settings
 page's files into one ([Generating a resource](generating.md)).
+
+## The HTTP door and the OpenAPI document
+
+```bash
+drush pm:install surface_http surface_openapi
+```
+
+Two submodules of the project, in the package `Surface API`:
+
+- `surface_http` serves every operation that can be asked on its own
+  over HTTP at `/surface-api/{resource}`: the read, the full schema, the
+  schema for values in progress, and the writes
+  ([The served contract](served-contract.md)).
+- `surface_openapi` describes that API as an OpenAPI 3.1 document at
+  `/surface-api/openapi.json` and `/surface-api/openapi.yaml`, with
+  Swagger UI at `/surface-api/docs` and Redoc at `/surface-api/redoc`,
+  each page behind the permission `access surface api docs`
+  ([An OpenAPI document](served-contract.md#an-openapi-document)). It
+  depends on `surface_http`.
+
+Install neither and the site serves no API: the form and the tools work
+as before, and a tool names no `/surface-api` URL. A site that installed
+the base module before these two existed gets both from the update
+`surface_post_update_install_http_and_openapi()`, so it keeps the API
+([why they are modules of their own](decisions.md#the-http-door-and-the-openapi-document-are-their-own-modules)).
+
+### Updating from a version where the base module served the API
+
+Run `drush update:db` right after the code lands, or at least `drush
+cr`. Until the container is rebuilt, the cached container still names
+the classes that moved to `surface_http`, and every request fails with
+a class-not-found error. `drush update:db` rebuilds the container
+before it runs anything.
+
+The update installs `surface_http` and `surface_openapi`, whichever
+is missing, and prints which ones it installed. It then saves every
+role that holds `access surface api docs` again, so the role depends on
+`surface_openapi`, which defines the permission now. Between deploying
+the code and running the update, no installed module defines that
+permission, and core removes an undefined permission from any role
+that is saved. Run the update before anything else saves roles.
+
+A site that deploys configuration must list both modules in its
+`core.extension.yml`. Add `surface_http: 0` and `surface_openapi: 0`
+to it in the same commit as the code, or run the update and export the
+configuration before the next import. Otherwise the next
+`config:import` (and so `drush deploy`) does one of two things:
+
+- Where `surface_examples` or `surface_examples_react` is installed,
+  which depends on `surface_http`, the import fails, because it would
+  uninstall a module an installed module requires.
+- Where neither is installed, the import uninstalls both modules
+  without an error, and the site stops serving the API.
 
 ## In production: compile assertions out
 
@@ -109,13 +158,13 @@ a free-form map.
 
 ## Experimental submodules
 
-Every submodule is an example. The base module, `surface`, is the
-project and the only thing meant to ship; read, install and remove the
-examples as you like. Each is marked `lifecycle: experimental`: they
-double as the fixtures the tests run against, so they are supported,
-but their APIs and their configuration may change without a deprecation
-path, and none of them is meant to replace core's own forms on a
-production site.
+Every other submodule is an example. The base module, `surface`, with
+`surface_http` and `surface_openapi`, is the project and the only thing
+meant to ship; read, install and remove the examples as you like.
+Each is marked `lifecycle: experimental`: they double as the fixtures
+the tests run against, so they are supported, but their APIs and their
+configuration may change without a deprecation path, and none of them
+is meant to replace core's own forms on a production site.
 
 Each row is one submodule: its install command, what it shows, and what
 it opens on a site. A submodule that needs a contributed module needs
@@ -131,13 +180,13 @@ teaches, in reading order, is in [Examples](examples/index.md).
 | `drush pm:install surface_examples_plugins` | Two structures and three hosts, in the two spellings: `ExampleBlockStructure`, a class of its own, drives a block and a standalone form, and the field formatter is its own structure. | `/admin/config/development/surface-example-form`; the block and the formatter where you place them |
 | `drush pm:install surface_examples_classic` | The same block and the same formatter written the classic way, by hand, without Surface API, with a parity test holding the two to the same behavior and a README counting what each costs. Depends on nothing from Surface API. | The classic block and formatter, for the side-by-side comparison |
 | `drush pm:install surface_examples_extras` | A third-party module extending someone else's resources and structures through alters, with no form alter anywhere; and, for content types, the same two settings added to core's own form the classic way, so the two can be compared. | The example formatter's settings and core's content type form, extended |
-| `drush pm:install surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, then a small resource per later concept, and example 18's keys declared with calls and again as properties; examples 16 and 17 are in submodules of their own. Needs Tool. | `/surface-examples` |
+| `drush pm:install surface_examples` | One resource that grows, one idea per example, each example a form beside the contract it emits, then a small resource per later concept, and example 18's keys declared with calls and again as properties; examples 16 and 17 are in submodules of their own. Needs Tool and `surface_http`, whose API example 16's lookups call. | `/surface-examples` |
 | `drush pm:install surface_examples_compliance` | Example 4: a compliance structure and the one alter that attaches it to example 3's resource, which does not know it, and nothing else. | `/surface-examples/4` |
 | `drush pm:install surface_examples_workflow` | Example 10, extended: two alters that answer access for the program and its fees, which do not know them, with no change to the program: the fees left out for an account that may not see them, and the program fixed once its workflow publishes it. | `/surface-examples/10` |
 | `drush pm:install surface_examples_keys` | Example 14: a module that manages keys, standing in for the Key module: a list of named keys, the constraint and resolver that offer them, and an alter that offers one on a resource that takes a pasted key, ruling the pasted key out once one is chosen. | `/surface-examples/14`, `/surface-examples/14/webhook` |
 | `drush pm:install surface_examples_references` | Example 16: keys that refer to an entity, each the id with a constraint naming the entity type it refers to: a venue, a user, an article and an entity of any type, listed while the site has few and looked up past that. Needs node; ships the article and page bundles for a site that has neither, and writes three nodes its calls name. | `/surface-examples/16` |
 | `drush pm:install surface_examples_retitle` | Example 17: a bulk retitle of nodes with keys, storage and a permission of its own, which borrows each node's update access and its title's edit access as gates, asked per node, a refusal on the node's own item. Needs node; ships the page bundle for a site that has none, two roles, and writes three pages its calls name. | `/surface-examples/17` |
-| `drush pm:install surface_examples_react` | An example client of the HTTP door: a React app that renders an operation's form from the served contract, narrows it as answers change, rehearses the write with a dry run and writes through `/surface-api`. Its built app is committed, so it needs no Node. | `/surface-react/{resource}/{operation}` |
+| `drush pm:install surface_examples_react` | An example client of the HTTP door: a React app that renders an operation's form from the served contract, narrows it as answers change, rehearses the write with a dry run and writes through `/surface-api`. Needs `surface_http`. Its built app is committed, so it needs no Node. | `/surface-react/{resource}/{operation}` |
 
 ### The pattern on Drupal's own things
 

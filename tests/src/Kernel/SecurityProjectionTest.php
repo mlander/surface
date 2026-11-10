@@ -18,7 +18,7 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\PreparedValues;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface_examples_workflow\Alter\FeesWorkflowAlter;
-use Drupal\surface\Http\ServedOperationAccessCheck;
+use Drupal\surface_http\Access\ServedOperationAccessCheck;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Plugin\tool\Tool\ResourceOperationToolBase;
 use Drupal\surface_tool_test\Storage\VaultStorage;
@@ -70,6 +70,7 @@ class SecurityProjectionTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples_node_type',
     'surface_examples_field',
     'surface_examples',

@@ -9,7 +9,7 @@ use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
-use Drupal\surface\Http\ServedOperationAccessCheck;
+use Drupal\surface_http\Access\ServedOperationAccessCheck;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface_entity_test\Hook\EntityTestHooks;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
@@ -44,7 +44,7 @@ class ContentEntityReadTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_entity_test'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_entity_test'];
 
   /**
    * The page every test reads.
