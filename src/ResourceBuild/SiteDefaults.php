@@ -7,7 +7,7 @@ namespace Drupal\surface\ResourceBuild;
 use Drupal\Core\Cache\CacheableDependencyInterface;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceBuilder;
 
 /**
  * The defaults a site sets on a resource's keys, over the declared ones.
@@ -88,7 +88,7 @@ final class SiteDefaults {
    * of a structure attached at a fixed key, which is handed back for that
    * child's build to write in its own frame (KeyPaths).
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The frame's builder, its keys and its alters' declared.
    * @param array{resource: string, at: string, values: array<string, mixed>} $defaults
    *   What of() answered, or what a parent's write() handed this frame.
@@ -102,7 +102,7 @@ final class SiteDefaults {
    *   When a path names no key a site default reaches, or a value does
    *   not fit its key.
    */
-  public function write(SurfaceBuilderInterface $builder, array $defaults, array $kinds): array {
+  public function write(SurfaceBuilder $builder, array $defaults, array $kinds): array {
     $where = [
       'resource' => $defaults['resource'],
       'at' => $defaults['at'],

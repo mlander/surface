@@ -8,7 +8,6 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\NotEmitted;
 use Drupal\surface\Pipeline\ViolationSet;
@@ -47,10 +46,10 @@ class OutputsTest extends SurfaceKernelTestBase {
   /**
    * Builds the fixture: one input, four outputs.
    *
-   * @return \Drupal\surface\SurfaceBuilderInterface
+   * @return \Drupal\surface\SurfaceBuilder
    *   The unsealed builder, so a test can add to it before it seals.
    */
-  protected function outputBuilder(): SurfaceBuilderInterface {
+  protected function outputBuilder(): SurfaceBuilder {
     $builder = new SurfaceBuilder([
       'mode' => DataDefinition::create('string')
         ->setLabel('Mode')

@@ -42,7 +42,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
  * says max-age 0: a runtime method reads what the data surface does not
  * describe.
  *
- * @see \Drupal\surface\SurfaceBuilderInterface::addRefiner()
+ * @see \Drupal\surface\SurfaceBuilder::addRefiner()
  * @see \Drupal\surface\ResourceBuild\RefinesInputRefiner
  * @see docs/refinement.md
  *

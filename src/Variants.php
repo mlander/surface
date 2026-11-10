@@ -33,7 +33,7 @@ use Drupal\surface\Pipeline\ValueState;
  * the pipeline can always find the child that answers for the chosen
  * variant.
  *
- * @see \Drupal\surface\SurfaceBuilderInterface::attachVariants()
+ * @see \Drupal\surface\SurfaceBuilder::attachVariants()
  */
 final class Variants {
 

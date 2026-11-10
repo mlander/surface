@@ -13,7 +13,6 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Computed;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Port;
 use Drupal\surface\Resource\ArrangementGroup;
@@ -140,7 +139,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
   /**
    * Constructs a blueprint.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The engine's builder the blueprint fills.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager.
@@ -157,7 +156,7 @@ final class ResourceBlueprint extends BlueprintAdapterBase implements BlueprintI
    *   NULL for the owner's own.
    */
   public function __construct(
-    SurfaceBuilderInterface $builder,
+    SurfaceBuilder $builder,
     TypedDataManagerInterface $typedDataManager,
     bool $outputs = FALSE,
     protected readonly ?ResourceRegistry $registry = NULL,

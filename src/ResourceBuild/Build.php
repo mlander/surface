@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\surface\ResourceBuild;
 
-use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\Resource\OperationContext;
 
 /**
@@ -51,7 +51,7 @@ final readonly class Build {
   /**
    * Constructs a Build.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The builder the shape is written into.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure, or the owner of the keys a step reads.
@@ -96,7 +96,7 @@ final readonly class Build {
    *   owner's key it is wired to.
    */
   public function __construct(
-    public SurfaceBuilderInterface $builder,
+    public SurfaceBuilder $builder,
     public ResourceDefinition $definition,
     public OperationContext $context,
     public array $ancestry = [],
