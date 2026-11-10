@@ -2,18 +2,19 @@ services:
   # The HTTP door: an operation served at /surface-api, the path the
   # resource and the method the operation (contract 3).
   #
-  # Resolves a resource id, an operation id and its parameters into the
-  # context, the built resource and its storage, and answers access.
+  # Runs the operation a resource id, an operation id and its parameters
+  # name through the runner, and reads what the door serves off the run:
+  # the current values, the fingerprint, where a created thing lives.
   surface.served_operations:
     class: Drupal\surface_http\ServedOperations
-    arguments: ['@surface.resource_registry', '@surface.resources', '@surface.stages']
+    arguments: ['@surface.resource_registry', '@surface.resources', '@surface.stages', '@surface.runner']
   # Reads which operation a path and a method name, and writes the path of
   # an operation: contract 3's paths.
   surface.served_paths:
     class: Drupal\surface_http\ServedPaths
     arguments: ['@surface.resource_registry', '@string_translation']
   # Gates the API, and a page that names an operation by its ids, by the
-  # operation they serve: its permission, then the resource's access class.
+  # operation they serve, through the runner's gate.
   surface.served_access:
     class: Drupal\surface_http\Access\ServedOperationAccessCheck
     arguments: ['@surface.served_operations', '@surface.served_paths', '@request_stack', '@surface.operation_gate', '@logger.channel.surface']

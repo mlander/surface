@@ -9,6 +9,7 @@ use Drupal\Core\Routing\RouteMatch;
 use Drupal\node\Entity\Node;
 use Drupal\surface_http\ProblemDetails;
 use Drupal\surface_http\Controller\ResourceApiController;
+use Drupal\surface\Operation\Refusal;
 use Drupal\surface\ResourceBuild\OperationRoute;
 use Drupal\surface_examples_react\Controller\ResourceReactPage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
@@ -16,6 +17,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Route;
@@ -60,7 +62,7 @@ class ReactStageTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_examples_react'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_examples_react', 'surface_stage_test'];
 
   /**
    * The stored page's id.
@@ -167,8 +169,10 @@ class ReactStageTest extends SurfaceKernelTestBase {
       $this->page(self::PAGE, 'update', ['id' => -1]);
       $this->fail('-1 named a page without the stage.');
     }
-    catch (NotFoundHttpException) {
-      // Without the stage, -1 names nothing.
+    catch (AccessDeniedHttpException) {
+      // Without the stage, -1 names nothing, which an account the
+      // operation declares no permission for hears as the one withheld
+      // refusal, as the route's access check answers it.
     }
   }
 
@@ -176,8 +180,9 @@ class ReactStageTest extends SurfaceKernelTestBase {
    * Tests the full schema and a lookup at `-1` read the stage header.
    *
    * They read nothing stored, but `-1` names nothing without the stage
-   * that gave it: with the header both answer 200, without it 404. At a
-   * stored id the full schema reads no header.
+   * that gave it: with the header both answer 200; without it, to an
+   * account the operation declares no permission for, the one withheld
+   * refusal, 403. At a stored id the full schema reads no header.
    */
   public function testLocalIdSchemaAndLookupReadTheHeader(): void {
     $id = $this->open();
@@ -191,7 +196,7 @@ class ReactStageTest extends SurfaceKernelTestBase {
     foreach (['schema' => $endpoints['schema'], 'lookup' => $lookup] as $name => $url) {
       $staged = $this->api($url, $header);
       $this->assertSame(200, $staged->getStatusCode(), $name . ': ' . $staged->getContent());
-      $this->assertSame(404, $this->api($url)->getStatusCode(), $name . ' without the header');
+      $this->assertSame(403, $this->api($url)->getStatusCode(), $name . ' without the header: names nothing, withheld');
       // The access check asks the stage too.
       $this->assertSame(['allowed', ''], array_slice($this->apiAccess($url, $header), 0, 2), $name);
     }
@@ -292,11 +297,33 @@ class ReactStageTest extends SurfaceKernelTestBase {
       // The page is not found.
     }
 
+    // A parameter left out, or one that is not a value the operation
+    // takes: the content page's update declares no permission, so every
+    // account hears the one withheld refusal. To an account that holds the
+    // ledger's permission it names nothing: let through in the request's
+    // own dispatch, and the page is not found.
+    $mine = $this->container->get('current_user')->getAccount();
+    foreach (['missing' => [], 'array' => ['id' => [(string) $this->node]]] as $case => $query) {
+      $this->assertSame(['forbidden', Refusal::WITHHELD, 0], $this->access(self::PAGE, 'update', $query), $case);
+    }
+    $this->setUpCurrentUser([], ['keep the ledger']);
+    foreach (['missing' => [], 'array' => ['id' => ['a']]] as $case => $query) {
+      $this->assertSame(['allowed', '', 0], $this->access('stage_test.ledger', 'update', $query), $case);
+      try {
+        $this->page('stage_test.ledger', 'update', $query);
+        $this->fail('A page whose parameter names nothing was served: ' . $case);
+      }
+      catch (NotFoundHttpException) {
+        // The page is not found.
+      }
+    }
+    $this->setCurrentUser($mine);
+
     // Another account's stage is refused, though the account may edit the
-    // page, with the one fixed reason.
+    // page, with the stage's own reason.
     $mine = $this->container->get('current_user')->getAccount();
     $this->setUpCurrentUser([], ['access content', 'edit any page content']);
-    $refused = ['forbidden', 'The operation cannot be served to this account with these parameters.', 0];
+    $refused = ['forbidden', "The stage is another account's.", 0];
     $this->assertSame($refused, $this->access(self::PAGE, 'update', ['id' => $this->node, 'stage' => $id]));
     $this->assertSame('allowed', $this->access(self::PAGE, 'update', ['id' => $this->node])[0]);
     $this->setCurrentUser($mine);

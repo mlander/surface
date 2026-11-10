@@ -6,18 +6,20 @@ namespace Drupal\surface_http\Access;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
-use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Routing\Access\AccessInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Access\OperationGate;
 use Drupal\surface\Form\CompiledFlow;
+use Drupal\surface\Operation\OperationRun;
+use Drupal\surface\Operation\Refusal;
+use Drupal\surface\Operation\RefusalCategory;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\StageResource;
-use Drupal\surface\ResourceBuild\NamesNothingException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Drupal\surface_http\HttpDoors;
 use Drupal\surface_http\ServedPaths;
 use Drupal\surface_http\ServedOperations;
 use Drupal\surface_http\ProblemException;
@@ -25,62 +27,81 @@ use Drupal\surface_http\ProblemException;
 /**
  * Gates the API, and a page naming an operation, by the operation served.
  *
- * The same answer OperationAccessCheck gives an operation's form route,
- * for a path that names the resource and the operation by id (a page,
- * such as the React example's) or the resource and the method that
- * implies the operation (the API, read by ServedPaths), rather than in
- * route defaults: the operation's permission, then the resource's access
- * class, no opinion read as a refusal. A route opts in with the requirement
- * `_surface_served_access: 'TRUE'`.
+ * The runner's gate (OperationRunnerInterface::gate()), for a path that
+ * names the resource and the operation by id (a page, such as the React
+ * example's) or the resource and the method that implies the operation
+ * (the API, read by ServedPaths), rather than in route defaults. A route
+ * opts in with the requirement `_surface_served_access: 'TRUE'`. This
+ * check reads the request and turns the run into an access answer; the
+ * order and the disclosure rule are the runner's: the operation's
+ * permission, from the two ids alone; the stage, which applies, exists
+ * and is the account's; the context; the access class, no opinion read as
+ * a refusal.
  *
- * The operation's permission is asked first, from the two ids alone,
- * before the request's parameters are read, the subject loaded or
- * anything built, so an account without it learns nothing of what the
- * parameters name. Every refusal after that gives one fixed reason,
- * whether a parameter named nothing or the access class refused what it
- * named, so the reason never says whether an id exists, and the real one
- * goes to the log; only an account holding the operation's permission
- * for what the parameters name hears the access class's reason, and that
- * a value names nothing: a 404 its controller answers. On the page, a
- * resource or an operation its path names that discovery does not have
- * is a 404 to any account, as the API answers a path that names nothing;
- * a page that names nothing is let through only in the request's own
- * dispatch, so no link to it is drawn. Both answers are the operation
- * form's route's too (OperationGate).
+ * Past the permission, an account that does not hold it hears one
+ * refusal whatever refused (Refusal::WITHHELD), so the reason never says
+ * whether an id exists, and the real one goes to the log; so does one
+ * refused a `%key` permission, which was filled from the parameters. An
+ * account that holds it hears the access class's reason, and that a
+ * value names nothing: a 404 its controller answers. The stage's own
+ * paths tell every account: an id that names no stage is a 404, another
+ * account's stage a 403 with the stage access's reason. On the page, a
+ * resource or an
+ * operation its path names that discovery does not have is a 404 to any
+ * account, as the API answers a path that names nothing; a page that
+ * names nothing is let through only in the request's own dispatch, so no
+ * link to it is drawn (OperationGate::namesNothing()).
  *
- * An API request whose `X-Surface-Stage` header names a stage is asked
- * the stage's own `update` access after the permission and before the
- * thing's context, which is then built through the stage, so another
- * account's stage is refused, 403, on any call and whatever the
- * parameters name. A header that names no stage is let through, as a
- * parameter that names nothing is: the controller answers 422 on a call
- * a stage does not apply to and 404 on one it applies to. On a path of
- * the stage itself the header is the controller's to refuse.
+ * An API request whose `X-Surface-Stage` header names a stage is asked,
+ * after the permission and before the thing's context, whether a stage
+ * applies to the operation, whether the stage exists, and whether it is
+ * the account's. One that does not apply, or names no stage, is let
+ * through for this request alone, for the controller to answer 422 or
+ * 404; another account's is refused, 403, with the stage's own reason.
+ * On a path of the stage itself the header is the controller's to
+ * refuse, and this check ignores it.
  *
  * A page reads the stage from its query, `?stage=<id>`, as the operation
  * form does (OperationRoute::stageRequested()), and asks the same three
- * things in the same order: whether a stage applies to the operation,
- * refused naming `does_not_apply`; whether the stage exists, a page not
- * found when it does not; and the stage's own `update` access. The
- * context is then built through the stage, so `?id=-1&stage=<id>` names
- * what the stage creates. A page's answer varies by the query's `stage`.
+ * things in the same order: a stage that does not apply is refused
+ * naming `does_not_apply`; one that does not exist is a page not found;
+ * another account's is refused. The context is built through the stage,
+ * so `?id=-1&stage=<id>` names what the stage creates. A page's answer
+ * varies by the query's `stage`.
  *
+ * Decision: see docs/decisions.md#one-runner-runs-an-operation.
  * Decision: see
  * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
  */
 final class ServedOperationAccessCheck implements AccessInterface {
 
   /**
+   * The route default that names a page's door, for the runner.
+   *
+   * The key of the door in the site catalog whose route the page is, such
+   * as `react`; the API's door, HttpDoors::DOOR, when a route names none.
+   */
+  public const DOOR = '_surface_door';
+
+  /**
+   * The one reason every refusal past the permission gives.
+   *
+   * The runner's, Refusal::WITHHELD.
+   */
+  public const REFUSED = Refusal::WITHHELD;
+
+  /**
    * Constructs a ServedOperationAccessCheck.
    *
    * @param \Drupal\surface_http\ServedOperations $servedOperations
-   *   What reads an operation off a request.
+   *   What reads an operation off a request and asks the runner.
    * @param \Drupal\surface_http\ServedPaths $servedPaths
    *   What reads an API path.
    * @param \Symfony\Component\HttpFoundation\RequestStack $requestStack
    *   The request stack, for a check made with no request handed in.
    * @param \Drupal\surface\Access\OperationGate $gate
-   *   The answers every door serving an operation gives alike.
+   *   The answer every door serving an operation gives alike to a URL
+   *   that names nothing.
    * @param \Psr\Log\LoggerInterface|null $logger
    *   Where the reason behind a refusal is written; NULL writes none.
    */
@@ -91,11 +112,6 @@ final class ServedOperationAccessCheck implements AccessInterface {
     protected readonly OperationGate $gate,
     protected readonly ?LoggerInterface $logger = NULL,
   ) {}
-
-  /**
-   * The one reason every refusal past the permission gives.
-   */
-  public const REFUSED = 'The operation cannot be served to this account with these parameters.';
 
   /**
    * Checks access to the page or an API path serving one operation.
@@ -117,8 +133,8 @@ final class ServedOperationAccessCheck implements AccessInterface {
    *   that names nothing, or is gone, is let through for the controller
    *   to answer with its problem (404, 405, 410); what a path names is
    *   the code's, never a stored value. An id that names nothing is a 404
-   *   for an account that holds the operation's permission, and the fixed
-   *   refusal for any other.
+   *   for an account that holds the operation's permission, and the one
+   *   withheld refusal for any other.
    */
   public function access(RouteMatchInterface $route_match, AccountInterface $account, ?Request $request = NULL): AccessResultInterface {
     // Access is also asked outside a request's own dispatch: a link, a
@@ -134,8 +150,6 @@ final class ServedOperationAccessCheck implements AccessInterface {
     $operation = $route_match->getRawParameter('operation');
     // The page names the operation in its path; the API, by the method.
     $api = $operation === NULL;
-    $parameters = NULL;
-    $stage = NULL;
     if ($api) {
       // The API: the operation is what the path and the method name.
       $segments = array_map(static fn (string $name): string => (string) $route_match->getRawParameter($name), ServedPaths::SEGMENTS);
@@ -150,125 +164,105 @@ final class ServedOperationAccessCheck implements AccessInterface {
       $resource = $target->definition->id;
       $operation = $target->operation->id;
       $parameters = $target->parameters;
+      // On a path of the stage itself the header is the controller's to
+      // refuse, 400.
       $stage = $target->definition->id === StageResource::ID ? NULL : $target->stage;
       // A client calls the API; no link the site draws points at it. What
       // its path names, or does not, is its controller's to answer, as
       // it answers a path that names nothing above.
       $dispatch = $request;
+      $door = HttpDoors::DOOR;
     }
-    $operation = (string) $operation;
-    try {
-      $permission = $this->gate->permission($resource, $operation, $account);
-    }
-    catch (\InvalidArgumentException) {
-      // The page's path names a resource or an operation discovery does
-      // not have: nothing is there, as the API answers such a path. Both
-      // controllers this check gates answer it with a page not found.
-      return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
-    }
-    if ($permission->isForbidden()) {
-      // Which permission it takes is the operation's, the same for every
-      // parameter, so saying it says nothing of what one names.
-      return $permission;
-    }
-    // A page names its stage in its query, as the operation form does.
-    $queried = $api ? NULL : ($request->query->all()[CompiledFlow::STAGE] ?? NULL);
-    if ($queried !== NULL && $queried !== '') {
-      if (!is_string($queried)) {
-        return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
-      }
-      if (!$this->servedOperations->stageable($resource, $operation)) {
-        $refusal = sprintf('A stage does not apply to the "%s" operation of %s (%s), so this page takes no "%s" in its query.', $operation, $resource, Violation::DOES_NOT_APPLY, CompiledFlow::STAGE);
-        return AccessResult::forbidden($refusal)->addCacheContexts(['url.query_args:' . CompiledFlow::STAGE])->setCacheMaxAge(0);
-      }
-      $stage = $queried;
-      $parameters = $this->servedOperations->parameters($resource, $operation, $request);
-    }
-    // The stage the header names is asked for before the thing: another
-    // account's is refused whatever the parameters name, on any call,
-    // and one that names nothing is the controller's to answer, 422 on a
-    // call a stage does not apply to and 404 on one it applies to. A
-    // context is then built through it, so a local id names what the
-    // stage creates.
-    // Decision: see
-    // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
-    $staged = NULL;
-    $through = NULL;
-    if ($stage !== NULL) {
+    else {
+      $operation = (string) $operation;
       try {
-        $staged = $this->servedOperations->contextAccess(StageResource::ID, $this->servedOperations->context(StageResource::ID, 'update', ['id' => $stage]), $account);
-        $through = $this->servedOperations->stage($stage, $parameters);
+        $parameters = $this->servedOperations->parameters($resource, $operation, $request);
       }
       catch (\InvalidArgumentException) {
-        // The header names no stage: the controller answers 422 where a
-        // stage does not apply, else 404. A page's query names none: a
-        // page not found.
-        return $api
-          ? AccessResult::allowed()->addCacheableDependency($permission)->setCacheMaxAge(0)
-          : $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
+        // The page's path names a resource or an operation discovery does
+        // not have: nothing is there, as the API answers such a path.
+        return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
       }
-      if (!$staged->isAllowed()) {
-        return $this->refused($staged instanceof AccessResultReasonInterface ? (string) $staged->getReason() : '')->addCacheableDependency($staged);
-      }
+      // A page names its stage in its query, as the operation form does.
+      $stage = $request->query->all()[CompiledFlow::STAGE] ?? NULL;
+      $stage = $stage === '' ? NULL : $stage;
+      $door = (string) ($route_match->getRouteObject()?->getDefault(self::DOOR) ?? HttpDoors::DOOR);
+    }
+    if ($stage !== NULL && !is_string($stage)) {
+      // A query that names no one stage: the gate without a stage answers
+      // a refusal as it is, and names nothing only when it is gated.
+      $run = $this->servedOperations->gate($resource, $operation, $parameters, NULL, $door, $account);
+      return $run->isRefused() ? $this->answer($run, $api, $dispatch, $resource, $operation) : $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
     }
     // The context alone, built from the parameters: access is answered
     // from it, and nothing is built for a response the page cache answers.
     // Decision: see docs/decisions.md#a-build-is-not-cached-across-requests.
-    try {
-      $context = $parameters === NULL
-        ? $this->servedOperations->contextFromRequest($resource, $operation, $request)
-        : $this->servedOperations->context($resource, $operation, $parameters, $through);
-    }
-    catch (\InvalidArgumentException $e) {
-      // A permission that names a parameter (`administer %entity_type
-      // fields`) is read off the parameters as sent: the page's from its
-      // query string, the API's from its path.
-      // Decision: see
-      // docs/decisions.md#a-parameter-is-identity-the-caller-knows.
-      if (!$permission->isAllowed()) {
-        $permission = $this->gate->permission($resource, $operation, $account, $parameters ?? $this->servedOperations->parameters($resource, $operation, $request));
-      }
-      // The account holds the operation's permission for what the
-      // parameters name: it may hear that one names nothing, a 404 the
-      // controller answers. The API answers any parameter it cannot use
-      // so; the page, as the form's route, a value that names nothing.
-      if ($permission->isAllowed() && ($api || $e instanceof NamesNothingException)) {
-        return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
-      }
-      return $this->refused($e->getMessage());
-    }
-    $access = $this->servedOperations->contextAccess($resource, $context, $account);
-    if ($access->isAllowed() && $staged !== NULL) {
-      // Decision: see
-      // docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
-      $access = $access->andIf($staged);
-    }
-    if (!$api && $access->isAllowed()) {
-      $access = $access->andIf(AccessResult::allowed()->addCacheContexts(['url.query_args:' . CompiledFlow::STAGE]));
-    }
-    // An account that holds the operation's permission for what the
-    // parameters name may hear why the rest refused; any other learns
-    // nothing of what they name.
-    if ($access->isAllowed() || ($this->servedOperations->permissionAccess($resource, $operation, $account, $context)?->isAllowed() ?? FALSE)) {
-      return $access;
-    }
-    return $this->refused($access instanceof AccessResultReasonInterface ? (string) $access->getReason() : '')->addCacheableDependency($access);
+    $run = $this->servedOperations->gate($resource, $operation, $parameters, $stage, $door, $account);
+    return $this->answer($run, $api, $dispatch, $resource, $operation);
   }
 
   /**
-   * Refuses with the one fixed reason, logging the real one.
+   * Turns the runner's answer into the route's, from what it may say.
    *
-   * @param string $reason
-   *   Why, for the log.
+   * Read from the refusal's public fields alone; its actual() is read
+   * only to log what was withheld.
    *
-   * @return \Drupal\Core\Access\AccessResult
-   *   Forbidden, cached for this request only.
+   * @param \Drupal\surface\Operation\OperationRun $run
+   *   What the runner's gate answered.
+   * @param bool $api
+   *   TRUE for the API, FALSE for a page.
+   * @param \Symfony\Component\HttpFoundation\Request|null $dispatch
+   *   The request, in its own dispatch; NULL when access is asked about a
+   *   link.
+   * @param string $resource
+   *   The resource, as the path named it.
+   * @param string $operation
+   *   The operation, as the path named it.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The answer.
    */
-  protected function refused(string $reason): AccessResult {
-    if ($reason !== '') {
-      $this->logger?->info('A served operation was refused: @reason', ['@reason' => $reason]);
+  protected function answer(OperationRun $run, bool $api, ?Request $dispatch, string $resource, string $operation): AccessResultInterface {
+    $refusal = $run->refusal();
+    if ($refusal === NULL) {
+      $access = $run->access();
+      return $api ? $access : $access->andIf(AccessResult::allowed()->addCacheContexts(['url.query_args:' . CompiledFlow::STAGE]));
     }
-    return AccessResult::forbidden(self::REFUSED)->setCacheMaxAge(0);
+    if ($refusal->code === Violation::PERMISSION && $refusal->access !== NULL) {
+      // A static permission, told: the same for every parameter, so
+      // saying it says nothing of what one names. The runner withholds a
+      // `%key` one, which arrives below.
+      return $refusal->access;
+    }
+    if ($refusal->category === RefusalCategory::Stage) {
+      return match ($refusal->code) {
+        // The controller answers 422: the caller drops the header.
+        Violation::DOES_NOT_APPLY => $api
+          ? AccessResult::allowed()->addCacheableDependency($refusal->cacheability)->setCacheMaxAge(0)
+          : AccessResult::forbidden(sprintf('A stage does not apply to the "%s" operation of %s (%s), so this page takes no "%s" in its query.', $operation, $resource, Violation::DOES_NOT_APPLY, CompiledFlow::STAGE))->addCacheContexts(['url.query_args:' . CompiledFlow::STAGE])->setCacheMaxAge(0),
+        // The controller answers 404; a page is not found.
+        Violation::NOT_FOUND => $api
+          ? AccessResult::allowed()->addCacheableDependency($refusal->cacheability)->setCacheMaxAge(0)
+          : $this->gate->namesNothing($dispatch, answersNotFound: TRUE),
+        // Another account's, with the stage access's own reason.
+        default => AccessResult::forbidden($refusal->reason)->addCacheableDependency($refusal->cacheability)->setCacheMaxAge(0),
+      };
+    }
+    // The resource, the operation or a parameter names nothing, told: a
+    // 404 the controller answers, in the request's own dispatch.
+    if ($refusal->category === RefusalCategory::NamesNothing) {
+      return $this->gate->namesNothing($dispatch, answersNotFound: TRUE);
+    }
+    if ($refusal->reason === Refusal::WITHHELD) {
+      $actual = $refusal->actual()->reason;
+      if ($actual !== '') {
+        $this->logger?->info('A served operation was refused: @reason', ['@reason' => $actual]);
+      }
+    }
+    // Withheld, or the access class told, each with its answer; and an
+    // account the runner may not run as (blocked, or no user), which
+    // carries none: access asked about another account, for a link.
+    return $refusal->access ?? AccessResult::forbidden($refusal->reason)->addCacheableDependency($refusal->cacheability);
   }
 
 }

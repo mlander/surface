@@ -95,6 +95,23 @@ Apply's own `changes` is `['']`: a structure with no keys has no document to
 compare, so the pipeline answers the whole call as the one change, as a
 delete does. `apply` declares `destructive` and is not idempotent.
 
+### The stage's own paths
+
+The six operations declare no permission; the stage's own access
+(`StageAccess`) decides who may use one. Their refusals are told to
+every account, as the stage a call goes through is
+([The `X-Surface-Stage` header](#the-x-surface-stage-header)): a stage
+id is a random UUID, so an account can only ask about one it was
+handed, and a client needs to know its stage expired to open another.
+An id that names no stage is `not_found` at every door: the tool's
+input to correct, a 404 naming the id over HTTP (`GET`, `PATCH`,
+`DELETE /surface-api/surface.stage/{id}`, `:changes`, `:apply`), a page
+not found at the form. Another account's stage is `access`, with the
+stage access's reason, "The stage is another account's.": the tool's
+access failure, a 403 over HTTP, at the route's check and at the
+controller alike, and the form's error
+(why: [decision](decisions.md#one-runner-runs-an-operation)).
+
 ## Naming a stage
 
 ### The `stage` input
@@ -190,21 +207,26 @@ X-Surface-Stage: 90330186-6d51-43bf-a4cd-d7f144e63c1e
   ignores the header at a stored id: the full schema reads nothing
   stored. At a local id (`-1`) it reads the header, since only the
   stage names that id, and answers the create's full schema; without
-  the header it is 404. A lookup (`:lookup`) does the same.
+  the header the id names nothing: 404 for an account that holds the
+  operation's permission, and the one withheld refusal, 403, for any
+  other, an account a content type's operations declare no permission
+  for among them. A lookup (`:lookup`) does the same.
 - Every answer stays `Cache-Control: no-store, private`.
 
-The route's access check (`ServedOperationAccessCheck`) reads the
-header's stage before the controller runs, so the answers come in this
-order. Another account's stage is 403 on any call, answered before the
-thing the path names is asked about or anything is built. The header on
-a path of the stage itself is 400: a stage is not staged. The header on
-any other call a stage does not apply to, a read included (a resource
-kept in State, the venues' listing or reorder), is 422 with one
-violation at no path, code `does_not_apply`: "A stage does not apply to
-this operation.", whether or not the stage exists. The controller
-answers both (`ResourceApiController::served()`), before it reads the
-stage the header names. A header that names no stage is 404 only on a
-call a stage applies to.
+The route's access check (`ServedOperationAccessCheck`) and the
+controller both ask the runner, which asks after the operation's
+permission, and before the thing the path names is asked about or
+anything is built: whether a stage applies, whether the stage exists,
+and whether it is the account's. So the answers come in this order. The
+header on a path of the stage itself is 400: a stage is not staged. The
+header on any other call a stage does not apply to, a read included (a
+resource kept in State, the venues' listing or reorder), is 422 with
+one violation at no path, code `does_not_apply`: "A stage does not
+apply to this operation.", whatever stage it names, another account's
+or none. On a call a stage applies to, a header that names no stage is
+404, its detail naming the id, and another account's stage is 403, "The
+stage is another account's.". The controller answers the 400 itself and
+the rest from the runner's refusal (`ResourceApiController::problem()`).
 
 The OpenAPI document describes the header once, as the parameter
 `SurfaceStage`, and references it from the envelope, the narrowing and
@@ -1592,12 +1614,15 @@ access meets core's own refusal, an exception from its predelete hook,
   to rehearse it, so a write staged between the two is applied with the
   rest; the check between the rehearsal and the commit (a stage written
   after it was rehearsed refuses the apply) closes the rest.
-- **An id that names nothing on the stage's own paths.** The stage's
-  operations declare no permission, so at the tool door's access check
-  (`drush tool:run`, MCP) and the HTTP route's, an id that names no
-  stage gets the door's one fixed refusal, as for any operation that
-  declares none; a tool called from PHP, which runs no access check,
-  answers `not_found`. A stage named through the `stage` input that
+- **An id that names nothing on the stage's own paths, at the tool's
+  access check.** The stage's operations declare no permission, so at
+  the tool door's access check (`drush tool:run`, MCP), which does not
+  run through the runner yet, an id that names no stage gets the door's
+  one fixed refusal, as for any operation that declares none; a tool
+  called from PHP, which runs no access check, answers `not_found`. The
+  runner tells it to every account, so the HTTP door answers 404 since
+  2026-11-10 ([The stage's own paths](#the-stages-own-paths)), and the
+  tool's access check converges when the tool door moves onto it. A stage named through the `stage` input that
   names nothing is not found; one named through the header is 404 on a
   call a stage applies to, and 422 on any other
   ([The `X-Surface-Stage` header](#the-x-surface-stage-header)).

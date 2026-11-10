@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Component\Render\PlainTextOutput;
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Access\AccessResultReasonInterface;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\Session\AccountSwitcherInterface;
@@ -37,18 +38,22 @@ use Psr\Log\LoggerInterface;
  *
  * Each refusal is a result. What it shows is what the account may hear:
  * past the permission, an account that does not hold it hears the same
- * refusal whatever refused, a stage that is gone and another account's
- * are the same refusal for every account, and the true one is kept
- * under actual(). The order holds: the permission before an argument is
- * read, a stage that does not apply before the context is built, and
- * arguments that are not values the parameters take before the
- * operation's method is called. gate() builds nothing, a prepare writes
- * nothing, a run writes and answers its outputs, a dry run writes
- * nothing, and a staged run writes into the stage. Outputs that do not
- * hold to the declaration are logged, never thrown. An explicit account
- * is run as when its id or its roles differ from the current user's, and
- * the current user is back afterwards, also when the storage or the
- * pipeline throws; a blocked or missing one is refused.
+ * refusal whatever refused, a `%key` permission's refusal among them; a
+ * stage that is gone and another account's are told apart, as the
+ * stage, or as the stage resource's own id; and the true one is kept
+ * under actual(). The order
+ * holds: the permission before an argument is read, the stage before the
+ * context is built, and arguments that are not values the parameters
+ * take before the operation's method is called. gate() builds nothing, a
+ * prepare writes nothing (one of a resource with no storage builds with
+ * none), a run writes and answers its outputs, a dry run writes nothing,
+ * submit() runs on the prepared surface and storage as the account the
+ * run was prepared for, once a write committed through it, and a staged
+ * run writes into the stage. Outputs that do not hold to the declaration
+ * are logged, never thrown. An explicit account is run as when its id or
+ * its roles differ from the current user's, and the current user is back
+ * afterwards, also when the storage or the pipeline throws; a blocked or
+ * missing one is refused, at submit() too.
  *
  * @see docs/decisions.md#one-runner-runs-an-operation
  */
@@ -145,17 +150,17 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
   /**
    * Tests an operation that declares no permission shows one refusal.
    *
-   * The stage's operations declare none, so past the ids every account
-   * hears the same refusal, whether the id names nothing or the access
-   * class refused, while actual() keeps the two apart. A refused run
-   * holds no context for an account that may not hear why.
+   * A pantry's update declares no permission and no access class, so past
+   * the ids every account hears the same refusal, whether an argument is
+   * not a value the operation takes or the access refused, while actual()
+   * keeps the two apart. A refused run holds no context for an account
+   * that may not hear why.
    */
   public function testWhatIsShownIsTheSameWithoutThePermission(): void {
-    $ghost = $this->runner()->run('surface.stage', 'changes', ['id' => 'ghost'], values: []);
-    $id = $this->opened();
-    $theirs = $this->runner()->run('surface.stage', 'changes', ['id' => $id], values: [], account: $this->second);
+    $misfit = $this->runner()->run('resource_test.pantry', 'update', ['pantry' => ['x']], values: []);
+    $refused = $this->runner()->run('resource_test.pantry', 'update', ['pantry' => 'x'], values: [], account: $this->second);
 
-    foreach ([$ghost, $theirs] as $run) {
+    foreach ([$misfit, $refused] as $run) {
       $this->assertSame(RefusalCategory::Access, $run->refusal()?->category);
       $this->assertSame(Violation::ACCESS, $run->refusal()->code);
       $this->assertSame(Refusal::WITHHELD, $run->refusal()->reason);
@@ -164,25 +169,62 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
       $this->assertThrowsMessage(fn () => $run->context(), 'The call was refused and holds no context: it was refused before the context was built, or the account may not hear why.');
       $this->assertThrowsMessage(fn () => $run->access(), 'The call was refused; refusal() holds the answer that refused it.');
     }
-    $this->assertEquals(static::shown($ghost->refusal()), static::shown($theirs->refusal()), 'Every field shown is the same.');
+    $this->assertEquals(static::shown($misfit->refusal()), static::shown($refused->refusal()), 'Every field shown is the same.');
 
     // The server still tells them apart.
-    $this->assertSame(RefusalCategory::NamesNothing, $ghost->refusal()->actual()->category);
-    $this->assertSame(Violation::NOT_FOUND, $ghost->refusal()->actual()->code);
-    $this->assertStringContainsString('ghost', $ghost->refusal()->actual()->reason);
-    $this->assertSame(RefusalCategory::Access, $theirs->refusal()->actual()->category);
-    $this->assertSame(Violation::ACCESS, $theirs->refusal()->actual()->code);
-    $this->assertSame("The stage is another account's.", $theirs->refusal()->actual()->reason);
-    $this->assertSame('Access refused: The stage is another account\'s.', PlainTextOutput::renderFromHtml((string) $theirs->refusal()->actual()->violation()->message));
-    $this->assertTrue($theirs->refusal()->actual()->access?->isForbidden());
-    $this->assertSame('surface.stage', $theirs->definition()->id);
+    $this->assertSame(RefusalCategory::NamesNothing, $misfit->refusal()->actual()->category);
+    $this->assertSame(Violation::NOT_FOUND, $misfit->refusal()->actual()->code);
+    $this->assertStringEndsWith('and was given array.', $misfit->refusal()->actual()->reason);
+    $this->assertSame(RefusalCategory::Access, $refused->refusal()->actual()->category);
+    $this->assertSame(Violation::ACCESS, $refused->refusal()->actual()->code);
+    $this->assertSame(OperationRunner::NOT_ALLOWED, $refused->refusal()->actual()->reason);
+    $this->assertSame('resource_test.pantry', $refused->definition()->id);
+  }
+
+  /**
+   * Tests the stage resource's own operations tell each refusal.
+   *
+   * Its operations declare no permission, and its id is a random UUID an
+   * account was handed, so every account hears what an account holding
+   * the permission would: an id that names no stage names nothing, and
+   * another account's stage is refused with the stage access's reason.
+   */
+  public function testTheStageResourceTellsItsOwnRefusals(): void {
+    $id = $this->opened();
+    $ghost = $this->runner()->run('surface.stage', 'changes', ['id' => 'ghost'], values: []);
+    $this->assertSame(RefusalCategory::NamesNothing, $ghost->refusal()?->category);
+    $this->assertSame(Violation::NOT_FOUND, $ghost->refusal()->code);
+    $this->assertStringContainsString('ghost', $ghost->refusal()->reason);
+    $this->assertSame($ghost->refusal()->actual()->reason, $ghost->refusal()->reason);
+    $this->assertSame(0, $ghost->refusal()->cacheability->getCacheMaxAge());
+
+    foreach ([$this->second, $this->stranger, new UserSession()] as $account) {
+      $theirs = $this->runner()->run('surface.stage', 'changes', ['id' => $id], values: [], account: $account);
+      $label = 'Account ' . $account->id();
+      $this->assertSame(RefusalCategory::Access, $theirs->refusal()?->category, $label);
+      $this->assertSame(Violation::ACCESS, $theirs->refusal()->code, $label);
+      $this->assertSame((string) $theirs->refusal()->actual()->reason, $theirs->refusal()->reason, $label . ' hears the stage access\'s own reason.');
+      $this->assertNotSame(Refusal::WITHHELD, $theirs->refusal()->reason, $label);
+      $this->assertTrue($theirs->refusal()->access?->isForbidden(), $label);
+      $this->assertSame('surface.stage', $theirs->definition()->id);
+    }
+    $theirs = $this->runner()->run('surface.stage', 'changes', ['id' => $id], values: [], account: $this->second);
+    $this->assertSame("The stage is another account's.", $theirs->refusal()?->reason);
+    $this->assertSame('Access refused: The stage is another account\'s.', PlainTextOutput::renderFromHtml((string) $theirs->refusal()->violation()->message));
+    $this->assertSame($id, $theirs->context()->known['id'] ?? NULL, 'Told as to an account that holds the permission, so the context is kept.');
+
+    // Arguments that are not values, told too.
+    $misfit = $this->runner()->run('surface.stage', 'update', ['id' => [1]], values: []);
+    $this->assertSame(RefusalCategory::NamesNothing, $misfit->refusal()?->category);
+    $this->assertStringEndsWith('and was given array.', $misfit->refusal()->reason);
   }
 
   /**
    * Tests each refusal of the stage, and that it comes before the context.
    *
-   * A stage that is gone and one that is another account's show the same
-   * refusal, to an account that holds the operation's permission too.
+   * Each is told: a stage that is gone is `not_found` and one that is
+   * another account's is `access`, with the stage access's reason, so a
+   * client knows to open another.
    */
   public function testTheStageIsAskedBeforeTheContext(): void {
     $id = $this->opened();
@@ -197,17 +239,25 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
 
     $gone = $this->runner()->gate('stage_test.ledger', 'update', ['id' => 'a'], stage: 'ghost', account: $this->second);
     $theirs = $this->runner()->gate('stage_test.ledger', 'update', ['id' => 'a'], stage: $id, account: $this->second);
+    $this->assertSame(RefusalCategory::Stage, $gone->refusal()?->category);
+    $this->assertSame(Violation::NOT_FOUND, $gone->refusal()->code);
+    $this->assertSame('There is no stage "ghost": it expired, was discarded or never was.', $gone->refusal()->reason);
+    $this->assertNull($gone->refusal()->access);
+    $this->assertSame(RefusalCategory::Stage, $theirs->refusal()?->category);
+    $this->assertSame(Violation::ACCESS, $theirs->refusal()->code);
+    $this->assertSame("The stage is another account's.", $theirs->refusal()->reason);
+    $denied = $theirs->refusal()->access;
+    $this->assertInstanceOf(AccessResult::class, $denied);
+    $this->assertTrue($denied->isForbidden());
+    $this->assertInstanceOf(AccessResultReasonInterface::class, $denied);
+    $this->assertSame("The stage is another account's.", (string) $denied->getReason());
+    $this->assertSame(0, $denied->getCacheMaxAge());
+    $this->assertSame('Access refused: The stage is another account\'s.', PlainTextOutput::renderFromHtml((string) $theirs->refusal()->violation()->message));
     foreach ([$gone, $theirs] as $run) {
-      $this->assertSame(RefusalCategory::Access, $run->refusal()?->category);
-      $this->assertSame(Refusal::WITHHELD, $run->refusal()->reason, 'The account holds the permission, and still hears nothing of the stage.');
       $this->assertSame(0, $run->refusal()->cacheability->getCacheMaxAge());
+      $this->assertContains('user.permissions', $run->refusal()->cacheability->getCacheContexts(), 'It varies by the permission it was told past.');
+      $this->assertEquals(static::shown($run->refusal()), static::shown(Refusal::told($run->refusal()->actual())), 'What is shown is the refusal as it was.');
     }
-    $this->assertEquals(static::shown($gone->refusal()), static::shown($theirs->refusal()), 'Every field shown is the same.');
-    $actual = $gone->refusal()->actual();
-    $this->assertSame([RefusalCategory::Stage, Violation::NOT_FOUND], [$actual->category, $actual->code]);
-    $actual = $theirs->refusal()->actual();
-    $this->assertSame([RefusalCategory::Stage, Violation::ACCESS], [$actual->category, $actual->code]);
-    $this->assertSame("The stage is another account's.", $actual->reason);
 
     $run = $this->runner()->gate('stage_test.ledger', 'update', ['id' => 'a'], stage: $this->stages()->named($id));
     $this->assertFalse($run->isRefused());
@@ -249,7 +299,7 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
 
     // An operation with no permission: the true reason is kept, and the
     // account hears the one sentence.
-    $run = $this->runner()->run('surface.stage', 'update', ['id' => [1]], values: []);
+    $run = $this->runner()->run('resource_test.pantry', 'update', ['pantry' => [1]], values: []);
     $this->assertSame(Refusal::WITHHELD, $run->refusal()?->reason);
     $this->assertSame(RefusalCategory::NamesNothing, $run->refusal()->actual()->category);
     $this->assertStringEndsWith('and was given array.', $run->refusal()->actual()->reason);
@@ -257,14 +307,26 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
 
   /**
    * Tests a `%key` permission is read off the arguments as given.
+   *
+   * Its refusal is withheld: which permission it names was read off an
+   * argument. The true one is kept under actual().
    */
   public function testKeyPermissionIsReadOffTheArguments(): void {
     $cook = $this->account((int) $this->second->id(), ['cook in main', 'cook in closed']);
     $this->assertFalse($this->runner()->gate('resource_test.recipe', 'update', ['kitchen' => 'main', 'name' => 'stew'], account: $cook)->isRefused());
 
     $run = $this->runner()->gate('resource_test.recipe', 'update', ['kitchen' => 'pantry', 'name' => 'stew'], account: $cook);
-    $this->assertSame(Violation::PERMISSION, $run->refusal()?->code);
-    $this->assertSame("The 'cook in pantry' permission is required.", $run->refusal()->reason);
+    $this->assertSame(RefusalCategory::Access, $run->refusal()?->category);
+    $this->assertSame(Violation::ACCESS, $run->refusal()->code);
+    $this->assertSame(Refusal::WITHHELD, $run->refusal()->reason);
+    $this->assertContains('user.permissions', $run->refusal()->cacheability->getCacheContexts(), 'It varies by the permission.');
+    $this->assertSame(0, $run->refusal()->cacheability->getCacheMaxAge());
+    $this->assertTrue($run->refusal()->access?->isForbidden());
+    $this->assertSame(0, CacheableMetadata::createFromObject($run->refusal()->access)->getCacheMaxAge());
+    $this->assertSame(Violation::PERMISSION, $run->refusal()->actual()->code);
+    $this->assertSame("The 'cook in pantry' permission is required.", $run->refusal()->actual()->reason);
+    // A static permission is told, as before.
+    $this->assertSame("The 'keep the ledger' permission is required.", $this->runner()->gate('stage_test.ledger', 'update', ['id' => 'a'], account: $cook)->refusal()?->reason);
 
     // Held for what the arguments name, so the access class's reason is
     // told.
@@ -275,18 +337,154 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Tests a resource with no storage of its own is refused before the build.
+   * Tests a resource with no storage is prepared with none, never run.
+   *
+   * Its host or its parent stores it: a prepare builds it, as the HTTP
+   * door serves its schema and its read, and says it has no storage; a
+   * run with values is refused before the build.
    */
-  public function testResourceWithNoStorageIsRefused(): void {
+  public function testResourceWithNoStorageIsPreparedNotRun(): void {
     $stocker = $this->createUser(['stock spice rack']);
     $arguments = ['larder' => 'pantry', 'shelf' => 'Top'];
     $this->assertFalse($this->runner()->gate('resource_test.larder.rack', 'restock', $arguments, account: $stocker)->isRefused(), 'Asking about it needs no storage.');
-    foreach ([NULL, []] as $values) {
-      $run = $this->runner()->run('resource_test.larder.rack', 'restock', $arguments, $values, account: $stocker);
-      $this->assertSame(RefusalCategory::NamesNothing, $run->refusal()?->category);
-      $this->assertSame('resource_test.larder.rack names no storage of its own: its host or its parent stores it, so its "restock" operation is not run on its own.', $run->refusal()->reason);
-      $this->assertFalse($run->hasBuilt());
+
+    $prepared = $this->runner()->run('resource_test.larder.rack', 'restock', $arguments, account: $stocker);
+    $this->assertFalse($prepared->isRefused());
+    $this->assertTrue($prepared->hasBuilt());
+    $this->assertFalse($prepared->hasStorage());
+    $this->assertNotEmpty($prepared->surface()->getDefinitions()->toArray(), 'It is built.');
+    $this->assertThrowsMessage(fn () => $prepared->storage(), 'resource_test.larder.rack names no storage of its own: its host or its parent stores it.');
+
+    $run = $this->runner()->run('resource_test.larder.rack', 'restock', $arguments, [], account: $stocker);
+    $this->assertSame(RefusalCategory::NamesNothing, $run->refusal()?->category);
+    $this->assertSame('resource_test.larder.rack names no storage of its own: its host or its parent stores it, so its "restock" operation is not run on its own.', $run->refusal()->reason);
+    $this->assertFalse($run->hasBuilt());
+    $this->assertFalse($run->hasStorage());
+  }
+
+  /**
+   * Tests submit() runs on the prepared run, as the account it was for.
+   *
+   * The same surface, storage and access answer as the prepare, the
+   * account the run was prepared for switched to and back; and a run it
+   * cannot submit to is the door's bug.
+   */
+  public function testSubmitRunsOnThePreparedRun(): void {
+    $switcher = $this->recordingSwitcher();
+    $runner = $this->runnerWith(switcher: $switcher);
+    $keeper = $this->keeper->id();
+    $second = $this->second->id();
+
+    $counted = array_flip(['built', 'reused', 'cached']);
+    $builds = fn (): int => array_sum(array_intersect_key($this->container->get('surface.resources')->buildCounts(), $counted));
+    $before = $builds();
+    $prepared = $runner->run('stage_test.ledger', 'update', ['id' => 'a'], account: $this->second);
+    $this->assertSame($before + 1, $builds(), 'A prepare builds once.');
+    $this->assertSame((int) $second, (int) $prepared->account()->id());
+    $this->assertTrue($prepared->hasStorage());
+    $switcher->said = [];
+    $ran = $runner->submit($prepared, ['title' => 'Bravo']);
+    $this->assertSame($before + 1, $builds(), 'submit() builds nothing: the prepare and the submit are one build.');
+    $this->assertSame(['to ' . $second, 'back ' . $keeper], $switcher->said, 'Run as the account the run was prepared for.');
+    $this->assertTrue($ran->result()->committed, $this->said($ran->result()));
+    $this->assertSame($prepared->surface(), $ran->surface());
+    $this->assertSame($prepared->storage(), $ran->storage());
+    $this->assertSame($prepared->access(), $ran->access());
+    $this->assertSame($prepared->account(), $ran->account());
+    $this->assertSame('Bravo', $this->row('a')['title']);
+
+    // As the current user nothing is switched; a dry run writes nothing.
+    $switcher->said = [];
+    $dry = $runner->submit($runner->run('stage_test.ledger', 'update', ['id' => 'a']), ['title' => 'Charlie'], dryRun: TRUE);
+    $this->assertSame([], $switcher->said);
+    $this->assertTrue($dry->result()->isValid(), $this->said($dry->result()));
+    $this->assertFalse($dry->result()->committed);
+    $this->assertSame((int) $keeper, (int) $dry->account()->id());
+    $this->assertSame('Bravo', $this->row('a')['title']);
+
+    // What it cannot submit to is the door's bug.
+    $stocker = $this->createUser(['stock spice rack']);
+    $refused = $runner->run('stage_test.ledger', 'update', ['id' => 'a'], account: $this->stranger);
+    $gated = $runner->gate('stage_test.ledger', 'update', ['id' => 'a']);
+    $rack = $runner->run('resource_test.larder.rack', 'restock', ['larder' => 'pantry', 'shelf' => 'Top'], account: $stocker);
+    $cases = [
+      'The run was refused; there is nothing to submit to.' => $refused,
+      'The run was only gated; prepare it, run() with no values, to submit to it.' => $gated,
+      'The run already ran; prepare another to submit again.' => $ran,
+      'resource_test.larder.rack names no storage of its own: its host or its parent stores it, so a prepare of it is not submitted to.' => $rack,
+      'A submit() to this prepare committed already, so its surface and stored values are from before that write: prepare the operation again to submit to it.' => $prepared,
+    ];
+    $switcher->said = [];
+    foreach ($cases as $message => $run) {
+      $this->assertThrowsMessage(fn () => $runner->submit($run, []), $message);
     }
+    $this->assertSame([], $switcher->said, 'Nothing is switched for a run it cannot submit to.');
+    $this->assertSame('Bravo', $this->row('a')['title']);
+  }
+
+  /**
+   * Tests a prepare is written through once.
+   *
+   * A dry run, and a submit whose values are refused, leave it usable, as
+   * a form validates, then writes; after a write committed, a second
+   * submit throws and writes nothing.
+   */
+  public function testPrepareIsWrittenThroughOnce(): void {
+    $prepared = $this->runner()->run('stage_test.ledger', 'update', ['id' => 'a']);
+    $this->assertTrue($this->runner()->submit($prepared, ['title' => 'Bravo'], dryRun: TRUE)->result()->isValid());
+    $this->assertFalse($this->runner()->submit($prepared, ['title' => 'Bravo', 'nothing' => 'x'])->result()->isValid());
+    $this->assertSame('Alpha', $this->row('a')['title']);
+    $this->assertTrue($this->runner()->submit($prepared, ['title' => 'Bravo'])->result()->committed, 'Written after a dry run and a refused submit.');
+    $this->assertSame('Bravo', $this->row('a')['title']);
+    $this->assertThrowsMessage(fn () => $this->runner()->submit($prepared, ['title' => 'Charlie']), 'A submit() to this prepare committed already, so its surface and stored values are from before that write: prepare the operation again to submit to it.');
+    $this->assertSame('Bravo', $this->row('a')['title'], 'Nothing was written the second time.');
+    // A create too: a second submit would create twice.
+    $create = $this->runner()->run('stage_test.ledger', 'create');
+    $this->assertTrue($this->runner()->submit($create, ['id' => 'b', 'title' => 'Bee'])->result()->committed);
+    $this->assertThrowsMessage(fn () => $this->runner()->submit($create, ['id' => 'c', 'title' => 'Sea']), 'A submit() to this prepare committed already, so its surface and stored values are from before that write: prepare the operation again to submit to it.');
+    $this->assertNull($this->row('c'));
+  }
+
+  /**
+   * Tests submit() asks for the account as run() does.
+   *
+   * An account blocked since its prepare is refused, and nothing is
+   * written; the current user is switched back when the storage throws
+   * inside submit().
+   */
+  public function testSubmitIsMadeAsAnAccountTheRunnerMayRunAs(): void {
+    $switcher = $this->recordingSwitcher();
+    $runner = $this->runnerWith(switcher: $switcher);
+    $keeper = $this->keeper->id();
+    $second = $this->second->id();
+
+    // The storage throws: switched back.
+    $prepared = $runner->run('stage_test.ledger', 'update', ['id' => 'a'], account: $this->second);
+    $this->container->get('state')->set(LedgerStorage::FAIL, 'a');
+    $switcher->said = [];
+    try {
+      $runner->submit($prepared, ['title' => 'Bravo']);
+      $this->fail('The storage did not throw.');
+    }
+    catch (\RuntimeException $e) {
+      $this->assertSame('The ledger row "a" could not be written.', $e->getMessage());
+    }
+    $this->assertSame(['to ' . $second, 'back ' . $keeper], $switcher->said);
+    $this->assertSame((int) $keeper, (int) $this->container->get('current_user')->id());
+    $this->container->get('state')->delete(LedgerStorage::FAIL);
+
+    // Blocked since the prepare: refused, nothing switched or written.
+    $prepared = $runner->run('stage_test.ledger', 'update', ['id' => 'a'], account: $this->second);
+    $this->assertFalse($prepared->isRefused());
+    $this->second->block()->save();
+    $switcher->said = [];
+    $run = $runner->submit($prepared, ['title' => 'Bravo']);
+    $this->assertTrue($run->isRefused());
+    $this->assertFalse($run->hasRun());
+    $this->assertSame(RefusalCategory::Access, $run->refusal()?->category);
+    $this->assertSame('The account is blocked.', $run->refusal()->reason);
+    $this->assertSame([], $switcher->said);
+    $this->assertSame('Alpha', $this->row('a')['title'], 'Nothing was written.');
   }
 
   /**
@@ -427,42 +625,7 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
    * blocked or missing account is refused before anything is switched.
    */
   public function testAnExplicitAccountIsRunAs(): void {
-    $switcher = new class ($this->container->get('account_switcher'), $this->container->get('current_user')) implements AccountSwitcherInterface {
-
-      /**
-       * The current user's id after each switch.
-       *
-       * @var list<string>
-       */
-      public array $said = [];
-
-      /**
-       * Wraps the site's account switcher, reading the current user.
-       */
-      public function __construct(
-        protected readonly AccountSwitcherInterface $switcher,
-        protected readonly AccountInterface $currentUser,
-      ) {}
-
-      /**
-       * {@inheritdoc}
-       */
-      public function switchTo(AccountInterface $account): static {
-        $this->switcher->switchTo($account);
-        $this->said[] = 'to ' . $this->currentUser->id();
-        return $this;
-      }
-
-      /**
-       * {@inheritdoc}
-       */
-      public function switchBack(): static {
-        $this->switcher->switchBack();
-        $this->said[] = 'back ' . $this->currentUser->id();
-        return $this;
-      }
-
-    };
+    $switcher = $this->recordingSwitcher();
     $pipeline = $this->misreporting();
     $runner = $this->runnerWith(switcher: $switcher, pipeline: $pipeline);
     $keeper = $this->keeper->id();
@@ -531,6 +694,16 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
     $this->assertSame([], $switcher->said);
     // Anonymous is no blocked account.
     $this->assertSame(Violation::PERMISSION, $runner->gate('stage_test.ledger', 'update', ['id' => 'a'], account: new UserSession())->refusal()?->code);
+  }
+
+  /**
+   * Builds the site's account switcher, which records each switch.
+   *
+   * @return \Drupal\Tests\surface\Kernel\RecordingAccountSwitcher
+   *   The switcher.
+   */
+  protected function recordingSwitcher(): RecordingAccountSwitcher {
+    return new RecordingAccountSwitcher($this->container->get('account_switcher'), $this->container->get('current_user'));
   }
 
   /**

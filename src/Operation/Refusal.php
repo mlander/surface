@@ -13,16 +13,21 @@ use Drupal\surface\Pipeline\Violation;
  * Why the runner refused a call, as the account may hear it.
  *
  * Every public field and violation() is safe to show the account the
- * call ran as. Past the operation's permission, an account that does not
- * hold it (for an operation that declares none, every account) hears
- * the same refusal whatever refused: category Access, code `access`, the
- * reason WITHHELD, max-age 0. So it cannot tell an id that names nothing
- * from one it may not touch, or a stage that is gone from another
- * account's. A stage that is gone and one that is another account's are
- * that same refusal for every account, the permission held or not.
- * Everything else is told in full: an unknown resource or operation,
- * the permission itself, a stage that does not apply to the operation,
- * and, to an account that holds the permission, what the arguments name.
+ * call ran as. What the two ids alone decide is told to anyone; a refusal
+ * that had to read an argument is withheld from an account that does
+ * not hold the operation's permission (for an operation that declares
+ * none, every account): it hears the same refusal whatever refused,
+ * category Access, code `access`, the reason WITHHELD, max-age 0. So it
+ * cannot tell an id that names nothing from one it may not touch. A
+ * `%key` permission's own refusal is withheld the same way, since which
+ * permission it names was read off an argument. Everything else is told
+ * in full: an unknown resource or operation, a static permission, the
+ * stage the call goes through (it does not apply to the operation,
+ * category Stage and code `does_not_apply`; it is gone, `not_found`; it
+ * is another account's, `access`, with the stage access's reason), what
+ * the arguments name to an account that holds the permission, and every
+ * refusal of the stage resource's own operations, whose id is a random
+ * UUID only an account handed it can name.
  *
  * The true category, code and reason are kept beside it, under actual(),
  * for the server's own decisions and logs.

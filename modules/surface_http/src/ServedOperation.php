@@ -4,55 +4,80 @@ declare(strict_types=1);
 
 namespace Drupal\surface_http;
 
-use Drupal\surface\SurfaceInterface;
+use Drupal\surface\Operation\OperationRun;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\Staging\Stage;
+use Drupal\surface\SurfaceInterface;
 
 /**
  * One operation of one resource, as a request named it, built and bound.
  *
- * What the page and the three endpoints all start from: the resource and
- * the operation the path named, the context the operation built from
- * the parameters the request carried, the resource built in that context
- * and the storage composed for it, and the stage its header named. Asked
- * afresh on every request, as the operation form asks afresh at every
- * stage.
+ * What the page and the endpoints start from: a prepare the runner
+ * answered (OperationRunnerInterface::run() with no values), and the
+ * parameters the request carried. Its properties are read off the run:
+ * the resource and the operation, the context the operation built from
+ * the parameters, the resource built in that context, the storage
+ * composed for it, and the stage the request named. Asked afresh on
+ * every request, as the operation form asks afresh at every stage.
  *
  * @internal
  */
 final class ServedOperation {
 
   /**
+   * What discovery found about the resource.
+   */
+  public readonly ResourceDefinition $definition;
+
+  /**
+   * The operation.
+   */
+  public readonly OperationDefinition $operation;
+
+  /**
+   * The context the operation built from the parameters.
+   */
+  public readonly OperationContext $context;
+
+  /**
+   * The built resource, in that context.
+   */
+  public readonly SurfaceInterface $surface;
+
+  /**
+   * The storage composed for it, or NULL when the resource names none.
+   */
+  public readonly ?SurfaceStorageInterface $storage;
+
+  /**
+   * The stage the request goes through, or NULL for none.
+   *
+   * It built the context and was handed the storage.
+   */
+  public readonly ?Stage $stage;
+
+  /**
    * Constructs a ServedOperation.
    *
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
-   *   What discovery found about the resource.
-   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
-   *   The operation.
+   * @param \Drupal\surface\Operation\OperationRun $run
+   *   The prepare the runner answered: built, not refused, not run.
    * @param array $parameters
    *   The operation's parameters as the request gave them, by name: raw
    *   ids and scalars, never an entity.
-   * @param \Drupal\surface\Resource\OperationContext $context
-   *   The context the operation built from them.
-   * @param \Drupal\surface\SurfaceInterface $surface
-   *   The built resource, in that context.
-   * @param \Drupal\surface\Pipeline\SurfaceStorageInterface|null $storage
-   *   The storage composed for it, or NULL when the resource names none.
-   * @param \Drupal\surface\Staging\Stage|null $stage
-   *   The stage the request goes through, which built the context and was
-   *   handed the storage, or NULL for none.
    */
   public function __construct(
-    public readonly ResourceDefinition $definition,
-    public readonly OperationDefinition $operation,
+    public readonly OperationRun $run,
     public readonly array $parameters,
-    public readonly OperationContext $context,
-    public readonly SurfaceInterface $surface,
-    public readonly ?SurfaceStorageInterface $storage,
-    public readonly ?Stage $stage = NULL,
-  ) {}
+  ) {
+    $this->definition = $run->definition();
+    $this->operation = $run->operation();
+    $this->context = $run->context();
+    $this->surface = $run->surface();
+    $this->storage = $run->hasStorage() ? $run->storage() : NULL;
+    $this->stage = $run->stage();
+  }
 
 }

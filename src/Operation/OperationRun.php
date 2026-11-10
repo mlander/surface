@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\Operation;
 
 use Drupal\Core\Access\AccessResultInterface;
+use Drupal\Core\Session\AccountInterface;
 use Drupal\surface\Pipeline\SurfaceResult;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\Resource\OperationContext;
@@ -16,12 +17,13 @@ use Drupal\surface\SurfaceInterface;
 /**
  * What one call to the runner reached, and what it found on the way.
  *
- * OperationRunnerInterface::gate() and run() answer one for every call,
- * refused or run. It says how far the call got (isRefused(), hasBuilt(),
- * hasRun()) and holds what each step produced: the definitions, the
- * context, the stage, the decisive access answer, the built surface, the
- * storage, the pipeline's result and the outputs. Reading something the
- * call did not reach throws a \BadMethodCallException that says why.
+ * OperationRunnerInterface::gate(), run() and submit() answer one for
+ * every call, refused or run. It says how far the call got (isRefused(),
+ * hasBuilt(), hasRun()) and holds what each step produced: the
+ * definitions, the context, the stage, the decisive access answer, the
+ * account it ran as, the built surface, the storage (hasStorage()), the
+ * pipeline's result and the outputs. Reading something the call did not
+ * reach throws a \BadMethodCallException that says why.
  *
  * Decision: see docs/decisions.md#one-runner-runs-an-operation.
  */
@@ -81,10 +83,13 @@ final readonly class OperationRun {
    *   The context.
    * @param \Drupal\Core\Access\AccessResultInterface|null $access
    *   The decisive access answer.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account the call ran as, once access allowed it.
    * @param \Drupal\surface\SurfaceInterface|null $surface
    *   The built surface.
    * @param \Drupal\surface\Pipeline\SurfaceStorageInterface|null $storage
-   *   The storage, composed with the stage.
+   *   The storage, composed with the stage; NULL for a resource that names
+   *   none.
    * @param \Drupal\surface\Pipeline\SurfaceResult|null $result
    *   The pipeline's result.
    * @param array $outputs
@@ -101,6 +106,7 @@ final readonly class OperationRun {
     private ?Stage $stage = NULL,
     private ?OperationContext $context = NULL,
     private ?AccessResultInterface $access = NULL,
+    private ?AccountInterface $account = NULL,
     private ?SurfaceInterface $surface = NULL,
     private ?SurfaceStorageInterface $storage = NULL,
     private ?SurfaceResult $result = NULL,
@@ -158,6 +164,8 @@ final readonly class OperationRun {
    *   The context.
    * @param \Drupal\Core\Access\AccessResultInterface $access
    *   The decisive access answer, which allows.
+   * @param \Drupal\Core\Session\AccountInterface $account
+   *   The account the call ran as.
    *
    * @return self
    *   The run.
@@ -165,8 +173,8 @@ final readonly class OperationRun {
    * @internal
    *   The runner's; not part of the public API.
    */
-  public static function gated(Door $door, ResourceDefinition $definition, OperationDefinition $operation, ?Stage $stage, OperationContext $context, AccessResultInterface $access): self {
-    return new self($door, self::GATED, NULL, $definition, $operation, $stage, $context, $access);
+  public static function gated(Door $door, ResourceDefinition $definition, OperationDefinition $operation, ?Stage $stage, OperationContext $context, AccessResultInterface $access, AccountInterface $account): self {
+    return new self($door, self::GATED, NULL, $definition, $operation, $stage, $context, $access, $account);
   }
 
   /**
@@ -176,8 +184,9 @@ final readonly class OperationRun {
    *   The call as gate() answered it.
    * @param \Drupal\surface\SurfaceInterface $surface
    *   The built surface.
-   * @param \Drupal\surface\Pipeline\SurfaceStorageInterface $storage
-   *   The storage, composed with the stage.
+   * @param \Drupal\surface\Pipeline\SurfaceStorageInterface|null $storage
+   *   The storage, composed with the stage; NULL for a resource that names
+   *   none.
    *
    * @return self
    *   The run.
@@ -185,8 +194,8 @@ final readonly class OperationRun {
    * @internal
    *   The runner's; not part of the public API.
    */
-  public static function prepared(self $gated, SurfaceInterface $surface, SurfaceStorageInterface $storage): self {
-    return new self($gated->door, self::BUILT, NULL, $gated->definition, $gated->operation, $gated->stage, $gated->context, $gated->access, $surface, $storage);
+  public static function prepared(self $gated, SurfaceInterface $surface, ?SurfaceStorageInterface $storage): self {
+    return new self($gated->door, self::BUILT, NULL, $gated->definition, $gated->operation, $gated->stage, $gated->context, $gated->access, $gated->account, $surface, $storage);
   }
 
   /**
@@ -208,7 +217,7 @@ final readonly class OperationRun {
    *   The runner's; not part of the public API.
    */
   public static function ran(self $prepared, SurfaceResult $result, array $outputs, bool $conformed): self {
-    return new self($prepared->door, self::RAN, NULL, $prepared->definition, $prepared->operation, $prepared->stage, $prepared->context, $prepared->access, $prepared->surface, $prepared->storage, $result, $outputs, $conformed);
+    return new self($prepared->door, self::RAN, NULL, $prepared->definition, $prepared->operation, $prepared->stage, $prepared->context, $prepared->access, $prepared->account, $prepared->surface, $prepared->storage, $result, $outputs, $conformed);
   }
 
   /**
@@ -342,6 +351,22 @@ final readonly class OperationRun {
   }
 
   /**
+   * Gets the account the call ran as.
+   *
+   * The account handed to the runner, or the current user's when none
+   * was: what submit() runs as.
+   *
+   * @return \Drupal\Core\Session\AccountInterface
+   *   The account.
+   *
+   * @throws \BadMethodCallException
+   *   When the call was refused.
+   */
+  public function account(): AccountInterface {
+    return $this->account ?? throw new \BadMethodCallException('The call was refused; it ran as no account past the refusal.');
+  }
+
+  /**
    * Gets the built surface.
    *
    * @return \Drupal\surface\SurfaceInterface
@@ -355,15 +380,33 @@ final readonly class OperationRun {
   }
 
   /**
+   * Answers whether the call composed a storage.
+   *
+   * A prepare of a resource that names no storage of its own (its host
+   * or its parent stores it) builds the surface and composes none.
+   *
+   * @return bool
+   *   TRUE when storage() holds one; FALSE for a resource that names none,
+   *   and for a call that built nothing.
+   */
+  public function hasStorage(): bool {
+    return $this->storage !== NULL;
+  }
+
+  /**
    * Gets the storage, composed with the stage.
    *
    * @return \Drupal\surface\Pipeline\SurfaceStorageInterface
    *   The storage.
    *
    * @throws \BadMethodCallException
-   *   When the call was refused or only gated.
+   *   When the call was refused or only gated, or the resource names no
+   *   storage of its own (hasStorage()).
    */
   public function storage(): SurfaceStorageInterface {
+    if ($this->storage === NULL && $this->reached >= self::BUILT) {
+      throw new \BadMethodCallException(sprintf('%s names no storage of its own: its host or its parent stores it.', $this->definition?->id));
+    }
     return $this->storage ?? throw new \BadMethodCallException('The call built nothing: it was refused or only gated.');
   }
 

@@ -1387,19 +1387,16 @@ class SurfaceOperationForm extends FormBase {
     if ($refusal === NULL) {
       return [$run->result(), $run->outputs()];
     }
-    // The refusal as it was, for the form's own decision: a stage that is
-    // gone has no page left. The stage's operations declare no permission,
-    // so what the account may hear is the same for both.
-    $actual = $refusal->actual();
-    if ($actual->category === RefusalCategory::NamesNothing) {
+    // A stage that is gone has no page left. The runner tells every
+    // refusal of the stage's own operations, so the public fields tell a
+    // gone stage from a refused one.
+    if ($refusal->category === RefusalCategory::NamesNothing) {
       return [NULL, []];
     }
     // Refused by access before the run: answered as the pipeline answers a
     // run it is handed a refusal for, one violation of the whole call, with
     // the stage's own reason, as this form showed it before the runner.
-    // What the form route shows moves to the runner's rule when the form
-    // door moves onto the runner.
-    return [new SurfaceResult([], new ViolationSet([$actual->violation()]), access: $actual->access), []];
+    return [new SurfaceResult([], new ViolationSet([$refusal->violation()]), access: $refusal->access), []];
   }
 
   /**

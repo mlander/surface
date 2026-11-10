@@ -601,8 +601,8 @@ class StagedConfigTest extends SurfaceKernelTestBase {
    *
    * 422, one violation at no path, code `does_not_apply`, for a read and a
    * write alike: a State resource's envelope, and the venues' reorder,
-   * also for a stage that names nothing; another account's stage is
-   * refused first, 403, by the route's access check. A config object's
+   * also for a stage that names nothing or is another account's: whether
+   * a stage applies is asked before the stage is read. A config object's
    * envelope reads through the stage.
    */
   public function testHeaderOnCallNotStagedIsUnprocessable(): void {
@@ -614,14 +614,16 @@ class StagedConfigTest extends SurfaceKernelTestBase {
     $this->assertSame(422, $read->getStatusCode(), (string) $read->getContent());
     $this->assertSame($refusal, json_decode((string) $read->getContent(), TRUE)['errors']);
 
-    // The order: another account's stage is refused by the route's
-    // access check first, 403, on a call a stage does not apply to too;
-    // a stage that names nothing is let through, and the call answers 422.
+    // The order: whether a stage applies, before the stage is read, so
+    // another account's stage and one that names nothing are let through
+    // by the route's access check, and the call answers 422.
     $admin = $this->container->get('current_user')->getAccount();
     $this->setCurrentUser($this->createUser());
     $foreign = $this->open();
     $this->setCurrentUser($admin);
-    $this->assertSame([FALSE, TRUE], $this->routeAccess('tool_test.vault', $foreign));
+    $this->assertSame([TRUE, FALSE], $this->routeAccess('tool_test.vault', $foreign));
+    $theirs = $this->served('GET', '/surface-api/tool_test.vault', NULL, ['X-Surface-Stage' => $foreign]);
+    $this->assertSame(422, $theirs->getStatusCode(), (string) $theirs->getContent());
     $this->assertSame([TRUE, FALSE], $this->routeAccess('tool_test.vault', 'no-such-stage'));
     $missing = $this->served('GET', '/surface-api/tool_test.vault', NULL, ['X-Surface-Stage' => 'no-such-stage']);
     $this->assertSame(422, $missing->getStatusCode(), (string) $missing->getContent());

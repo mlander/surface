@@ -22,9 +22,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * of the page as it stands in the stage, and If-Match is held to that
  * view. GET with the header reads it, without it what is stored. The
  * stage's own paths open, read, rename, list, apply and discard it, and
- * a discarded stage's path is refused as any id that names nothing is
- * where the operation declares no permission; another account's stage is
- * forbidden at its path and through the header alike, a header that
+ * a discarded stage's path is not found, for any account; another
+ * account's stage is forbidden at its path and through the header
+ * alike, with the stage access's reason, a header that
  * names nothing is not found, and the header on the stage's own path is
  * refused.
  *
@@ -202,11 +202,12 @@ class StageApiTest extends BrowserTestBase {
     $this->assertSame(['does_not_apply'], array_column($twice['errors'], 'code'));
     $this->decoded($this->send('GET', $stage), 200);
     $this->assertTrue($this->decoded($this->send('DELETE', $stage))['committed']);
-    // Gone: the stage's operations declare no permission, so the route's
-    // access check lets no account hear that an id names nothing, and
-    // answers with its one fixed refusal, as for any such operation.
-    $this->problem($this->send('DELETE', $stage), 403);
-    $this->problem($this->send('GET', $stage), 403);
+    // Gone: every account hears it, a 404 naming the id, since a stage id
+    // is a random UUID only an account handed it can name.
+    foreach (['DELETE', 'GET'] as $method) {
+      $gone = $this->problem($this->send($method, $stage), 404);
+      $this->assertStringContainsString($id, $gone['detail'], $method);
+    }
 
     // A header naming no stage names nothing.
     $this->problem($this->send('PATCH', $page, ['title' => ['value' => 'Nowhere']], [ServedPaths::STAGE_HEADER => self::NONE]), 404);
@@ -220,8 +221,10 @@ class StageApiTest extends BrowserTestBase {
     // Another account's stage is forbidden at its path and through the
     // header alike; without the header the page is that account's to edit.
     $this->drupalLogin($this->editor());
-    $this->problem($this->send('GET', self::STAGES . '/' . $mine), 403);
-    $this->problem($this->send('PATCH', self::STAGES . '/' . $mine . ':apply', []), 403);
+    foreach ([['GET', ''], ['PATCH', ':apply']] as [$method, $suffix]) {
+      $theirs = $this->problem($this->send($method, self::STAGES . '/' . $mine . $suffix, $method === 'PATCH' ? [] : NULL), 403);
+      $this->assertSame("The stage is another account's.", $theirs['detail'], $method . ': the route refuses first, with the stage access\'s reason.');
+    }
     $this->problem($this->send('PATCH', $page, ['title' => ['value' => 'Theirs']], [ServedPaths::STAGE_HEADER => $mine]), 403);
     $this->problem($this->send('GET', $page, NULL, [ServedPaths::STAGE_HEADER => $mine]), 403);
     $this->decoded($this->send('GET', $page));

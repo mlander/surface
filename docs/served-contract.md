@@ -1331,18 +1331,33 @@ is `POST /surface-api/field.instance/node/page/body:reuse`; example
 `entity.content:node.page`, is read whole first. A default may be named
 the same way.
 
-Every path is gated by `_surface_served_access`: the operation's
-permission, then the access class the resource or structure names,
-through `Resources::access()`, with no opinion read as a refusal. The
+Every path is gated by `_surface_served_access`, which asks the
+runner (`surface.runner`,
+[Running an operation from PHP](resources.md#running-an-operation-from-php)): the operation's
+permission, then the stage the `X-Surface-Stage` header names, then the
+access class the resource or structure names, through
+`Resources::access()`, with no opinion read as a refusal. The
 permission is asked first, from the two ids alone, before a parameter
-is read or the subject loaded; a refusal past it (an access class
-refusing what the parameters name, or an id that names nothing for an
-account without the operation's permission) gives one fixed reason,
-"The operation cannot be served to this account with these
-parameters.", so it never says whether an id exists, and only an
-account holding the operation's permission hears the access class's
-own, and that an id names nothing (404)
-(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+is read or the subject loaded. What the two ids alone decide is told to
+anyone: a permission as written names itself. A refusal that had to
+read a parameter is withheld from an account without the operation's
+permission: an access class refusing what the parameters name, an id
+that names nothing, and a permission with a `%key` the parameters fill
+(`administer %entity_type fields`) give one fixed reason, "The
+operation cannot be run by this account with these parameters.", so it
+never says whether an id exists. Only an account holding the
+operation's permission hears the access class's own (or "The
+operation's permission and the resource's own access both have to
+allow this." when it gives none), and that an id names nothing (404).
+The stage's own paths, `/surface-api/surface.stage/{id}`, whose
+operations declare no permission, tell every account, since a stage id
+is a random UUID only an account handed it can name: an id that names
+no stage is 404, and another account's stage 403, "The stage is
+another account's." ([Staging](staging.md#the-stages-own-paths)).
+The controller asks the runner too, so a request the check would refuse
+is refused with the same status however it reaches the controller
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects),
+[decision](decisions.md#one-runner-runs-an-operation)).
 A `POST`, a `PATCH` or a `DELETE` carrying the session cookie requires
 `X-CSRF-Token` from `/session/token` (`_csrf_request_header_token`).
 
@@ -1596,7 +1611,7 @@ present, then three keys of its own:
 | `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused (why: [decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
 | `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |
 | `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; on a dry run, and for an operation that changes nothing, what its `prepare()` answered under an output's name; `{}` when none are declared or none was answered. |
-| `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. |
+| `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. `null` too, with no `ETag`, when the write committed and reading it back is refused: the write closed the account's access (an access class that reads a status or an owner the write changed), or changed what the path names. The write stands; read it again to know what the account may see now (why: [decision](decisions.md#one-runner-runs-an-operation)). |
 | `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); for a create staged under `X-Surface-Stage`, where it lives in that stage, its parameters its local id (`{id: -1}`); otherwise `null`. |
 | `x-surface-dry-run` | `true`, on a dry run only. |
 
@@ -1611,11 +1626,11 @@ same at both doors, so a program calling the API branches on them
 
 | Status | When |
 | --- | --- |
-| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`. A create staged under `X-Surface-Stage`, its `outputs.id` the local id, `created` naming it in the stage and no `Location` ([Staging](staging.md#a-staged-create)). |
+| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`, unless reading it back is refused (`contract` `null`). A create staged under `X-Surface-Stage`, its `outputs.id` the local id, `created` naming it in the stage and no `Location` ([Staging](staging.md#a-staged-create)). |
 | 201 | A create written, with `Location`, the created thing's read (`/surface-api/node.type/recipe`); no `Location` when no operation addresses it (a field added to a bundle), and none under `X-Surface-Stage`, which answers 200. |
 | 400 | A body that is not a JSON object, or a parameter the operation needs given nowhere. |
-| 403 | Access refused, at the route or by the pipeline for the whole call (code `access` or `permission`); the session's token missing. |
-| 404 | A resource, an operation or an id that names nothing. |
+| 403 | Access refused, at the route or by the pipeline for the whole call (code `access` or `permission`); another account's stage under `X-Surface-Stage`, or at its own path, "The stage is another account's."; the session's token missing. Never after a write committed. |
+| 404 | A resource, an operation or an id that names nothing, for an account that may hear it; a stage `X-Surface-Stage` names that is gone, on a call a stage applies to; a stage id at the stage's own path that names no stage, for any account. Never after a write committed. |
 | 405 | A method the path does not answer, with `Allow`: a `POST` on a singleton, a `PATCH` on a collection, a `DELETE` where no delete is, a write to a resource with no storage. |
 | 410 | A contract 2 path ([gone](#gone)). |
 | 412 | `If-Match` no longer names what is stored ([conflict](#conflict)). |
