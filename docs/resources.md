@@ -389,6 +389,71 @@ $storage = $resources->storage(NodeTypeResource::class, $context, $surface);
 A generic caller passes an empty context: every identity key stays
 open, and it is still the same resource.
 
+### Running an operation from PHP
+
+To run an operation, call the runner, `surface.runner`
+(`OperationRunnerInterface`). It asks the permission, the stage, the
+context and the access, builds, submits and reads the outputs, in the
+order every door uses, so a caller writes none of the calls above:
+
+```php
+use Drupal\surface\Operation\RefusalCategory;
+
+$run = \Drupal::service('surface.runner')->run(
+  NodeTypeResource::class, 'update',
+  arguments: ['type' => 'article'], // By parameter name or position.
+  values: ['name' => 'Article'],    // NULL prepares and writes nothing.
+  stage: NULL,                      // A stage's id, to write into it.
+  dryRun: FALSE,
+  account: NULL,                    // NULL is the current user; another is run as.
+);
+if ($run->isRefused()) {
+  // $run->refusal(): what the account may hear, safe to show it.
+  // $run->refusal()->actual(): the true reason, for the server alone.
+}
+elseif (!$run->result()->isValid()) {
+  // $run->result()->violations, as the pipeline refused them.
+}
+else {
+  $outputs = $run->outputs();
+}
+```
+
+`gate()` takes the same arguments but the values and the dry run, and
+stops after the access check, for a caller that only asks whether a call
+may be made. It builds nothing itself; an access class that judges by
+the built resource builds it. A refusal and an invalid run are results.
+What can still be thrown: `run()` throws a `StageRaceException` when a
+stage moved meanwhile, so ask the person to try again; anything else
+thrown is a bug. Nothing is thrown after a write: outputs that do not
+hold to the declaration are logged, and `$run->conformed()` says so.
+
+A refusal's own fields are what the account may hear: past the
+permission, an account that does not hold it hears one sentence,
+`Refusal::WITHHELD`, whatever refused, and a stage that is gone and one
+that is another account's read the same for every account. Read
+`actual()` to decide what to do, never to show it. An account other
+than the current user, in its id or its roles, is run as, through core's
+account switcher, and the current user is back when the call returns; a
+blocked or missing user is refused first. The runner is for a caller
+acting for an account: an install hook, which acts for none, calls the
+pipeline directly
+([decision](decisions.md#one-runner-runs-an-operation)).
+
+The same from the command line, as user 1:
+
+```
+drush surface:run node.type update --uid=1 \
+  --arguments='{"type":"article"}' --values='{"name":"Article"}' --dry-run --json
+```
+
+It runs as anonymous unless `--uid` says, takes `--stage=<id>`, and
+prints the result as every door answers it, with `outputs` after.
+Without `--values` it writes nothing: it says whether the account may
+run the operation and which keys it takes. `--values='{}'` runs an
+operation that takes none. A destructive operation asks to be
+confirmed, which `--yes` answers, unless it is a `--dry-run`.
+
 ### An operation that takes keys of its own
 
 Most operations take the resource's keys: a create sends them, an update

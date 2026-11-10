@@ -1293,7 +1293,8 @@ delete of many things, chosen on a listing.
   as for core's. The list has one row per translation and hands the
   action each row's translation, so two rows of one node are one node.
   The action asks the delete access of each node through
-  `entity.content:node`, leaving a refused one out with a message; opens
+  `entity.content:node` with the runner's `gate()`, leaving a refused
+  one out with a message; opens
   a stage as the current user, labeled with the count of the nodes
   allowed, "Delete 2 items"; stages one delete per node; and keeps
   `['stage' => <id>, 'ids' => [...]]` in the private temp store
@@ -1312,12 +1313,12 @@ delete of many things, chosen on a listing.
   stored, since each is there until the stage is applied, names the
   stage by its label, asks "Delete 2 items?", and is never cached. The
   label is read by running the stage's `read`, which the module resolves
-  to the update's context, through the pipeline with no values, a run
+  to the update's context, through the runner with no values, a run
   that writes nothing and answers what is stored in `$result->values`
   ([From PHP](#from-php)); the read tool and the HTTP door read stored
   values through the storage's `load()` instead. Before it asks, it
-  runs the stage's `changes` the same way and reads `total` through the
-  pipeline's `outputs()`: with `total` 0 (the stage was applied through
+  runs the stage's `changes` the same way and reads `total` from the
+  run's outputs: with `total` 0 (the stage was applied through
   another door, or holds no write) it clears the selection and goes back
   to the content list, "The stage of this selection holds nothing to
   apply: it was applied or emptied. Select the content again to stage
@@ -1325,7 +1326,7 @@ delete of many things, chosen on a listing.
   discarded, it goes back to the content list with a message, the
   selection cleared; with a stage the account may not read, it goes
   back with the selection kept.
-- **Delete** runs the stage's `apply` through the pipeline for the
+- **Delete** runs the stage's `apply` through the runner for the
   current user, the stage's owner ([Apply](#apply)): each delete is
   checked again, its delete access and its token, and all are made in
   one transaction. Committed, the page says "Deleted 2 items.", the

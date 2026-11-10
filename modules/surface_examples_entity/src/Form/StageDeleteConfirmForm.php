@@ -12,12 +12,11 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TempStore\PrivateTempStore;
 use Drupal\Core\TempStore\PrivateTempStoreFactory;
 use Drupal\Core\Url;
+use Drupal\surface\Operation\OperationRunnerInterface;
+use Drupal\surface\Operation\RefusalCategory;
 use Drupal\surface\Pipeline\ResultDocument;
-use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\SurfaceResult;
 use Drupal\surface\Pipeline\Violation;
-use Drupal\surface\ResourceBuild\NamesNothingException;
-use Drupal\surface\ResourceBuild\ResourcesInterface;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Staging\StageRaceException;
 use Drupal\surface_examples_entity\Plugin\Action\StageDeleteAction;
@@ -32,20 +31,20 @@ use Symfony\Component\HttpFoundation\RedirectResponse;
  * the selected nodes from what is stored, since each is there until the
  * stage is applied, and names the stage by its label. The label is read
  * by running the stage's `read`, which the module resolves to the
- * update's context, through the pipeline with no values: a run that
+ * update's context, through the runner with no values: a run that
  * writes nothing and answers what is stored in the result's values. The
  * read tool and the HTTP door read stored values through the storage's
- * `load()` instead; the page keeps to the pipeline, as docs/staging.md's
+ * `load()` instead; the page keeps to the runner, as docs/staging.md's
  * From PHP shows. Before it asks the person, the page asks the stage what
- * it holds: it runs the stage's `changes` through the pipeline and reads
- * `total` through the pipeline's outputs(). With `total` 0 (the stage was
+ * it holds: it runs the stage's `changes` through the runner and reads
+ * `total` from the run's outputs. With `total` 0 (the stage was
  * applied through another door, which empties it, or holds no write) no
  * delete is left to confirm, so the selection is cleared and the account
  * sent back to the content list. A stage that names nothing clears the
  * selection; one the account may not read sends it back to the content
  * list with the selection kept.
  *
- * Confirming runs the stage's `apply` through the pipeline for the
+ * Confirming runs the stage's `apply` through the runner for the
  * current user, the stage's owner: every delete is checked again (its
  * access, and that the node did not change since it was staged) and all
  * are made in one transaction, or none. A refusal of a write is shown
@@ -91,11 +90,8 @@ final class StageDeleteConfirmForm extends ConfirmFormBase {
   /**
    * Constructs a StageDeleteConfirmForm.
    *
-   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
-   *   The build step: the stage's operations, their access, builds and
-   *   storages.
-   * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
-   *   The pipeline, which applies the stage.
+   * @param \Drupal\surface\Operation\OperationRunnerInterface $runner
+   *   The runner, which runs the stage's operations.
    * @param \Drupal\Core\TempStore\PrivateTempStoreFactory $tempStoreFactory
    *   The private temp store, where the action kept the selection.
    * @param \Drupal\Core\Session\AccountInterface $currentUser
@@ -104,8 +100,7 @@ final class StageDeleteConfirmForm extends ConfirmFormBase {
    *   The entity type manager, which loads the selected nodes.
    */
   public function __construct(
-    protected readonly ResourcesInterface $resources,
-    protected readonly SurfacePipelineInterface $pipeline,
+    protected readonly OperationRunnerInterface $runner,
     protected readonly PrivateTempStoreFactory $tempStoreFactory,
     protected readonly AccountInterface $currentUser,
     protected readonly EntityTypeManagerInterface $entityTypeManager,
@@ -116,8 +111,7 @@ final class StageDeleteConfirmForm extends ConfirmFormBase {
    */
   public static function create(ContainerInterface $container): static {
     return new static(
-      $container->get('surface.resources'),
-      $container->get('surface.pipeline'),
+      $container->get('surface.runner'),
       $container->get('tempstore.private'),
       $container->get('current_user'),
       $container->get('entity_type.manager'),
@@ -236,35 +230,32 @@ final class StageDeleteConfirmForm extends ConfirmFormBase {
       return;
     }
     try {
-      $context = $this->resources->operation(StageResource::ID, 'apply', ['id' => $selection['stage']]);
-    }
-    catch (\InvalidArgumentException) {
-      $this->store()->delete(StageDeleteAction::KEY);
-      $this->messenger()->addError($this->t('The stage of this selection expired or was discarded, so nothing was deleted: select the content again.'));
-      $form_state->setRedirectUrl($this->getCancelUrl());
-      return;
-    }
-    $access = $this->resources->access(StageResource::ID, $context, $this->currentUser);
-    if (!$access->isAllowed()) {
-      $this->messenger()->addError($this->t('You may not apply the stage of this selection, so nothing was deleted.'));
-      $form_state->setRebuild();
-      return;
-    }
-    $built = $this->resources->build(StageResource::ID, $context);
-    $storage = $this->resources->storage(StageResource::ID, $context, $built, $this->currentUser);
-    try {
-      $result = $this->pipeline->submit($built, [], $storage, access: $access);
+      $run = $this->runner->run(StageResource::ID, 'apply', ['id' => $selection['stage']], values: [], account: $this->currentUser);
     }
     catch (StageRaceException) {
       $this->messenger()->addError($this->t('The stage changed while it was being applied (another request, an edit to a selected item, or the stage expired, was discarded or was applied); try again.'));
       $form_state->setRebuild();
       return;
     }
-    if (!$result->committed) {
-      $this->refused($result, $form_state);
+    // The refusal as it was, for the page's own decision: the stage's
+    // operations declare no permission, so what the account may hear is
+    // the same whether the stage is gone or refused.
+    if ($run->refusal()?->actual()->category === RefusalCategory::NamesNothing) {
+      $this->store()->delete(StageDeleteAction::KEY);
+      $this->messenger()->addError($this->t('The stage of this selection expired or was discarded, so nothing was deleted: select the content again.'));
+      $form_state->setRedirectUrl($this->getCancelUrl());
       return;
     }
-    $applied = $this->pipeline->outputs($built, $storage, $result)['applied'] ?? [];
+    if ($run->isRefused()) {
+      $this->messenger()->addError($this->t('You may not apply the stage of this selection, so nothing was deleted.'));
+      $form_state->setRebuild();
+      return;
+    }
+    if (!$run->result()->committed) {
+      $this->refused($run->result(), $form_state);
+      return;
+    }
+    $applied = $run->outputs()['applied'] ?? [];
     $this->messenger()->addStatus($this->formatPlural(count($applied), 'Deleted 1 item.', 'Deleted @count items.'));
     $this->store()->delete(StageDeleteAction::KEY);
     // The bulk form's ?destination, when it set one, wins over this.
@@ -333,13 +324,13 @@ final class StageDeleteConfirmForm extends ConfirmFormBase {
   }
 
   /**
-   * Runs an operation of the stage that writes nothing, through the pipeline.
+   * Runs an operation of the stage that writes nothing, through the runner.
    *
    * The stage's `read` is resolved to the update's context, so its run is
    * a rename with no values: it writes nothing and answers what is stored,
    * the label among it, in the result's values. `changes` is read only, so
    * its run stops after prepare; what it reports, `items` and `total`, is
-   * read through the pipeline's outputs().
+   * read from the run's outputs.
    *
    * @param string $operation
    *   The operation, `read` or `changes`.
@@ -353,21 +344,18 @@ final class StageDeleteConfirmForm extends ConfirmFormBase {
    *   today.
    */
   protected function ask(string $operation, string $id): array|false|null|SurfaceResult {
-    try {
-      $context = $this->resources->operation(StageResource::ID, $operation, ['id' => $id]);
-    }
-    catch (NamesNothingException) {
+    $run = $this->runner->run(StageResource::ID, $operation, ['id' => $id], values: [], account: $this->currentUser);
+    // The refusal as it was, for the page's own decision: the stage's
+    // operations declare no permission, so what the account may hear is
+    // the same whether the stage is gone or refused.
+    if ($run->refusal()?->actual()->category === RefusalCategory::NamesNothing) {
       return NULL;
     }
-    // Refused here, before the run, which is handed this answer and asks
-    // no access of its own.
-    $access = $this->resources->access(StageResource::ID, $context, $this->currentUser);
-    if (!$access->isAllowed()) {
+    // Refused by access before the run.
+    if ($run->isRefused()) {
       return FALSE;
     }
-    $built = $this->resources->build(StageResource::ID, $context);
-    $storage = $this->resources->storage(StageResource::ID, $context, $built, $this->currentUser);
-    $result = $this->pipeline->submit($built, [], $storage, access: $access);
+    $result = $run->result();
     // The record gone since the context was built.
     foreach ($result->violations as $violation) {
       if ($violation->code === Violation::NOT_FOUND) {
@@ -383,7 +371,7 @@ final class StageDeleteConfirmForm extends ConfirmFormBase {
     }
     return [
       'values' => $result->values,
-      'outputs' => $this->pipeline->outputs($built, $storage, $result),
+      'outputs' => $run->outputs(),
     ];
   }
 

@@ -11,8 +11,8 @@ use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
+use Drupal\surface\Operation\OperationRunnerInterface;
 use Drupal\surface\Pipeline\StorageViolationsException;
-use Drupal\surface\Pipeline\SurfacePipelineInterface;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\ResourceBuild\NamesNothingException;
@@ -36,7 +36,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * listed above it. A node the stage removes is a page saying so.
  *
  * Which resource the stage writes the node through is read from the
- * stage's `changes`, run through the pipeline: a node the stage holds no
+ * stage's `changes`, run through the runner: a node the stage holds no
  * write of is not found.
  *
  * Access follows core's NodePreviewAccessCheck: the stage's own access,
@@ -60,8 +60,8 @@ final class StagePreviewController implements ContainerInjectionInterface {
    *
    * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
    *   The build step.
-   * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
-   *   The pipeline, which runs the stage's `changes`.
+   * @param \Drupal\surface\Operation\OperationRunnerInterface $runner
+   *   The runner, which runs the stage's `changes`.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entityTypeManager
    *   The entity type manager, for the view builder.
    * @param \Drupal\Core\DependencyInjection\ClassResolverInterface $classResolver
@@ -71,7 +71,7 @@ final class StagePreviewController implements ContainerInjectionInterface {
    */
   public function __construct(
     protected readonly ResourcesInterface $resources,
-    protected readonly SurfacePipelineInterface $pipeline,
+    protected readonly OperationRunnerInterface $runner,
     protected readonly EntityTypeManagerInterface $entityTypeManager,
     protected readonly ClassResolverInterface $classResolver,
     protected readonly AccountInterface $currentUser,
@@ -83,7 +83,7 @@ final class StagePreviewController implements ContainerInjectionInterface {
   public static function create(ContainerInterface $container): static {
     $instance = new static(
       $container->get('surface.resources'),
-      $container->get('surface.pipeline'),
+      $container->get('surface.runner'),
       $container->get('entity_type.manager'),
       $container->get('class_resolver'),
       $container->get('current_user'),
@@ -234,23 +234,11 @@ final class StagePreviewController implements ContainerInjectionInterface {
    *   NULL when the stage holds no write of it, or may not be read.
    */
   protected function item(Stage $stage, int $id, AccountInterface $account): ?array {
-    try {
-      $context = $this->resources->operation(StageResource::ID, 'changes', ['id' => $stage->id]);
-    }
-    catch (NamesNothingException) {
+    $run = $this->runner->run(StageResource::ID, 'changes', ['id' => $stage->id], values: [], account: $account);
+    if ($run->isRefused() || !$run->result()->isValid()) {
       return NULL;
     }
-    $access = $this->resources->access(StageResource::ID, $context, $account);
-    if (!$access->isAllowed()) {
-      return NULL;
-    }
-    $built = $this->resources->build(StageResource::ID, $context);
-    $storage = $this->resources->storage(StageResource::ID, $context, $built, $account);
-    $result = $this->pipeline->submit($built, [], $storage, access: $access);
-    if (!$result->isValid()) {
-      return NULL;
-    }
-    foreach ($this->pipeline->outputs($built, $storage, $result)['items'] ?? [] as $item) {
+    foreach ($run->outputs()['items'] ?? [] as $item) {
       $resource = (string) $item['resource'];
       if ($resource !== self::NODE && !str_starts_with($resource, self::NODE . '.')) {
         continue;

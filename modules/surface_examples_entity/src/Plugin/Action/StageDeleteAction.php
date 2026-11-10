@@ -12,10 +12,9 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TempStore\PrivateTempStoreFactory;
+use Drupal\surface\Operation\OperationRunnerInterface;
+use Drupal\surface\Operation\RefusalCategory;
 use Drupal\surface\Pipeline\ResultDocument;
-use Drupal\surface\Pipeline\SurfacePipelineInterface;
-use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Staging\Stage;
 use Drupal\surface\Staging\StageStoreInterface;
@@ -31,7 +30,7 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * the entity type's resource, `entity.content:node`, and leaves a refused
  * one out with a message, as the bulk form leaves out one the action's
  * access() refuses. It then opens a stage as the current user, through
- * the pipeline, as any door opens one, labeled with the count of the
+ * the runner, as any door opens one, labeled with the count of the
  * nodes allowed; stages one delete per node; and keeps the stage's id and
  * the staged ids in the private temp store, one selection per account, as
  * core's delete action keeps its own. The bulk form then sends the
@@ -88,10 +87,9 @@ final class StageDeleteAction extends EntityActionBase {
    *   The plugin definition.
    * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
    *   The entity type manager.
-   * @param \Drupal\surface\ResourceBuild\ResourcesInterface $resources
-   *   The build step: operations, their access, builds and storages.
-   * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
-   *   The pipeline, which opens the stage and stages each delete.
+   * @param \Drupal\surface\Operation\OperationRunnerInterface $runner
+   *   The runner, which asks each delete, opens the stage and stages each
+   *   delete.
    * @param \Drupal\surface\Staging\StageStoreInterface $stages
    *   The stages, which name the stage a staged write is handed.
    * @param \Drupal\Core\TempStore\PrivateTempStoreFactory $tempStoreFactory
@@ -105,8 +103,7 @@ final class StageDeleteAction extends EntityActionBase {
     $plugin_id,
     $plugin_definition,
     EntityTypeManagerInterface $entity_type_manager,
-    protected readonly ResourcesInterface $resources,
-    protected readonly SurfacePipelineInterface $pipeline,
+    protected readonly OperationRunnerInterface $runner,
     protected readonly StageStoreInterface $stages,
     protected readonly PrivateTempStoreFactory $tempStoreFactory,
     protected readonly AccountInterface $currentUser,
@@ -123,8 +120,7 @@ final class StageDeleteAction extends EntityActionBase {
       $plugin_id,
       $plugin_definition,
       $container->get('entity_type.manager'),
-      $container->get('surface.resources'),
-      $container->get('surface.pipeline'),
+      $container->get('surface.runner'),
       $container->get('surface.stages'),
       $container->get('tempstore.private'),
       $container->get('current_user'),
@@ -143,21 +139,15 @@ final class StageDeleteAction extends EntityActionBase {
         $nodes[$entity->id()] ??= $entity;
       }
     }
-    $allowed = [];
-    foreach ($nodes as $node) {
-      $answer = $this->allowedDelete($node);
-      if ($answer !== NULL) {
-        $allowed[] = [$node, ...$answer];
-      }
-    }
+    $allowed = array_values(array_filter($nodes, $this->allowedDelete(...)));
     $stage = $allowed === [] ? NULL : $this->open($this->formatPlural(count($allowed), 'Delete 1 item', 'Delete @count items'));
     if ($stage === NULL) {
       $store->delete(self::KEY);
       return;
     }
     $ids = [];
-    foreach ($allowed as [$node, $context, $access]) {
-      if ($this->stageDelete($stage, $node, $context, $access)) {
+    foreach ($allowed as $node) {
+      if ($this->stageDelete($stage, $node)) {
         $ids[] = $node->id();
       }
     }
@@ -195,16 +185,14 @@ final class StageDeleteAction extends EntityActionBase {
    *   The stage, or NULL when it was refused, which a message says.
    */
   protected function open(\Stringable|string $label): ?Stage {
-    $context = $this->resources->operation(StageResource::ID, 'create');
-    $access = $this->resources->access(StageResource::ID, $context, $this->currentUser);
-    $built = $this->resources->build(StageResource::ID, $context);
-    $storage = $this->resources->storage(StageResource::ID, $context, $built, $this->currentUser);
-    $result = $this->pipeline->submit($built, ['label' => (string) $label], $storage, access: $access);
+    $run = $this->runner->run(StageResource::ID, 'create', values: ['label' => (string) $label], account: $this->currentUser);
     // The id is no value sent: the storage reports it once the stage is
-    // open, and the pipeline reads it.
-    $id = $this->pipeline->outputs($built, $storage, $result)['id'] ?? NULL;
-    if (!$result->committed || !is_string($id)) {
-      foreach ($result->violations as $violation) {
+    // open, and the run reads it through the pipeline.
+    $refusal = $run->refusal();
+    $id = $refusal === NULL && $run->result()->committed ? ($run->outputs()['id'] ?? NULL) : NULL;
+    if (!is_string($id)) {
+      $violations = $refusal !== NULL ? [$refusal->violation()] : iterator_to_array($run->result()->violations, FALSE);
+      foreach ($violations as $violation) {
         $this->messenger()->addError($this->t('No stage could be opened, so nothing was staged for deletion: @reason', [
           '@reason' => ResultDocument::message($violation, FALSE),
         ]));
@@ -213,8 +201,7 @@ final class StageDeleteAction extends EntityActionBase {
     }
     // The stage's own access, asked before it is handed on, as every door
     // asks it.
-    $update = $this->resources->operation(StageResource::ID, 'update', ['id' => $id]);
-    if (!$this->resources->access(StageResource::ID, $update, $this->currentUser)->isAllowed()) {
+    if ($this->runner->gate(StageResource::ID, 'update', ['id' => $id], account: $this->currentUser)->isRefused()) {
       $this->messenger()->addError($this->t('The stage just opened may not be written into, so nothing was staged for deletion.'));
       return NULL;
     }
@@ -227,54 +214,46 @@ final class StageDeleteAction extends EntityActionBase {
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The node.
    *
-   * @return array{0: \Drupal\surface\Resource\OperationContext, 1: \Drupal\Core\Access\AccessResultInterface}|null
-   *   The delete's context and its access answer, or NULL when the node
-   *   may not be staged for deletion, which a message says.
+   * @return bool
+   *   TRUE when it may; when not, a message says why.
    */
-  protected function allowedDelete(EntityInterface $entity): ?array {
-    try {
-      $context = $this->resources->operation(self::RESOURCE, 'delete', ['id' => $entity->id()]);
-    }
-    catch (\InvalidArgumentException $e) {
+  protected function allowedDelete(EntityInterface $entity): bool {
+    $refusal = $this->runner->gate(self::RESOURCE, 'delete', ['id' => $entity->id()], account: $this->currentUser)->refusal();
+    if ($refusal?->category === RefusalCategory::NamesNothing) {
       $this->messenger()->addError($this->t('%label was not staged for deletion: @reason', [
         '%label' => $entity->label() ?? $entity->id(),
-        '@reason' => $e->getMessage(),
+        '@reason' => $refusal->reason,
       ]));
-      return NULL;
+      return FALSE;
     }
-    $access = $this->resources->access(self::RESOURCE, $context, $this->currentUser);
-    if (!$access->isAllowed()) {
+    if ($refusal !== NULL) {
       $this->messenger()->addError($this->t('%label was not staged for deletion: you may not delete it.', [
         '%label' => $entity->label() ?? $entity->id(),
       ]));
-      return NULL;
+      return FALSE;
     }
-    return [$context, $access];
+    return TRUE;
   }
 
   /**
-   * Stages one node's delete, as a door does, its access asked already.
+   * Stages one node's delete through the runner, as a door does.
    *
    * @param \Drupal\surface\Staging\Stage $stage
    *   The stage.
    * @param \Drupal\Core\Entity\EntityInterface $entity
    *   The node.
-   * @param \Drupal\surface\Resource\OperationContext $context
-   *   The delete's context.
-   * @param \Drupal\Core\Access\AccessResultInterface $access
-   *   The delete's access answer, which allowed it.
    *
    * @return bool
    *   Whether the stage holds its delete; when not, a message says why.
    */
-  protected function stageDelete(Stage $stage, EntityInterface $entity, OperationContext $context, AccessResultInterface $access): bool {
-    $built = $this->resources->build(self::RESOURCE, $context);
-    $storage = $this->resources->storage(self::RESOURCE, $context, $built, $this->currentUser, $stage->withArguments(['id' => $entity->id()]));
-    $result = $this->pipeline->submit($built, [], $storage, access: $access);
-    if ($result->committed) {
+  protected function stageDelete(Stage $stage, EntityInterface $entity): bool {
+    $run = $this->runner->run(self::RESOURCE, 'delete', ['id' => $entity->id()], values: [], stage: $stage, account: $this->currentUser);
+    $refusal = $run->refusal();
+    if ($refusal === NULL && $run->result()->committed) {
       return TRUE;
     }
-    foreach ($result->violations as $violation) {
+    $violations = $refusal !== NULL ? [$refusal->violation()] : iterator_to_array($run->result()->violations, FALSE);
+    foreach ($violations as $violation) {
       $this->messenger()->addError($this->t('%label was not staged for deletion: @reason The stage keeps the others.', [
         '%label' => $entity->label() ?? $entity->id(),
         '@reason' => ResultDocument::message($violation, FALSE),

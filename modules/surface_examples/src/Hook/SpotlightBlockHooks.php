@@ -92,6 +92,10 @@ final class SpotlightBlockHooks {
   /**
    * Places the two blocks, each unless it is placed or is refused.
    *
+   * The create runs through the pipeline directly, not the runner. The
+   * runner is for a caller acting for an account, and an install hook is
+   * not one: it is the module's own code, with no account acting.
+   *
    * @return bool
    *   TRUE when either was placed now.
    */
