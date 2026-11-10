@@ -284,6 +284,9 @@ class OperationRunnerTest extends SurfaceKernelTestBase {
     $this->assertSame('The row is sealed.', $staged->refusal()?->reason);
     $this->assertSame(0, $staged->refusal()->cacheability->getCacheMaxAge());
     $this->assertSame(0, $staged->refusal()->actual()->cacheability->getCacheMaxAge());
+    // The answer a door hands on carries it too.
+    $this->assertNotNull($staged->refusal()->access);
+    $this->assertSame(0, CacheableMetadata::createFromObject($staged->refusal()->access)->getCacheMaxAge());
   }
 
   /**

@@ -406,23 +406,31 @@ fields`, named from the identity the operation's context knows (the
 entity type every field tool is given), then `FieldInstanceAccess`,
 which refuses a locked
 storage, then the access class of the settings variant the field type
-chose, which may refuse (the gated test field type does). A tool asks a
-permission as written first, from its id alone, before it reads a
-parameter or loads what one names, and refines `values` (which reads
-what is stored) only for an account the operation is open to. A refusal
-past that gives one reason, "The operation cannot be run by this
-account with these parameters.", whether a field or storage does not
-exist or an access class refused it, so it never says whether an id
-exists; an account holding the operation's permission for what the
-parameters name hears the access class's own reason, and the rest is
-logged to the tool channel. An account holding a permission as written
-(one with no `%key`) is let through when a parameter names nothing, and
-the call fails as input to correct, "Not found: there is none with the
-id ...", not as access denied, which reads as final. So is an account
-holding a `%key` permission filled from the parameters as sent, since
-naming nothing builds no context to fill it from: `administer node
-fields` hears `Not found: field_name "nope" names no field of the node
-entity type.`
+chose, which may refuse (the gated test field type does). A tool runs
+the operation through the runner (`surface.runner`,
+[Running an operation from PHP](resources.md#running-an-operation-from-php)),
+as the door `tool` (the narrowing tool as `schema tool`), at its access
+check and in `execute()` alike, so the order is every door's: the
+permission, from the tool's id alone, before a parameter is read or
+what one names is loaded; the stage; the context; the access class. It
+refines `values` (which reads what is stored) only for an account the
+operation is open to. A refusal past the permission gives one reason,
+"The operation cannot be run by this account with these parameters.",
+whether a field or storage does not exist or an access class refused
+it, so it never says whether an id exists; an account holding the
+operation's permission for what the parameters name hears the access
+class's own reason, and the rest is logged to the tool channel. An
+account holding the permission is let through the access check when a
+parameter names nothing, and the call fails as input to correct, "Not
+found: there is none with the id ...", not as access denied, which reads
+as final. That holds for a `%key` permission filled from the parameters
+as sent too: `administer node fields` hears `Not found: field_name
+"nope" names no field of the node entity type.` A stage that does not
+apply, is gone or is another account's is let through the same way, and
+the call answers it with its code. So `access()` answers allowed, for
+this call alone (max-age 0), for a call `execute()` then refuses with a
+document: a caller that reads `access()` as "may run" and never calls
+`execute()` sees allowed for these.
 
 The operation's permission is also the tool's declared permission
 (`ToolDefinition::getPermission()`), so `tool:info` prints it and the
@@ -485,9 +493,29 @@ an instance when it derives its MCP tools and caches what it normalized
 for every client, so its `tools/list` is the listing of the account that
 caused that derivation: the bridge's caching, open there.
 
-The tool asks again inside `doExecute()`. `ToolInterface::execute()`
-runs no access check of its own, so a caller reaching a tool directly
-from PHP would otherwise write without one.
+`execute()` runs the whole sequence again through the runner: the write
+tool's is one run with the values and the dry run, the read and
+narrowing tools prepare. `ToolInterface::execute()` runs no access check
+of its own, so a caller reaching a tool directly from PHP is refused
+what the access check refuses, in the result shape: `permission` or
+`access` with "You do not have permission to do this." (or the access
+class's own reason, to an account holding the permission), `not_found`,
+or `does_not_apply`. For an operation that declares no permission, as
+every content-entity operation does, no account holds it, so an id
+that names nothing is `access` too, never `not_found`, for every
+account; a resource that wants holders to hear it declares a permission
+on its operations. The access check and `execute()` judge the current
+user alike: an account handed to `access()` is checked for being
+blocked or no saved user only when it is not the current user, as
+run-as.
+
+Nothing after a committed write is answered as a refusal. When the
+resource's own outputs do not hold to the declaration (a bug in its
+storage, found after the write), the write tool answers only the outputs
+the Tool API's own check of the outputs takes, logs the rest and names
+them on the last line of the result's message. If that leaves out an
+output the Tool API requires, the Tool API fails the call, and its
+document is the write's, with `committed: true`.
 
 ## Notes for the Tool API
 

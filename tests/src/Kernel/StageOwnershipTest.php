@@ -199,7 +199,7 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
     $this->assertFalse($answer['success']);
     $this->assertSame(FailureCategory::Access, $answer['category']);
     $this->assertSame(['' => Violation::ACCESS], static::toolCodes($answer));
-    $this->assertSame('You do not have permission to use the stage ' . $id . '.', $answer['message']);
+    $this->assertSame("The stage is another account's.", $answer['message']);
     $read = $this->runTool('surface:stage_test.ledger:read', ['id' => 'a', OperationInputs::STAGE => $id]);
     $this->assertFalse($read['success']);
     $this->assertSame(['' => Violation::ACCESS], static::toolCodes($read));

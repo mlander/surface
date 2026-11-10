@@ -46,7 +46,9 @@ interface OperationRunnerInterface {
    * @param \Drupal\surface\Staging\Stage|string|null $stage
    *   The stage the call goes through, or its id; NULL for none.
    * @param \Drupal\Core\Session\AccountInterface|null $account
-   *   The account to run as; NULL for the current user.
+   *   The account to run as; NULL for the current user. One that is the
+   *   current user, by id and roles, is taken as NULL; any other is
+   *   refused when its user is blocked or does not exist.
    *
    * @return \Drupal\surface\Operation\OperationRun
    *   Refused, or gated: its context and its access answer. Nothing a
@@ -85,7 +87,9 @@ interface OperationRunnerInterface {
    * @param bool $dryRun
    *   TRUE to prepare the write and skip it.
    * @param \Drupal\Core\Session\AccountInterface|null $account
-   *   The account to run as; NULL for the current user.
+   *   The account to run as; NULL for the current user. One that is the
+   *   current user, by id and roles, is taken as NULL; any other is
+   *   refused when its user is blocked or does not exist.
    *
    * @return \Drupal\surface\Operation\OperationRun
    *   Refused, prepared, or run: the pipeline's result and the outputs.
@@ -115,9 +119,10 @@ interface OperationRunnerInterface {
    * that same surface and storage, which a second run() would build
    * again. Run as the account the run was prepared for
    * (OperationRun::account()), through the same wrapper as gate() and
-   * run(): an account blocked or deleted since the prepare is refused
-   * and nothing is written; one that is not the current user is switched
-   * to, and back in a `finally`.
+   * run(): a run-as account (one that is not the current user) blocked
+   * or deleted since the prepare is refused and nothing is written, and
+   * is switched to, and back in a `finally`. The current user is not
+   * checked again.
    *
    * A prepare is written through once. A dry run, or a submit whose
    * result is not valid or commits nothing, leaves it usable, so a door

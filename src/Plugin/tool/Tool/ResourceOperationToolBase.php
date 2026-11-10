@@ -6,23 +6,21 @@ namespace Drupal\surface\Plugin\tool\Tool;
 
 use Drupal\Core\Access\AccessResult;
 use Drupal\Core\Access\AccessResultInterface;
-use Drupal\Core\Access\AccessResultReasonInterface;
+use Drupal\Core\Cache\RefinableCacheableDependencyInterface;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\SurfaceAccess;
+use Drupal\surface\Operation\Door;
+use Drupal\surface\Operation\OperationRun;
+use Drupal\surface\Operation\OperationRunnerInterface;
+use Drupal\surface\Operation\Refusal;
+use Drupal\surface\Operation\RefusalCategory;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
-use Drupal\surface\Resource\OperationContext;
-use Drupal\surface\Resource\StageResource;
-use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationDefinition;
-use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
-use Drupal\surface\ResourceBuild\ResourcesInterface;
-use Drupal\surface\Staging\Stage;
-use Drupal\surface\Staging\StageStoreInterface;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\surface\Tool\PlainTextMarkup;
+use Drupal\surface\Tool\ToolDoors;
 use Drupal\tool\ExecutableResult;
 use Drupal\tool\FailureCategory;
 use Drupal\tool\Tool\ToolBase;
@@ -33,15 +31,22 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  *
  * Each is derived from one operation of one resource and reads which from
  * its derivative id, `<resource id>:<operation id>`, and for the narrowing
- * tool ResourceOperationSchemaTool::SUFFIX after it. Each builds the
- * operation's context from the parameters the same way, and answers
- * access the same way: the operation's permission, then the resource's
- * access class, for that context. A tool that takes a stage resolves it
- * the same way too: an id that names no stage is refused as not found,
- * and the stage's own access is asked for the account beside the thing's.
+ * tool ResourceOperationSchemaTool::SUFFIX after it. The sequence is the
+ * runner's (OperationRunnerInterface): the permission, the stage, the
+ * context, the access class, the build, the storage and the write. A tool
+ * owns what is the Tool API's: it reads its inputs into the operation's
+ * arguments, the stage, the values and the dry run (gate(), run()), and
+ * turns what the runner answers into the access hook's answer (answer())
+ * or a result in the one result shape (refusal()).
+ *
+ * The runner is asked as this tool's door, DOOR: its key in the site
+ * catalog (ToolDoors).
+ *
+ * Decision: see docs/decisions.md#one-runner-runs-an-operation.
  *
  * @see \Drupal\surface\Plugin\tool\Tool\ResourceOperationTool
  * @see \Drupal\surface\Plugin\tool\Tool\ResourceOperationReadTool
+ * @see \Drupal\surface\Plugin\tool\Tool\ResourceOperationSchemaTool
  */
 abstract class ResourceOperationToolBase extends ToolBase {
 
@@ -51,9 +56,21 @@ abstract class ResourceOperationToolBase extends ToolBase {
   public const SUFFIX = '';
 
   /**
-   * The build step.
+   * The door the runner is asked through: the tool's key in the catalog.
    */
-  protected ResourcesInterface $resources;
+  public const DOOR = ToolDoors::TOOL;
+
+  /**
+   * The one reason a refusal withheld from the account gives.
+   *
+   * The runner's, Refusal::WITHHELD.
+   */
+  public const REFUSED = Refusal::WITHHELD;
+
+  /**
+   * The runner, which runs the operation's sequence.
+   */
+  protected OperationRunnerInterface $runner;
 
   /**
    * What discovery found.
@@ -66,139 +83,125 @@ abstract class ResourceOperationToolBase extends ToolBase {
   protected OperationInputs $operationInputs;
 
   /**
-   * Where the stages are kept.
-   *
-   * @internal
-   */
-  protected StageStoreInterface $stages;
-
-  /**
    * {@inheritdoc}
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     $instance = parent::create($container, $configuration, $plugin_id, $plugin_definition);
-    $instance->resources = $container->get('surface.resources');
+    $instance->runner = $container->get('surface.runner');
     $instance->resourceRegistry = $container->get('surface.resource_registry');
     $instance->operationInputs = $container->get('surface.operation_inputs');
-    $instance->stages = $container->get('surface.stages');
     return $instance;
   }
 
   /**
-   * The one reason a refusal past the permission gives.
-   */
-  public const REFUSED = 'The operation cannot be run by this account with these parameters.';
-
-  /**
    * {@inheritdoc}
    *
-   * The operation's permission first, from the tool's id alone, before a
-   * parameter is read or the subject loaded; then the whole answer for
-   * the context the parameters build. A refusal past the permission
-   * gives one fixed reason, whether a parameter named nothing or the
-   * access class refused what it named, so it never says whether an id
-   * exists, and the real one goes to the log; only an account holding
-   * the operation's permission for the context the parameters name (one
-   * with a `%key` filled in) hears the access class's reason.
-   *
-   * An account the operation's own permission lets in, read off the
-   * tool's id with no `%key`, may hear that a parameter names nothing: it
-   * is let through, and the call answers "Not found" as input to correct
-   * (notFound()), since a wrong id is fixable and "access denied" reads
-   * as final. Any other account learns nothing of what the parameters
-   * name.
-   *
-   * The context is built through the stage the call names only when the
-   * stage exists and the account may use it, so a local id names the
-   * thing the account's own stage creates. A named stage that names
-   * nothing lets a call whose parameters then build nothing through, and
-   * the call answers "Not found" naming the stage.
-   *
-   * Decision: see
-   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   * The runner's gate, once, for the account handed in: the operation's
+   * permission, the stage, the context and the access class, in that
+   * order, with nothing built. answer() turns what it answers into the
+   * access hook's answer.
    */
   protected function checkAccess(array $values, AccountInterface $account, $return_as_object = FALSE): bool|AccessResultInterface {
-    $result = $this->permissionAccess($account);
-    if ($result === NULL || $result->isAllowed()) {
-      $held = FALSE;
-      $permitted = $result;
-      $stage = NULL;
-      $missing = FALSE;
-      try {
-        $stage = $this->stage($values, []);
-        if ($stage !== NULL && !$this->stageAccess($stage, $account)->isAllowed()) {
-          $stage = NULL;
-        }
-      }
-      catch (NamesNothingException) {
-        $stage = NULL;
-        $missing = TRUE;
-      }
-      // A stage sent to a tool that takes none: execute refuses it.
-      catch (\InvalidArgumentException) {
-        $stage = NULL;
-      }
-      try {
-        [$resource, $operation, $context] = $this->operation($values, $stage);
-        $result = $this->operationAccess($resource, $context, $account);
-        $held = $this->resources->permissionAccess($resource->name(), $operation->id, $account, $context)?->isAllowed() ?? FALSE;
-      }
-      catch (\InvalidArgumentException $e) {
-        // The stage is asked before the thing: one that names nothing is
-        // the caller's to correct, whatever the parameters name.
-        // Decision: see
-        // docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
-        if ($missing) {
-          $result = AccessResult::allowed()->setCacheMaxAge(0);
-          return $return_as_object ? $result : TRUE;
-        }
-        // A permission that names a parameter (`administer %entity_type
-        // fields`) is read off the parameters as sent, so an account that
-        // holds it for what they name hears which part names nothing.
-        // Decision: see
-        // docs/decisions.md#a-parameter-is-identity-the-caller-knows.
-        $permitted ??= $this->sentPermissionAccess($values, $account);
-        if ($permitted !== NULL && $permitted->isAllowed()) {
-          $result = AccessResult::allowed()->addCacheableDependency($permitted)->setCacheMaxAge(0);
-          return $return_as_object ? $result : TRUE;
-        }
-        $result = AccessResult::forbidden($e->getMessage())->setCacheMaxAge(0);
-      }
-      // An account that holds the operation's permission for what the
-      // parameters name may hear why the rest refused; any other learns
-      // nothing of what they name.
-      if (!$result->isAllowed() && !$held) {
-        $this->logRefusal($result);
-        $result = AccessResult::forbidden(self::REFUSED)->addCacheableDependency($result);
-      }
+    try {
+      $result = $this->answer($this->gate($values, $account));
     }
-    else {
-      $result = SurfaceAccess::decisive($result, $result instanceof AccessResultReasonInterface ? $result->getReason() : NULL);
+    catch (\InvalidArgumentException | \LogicException) {
+      // A tool that is not one of the derived ones.
+      $result = AccessResult::forbidden();
     }
     return $return_as_object ? $result : $result->isAllowed();
   }
 
   /**
-   * Answers a call whose parameters name nothing.
+   * Turns the runner's gate into the access hook's answer.
    *
-   * Reached only by an account the operation's own permission lets in
-   * (checkAccess()), which may hear it: the id is the caller's to
-   * correct, so it is input, not access.
+   * Read from the refusal's public fields alone; its actual() is read only
+   * to log what was withheld. A refusal the Tool API's runner hears from
+   * the access hook reaches the caller as "Access denied for tool ..."
+   * with no document, so a refusal the caller can correct, or one about
+   * its stage, is let through for this call alone, and execute() answers
+   * it with its code (refusal()):
+   * - gated: the run's access answer;
+   * - the operation's permission, told: its own answer, decisive;
+   * - the stage does not apply, is gone, or is another account's: allowed,
+   *   max-age 0;
+   * - the resource, the operation or an argument names nothing, told:
+   *   allowed, max-age 0;
+   * - withheld: forbidden, Refusal::WITHHELD, max-age 0, the true reason
+   *   logged;
+   * - the access class, or the account, told: forbidden, with its reason.
+   * A refusal's own cacheability is kept on every answer: under a stage
+   * it holds the stage's max-age 0.
    *
-   * Decision: see
-   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
+   * Decision: see docs/decisions.md#one-result-at-every-door.
    *
-   * @param \InvalidArgumentException $e
-   *   Why the parameters built no context.
+   * @param \Drupal\surface\Operation\OperationRun $run
+   *   What the runner's gate answered.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The access hook's answer.
+   */
+  protected function answer(OperationRun $run): AccessResultInterface {
+    $refusal = $run->refusal();
+    if ($refusal === NULL) {
+      return $run->access();
+    }
+    // The runner sets the answer on every told permission. One without it
+    // has no producer today; the last return answers it: forbidden, with
+    // its reason.
+    if ($refusal->code === Violation::PERMISSION && $refusal->access !== NULL) {
+      return $refusal->access;
+    }
+    if ($refusal->category === RefusalCategory::Stage || $refusal->category === RefusalCategory::NamesNothing) {
+      return AccessResult::allowed()->addCacheableDependency($refusal->cacheability)->setCacheMaxAge(0);
+    }
+    if ($refusal->reason === Refusal::WITHHELD) {
+      $actual = $refusal->actual()->reason;
+      if ($actual !== '') {
+        $this->logger->info('The @tool tool was refused: @reason', [
+          '@tool' => $this->getPluginId(),
+          '@reason' => $actual,
+        ]);
+      }
+    }
+    // A copy, so the runner's answer is not changed in place.
+    $answer = $refusal->access === NULL ? AccessResult::forbidden($refusal->reason) : clone $refusal->access;
+    return $answer instanceof RefinableCacheableDependencyInterface ? $answer->addCacheableDependency($refusal->cacheability) : $answer;
+  }
+
+  /**
+   * Turns a refusal of the runner into the tool's result.
+   *
+   * Read from the refusal's public fields alone, in the one result shape,
+   * its one violation at no path with the refusal's code:
+   * - names nothing, and a stage that is gone: `not_found`, Input, "Not
+   *   found: " and the reason;
+   * - a stage that does not apply: `does_not_apply`, Input;
+   * - the operation's permission, told, and a refusal withheld: its code,
+   *   Access, "You do not have permission to do this.";
+   * - another account's stage, the access class, or the account, told:
+   *   `access`, Access, the reason.
+   *
+   * Decision: see docs/decisions.md#one-result-at-every-door.
+   *
+   * @param \Drupal\surface\Operation\Refusal $refusal
+   *   The refusal.
    *
    * @return \Drupal\tool\ExecutableResult
-   *   The failure, in the input category.
+   *   The failure.
    */
-  protected function notFound(\InvalidArgumentException $e): ExecutableResult {
-    // Plain text, as every machine document carries: a reason quoting the
-    // part that names nothing keeps its quotation marks.
-    // Decision: see docs/decisions.md#a-machine-document-carries-plain-text.
-    return $this->refused(PlainTextMarkup::translatable($this->t('Not found: @reason', ['@reason' => $e->getMessage()])), Violation::NOT_FOUND, FailureCategory::Input);
+  protected function refusal(Refusal $refusal): ExecutableResult {
+    return match (TRUE) {
+      // Plain text, as every machine document carries: a reason quoting
+      // the part that names nothing keeps its quotation marks.
+      // Decision: see docs/decisions.md#a-machine-document-carries-plain-text.
+      $refusal->code === Violation::NOT_FOUND => $this->refused(PlainTextMarkup::translatable($this->t('Not found: @reason', ['@reason' => $refusal->reason])), Violation::NOT_FOUND, FailureCategory::Input),
+      $refusal->code === Violation::DOES_NOT_APPLY => $this->refused($this->t('A stage does not apply to this operation.'), Violation::DOES_NOT_APPLY, FailureCategory::Input),
+      // An empty reason: an access class that refuses with no reason, told
+      // to an account holding the permission.
+      $refusal->code === Violation::PERMISSION, $refusal->reason === Refusal::WITHHELD, $refusal->reason === '' => $this->refused($this->t('You do not have permission to do this.'), $refusal->code, FailureCategory::Access),
+      default => $this->refused(PlainTextMarkup::translatable($this->t('@reason', ['@reason' => $refusal->reason])), $refusal->code, FailureCategory::Access),
+    };
   }
 
   /**
@@ -225,151 +228,63 @@ abstract class ResourceOperationToolBase extends ToolBase {
   }
 
   /**
-   * Answers a refusal by access for an operation's context.
-   *
-   * The operation's permission or the resource's access class: which one
-   * refused is the code, `permission` or `access`.
-   *
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
-   *   The resource.
-   * @param \Drupal\surface\ResourceBuild\OperationDefinition $operation
-   *   The operation.
-   * @param \Drupal\surface\Resource\OperationContext $context
-   *   The context.
-   * @param \Drupal\Core\StringTranslation\TranslatableMarkup|null $message
-   *   Why, when it says more than that the account may not; NULL for that.
-   *
-   * @return \Drupal\tool\ExecutableResult
-   *   The failure, in the Access category.
-   */
-  protected function accessRefused(ResourceDefinition $resource, OperationDefinition $operation, OperationContext $context, ?TranslatableMarkup $message = NULL): ExecutableResult {
-    $permission = $this->resources->permissionAccess($resource->name(), $operation->id, $this->currentUser, $context);
-    return $this->refused(
-      $message ?? $this->t('You do not have permission to do this.'),
-      $permission !== NULL && !$permission->isAllowed() ? Violation::PERMISSION : Violation::ACCESS,
-      FailureCategory::Access,
-    );
-  }
-
-  /**
-   * Answers the operation's static permission, from the tool's id alone.
-   *
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   The account.
-   *
-   * @return \Drupal\Core\Access\AccessResultInterface|null
-   *   As ResourcesInterface::permissionAccess() answers; a tool that is
-   *   not one of the derived ones is refused.
-   */
-  protected function permissionAccess(AccountInterface $account): ?AccessResultInterface {
-    try {
-      [$resource, $operation] = $this->found();
-      return $this->resources->permissionAccess($resource->name(), $operation->id, $account);
-    }
-    catch (\InvalidArgumentException | \LogicException) {
-      return AccessResult::forbidden();
-    }
-  }
-
-  /**
-   * Answers the operation's permission filled from the parameters sent.
+   * Asks the runner's gate for the call the inputs name.
    *
    * @param array $values
    *   The tool's input values.
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   The account.
+   * @param \Drupal\Core\Session\AccountInterface|null $account
+   *   The account the access hook was handed; NULL for the current user.
    *
-   * @return \Drupal\Core\Access\AccessResultInterface|null
-   *   As ResourcesInterface::permissionAccess() answers for a context that
-   *   knows each scalar parameter as sent; NULL when a placeholder is no
-   *   parameter sent, or the tool is not one of the derived ones.
+   * @return \Drupal\surface\Operation\OperationRun
+   *   The run, gated or refused. A stage input that is not a string is
+   *   left out, and the call answers it (run()).
+   *
+   * @throws \LogicException
+   *   When the tool is not one of the derived ones.
    */
-  protected function sentPermissionAccess(array $values, AccountInterface $account): ?AccessResultInterface {
-    try {
-      [$resource, $operation] = $this->found();
-    }
-    catch (\InvalidArgumentException | \LogicException) {
-      return NULL;
-    }
-    $sent = [];
-    foreach ($operation->parameters as $parameter) {
-      if (is_scalar($values[$parameter->name] ?? NULL)) {
-        $sent[$parameter->name] = $values[$parameter->name];
-      }
-    }
-    return $this->resources->permissionAccess($resource->name(), $operation->id, $account, new OperationContext($operation->id, known: $sent));
-  }
-
-  /**
-   * Writes why a call was refused to the tool log, not to the caller.
-   *
-   * @param \Drupal\Core\Access\AccessResultInterface $result
-   *   The refusal.
-   */
-  protected function logRefusal(AccessResultInterface $result): void {
-    $reason = $result instanceof AccessResultReasonInterface ? (string) $result->getReason() : '';
-    if ($reason !== '') {
-      $this->logger->info('The @tool tool was refused: @reason', ['@tool' => $this->getPluginId(), '@reason' => $reason]);
-    }
-  }
-
-  /**
-   * Builds the operation this tool is for, from its parameters' values.
-   *
-   * @param array $values
-   *   The tool's input values; the parameters are read by name.
-   * @param \Drupal\surface\Staging\Stage|null $stage
-   *   The stage the call goes through, which the account may use, so a
-   *   thing the stage creates is built as that create; NULL for none.
-   *
-   * @return array{0: \Drupal\surface\ResourceBuild\ResourceDefinition, 1: \Drupal\surface\ResourceBuild\OperationDefinition, 2: \Drupal\surface\Resource\OperationContext}
-   *   The resource, the operation and the context it built.
-   *
-   * @throws \InvalidArgumentException
-   *   When a parameter is missing or names nothing, which the Tool API
-   *   reports as the caller's input to correct.
-   */
-  protected function operation(array $values, ?Stage $stage = NULL): array {
+  protected function gate(array $values, ?AccountInterface $account = NULL): OperationRun {
     [$resource, $operation] = $this->found();
-    $arguments = $this->arguments($values, $operation);
-    return [$resource, $operation, $this->resources->operation($resource->name(), $operation->id, $arguments, $stage)];
+    $stage = $values[OperationInputs::STAGE] ?? NULL;
+    return $this->runner->gate($resource->name(), $operation->id, $this->arguments($values, $operation), Door::from(static::DOOR), is_string($stage) && $stage !== '' ? $stage : NULL, $account);
   }
 
   /**
-   * Builds the operation a call asks for, through the stage it names.
-   *
-   * In the order every door keeps: the stage the call names, whether the
-   * account may use it, then the context, built through it, so the stage
-   * is answered for before anything it holds is.
-   *
-   * Decision: see
-   * docs/decisions.md#a-stage-decides-the-context-of-a-thing-it-creates.
+   * Runs the call the inputs name, as the current user.
    *
    * @param array $values
    *   The tool's input values.
+   * @param array|null $submit
+   *   The values to submit, by key; NULL to prepare: the surface built and
+   *   its storage composed with the stage, nothing written.
+   * @param bool $dryRun
+   *   TRUE to prepare the write and skip it.
    *
-   * @return array{0: \Drupal\surface\ResourceBuild\ResourceDefinition, 1: \Drupal\surface\ResourceBuild\OperationDefinition, 2: \Drupal\surface\Resource\OperationContext, 3: \Drupal\surface\Staging\Stage|null}|\Drupal\tool\ExecutableResult
-   *   The resource, the operation, the context and the stage, or the
-   *   refusal of a stage the account may not use, naming it, or of a
-   *   stage sent to a tool that takes none.
+   * @return \Drupal\surface\Operation\OperationRun|\Drupal\tool\ExecutableResult
+   *   The run, or the refusal as the tool answers it (refusal()).
    *
-   * @throws \InvalidArgumentException
-   *   When the stage or a parameter names nothing, or a parameter is
-   *   missing.
-   *
-   * @internal
+   * @throws \LogicException
+   *   When the tool is not one of the derived ones.
+   * @throws \Drupal\surface\Staging\StageRaceException
+   *   From the runner, when the stage moved meanwhile.
    */
-  protected function staged(array $values): array|ExecutableResult {
-    [, $operation] = $this->found();
-    if ($this->stageUndeclared($values)) {
-      return $this->refused($this->t('A stage does not apply to this operation.'), Violation::DOES_NOT_APPLY, FailureCategory::Input);
+  protected function run(array $values, ?array $submit = NULL, bool $dryRun = FALSE): OperationRun|ExecutableResult {
+    $stage = $values[OperationInputs::STAGE] ?? NULL;
+    if ($stage !== NULL && $stage !== '' && !is_string($stage)) {
+      // A stage named by something other than its id: the runner takes an
+      // id, so it is asked the rest without the stage, and the stage is
+      // answered here, as the Tool API's own string input lets such a
+      // value through to a PHP caller.
+      $gated = $this->gate($values);
+      return match (TRUE) {
+        $gated->isRefused() => $this->refusal($gated->refusal()),
+        !array_key_exists(OperationInputs::STAGE, $this->getInputDefinitions(TRUE)) => $this->refused($this->t('A stage does not apply to this operation.'), Violation::DOES_NOT_APPLY, FailureCategory::Input),
+        default => $this->refused($this->t('Not found: A stage is named by its id, a string.'), Violation::NOT_FOUND, FailureCategory::Input),
+      };
     }
-    $stage = $this->stage($values, $this->arguments($values, $operation));
-    $refused = $stage === NULL ? NULL : $this->stageRefused($stage);
-    if ($refused !== NULL) {
-      return $refused;
-    }
-    return [...$this->operation($values, $stage), $stage];
+    [$resource, $operation] = $this->found();
+    $run = $this->runner->run($resource->name(), $operation->id, $this->arguments($values, $operation), $submit, Door::from(static::DOOR), $stage === '' ? NULL : $stage, $dryRun);
+    $refusal = $run->refusal();
+    return $refusal === NULL ? $run : $this->refusal($refusal);
   }
 
   /**
@@ -396,116 +311,6 @@ abstract class ResourceOperationToolBase extends ToolBase {
   }
 
   /**
-   * Gets the stage the call names, for the storage it is handed to.
-   *
-   * The `stage` input, read only where the tool takes it: empty, or left
-   * out, names none; a value that is not a string names nothing; a value
-   * sent to a tool that takes no stage is refused, so no adapter that
-   * hands undeclared inputs through has a write made for real. Who may
-   * use the stage is not answered here (stageRefused()).
-   *
-   * Decision: see
-   * docs/decisions.md#a-stage-input-is-a-door-argument-handed-to-storage-never-context.
-   *
-   * @param array $values
-   *   The tool's input values.
-   * @param array<string, mixed> $parameters
-   *   The operation's arguments, by name (arguments()), which the stage
-   *   records beside a write.
-   *
-   * @return \Drupal\surface\Staging\Stage|null
-   *   The stage, its arguments the operation's; NULL when none is named.
-   *
-   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
-   *   At `stage`, when the id names no stage or the value is not a string,
-   *   which the Tool API reports as the caller's input to correct.
-   * @throws \InvalidArgumentException
-   *   When a stage is sent to a tool that takes none.
-   *
-   * @internal
-   */
-  protected function stage(array $values, array $parameters): ?Stage {
-    $id = $values[OperationInputs::STAGE] ?? '';
-    if ($this->stageUndeclared($values)) {
-      throw new \InvalidArgumentException('A stage does not apply to this operation: its tool takes no stage input.');
-    }
-    if ($id === '' || !array_key_exists(OperationInputs::STAGE, $this->getInputDefinitions(TRUE))) {
-      return NULL;
-    }
-    if (!is_string($id)) {
-      throw new NamesNothingException('A stage is named by its id, a string.', OperationInputs::STAGE);
-    }
-    return $this->stages->named($id)->withArguments($parameters);
-  }
-
-  /**
-   * Answers whether a stage is sent to a tool that takes none.
-   *
-   * @param array $values
-   *   The tool's input values.
-   *
-   * @return bool
-   *   TRUE when the values hold a stage that is not empty, and the tool
-   *   declares no `stage` input.
-   *
-   * @internal
-   */
-  protected function stageUndeclared(array $values): bool {
-    $id = $values[OperationInputs::STAGE] ?? NULL;
-    return $id !== NULL && $id !== '' && !array_key_exists(OperationInputs::STAGE, $this->getInputDefinitions(TRUE));
-  }
-
-  /**
-   * Answers whether the current account may use a stage.
-   *
-   * The stage's own `update` access, which StageAccess answers: only its
-   * owner may write into it or read through it.
-   *
-   * @param \Drupal\surface\Staging\Stage $stage
-   *   The stage.
-   *
-   * @return \Drupal\tool\ExecutableResult|null
-   *   The refusal, naming the stage, in the Access category; NULL when the
-   *   account may use it.
-   *
-   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
-   *   When the stage was discarded since it was named.
-   *
-   * @internal
-   */
-  protected function stageRefused(Stage $stage): ?ExecutableResult {
-    if ($this->stageAccess($stage, $this->currentUser)->isAllowed()) {
-      return NULL;
-    }
-    $definition = $this->resourceRegistry->getDefinition(StageResource::ID);
-    $operation = $this->resourceRegistry->getOperation($definition->name(), 'update');
-    $context = $this->resources->operation($definition->name(), $operation->id, ['id' => $stage->id]);
-    return $this->accessRefused($definition, $operation, $context, $this->t('You do not have permission to use the stage @stage.', ['@stage' => $stage->id]));
-  }
-
-  /**
-   * Answers the stage's own `update` access for an account.
-   *
-   * @param \Drupal\surface\Staging\Stage $stage
-   *   The stage.
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   The account.
-   *
-   * @return \Drupal\Core\Access\AccessResultInterface
-   *   What StageAccess answers: allowed for its owner alone.
-   *
-   * @throws \Drupal\surface\ResourceBuild\NamesNothingException
-   *   When the stage was discarded since it was named.
-   *
-   * @internal
-   */
-  protected function stageAccess(Stage $stage, AccountInterface $account): AccessResultInterface {
-    $definition = $this->resourceRegistry->getDefinition(StageResource::ID);
-    $context = $this->resources->operation($definition->name(), 'update', ['id' => $stage->id]);
-    return $this->operationAccess($definition, $context, $account);
-  }
-
-  /**
    * Reads which resource and operation this tool is for, off its id.
    *
    * @return array{0: \Drupal\surface\ResourceBuild\ResourceDefinition, 1: \Drupal\surface\ResourceBuild\OperationDefinition}
@@ -525,26 +330,6 @@ abstract class ResourceOperationToolBase extends ToolBase {
     }
     $resource = $this->resourceRegistry->getDefinition(substr($derivative, 0, $separator));
     return [$resource, $this->resourceRegistry->getOperation($resource->name(), substr($derivative, $separator + 1))];
-  }
-
-  /**
-   * Answers access for an operation's context, decisively.
-   *
-   * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
-   *   The resource.
-   * @param \Drupal\surface\Resource\OperationContext $context
-   *   The context.
-   * @param \Drupal\Core\Session\AccountInterface $account
-   *   The account.
-   *
-   * @return \Drupal\Core\Access\AccessResultInterface
-   *   Allowed or forbidden, never neutral.
-   */
-  protected function operationAccess(ResourceDefinition $resource, OperationContext $context, AccountInterface $account): AccessResultInterface {
-    return SurfaceAccess::decisive(
-      $this->resources->access($resource->name(), $context, $account),
-      'The operation\'s permission and the resource\'s own access both have to allow this.',
-    );
   }
 
 }

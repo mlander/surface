@@ -417,10 +417,11 @@ the record of the rework that brought the module to the pattern.
   The doors name one only where a stage applies: the **stage input**,
   `stage` (`OperationInputs::STAGE`), last on every write tool (after
   `dry_run`), read tool and narrowing tool, default `''` so the `values`
-  refiner still fires, resolved by `ResourceOperationToolBase::stage()`
-  (a missing id `notFound()`, another account's `accessRefused()`),
-  asked before the thing's context, which is built through it
-  (`ResourceOperationToolBase::staged()`); and
+  refiner still fires, handed to the runner, which asks it before the
+  thing's context and builds the context through it (a missing id
+  `not_found`, another account's `access` with its reason, answered by
+  `execute()`; a value that is not a string the tool's own `not_found`);
+  and
   the **stage header**, `X-Surface-Stage` (`ServedPaths::STAGE_HEADER`),
   read in `target()` into `ServedTarget::$stage`, asked by the runner
   in the route check and the controller alike, before the thing's
@@ -582,8 +583,9 @@ the record of the rework that brought the module to the pattern.
   context, the access class made decisive and ANDed with the stage's,
   then the build and the storage with the stage, the pipeline's
   `submit()`, and the outputs, the stage resource's held to the surface
-  (`conformOutput()`, `NotEmitted` stripped; a mismatch logged, never
-  thrown after a commit, `OperationRun::conformed()`). `gate()` stops
+  (`conformOutput()`; a mismatch logged, never thrown after a commit,
+  `OperationRun::conformed()`), every `NotEmitted` key stripped whether
+  or not they conform. `gate()` stops
   after the access and builds nothing itself, `run(values: NULL)` after
   the build (a resource with no storage of its own is built with none,
   `hasStorage()` FALSE, and refused when run with values), and the
@@ -593,11 +595,12 @@ the record of the rework that brought the module to the pattern.
   builds once; `run()` with values is a prepare, then `submit()`. A
   prepare is written through once: after a submit that committed, a
   second `submit()` to it throws (a `\WeakMap` of spent prepares); a dry
-  run or a refused submit leaves it usable. No account is the current
-  user; another, by id or by roles, is run as through core's account
-  switcher, switched back in a `finally`, a blocked or missing user
-  refused first, by the one wrapper `gate()`, `run()` and `submit()` go
-  through (`asAccount()`). What a caller can cause is a `Refusal` on the
+  run or a refused submit leaves it usable. No account, or the current
+  user's own (same id and roles), is the current user, never checked
+  for being blocked: core vouches for it; another, by id or by roles, is
+  run as through core's account switcher, switched back in a `finally`,
+  a blocked or missing user refused first, by the one wrapper `gate()`,
+  `run()` and `submit()` go through (`asAccount()`). What a caller can cause is a `Refusal` on the
   `OperationRun`, never an exception; only a `StageRaceException`, a
   `\BadMethodCallException` from `submit()` handed what it cannot
   submit to, and a bug are thrown. A `Refusal`'s fields (`category`,
@@ -622,10 +625,21 @@ the record of the rework that brought the module to the pattern.
   controller gates the full schema, prepares every other action and
   submits a write to its prepare; a committed write whose re-read the
   runner refuses answers `contract: null` and no `ETag`, never a 403 or
-  404 after the commit), the form's runs of the stage's own
+  404 after the commit), the tool door (the access hook calls `gate()`
+  with the account it is handed, door `tool`, `schema tool` for the
+  narrowing tool, and answers from the refusal's public fields,
+  `ResourceOperationToolBase::answer()`, a refusal the caller can
+  correct or one about its stage let through for `execute()` to answer
+  with its code; the write tool's `execute()` is one `run()` with the
+  values and the dry run, the read and narrowing tools and the `values`
+  refiner prepare; `ResourceOperationToolBase::refusal()` turns a
+  refusal into the result; a committed write is never answered as a
+  refusal: outputs the Tool API's own check would refuse are left out
+  and logged, and only a refusal of the inputs is rewritten into a
+  document that says nothing was committed), the form's runs of the stage's own
   operations (`stageRun()`) and the examples that ran one by hand for an
   account; an install hook acts for none and calls the pipeline; the
-  tool and form doors keep their own sequence until they move
+  form door keeps its own sequence until it moves
   (`docs/resources.md#running-an-operation-from-php`,
   `docs/decisions.md#one-runner-runs-an-operation`).
 
@@ -915,7 +929,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2210, Assertions: 54616, Errors: 0, Failures: 0, Skipped: 3. Classes: 307 of 307, 8 at a time, browser classes 4.
+phpunit: Tests: 2218, Assertions: 54878, Errors: 0, Failures: 0, Skipped: 3. Classes: 309 of 309, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -935,8 +949,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2096, Assertions: 50067, Skipped: 3, Deprecations: 139. Classes:
-254, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2104, Assertions: 50329, Skipped: 3, Deprecations: 139. Classes:
+256, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1276,8 +1290,9 @@ src/Tool/                The Tool API door: what a tool takes and answers
                          doors and the invalidator, registered by
                          SurfaceServiceProvider only with the tool module.
 src/Plugin/tool/ src/Plugin/Derivative/
-                         The tool plugins and their deriver, found only by
-                         the tool module's plugin manager.
+                         The tool plugins, which run an operation through
+                         the runner, and their deriver, found only by the
+                         tool module's plugin manager.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots;

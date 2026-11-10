@@ -153,14 +153,16 @@ drush tool:run surface:entity.content:node.page:update --uid=1 --json \
   `stage`.
 - A narrowing tool narrows over the staged view.
 
-An id that names no stage is the caller's input to correct, code
-`not_found`. A call refuses another account's stage, code `access`,
-before the thing the parameters name is asked about or anything is
-built, and the message names the stage. The Tool API runner (`drush
-tool:run`, MCP) asks the tool's access check before the call, and that
-check builds without a stage the account may not use: where the thing
-would refuse without it, as `id: -1` does, the runner answers its fixed
-refusal, `access_denied`, which does not name the stage.
+The stage is asked after the operation's permission and before the
+thing the parameters name, through the runner, and nothing is built
+for a stage the call may not use. An id that names no stage is the
+caller's input to correct, code `not_found`. Another account's stage is
+refused, code `access`, with the stage access's reason, "The stage is
+another account's.". A stage on a call it does not apply to is
+`does_not_apply`. The tool's access check, which the Tool API's runner
+(`drush tool:run`, MCP) asks before the call, lets each of these through
+for the call alone, so the call answers it in the result shape with its
+code, whatever the thing would answer without the stage.
 
 ### The `X-Surface-Stage` header
 
@@ -764,10 +766,12 @@ drush tool:run surface:entity.content:node.page:create --uid=1 --json \
   taken out of it; nothing was created or removed." After that, `-1`
   names nothing, as without the stage: the stage holds no create at it,
   so its context is built as with no stage, and the owner finds no node
-  `-1`. The tool's call answers `not_found` ("Not found: …"); the Tool
-  API runner answers its fixed `access_denied` and HTTP its fixed 403,
-  since the entity resources declare no operation permission (an
-  account holding a resource's permission hears not found). Only a
+  `-1`. Every door answers the fixed refusal, since the entity
+  resources declare no operation permission, so no account may hear
+  that an id names nothing: the tool's call answers `access` ("You do
+  not have permission to do this."), the Tool API runner its fixed
+  access denied, and HTTP its fixed 403 (an account holding a resource's
+  permission, where one is declared, hears not found). Only a
   write whose context was built before the drop and prepared after it
   is refused by the stage, code `not_found`: "The stage no longer
   creates this thing: its create was taken out of the stage."
@@ -1614,17 +1618,13 @@ access meets core's own refusal, an exception from its predelete hook,
   to rehearse it, so a write staged between the two is applied with the
   rest; the check between the rehearsal and the commit (a stage written
   after it was rehearsed refuses the apply) closes the rest.
-- **An id that names nothing on the stage's own paths, at the tool's
-  access check.** The stage's operations declare no permission, so at
-  the tool door's access check (`drush tool:run`, MCP), which does not
-  run through the runner yet, an id that names no stage gets the door's
-  one fixed refusal, as for any operation that declares none; a tool
-  called from PHP, which runs no access check, answers `not_found`. The
-  runner tells it to every account, so the HTTP door answers 404 since
-  2026-11-10 ([The stage's own paths](#the-stages-own-paths)), and the
-  tool's access check converges when the tool door moves onto it. A stage named through the `stage` input that
-  names nothing is not found; one named through the header is 404 on a
-  call a stage applies to, and 422 on any other
+- **A stage named by a value that is not a string.** The Tool API lets
+  any value through a string input to a PHP caller that calls
+  `execute()`; the runner takes an id, so the tool asks the runner
+  without the stage and answers such a value itself, `not_found`. A
+  stage named through the `stage` input that names nothing is not
+  found; one named through the header is 404 on a call a stage applies
+  to, and 422 on any other
   ([The `X-Surface-Stage` header](#the-x-surface-stage-header)).
 - **A required key after a staged delete.** The pipeline validates a
   write before the storage sees it, and a load through the stage
