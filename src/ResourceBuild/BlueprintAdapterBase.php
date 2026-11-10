@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\LeafTypes;
 use Drupal\surface\DefinitionMetadata;
@@ -96,7 +96,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
   /**
    * Constructs a blueprint over a builder.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The engine's builder the blueprint fills.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager, which turns a type name into the right
@@ -105,7 +105,7 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
    *   TRUE when this blueprint describes outputs rather than inputs.
    */
   public function __construct(
-    protected readonly SurfaceBuilderInterface $builder,
+    protected readonly SurfaceBuilder $builder,
     protected readonly TypedDataManagerInterface $typedDataManager,
     protected readonly bool $outputs = FALSE,
   ) {

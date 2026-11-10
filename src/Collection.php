@@ -30,7 +30,7 @@ use Drupal\surface\Resource\OperationContext;
  * The child's operation, and its access, were answered once for the
  * list: field access is per field, not per delta.
  *
- * @see \Drupal\surface\SurfaceBuilderInterface::attachList()
+ * @see \Drupal\surface\SurfaceBuilder::attachList()
  * @see \Drupal\surface\Attachment
  */
 final class Collection {

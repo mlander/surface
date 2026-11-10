@@ -10,7 +10,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Computed;
-use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\DefinitionTypedData;
@@ -84,7 +84,7 @@ final class KeyPaths {
   /**
    * Writes one frame's defaults onto its keys.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The frame's builder, its keys and its alters' declared.
    * @param array{resource: string, at: string, source: string, noun: string, verb: string} $where
    *   Where the values come from, for the refusals.
@@ -101,7 +101,7 @@ final class KeyPaths {
    *   When a path names no key a default reaches, or a value does not fit
    *   its key.
    */
-  public function writeDefaults(SurfaceBuilderInterface $builder, array $where, array $values, array $kinds): array {
+  public function writeDefaults(SurfaceBuilder $builder, array $where, array $values, array $kinds): array {
     $children = [];
     foreach ($values as $path => $raw) {
       $path = (string) $path;
@@ -159,7 +159,7 @@ final class KeyPaths {
   /**
    * Finds the definition a path names in a frame.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The frame's builder.
    * @param string[] $segments
    *   The path, split.
@@ -175,7 +175,7 @@ final class KeyPaths {
    * @throws \LogicException
    *   When the path names no key, or names an item of a list.
    */
-  public function resolve(SurfaceBuilderInterface $builder, array $segments, array $where, string $path): array {
+  public function resolve(SurfaceBuilder $builder, array $segments, array $where, string $path): array {
     $definition = NULL;
     $rest = $segments;
     if ($segments[0] === 'third_party_settings' && count($segments) >= 3) {

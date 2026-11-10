@@ -8,7 +8,6 @@ use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\Plugin\Validation\Constraint\LabeledChoiceConstraint;
 use Drupal\surface\Storage\StorageLayoutInterface;
 use Drupal\surface_test\CasingVariantRefiner;
@@ -36,10 +35,10 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
   /**
    * Builds a builder holding one flat key, one map, and one choice list.
    *
-   * @return \Drupal\surface\SurfaceBuilderInterface
+   * @return \Drupal\surface\SurfaceBuilder
    *   The builder, unsealed.
    */
-  protected function builder(): SurfaceBuilderInterface {
+  protected function builder(): SurfaceBuilder {
     return new SurfaceBuilder([
       'casing' => DataDefinition::create('string')
         ->setLabel('Casing')
@@ -65,15 +64,15 @@ class SurfaceBuilderTest extends SurfaceKernelTestBase {
   public function testEveryMutatorRefusesAfterSeal(): void {
     $definition = DataDefinition::create('string');
     $mutations = [
-      'setDefinition' => static fn (SurfaceBuilderInterface $b) => $b->setDefinition('added', clone $definition),
-      'setDefault' => static fn (SurfaceBuilderInterface $b) => $b->setDefault('casing', 'none'),
-      'lock' => static fn (SurfaceBuilderInterface $b) => $b->lock('casing'),
-      'extendChoices' => static fn (SurfaceBuilderInterface $b) => $b->extendChoices('casing', ['lowercase'], 'other'),
-      'setThirdPartyDefinition' => static fn (SurfaceBuilderInterface $b) => $b->setThirdPartyDefinition('other', 'badge', clone $definition),
-      'setThirdPartyLayout' => fn (SurfaceBuilderInterface $b) => $b->setThirdPartyLayout('other', $this->layout()),
-      'addRefinement' => static fn (SurfaceBuilderInterface $b) => $b->addRefinement('casing', ['extras']),
-      'addRefiner' => static fn (SurfaceBuilderInterface $b) => $b->addRefiner('casing', new CasingVariantRefiner()),
-      'addCacheableDependency' => static fn (SurfaceBuilderInterface $b) => $b->addCacheableDependency(new CacheableMetadata()),
+      'setDefinition' => static fn (SurfaceBuilder $b) => $b->setDefinition('added', clone $definition),
+      'setDefault' => static fn (SurfaceBuilder $b) => $b->setDefault('casing', 'none'),
+      'lock' => static fn (SurfaceBuilder $b) => $b->lock('casing'),
+      'extendChoices' => static fn (SurfaceBuilder $b) => $b->extendChoices('casing', ['lowercase'], 'other'),
+      'setThirdPartyDefinition' => static fn (SurfaceBuilder $b) => $b->setThirdPartyDefinition('other', 'badge', clone $definition),
+      'setThirdPartyLayout' => fn (SurfaceBuilder $b) => $b->setThirdPartyLayout('other', $this->layout()),
+      'addRefinement' => static fn (SurfaceBuilder $b) => $b->addRefinement('casing', ['extras']),
+      'addRefiner' => static fn (SurfaceBuilder $b) => $b->addRefiner('casing', new CasingVariantRefiner()),
+      'addCacheableDependency' => static fn (SurfaceBuilder $b) => $b->addCacheableDependency(new CacheableMetadata()),
     ];
 
     foreach ($mutations as $name => $mutation) {

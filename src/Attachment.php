@@ -42,7 +42,7 @@ use Drupal\Core\TypedData\MapDataDefinition;
  * @property-read \Drupal\surface\SurfaceInterface $child
  *   The sealed child, as it was advertised, built now if it was not yet.
  *
- * @see \Drupal\surface\SurfaceBuilderInterface::attach()
+ * @see \Drupal\surface\SurfaceBuilder::attach()
  * @see \Drupal\surface\Variants
  */
 final class Attachment {

@@ -50,7 +50,7 @@ use Drupal\surface\Storage\StorageLayoutInterface;
  *
  * @see \Drupal\surface\SurfaceInterface
  *   For the documentation of every method.
- * @see \Drupal\surface\SurfaceBuilderInterface::seal()
+ * @see \Drupal\surface\SurfaceBuilder::seal()
  *   The only construction path.
  * @see docs/refinement.md
  *   For the contribution model this implements.

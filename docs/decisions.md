@@ -5752,7 +5752,7 @@ closing that gap (found 2026-10-19), point by point.
   once the subject is known. *Changed with this decision: until then
   nothing was marked, and the full schema stated open keys the build
   would lock, which the agreement trait found on example 10 with its
-  workflow module.* (`SurfaceBuilderInterface::markRuntimeAccessWhole()`)
+  workflow module.* (`SurfaceBuilder::markRuntimeAccessWhole()`)
 - **Read by the wall.** Like any access answer, an alter's is the
   site's, never the def's: the def stays the widest reading of the
   child ([The wall is the reference
@@ -6258,7 +6258,7 @@ submit written back unchanged would report a write that did nothing.
 **A lock says its own reason, once** (decided 2026-10-20, from the Form
 API review, B16 of the reviews' synthesis). A key an access answer
 locked carries the answer's reason, recorded with the lock
-(`SurfaceBuilderInterface::lock()`, `Entry::$lockedBecause`), and
+(`SurfaceBuilder::lock()`, `Entry::$lockedBecause`), and
 the form prints that reason beside the fixed element, as it prints a
 locked variant's; "Fixed for this operation." is left for a lock with
 no reason, an operation's (an identity key) or an answer that gave
