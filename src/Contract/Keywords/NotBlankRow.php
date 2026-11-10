@@ -12,7 +12,7 @@ namespace Drupal\surface\Contract\Keywords;
  * again, it is the same keyword), the constraint id is not. Deliberate:
  * the keyword says no more than the length, and the Length row reads
  * every `minLength`. A `normalizer` (trimming, say) makes NotBlank refuse
- * more than the keyword does, so it is named under `checkedOnServer`
+ * more than the keyword does, so it is named under `portable-check`
  * besides. Whether null is allowed is the key's type, not this row's.
  *
  * @internal

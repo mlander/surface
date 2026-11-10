@@ -94,7 +94,8 @@ export function stockWidget(schema: Schema): Widget | null {
     case 'number':
       return 'number';
     case 'string':
-      return schema.format === 'idn-email' ? 'email' : 'text';
+      // `idn-email` is how a document before contract 5 said it.
+      return schema.format === 'email' || schema.format === 'idn-email' ? 'email' : 'text';
     default:
       return null;
   }

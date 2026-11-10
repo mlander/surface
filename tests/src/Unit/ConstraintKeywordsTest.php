@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Unit;
 
 use Drupal\surface\Contract\ConstraintKeywords;
-use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\Keywords\BoundsRow;
 use Drupal\surface\Contract\Keywords\ReadBack;
 use Drupal\surface\Contract\LeafTypes;
@@ -18,7 +18,7 @@ use PHPUnit\Framework\Attributes\Group;
  * Every row is written with representative options and read back: the
  * keywords it writes, the constraint the reader reads from them, and the
  * same keywords written again. A row against a type it does not apply to
- * is left for the emitter to name under `checkedOnServer`, never dropped;
+ * is left for the emitter to name under `portable-check`, never dropped;
  * two rows writing one keyword merge by the table's rule, in either
  * order.
  *
@@ -78,14 +78,14 @@ class ConstraintKeywordsTest extends UnitTestCase {
       // stable, the constraint id is not.
       ['NotBlank', [], ['string'], ['minLength' => 1], 'Length', ['min' => 1]],
       // Email reads back as the email leaf type (LeafTypes), no constraint.
-      ['Email', [], ['string'], ['format' => 'idn-email'], NULL, []],
+      ['Email', [], ['string'], ['format' => 'email'], NULL, []],
       [
         'Regex', $lower, ['string'],
-        ['pattern' => '^[a-z]+$'], 'Regex', $lower, ['patternMessage' => 'Lower case.'],
+        ['pattern' => '^[a-z]+$'], 'Regex', $lower, ['messages' => ['pattern' => 'Lower case.']],
       ],
       [
         'Regex', $digits, ['string'],
-        ['not' => ['pattern' => '^\d+$']], 'Regex', $digits, ['patternMessage' => 'Not only digits.'],
+        ['not' => ['pattern' => '^\d+$']], 'Regex', $digits, ['messages' => ['not' => 'Not only digits.']],
       ],
       // Symfony holds `match` as a boolean: 0 is FALSE.
       [
@@ -118,7 +118,7 @@ class ConstraintKeywordsTest extends UnitTestCase {
       $this->assertSame($extras, $stated['extras'], $id . ' writes its extras.');
       $this->assertSame([], $stated['left'], $id . ' is stated whole.');
 
-      $schema = $keywords + ($extras === [] ? [] : [ContractEmitter::EXTENSION => $extras]);
+      $schema = $keywords + ($extras === [] ? [] : [PortableKeywords::MESSAGES => $extras['messages']]);
       $read = array_values(array_filter(ConstraintKeywords::read($schema, $types), static fn (ReadBack $back): bool => $back->constraint !== NULL));
       if ($read_as === NULL) {
         $this->assertSame([], $read, $id . ' is read by the leaf type, not the table.');
@@ -157,7 +157,7 @@ class ConstraintKeywordsTest extends UnitTestCase {
     foreach ($cases as $id => [$options, $types]) {
       $stated = ConstraintKeywords::state([$id => $options], $types);
       $this->assertSame([], $stated['keywords'], $id . ' writes no keyword on ' . $types[0] . '.');
-      $this->assertSame([[$id, $options, TRUE]], $stated['left'], $id . ' is left, for checkedOnServer.');
+      $this->assertSame([[$id, $options, TRUE]], $stated['left'], $id . ' is left, for portable-check.');
     }
 
     // Options a row cannot state are left too, and a part of them leaves
@@ -172,11 +172,12 @@ class ConstraintKeywordsTest extends UnitTestCase {
     $unknown = ConstraintKeywords::state(['Choice' => ['choices' => ['a']]], ['string']);
     $this->assertSame([['Choice', ['choices' => ['a']], FALSE]], $unknown['left'], 'A constraint no row maps is the caller\'s.');
 
-    // A Regex no pattern carries still says its message.
+    // A Regex no pattern carries has no keyword to give its message
+    // under: the check it is left for says it.
     $anything = ['Regex' => ['pattern' => '/^.+$/', 'message' => 'Anything.']];
     $regex = ConstraintKeywords::state($anything, ['string']);
     $this->assertSame([], $regex['keywords']);
-    $this->assertSame(['patternMessage' => 'Anything.'], $regex['extras']);
+    $this->assertSame([], $regex['extras']);
     $this->assertSame(['Regex'], array_column($regex['left'], 0));
 
     // Read on a type it does not apply to, a row's keywords are kept.
@@ -217,8 +218,8 @@ class ConstraintKeywordsTest extends UnitTestCase {
     $this->assertSame('uniqueItems', array_key_last($last), 'uniqueItems is written last, where the reader reads it.');
     // A keyword two rows write differently and no rule merges: the
     // later is left.
-    $clash = ConstraintKeywords::state(['Uuid' => []], ['string'], ['type' => 'string', 'format' => 'idn-email']);
-    $this->assertSame(['type' => 'string', 'format' => 'idn-email'], $clash['keywords']);
+    $clash = ConstraintKeywords::state(['Uuid' => []], ['string'], ['type' => 'string', 'format' => 'email']);
+    $this->assertSame(['type' => 'string', 'format' => 'email'], $clash['keywords']);
     $this->assertSame(['Uuid'], array_column($clash['left'], 0));
   }
 
@@ -231,7 +232,7 @@ class ConstraintKeywordsTest extends UnitTestCase {
   public function testClashIsDecidedByTheTableOrder(): void {
     $forward = ConstraintKeywords::state(['Email' => [], 'Uuid' => []], ['string']);
     $backward = ConstraintKeywords::state(['Uuid' => [], 'Email' => []], ['string']);
-    $this->assertSame(['format' => 'idn-email'], $forward['keywords']);
+    $this->assertSame(['format' => 'email'], $forward['keywords']);
     $this->assertSame($forward['keywords'], $backward['keywords'], 'One document in either order.');
     $this->assertSame(['Uuid'], array_column($forward['left'], 0));
     $this->assertSame(['Uuid'], array_column($backward['left'], 0));
@@ -316,7 +317,7 @@ class ConstraintKeywordsTest extends UnitTestCase {
     // does.
     $mail = ['constraints' => [['Email' => []], ['Length' => ['max' => 60]]]];
     $written = ConstraintKeywords::state(['Sequentially' => $mail], ['string']);
-    $this->assertSame(['allOf' => [['format' => 'idn-email'], ['maxLength' => 60]]], $written['keywords']);
+    $this->assertSame(['allOf' => [['format' => 'email'], ['maxLength' => 60]]], $written['keywords']);
     $this->assertSame([], $written['left']);
     $back = ConstraintKeywords::read($written['keywords'], ['string']);
     $pairs = array_map(static fn (ReadBack $back): array => [$back->constraint, $back->kept], $back);
@@ -333,7 +334,7 @@ class ConstraintKeywordsTest extends UnitTestCase {
     $read = ConstraintKeywords::read($list, ['array']);
     $this->assertSame(['Sequentially', 'Count', 'UniqueItems'], array_map(static fn (ReadBack $back): ?string => $back->constraint, $read));
     $this->assertTrue(ConstraintKeywords::readsFormat('uuid'));
-    $this->assertFalse(ConstraintKeywords::readsFormat('idn-email'));
+    $this->assertFalse(ConstraintKeywords::readsFormat('email'));
   }
 
 }

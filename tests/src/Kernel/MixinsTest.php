@@ -399,7 +399,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $full = $this->schema(JournalResource::class);
     $keys = ['$schema', 'x-surface', 'type', 'properties', 'unevaluatedProperties', 'required', 'allOf', '$defs'];
     $this->assertSame($keys, array_keys($full));
-    $this->assertSame(['contract' => 4, 'version' => 1, 'rules' => [2, 4, 5]], $full['x-surface'], 'Asked for in no operation: the contract and the version, and which conditionals are rules.');
+    $this->assertSame(['contract' => 5, 'version' => 1, 'rules' => [2, 4, 5]], $full['x-surface'], 'Asked for in no operation: the contract and the version, and which conditionals are rules.');
     // Each marker where the emitter's pass wrote it, as the rest reads it.
     // Decision: see docs/decisions.md#contract-2.
     $full = SchemaResolver::restored($full);

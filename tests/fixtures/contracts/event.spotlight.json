@@ -1,18 +1,18 @@
 {
     "resource": "event.spotlight",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.spotlight",
             "operation": "configure",
             "label": "Configure the spotlight",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure the spotlight",
                 "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the spotlight",

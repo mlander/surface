@@ -11,7 +11,7 @@ import journal from './fixtures/refine-journal.json';
 const contact: Schema = {
   type: 'object',
   properties: {
-    email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': { widget: 'email' } },
+    email: { title: 'Email', type: 'string', format: 'email', 'x-surface': { widget: 'email' } },
     phone: { title: 'Phone', type: ['string', 'null'], 'x-surface': { widget: 'text' } },
   },
   additionalProperties: false,
@@ -264,13 +264,13 @@ describe('a key declared with a shape', () => {
     maxLength: 12,
     pattern: '^[A-Z]{2}\\d+$',
     examples: ['AB12'],
-    'x-surface': { patternMessage: 'A stock code is two capitals and digits, such as AB12.' },
+    'x-portable-messages': { pattern: 'A stock code is two capitals and digits, such as AB12.' },
   } as Schema;
   const root: Schema = {
     type: 'object',
     properties: {
-      sku: { $ref: '#/$defs/resource_test.sku', title: 'Stock code', type: 'string', minLength: 4, 'x-surface': { ...text(), patternMessage: 'A stock code is two capitals and digits, such as AB12.' } },
-      spare: { $ref: '#/$defs/resource_test.sku', title: 'Spare code', description: 'Printed on the back.', maxLength: 6, 'x-surface': { ...text(), patternMessage: 'A stock code is two capitals and digits, such as AB12.' } },
+      sku: { $ref: '#/$defs/resource_test.sku', title: 'Stock code', type: 'string', minLength: 4, 'x-portable-messages': { pattern: 'A stock code is two capitals and digits, such as AB12.' }, 'x-surface': text() },
+      spare: { $ref: '#/$defs/resource_test.sku', title: 'Spare code', description: 'Printed on the back.', maxLength: 6, 'x-portable-messages': { pattern: 'A stock code is two capitals and digits, such as AB12.' }, 'x-surface': text() },
       tag: { title: 'Tag', $ref: '#/$defs/resource_test.shelf_tag', 'x-surface': fieldset },
     },
     required: ['sku'],
@@ -289,7 +289,8 @@ describe('a key declared with a shape', () => {
       maxLength: 12,
       pattern: '^[A-Z]{2}\\d+$',
       examples: ['AB12'],
-      'x-surface': { ...text(), patternMessage: 'A stock code is two capitals and digits, such as AB12.' },
+      'x-portable-messages': { pattern: 'A stock code is two capitals and digits, such as AB12.' },
+      'x-surface': text(),
       minLength: 4,
     });
     expect(inline.properties?.spare).toMatchObject({ title: 'Spare code', description: 'Printed on the back.', type: ['string', 'null'], maxLength: 6, pattern: '^[A-Z]{2}\\d+$' });
@@ -311,27 +312,28 @@ describe('a key declared with a shape', () => {
       expect(isPart(mount)).toBe(true);
       expect(isPart(mount.properties!.license)).toBe(false);
       expect(mount.properties?.license).toMatchObject({ title: 'Event license', type: ['string', 'null'], pattern: '^\\d{4}$' });
-      expect(mount.properties?.license['x-surface']).toMatchObject({ widget: 'text', patternMessage: 'A license number is four digits, such as 2048.' });
+      expect(mount.properties?.license['x-surface']).toMatchObject({ widget: 'text' });
+      expect(mount.properties?.license['x-portable-messages']).toEqual({ pattern: 'A license number is four digits, such as 2048.' });
     }
   });
 });
 
-describe('contract 4 on the wire', () => {
+describe('contract 5 on the wire', () => {
   const said = (widget: Extension['widget'], more: Partial<Extension> = {}): Extension => ({ widget, ...more });
 
   it('refuses a document of contract 1, which states no version, and one of any other', () => {
-    expect(CONTRACT).toBe(4);
+    expect(CONTRACT).toBe(5);
     expect(() => assertContract({ schema: { type: 'object' } })).toThrow(new ContractRefused('1'));
-    expect(() => assertContract({ schema: { type: 'object' } })).toThrow('This page reads contract 4; the server sent contract 1.');
-    expect(() => assertContract({ schema: { 'x-surface': { contract: 3 } as Extension } })).toThrow('This page reads contract 4; the server sent contract 3.');
-    expect(assertContract(example3 as unknown as { schema: Schema }).schema['x-surface']?.contract).toBe(4);
+    expect(() => assertContract({ schema: { type: 'object' } })).toThrow('This page reads contract 5; the server sent contract 1.');
+    expect(() => assertContract({ schema: { 'x-surface': { contract: 3 } as Extension } })).toThrow('This page reads contract 5; the server sent contract 3.');
+    expect(assertContract(example3 as unknown as { schema: Schema }).schema['x-surface']?.contract).toBe(5);
   });
 
   it('refuses a full schema, served bare, of any other contract', () => {
     const recorded = license as unknown as { schema: Schema };
-    expect(assertSchema(recorded.schema)['x-surface']?.contract).toBe(4);
+    expect(assertSchema(recorded.schema)['x-surface']?.contract).toBe(5);
     expect(() => assertSchema({ ...recorded.schema, 'x-surface': { ...recorded.schema['x-surface'], contract: 3 } as Extension })).toThrow(
-      'This page reads contract 4; the server sent contract 3.',
+      'This page reads contract 5; the server sent contract 3.',
     );
   });
 

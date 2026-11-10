@@ -100,7 +100,7 @@ The shape itself is written once, titled by its label:
   "type": ["string", "null"],
   "pattern": "^#[0-9A-Fa-f]{6}$",
   "examples": ["#0969DA"],
-  "x-surface": {"patternMessage": "Write the color as # and six hexadecimal digits, such as #0969DA."}
+  "x-portable-messages": {"pattern": "Write the color as # and six hexadecimal digits, such as #0969DA."}
 }
 ```
 

@@ -3,10 +3,10 @@
     "operation": "configure",
     "label": "Configure the poster",
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the poster",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "version": 1
         },
         "type": "object",
@@ -187,18 +187,17 @@
                             "null"
                         ],
                         "maxLength": 60,
-                        "x-surface": {
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "JsonSchema",
-                                    "message": "Checked on the server against the schema it was read from: not.",
-                                    "schema": {
-                                        "not": {
-                                            "const": "Untitled"
-                                        }
+                        "portable-check": {
+                            "drupal:JsonSchema": {
+                                "schema": {
+                                    "not": {
+                                        "const": "Untitled"
                                     }
                                 }
-                            ]
+                            }
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:JsonSchema": "Checked on the server against the schema it was read from: not."
                         }
                     },
                     "tags": {

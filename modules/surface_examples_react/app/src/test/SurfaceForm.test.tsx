@@ -58,11 +58,11 @@ interface Call {
   init?: RequestInit;
 }
 
-/** An answer of the API: JSON, of contract 4. */
+/** An answer of the API: JSON, of contract 5. */
 function json(body: unknown, init: { status?: number; headers?: Record<string, string> } = {}): Response {
   return new Response(JSON.stringify(body), {
     status: init.status ?? 200,
-    headers: { 'Content-Type': 'application/json', 'Contract-Version': '4', ...init.headers },
+    headers: { 'Content-Type': 'application/json', 'Contract-Version': '5', ...init.headers },
   });
 }
 
@@ -73,7 +73,7 @@ function problem(status: number, members: Record<string, unknown> = {}): Respons
   return new Response(JSON.stringify({ type: 'about:blank', title: REASONS[status], status, ...members }), {
     status,
     statusText: REASONS[status],
-    headers: { 'Content-Type': 'application/problem+json', 'Contract-Version': '4' },
+    headers: { 'Content-Type': 'application/problem+json', 'Contract-Version': '5' },
   });
 }
 
@@ -144,7 +144,7 @@ function narrowingLine(): string | null {
 
 /**
  * A mocked server: each route, `METHOD /path`, answers a document (200,
- * contract 4) or a Response of its own.
+ * contract 5) or a Response of its own.
  */
 function server(routes: Record<string, (call: Call) => unknown>) {
   const calls: Call[] = [];
@@ -722,7 +722,7 @@ describe('narrowing here, from the full schema', () => {
   });
 });
 
-describe('the contract 4 wire', () => {
+describe('the contract 5 wire', () => {
   const check: Settings = {
     ...settings,
     resource: 'event.program',
@@ -866,14 +866,14 @@ describe('the contract 4 wire', () => {
   });
 });
 
-describe('contract 4 only', () => {
+describe('contract 5 only', () => {
   /** example 2's contract as a server of contract 1 wrote it: no version stated. */
   const contractOne = (): Contract => {
     const contract = JSON.parse(JSON.stringify(example2)) as Contract;
     delete contract.schema['x-surface']?.contract;
     return contract;
   };
-  const refusalOf = (version: string) => `This page reads contract 4; the server sent contract ${version}.`;
+  const refusalOf = (version: string) => `This page reads contract 5; the server sent contract ${version}.`;
 
   it('refuses a contract of contract 1, which states no version, as the form\'s error', async () => {
     const { fetcher } = server({ [step2.read]: () => contractOne() });
@@ -898,7 +898,7 @@ describe('contract 4 only', () => {
     const answer = (version: string | null) => vi.fn(async () =>
       new Response(JSON.stringify(example2), { status: 200, headers: version === null ? {} : { 'Content-Type': 'application/json', 'Contract-Version': version } }));
     await expect(createApi(settings, answer('3')).contract()).rejects.toThrow(refusalOf('3'));
-    await expect(createApi(settings, answer('4')).contract()).resolves.toMatchObject({ document: { resource: 'registration.step2', operation: 'configure' } });
+    await expect(createApi(settings, answer('5')).contract()).resolves.toMatchObject({ document: { resource: 'registration.step2', operation: 'configure' } });
     // No header is no refusal by itself: the document is read.
     await expect(createApi(settings, answer(null)).contract()).resolves.toMatchObject({ document: { resource: 'registration.step2' } });
   });
@@ -921,12 +921,12 @@ describe('contract 4 only', () => {
     expect(screen.getByLabelText(/Room/)).toHaveDisplayValue('Main hall');
   });
 
-  it('refuses a write whose contract is of contract 1, and takes a write of contract 4', async () => {
+  it('refuses a write whose contract is of contract 1, and takes a write of contract 5', async () => {
     const written = (contract: Contract) => ({ ...nothing, committed: true, changed: true, changes: ['/title'], contract });
     const one = server({ [step2.write]: () => written(contractOne()) });
     await expect(createApi(settings, one.fetcher).submit({}, [], null)).rejects.toThrow(refusalOf('1'));
-    const four = server({ [step2.write]: () => written(example2 as unknown as Contract) });
-    await expect(createApi(settings, four.fetcher).submit({}, [], null)).resolves.toMatchObject({ document: { committed: true, changes: ['title'] } });
+    const five = server({ [step2.write]: () => written(example2 as unknown as Contract) });
+    await expect(createApi(settings, five.fetcher).submit({}, [], null)).resolves.toMatchObject({ document: { committed: true, changes: ['title'] } });
   });
 });
 

@@ -142,7 +142,8 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
   public function testTheDocumentIsOpenApi31(): void {
     $document = $this->decoded();
     $this->assertSame('3.1.0', $document['openapi']);
-    $this->assertSame(ContractEmitter::DIALECT, $document['jsonSchemaDialect']);
+    $this->assertSame(OpenApiDocument::JSON_SCHEMA_DIALECT, $document['jsonSchemaDialect']);
+    $this->assertSame('https://json-schema.org/draft/2020-12/schema', $document['jsonSchemaDialect']);
     $this->assertSame((string) ContractEmitter::CONTRACT, $document['info']['version'], 'info.version is the contract version.');
     $this->assertSame('Test site: Surface API', $document['info']['title']);
     $this->assertStringContainsString('Built for no account', $document['info']['description']);

@@ -141,7 +141,7 @@ is one of them:
 | Type | JSON Schema |
 | --- | --- |
 | `string` | `type: string`; `format: date` where the key asks for the date widget |
-| `email` | `type: string`, `format: idn-email` |
+| `email` | `type: string`, `format: email` |
 | `uri` | `type: string`, `format: uri` |
 | `datetime_iso8601` | `type: string`, `format: date-time` |
 | `integer`, `timestamp` | `type: integer` |
@@ -282,7 +282,7 @@ negated class, `\d` `\w` `\s` `\b` only without the `u` modifier, and
 `$` only with the `D` modifier, which the license's pattern carries
 ([The served contract](served-contract.md#never-stricter-than-the-runtime)).
 Any other pattern is checked on the server only and named under
-`x-surface.checkedOnServer`: an email shape written
+`portable-check`: an email shape written
 `/^[^@\s]+@example\.org$/D` is, for its negated class, while
 `/^[a-z0-9._-]+@example\.org$/D` reaches both documents, and so does
 `/^\d{4}$/D`, where `/^\d{4}$/uD` does not.
@@ -1162,7 +1162,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   (`DeletableStorageInterface::exists()`, which `ConfigEntityStorage`
   answers), the build adds the stock `SurfaceUnique` to it: "A venue
   named riverside already exists.", code `taken`, named under
-  `checkedOnServer`. No resource writes a uniqueness rule of its own.
+  `portable-check`. No resource writes a uniqueness rule of its own.
 - **Drawn as core's element.** The form draws it as a `machine_name`
   element whose source is the title's element, so the browser suggests
   the name as the title is typed and a person may edit it. On an update

@@ -73,6 +73,40 @@ JSON Schema cannot say them. This one can.
   definition has no conditional, so the tool's schema stays as loose as
   the unrefined data surface.
 
+## Contract 5
+
+Since 2026-11-11 every document the module serves is a Portable Schema
+document: a dialect of JSON Schema 2020-12, with fixed rules where the
+standard leaves a choice, so a validator in PHP and one in JavaScript
+give the same verdict, and a few keywords of its own. A generic 2020-12
+validator still reads every standard keyword and ignores the rest. Two
+things contract 4 said under `x-surface` are the dialect's own keywords
+now, and nothing else moved; no path moved, so no path answers 410 for
+it (why: [decision](decisions.md#the-served-document-is-a-portable-schema-document)):
+
+| In contract 4 | In contract 5 | Why |
+| --- | --- | --- |
+| `"$schema": "https://json-schema.org/draft/2020-12/schema"` | `"$schema": "https://portable-schema.dev/v1/schema"` | The dialect's profile refuses any other `$schema` |
+| `x-surface.checkedOnServer`, a list of `{constraint, message}` (and `schema` for a JsonSchema one) | `portable-check`, a map from `drupal:<plugin id>` to its options, `{}`, or `{"schema": ...}` for `drupal:JsonSchema`; each message in `x-portable-messages` under `check.drupal:<plugin id>` | The dialect has the word for a check only the server runs, and for the message of its error |
+| `x-surface.patternMessage` | `x-portable-messages.pattern`, or `.not` for `not: {pattern}` | The dialect gives a message by the error code of the keyword it goes with |
+| `format: idn-email` | `format: email` | The profile refuses `idn-email`, whose IDNA processing differs between PHP and JavaScript; `email` is RFC 5321, ASCII only |
+| `"contract": 4`, `Contract-Version: 4` | `5` | Two keywords moved out of `x-surface` |
+
+The pipeline still validates through Typed Data, so what a write accepts
+is as before: an email address with a non-ASCII local part
+(`jöe@example.com`) is accepted by Drupal and refused by a client that
+asserts `format: email`, a known difference of the dialect
+([`format` is advisory](#never-stricter-than-the-runtime)).
+
+**What a client of contract 4 does.** It refuses a contract 5 document
+by its number, as it would misread a key whose server check moved out
+of `x-surface` as one nothing checks. The contract diff reports a
+contract 4 baseline once, "contract version 4 to 5", and re-pins it.
+
+Later contracts of the same series move more into the dialect's
+keywords: the widget hints, a reference, the variants and the marker
+`refine`.
+
 ## Contract 4
 
 A contract version is the version of the wire format both documents are
@@ -80,11 +114,12 @@ written in, distinct from a resource's `version`: it counts the changes
 to how every document is spelled, and a client refuses one it does not
 know ([Evolving a resource](evolution.md#the-contracts-own-version)).
 Both documents state it first under the top `x-surface`, `"contract":
-4`, and every answer of the API in its `Contract-Version` header.
+5`, and every answer of the API in its `Contract-Version` header.
 Contract 1 is what the module served until 2026-10-20, contract 2 until
-2026-10-22, contract 3 until 2026-10-24; this page describes contract
-4, which cut the `x-surface` keywords that said nothing or said it twice
-and kept contract 3's paths, so no path answers 410 for it
+2026-10-22, contract 3 until 2026-10-24, contract 4 until 2026-11-11;
+this page describes contract 5 ([above](#contract-5)). Contract 4 cut
+the `x-surface` keywords that said nothing or said it twice and kept
+contract 3's paths, so no path answers 410 for it
 (why: [decision](decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire)):
 
 | In contract 3 | In contract 4 | Why |
@@ -191,9 +226,9 @@ The emitter writes two documents from one data surface, by one code path.
   Its `x-surface` carries only what holds for
   any values (`contract`, `version`, `computed`, `dependsOn`,
   `enumerated`, `refine`, `deferred`, `live`, `rules`, `within`,
-  the `by` and `variants` of a key with variants, `group`, `after`,
-  `patternMessage`,
-  `checkedOnServer`); there is no `refined`, `stale`, `emptyOption` or
+  the `by` and `variants` of a key with variants, `group`, `after`),
+  and beside it `portable-check` and `x-portable-messages`; there is no
+  `refined`, `stale`, `emptyOption` or
   `chosen`, and no `values` or `stale` beside the schema. A child's
   frame is described from nothing, not from the child's defaults. Only
   the locked keys an operation knows are read, since no value changes
@@ -228,8 +263,10 @@ and the schema need not admit; the document they become, it does.
   (why: [decision](decisions.md#format-is-an-annotation)). Drupal's checks
   are not the formats': a URI with a space is accepted by the pipeline
   and refused by a client that asserts `format`. An email address is
-  `idn-email` (RFC 6531), which admits a non-ASCII local part as
-  Drupal's validator does; contract 1 said `email`, which refused one.
+  `email`, the dialect's (RFC 5321, ASCII only), which refuses a
+  non-ASCII local part Drupal's validator admits: a known difference
+  ([Contract 5](#contract-5)). Contracts 2 to 4 said `idn-email`, which
+  the dialect does not allow; contract 1 said `email`.
 - **`default` is an annotation too.** A validator that fills a missing
   key from its `default` before reading `required` (opis's
   `allowDefaults`) is not reading the schema as a standard one does;
@@ -237,7 +274,7 @@ and the schema need not admit; the document they become, it does.
 - **Where the schema cannot say a rule it stays wide.** Where a rule
   has no JSON Schema keyword, a dependency is free text or too large to
   list, or a refiner is declared runtime, the schema stays at the
-  declared width and says so (`checkedOnServer`, `refine`, `live`);
+  declared width and says so (`portable-check`, `refine`, `live`);
   the pipeline's refinement is the guard with the last word. A Regex is
   carried as `pattern` only inside the subset PHP and a JavaScript
   engine read alike: literals, ranges in a class that is not negated,
@@ -245,7 +282,7 @@ and the schema need not admit; the document they become, it does.
   alternation and groups, `^`, and `$` only with the `D` modifier, which
   every pattern ending in `$` needs
   (why: [decision](decisions.md#a-pattern-both-engines-read-alike)). Anything
-  else carries no `pattern` and is named under `checkedOnServer`: the
+  else carries no `pattern` and is named under `portable-check`: the
   fourth newcomer's email shape, `/^[^@\s]+@example\.org$/D`, is checked
   on the server only, for its negated class, where
   `/^[a-z0-9._-]+@example\.org$/D` is carried, and `/^\d{4}$/uD` is
@@ -299,7 +336,7 @@ trusted for a key, and what to do about the rest
 | `deferred` | Static, and left out for its size: a list the site decides with more entries than `site_list_limit`, open here, its `fetch` naming the full schema with one entry stated. | Fetch per choice, `GET .../schema?choose=<pointer>=<value>`, and cache the answer until the site's list changes (its `ETag`, its cache tags); or ask the narrowing with values; or send the values and be refused by name. |
 | `refine` | Static, but not writable: a coded refiner over a value with no list (a number, free text), or more combinations than `ENUMERATION_CAP`. | Ask the narrowing with values, `POST .../schema` or the `:schema` tool, when a key it depends on changes. |
 | `live` | Runtime: a rule no schema states (a lookup, uniqueness, the account, the time), or an access answer only the subject settles. | Ask the narrowing per request; never cache its answer. |
-| `checkedOnServer` | A constraint only the server checks, named with what it checks. | Send, or rehearse with `?dryRun=true`, and read the refusal. |
+| `portable-check` | A constraint only the server checks, named beside `x-surface` with what it checks (`x-portable-messages`). | Send, or rehearse with `?dryRun=true`, and read the refusal. |
 
 Example 2's full schema, abbreviated:
 
@@ -326,7 +363,7 @@ Example 2's full schema, abbreviated:
 | `resource` | The resource's id, the one on its `#[Resource]` (or a structure's, on its `#[Structure]`). |
 | `operation` | The operation's id, or `null` for a resource or structure asked for in no operation. |
 | `label` | The operation's label. |
-| `schema` | JSON Schema 2020-12 for the inputs, `x-surface` on every property, and at the top how the operation behaves, `x-surface.operation` ([below](#the-schema)). |
+| `schema` | A Portable Schema document for the inputs (a dialect of JSON Schema 2020-12, [Contract 5](#contract-5)), `x-surface` on every property, and at the top how the operation behaves, `x-surface.operation` ([below](#the-schema)). |
 | `values` | The values the schema describes now: what storage holds over the declared defaults (which carry an operation's starting values and known identity), with any in-progress answers over that. Every key is present. A secret is `null` (masked: read as the key left out); a stale value is `null`, its path in `stale`. |
 | `stale` | The JSON Pointers shown on the empty option in place of a stored value (dotted paths until contract 3). |
 | `outputs` | The output schema, when the resource or structure declares outputs. |
@@ -421,7 +458,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | The declaration says | The schema says |
 | --- | --- |
 | label, description | `title`, `description`, as plain text: a placeholder's escaping decoded, a line break a new line, every other tag stripped; the form keeps the markup (why: [decision](decisions.md#a-machine-document-carries-plain-text)) |
-| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: idn-email` / `uri` for those types, `date` for a string drawn as a date, advisory); an optional key also allows `null`, which clears it (a secret does not, nor a key its storage always holds, one a fully validatable config schema does not mark `nullable: true`; why: [decision](decisions.md#a-key-its-storage-always-holds)) |
+| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: email` / `uri` for those types, `date` for a string drawn as a date, advisory); an optional key also allows `null`, which clears it (a secret does not, nor a key its storage always holds, one a fully validatable config schema does not mark `nullable: true`; why: [decision](decisions.md#a-key-its-storage-always-holds)) |
 | `setRequired(TRUE)` | the key in `required`: present and not null, nothing about size. The contract's `values` always carry every key, so presence is never the question. |
 | a declared default, examples | `default`, `examples` |
 | `Range`, on an integer or a number | `minimum`, `maximum`, always numbers (core's timestamp field holds its bounds as strings); a bound that is no number, or one read from another property, is also left to the server |
@@ -429,17 +466,17 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `Count`, on an array | `minItems`, `maxItems`; `exactly` as both, equal, where neither `min` nor `max` is given |
 | `UniqueItems`, on an array | `uniqueItems: true`, after every other keyword |
 | `Regex`, on a string | `pattern` (`not: {pattern}` for `match: false`), carried only when its body stays inside the subset both engines read alike and its modifiers are `u` and `D`; otherwise left to the server (why: [decision](decisions.md#a-pattern-both-engines-read-alike)) |
-| `Email`, on a string | `format: idn-email`, advisory |
+| `Email`, on a string | `format: email`, advisory |
 | `NotBlank`, on a string | `minLength: 1`, the larger of it and a `Length`'s `min` |
 | `Uuid`, on a string | `format: uuid`, advisory |
 | `Sequentially`, `AtLeastOneOf` | `allOf`, `anyOf` of its parts, each stated as the constraint alone would be; when any part is not, the composite is left to the server (why: [decision](decisions.md#a-composite-is-its-parts)) |
-| one of the constraints above on a type it does not apply to, or with options its keywords cannot state | left to the server, under `x-surface.checkedOnServer`, whole or in part ([below](#what-the-keywords-leave-to-the-server); why: [decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)) |
+| one of the constraints above on a type it does not apply to, or with options its keywords cannot state | left to the server, under `portable-check`, whole or in part ([below](#what-the-keywords-leave-to-the-server); why: [decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)) |
 | any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. A `Choice` the `oneOf` does not state is left to the server ([below](#what-the-keywords-leave-to-the-server)). An optional key that may be cleared adds an untitled `{const: null}` (not one its storage always holds), and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | an anonymous map, `addMap()` | inline, as a map's: `type: object`, its properties, `additionalProperties: false`, and no def; a structure it holds a reference to that structure's def ([An anonymous map](declaring-a-resource.md#an-anonymous-map)) |
 | a key with variants | `anyOf` of a reference to each variant's def, and `{"type": "null"}` where it may be cleared, no `type` beside it; each variant stated exactly by a conditional on the parent ([below](#variants-are-conditionals)) |
-| a key that refers to an entity, its id with `SurfaceValidReference` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `surface.settings:reference_list_limit`, and `SurfaceValidReference` under `checkedOnServer`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
+| a key that refers to an entity, its id with `SurfaceValidReference` | its id's type, `x-surface.reference`, the candidates as `oneOf` up to `surface.settings:reference_list_limit`, and `drupal:SurfaceValidReference` under `portable-check`; past the limit no `oneOf`, `x-surface.widget: autocomplete` ([Options](options.md#a-key-that-refers-to-an-entity)) |
 | a reference to any entity type, a structure of `entity_type` and `id` | a reference to its def, `{entity_type, id}`: the entity types as `oneOf`, the id a string marked `reference: {by: "entity_type"}`, `enumerated`, its candidates per entity type one conditional on the def |
 | a deciding key that holds a value and whose variants offer one value, or a key its operation's context fixes to one (fixing makes it hold a value) | `const` of that value, no `oneOf`, the value's label under `x-surface.fixed`; a list the key declares itself, or a stored value no longer offered, is stated as any list (why: [decision](decisions.md#an-extension-is-a-variant-the-site-adds-or-an-alter), [a route that fixes a key](decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for)) |
 | a structure mixed in, `mixIn()` | a reference to its def in the frame's `allOf`, beside the frame's own `properties` (each member in its place: `true`, what differs, or `false`), the frame closed with `unevaluatedProperties: false` ([below](#a-mixed-in-structure-is-composed)) |
@@ -451,12 +488,12 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a key under a runtime access answer, in the full schema | there and writable, as the static answers leave it, with `x-surface.live`: it may be locked or left out once the subject is known; the schema for these answers says which, and marks nothing ([Static and runtime access](resources.md#static-and-runtime-access)) |
 | a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` (why: [decision](decisions.md#a-secret-is-optional-never-nullable)) |
 | a key a refiner answers [does not apply](refinement.md#when-a-key-does-not-apply) for these values | no property, not in `required`, not in `values`; the frame's own `x-surface.doesNotApply` names it with what it depends on. In the full schema, `false` under each conditional that rules it out, and `required` under each where it applies and is required (why: [decision](decisions.md#a-key-that-does-not-apply)) |
-| any other constraint | named in `x-surface.checkedOnServer` with what it checks: the schema is not the whole story, ask with `?dryRun=true`; not one whose resolver says its list is the whole of it (`exact: TRUE`), which is the `oneOf` ([Options](options.md#writing-a-resolver)) |
+| any other constraint | named in `portable-check` with what it checks (`x-portable-messages`): the schema is not the whole story, ask with `?dryRun=true`; not one whose resolver says its list is the whole of it (`exact: TRUE`), which is the `oneOf` ([Options](options.md#writing-a-resolver)) |
 
 ### What the keywords leave to the server
 
 A constraint the keywords state in part is written as far as they go and
-named under `x-surface.checkedOnServer` besides; one they do not state
+named under `portable-check` besides; one they do not state
 at all is only named there. Each row of the table of constraints and
 keywords (`Contract\ConstraintKeywords`) says which; this list is
 written from them by hand, and [Reading a schema](reading-a-schema.md)
@@ -473,18 +510,31 @@ refers to it.
 | `Uuid` with `strict: false` or `normalizer` | no |
 | `Uuid` with `versions` | in part: `format: uuid` |
 | `Uuid` or `Email` on a key whose type writes another `format` (a string drawn as a date), or both on one key | the one the type or the table's order writes first; the other no |
-| `Regex` with `normalizer`, or a pattern outside the subset both engines read alike | no; its message is still `x-surface.patternMessage` |
+| `Regex` with `normalizer`, or a pattern outside the subset both engines read alike | no; with no `pattern` to give it under, its message is the check's, `check.drupal:Regex` |
 | `Regex` whose message names the value (`%value`, `@value`, `{{ value }}`) | the pattern; the message is not said |
 | `Sequentially`, `AtLeastOneOf` with any part not stated whole | no |
 | `Choice` with `match: false` | no: it refuses its values, so no `oneOf`, no form options, no list in a refusal |
 | `Choice` from a callback (`AllowedValues`) | no |
 | `Choice` on a list definition, or with `multiple` (its `min` and `max` count an array) | no |
 
+### The dialect's own keywords
+
+Beside the standard keywords, on the node they are about and before its
+`x-surface`, a document carries three keywords of the dialect. They are
+standard keywords of the dialect: they stay where they are written,
+below an applicator too, where `x-surface` moves to `within`.
+
+| Keyword | Holds |
+| --- | --- |
+| `$schema` | At the top only, first: `https://portable-schema.dev/v1/schema`, the dialect. |
+| `portable-check` | The constraints no keyword states, which only the server checks: a map from `drupal:` and the constraint's plugin id to its options, an empty object, since the document says which plugin checks and not how it is configured: `{"drupal:SurfaceUnique": {}}`. A JsonSchema constraint, what a structure read from a schema kept of it, carries the schema, `{"drupal:JsonSchema": {"schema": {"contains": {"const": "news"}}}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). In the order the key declares them; a constraint named twice is one check. |
+| `x-portable-messages` | A message per error code, plain text, each one not empty. A Regex's own message first, under the code of the keyword it goes with, `pattern`, or `not` for a pattern the value must not match: how a person is told what the pattern allows, which a renderer says in place of the pattern. Then what each check checks, under `check.` and its name: the constraint's own `reason` where it was given one (the stock `SurfaceUnique`'s), else its own `message` (a Regex's), else its plugin's label, else the id: `{"check.drupal:SurfaceUnique": "Refused when a venue named this already exists."}`. |
+
 ### `x-surface`
 
 | Keyword | Holds |
 | --- | --- |
-| `contract` | At the top always, first: the version of the wire format the document is written in, `4` ([Contract 4](#contract-4)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
+| `contract` | At the top always, first: the version of the wire format the document is written in, `5` ([Contract 5](#contract-5)), which the `Contract-Version` header of every answer of the API says too. A client refuses a version it does not know ([Evolving a resource](evolution.md#the-contracts-own-version)). |
 | `widget` | Only when the caller asks for widget hints (the HTTP door does). The Form API-equivalent hint, the widget's choice ([the widget mapping](#the-widget-mapping)): a module's widget that claims the key, by its plugin ID ([Widgets](widgets.md#a-module-serves-a-widget-to-every-key-of-a-kind)), or a stock word, `select`, `radios`, `checkboxes`, `checkbox`, `number`, `text`, `textarea`, `email`, `time`, `date`, `fieldset`, `variants` (a key with variants; `slot` in contract 1), `list` (a list of free values, and a collection), `fixed` (a deciding key whose variants offer one value, or a key its operation's context fixes to one, drawn as its label), `autocomplete` (a key that refers to an entity and lists no candidates, past the limit, and a bare reference's id, which is a select once its entity type's conditional lists them); `null` when no widget would claim the key. |
 | `dependsOn` | Only where it names one: the sibling keys this key's refiners watch, in its own frame; a key an alter mounted, which only that alter may watch, by its dotted path in that frame (`third_party_settings.<module>.<key>`); a port the frame reads, by the port's name. A client refines when one of them changes. |
 | `refined` | Only when `true`, in the schema for these answers: the key is narrowed right now, compared with what the resource or structure advertises in this operation. |
@@ -498,8 +548,6 @@ refers to it.
 | `computed` | On a computed key, in both documents, beside `readOnly: true`: the keys it is computed from and when, `{"from": ["label"], "when": "create"}`, `create` for once, while storage holds nothing for it, `change` for again on every write that changes one of them. Nobody types it: a client shows it, narrows with `POST .../schema` when a key in `from` changes, which answers the value it would compute, and leaves it out of a write; a value sent equal to what it holds is noted, code `computed`, and any other refused. Additive in contract 3 (why: [decision](decisions.md#a-computed-key-is-a-pure-function-of-its-sources)). `unless_sent`, with no `readOnly`, for a key computed as `create` computes it only when a write leaves it out or sends it empty: a client shows the narrowing's value as a suggestion, sends it once the person typed over it, and a value sent is kept (why: [decision](decisions.md#a-machine-name-is-a-computed-identity)). |
 | `group` | Only when `true`, on `third_party_settings`: the object only groups one object per contributing module, each that module's fieldset, so it has no `title` or `description` and a renderer draws nothing around them, as the form does. |
 | `after` | On a module's object inside a `group`, when its alter placed it (`describe(..., after:)`): draw this fieldset after the named property of the object that contains its group. Only where it is drawn: its properties stay in the group, where its values are sent, and the schema's order and nesting do not move. |
-| `checkedOnServer` | Constraints no keyword states, each `{constraint, message}`: the constraint's plugin id, and what it checks, the constraint's own `reason` where it was given one (the stock `SurfaceUnique`'s), else its own `message` (a Regex's), else its plugin's label, else the id: `[{"constraint": "SurfaceUnique", "message": "Refused when a venue named this already exists."}]`. A list of plugin ids in contract 1. A `JsonSchema` entry, what a structure read from a schema kept of it, carries the schema beside its message, `{"constraint": "JsonSchema", "message": "Checked on the server against the schema it was read from: contains.", "schema": {"contains": {"const": "news"}}}`; on an object (the top, a def) it is what that schema says of the object as a whole ([Reading a schema](reading-a-schema.md#what-is-kept)). |
-| `patternMessage` | On a key with a `pattern`: the Regex's own message, which is how a person is told what the pattern allows. The pattern is for machines; a renderer explains the key by this, never by the pattern. |
 | `enumerated` | Only when `true`: the key's static refiners have nothing to refine against yet, and what they answer for every value they could be handed is stated as conditionals on the parent ([below](#exact-where-it-can-be)). Captured exactly: the schema is exact for this key with no round trip, less what `live` adds. |
 | `refine` | Only when `true` (`dynamic` in contract 1): the key's static refiners have nothing to refine against yet, and what they would answer cannot be listed (a watched key with no list of values, or too many combinations). Static by declaration, not captured here: the schema is the unrefined, looser one, wider than the pipeline and never narrower (why: [decision](decisions.md#two-documents-never-stricter-than-the-runtime)); refine when a `dependsOn` key changes. In [the full schema](#two-documents) every key that cannot be listed carries it. |
 | `deferred` | On a key whose list the site decides and has more entries than the site list limit, in [the full schema](#two-documents) and in the schema for these answers while nothing is chosen: the key is an open object, variants with `by` beside it and no def per variant, or a map of keys from the site ([a list the site decides](#a-list-the-site-decides)). Static and stated, left out for its size. An object: `fetch`, an RFC 6570 template, the full schema's URL with `choose=<pointer>={value}` for the key and a `choose` for each variant on the way to it, `{value}` the deciding key's value or an entry's id, its query alone in a document no route serves, read against the full schema's URL; and, on a map of keys from the site only, `entries`, each key the map holds, `{"id": "bench_7", "label": "Bench 7"}`, in order, whose keys the schema for these answers states, and `fetch` one at a time. `refine` until 2026-10-24; `deferred: true` with `fetch` and `entries` beside it in contract 3 (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)). |
@@ -520,6 +568,10 @@ refused and a renderer offers none; why:
 [decision](decisions.md#locked-at-the-top)), `declared` (the frame's
 `rules`), `access` (`live`), `fetch` and `entries` (inside `deferred`)
 and `list` (`collection`).
+
+Moved out in contract 5 ([Contract 5](#contract-5)): `checkedOnServer`
+(`portable-check`) and `patternMessage` (`x-portable-messages`), the
+dialect's own keywords ([below](#the-dialects-own-keywords)).
 
 Removed on 2026-11-06, within contract 4, with `mixInVariants()`:
 `variantsMixedIn` (variants sit at a key, whose `by` and `variants` say
@@ -676,7 +728,7 @@ its def, so every reference is bare:
                                      "additionalProperties": false, "required": ["price", "currency"]},
   "registration.contact": {"title": "registration.contact", "type": "object",
     "properties": {
-      "email": {"title": "Email", "type": "string", "format": "idn-email"},
+      "email": {"title": "Email", "type": "string", "format": "email"},
       "phone": {"title": "Phone", "type": ["string", "null"]}},
     "additionalProperties": false, "required": ["email"]}
 }
@@ -969,15 +1021,16 @@ and its `x-surface`
 carries only what the shape checks, the message of its pattern and
 what only the server checks. Each key that
 uses it is `$ref` first, then its title, then only what it says
-differently from the def, and its whole `x-surface`. Example 4's
+differently from the def, what it checks and says (`portable-check`,
+`x-portable-messages`), and its whole `x-surface`. Example 4's
 compliance structure, in its def:
 
 ```json
 "license": {
   "$ref": "#/$defs/event.license",
   "title": "Event license",
-  "x-surface": {"widget": "text",
-                "patternMessage": "A license number is four digits, such as 2048."}
+  "x-portable-messages": {"pattern": "A license number is four digits, such as 2048."},
+  "x-surface": {"widget": "text"}
 }
 ```
 
@@ -990,7 +1043,7 @@ and the shape beside it under `$defs`:
   "type": ["string", "null"],
   "pattern": "^\\d{4}$",
   "examples": ["2048"],
-  "x-surface": {"patternMessage": "A license number is four digits, such as 2048."}
+  "x-portable-messages": {"pattern": "A license number is four digits, such as 2048."}
 }
 ```
 
@@ -1175,11 +1228,11 @@ Riverside Hall and its main hall, as `/surface-api` serves it:
   "operation": "configure",
   "label": "Configure registration (step 2)",
   "schema": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$schema": "https://portable-schema.dev/v1/schema",
     "$id": "https://example.com/surface-api/registration.step2/configure",
     "title": "Configure registration (step 2)",
     "description": "Sets the event title, whether registration is open, the venue, a room at that venue and a capacity the room can hold.",
-    "x-surface": {"contract": 3, "operation": {"id": "configure", "kind": "update", ...}, "version": 1},
+    "x-surface": {"contract": 5, "operation": {"id": "configure", "kind": "update", ...}, "version": 1},
     "type": "object",
     "properties": {
       "title": {"title": "Event title", "type": "string", "x-surface": {"widget": "text", ...}},
@@ -1858,8 +1911,12 @@ a resource from it. It is the submodule `surface_openapi`'s, on a route
 of its own, not the contributed `openapi` module's, and needs nothing
 contributed
 (why: [decision](decisions.md#an-openapi-document-is-one-more-door)).
-OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
-dialect both documents are written in. `GET /surface-api/docs` renders
+OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, of
+which both documents are written in a dialect: the document names
+2020-12 as its `jsonSchemaDialect`, for OpenAPI tools, and each
+operation's component keeps its own `$schema`, the Portable Schema
+dialect, whose keywords a tool that does not know them ignores.
+`GET /surface-api/docs` renders
 Swagger UI over it, whose "try it out" calls the API with the logged-in
 session, sending every `POST`, `PATCH` and `DELETE` with the token
 `/session/token` answers and, as `If-Match`, the last `ETag` it saw

@@ -4,12 +4,12 @@
     "operation": "configure",
     "label": "Configure the spotlight",
     "schema": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -323,12 +323,12 @@
     "notes": []
   },
   "full": {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$schema": "https://portable-schema.dev/v1/schema",
     "$id": "/surface-api/event.spotlight/schema",
     "title": "Configure the spotlight",
     "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
     "x-surface": {
-      "contract": 4,
+      "contract": 5,
       "operation": {
         "id": "configure",
         "label": "Configure the spotlight",
@@ -410,12 +410,12 @@
   },
   "chosen": {
     "choose=/props=surface_examples%3Ahero": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight/schema?choose=/props=surface_examples:hero",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -587,12 +587,12 @@
       }
     },
     "choose=/props=surface_examples%3Ahero&choose=/slots=surface_examples%3Ahero": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight/schema?choose=/props=surface_examples:hero&choose=/slots=surface_examples:hero",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -1119,12 +1119,12 @@
       }
     },
     "choose=/props=surface_examples%3Acard": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight/schema?choose=/props=surface_examples:card",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -1302,12 +1302,12 @@
       }
     },
     "choose=/props=surface_examples%3Acard&choose=/slots=surface_examples%3Acard": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "$schema": "https://portable-schema.dev/v1/schema",
       "$id": "/surface-api/event.spotlight/schema?choose=/props=surface_examples:card&choose=/slots=surface_examples:card",
       "title": "Configure the spotlight",
       "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
       "x-surface": {
-        "contract": 4,
+        "contract": 5,
         "operation": {
           "id": "configure",
           "label": "Configure the spotlight",
@@ -1589,12 +1589,12 @@
       "operation": "configure",
       "label": "Configure the spotlight",
       "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "$id": "/surface-api/event.spotlight",
         "title": "Configure the spotlight",
         "description": "Sets the component the event home page spotlights, chosen from the components the site has, and the props it is drawn with.",
         "x-surface": {
-          "contract": 4,
+          "contract": 5,
           "operation": {
             "id": "configure",
             "label": "Configure the spotlight",

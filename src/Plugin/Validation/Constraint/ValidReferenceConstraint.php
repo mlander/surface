@@ -23,7 +23,7 @@ use Symfony\Component\Validator\Attribute\HasNamedArguments;
  *
  * The options resolver beside it reads it as the candidates while there
  * are few enough to list; past that, the key takes any id and this
- * validator decides, which both documents name under `checkedOnServer`.
+ * validator decides, which both documents name under `portable-check`.
  *
  * @see \Drupal\surface\Reference\References
  * @see \Drupal\surface\Plugin\SurfaceOptionsResolver\ReferenceOptions

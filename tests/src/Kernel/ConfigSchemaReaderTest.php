@@ -628,10 +628,11 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $schema = $this->container->get('surface.contract_emitter')->emitFull($built, $name)->document['schema'];
     $back = $this->readBack($schema, $name, 'surface', 'configure', NULL, NULL, []);
     // The langcode's Choice takes its values from a callback, which no
-    // resolver reads: named under checkedOnServer, which a reader cannot
+    // resolver reads: named under portable-check, which a reader cannot
     // read back (the `server` kind). The rest reads back to itself.
-    $this->assertSame([['constraint' => 'Choice', 'message' => 'Choice']], $schema['properties']['langcode'][ContractEmitter::EXTENSION]['checkedOnServer']);
-    unset($schema['properties']['langcode'][ContractEmitter::EXTENSION]);
+    $this->assertEquals(['drupal:Choice' => new \stdClass()], $schema['properties']['langcode']['portable-check']);
+    $this->assertSame(['check.drupal:Choice' => 'Choice'], $schema['properties']['langcode']['x-portable-messages']);
+    unset($schema['properties']['langcode']['portable-check'], $schema['properties']['langcode']['x-portable-messages'], $schema['properties']['langcode'][ContractEmitter::EXTENSION]);
     $this->assertSame('differs', $back['verdict'], (string) ($back['error'] ?? ''));
     $this->assertSame($schema, $back['again']);
   }

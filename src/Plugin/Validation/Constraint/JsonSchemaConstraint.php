@@ -23,7 +23,7 @@ use Symfony\Component\Validator\Constraint as SymfonyConstraint;
  * a document outside the schema is never fetched: a value it would decide
  * is refused, naming the reference.
  *
- * Both documents name it under `x-surface.checkedOnServer`, with the
+ * Both documents name it under `portable-check`, with the
  * keywords it checks and the schema itself, so a reader of a document
  * reads it back as the same constraint.
  *

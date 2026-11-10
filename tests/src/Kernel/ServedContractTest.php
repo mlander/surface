@@ -23,7 +23,8 @@ use Drupal\surface_resource_test\Resource\Pantry\PantryResource;
 use Drupal\node\Entity\NodeType;
 use Drupal\Tests\surface\Traits\ContractValidationTrait;
 use Drupal\Tests\user\Traits\UserCreationTrait;
-use Opis\JsonSchema\CompliantValidator;
+use PortableSchema\Registry;
+use PortableSchema\Validator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
@@ -38,14 +39,11 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * conditional on the deciding key, the locked machine name, and the
  * x-surface reading of each key, widget hints included where the React
  * renderer asks for them and left out otherwise. Every schema is then
- * held to two
- * validators already in the site's vendor directory: opis/json-schema,
- * which compiles it under draft 2020-12 and validates the contract's own
- * values against it (and refuses values the pipeline refuses), and the
- * draft-07 meta-schema justinrainbow/json-schema ships, against which the
- * schema document itself is checked: every keyword the emitter writes
- * has the same shape in both drafts, and no 2020-12 meta-schema is
- * vendored.
+ * held to two validators: opis/json-schema, which compiles it under draft
+ * 2020-12 and validates the contract's own values against it (and
+ * refuses values the pipeline refuses), and Portable Schema's own
+ * registry and validator, which load the schema document itself against
+ * the dialect's meta-schema and profile and refuse one outside them.
  */
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
@@ -187,17 +185,44 @@ class ServedContractTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Holds a schema document to the vendored draft-07 meta-schema.
+   * Gives each check's options as an object, at any depth.
+   *
+   * @param array $schema
+   *   A schema decoded with maps as arrays.
+   *
+   * @return array
+   *   The same, each `portable-check` value an object.
+   */
+  protected static function checksAsObjects(array $schema): array {
+    foreach ($schema as $keyword => $value) {
+      if ($keyword === 'portable-check' && is_array($value)) {
+        $schema[$keyword] = array_map(static fn (mixed $options): mixed => is_array($options) ? (object) $options : $options, $value);
+      }
+      elseif (is_array($value) && !in_array($keyword, ['const', 'default', 'examples', 'enum'], TRUE)) {
+        $schema[$keyword] = static::checksAsObjects($value);
+      }
+    }
+    return $schema;
+  }
+
+  /**
+   * Holds a schema document to the dialect's meta-schema and profile.
+   *
+   * Registry::add() refuses an id or an embedded `$id` or `$schema` the
+   * profile does not allow, and the Validator loads every schema of the
+   * registry against the meta-schema and the profile, throwing for one
+   * outside them.
    *
    * @param array $schema
    *   The schema.
    */
   protected function assertWellFormed(array $schema): void {
-    $meta = DRUPAL_ROOT . '/../vendor/justinrainbow/json-schema/dist/schema/json-schema-draft-07.json';
-    $this->assertFileExists($meta);
-    $validator = new CompliantValidator();
-    $result = $validator->validate(json_decode((string) json_encode($schema)), (string) file_get_contents($meta));
-    $this->assertTrue($result->isValid(), 'The schema is a well-formed schema document.');
+    // Decoded with maps as arrays, a check's empty options read as a list:
+    // in JSON they are an object.
+    $document = json_decode((string) json_encode(static::checksAsObjects($schema)));
+    $this->assertInstanceOf(\stdClass::class, $document);
+    $registry = Registry::withTypes()->add($document, isset($schema['$id']) ? NULL : 'surface:served-contract-test/well-formed');
+    $this->assertInstanceOf(Validator::class, new Validator($registry), 'The schema is a well-formed Portable Schema document.');
   }
 
   /**
@@ -209,7 +234,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame('configure', $contract['operation']);
     $this->assertSame('Configure registration (step 1)', $contract['label']);
     $schema = $contract['schema'];
-    $this->assertSame('https://json-schema.org/draft/2020-12/schema', $schema['$schema']);
+    $this->assertSame('https://portable-schema.dev/v1/schema', $schema['$schema']);
     $this->assertSame('object', $schema['type']);
     $this->assertFalse($schema['additionalProperties']);
     $this->assertSame(['title'], $schema['required']);
@@ -388,7 +413,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame('Contact', $contact['title']);
     $this->assertSame('fieldset', $contact['x-surface']['widget']);
     $this->assertSame(['email'], $contact['required']);
-    $this->assertSame('idn-email', $contact['properties']['email']['format']);
+    $this->assertSame('email', $contact['properties']['email']['format']);
     $this->assertSame('email', $contact['properties']['email']['x-surface']['widget']);
 
     $this->assertSame(['note' => ''], $contract['values']['ticket']);
@@ -616,7 +641,10 @@ class ServedContractTest extends SurfaceKernelTestBase {
   }
 
   /**
-   * Strips `x-surface` from a schema, at every depth.
+   * Strips `x-surface` and the dialect's two keywords, at every depth.
+   *
+   * A conditional states neither `portable-check` nor
+   * `x-portable-messages`, as it states no `x-surface`.
    *
    * @param array $schema
    *   The schema.
@@ -625,7 +653,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The schema in plain JSON Schema.
    */
   protected function plain(array $schema): array {
-    unset($schema['x-surface']);
+    unset($schema['x-surface'], $schema['portable-check'], $schema['x-portable-messages']);
     foreach ($schema as $keyword => $value) {
       if (is_array($value)) {
         $schema[$keyword] = $this->plain($value);
@@ -1094,7 +1122,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
         $this->assertSame(['title', 'type', 'properties', 'additionalProperties', 'required'], array_keys($def), $at);
         $this->assertSame('registration.contact', $def['title'], $at);
         $this->assertSame(['email', 'phone'], array_keys($def['properties']), $at);
-        $this->assertSame('idn-email', $def['properties']['email']['format'], $at);
+        $this->assertSame('email', $def['properties']['email']['format'], $at);
 
         foreach (['free', 'paid'] as $value) {
           $then = $this->conditional($schema, 'pricing', $value, 'ticket');
@@ -1411,10 +1439,8 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $this->assertArrayNotHasKey('const', $type);
     // Named with what it checks, the reason the build gives it; computed
     // from the name unless sent, and offered.
-    $this->assertContains([
-      'constraint' => 'SurfaceUnique',
-      'message' => 'Refused when a content type named this already exists.',
-    ], $type['x-surface']['checkedOnServer']);
+    $this->assertArrayHasKey('drupal:SurfaceUnique', $type['portable-check']);
+    $this->assertSame('Refused when a content type named this already exists.', $type['x-portable-messages']['check.drupal:SurfaceUnique']);
     $this->assertSame(['from' => ['name'], 'when' => 'unless_sent'], $type['x-surface']['computed']);
     $this->assertSame(['^[a-z0-9_]+$', 32], [$type['pattern'], $type['maxLength']]);
   }

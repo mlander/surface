@@ -14,7 +14,7 @@ use Symfony\Component\Validator\Constraints\Length;
  *   string, as core's timestamp field does). A bound that is no number
  *   (a date) or one read from another property (`minPropertyPath`,
  *   `maxPropertyPath`) is not stated, and the constraint is named under
- *   `checkedOnServer` besides. On an integer, `exclusiveMinimum` and
+ *   `portable-check` besides. On an integer, `exclusiveMinimum` and
  *   `exclusiveMaximum` read back as the next whole number in; on a
  *   number they are kept in the JsonSchema constraint.
  * - `Length` on a string: `minLength`, `maxLength`. Options that count
@@ -22,7 +22,7 @@ use Symfony\Component\Validator\Constraints\Length;
  *   than code points, a `charset` other than UTF-8) leave the whole
  *   constraint unstated.
  * - `Count` on an array: `minItems`, `maxItems`. `divisibleBy` is not
- *   stated, and the constraint is named under `checkedOnServer` besides.
+ *   stated, and the constraint is named under `portable-check` besides.
  *
  * `exactly` on Length and Count is written as both bounds, equal, where
  * neither `min` nor `max` is given; beside either, Symfony ignores it, and

@@ -14,6 +14,9 @@ opens which door.
   which checks what a structure read from a JSON Schema keeps of it
   ([Reading a schema](reading-a-schema.md#what-is-kept)). Composer
   installs it with the module.
+- `fago/portable-schema` (MIT, `dev-main`), the dialect every served
+  document is written in ([The served contract](served-contract.md#the-dialects-own-keywords)).
+  Composer installs it with the module.
 
 Beyond these, the base module has no dependencies and ships no
 configuration of its own.

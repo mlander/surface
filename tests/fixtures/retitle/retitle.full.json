@@ -3,11 +3,11 @@
     "operation": "retitle",
     "label": "Retitle nodes",
     "schema": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Retitle nodes",
         "description": "Rewrites the titles of one to fifty nodes in the style chosen, each node one the account may update and whose title it may edit; a new title sent is written as sent.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "retitle",
                 "label": "Retitle nodes",
@@ -93,17 +93,17 @@
                                 "title": "WHERE TO PARK ON FESTIVAL DAYS"
                             }
                         ],
+                        "portable-check": {
+                            "drupal:SurfaceValidReference": {}
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
+                        },
                         "x-surface": {
                             "widget": "select",
                             "reference": {
                                 "entityType": "node"
-                            },
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "SurfaceValidReference",
-                                    "message": "Refers to an entity the account may reference"
-                                }
-                            ]
+                            }
                         }
                     },
                     "new_title": {
@@ -127,7 +127,7 @@
         }
     },
     "outputs": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "type": "object",
         "properties": {
             "titles": {

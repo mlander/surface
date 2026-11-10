@@ -76,7 +76,7 @@ final class PropertySchema {
    * list is written; one no resolver reads a list from (AllowedValues,
    * whose values a callback gives when it validates, or a Choice with
    * `match` FALSE), one on a list definition and one with `multiple` are
-   * named under `x-surface.checkedOnServer`.
+   * named under `portable-check`.
    */
   protected const LISTED = [
     'Choice',
@@ -91,8 +91,8 @@ final class PropertySchema {
    * (ConstraintKeywords); the ones here are said otherwise. NotNull is
    * `required`. PrimitiveType, ComplexData and ValidReference are the
    * data type's own, which `type` states. The lists of values are LISTED.
-   * Anything else no keyword states is named under
-   * `x-surface.checkedOnServer`, so a client knows the schema is not the
+   * Anything else no keyword states is named under `portable-check`, so a
+   * client knows the schema is not the
    * whole story for that key, unless the resolver reading it says its
    * list is the whole of it, which is its `oneOf`
    * (SurfaceOptions::isStatedByList()).
@@ -136,17 +136,15 @@ final class PropertySchema {
    *
    * @return array{0: array, 1: array}
    *   Its title, description, `type` and keywords (`minItems`,
-   *   `maxItems`); and what goes under `x-surface` beside them: the
-   *   constraints no keyword states.
+   *   `maxItems`); and the constraints no keyword states, as
+   *   `portable-check` and their messages, which go right before its
+   *   `x-surface` (PortableKeywords::before()).
    */
   public function listKeywords(DataDefinitionInterface $definition): array {
     $schema = $this->describe($definition) + ['type' => $this->nullable('array', $definition)] + $this->keywords($definition, 'array');
-    $extras = [];
-    if (isset($schema[self::EXTENSION . '-checked'])) {
-      $extras['checkedOnServer'] = $schema[self::EXTENSION . '-checked'];
-    }
+    $checks = PortableKeywords::write($schema[self::EXTENSION . '-checked'] ?? []);
     unset($schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message']);
-    return [$schema, $extras];
+    return [$schema, $checks];
   }
 
   /**
@@ -194,7 +192,8 @@ final class PropertySchema {
    * properties are compared one by one; its conditionals keep only those
    * the def does not already state; and a property's `x-surface`, which
    * a renderer reads whole, is written whole wherever it differs, less
-   * what the document strips anyway.
+   * what the document strips anyway, with its `portable-check` and
+   * `x-portable-messages`.
    *
    * @param array $instance
    *   The instance.
@@ -208,10 +207,14 @@ final class PropertySchema {
    */
   public function narrowing(array $instance, array $def, array $transient): array {
     $narrowing = [];
+    // A property's `x-surface`, and what it names only the server checks
+    // and the messages it gives, are one: written whole where any differs.
+    $said = array_merge(PortableKeywords::KEYWORDS, [self::EXTENSION]);
+    $whole = static fn (array $schema): array => array_intersect_key($schema, array_flip(PortableKeywords::KEYWORDS)) + [self::EXTENSION => array_diff_key((array) ($schema[self::EXTENSION] ?? []), array_flip($transient))];
+    $differs = !Subschemas::same($whole($instance), $whole($def));
     foreach ($instance as $keyword => $value) {
-      if ($keyword === self::EXTENSION) {
-        $kept = array_diff_key((array) $value, array_flip($transient));
-        if (!Subschemas::same($kept, array_diff_key((array) ($def[$keyword] ?? []), array_flip($transient)))) {
+      if (in_array($keyword, $said, TRUE)) {
+        if ($differs) {
           $narrowing[$keyword] = $value;
         }
         continue;
@@ -461,14 +464,13 @@ final class PropertySchema {
       }
       $extension['computed'] = $computed->marker();
     }
-    if (isset($schema[self::EXTENSION . '-checked'])) {
-      $extension['checkedOnServer'] = $schema[self::EXTENSION . '-checked'];
-      unset($schema[self::EXTENSION . '-checked']);
-    }
-    if (isset($schema[self::EXTENSION . '-pattern-message'])) {
-      $extension['patternMessage'] = $schema[self::EXTENSION . '-pattern-message'];
-      unset($schema[self::EXTENSION . '-pattern-message']);
-    }
+    // What only the server checks, and the messages, in the dialect's own
+    // keywords, after the standard ones and before `x-surface`.
+    // Decision: see
+    // docs/decisions.md#the-served-document-is-a-portable-schema-document.
+    $checks = PortableKeywords::write($schema[self::EXTENSION . '-checked'] ?? [], $schema[self::EXTENSION . '-pattern-message'] ?? []);
+    unset($schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message']);
+    $schema += $checks;
     $arranged = $this->arrangement($definition);
     if ($arranged !== []) {
       // A widget hint: how the key is drawn, never what it accepts.
@@ -494,10 +496,10 @@ final class PropertySchema {
    *
    * The shape is described as an optional key is, so its def allows null,
    * since whether a key may hold nothing is the key's; a required key's
-   * site says `type` without it. Of `x-surface`, only what the shape
-   * checks is kept: the message of its pattern and what only the server
-   * checks. The widget, the lock and what a key depends on are each
-   * key's.
+   * site says `type` without it. What the shape checks stays: the
+   * message of its pattern and what only the server checks
+   * (`x-portable-messages` and `portable-check`). Its `x-surface` goes:
+   * the widget, the lock and what a key depends on are each key's.
    *
    * @param array $schema
    *   The shape, described as a key.
@@ -506,11 +508,7 @@ final class PropertySchema {
    *   Its def.
    */
   protected function shapeDef(array $schema): array {
-    $extension = array_intersect_key($schema[self::EXTENSION] ?? [], array_flip(['patternMessage', 'checkedOnServer']));
     unset($schema[self::EXTENSION]);
-    if ($extension !== []) {
-      $schema[self::EXTENSION] = $extension;
-    }
     return $schema;
   }
 
@@ -521,7 +519,8 @@ final class PropertySchema {
    * left it, and each key declared with it becomes `$ref` to it first,
    * then the key's title, then what the key says differently from the
    * def (its type without null where it is required, a default, a
-   * constraint it narrows, a description of its own) and its whole
+   * constraint it narrows, a description of its own), its
+   * `portable-check` and `x-portable-messages`, and its whole
    * `x-surface`, as every property's. `$ref` first, so a reader that lays
    * the def where the reference stood lays the key over it. A key a
    * refinement or a conditional narrows is compared as written, so a
@@ -577,7 +576,9 @@ final class PropertySchema {
     $named[$key] ??= $def;
     $site = ['$ref' => ContractEmitter::DEFS . ContractEmitter::pointer($key)];
     foreach ($schema as $keyword => $value) {
-      if ($keyword === 'title' || $keyword === self::EXTENSION || !array_key_exists($keyword, $def) || !Subschemas::same($def[$keyword], $value)) {
+      // The key's own `x-surface`, and what it checks and says, stay
+      // with it, as they stood before the dialect spelled the last two.
+      if ($keyword === 'title' || $keyword === self::EXTENSION || in_array($keyword, PortableKeywords::KEYWORDS, TRUE) || !array_key_exists($keyword, $def) || !Subschemas::same($def[$keyword], $value)) {
         $site[$keyword] = $value;
       }
     }
@@ -826,7 +827,7 @@ final class PropertySchema {
    *
    * The table of constraints and keywords writes what it maps
    * (ConstraintKeywords::state()); what is left is named under
-   * `x-surface.checkedOnServer`, but for the constraints STATED names.
+   * `portable-check`, but for the constraints STATED names.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
@@ -841,9 +842,10 @@ final class PropertySchema {
    *
    * @return array
    *   The keywords; under `x-surface-pattern-message` a Regex's own
-   *   message, which property() moves into `x-surface.patternMessage`;
-   *   and under `x-surface-checked` each constraint no keyword states, as
-   *   checked(), which property() moves into `x-surface.checkedOnServer`.
+   *   message by the code of its keyword, and under `x-surface-checked`
+   *   each constraint no keyword states, as checked(), which property()
+   *   writes as `x-portable-messages` and `portable-check`
+   *   (PortableKeywords::write()).
    */
   protected function keywords(DataDefinitionInterface $definition, string|array|null $type, array $given = [], bool $listed = FALSE): array {
     $stated = ConstraintKeywords::state($definition->getConstraints(), (array) $type, $given);
@@ -870,11 +872,16 @@ final class PropertySchema {
     // A pattern is for machines; a person is told the message, in the
     // document's language: the source core's validator translates when it
     // refuses a value, read as plain text.
-    $message = $stated['extras']['patternMessage'] ?? NULL;
-    // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-    $message = is_string($message) ? $this->t($message) : $message;
-    if ($message instanceof TranslatableMarkup) {
-      $keywords[self::EXTENSION . '-pattern-message'] = PlainText::of($message);
+    $messages = [];
+    foreach ($stated['extras']['messages'] ?? [] as $code => $message) {
+      // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
+      $message = is_string($message) ? $this->t($message) : $message;
+      if ($message instanceof TranslatableMarkup) {
+        $messages[$code] = PlainText::of($message);
+      }
+    }
+    if ($messages !== []) {
+      $keywords[self::EXTENSION . '-pattern-message'] = $messages;
     }
     if ($unstated !== []) {
       $keywords[self::EXTENSION . '-checked'] = $unstated;
@@ -1094,7 +1101,7 @@ final class PropertySchema {
    * @return array
    *   The schema, its `x-surface` keywords without `widget`, `multiple`
    *   and `arrangement`, and with no `x-surface` where nothing else was
-   *   said.
+   *   said; a subschema left with nothing is `{}`, a \stdClass.
    */
   public function withoutWidgets(array $schema): array {
     foreach ($schema as $key => $value) {
@@ -1110,14 +1117,22 @@ final class PropertySchema {
         $schema[$key] = $value;
       }
       else {
-        $schema[$key] = $this->withoutWidgets($value);
+        // A schema that said nothing but its hints (the items of a list
+        // of anything) is the empty schema, an object: an empty JSON
+        // array is no schema.
+        $stripped = $this->withoutWidgets($value);
+        $schema[$key] = $stripped === [] && $value !== [] ? new \stdClass() : $stripped;
       }
     }
     return $schema;
   }
 
   /**
-   * Strips the extension keywords from a schema, at every depth.
+   * Strips what a schema says beside what a value must hold, at every depth.
+   *
+   * `x-surface`, and the dialect's `portable-check` and
+   * `x-portable-messages`: what a conditional, an output and a narrowing
+   * compared through this say only of the keys themselves.
    *
    * @param array $schema
    *   The schema.
@@ -1126,7 +1141,7 @@ final class PropertySchema {
    *   The schema in plain JSON Schema.
    */
   public function withoutExtension(array $schema): array {
-    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message'], $schema[self::SHAPED]);
+    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message'], $schema[self::SHAPED], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES]);
     foreach ($schema as $key => $value) {
       if (is_array($value)) {
         $schema[$key] = $this->withoutExtension($value);

@@ -83,7 +83,8 @@ describe('text, textarea and email', () => {
             type: 'string',
             pattern: '^\\d{4}$',
             examples: ['2048'],
-            'x-surface': x('text', { patternMessage: message }),
+            'x-portable-messages': { pattern: message },
+            'x-surface': x('text'),
           },
         })}
         initial={{ license: 'EV-2048' }}
@@ -116,7 +117,7 @@ describe('text, textarea and email', () => {
     render(
       <Form
         schema={object({
-          email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': x('email') },
+          email: { title: 'Email', type: 'string', format: 'email', 'x-surface': x('email') },
           token: { title: 'Token', type: ['string', 'null'], writeOnly: true, 'x-surface': x('text') },
         })}
         initial={{ email: 'events@example.com', token: null }}
@@ -447,7 +448,7 @@ describe('fieldset, variants and list', () => {
   it('renders a fieldset with its legend and its properties', () => {
     render(
       <Form
-        schema={object({ contact: { title: 'Contact', type: 'object', required: ['email'], properties: { email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': x('email') } }, 'x-surface': x('fieldset') } })}
+        schema={object({ contact: { title: 'Contact', type: 'object', required: ['email'], properties: { email: { title: 'Email', type: 'string', format: 'email', 'x-surface': x('email') } }, 'x-surface': x('fieldset') } })}
         initial={{ contact: { email: 'events@example.com' } }}
       />,
     );
@@ -698,9 +699,13 @@ describe('the contract panel', () => {
           handle: {
             title: 'Handle',
             type: 'string',
-            'x-surface': x('text', { checkedOnServer: [{ constraint: 'UniqueHandle', message: 'No other account uses this handle.' }] }),
+            'portable-check': { 'drupal:UniqueHandle': {} },
+            'x-portable-messages': { 'check.drupal:UniqueHandle': 'No other account uses this handle.' },
+            'x-surface': x('text'),
           },
           email: { title: 'Email', type: 'string', format: 'idn-email', 'x-surface': x('email') },
+          mail: { title: 'Mail', type: 'string', format: 'email', 'x-surface': x('email') },
+          tag: { title: 'Tag', type: 'string', 'portable-check': { 'drupal:UniqueTag': {} }, 'x-surface': x('text') },
         })}
         values={{}}
       />,
@@ -709,6 +714,8 @@ describe('the contract panel', () => {
     expect(handle.textContent).toContain('checked on the server: No other account uses this handle.');
     expect(handle.textContent).not.toContain('UniqueHandle');
     expect(document.querySelector('tr[surface-key="email"]')?.textContent).toContain('an email address');
+    expect(document.querySelector('tr[surface-key="mail"]')?.textContent).toContain('an email address');
+    expect(document.querySelector('tr[surface-key="tag"]')?.textContent).toContain('checked on the server: drupal:UniqueTag');
   });
 
   it('explains a Regex by its message, and only a Regex without one by its pattern, in code', () => {
@@ -722,7 +729,7 @@ describe('the contract panel', () => {
           stale: [],
           values: {},
           schema: object({
-            license: { title: 'Event license', type: 'string', pattern: '^\\d{4}$', 'x-surface': x('text', { patternMessage: message }) },
+            license: { title: 'Event license', type: 'string', pattern: '^\\d{4}$', 'x-portable-messages': { pattern: message }, 'x-surface': x('text') },
             code: { title: 'Code', type: 'string', pattern: '^[a-z]+$', 'x-surface': x('text') },
           }),
         }}
@@ -974,6 +981,20 @@ describe("a module's widget the page has no field for", () => {
     expect(within(screen.getByLabelText('Venue')).getByRole('option', { name: 'Old Library' })).toBeInTheDocument();
     expect(screen.getByLabelText('Open')).toBeChecked();
     expect(screen.getByText('Not editable here: no widget claims this key.')).toBeInTheDocument();
+  });
+
+  it('draws an email input for an email address, by the format either contract spells it with', () => {
+    render(
+      <Form
+        schema={object({
+          mail: { title: 'Mail', type: 'string', format: 'email', 'x-surface': x('my_module_mail') },
+          old_mail: { title: 'Old mail', type: 'string', format: 'idn-email', 'x-surface': x('my_module_mail') },
+        })}
+        initial={{ mail: 'events@example.com', old_mail: 'events@example.com' }}
+      />,
+    );
+    expect(screen.getByLabelText('Mail')).toHaveAttribute('type', 'email');
+    expect(screen.getByLabelText('Old mail')).toHaveAttribute('type', 'email');
   });
 });
 

@@ -540,7 +540,7 @@ validator translator translates that string when it makes a violation,
 in the language of the request. So when a data surface is sealed, and
 when a shape is copied for a key, each message option written with
 `t()` is replaced by its untranslated string (`ConstraintMessages`),
-and the validator, the served contract's `x-surface.patternMessage`
+and the validator, the served contract's `x-portable-messages`
 (translated into the document's language, read as plain text) and the
 contract panel all meet that one source. Only a plain source is
 unwrapped: a message with arguments, a context or plural forms is left

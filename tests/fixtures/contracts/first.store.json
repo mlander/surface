@@ -1,18 +1,18 @@
 {
     "resource": "first.store",
     "module": "surface_examples_first",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "first.store",
             "operation": "configure",
             "label": "Configure the store location",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure the store location",
                 "description": "Sets the store location: its country, and a region of that country.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the store location",

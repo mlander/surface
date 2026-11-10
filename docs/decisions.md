@@ -645,7 +645,9 @@ one value of a type the contract states a JSON Schema type for, and one
 class says which types those are and how each is written
 (`Contract\LeafTypes`).
 
-- **Eight rows.** `string`, `email` (`format: idn-email`), `uri`
+- **Eight rows.** `string`, `email` (`format: idn-email`; `format:
+  email` since contract 5,
+  [The served document is a Portable Schema document](#the-served-document-is-a-portable-schema-document)), `uri`
   (`format: uri`), `datetime_iso8601` (`format: date-time`), `integer`
   and `timestamp` (`type: integer`), `float` (`type: number`) and
   `boolean`. A shape and a config schema type of one value
@@ -10511,6 +10513,15 @@ since [contract 2](#contract-2), which admits a non-ASCII local part
 as Drupal's validator does; it was `email`, which refused one.
 (`PropertySchema::type()`)
 
+*Superseded for `email` on 2026-11-11.* The served document is a
+Portable Schema document, whose profile allows `email` and not
+`idn-email`, so an address is `format: email` again: `format` follows
+the profile's list. Validation does not change until the pipeline
+validates through the dialect: the pipeline holds an address to
+Drupal's own check, which admits a non-ASCII local part `email`
+refuses, and the suite's validator still asserts no format
+([The served document is a Portable Schema document](#the-served-document-is-a-portable-schema-document)).
+
 ### A composite is its parts
 
 Core's two composite constraints are stated through their parts:
@@ -11203,6 +11214,142 @@ names `x-surface.deferred.entries`. (`PropertySchema::extension()`,
 `SchemaReader::droppedExtension()`, `CONTRACT` and `compacted()` in
 `app/src/contract.ts`, `ContractBaselineTest`, `SiteListBudgetTest`,
 `StaticRuntimeAccessTest`, `SchemaRoundTripTest`)
+
+### The served document is a Portable Schema document
+
+Decided 2026-11-11. Every document the module serves, both documents of
+an operation and its outputs, is a Portable Schema document: `$schema`
+is `https://portable-schema.dev/v1/schema` (`ContractEmitter::DIALECT`),
+a dialect of JSON Schema 2020-12 with a profile, fixed rules where the
+standard leaves a choice so a PHP and a JavaScript validator give one
+verdict, and a vocabulary of its own. The profile audit of the
+contract 4 baselines found two values between them and the profile:
+the root `$schema`, and `format: idn-email`. Contract 5 changes those
+and moves two facts `x-surface` said into the dialect's keywords;
+nothing else moves, and no path.
+
+- **Contract 5.** `ContractEmitter::CONTRACT` is 5, the
+  `Contract-Version` header says `5`, and so do the OpenAPI document's
+  `info.version` and the React app. A keyword moved out of `x-surface`
+  breaks a client that reads it there, so it takes a new number
+  ([Contract 4](#contract-4-fewer-keywords-nothing-new-on-the-wire),
+  the rule for keywords). One number for the series: the later slices
+  change spelling under it before it ships.
+- **`portable-check` for what only the server checks.** It was
+  `x-surface.checkedOnServer`, a list of `{constraint, message}`. It is
+  now a map from `drupal:` and the constraint plugin's id to its
+  options, an empty object, since the document says which plugin checks
+  and not how it is configured; a JsonSchema constraint keeps its
+  schema as its options, `{"schema": ...}`, so a reader reads the same
+  constraint back. Surface's own constraints are named the same way
+  (`drupal:SurfaceValidReference`): the dialect's Drupal provider maps
+  `drupal:<Name>` to the plugin `<Name>`. A constraint named twice on
+  one node is one check, its first options and its first message
+  standing; none of the baselines names one twice. A frame read from a
+  schema can hold several JsonSchema constraints (what its root left
+  over, and its own `portable-check`): they are one check, their
+  schemas held together as an `allOf`, and its message names the
+  keywords of all of them (`ContractEmitter::foreign()`), so the
+  document read back reads that one check and writes the same message.
+  On a property, a collection, a frame and a def, as `checkedOnServer`
+  was; 14 nodes of the 42 baselines carry it.
+- **`x-portable-messages` for a message.** The dialect keys a message
+  by the error code it is for. A Regex's own message is said under the
+  code of the keyword it goes with, `pattern`, or `not` for
+  `not: {pattern}`; it was `x-surface.patternMessage`. Each check's
+  message, what `checkedOnServer` carried beside the id, is said under
+  `check.drupal:<id>`, the code the dialect's validator reports the
+  check's error with. One map per node, the pattern's message first; an
+  empty message is left out. A Regex no keyword states has no code of
+  its own: its message is the check's. 38 nodes of the baselines carry
+  it.
+- **Why the dialect's and not `x-surface`'s.** Both say something a
+  validator acts on: that the document is not the whole check, and
+  what a person is told when a value fails. The dialect has the words,
+  and a client that knows the dialect and nothing of Surface reads
+  them. They are standard keywords of the dialect, so they come after
+  the standard keywords and before `x-surface` on their node, and stay
+  there below an applicator, where `x-surface` moves to `within`
+  (`DocumentHead::owning()` treats them as data and descends into
+  neither; `SchemaResolver::restored()` and the React app's
+  `restored()` move only `x-surface`, and needed no change). A key
+  declared with a shape keeps both beside its reference, as it kept its
+  whole `x-surface` (`PropertySchema::named()`), and a site's narrowing
+  writes them with its `x-surface` wherever any of the three differs
+  from the def (`PropertySchema::narrowing()`). A conditional's `then`
+  leaves them out, as it leaves out `x-surface`, and so does an
+  output's property (`PropertySchema::withoutExtension()`).
+- **What stays in `x-surface`.** Composition and placement (`ports`,
+  `reads`, `group`, `after`, `rules`, `within`, `by`, `variants`), the
+  reports for one set of values (`doesNotApply`, `refined`, `stale`,
+  `emptyOption`, `chosen`), Surface's own version and operation facts
+  (`contract`, `version`, `operation`), and the markers and hints a
+  later slice moves or keeps (`widget`, `multiple`, `arrangement`,
+  `reference`, `refine`, `live`, `enumerated`, `deferred`, `computed`,
+  `fixed`, `collection`, `dependsOn`). Composition and ownership are
+  Surface's: the dialect is a value with no author, and the alter and
+  extend rules stay in this module.
+- **An email address is `format: email`.** The profile refuses
+  `idn-email`, whose IDNA processing differs between PHP and
+  JavaScript. `email` is RFC 5321, ASCII only, so a client that asserts
+  formats refuses `jöe@example.com`, which Drupal's validator accepts: a
+  known difference the dialect names (`docs/drupal.md` of the
+  `fago/portable-schema` package, section "Known differences"). The
+  pipeline still validates through Typed
+  Data, so what a write accepts is as before, and the never-stricter
+  helpers leave `format` out as they did. The reader reads `email` as
+  the email leaf type, and `idn-email`, which documents before contract
+  5 wrote, the same (`LeafTypes::READ_FORMATS`).
+- **What the reader reads.** A document is a Portable Schema document
+  only where no schema below its root holds a `$id` or a `$schema`
+  (the dialect's registry refuses one), and what a structure read from
+  a schema keeps of it is served again under `portable-check`, below
+  the root. So the reader drops `$id`, `$schema`, `$anchor` and
+  `$dynamicAnchor` below the root, each with a note
+  (`SchemaReader::IDENTIFIERS`). A document contract 4 wrote is read as
+  it was checked: its `x-surface.checkedOnServer` as `portable-check`
+  and its `x-surface.patternMessage` under the code of its keyword
+  (`SchemaReader::respelled()`), as `idn-email` is read as `email`.
+- **A list of anything.** Its `items` is the empty schema `{}`, an
+  object, as the config schema document writes one; an empty JSON
+  array is no schema, and the dialect refuses it.
+- **The lint.** `ContractDiff` compares `portable-check` where it
+  compares the standard keywords: a check added narrows, one removed
+  widens, its options changed is a note; `x-portable-messages` changed
+  is a note. `$schema` stays as the lint reads it, which only a new
+  contract changes. The contract 4 baselines were reported once,
+  "contract version 4 to 5", and re-pinned with no allowance.
+- **The document as the dialect's value.** `ServedContract::schema()`
+  and `outputs()` answer a `PortableSchema\Builder\Schema`, each read
+  once with `Schema::from()` from the arrays, which stay arrays: the
+  lint, the OpenAPI components and the tool result read arrays. Every
+  pinned document, the module's 73 and the React app's 59, loads in the
+  dialect's registry and validator and writes back byte for byte from a
+  `Schema` (`PortableDocumentTest`, `PortableServedContractTest`).
+- **The dependency.** The module requires `fago/portable-schema`
+  (`dev-main`), which depends on `opis/json-schema` as the module does.
+- **OpenAPI.** The OpenAPI document names JSON Schema 2020-12 as its
+  `jsonSchemaDialect`, since OpenAPI tools read that dialect, and each
+  operation's component keeps its own `$schema`, the Portable Schema
+  dialect, whose keywords a tool that does not know them ignores. A
+  Schema Object's own `$schema` takes precedence over
+  `jsonSchemaDialect`, so that default applies to no component the
+  module writes; it stays for any schema a site adds without one.
+- **Later.** The widget hints become `x-portable-ui`; a reference
+  `portable-check` with `x-portable-links`; variants `portable-typeBy`;
+  `refine` `portable-refine`; a shape a `portable:` type; the emitter
+  builds through `Schema`, the reader reads through `Schema::from()`,
+  and the pipeline validates through the dialect's validator. Each is
+  its own change, under contract 5 until it ships.
+
+(`ContractEmitter::DIALECT`, `ContractEmitter::CONTRACT`,
+`PortableKeywords`, `PropertySchema::property()`,
+`SchemaReader::respelled()`, `SchemaReader::kept()`,
+`PropertySchema::listKeywords()`, `ContractEmitter::frame()`,
+`Keywords\RegexRow`, `Keywords\EmailRow`, `LeafTypes`,
+`ContractDiff::checks()`, `ServedContract::schema()`,
+`OpenApiDocument::JSON_SCHEMA_DIALECT`, `app/src/contract.ts`,
+`ContractBaselineTest`, `PortableDocumentTest`)
 
 ### The emitter is one walk and three writers
 

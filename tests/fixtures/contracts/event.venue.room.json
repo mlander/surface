@@ -1,16 +1,16 @@
 {
     "resource": "event.venue.room",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.venue.room",
             "operation": null,
             "label": null,
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "version": 1
                 },
                 "type": "object",
@@ -20,8 +20,8 @@
                         "type": "string",
                         "pattern": "^[a-z0-9_]+$",
                         "maxLength": 64,
-                        "x-surface": {
-                            "patternMessage": "A room id holds only lowercase letters, numbers and underscores."
+                        "x-portable-messages": {
+                            "pattern": "A room id holds only lowercase letters, numbers and underscores."
                         }
                     },
                     "label": {

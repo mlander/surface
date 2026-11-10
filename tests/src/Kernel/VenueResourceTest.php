@@ -240,7 +240,7 @@ class VenueResourceTest extends SurfaceKernelTestBase {
     $context = $resources->operation(VenueResource::class, 'list');
     $outputs = $this->container->get('surface.contract_emitter')->emitFull($resources->buildStatic(VenueResource::class, $context), 'event.venue', 'list')->document['outputs'];
     $this->assertSame([
-      '$schema' => 'https://json-schema.org/draft/2020-12/schema',
+      '$schema' => 'https://portable-schema.dev/v1/schema',
       'type' => 'object',
       'properties' => [
         'items' => [

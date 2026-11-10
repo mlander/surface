@@ -198,7 +198,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     // The strip's caption is never "Untitled", which the documents leave
     // to the server: wider than the pipeline, never stricter.
     $this->assertTrue($this->validates($full['schema'], ['layout' => 'strip', 'panels' => ['caption' => 'Untitled']]));
-    $this->assertSame(['not' => ['const' => 'Untitled']], $full['schema']['$defs']['resource_test.poster.panels.strip']['properties']['caption']['x-surface']['checkedOnServer'][0]['schema']);
+    $this->assertSame(['not' => ['const' => 'Untitled']], $full['schema']['$defs']['resource_test.poster.panels.strip']['properties']['caption']['portable-check']['drupal:JsonSchema']['schema']);
     // Its tags are unique, which the documents state.
     $this->assertFalse($this->validates($full['schema'], ['layout' => 'strip', 'panels' => ['tags' => ['a', 'a']]]));
     $this->assertTrue($full['schema']['$defs']['resource_test.poster.panels.strip']['properties']['tags']['uniqueItems']);

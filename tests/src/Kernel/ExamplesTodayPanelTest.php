@@ -203,7 +203,7 @@ class ExamplesTodayPanelTest extends SurfaceKernelTestBase {
     ], $this->comparison($today));
     $today = $this->panelsOf(2)[ExamplePanels::TODAY];
     $this->assertSame('Registration settings, example 2', $this->document($today['derived'])['title']);
-    $this->assertSame(['title, type', 'title, type, oneOf (3)'], $this->comparison($today)['venue']);
+    $this->assertSame(['title, type', 'title, type, oneOf (3), portable-check, x-portable-messages'], $this->comparison($today)['venue']);
   }
 
   /**

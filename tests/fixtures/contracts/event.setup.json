@@ -1,18 +1,18 @@
 {
     "resource": "event.setup",
     "module": "surface_examples",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "event.setup",
             "operation": "configure",
             "label": "Set up the event",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Set up the event",
                 "description": "Sets the event name, date and capacity, then the ticket price, whether sales are open and a note for buyers.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Set up the event",
@@ -42,8 +42,8 @@
                         "format": "date",
                         "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$",
                         "default": "2026-10-17",
-                        "x-surface": {
-                            "patternMessage": "Write the date as YYYY-MM-DD, such as 2026-10-17."
+                        "x-portable-messages": {
+                            "pattern": "Write the date as YYYY-MM-DD, such as 2026-10-17."
                         }
                     },
                     "capacity": {

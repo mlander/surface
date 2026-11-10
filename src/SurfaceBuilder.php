@@ -591,7 +591,7 @@ final class SurfaceBuilder {
    * than of one key (a conditional outside the vocabulary of declared
    * rules, `dependentSchemas`, `not` over the object), checked by the
    * pipeline against the frame's accepted values, and named under the
-   * frame's `x-surface.checkedOnServer` in both documents.
+   * frame's `portable-check` in both documents.
    *
    * Decision: see docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
    *

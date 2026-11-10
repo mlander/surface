@@ -63,11 +63,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
    */
   protected const MAILER_OFF = <<<'JSON'
     {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the mailer",
         "description": "Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the mailer",
@@ -84,7 +84,7 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
             "sender": {
                 "title": "Sender",
                 "type": "string",
-                "format": "idn-email",
+                "format": "email",
                 "default": "tickets@example.com"
             },
             "endpoint": {
@@ -175,11 +175,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
    */
   protected const MAILER_ON = <<<'JSON'
     {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the mailer",
         "description": "Sets who the event's mail is sent from, the mail service it is sent through, and the credential that service is called with: a key pasted here, or a key the site manages.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the mailer",
@@ -196,7 +196,7 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
             "sender": {
                 "title": "Sender",
                 "type": "string",
-                "format": "idn-email",
+                "format": "email",
                 "default": "tickets@example.com"
             },
             "endpoint": {
@@ -327,13 +327,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
                                 "title": "Webhook signing"
                             }
                         ],
-                        "x-surface": {
-                            "checkedOnServer": [
-                                {
-                                    "constraint": "ManagedKey",
-                                    "message": "Managed key"
-                                }
-                            ]
+                        "portable-check": {
+                            "drupal:ManagedKey": {}
+                        },
+                        "x-portable-messages": {
+                            "check.drupal:ManagedKey": "Managed key"
                         }
                     }
                 },
@@ -351,11 +349,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
    */
   protected const WEBHOOK_OFF = <<<'JSON'
     {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the sales webhook",
         "description": "Sets the address the event's sales are posted to, and the key each post is signed with.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sales webhook",
@@ -394,11 +392,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
    */
   protected const WEBHOOK_ON = <<<'JSON'
     {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$schema": "https://portable-schema.dev/v1/schema",
         "title": "Configure the sales webhook",
         "description": "Sets the address the event's sales are posted to, and the key each post is signed with.",
         "x-surface": {
-            "contract": 4,
+            "contract": 5,
             "operation": {
                 "id": "configure",
                 "label": "Configure the sales webhook",
@@ -465,13 +463,11 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
                                         "const": null
                                     }
                                 ],
-                                "x-surface": {
-                                    "checkedOnServer": [
-                                        {
-                                            "constraint": "ManagedKey",
-                                            "message": "Managed key"
-                                        }
-                                    ]
+                                "portable-check": {
+                                    "drupal:ManagedKey": {}
+                                },
+                                "x-portable-messages": {
+                                    "check.drupal:ManagedKey": "Managed key"
                                 }
                             }
                         },

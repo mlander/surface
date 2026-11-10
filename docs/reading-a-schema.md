@@ -55,7 +55,7 @@ the emitter wrote reads back as what it was written from
 | --- | --- |
 | a property | a key; `title` its label, `description` its description (a property with no title has no label) |
 | `type` `string`, `integer`, `number`, `boolean` | the data type `string`, `integer`, `float`, `boolean`: the type table the emitter writes from (`Contract\LeafTypes`), read backwards, so every value a declaration holds is written with a `type` and read back to it ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)) |
-| `format` `idn-email` or `email`, `uri`, `date-time` | the data type `email`, `uri`, `datetime_iso8601`; `email` is written back as `idn-email`, which Drupal's validator holds to |
+| `format` `email` or `idn-email`, `uri`, `date-time` | the data type `email`, `uri`, `datetime_iso8601`; `idn-email`, which documents before contract 5 wrote, is written back as `email`, the dialect's ([Contract 5](served-contract.md#contract-5)) |
 | `format` `date`, `time` | a `Regex` of RFC 3339's date or full time (none beside a `pattern`, which is the rule); a `date` is drawn as a date input |
 | `format` `uuid` | a `Uuid` constraint, written back as `format: uuid`; core's check is strict and refuses the nil UUID, which the format allows ([decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)) |
 | `format` on a type other than string | dropped, with no note: an annotation, which checks nothing |
@@ -73,7 +73,7 @@ the emitter wrote reads back as what it was written from
 | `minLength`, `maxLength` on a string | `Length`, `min` and `max`; two equal bounds as `min` and `max`, not `exactly`; `minLength: 1` as `Length`, not `NotBlank` |
 | `minItems`, `maxItems` on an array | `Count`, `min` and `max`; on a collection, its bounds, a bound that is no whole number noted and not read |
 | `uniqueItems: true` on an array | `UniqueItems`; `false` is what an array says without it, and reads as nothing |
-| `pattern` on a string | a `Regex`, when it is inside the subset PHP and an ECMA engine read alike: the body, delimited, with `D` and, for a character outside ASCII, `u` (why: [decision](decisions.md#a-pattern-both-engines-read-alike)); `x-surface.patternMessage` its message; outside the subset, kept |
+| `pattern` on a string | a `Regex`, when it is inside the subset PHP and an ECMA engine read alike: the body, delimited, with `D` and, for a character outside ASCII, `u` (why: [decision](decisions.md#a-pattern-both-engines-read-alike)); `x-portable-messages.pattern` its message; outside the subset, kept |
 | `not: {pattern}` on a string | a `Regex` that must not match; beside a `pattern`, both are kept, since a definition holds one `Regex`; beside a `format` read as a `Regex` (`date`, `time`), the format's pattern is kept as a `pattern` |
 | `allOf`, `anyOf` of parts each one constraint of the table | `Sequentially`, `AtLeastOneOf` of them (why: [decision](decisions.md#a-composite-is-its-parts)); otherwise kept |
 | any of these on a type it does not say anything of (`minLength` on an integer) | kept ([below](#what-is-kept)) |
@@ -108,11 +108,28 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | `reads` | the wiring of a child's ports, where the wired key is a key of the object holding the child |
 | `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
 | `collection` | a collection (`list` in contract 3) |
-| `patternMessage` | the `Regex`'s message |
 | `widget` `radios`, `time`, `date`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
 | `group`, `after` | a map that only groups, a map placed after a key |
-| `checkedOnServer` of a `JsonSchema` constraint | that constraint, from the schema beside its message; with keywords the value keeps besides, one constraint, the `allOf` of both. Any other entry is noted and not read: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
 | `rules`, `within` | where the emitter moved its markers, put back first (`SchemaResolver::restored()`) |
+
+Two keywords of the dialect are read too ([The dialect's own keywords](served-contract.md#the-dialects-own-keywords)):
+
+| Keyword | Read as |
+| --- | --- |
+| `x-portable-messages` | under `pattern`, or `not` for `not: {pattern}`: the `Regex`'s message |
+| `portable-check` `drupal:JsonSchema` | that constraint, from its `schema`; with keywords the value keeps besides, one constraint, the `allOf` of both. Any other check is noted and not read: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
+
+A document contract 4 wrote said both under `x-surface`: its
+`checkedOnServer`, a list of `{constraint, message, schema}`, is read as
+`portable-check`, and its `patternMessage` as `x-portable-messages`
+under the code of the node's `pattern` or `not`
+(`SchemaReader::respelled()`), so the document is checked as it was.
+
+Below the root, `$id`, `$schema`, `$anchor` and `$dynamicAnchor` are
+dropped, each noted, wherever they stand, in a schema kept for a
+JsonSchema constraint too: what a structure keeps of a schema is served
+again under `portable-check`, below the root, where a Portable Schema
+document holds no `$id` and no `$schema`.
 
 The rest says what is true of one moment (`refined`, `stale`,
 `emptyOption`, `chosen`, `doesNotApply`), of an account or an access
@@ -146,18 +163,16 @@ from: At least one array item must match schema." A reference to another
 document is never fetched: a value it would decide is refused, naming
 the reference, code `unresolved`.
 
-Both documents name it under `checkedOnServer`, the key's or the
-frame's, with the keywords it checks and the schema itself, so a
-reader of a document reads it back as the same constraint:
+Both documents name it under `portable-check`, the key's or the
+frame's, with the schema itself, and say the keywords it checks under
+`x-portable-messages`, so a reader of a document reads it back as the
+same constraint:
 
 ```json
 "tags": {
   "title": "Tags", "type": ["array", "null"], "items": {"type": "string"},
-  "x-surface": {"checkedOnServer": [{
-    "constraint": "JsonSchema",
-    "message": "Checked on the server against the schema it was read from: contains.",
-    "schema": {"contains": {"const": "news"}}
-  }]}
+  "portable-check": {"drupal:JsonSchema": {"schema": {"contains": {"const": "news"}}}},
+  "x-portable-messages": {"check.drupal:JsonSchema": "Checked on the server against the schema it was read from: contains."}
 }
 ```
 
@@ -187,9 +202,8 @@ refused."
 
 Dropped, each noted: `$comment`, `deprecated`, `contentMediaType`,
 `contentEncoding`, `contentSchema`, `$anchor`, another vendor's `x-`
-keywords, a `default` or `examples` of a whole object, a `checkedOnServer`
-entry of a constraint other than `JsonSchema` (known by its plugin
-alone), and what a site narrows of a child (a lock its context made).
+keywords, a `default` or `examples` of a whole object, a `portable-check`
+check other than `drupal:JsonSchema` (known by its plugin alone), and what a site narrows of a child (a lock its context made).
 
 ## What is refused
 

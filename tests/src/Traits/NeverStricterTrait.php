@@ -123,7 +123,7 @@ trait NeverStricterTrait {
    * docs/decisions.md#two-documents-never-stricter-than-the-runtime: a
    * key whose narrowing the schema cannot list (`refine`), one a runtime
    * refiner narrows (`live`), a rule no keyword states
-   * (`checkedOnServer`), an advisory `format`, and a stored value kept
+   * (`portable-check`), an advisory `format`, and a stored value kept
    * stale. A refusal of the whole frame is read at the frame.
    *
    * @param array|\stdClass $schema
@@ -203,9 +203,9 @@ trait NeverStricterTrait {
    *
    * Each documents a widening: a `format` no validator asserts, a rule
    * only the server runs (`refine`, `live` for a runtime refiner or a
-   * runtime access answer, a constraint `checkedOnServer`), or a list the
-   * site decides left out for its size (`deferred`), stated open and
-   * fetched per choice.
+   * runtime access answer, a constraint named under `portable-check`), or
+   * a list the site decides left out for its size (`deferred`), stated
+   * open and fetched per choice.
    *
    * @param array $schema
    *   The object.
@@ -219,7 +219,7 @@ trait NeverStricterTrait {
       || !empty($extension['refine'])
       || !empty($extension['deferred'])
       || !empty($extension['live'])
-      || !empty($extension['checkedOnServer']);
+      || !empty($schema['portable-check']);
   }
 
   /**

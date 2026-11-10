@@ -42,9 +42,10 @@ use Symfony\Component\HttpFoundation\Request;
  * One more door onto the same contract: the HTTP door's API,
  * contract 3, for every operation that can be asked on its own
  * (ResourceCatalog::standalone(), the rule the tool deriver follows).
- * OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
- * dialect both documents are written in; 3.0 has no `$defs`, `if`/`then`,
- * `const`, type arrays or `unevaluatedProperties`.
+ * OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, of
+ * which both documents are written in a dialect, Portable Schema; 3.0 has
+ * no `$defs`, `if`/`then`, `const`, type arrays or
+ * `unevaluatedProperties`.
  *
  * - **One path item per resource path.** A singleton or a collection is
  *   `/surface-api/{resource}`, one thing `/surface-api/{resource}/{id}`,
@@ -99,6 +100,18 @@ final class OpenApiDocument {
    * The OpenAPI version written.
    */
   public const OPENAPI = '3.1.0';
+
+  /**
+   * The dialect the document names for its schema objects, for OpenAPI tools.
+   *
+   * JSON Schema 2020-12, which every OpenAPI 3.1 tool reads. Each operation's
+   * component still says its own `$schema`, the Portable Schema dialect
+   * (ContractEmitter::DIALECT), a profile of 2020-12 with keywords a tool
+   * that does not know them ignores.
+   * Decision: see
+   * docs/decisions.md#the-served-document-is-a-portable-schema-document.
+   */
+  public const JSON_SCHEMA_DIALECT = 'https://json-schema.org/draft/2020-12/schema';
 
   /**
    * The security scheme of the session cookie.
@@ -297,7 +310,7 @@ final class OpenApiDocument {
     $document = [
       'openapi' => self::OPENAPI,
       'info' => $this->info($request),
-      'jsonSchemaDialect' => ContractEmitter::DIALECT,
+      'jsonSchemaDialect' => self::JSON_SCHEMA_DIALECT,
       'servers' => [['url' => $request->getSchemeAndHttpHost()]],
       'tags' => array_values($tags),
       'paths' => $paths === [] ? new \stdClass() : $paths,
@@ -411,9 +424,9 @@ final class OpenApiDocument {
     $creates = $kind === OperationDefinition::CREATE;
     // The resource in the answers: its values, and its schema documents
     // shown by example.
-    $documents = ['schema' => static::document($components->get($schema), (string) $this->t('JSON Schema 2020-12; its example is the full schema built for no account.'))];
+    $documents = ['schema' => static::document($components->get($schema), (string) $this->t('A Portable Schema document, a dialect of JSON Schema 2020-12; its example is the full schema built for no account.'))];
     if ($outputs !== NULL) {
-      $documents['outputs'] = static::document($components->get($outputs), (string) $this->t('JSON Schema 2020-12; its example is the output schema.'));
+      $documents['outputs'] = static::document($components->get($outputs), (string) $this->t('A Portable Schema document, a dialect of JSON Schema 2020-12; its example is the output schema.'));
     }
     $contractValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a key that holds nothing is null.'));
     $resultValues = $this->shaped($schema, (string) $this->t('Values not valid against it: a run answers what it accepted.'));
@@ -1340,7 +1353,7 @@ final class OpenApiDocument {
           'resource' => ['type' => 'string'],
           'operation' => $nullable,
           'label' => $nullable,
-          'schema' => $object + $this->said($this->t('JSON Schema 2020-12 for the values, for the account that asks and these values; x-surface on every property.')),
+          'schema' => $object + $this->said($this->t('A Portable Schema document, a dialect of JSON Schema 2020-12, for the values, for the account that asks and these values; x-surface on every property.')),
           'values' => $object + $this->said($this->t('Every key: what is stored over the declared defaults; a secret and a stale value are null.')),
           'stale' => $paths + $this->said($this->t('The JSON Pointers shown on the empty option in place of a stored value.')),
           'outputs' => $object + $this->said($this->t('The output schema, when outputs are declared.')),
@@ -1361,7 +1374,7 @@ final class OpenApiDocument {
       ],
       'FullSchema' => [
         'type' => 'object',
-        'description' => (string) $this->t('The full schema itself, JSON Schema 2020-12 for any values, for the account that asks; it reads no stored value.'),
+        'description' => (string) $this->t('The full schema itself, a Portable Schema document, a dialect of JSON Schema 2020-12, for any values, for the account that asks; it reads no stored value.'),
       ],
       'NarrowRequest' => [
         'type' => 'object',

@@ -400,8 +400,8 @@ class OperationFactsTest extends SurfaceKernelTestBase {
     $this->assertArrayNotHasKey('description', $emitter->emitFull($built, 'tool_test.vault', 'configure', $vault->label, operation: $vault->facts())->document['schema']);
 
     $built = $resources->buildOperation(RegistrationStep3Resource::class, 'configure', []);
-    $this->assertSame(['contract' => 4, 'version' => 1], $emitter->emit($built, [], 'registration.step3')->document['schema']['x-surface'], 'No operation: only the contract and the version.');
-    $this->assertSame(['contract' => 4, 'version' => 1], $emitter->emitFull($built, 'registration.step3')->document['schema']['x-surface'], 'No operation: only the contract and the version.');
+    $this->assertSame(['contract' => 5, 'version' => 1], $emitter->emit($built, [], 'registration.step3')->document['schema']['x-surface'], 'No operation: only the contract and the version.');
+    $this->assertSame(['contract' => 5, 'version' => 1], $emitter->emitFull($built, 'registration.step3')->document['schema']['x-surface'], 'No operation: only the contract and the version.');
   }
 
 }

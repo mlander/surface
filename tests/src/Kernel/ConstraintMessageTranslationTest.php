@@ -17,7 +17,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  *
  * A custom message was a bare literal in a constraint's options, which
  * potx never extracts; and the served contract copied it into
- * `x-surface.patternMessage` untranslated, so a document in another
+ * the document's message for the pattern untranslated (contract 5 says it
+ * under `x-portable-messages`), so a document in another
  * language said the pattern in English while the refusal for the same
  * value was translated. A message is written with t() now, and the build
  * hands Symfony its source, the string core's validator translates.
@@ -87,7 +88,7 @@ class ConstraintMessageTranslationTest extends SurfaceKernelTestBase {
   public function testThePatternMessageIsTranslated(): void {
     $built = $this->container->get('surface.resources')->buildOperation('event.doors', 'configure');
     $emitter = $this->container->get('surface.contract_emitter');
-    $message = static fn (array $document): mixed => $document['schema']['properties']['opens']['x-surface']['patternMessage'] ?? NULL;
+    $message = static fn (array $document): mixed => $document['schema']['properties']['opens']['x-portable-messages']['pattern'] ?? NULL;
 
     $source = $message($emitter->emitFull($built, 'event.doors')->document);
     $this->assertSame(self::MESSAGE, $source);

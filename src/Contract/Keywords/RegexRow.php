@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Drupal\surface\Contract\Keywords;
 
 use Drupal\Core\StringTranslation\TranslatableMarkup;
-use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\PatternTranslation;
+use Drupal\surface\Contract\PortableKeywords;
 
 /**
  * The row for Regex: `pattern`, or `not: {pattern}`, on a string.
@@ -15,15 +15,18 @@ use Drupal\surface\Contract\PatternTranslation;
  * subset both engines read alike; `match: FALSE` is `not: {pattern}`. A
  * pattern outside the subset, or a `normalizer`, which changes the value
  * before it is matched, writes no pattern, and the constraint is named
- * under `checkedOnServer`. The message is said under
- * `x-surface.patternMessage` either way, unless it names the value it
- * refuses (core's `machine_name` says "The %value machine name is not
- * valid."), a refusal's sentence with no value to name ahead of one.
+ * under `portable-check`. The message is said under `x-portable-messages`,
+ * by the code of the keyword it goes with (`pattern`, or `not`), unless
+ * it names the value it refuses (core's `machine_name` says "The %value
+ * machine name is not valid."), a refusal's sentence with no value to
+ * name ahead of one. A pattern no keyword states has no code of its own:
+ * its message is the check's.
  *
  * Read back, the pattern is the body of a Regex, delimited by a character
  * it does not hold, with `D`, and `u` where it holds a character outside
  * ASCII, accepted only where PatternTranslation gives the same pattern
- * again; `x-surface.patternMessage` is its message. A property holding
+ * again; its message is the one `x-portable-messages` gives under the
+ * keyword's code. A property holding
  * both `pattern` and `not: {pattern}` is two Regex constraints, of which
  * a definition holds one, so the pair is kept whole in the JsonSchema
  * constraint, with a note.
@@ -72,7 +75,7 @@ final class RegexRow implements ConstraintRowInterface {
     if (is_string($message) && ($message === '' || preg_match('/%value|@value|\{\{ ?value ?\}\}/', $message) === 1)) {
       $message = NULL;
     }
-    $extras = is_string($message) || $message instanceof TranslatableMarkup ? ['patternMessage' => $message] : [];
+    $extras = (is_string($message) || $message instanceof TranslatableMarkup) && $keywords !== [] ? ['messages' => [array_key_first($keywords) => $message]] : [];
     return new Written($keywords, $extras, $pattern !== NULL);
   }
 
@@ -88,7 +91,7 @@ final class RegexRow implements ConstraintRowInterface {
     if ($has_pattern && $has_not) {
       return new ReadBack(NULL, kept: ['pattern' => $schema['pattern'], 'not' => $schema['not']], note: 'Kept as a JsonSchema constraint: a pattern and a pattern it must not match are two Regex constraints, and a definition holds one.');
     }
-    $message = $schema[ContractEmitter::EXTENSION]['patternMessage'] ?? NULL;
+    $message = PortableKeywords::message($schema, $has_pattern ? 'pattern' : 'not');
     $message = is_string($message) ? ['message' => $message] : [];
     if ($has_pattern) {
       $regex = is_string($schema['pattern']) ? static::regex($schema['pattern']) : NULL;

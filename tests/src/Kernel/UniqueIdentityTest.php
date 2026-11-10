@@ -198,12 +198,8 @@ class UniqueIdentityTest extends SurfaceKernelTestBase {
     $resources = $this->container->get('surface.resources');
     $built = $resources->build(VenueResource::class, $resources->operation(VenueResource::class, 'create'));
     $id = $this->container->get('surface.contract_emitter')->emitFull($built, 'event.venue', 'create')->document['schema']['properties']['id'];
-    $this->assertSame([
-      [
-        'constraint' => 'SurfaceUnique',
-        'message' => 'Refused when a venue named this already exists.',
-      ],
-    ], $id['x-surface']['checkedOnServer']);
+    $this->assertEquals(['drupal:SurfaceUnique' => new \stdClass()], $id['portable-check']);
+    $this->assertSame(['check.drupal:SurfaceUnique' => 'Refused when a venue named this already exists.'], $id['x-portable-messages']);
     $this->assertSame(['^[a-z0-9_]+$', 32], [$id['pattern'], $id['maxLength']]);
     $this->assertArrayNotHasKey('readOnly', $id);
   }

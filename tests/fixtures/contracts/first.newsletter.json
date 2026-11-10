@@ -1,18 +1,18 @@
 {
     "resource": "first.newsletter",
     "module": "surface_examples_first",
-    "contract": 4,
+    "contract": 5,
     "documents": [
         {
             "resource": "first.newsletter",
             "operation": "configure",
             "label": "Configure the newsletter",
             "schema": {
-                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                "$schema": "https://portable-schema.dev/v1/schema",
                 "title": "Configure the newsletter",
                 "description": "Sets who the newsletter is sent from, how often it goes out and how many recipients one send reaches.",
                 "x-surface": {
-                    "contract": 4,
+                    "contract": 5,
                     "operation": {
                         "id": "configure",
                         "label": "Configure the newsletter",
@@ -34,7 +34,7 @@
                     "sender_email": {
                         "title": "Sender email",
                         "type": "string",
-                        "format": "idn-email"
+                        "format": "email"
                     },
                     "frequency": {
                         "title": "Frequency",

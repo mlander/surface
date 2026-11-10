@@ -402,7 +402,7 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
    */
   public function testTheFullDocumentStatesEachVariantOnce(): void {
     $full = $this->schema();
-    $this->assertSame(['contract' => 4, 'version' => 1], $full['x-surface']);
+    $this->assertSame(['contract' => 5, 'version' => 1], $full['x-surface']);
     $this->assertSame(self::KEYS, array_keys($full['properties']));
     $this->assertFalse($full['additionalProperties']);
     $this->assertSame(['title', 'kind'], $full['required']);

@@ -859,12 +859,14 @@ final class Conditionals {
    *   The unrefined schema.
    *
    * @return array
-   *   The keywords that differ, without `x-surface`; empty when none do.
+   *   The keywords that differ, without `x-surface`, `portable-check` and
+   *   `x-portable-messages`, which the property itself carries; empty
+   *   when none do.
    */
   protected function narrowed(array $schema, array $base): array {
     $narrowed = [];
     foreach ($schema as $keyword => $value) {
-      if ($keyword === self::EXTENSION) {
+      if ($keyword === self::EXTENSION || in_array($keyword, PortableKeywords::KEYWORDS, TRUE)) {
         continue;
       }
       if ($keyword === 'properties' && is_array($value) && is_array($base['properties'] ?? NULL)) {

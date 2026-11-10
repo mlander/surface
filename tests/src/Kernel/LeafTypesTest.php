@@ -90,7 +90,8 @@ class LeafTypesTest extends SurfaceKernelTestBase {
       $this->assertSame($row, $written, $type);
       $this->assertSame($type === 'timestamp' ? 'integer' : $type, LeafTypes::read($row['type'], $row['format'] ?? NULL), 'Read back to its row, the first that writes it.');
     }
-    $this->assertSame('email', LeafTypes::read('string', 'email'), 'Read as Drupal\'s email, written back as idn-email.');
+    $this->assertSame('email', LeafTypes::read('string', 'email'), 'Read as Drupal\'s email.');
+    $this->assertSame('email', LeafTypes::read('string', 'idn-email'), 'Read as Drupal\'s email, as documents before contract 5 wrote it, and written back as email.');
     $this->assertSame('string', LeafTypes::read('string', 'date'), 'A format no row writes reads as the string.');
   }
 

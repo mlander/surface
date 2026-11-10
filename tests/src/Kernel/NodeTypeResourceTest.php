@@ -440,7 +440,7 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
     };
     $tags = $find(json_decode((string) json_encode($this->container->get('surface.contract_emitter')->emitFull($surface, 'node.type')->document['schema']), TRUE));
     $this->assertTrue($tags['uniqueItems'] ?? NULL);
-    $this->assertArrayNotHasKey('checkedOnServer', $tags['x-surface'] ?? []);
+    $this->assertArrayNotHasKey('portable-check', $tags);
 
     $week = [NodeTypeReviewSettings::AMOUNT => 1, NodeTypeReviewSettings::UNIT => 'weeks'];
     $result = $this->submit($surface, $storage, [

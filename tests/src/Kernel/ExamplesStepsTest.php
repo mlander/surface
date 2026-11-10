@@ -385,7 +385,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
     $panel = $form[SurfaceOperationForm::PANEL_KEY][ExamplePanels::CONTRACT];
     $this->assertSame('The schema for these answers', (string) $panel['contract']['#title']);
     $contract = json_decode((string) $panel['contract']['json']['#code'], TRUE);
-    $this->assertSame('https://json-schema.org/draft/2020-12/schema', $contract['$schema']);
+    $this->assertSame('https://portable-schema.dev/v1/schema', $contract['$schema']);
     $branches = [];
     foreach ($contract['allOf'] as $branch) {
       $this->assertSame(['pricing'], $branch['if']['required']);
