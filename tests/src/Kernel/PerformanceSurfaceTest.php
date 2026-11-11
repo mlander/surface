@@ -155,7 +155,7 @@ class PerformanceSurfaceTest extends SurfaceKernelTestBase {
     $refused = $this->configure(['max_age' => 120]);
     $this->assertFalse($refused['ok']);
     $this->assertSame(['/max_age'], array_column($refused['violations'], 'path'));
-    $this->assertSame(['no_such_choice'], array_column($refused['violations'], 'code'));
+    $this->assertSame(['enum'], array_column($refused['violations'], 'code'));
 
     $refused = $this->configure(['max_age' => NULL]);
     $this->assertFalse($refused['ok']);

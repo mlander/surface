@@ -96,11 +96,15 @@ it (why: [decision](decisions.md#the-served-document-is-a-portable-schema-docume
 | `x-surface.reference`: `{entityType, bundles?}`, or `{by: "entity_type"}` on the id of a key of any entity type | The check's options, the plugin's own, `portable-check: {"drupal:SurfaceValidReference": {"entityTypeId": "node", "bundles": ["article"]}}`, and a `lookup` link in `x-portable-links`; the bare id's link reads its entity type from its sibling (`source`) | What a key refers to is what its check holds a value to, and where to find an id is a link. Moved on 2026-11-10, under the same number (why: [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)) |
 | `x-surface.deferred: {fetch, entries?}` | `deferred: true`, or `{entries}` on a map of keys from the site, and a `choose` link in `x-portable-links`, its `href` the template `fetch` was | The fetch is a link. Moved on 2026-11-10, under the same number |
 
-The pipeline still validates through Typed Data, so what a write accepts
-is as before: an email address with a non-ASCII local part
-(`jöe@example.com`) is accepted by Drupal and refused by a client that
-asserts `format: email`, a known difference of the dialect
-([`format` is advisory](#never-stricter-than-the-runtime)).
+The pipeline holds a request's values to this document by the dialect's
+validator, so a write accepts what the document accepts: an email
+address with a non-ASCII local part (`jöe@example.com`) is refused, as
+the document's `format: email` says
+([`format` is asserted](#never-stricter-than-the-runtime)). A refusal the
+document states carries the dialect's code and its `params`
+([Codes](semantics.md#codes)), and a `datetime_iso8601` value is served
+with its offset (`Z`)
+(why: [decision](decisions.md#validation-runs-through-the-dialects-validator)).
 
 **What a client of contract 4 does.** It refuses a contract 5 document
 by its number, as it would misread a key whose server check moved out
@@ -268,15 +272,20 @@ and the schema need not admit; the document they become, it does.
   `null` does not clear it, its marker does. The contract's `values`
   carry every key, a secret as `null` because it is masked; read
   against the schema, that one `null` is the key left out.
-- **`format` is advisory.** `format` is written as JSON Schema 2020-12
-  defines it, an annotation a client may opt into asserting
-  (why: [decision](decisions.md#format-is-an-annotation)). Drupal's checks
-  are not the formats': a URI with a space is accepted by the pipeline
-  and refused by a client that asserts `format`. An email address is
-  `email`, the dialect's (RFC 5321, ASCII only), which refuses a
-  non-ASCII local part Drupal's validator admits: a known difference
-  ([Contract 5](#contract-5)). Contracts 2 to 4 said `idn-email`, which
-  the dialect does not allow; contract 1 said `email`.
+- **`format` is asserted.** The dialect asserts every `format`, and the
+  server holds a request's values to the document with the dialect's
+  validator, so the server and a client that validates refuse alike: a
+  URI needs a scheme (`https:`, `internal:`, `entity:`) and no space or
+  other character outside RFC 3986 (a host such as `例え.jp` is sent in
+  punycode, `xn--r8jz45g.jp`), a date and time an offset, an email
+  address is `email`, the dialect's
+  (RFC 5321, ASCII only), which refuses a non-ASCII local part
+  ([Contract 5](#contract-5);
+  why: [decision](decisions.md#validation-runs-through-the-dialects-validator)).
+  Until contract 5 the server checked with Typed Data, and `format` was
+  advisory (why: [decision](decisions.md#format-is-an-annotation)).
+  Contracts 2 to 4 said `idn-email`, which the dialect does not allow;
+  contract 1 said `email`.
 - **`default` is an annotation too.** A validator that fills a missing
   key from its `default` before reading `required` (opis's
   `allowDefaults`) is not reading the schema as a standard one does;
@@ -468,7 +477,7 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | The declaration says | The schema says |
 | --- | --- |
 | label, description | `title`, `description`, as plain text: a placeholder's escaping decoded, a line break a new line, every other tag stripped; the form keeps the markup (why: [decision](decisions.md#a-machine-document-carries-plain-text)) |
-| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: email` / `uri` for those types, `date` for a string drawn as a date, advisory); an optional key also allows `null`, which clears it (a secret does not, nor a key its storage always holds, one a fully validatable config schema does not mark `nullable: true`; why: [decision](decisions.md#a-key-its-storage-always-holds)) |
+| `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: email` / `uri` for those types, `date` for a string drawn as a date, asserted); an optional key also allows `null`, which clears it (a secret does not, nor a key its storage always holds, one a fully validatable config schema does not mark `nullable: true`; why: [decision](decisions.md#a-key-its-storage-always-holds)) |
 | `setRequired(TRUE)` | the key in `required`: present and not null, nothing about size. The contract's `values` always carry every key, so presence is never the question. |
 | a declared default, examples | `default`, `examples` |
 | `Range`, on an integer or a number | `minimum`, `maximum`, always numbers (core's timestamp field holds its bounds as strings); a bound that is no number, or one read from another property, is also left to the server |
@@ -476,9 +485,9 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `Count`, on an array | `minItems`, `maxItems`; `exactly` as both, equal, where neither `min` nor `max` is given |
 | `UniqueItems`, on an array | `uniqueItems: true`, after every other keyword |
 | `Regex`, on a string | `pattern` (`not: {pattern}` for `match: false`), carried only when its body stays inside the subset both engines read alike and its modifiers are `u` and `D`; otherwise left to the server (why: [decision](decisions.md#a-pattern-both-engines-read-alike)) |
-| `Email`, on a string | `format: email`, advisory |
+| `Email`, on a string | `format: email`, asserted |
 | `NotBlank`, on a string | `minLength: 1`, the larger of it and a `Length`'s `min` |
-| `Uuid`, on a string | `format: uuid`, advisory |
+| `Uuid`, on a string | `format: uuid`, asserted |
 | `Sequentially`, `AtLeastOneOf` | `allOf`, `anyOf` of its parts, each stated as the constraint alone would be; when any part is not, the composite is left to the server (why: [decision](decisions.md#a-composite-is-its-parts)) |
 | one of the constraints above on a type it does not apply to, or with options its keywords cannot state | left to the server, under `portable-check`, whole or in part ([below](#what-the-keywords-leave-to-the-server); why: [decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)) |
 | any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. A `Choice` the `oneOf` does not state is left to the server ([below](#what-the-keywords-leave-to-the-server)). An optional key that may be cleared adds an untitled `{const: null}` (not one its storage always holds), and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
@@ -1853,7 +1862,7 @@ are the module's own, each a heading below; every other status is
 #### Refused
 
 422, the values refused, nothing written: `errors` are the run's
-violations, `{path, code, message}`, and `notes` and `stale` are the
+violations, `{path, code, message, params?}`, and `notes` and `stale` are the
 result's. Example 2's harbour sent with the library's garden room:
 
 ```json
@@ -1862,7 +1871,7 @@ result's. Example 2's harbour sent with the library's garden room:
   "title": "The values were refused",
   "status": 422,
   "detail": "One value was refused; nothing was written.",
-  "errors": [{"path": "/room", "code": "no_such_choice", "message": "The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck."}],
+  "errors": [{"path": "/room", "code": "enum", "message": "The value you selected is not a valid choice. This applies when Venue is Harbour Centre. Choose Auditorium or Upper deck.", "params": {"value": "library_garden", "allowed": ["harbour_auditorium", "harbour_deck"]}}],
   "notes": [],
   "stale": []
 }

@@ -100,7 +100,7 @@ class ResultPointersTest extends SurfaceKernelTestBase {
   public function testRefusalPathIsPointerAtEveryDoor(): void {
     $sent = ['venue' => 'harbour', 'room' => 'library_garden'];
     [$tool, $message] = $this->tool('registration.step2', $sent);
-    $this->assertSame(['/room' => 'no_such_choice'], array_column($tool['violations'], 'code', 'path'));
+    $this->assertSame(['/room' => 'enum'], array_column($tool['violations'], 'code', 'path'));
     $this->assertStringContainsString("\n/room: The value you selected is not a valid choice.", $message, 'The text names the path as the result does.');
 
     $problem = $this->servedJson('PATCH', '/surface-api/registration.step2?dryRun=true', $sent);

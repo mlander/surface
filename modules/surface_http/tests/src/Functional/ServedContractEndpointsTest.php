@@ -331,7 +331,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     // JSON Pointer.
     $wrong_room = $this->problem($this->send('PATCH', $path, ['room' => 'library_garden', 'capacity' => 20] + $values), 422);
     $this->assertStringEndsWith('served-contract.md#refused', $wrong_room['type']);
-    $this->assertSame(['/room' => 'no_such_choice'], array_column($wrong_room['errors'], 'code', 'path'));
+    $this->assertSame(['/room' => 'enum'], array_column($wrong_room['errors'], 'code', 'path'));
     $this->assertSame(['type', 'title', 'status', 'detail', 'errors', 'notes', 'stale'], array_keys($wrong_room));
     // What storage rehearsed is never served: it may hold what the caller
     // may not see.

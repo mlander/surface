@@ -143,7 +143,7 @@ is one of them:
 | `string` | `type: string`; `format: date` where the key asks for the date widget |
 | `email` | `type: string`, `format: email` |
 | `uri` | `type: string`, `format: uri` |
-| `datetime_iso8601` | `type: string`, `format: date-time` |
+| `datetime_iso8601` | `type: string`, `format: date-time`; `format: date` for a key that holds a `DateOnly` constraint |
 | `integer`, `timestamp` | `type: integer` |
 | `float` | `type: number` |
 | `boolean` | `type: boolean` |
@@ -1161,7 +1161,7 @@ Each class's `use` line: [Namespaces](concepts.md#namespaces).
   storage can say whether a thing is stored under it
   (`DeletableStorageInterface::exists()`, which `ConfigEntityStorage`
   answers), the build adds the stock `SurfaceUnique` to it: "A venue
-  named riverside already exists.", code `taken`, named under
+  named riverside already exists.", code `check.drupal:SurfaceUnique.taken`, named under
   `portable-check`. No resource writes a uniqueness rule of its own.
 - **Drawn as core's element.** The form draws it as a `machine_name`
   element whose source is the title's element, so the browser suggests

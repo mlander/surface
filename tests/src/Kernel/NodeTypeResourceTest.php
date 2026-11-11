@@ -471,6 +471,8 @@ class NodeTypeResourceTest extends SurfaceKernelTestBase {
       ['third_party_settings.' . $extras . '.' . NodeTypeReviewSettings::DEADLINE . '.' . NodeTypeReviewSettings::AMOUNT],
       array_map(static fn ($violation): string => $violation->fullPath(), iterator_to_array($late->violations, FALSE)),
     );
+    // Filed where the check named it, so no `params.path` is left over.
+    $this->assertSame([NULL], array_map(static fn ($violation): mixed => $violation->params['path'] ?? NULL, iterator_to_array($late->violations, FALSE)));
   }
 
   /**

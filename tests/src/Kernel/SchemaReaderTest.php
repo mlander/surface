@@ -376,14 +376,15 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $monthly = ['frequency' => 'monthly', 'send_day' => 'mon', 'items' => 12];
     $this->assertSame(['send_day does_not_apply'], $this->refused($read, $monthly));
     $weekly = ['frequency' => 'weekly', 'send_day' => 'mon', 'items' => 8];
-    $this->assertSame(['items not_in_range'], $this->refused($read, $weekly));
+    $this->assertSame(['items maximum'], $this->refused($read, $weekly));
     $this->assertSame(['note required'], $this->refused($read, [
       'frequency' => 'weekly',
       'license' => 'L-1',
       'items' => 3,
       'send_day' => 'mon',
     ]));
-    $this->assertSame([' not_valid'], $this->refused($read, ['frequency' => 'weekly', 'items' => 3, 'send_day' => 'tue']), 'The leftover, checked on the frame.');
+    $weekly = ['frequency' => 'weekly', 'items' => 3, 'send_day' => 'tue'];
+    $this->assertSame([' check.drupal:JsonSchema.not_valid'], $this->refused($read, $weekly), 'The leftover, checked on the frame.');
 
     // Written back, each rule is the conditional it was read from.
     $full = $this->container->get('surface.contract_emitter')->emitFull($read, 'test.read')->document['schema'];
@@ -431,10 +432,10 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
 
     // And the pipeline checks them.
     $this->assertSame([], $this->refused($read, ['tags' => ['news', 'b'], 'odd' => 3, 'either' => 'x']));
-    $this->assertSame(['tags not_valid'], $this->refused($read, ['tags' => ['a', 'b']]));
-    $this->assertSame(['odd not_valid', ' not_valid'], $this->refused($read, ['odd' => 4]), 'An even number, and odd without either.');
-    $this->assertSame(['either not_valid'], $this->refused($read, ['either' => TRUE]));
-    $this->assertSame(['elsewhere unresolved'], $this->refused($read, ['elsewhere' => 'x']), 'A document outside is never fetched.');
+    $this->assertSame(['tags check.drupal:JsonSchema.not_valid'], $this->refused($read, ['tags' => ['a', 'b']]));
+    $this->assertSame(['odd check.drupal:JsonSchema.not_valid', ' check.drupal:JsonSchema.not_valid'], $this->refused($read, ['odd' => 4]), 'An even number, and odd without either.');
+    $this->assertSame(['either check.drupal:JsonSchema.not_valid'], $this->refused($read, ['either' => TRUE]));
+    $this->assertSame(['elsewhere check.drupal:JsonSchema.unresolved'], $this->refused($read, ['elsewhere' => 'x']), 'A document outside is never fetched.');
   }
 
   /**
@@ -521,7 +522,7 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame('Not starting with x.', $constraints('other')['Regex']['message']);
     $this->assertFalse($constraints('other')['Regex']['match']);
     $this->assertTrue($read->getDefinition('other')->getSetting('multiline'), 'The rest of its x-surface is read as before.');
-    $this->assertSame(['tags not_valid'], $this->refused($read, ['tags' => ['a']]));
+    $this->assertSame(['tags check.drupal:JsonSchema.not_valid'], $this->refused($read, ['tags' => ['a']]));
   }
 
   /**
@@ -618,8 +619,8 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertSame(['type', 'items', 'minItems', 'uniqueItems'], array_keys($said));
 
     $this->assertSame([], $this->refused($read, ['tags' => ['a', 'b'], 'rows' => [['n' => 1], ['n' => 2]]]));
-    $this->assertSame(['tags is_not_unique'], $this->refused($read, ['tags' => ['a', 'b', 'a']]));
-    $this->assertSame(['rows is_not_unique'], $this->refused($read, ['rows' => [['n' => 1], ['n' => 1]]]), 'Two items of a collection with the same values.');
+    $this->assertSame(['tags uniqueItems'], $this->refused($read, ['tags' => ['a', 'b', 'a']]));
+    $this->assertSame(['rows uniqueItems'], $this->refused($read, ['rows' => [['n' => 1], ['n' => 1]]]), 'Two items of a collection with the same values.');
     $this->assertSame([], $this->refused($read, ['tags' => ['1', 'a'], 'any' => ['a', 'a']]));
   }
 

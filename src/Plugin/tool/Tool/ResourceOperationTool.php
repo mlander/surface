@@ -323,13 +323,17 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
         ], TRUE) => Violation::TYPE_MISMATCH,
         default => Violation::codeOf($violation),
       };
+      $arguments = $violation->getParameters();
+      $typed = static fn (string $key, string $below): Violation => $code === Violation::TYPE_MISMATCH && is_string($arguments['@expected'] ?? NULL) && is_string($arguments['@actual'] ?? NULL)
+        ? Violation::typeMismatch($key, $below, $message, $arguments['@expected'], $arguments['@actual'])
+        : new Violation($key, $below, $message, $code);
       if ($path === OperationInputs::VALUES || str_starts_with($path, OperationInputs::VALUES . '.')) {
         [$key, $below] = array_pad(explode('.', substr($path, strlen(OperationInputs::VALUES) + 1), 2), 2, '');
-        $refused[] = new Violation($key, $below, $message, $code);
+        $refused[] = $typed($key, $below);
         continue;
       }
       // Another input than the values, by its name.
-      $refused[] = new Violation('', $path, $message, $code);
+      $refused[] = $typed('', $path);
     }
     $this->result = ExecutableResult::failure($result->getMessage(), ResultDocument::refused([], ...$refused), $result->getFailureCategory() ?? FailureCategory::Input, $result->getViolations());
     return $this;

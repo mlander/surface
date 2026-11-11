@@ -66,6 +66,13 @@ final class LeafTypes {
   ];
 
   /**
+   * The JSON Schema a `datetime_iso8601` key holding DateOnly is written with.
+   *
+   * Its value is a date alone, `Y-m-d`, which `date-time` would refuse.
+   */
+  public const DATE_ONLY = ['type' => 'string', 'format' => 'date'];
+
+  /**
    * Formats read as a type whose row writes another, by format.
    *
    * `idn-email`, which documents before contract 5 wrote for an email
@@ -129,6 +136,10 @@ final class LeafTypes {
    */
   public static function spelling(DataDefinitionInterface $definition): array {
     $type = $definition->getDataType();
+    if ($type === 'datetime_iso8601' && array_key_exists('DateOnly', $definition->getConstraints())) {
+      // A datetime that holds a date alone is a calendar date.
+      return self::DATE_ONLY;
+    }
     if (isset(self::ROWS[$type])) {
       return self::ROWS[$type];
     }

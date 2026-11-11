@@ -37,11 +37,26 @@ interface Summary {
   created: Created | null;
 }
 
-/** Files violations by path, for the fields to show inline. */
+/**
+ * The dotted path of the field a violation is about.
+ *
+ * Its own path, but for the codes the dialect files at the object and
+ * names the property of (`required`, `unknownProperty`), which are about
+ * that property. A check's refusal is filed where the check named it.
+ */
+export function fieldOf(violation: Violation): string {
+  const property = violation.params?.property;
+  if ((violation.code === 'required' || violation.code === 'unknownProperty') && typeof property === 'string') {
+    return violation.path === '' ? property : `${violation.path}.${property}`;
+  }
+  return violation.path;
+}
+
+/** Files violations by the field each is about, for the fields to show inline. */
 function byPath(violations: Violation[]): Record<string, string[]> {
   const errors: Record<string, string[]> = {};
   for (const violation of violations) {
-    (errors[violation.path] ??= []).push(violation.message);
+    (errors[fieldOf(violation)] ??= []).push(violation.message);
   }
   return errors;
 }

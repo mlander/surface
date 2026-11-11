@@ -16,6 +16,7 @@ use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\ResourceBuild\OutputsStorageInterface;
+use Drupal\surface\Validation\PortableValidator;
 
 /**
  * The one entry point from raw values to stored values.
@@ -111,15 +112,19 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    *   a person reads when a value is refused, so it is handed the
    *   service rather than letting each message reach the global
    *   container when it is finally rendered.
+   * @param \Drupal\surface\Validation\PortableValidator $validator
+   *   The validator that holds the values to the document they are served
+   *   with.
    */
   public function __construct(
     protected readonly TypedDataManagerInterface $typedDataManager,
     protected readonly SurfaceOptions $options,
     TranslationInterface $string_translation,
+    PortableValidator $validator,
   ) {
     $this->stringTranslation = $string_translation;
     $this->accepting = new Accepting($options, $string_translation);
-    $this->validating = new Validating($typedDataManager, $options, $string_translation, $this->accepting, $this);
+    $this->validating = new Validating($validator, $options, $string_translation, $this->accepting, $this);
     $this->conforming = new Conforming($typedDataManager, $string_translation);
   }
 
@@ -152,7 +157,8 @@ final class SurfacePipeline implements SurfacePipelineInterface {
       }
       $child = $entry?->childFor($values);
       $document->{$name} = match (TRUE) {
-        $entry === NULL || !is_array($value) => $value,
+        $entry === NULL => $value,
+        !is_array($value) => static::documentValue($entry->definition, $value),
         $child !== NULL => $this->document($child, $value),
         $entry->list !== NULL => array_map(fn (mixed $item): mixed => is_array($item) ? $this->document($entry->list->item->child, $item) : $item, array_values($value)),
         default => static::documentValue($entry->definition, $value),
@@ -170,11 +176,13 @@ final class SurfacePipeline implements SurfacePipelineInterface {
    *   The value.
    *
    * @return mixed
-   *   The value, each map in it an object and each list a list.
+   *   The value, each map in it an object, each list a list, and each
+   *   datetime with its offset.
    */
   protected static function documentValue(DataDefinitionInterface $definition, mixed $value): mixed {
     if (!is_array($value)) {
-      return $value;
+      // A datetime with its offset, as it is served.
+      return $definition->getDataType() === 'datetime_iso8601' ? Coercion::served($value, $definition) : $value;
     }
     if ($definition instanceof ListDataDefinitionInterface) {
       return array_map(static fn (mixed $item): mixed => static::documentValue($definition->getItemDefinition(), $item), array_values($value));

@@ -1,7 +1,13 @@
 services:
   surface.pipeline:
     class: Drupal\surface\Pipeline\SurfacePipeline
-    arguments: ['@typed_data_manager', '@surface.options', '@string_translation']
+    arguments: ['@typed_data_manager', '@surface.options', '@string_translation', '@surface.portable_validator']
+  # Holds a request's values to the document they are served with, by the
+  # dialect's validator over the site's registry; every `drupal:` check the
+  # document names runs the constraint of the place it is about.
+  surface.portable_validator:
+    class: Drupal\surface\Validation\PortableValidator
+    arguments: ['@surface.portable_registry', '@surface.contract_emitter', '@typed_data_manager', '@string_translation', '@surface.options', '@current_user']
   Drupal\surface\Pipeline\SurfacePipelineInterface: '@surface.pipeline'
   plugin.manager.surface_widget:
     class: Drupal\surface\Widget\SurfaceWidgetManager

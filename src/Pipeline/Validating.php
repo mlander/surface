@@ -11,31 +11,32 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
-use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
-use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Computed;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
-use Drupal\surface\DefinitionTypedData;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Entry;
 use Drupal\surface\Collection;
-use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraint;
-use Drupal\surface\Plugin\Validation\Constraint\JsonSchemaConstraintValidator;
-use Symfony\Component\Validator\Constraints\Choice;
+use Drupal\surface\Validation\DrupalCheckProvider;
+use Drupal\surface\Validation\Found;
+use Drupal\surface\Validation\PortableValidator;
 
 /**
  * The validate verb of the pipeline: accepted values held to the rules.
  *
- * What SurfacePipelineInterface::validate() does: each level refined
- * against its values and judged by typed data, each child, variant and
- * collection item in its own frame; each refusal filed under its key with
- * the path below it, naming what it depends on and what is allowed; a
- * key that does not apply, a key required inside a plain map, a computed
- * key held to the value computed, and the stale rule.
+ * What SurfacePipelineInterface::validate() does: the values held once
+ * to the document the data surface serves for them, by the dialect's
+ * validator (PortableValidator); then each level refined against its
+ * values, each child, variant and collection item in its own frame, its
+ * keys judged by what only the module can say (a key computed, a key that
+ * does not apply, a key required or always held while it holds no value,
+ * a key with variants and no variant), and every other key taking the
+ * validator's refusals at it and below it. Each refusal is filed under
+ * its key with the path below it, naming what it depends on and what is
+ * allowed, and held to the stale rule.
  *
  * It holds the frame of the level being validated, where that level sits
  * in the values a caller sends, so a refusal names a key by the path a
@@ -77,10 +78,26 @@ final class Validating {
   protected bool $creates = FALSE;
 
   /**
+   * What the validator refused in the last validate(), by dotted path.
+   *
+   * Each level takes what is at its keys, and what is at itself, as it
+   * walks; what no level takes is about a value the module judges itself
+   * (a key that does not apply, a key holding no value) and is not said.
+   *
+   * @var array<string, \Drupal\surface\Validation\Found[]>
+   */
+  protected array $found = [];
+
+  /**
+   * The provider of the checks of the last validate(), for its keys' maps.
+   */
+  protected ?DrupalCheckProvider $provider = NULL;
+
+  /**
    * Constructs the validate verb.
    *
-   * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
-   *   The typed data manager, used to run the data surface's constraints.
+   * @param \Drupal\surface\Validation\PortableValidator $validator
+   *   The validator that holds the values to their document.
    * @param \Drupal\surface\Options\SurfaceOptions $options
    *   The options service, asked whether a refused value is among the
    *   ones its key offers (the stale rule), and for the values a refusal
@@ -91,11 +108,10 @@ final class Validating {
    *   The accept verb, which reads a computed key's value as accepted and
    *   names the keys it is computed from.
    * @param \Drupal\surface\Pipeline\SurfacePipelineInterface $pipeline
-   *   The pipeline, whose document() a schema read into a frame is held
-   *   to.
+   *   The pipeline, whose document() the validator is handed.
    */
   public function __construct(
-    protected readonly TypedDataManagerInterface $typedDataManager,
+    protected readonly PortableValidator $validator,
     protected readonly SurfaceOptions $options,
     TranslationInterface $string_translation,
     protected readonly Accepting $accepting,
@@ -122,9 +138,22 @@ final class Validating {
    * @see \Drupal\surface\Pipeline\SurfacePipelineInterface::validate()
    */
   public function validate(SurfaceInterface $surface, array $values, array $current = [], bool $creates = FALSE): ViolationSet {
+    $was = [$this->frame, $this->creates, $this->found, $this->provider];
     $this->frame = ['', [], []];
     $this->creates = $creates;
-    return new ViolationSet($this->validateLevel($surface, $values, $current));
+    $this->found = [];
+    $this->provider = $this->validator->provider($surface, $values, $this->pipeline);
+    try {
+      // Once, over the whole document. Decision: see
+      // docs/decisions.md#validation-runs-through-the-dialects-validator.
+      foreach ($this->validator->validate($this->provider) as $found) {
+        $this->found[$found->path][] = $found;
+      }
+      return new ViolationSet($this->validateLevel($surface, $values, $current));
+    }
+    finally {
+      [$this->frame, $this->creates, $this->found, $this->provider] = $was;
+    }
   }
 
   /**
@@ -286,41 +315,36 @@ final class Validating {
         }
         continue;
       }
-      if (($definition instanceof ListDataDefinition || $definition instanceof MapDataDefinition) && is_array($value) && $definition->isRequired()) {
-        // Required means configured, and the empty list is: what all
-        // checkboxes unchecked, or every row removed, says. So is a map
-        // whose keys hold nothing, whose required keys each say so in
-        // their own words ($missing), as a child's do. Core's NotNull
-        // reads an empty list, or a map of nothing, as null, so it is not
-        // asked here; the data surface asked whether the key holds a
-        // value, above.
-        // Decision: see docs/decisions.md#required-means-must-hold-a-value.
-        $definition = (clone $definition)->setRequired(FALSE);
-      }
-      $typed_data = DefinitionTypedData::create($this->typedDataManager, $definition, $value, $name);
+      // What the validator refused at the key and below it. A required
+      // property of a map holding no value is said below, in the data
+      // surface's own words; a property ruled out is not there.
       $refusals = [];
       $choices = [];
-      foreach ($typed_data->validate() as $violation) {
-        $path = (string) $violation->getPropertyPath();
-        if (isset($missing[$path])) {
-          // Said below, in the data surface's own words.
+      $unwritten = [];
+      foreach ($this->provider === NULL ? [] : $this->validator->unwritten($this->provider, $definition, $value, $this->frame[0] . $name) as $found) {
+        $relative = $found->path === $this->frame[0] . $name ? '' : substr($found->path, strlen($this->frame[0] . $name) + 1);
+        $unwritten[] = [$relative, $found];
+      }
+      $missing_paths = array_map('strval', array_keys($missing));
+      foreach ([...$this->taken($this->frame[0] . $name, TRUE), ...$unwritten] as [$path, $found]) {
+        $subject = static::subject($path, $found);
+        if (static::under($subject, $missing_paths) || static::under($subject, $ruled_out)) {
           continue;
         }
-        // The message stays the object the constraint built. Flattening
-        // it here would render its placeholders once, as plain text, and
-        // whatever reads the violation afterwards would escape that text
-        // a second time; a form error, a tool result and a log line each
-        // render it themselves, at their own boundary. A Symfony
-        // placeholder core's translator leaves in it is filled in then.
-        if ($violation->getConstraint() instanceof Choice) {
+        if ($found->code === Violation::TYPE_MISMATCH && ($found->params['actual'] ?? NULL) === 'null' && static::holds($path, $missing_paths)) {
+          // A map holding nothing whose required keys are said below, in
+          // the data surface's own words.
+          continue;
+        }
+        if ($found->code === 'enum') {
           // A value not on a list: the refusal names the list.
           $choices[count($refusals)] = TRUE;
         }
-        $refusals[] = Violation::fromConstraint($name, $path, $violation);
+        $refusals[] = new Violation($name, $path, $found->message, $found->code, params: $found->params);
       }
       foreach ($missing as $path => $label) {
         // What a rule made required is said below, with the rest.
-        $refusals[] = new Violation($name, $path, $this->t('@label is required.', ['@label' => $label]), Violation::REQUIRED);
+        $refusals[] = new Violation($name, (string) $path, $this->t('@label is required.', ['@label' => $label]), Violation::REQUIRED);
       }
       if ($refusals !== [] && $this->isStale($definition, $value, $name, $current, $refined->getDefinitions()->dependencies($name), $values)) {
         // The whole key is reported as stale and not re-judged. What
@@ -333,19 +357,16 @@ final class Validating {
       }
       $errors = array_merge($errors, $this->sayingWhatIsAllowed($refusals, $surface, $refined, $name, $values, $choices));
     }
-    foreach ($refined->getDefinitions()->frameConstraints() as $schema) {
-      // What a schema read into this frame says of the object as a whole,
-      // which no key and no rule could say, held to the values as accepted.
-      // Decision: see
-      // docs/decisions.md#a-schema-can-be-read-back-into-a-structure.
-      $verdict = JsonSchemaConstraintValidator::verdict($this->pipeline->document($refined, $values), $schema);
-      if ($verdict === NULL) {
+    // What the validator refused of this level as a whole: a schema read
+    // into it, a check on it. Its keys' own presence is the module's to
+    // judge (required, does not apply, a variant's keys), above.
+    $keys = $surface->getDefinitions()->entries();
+    foreach ($this->taken(rtrim($this->frame[0], '.'), FALSE) as [, $found]) {
+      $property = is_string($found->params['property'] ?? NULL) ? $found->params['property'] : NULL;
+      if (in_array($found->code, [Violation::REQUIRED, 'unknownProperty'], TRUE) && $property !== NULL && isset($keys[$property])) {
         continue;
       }
-      [$code, $said] = $verdict;
-      $errors[] = $code === JsonSchemaConstraint::UNRESOLVED_ERROR
-        ? new Violation('', '', $this->t('These values cannot be checked here: the schema they were read from refers to @reference, which is outside it.', ['@reference' => $said]), Violation::UNRESOLVED)
-        : new Violation('', '', $this->t('These values do not hold to the schema they were read from: @error', ['@error' => $said]), Violation::NOT_VALID);
+      $errors[] = new Violation('', '', $found->message, $found->code, params: $found->params);
     }
     return $this->namingSources($errors, $surface, $values, $current);
   }
@@ -980,6 +1001,95 @@ final class Validating {
   }
 
   /**
+   * Takes what the validator refused at a place, so no other place says it.
+   *
+   * @param string $at
+   *   The place, as a dotted path from the top.
+   * @param bool $below
+   *   TRUE to take what is below it too.
+   *
+   * @return list<array{0: string, 1: \Drupal\surface\Validation\Found}>
+   *   Each refusal, with its dotted path below the place ('' at it).
+   */
+  protected function taken(string $at, bool $below): array {
+    $taken = [];
+    foreach ($this->found as $path => $found) {
+      $path = (string) $path;
+      if ($path !== $at && !($below && ($at === '' || str_starts_with($path, $at . '.')))) {
+        continue;
+      }
+      $relative = $path === $at ? '' : substr($path, $at === '' ? 0 : strlen($at) + 1);
+      foreach ($found as $one) {
+        $taken[] = [$relative, $one];
+      }
+      unset($this->found[$path]);
+    }
+    return $taken;
+  }
+
+  /**
+   * Reads what a refusal is about: its place, or the property it names.
+   *
+   * @param string $path
+   *   Its dotted path.
+   * @param \Drupal\surface\Validation\Found $found
+   *   The refusal.
+   *
+   * @return string
+   *   The dotted path of what it is about: for `required` and
+   *   `unknownProperty`, which the dialect files at the object, the
+   *   property it names.
+   */
+  protected static function subject(string $path, Found $found): string {
+    $property = $found->params['property'] ?? NULL;
+    $named = [Violation::REQUIRED, 'unknownProperty', 'propertyNames', 'dependentRequired'];
+    if (!is_string($property) || !in_array($found->code, $named, TRUE)) {
+      return $path;
+    }
+    return $path === '' ? $property : $path . '.' . $property;
+  }
+
+  /**
+   * Answers whether one of some dotted paths is below a dotted path.
+   *
+   * @param string $path
+   *   The path; '' for the key itself.
+   * @param string[] $paths
+   *   The paths.
+   *
+   * @return bool
+   *   TRUE when one is.
+   */
+  protected static function holds(string $path, array $paths): bool {
+    foreach ($paths as $one) {
+      if ($path === '' ? $one !== '' : str_starts_with($one, $path . '.')) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
+   * Answers whether a dotted path is at or below one of some paths.
+   *
+   * @param string $path
+   *   The path.
+   * @param string[] $paths
+   *   The paths.
+   *
+   * @return bool
+   *   TRUE when it is.
+   */
+  protected static function under(string $path, array $paths): bool {
+    foreach ($paths as $one) {
+      if ($path === $one || str_starts_with($path, $one . '.')) {
+        return TRUE;
+      }
+    }
+    return FALSE;
+  }
+
+  /**
    * Finds the definition at a key, or at a property path inside it.
    *
    * A port is read as the container's key it is wired to. A delta below
@@ -1080,10 +1190,10 @@ final class Validating {
     $name = $entry->name;
     if (!is_array($value)) {
       return [
-        new Violation($name, '', $this->t('This value must be of type @expected, @actual given.', [
+        Violation::typeMismatch($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'map',
           '@actual' => get_debug_type($value),
-        ]), Violation::TYPE_MISMATCH),
+        ]), 'map', get_debug_type($value), !DefinitionMetadata::holdsValue($entry->definition) && !DefinitionMetadata::isSecret($entry->definition)),
       ];
     }
     $errors = [];
@@ -1103,6 +1213,20 @@ final class Validating {
       // Judged as the variant would judge it on its own: the keys it
       // declares, and nothing it does not.
       $value = array_diff_key($value, array_flip($strangers));
+      $at = $this->frame[0] . $name;
+      foreach ($this->found[$at] ?? [] as $index => $found) {
+        if ($found->code === 'unknownProperty' && in_array($found->params['property'] ?? NULL, $strangers, TRUE)) {
+          unset($this->found[$at][$index]);
+        }
+      }
+      foreach ($strangers as $stranger) {
+        // Said above; what is inside a key sent for another variant is not.
+        foreach (array_keys($this->found) as $path) {
+          if ($path === $at . '.' . $stranger || str_starts_with((string) $path, $at . '.' . $stranger . '.')) {
+            unset($this->found[$path]);
+          }
+        }
+      }
     }
     foreach ($this->validateFramed($child, $value, is_array($current) ? $current : [], $name, $reads, $level) as $violation) {
       $errors[] = $violation->at($name, $violation->fullPath());
@@ -1141,32 +1265,27 @@ final class Validating {
     $name = $entry->name;
     if (!is_array($value)) {
       return [
-        new Violation($name, '', $this->t('This value must be of type @expected, @actual given.', [
+        Violation::typeMismatch($name, '', $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'list',
           '@actual' => get_debug_type($value),
-        ]), Violation::TYPE_MISMATCH),
+        ]), 'list', get_debug_type($value), !DefinitionMetadata::holdsValue($entry->definition) && !DefinitionMetadata::isSecret($entry->definition)),
       ];
     }
     $items = array_values($value);
     // The list's own rules, apart from its items, which the child judges:
-    // a list of anything, carrying the list's constraints.
-    $own = ListDataDefinition::create('any');
-    $own->setLabel($entry->definition->getLabel());
-    foreach ($entry->definition->getConstraints() as $constraint => $options) {
-      $own->addConstraint((string) $constraint, $options);
-    }
+    // what the validator refused of the list itself.
     $errors = [];
-    foreach (DefinitionTypedData::create($this->typedDataManager, $own, $items, $name)->validate() as $violation) {
-      $errors[] = Violation::fromConstraint($name, (string) $violation->getPropertyPath(), $violation);
+    foreach ($this->taken($this->frame[0] . $name, FALSE) as [, $found]) {
+      $errors[] = new Violation($name, '', $found->message, $found->code, params: $found->params);
     }
     $stored = is_array($current) ? array_values($current) : [];
     $child = $list->child();
     foreach ($items as $delta => $item) {
       if (!is_array($item)) {
-        $errors[] = new Violation($name, (string) $delta, $this->t('This value must be of type @expected, @actual given.', [
+        $errors[] = Violation::typeMismatch($name, (string) $delta, $this->t('This value must be of type @expected, @actual given.', [
           '@expected' => 'map',
           '@actual' => get_debug_type($item),
-        ]), Violation::TYPE_MISMATCH);
+        ]), 'map', get_debug_type($item));
         continue;
       }
       $held = is_array($stored[$delta] ?? NULL) ? $stored[$delta] : [];

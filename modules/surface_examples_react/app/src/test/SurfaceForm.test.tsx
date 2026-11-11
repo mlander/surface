@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createApi, dottedToPointer, pageOf, pointerToDotted, STAGE_HEADER, startedPaths, startingValues, type Endpoints, type Settings } from '../api';
 import type { Contract, Schema } from '../contract';
 import { ContractRefused, getAt } from '../contract';
-import { outputText, SurfaceForm } from '../SurfaceForm';
+import { fieldOf, outputText, SurfaceForm } from '../SurfaceForm';
 import example2 from './fixtures/example2.json';
 import library from './fixtures/example2-library.json';
 import example3 from './fixtures/example3.json';
@@ -78,7 +78,7 @@ function problem(status: number, members: Record<string, unknown> = {}): Respons
 }
 
 /** A 422 refusal: the values as the result has them, `errors` the violations. */
-function refusal(errors: { path: string; code: string; message: string }[]): Response {
+function refusal(errors: { path: string; code: string; message: string; params?: Record<string, unknown> }[]): Response {
   return problem(422, {
     type: 'https://git.drupalcode.org/project/surface/-/blob/1.0.x/docs/served-contract.md#refused',
     title: 'The values were refused',
@@ -231,7 +231,7 @@ describe('the React form of example 2', () => {
     };
     const { calls, fetcher } = server({
       [step2.narrow]: answered,
-      [step2.write]: () => refusal([{ path: '/room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }]),
+      [step2.write]: () => refusal([{ path: '/room', code: 'enum', message: 'The value you selected is not a valid choice.', params: { value: 'harbour_deck', allowed: ['riverside_main', 'riverside_east'] } }]),
       [step2.read]: () => example2,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -267,7 +267,7 @@ describe('the React form of example 2', () => {
   it('a refused submit shows what was refused inline and in a summary', async () => {
     const { calls, fetcher } = server({
       [step2.narrow]: () => library,
-      [step2.write]: () => refusal([{ path: '/room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }]),
+      [step2.write]: () => refusal([{ path: '/room', code: 'enum', message: 'The value you selected is not a valid choice.', params: { value: 'harbour_deck', allowed: ['riverside_main', 'riverside_east'] } }]),
       [step2.read]: () => example2,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -354,7 +354,7 @@ describe('submitting example 2', () => {
 
   it('shows a 422 problem as refused values, inline and in a summary', async () => {
     const { fetcher } = server({
-      [step2.write]: () => refusal([{ path: '/room', code: 'no_such_choice', message: 'The value you selected is not a valid choice.' }]),
+      [step2.write]: () => refusal([{ path: '/room', code: 'enum', message: 'The value you selected is not a valid choice.', params: { value: 'harbour_deck', allowed: ['riverside_main', 'riverside_east'] } }]),
       [step2.read]: loaded,
     });
     render(<SurfaceForm settings={settings} fetcher={fetcher} refineDelay={0} />);
@@ -393,7 +393,7 @@ describe('submitting example 2', () => {
 
   it('sends no If-Match when the page turns the fingerprint off', async () => {
     const { calls, fetcher } = server({
-      [step2.write]: () => refusal([{ path: '/room', code: 'no_such_choice', message: 'No.' }]),
+      [step2.write]: () => refusal([{ path: '/room', code: 'enum', message: 'No.' }]),
       [step2.read]: loaded,
     });
     render(<SurfaceForm settings={{ ...settings, sendFingerprint: false }} fetcher={fetcher} refineDelay={0} />);
@@ -411,6 +411,16 @@ describe('submitting example 2', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Submit' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('The server answered 500 Internal Server Error: The database went away.');
     expect(screen.queryByRole('status')).toBeNull();
+  });
+});
+
+describe('the field a violation is about', () => {
+  it('is its path, or the property a dialect code at the object names', () => {
+    expect(fieldOf({ path: 'room', code: 'enum', message: 'No.', params: { value: 'x', allowed: [] } })).toBe('room');
+    expect(fieldOf({ path: 'contact', code: 'required', message: 'Email is required.', params: { property: 'email' } })).toBe('contact.email');
+    expect(fieldOf({ path: '', code: 'unknownProperty', message: 'Unknown key fax.', params: { property: 'fax' } })).toBe('fax');
+    expect(fieldOf({ path: 'deadline.amount', code: 'check.drupal:ReviewDeadline', message: 'Too late.', params: { amount: '45' } })).toBe('deadline.amount');
+    expect(fieldOf({ path: 'deadline', code: 'maximum', message: 'Too big.', params: { limit: 3 } })).toBe('deadline');
   });
 });
 
@@ -565,7 +575,7 @@ describe('the React form of example 3', () => {
 
   it('shows a refusal inside the contact on its email field, its pointer read as a dotted path', async () => {
     const { calls, fetcher } = server({
-      [step3.write]: () => refusal([{ path: '/contact/email', code: 'invalid_format', message: 'This value is not a valid email address.' }]),
+      [step3.write]: () => refusal([{ path: '/contact/email', code: 'format.email', message: 'This value is not a valid email address.' }]),
       [step3.read]: () => example3,
     });
     render(<SurfaceForm settings={settings3} fetcher={fetcher} refineDelay={0} />);
@@ -834,7 +844,7 @@ describe('the contract 5 wire', () => {
   });
 
   it('reads a 422, a 412 and a 403 that names what was refused as a refusal, and throws for a 403 that names nothing', async () => {
-    const errors = [{ path: '/contact/email', code: 'invalid_format', message: 'Not an email address.' }];
+    const errors = [{ path: '/contact/email', code: 'format.email', message: 'Not an email address.' }];
     const answers = [
       problem(422, { errors, notes: [{ path: '/venue', code: 'locked', message: 'Locked.' }], stale: [] }),
       problem(412, { errors: [{ path: '', code: 'conflict', message: 'Changed.' }], notes: [], stale: [] }),
@@ -849,7 +859,7 @@ describe('the contract 5 wire', () => {
         changed: false,
         changes: [],
         values: {},
-        violations: [{ path: 'contact.email', code: 'invalid_format', message: 'Not an email address.' }],
+        violations: [{ path: 'contact.email', code: 'format.email', message: 'Not an email address.' }],
         notes: [{ path: 'venue', code: 'locked', message: 'Locked.' }],
         stale: [],
         outputs: {},

@@ -166,6 +166,20 @@ door and cut the `x-surface` keywords that said nothing or said it twice
 `deferred`, `list`), and writes every keyword only where it says
 something (why: [decision](decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire)).
 
+### Contract 5
+
+Contract 5 writes the documents as Portable Schema documents, and holds
+a request's values to them with the dialect's validator. So the codes of
+the violation document became the dialect's where the document
+expresses the rule (`maxLength` for `too_long`, `enum` for
+`no_such_choice`, `type` for `type_mismatch`,
+`check.drupal:SurfaceUnique.taken` for `taken`; the table is in
+[Codes](semantics.md#codes)), each entry gained `params` after its
+`message`, and a `datetime_iso8601` value is served with its offset,
+`2026-11-14T16:32:00Z`, as `format: date-time` says, where contract 4
+served `2026-11-14T16:32:00`
+(why: [decision](decisions.md#validation-runs-through-the-dialects-validator)).
+
 **What raises it.** A change to how documents are spelled or laid out
 that a client reading the old spelling would misread: a key or a marker
 renamed, moved, reshaped or removed (`surface` becoming `resource`,

@@ -12,6 +12,7 @@ use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\Sentences;
 use Drupal\surface\Pipeline\VariantMismatchException;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\OperationRoute;
@@ -206,6 +207,28 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
     $stored = $this->config('surface_resource_test.pack')->getRawData();
     $this->assertSame(['day', ['capacity' => 20, 'cover' => $cover]], [$stored['carry'], $stored['load']]);
     $this->assertStaticRefinersAgree($pack);
+  }
+
+  /**
+   * Tests the chosen variant's refusal is said, and never a bare null type.
+   *
+   * The load is an `anyOf` of each variant and null, and the carry's
+   * conditional holds it to the chosen variant: a refusal inside the
+   * variant's own def is said where it is, and the null branch the
+   * `anyOf` falls back to says nothing beside it. Were it ever said
+   * alone, it would say the value does not fit the chosen variant.
+   */
+  public function testTheChosenVariantsRefusalIsSaid(): void {
+    $pack = $this->pack();
+    $input = ['load' => ['capacity' => 5] + self::PACK['load']];
+    $accepted = $this->pipeline()->accept($pack, $input, self::PACK);
+    $said = [];
+    foreach ($this->pipeline()->validate($pack, $accepted, self::PACK) as $violation) {
+      $said[] = $violation->fullPath() . ' ' . $violation->code;
+    }
+    $this->assertSame(['load.capacity minimum'], $said);
+    $sentence = Sentences::ofError('type', ['expected' => ['null'], 'actual' => 'object'], [], $this->container->get('string_translation'));
+    $this->assertSame('This value does not fit the chosen variant.', (string) $sentence);
   }
 
   /**

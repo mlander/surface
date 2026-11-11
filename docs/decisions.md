@@ -10536,6 +10536,10 @@ Drupal's own check, which admits a non-ASCII local part `email`
 refuses, and the suite's validator still asserts no format
 ([The served document is a Portable Schema document](#the-served-document-is-a-portable-schema-document)).
 
+*Superseded 2026-11-11 by [Validation runs through the dialect's
+validator](#validation-runs-through-the-dialects-validator):* `format`
+is asserted.
+
 ### A composite is its parts
 
 Core's two composite constraints are stated through their parts:
@@ -11859,6 +11863,173 @@ values, as the emitter builds one.
 `LeafTypes::LIBRARY`, `SchemaComponents`, `LibraryTypesReaderTest`,
 `TypeByReaderTest`, `MalformedDocumentsReaderTest`, `SchemasTest`,
 `SchemaResolverDataFormsTest`, `SchemaComponentsTest`)
+
+### Validation runs through the dialect's validator
+
+A request's values are held once to the document they are served with,
+by the Portable Schema validator, and every rule the document cannot
+say is run by a check on the server.
+
+- **One run.** `validate()` emits the document the data surface serves
+  for the accepted values (`emit()`, `ServedContract::schema()`) and
+  holds `SurfacePipelineInterface::document()` of the values to it, once
+  (`Validation\PortableValidator`). Then it walks the levels: each level
+  refined against its own values, each child, variant and item in its
+  own frame. A key computed, a key that does not apply, a key required
+  or always held while it holds no value, and a key with variants and no
+  variant are the module's to judge, since the document cannot say
+  "configured"; every other key takes the validator's refusals at it and
+  below it, a list the refusals of the list itself, and a level those of
+  the level as a whole. A refusal at a key the module judged is not
+  said. The stale rule, "Choose X or Y" and "This applies when ..." are
+  the module's own sentences, set beside the validator's refusals.
+- **Typed Data stays where it is not a request.** `prepare()` and a
+  storage's own pass (`SchemaViolations`, an entity's `validate()`),
+  `Conforming::conformOutput()`, `WatchedValueCheck::admits()` while
+  refining, `KeyPaths` defaults at the build. A plugin host's settings
+  (`SurfaceConfigurationTrait`) go through `validate()`, so through the
+  validator. Inside a request it runs one constraint of one place alone,
+  and only there: a check's constraint (`DrupalCheckProvider::check()`),
+  the constraint a keyword's refusal is said in
+  (`DrupalCheckProvider::constraintMessage()`), and the checks the
+  document does not name yet (`DrupalCheckProvider::unwritten()` and
+  `unnamed()`, below).
+- **A check runs the host's own constraint.** One `CheckProvider`,
+  `Validation\DrupalCheckProvider`, answers every `drupal:<plugin id>`
+  name. It reads the request's location back to its place on the data
+  surface refined against the values (`ResourceBuild\Location::definitionAt()`,
+  through attached children, variants, collection items and a map's
+  members, a key an alter mounted among them, each pointer segment one
+  name, a `.` in it included), and runs that place's constraint of that
+  id, with the options the definition holds, through Typed Data for that
+  definition with that constraint alone. The options the document
+  publishes describe the check and are never what runs. A frame's
+  `drupal:JsonSchema` is each schema read into the frame, held to the
+  frame's values. Each violation is `check.drupal:<id>`, then `.<name>`
+  where the violation has a code (its constraint's name for it, snake
+  case without `_ERROR`), its params its parameters, its message its
+  own. A violation below the place is filed where the check named it:
+  the request's location joined with the violation's own path
+  (ReviewDeadline's at `/review_deadline/amount`), so every door marks
+  the field it is about and no `params.path` is on the wire. A place
+  holding no value passes. A throwable in a check is thrown once the
+  validation returns: a bug is never a refusal.
+- **A check is not asked where a keyword refuses.** Where the
+  document's `type`, `pattern`, `maxLength`, `minLength` or `format` at
+  a place refuses its value, the place's checks are not asked: that
+  refusal stands alone, and no check runs on a value of the wrong type
+  or shape (a SurfaceUnique lookup of an id too long to be one).
+  DateTime and DateOnly, which state the rule of the format beside them,
+  are asked where only that format refuses. `Validation\Nodes` reads the
+  document's nodes that apply at each place; where it reads a keyword
+  otherwise than the validator does, the run is made again with every
+  check asked.
+- **Checks the document does not name yet.** The document writes a
+  plain key's map (a key's settings, a map an alter mounted, the map
+  each item of a list is) as its properties alone, never the map's own
+  constraints (ReviewDeadline on an amount and a unit together). Each is
+  run as the check it is, `check.drupal:<id>` at the map, by the same
+  provider, at any depth (`unwritten()`). Drupal's Email and Uuid are
+  written as `format: email` and `format: uuid` alone, and each format
+  admits what the constraint refuses (`a@b`, `x@localhost`, a quoted
+  local part, an address literal, the nil UUID): at each place a node
+  writes either format and nothing refuses, the place's own constraint
+  runs too, as `check.drupal:Email` or `check.drupal:Uuid` with its
+  sub-code, never as the format's code (`unnamed()`).
+- **What the module says, the validator does not.** A key nothing
+  declares is refused by accept() as `unknown_key`, so the validator's
+  `unknownProperty` is never said, and what storage holds beyond what
+  the caller was built is kept, never judged. An `enum` the check's own
+  options produced is not said beside that check's refusal (a theme's
+  regions): the list is the check's rule, said once. An `enum` of the
+  place's own (a Choice beside the check) is said beside it. A key with
+  variants is an `anyOf` of each variant and null: its value is judged
+  by the chosen variant's conditional, and a `type` that asks for null
+  beside a refusal below it is not said; one that stands alone says
+  "This value does not fit the chosen variant." A map holding null whose
+  required keys the module names below it is not also refused as
+  `type`. A `const` at a read-only place is not said: a locked key's
+  `const` is the value the operation knows, the value sent for it is not
+  taken, and what is held there is never the request's (a resource built
+  from storage seeds that value from what is stored; a data surface
+  built by hand may declare a default storage does not hold, and the
+  validator does not judge storage).
+- **A check that cannot run refuses.** A name outside `drupal:`, a
+  plugin the site lacks, a place nothing declares, or a JsonSchema
+  whose schema names a check of its own is `unchecked`, at its location,
+  naming the check. `x-portable-unchecked` is neither written nor read.
+- **Codes.** A refusal the document expresses carries the dialect's code
+  and params at the dialect's location; a refusal of the call or of the
+  module's own rules keeps its snake case code
+  ([Codes](semantics.md#codes)). The entry is `{path, code, message,
+  params?}`, `params` written where it has any (`Violation::$params`,
+  `ResultDocument::entry()`). A storage's own pass keeps its
+  constraint's Symfony code. A value may carry two entries for one
+  problem where both are true: a `format.*` and a `pattern` (a date), a
+  check and a keyword (DateTime and `format.date-time`, ReviewDeadline
+  and `minimum`). `params.allowed` holds at most
+  `SurfacePipeline::CHOICES_SHOWN` values, `params.more` counting the
+  rest. accept()'s `type` names `null` in `params.expected` for a key
+  that takes it, as the validator's does.
+- **A secret's refusal carries no value.** At a secret place a
+  refusal's params keep `path`, `limit`, `expected`, `actual`,
+  `property`, `check` and `reason` alone, and its message is "This
+  value is not accepted.", a keyword's and a check's alike.
+- **Messages.** The validator says no text. A check's message is its
+  violation's. A keyword's is the message of the constraint the keyword
+  was written from (`maximum` from Range, `enum` from Choice or the
+  constraint the key's list is read from), run alone on the value where
+  the place holds it, so an author's message, its markup and Drupal's
+  translation stand; else, where the place holds no such constraint (a
+  document from another host), the document's `x-portable-messages` for
+  the code at its location; else one source string per code family
+  (`Sentences::ofError()`), its params as placeholders, a bound on both
+  sides said as Range says it. The package's formatter and catalog are
+  not used.
+- **One validator per document.** `surface.portable_validator` adds the
+  document to a clone of `surface.portable_registry` under its `$id`, or
+  `urn:surface:validate:<hash>`, and keeps the compiled validator for
+  the request by the document's hash, at most 16. The document emitted
+  for a data surface and its values is kept the same way, for the
+  account, until a cache tag is invalidated
+  (`ResourceRegistryInvalidator`). The provider refines each level once
+  per validation, for every place it reads.
+- **No coercion, every format.** Coercion stays in accept(); a value of
+  another type is `type`. `format` is asserted: `email` refuses a
+  non-ASCII local part; `uri` is an absolute URI as RFC 3986 says it, so
+  it needs a scheme, and a host with characters outside ASCII is sent in
+  punycode (`http://xn--r8jz45g.jp`, not `http://例え.jp`); `date-time`
+  needs an offset. Every `datetime_iso8601` key, with a DateTime
+  constraint or none, is stored in UTC with no offset, `Y-m-d\TH:i:s`: a
+  value with an offset is moved to UTC, and a value with none is read as
+  UTC. It is served, and handed to the validator, with `Z`
+  (`Coercion::served()`). A `datetime_iso8601` key that holds DateOnly is
+  written `format: date`, and is stored and served as `Y-m-d`.
+- **Never stricter, in the tests.** `NeverStricterTrait` and
+  `ContractValidationTrait` hold an advertised document to what the
+  server accepts with the package's validator; a served document the
+  package cannot load fails the test. A schema the caller marks as a
+  fragment (one a reader kept) is held with Opis, as
+  `JsonSchemaConstraintValidator` holds it on the server.
+- **Later.** The emitter writes what the provider runs unnamed:
+  `portable-check: {drupal:Email}` and `{drupal:Uuid}` beside the
+  format, a plain map's own constraints under `portable-check` at the
+  map and an item map's at `items`; `unwritten()` and `unnamed()` go
+  then. `format: iri` for a `uri` key that takes a host outside ASCII, a
+  document decision. A check's error filed at its own location by the
+  package once it carries one (`check-locations` on the fork, which
+  requires a location to name a value present in the instance), in place
+  of the joining above. Manifests for the library's checks.
+  `References::definitionAt()`, `Validating::definitionAt()` and
+  `Extracting::definitionAt()` answer other questions than
+  `Location::definitionAt()` and stay their own: the first finds a
+  reference target and refines by an entity type, not by the values;
+  the other two read one level's definitions as handed in, never
+  refining.
+
+(`PortableValidator`, `DrupalCheckProvider`, `Nodes`, `Found`,
+`Location`, `Sentences::ofError()`, `Coercion::served()`,
+`PortableValidationTest`, `PortableValidatorTest`)
 
 ### An OpenAPI document is one more door
 

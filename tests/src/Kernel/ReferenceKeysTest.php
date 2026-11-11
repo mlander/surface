@@ -405,7 +405,7 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     ], $this->call(['venue' => 'concert_hall']));
     $refused = $this->call(['setting' => ['entity_type' => 'node', 'id' => (string) $nodes['article']]]);
     $this->assertFalse($refused['success']);
-    $this->assertSame('The entity type node cannot be referenced here.', $refused['refused']['/setting/entity_type'], 'Node is no config entity.');
+    $this->assertSame('The entity type node cannot be referenced here. Choose event_venue (Venue) or user_role (Role).', $refused['refused']['/setting/entity_type'], 'Node is no config entity, and what may be chosen is said.');
     $this->assertSame([
       'success' => FALSE,
       'refused' => [

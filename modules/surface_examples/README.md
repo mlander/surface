@@ -1086,7 +1086,7 @@ Failed: The values were refused:
   changed: false
   changes: []
   values: {"title":"Garden party","open":true,"venue":"library","room":"library_garden","capacity":45,"pricing":"free","ticket":{"note":null},"contact":{"email":"events@example.com","phone":""}}
-  violations: [{"path":"/capacity","code":"not_in_range","message":"This value should be between 1 and 30. This applies when Room is library_garden (Garden room)."}]
+  violations: [{"path":"/capacity","code":"maximum","message":"This value should be between 1 and 30. This applies when Room is library_garden (Garden room).","params":{"limit":30}}]
   notes: []
   stale: []
 
@@ -4711,7 +4711,7 @@ drush tool:run surface:event.sponsorship:configure --uid=1 --input='{"values":{"
 4. A node where a config entity is asked for: refused
 Failed: The values were refused:
 /setting/id: ID does not apply.
-/setting/entity_type: The entity type node cannot be referenced here.
+/setting/entity_type: The entity type node cannot be referenced here. Choose event_venue (Venue) or user_role (Role).
 ```
 
 ### Files
@@ -5496,6 +5496,7 @@ Success: Dry run of Set up the event: the values were accepted and prepared, and
 
 2. A date written the other way round: refused
 Failed: The values were refused:
+/date: This value is not a valid date.
 /date: Write the date as YYYY-MM-DD, such as 2026-10-17.
 
 1. A banner, shown

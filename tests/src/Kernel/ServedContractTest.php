@@ -428,9 +428,8 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $paid_values = ['pricing' => 'paid', 'ticket' => ['price' => 12.5, 'currency' => 'EUR']] + $contract['values'];
     $this->assertTrue($this->validates($schema, $paid_values), 'A paid ticket fits the paid conditional.');
     $this->assertFalse($this->validates($schema, ['pricing' => 'paid'] + $contract['values']), 'A free ticket does not fit the paid conditional.');
-    // `format` is advisory: a standard validator does not assert it, and
-    // the pipeline's own Email check is the one that refuses this.
-    $this->assertTrue($this->validates($schema, ['contact' => ['email' => 'nobody', 'phone' => '']] + $contract['values']));
+    // `format` is asserted, by the document as by the server.
+    $this->assertFalse($this->validates($schema, ['contact' => ['email' => 'nobody', 'phone' => '']] + $contract['values']));
 
     // Choosing paid makes the ticket the paid one, from its defaults.
     $chosen = $this->contract('registration.step3', 'configure', [], ['pricing' => 'paid']);
@@ -1537,8 +1536,8 @@ class ServedContractTest extends SurfaceKernelTestBase {
       'paid, nothing to pay' => [['ticket' => ['price' => 0, 'currency' => 'EUR']] + $paid, FALSE, FALSE, FALSE],
       'paid, a currency not offered' => [['ticket' => ['price' => 5, 'currency' => 'JPY']] + $paid, FALSE, FALSE, FALSE],
       'free, the paid ticket' => [['ticket' => ['price' => 5, 'currency' => 'EUR']], FALSE, FALSE, FALSE],
-      // `format` is advisory: the pipeline's Email check refuses it.
-      'a contact address that is none' => [['contact' => ['email' => 'nobody', 'phone' => '']], FALSE, TRUE, TRUE],
+      // `format` is asserted: both documents refuse it, as the server does.
+      'a contact address that is none' => [['contact' => ['email' => 'nobody', 'phone' => '']], FALSE, FALSE, FALSE],
       'a contact with no address' => [['contact' => ['email' => NULL, 'phone' => '555']], FALSE, FALSE, FALSE],
       'a contact key nobody declares' => [['contact' => ['fax' => '1'] + self::EVENT['contact']], FALSE, FALSE, FALSE],
       'another venue\'s room' => [['room' => 'library_reading'], FALSE, FALSE, FALSE],

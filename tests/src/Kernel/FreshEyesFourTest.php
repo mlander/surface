@@ -199,8 +199,9 @@ class FreshEyesFourTest extends SurfaceKernelTestBase {
     $this->assertSame([
       [
         'path' => '/days/1',
-        'code' => 'no_such_choice',
+        'code' => 'enum',
         'message' => 'The value you selected is not a valid choice. Choose fri (Friday), sat (Saturday) or sun (Sunday).',
+        'params' => ['value' => 'mon', 'allowed' => ['fri', 'sat', 'sun']],
       ],
     ], $refused['outputs']['violations']);
     $validated = $this->validate('event.doors', ['days' => ['fri', 'mon']]);

@@ -291,8 +291,9 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       // docs/decisions.md#an-item-is-never-null.
       'a null item, dropped' => [['tags' => ['a', NULL]], TRUE],
       'an empty item, dropped' => [['tags' => ['', 'b']], TRUE],
-      'format is advisory: an internationalized address' => [['mail' => 'üser@example.com'], TRUE],
-      'format is advisory: a URI with a space' => [['link' => 'http://a b.example'], TRUE],
+      // `format` is asserted, by the server and by both documents alike.
+      'format is asserted: an internationalized address' => [['mail' => 'üser@example.com'], FALSE],
+      'format is asserted: a URI with a space' => [['link' => 'http://a b.example'], FALSE],
       'below the range' => [['count' => 0], FALSE],
       'above the range' => [['count' => 1001], FALSE],
       'a fraction for an integer' => [['count' => 7.5], FALSE],
@@ -310,8 +311,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       'a list for a string' => [['word' => ['a']], FALSE],
       'the required key emptied' => [['name' => ''], FALSE],
       'the required key null' => [['name' => NULL], FALSE],
-      // Drupal's Email check refuses it; `format` is an annotation.
-      'format is advisory: not an address' => [['mail' => 'nobody'], FALSE, TRUE, TRUE],
+      'format is asserted: not an address' => [['mail' => 'nobody'], FALSE],
     ]);
   }
 
@@ -353,7 +353,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       'a price below a cent' => [['pricing' => 'paid', 'ticket' => ['price' => 0, 'currency' => 'EUR']], FALSE],
       'another variant\'s key' => [['pricing' => 'free', 'ticket' => ['price' => 5]], FALSE],
       'an unknown key inside the part' => [['contact' => ['email' => 'a@example.com', 'fax' => '1']], FALSE],
-      'format is advisory: not an address' => [['contact' => ['email' => 'nobody']], FALSE, TRUE, TRUE],
+      'format is asserted: not an address' => [['contact' => ['email' => 'nobody']], FALSE],
       // A child sent null is each of its keys sent null: the optional ones
       // cleared, a required one refused in its own words.
       'the contact null, its email required' => [['contact' => NULL], FALSE],
@@ -733,7 +733,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       'a pasted key' => [['credential' => ['api_key' => 'mk-1']], TRUE],
       'the one source, and a pasted key' => [['source' => 'pasted', 'credential' => ['api_key' => 'mk-1']], TRUE],
       'the managed source, which the site does not offer' => [$managed('mail_service'), FALSE],
-      'a sender that is no address' => [['sender' => 'tickets'] + $pasted, FALSE, TRUE, TRUE],
+      'a sender that is no address' => [['sender' => 'tickets'] + $pasted, FALSE],
     ]);
 
     $this->container->get('module_installer')->install(['surface_examples_keys']);
@@ -810,12 +810,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
       'a section holding a card' => [$section($card), TRUE],
       'a section holding a call to action, which has no tag block' => [$section($cta([])), FALSE],
       'a hero\'s slot sent for the card' => [['slots' => ['actions' => ['kind' => 'text']]], FALSE],
-      'format is advisory: an address that is no URI' => [
-        ['props' => ['link' => ['url' => 'not a uri']]],
-        FALSE,
-        TRUE,
-        TRUE,
-      ],
+      'format is asserted: an address that is no URI' => [['props' => ['link' => ['url' => 'not a uri']]], FALSE],
     ]);
   }
 

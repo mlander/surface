@@ -122,8 +122,8 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
       'email' => str_repeat('a', 10) . '@' . implode('.', array_fill(0, 4, str_repeat('b', 60))) . '.co',
       'count' => self::SAFE + 1,
     ])));
-    $this->assertContains('email not_valid', $refused, 'An address longer than the library allows.');
-    $this->assertContains('count not_valid', $refused, 'An integer outside the library\'s range.');
+    $this->assertContains('email format.email', $refused, 'An address longer than the library allows: the format the email row writes refuses it.');
+    $this->assertContains('count check.drupal:JsonSchema.not_valid', $refused, 'An integer outside the library\'s range.');
   }
 
   /**

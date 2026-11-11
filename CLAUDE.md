@@ -240,7 +240,8 @@ the record of the rework that brought the module to the pattern.
   structure, `structure($document, $id)`. A `$ref` to a type of the
   Portable Schema library and a `portable-typeBy` are read through the
   registry `surface.portable_registry` (the type library, a site's
-  schemas added). A def is one
+  schemas added), the one the validator holds a request's values to
+  their document over (`surface.portable_validator`). A def is one
   structure (a read structure, registered by
   `ResourceRegistry::defineRead()` as `schema:<id>:<hash>` and listed by
   nothing), a conditional of the vocabulary a declared rule. What no
@@ -970,7 +971,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2298, Assertions: 56526, Errors: 0, Failures: 0, Skipped: 3. Classes: 321 of 321, 8 at a time, browser classes 4.
+phpunit: Tests: 2314, Assertions: 56739, Errors: 0, Failures: 0, Skipped: 3. Classes: 323 of 323, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -986,12 +987,16 @@ or its process died) fails the gate by name, as does `run-tests.sh`
 exiting 2 or more with every log clean (an error outside any test). Its
 exit 1 with every log clean is a PHPUnit warning or a risky test, which
 the gate has never failed on; the classes are named. Deprecations never
-fail the gate, in either lane: plain phpunit counts them (42 as of this
-writing) and passes, and the full lane passes `--suppress-deprecations`,
-without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
+fail the gate, in either lane: plain phpunit counts them and passes,
+and the full lane passes `--suppress-deprecations`, without which
+`run-tests.sh` adds `--fail-on-deprecation` to every class. Most come
+from the Portable Schema package's subclasses of Opis classes
+(`PortableSchema\Opis\RegistryResolver`, `FullObjectSchema`) and from
+Opis itself, about four in each class that loads the package; none is
+the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2184, Assertions: 51972, Skipped: 3, Deprecations: 159. Classes:
-268, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2200, Assertions: 52185, Deprecations: 671, Skipped: 3. Classes:
+270, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1292,6 +1297,16 @@ src/Pipeline/            Access, accept, validate, prepare, commit; results.
                          Validating.php, Conforming.php. The storage
                          interfaces; TransactionalStorageInterface is
                          what a storage implements to be staged.
+src/Validation/          A request's values held to their document by the
+                         Portable Schema validator: PortableValidator
+                         (`surface.portable_validator`, one run per
+                         validate(), compiled validators kept by the
+                         document's hash), DrupalCheckProvider (every
+                         `drupal:<plugin id>` check, run from the place's
+                         own definition), Nodes (the document's nodes at
+                         each place of the data), Found (one refusal,
+                         said). ResourceBuild/Location.php reads a JSON
+                         Pointer back to its definition and value.
 src/Storage/             Where accepted values are written; settings layouts.
 src/Staging/             The store contract (StageStoreInterface, and
                          the optional ListsStagesInterface), the
