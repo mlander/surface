@@ -9,10 +9,12 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
+use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\Compute;
+use PortableSchema\Builder\Schema;
 
 /**
  * A blueprint that writes down the verbs a reader calls, and checks none.
@@ -160,6 +162,17 @@ final class RecordingBlueprint implements BlueprintInterface {
    */
   public function addDefinition(string $key, DataDefinitionInterface $definition, mixed $default = NULL): DataDefinitionInterface {
     return $this->record($key, 'addDefinition', $definition, ['default' => $default]);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Read into this blueprint, so the verbs the schema stands for are
+   * written down.
+   */
+  public function addSchema(string $key, Schema $schema, ?bool $required = NULL): static {
+    SchemaReader::authored($this, $key, $schema, $required);
+    return $this;
   }
 
   /**

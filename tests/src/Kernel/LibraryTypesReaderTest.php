@@ -22,8 +22,10 @@ use PortableSchema\Validator;
  * Reading a `$ref` to a type of the Portable Schema library.
  *
  * A type LeafTypes::LIBRARY names is read as that leaf type, and what its
- * document says beyond the type's row is kept as a JsonSchema constraint;
- * any other type is read from its document, an object one as a structure.
+ * document says beyond the type's row is read as the constraint a row of
+ * the table reads it as (an email's `maxLength` a Length, an integer's
+ * range a Range), or else kept as a JsonSchema constraint; any other type
+ * is read from its document, an object one as a structure.
  * What a site says beside the `$ref` narrows the type. An id the registry
  * does not hold is noted and kept, as any reference to another document.
  *
@@ -98,7 +100,8 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
     $definition = static fn (string $key): DataDefinitionInterface => $read->getDefinition($key);
 
     $this->assertSame('email', $definition('email')->getDataType());
-    $this->assertSame(['schema' => ['maxLength' => 254]], $definition('email')->getConstraint('JsonSchema'), 'The length the library holds an email to is kept.');
+    $this->assertSame(['max' => 254], $definition('email')->getConstraint('Length'), 'The length the library holds an email to is a Length.');
+    $this->assertArrayNotHasKey('JsonSchema', $definition('email')->getConstraints());
 
     $this->assertSame('email', $definition('short')->getDataType());
     $this->assertSame('Short email', $definition('short')->getLabel());
@@ -106,9 +109,9 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
     $this->assertSame(['schema' => ['maxLength' => 254]], $definition('short')->getConstraint('JsonSchema'));
 
     $this->assertSame('timestamp', $definition('when')->getDataType(), 'Only the id tells a timestamp from an integer.');
-    $this->assertSame(['schema' => ['minimum' => -self::SAFE, 'maximum' => self::SAFE]], $definition('when')->getConstraint('JsonSchema'));
+    $this->assertSame(['min' => -self::SAFE, 'max' => self::SAFE], $definition('when')->getConstraint('Range'));
     $this->assertSame('integer', $definition('count')->getDataType());
-    $this->assertSame(['schema' => ['minimum' => -self::SAFE, 'maximum' => self::SAFE]], $definition('count')->getConstraint('JsonSchema'), 'The range of an integer is kept.');
+    $this->assertSame(['min' => -self::SAFE, 'max' => self::SAFE], $definition('count')->getConstraint('Range'), 'The range of an integer is a Range.');
     $this->assertSame('uri', $definition('site')->getDataType());
     $this->assertArrayNotHasKey('JsonSchema', $definition('site')->getConstraints(), 'A uri says nothing beyond its row.');
 
@@ -123,7 +126,8 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
       'count' => self::SAFE + 1,
     ])));
     $this->assertContains('email format.email', $refused, 'An address longer than the library allows: the format the email row writes refuses it.');
-    $this->assertContains('count check.drupal:JsonSchema.not_valid', $refused, 'An integer outside the library\'s range.');
+    $this->assertContains('email maxLength', $refused, 'And the length the library allows.');
+    $this->assertContains('count maximum', $refused, 'An integer outside the library\'s range.');
   }
 
   /**
@@ -165,7 +169,8 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
     $written = $contract->document['schema'];
     $row = array_intersect_key($written['properties']['email'], ['type' => TRUE, 'format' => TRUE]);
     $this->assertSame(['type' => ['string', 'null'], 'format' => 'email'], $row, 'The emitter writes the leaf type as its row, an optional key nullable.');
-    $this->assertSame(['schema' => ['maxLength' => 254]], (array) $written['properties']['email']['portable-check']['drupal:JsonSchema']);
+    $this->assertSame(254, $written['properties']['email']['maxLength'], 'What the library says beyond the row is served as its keyword.');
+    $this->assertArrayNotHasKey('portable-check', $written['properties']['email']);
     $validator = new Validator(Registry::withTypes()->add($schema->toDocument(), 'surface:test.library'));
     $valid = $validator->validate(json_decode('{"email": "a@b.co", "count": 3, "link": {"uri": "https://example.com"}}'), 'surface:test.library');
     $this->assertSame([], $valid->toArray()['errors'], 'Values the library allows are valid.');
@@ -213,7 +218,7 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
     $emails = $read->getDefinition('emails');
     $this->assertInstanceOf(ListDataDefinitionInterface::class, $emails);
     $this->assertSame('email', $emails->getItemDefinition()->getDataType());
-    $this->assertSame(['schema' => ['maxLength' => 254]], $emails->getItemDefinition()->getConstraint('JsonSchema'));
+    $this->assertSame(['max' => 254], $emails->getItemDefinition()->getConstraint('Length'));
     $times = $read->getDefinition('times');
     $this->assertInstanceOf(ListDataDefinitionInterface::class, $times);
     $this->assertSame('timestamp', $times->getItemDefinition()->getDataType());
@@ -292,7 +297,8 @@ class LibraryTypesReaderTest extends SurfaceKernelTestBase {
     $this->assertSame('email', $read->getDefinition('as_number')->getDataType());
     $this->assertSame('integer', $read->getDefinition('weight')->getDataType());
     $this->assertSame(['schema' => ['format' => 'int32']], $read->getDefinition('weight')->getConstraint('JsonSchema'), 'A format no row reads is kept.');
-    $this->assertSame(['schema' => ['minimum' => -self::SAFE, 'maximum' => self::SAFE, 'format' => 'int64']], $read->getDefinition('big')->getConstraint('JsonSchema'), 'A format the row states none of is kept beside the type.');
+    $this->assertSame(['schema' => ['format' => 'int64']], $read->getDefinition('big')->getConstraint('JsonSchema'), 'A format the row states none of is kept beside the type.');
+    $this->assertSame(['min' => -self::SAFE, 'max' => self::SAFE], $read->getDefinition('big')->getConstraint('Range'));
     $this->assertSame([], $this->refused($read, ['weight' => 3, 'big' => 4]), 'The check reads a format it does not know as an annotation.');
     $this->assertFalse($read->getDefinitions()->entry('link')->attachment->child->getDefinition('title')->isRequired(), 'The library\'s structure as it states it.');
   }

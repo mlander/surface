@@ -12,6 +12,7 @@ use Drupal\Core\TypedData\Type\BooleanInterface;
 use Drupal\Core\TypedData\Type\FloatInterface;
 use Drupal\Core\TypedData\Type\IntegerInterface;
 use Drupal\Core\TypedData\Type\StringInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Writes a config schema type as the JSON Schema of the values it holds.
@@ -75,12 +76,12 @@ final class ConfigSchemaDocument {
    * @param array $defaults
    *   A default per key, kept where it is a value of the key's type.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The JSON Schema: an object, closed.
    */
-  public function object(string $type, array $leave_out = [], array $defaults = []): array {
+  public function object(string $type, array $leave_out = [], array $defaults = []): Schema {
     $root = $this->typedConfig->hasConfigSchema($type) ? $this->typedConfig->getDefinition($type) : [];
-    $properties = [];
+    $object = Schema::any()->with('type', 'object')->with('properties', []);
     foreach ((array) ($root['mapping'] ?? []) as $key => $property) {
       $key = (string) $key;
       if (in_array($key, $leave_out, TRUE) || !is_array($property)) {
@@ -90,13 +91,9 @@ final class ConfigSchemaDocument {
       if (array_key_exists($key, $defaults) && self::fits($element, $defaults[$key])) {
         $element['default'] = $defaults[$key];
       }
-      $properties[$key] = $element;
+      $object = $object->property($key, $element);
     }
-    return [
-      'type' => 'object',
-      'properties' => $properties === [] ? new \stdClass() : $properties,
-      'additionalProperties' => FALSE,
-    ];
+    return $object->with('additionalProperties', FALSE);
   }
 
   /**
@@ -127,13 +124,13 @@ final class ConfigSchemaDocument {
    *
    * @param-out array<string, array{constraints?: array<string, mixed>, type?: string, default?: mixed}> $left
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The JSON Schema: an object, closed.
    *
    * @throws \InvalidArgumentException
    *   When the site has no config schema of that name.
    */
-  public function document(string $type, array $defaults = [], ?array &$left = [], array $owned = ['_core', 'langcode']): array {
+  public function document(string $type, array $defaults = [], ?array &$left = [], array $owned = ['_core', 'langcode']): Schema {
     if (!$this->typedConfig->hasConfigSchema($type)) {
       throw new \InvalidArgumentException(sprintf('The site has no config schema named %s.', $type));
     }
@@ -152,7 +149,11 @@ final class ConfigSchemaDocument {
       $writer->left['']['constraints'] = $constraints;
     }
     $mapping = array_diff_key((array) ($root['mapping'] ?? []), array_flip($owned));
-    $document = ['type' => 'object'] + $writer->mapping($mapping, $defaults, $validatable, '');
+    $document = Schema::any()->with('type', 'object');
+    foreach ($writer->mapping($mapping, $defaults, $validatable, '') as $keyword => $value) {
+      // An empty map of properties is the builder's `[]`, written `{}`.
+      $document = $document->with($keyword, $value instanceof \stdClass ? (array) $value : $value);
+    }
     $left = $writer->leftOut();
     return $document;
   }

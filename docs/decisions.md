@@ -318,6 +318,14 @@ moved onto it: `submit()` on `OperationRunnerInterface` and its class,
 `OperationRun::hasStorage()` and `OperationRun::account()`. The four
 pins are unchanged.
 
+*Grown 2026-11-11,* by one blueprint method, `addSchema()`, a key stated
+as a Portable Schema
+([Authoring takes a Schema](#authoring-takes-a-schema)): 18 blueprint
+methods. The package's attributes a property may carry instead of
+Surface's (`#[Of]`, `#[Schema]`, `#[Check]`, `#[Ui]`, `#[Required]`) are
+the package's, not counted; no Surface attribute, argument or interface
+was added.
+
 `PublicSurfaceTest` pins what `src/Resource/` declares, so the count
 grows only with that test updated beside a reason: 9 attributes, 36
 attribute arguments (35 until 2026-11-01, when `widget:` was added to
@@ -11828,11 +11836,14 @@ values, as the emitter builds one.
   id `LeafTypes::LIBRARY` names reads as that leaf type, at a key, in a
   list's items and through a def that is that `$ref`; what the type's
   document says beyond the row is kept as a JsonSchema constraint, so
-  the key is no wider than the type. The site's keywords beside the
-  `$ref` narrow it, but for a `type` or a `format` that says otherwise
-  than the row, which is noted and not read; a `format` the row states
-  none of is kept beside the type. `anyOf` of the `$ref` and `{"type":
-  "null"}`, in either order, is the type, nullable. Any other id of the
+  the key is no wider than the type. *Changed 2026-11-11:* what a row of
+  the table reads is that constraint, served as its keywords
+  ([Authoring takes a Schema](#authoring-takes-a-schema)). The site's
+  keywords beside the `$ref` narrow it, but for a `type` or a `format`
+  that says otherwise than the row, which is noted and not read; a
+  `format` the row states none of is kept beside the type. `anyOf` of
+  the `$ref` and `{"type": "null"}`, in either order, is the type,
+  nullable. Any other id of the
   library is read from its document: an object type as a structure,
   read as the library states it, the site's keywords beside the `$ref`
   noted and not read; any other where the key stands, a `format` no
@@ -11862,8 +11873,10 @@ values, as the emitter builds one.
   every pointer in a component and in its patch leads to a component.
 - **Later.** The provider contracts and the writers of the reader's
   input (`ConfigSchemaDocument`, `ComponentSlots`, `ComponentProps`)
-  move to `Schema`; the emitter may write a type of the library as its
-  `$ref`; the site's keywords beside a `$ref` to an object type of the
+  move to `Schema` (done 2026-11-11,
+  [Authoring takes a Schema](#authoring-takes-a-schema)); the emitter
+  may write a type of the library as its `$ref`; the site's keywords
+  beside a `$ref` to an object type of the
   library narrow it, once a `$ref` to a local def is narrowed the same
   way; the server's validator enforces `portable-refine`,
   `portable-compare` and `portable-typeBy`.
@@ -12210,6 +12223,188 @@ app draws it, and reads nothing else to draw.
 `WidgetHostInterface`, `FormWidgetHost`, `WidgetChoice`,
 `DocumentNarrowing`, `DocumentFormIsolationTest`, `WidgetAgreementTest`,
 `DocumentFormTest`, `DocumentFormEntityTest`, `ItemConditionalsTest`)
+
+### Authoring takes a Schema
+
+Decided 2026-11-11. An author may state a key as a Portable Schema, with
+`addSchema()` or with the package's property attributes, beside the
+Typed Data spelling, which stays where storage needs it. Contract 5
+stays 5: the two examples rewritten in the new spelling serve the bytes
+they served.
+
+- **`addSchema()`.** `BlueprintAdditionsInterface::addSchema(string
+  $key, Schema $schema, ?bool $required = NULL): static` takes a
+  `Schema` only; a schema held as an array is handed in as
+  `Schema::from($array)`. The schema is laid in an object of one
+  property, the key, closed, its `$defs` moved up to that object, and
+  the object is read by the schema reader as any frame is
+  (`SchemaReader::authored()`): one reading turns a document and an
+  author's schema into keys, through the blueprint's own verbs. An
+  `array` schema is a list, an `object` one a map, a `$ref` to a def of
+  an object a child and to a scalar def the shape of that id. A boolean
+  schema is refused. The verb returns the blueprint: the schema is
+  complete at the call. A part that needs a frame of its own (a child,
+  variants, a rule) inside a map stops the map's first reading, as any
+  such verb does; in an alter's or a shape's blueprint it is refused.
+- **Two spellings, never on one property.** `PropertyDeclaration`
+  reads the package's `#[Of]`, `#[Schema]`, `#[Check]`, `#[Ui]` and
+  `#[Required]` beside Surface's attributes. A property carrying one of
+  them is spelled as a schema: built by the package's rules (the PHP
+  type the `type`, `?T` null beside it, the initializer the `default`,
+  `#[Of]` the `$ref`, an `anyOf` of it and null where nullable, a shape
+  too, `#[Schema]` keywords, `#[Check]` checks, `#[Ui]` hints), mirroring
+  `ClassReader`, which keeps the reading of one property private, and
+  declared with `addSchema()`. A class a keyword names (`items`) is a
+  `$ref` to its `#[Document]` id, or read in place where it has none, as
+  `ClassReader` reads it; `#[Of]` naming a class that is no shape and
+  has no `#[Document]` is refused, naming the property and the three ways
+  out. Required is `addSchema()`'s rule alone: the property passes
+  `#[Required]` as TRUE and nothing otherwise.
+- **The package's spelling is an `#[Input]`.** It combines with exactly
+  what `#[Input]` combines with in Surface's own spelling. Combined:
+  `#[Examples]` (as `examples`) and `#[Rule]`; a secret is `writeOnly`,
+  which `#[Schema]` says, since Surface has no attribute for one.
+  Refused with the message `#[Input]` gets beside another kind ("which
+  each say what it is"): `#[Output]`, `#[Port]`, `#[Computed]`,
+  `#[Attach]`, `#[AttachList]`, `#[AttachVariants]`, `#[Each]`,
+  `#[AttachEach]`, `#[Map]`. Refused naming both spellings, since they
+  say what the package's attributes say: `#[Input]`, `#[Constraint]`,
+  `#[Widget]`, `#[Describe]`, `#[Setting]`. On the class, the package's
+  `#[Ui(groups:)]` declares groups as `#[Group]` does, one of the two
+  per class; the group a key's `#[Ui(group:)]` names is laid on with
+  `describe()`. `#[Of]`, `#[Schema]` and `#[Check]` on the class, and a
+  class `#[Ui]` saying more than `groups`, are refused; `#[Document]` is
+  not read, since a resource's id and title are its own attributes'.
+  The properties read follow the host's reflection rule, not the
+  package's: a protected property carrying the package's attributes is
+  read, as Surface reads its own; a static one is refused.
+- **An author's schema is the author's own.** So what it holds and the
+  reader does not read as written is an author error: `addSchema()`,
+  and the property path naming `Class::$property`, throw
+  `\InvalidArgumentException` listing every such part by its pointer (an
+  unknown widget, a fractional weight, a message for a code no
+  constraint reads, a format on a type that is no string, an object left
+  open, which is read closed). A structure of the schema read later in
+  the build is refused the same way. What is accepted, and returned by
+  `SchemaReader::authored()` as notes: a link, dropped, since links are
+  the emitter's; a check the site cannot build (a plugin it lacks,
+  options it refuses, a name outside `drupal:`), kept in the key's
+  JsonSchema constraint, which the server answers as `unchecked`; a
+  check merged with or kept beside a keyword (below); a value no data
+  type says, held whole to its schema by the JsonSchema constraint; a
+  def, or a type of the library, read in place. An id the library does
+  not hold is refused. A property named by digits alone is refused, since
+  PHP would write the object as a list.
+- **What the reader reads back of an author's schema.** Every
+  `drupal:<plugin id>` check of a plugin the site has, whose options the
+  plugin takes, is that constraint with those options; its message under
+  `check.drupal:<plugin id>` is the constraint's `message`, where the
+  constraint has one. A definition holds one constraint of each plugin,
+  so a check naming one a keyword already reads is laid beside it:
+  Range, Length and Count are merged, the check's options over the
+  keyword's, and where both bound the same side the stricter bound is
+  kept (the larger `min`, the smaller `max`); any other (Regex beside
+  `pattern`, Choice beside `enum`) is the check's constraint, and the
+  keyword is kept in the key's JsonSchema constraint, which runs it, so
+  both hold. A check kept inside the JsonSchema constraint would be
+  answered `unchecked` for every value, so the keyword is the one kept
+  there. A message under any other code but `pattern` and `not` is
+  refused. A document from anywhere else is read as before: its checks
+  describe what its server runs, and only `drupal:JsonSchema` and a
+  reference's are read.
+- **A union of one schema and null.** In an author's schema, an `anyOf`
+  or `oneOf` of exactly one schema and `{"type": "null"}` (or `{"const":
+  null}`), in either order, is that schema with null allowed: its
+  keywords beside the union's own, `null` added to the type it states or
+  its values say, so the key is served as an optional key is, for a
+  leaf, an enum, an object, a type of the library or a `$ref`. The
+  package writes `?Size` and a nullable `#[Of]` so. A document from
+  anywhere else is read as before.
+- **Labels stay translatable.** The reader reads a `Schema` an author
+  hands it as it is, never through JSON, so a title, description or
+  option label made with `t()` stays a `TranslatableMarkup` in the
+  definition, as `add()` keeps it. The builder takes
+  `string|\Stringable` for `title()`, `description()`, `message()` and
+  `options()`, and `Schema::from()` keeps a `\Stringable` as given;
+  `toDocument()` writes it as a string. `Schemas::decoded()` is for JSON
+  from outside (the generator's sources) and the writers, whose words are
+  strings as they were. A structure of an author's schema (an object
+  read as a child, a collection's item) is read from the document's
+  array and holds strings.
+- **Numbers to choose from.** A refusal names a Choice of numbers by its
+  values, as JSON writes them, never a `TypeError`; a float choice is
+  served as the float (`ChoiceOptions` keys it as JSON writes it).
+- **A site list holds no boolean schema.** `SiteList::add()` and
+  `addDefs()` refuse `true` and `false` as `addSchema()` does.
+- **Surface's semantics apply to the definition.** Required, where
+  `$required` is NULL, is the dialect's rule: no `default` and no null,
+  or `required()`. TRUE requires a key that has a default; FALSE leaves
+  one optional. An optional key with a default is one null clears,
+  which puts the default back, as for a key `add()` declares, so the
+  document writes `["<type>", "null"]` for it: the authored schema is
+  what the definition is read from, never what is served.
+- **Types of the library.** `#[Of('portable:email')]` and
+  `Schema::of('portable:email')` are the `email` leaf type, served as
+  that leaf is (`type: string`, `format: email`). What the type's
+  document says beyond the row is the constraint a row of the table
+  reads it as, served as its keywords (`maxLength: 254` a Length, an
+  integer's range a Range), so an author who wants the library's rule
+  gets it, and one who writes `format('email')` gets the row alone. A
+  keyword the site states beside the `$ref` too, or one no row reads, is
+  kept as before. This holds for every document the reader reads, not
+  only an author's (one reading, B1), with no served byte changed: a
+  value beyond the library's rule is refused with the keyword's code
+  (`maximum`, `maxLength`) where it was `check.drupal:JsonSchema.not_valid`.
+  Reading a `drupal:` check as its constraint holds for an author's
+  schema alone: a served document publishes its checks with `{}`
+  options, which describe and never run.
+- **Shapes and other ids.** `#[Of(SomeShape::class)]`, or the shape's
+  class as the property's type, is that shape: a `$ref` to a def of the
+  shape's `#[Shape]` id, which the reader reads as the shape. An
+  absolute URI the reader's registry holds is read as an id of the
+  library is; one it does not hold is kept, as any reference to another
+  document. A shape keeps `define(): DataDefinition`.
+- **The provider contracts.** `EntrySchemasInterface::entrySchema()`
+  answers `?Schema` and `entryDefs()` `array<string, Schema>`;
+  `SiteList::add(..., ?Schema $schema)` and `addDefs(array<string,
+  Schema>)`. A provider holding arrays hands in `Schema::from()`. The
+  build reads, hashes and registers a list's schemas as their array
+  form (`Schemas::arrayed()`) and keeps the `Schema` otherwise.
+  `ConfigSchemaDocument::object()` and `document()`, `ComponentSlots`
+  and `ComponentProps::props()` build through `Schema` (`with()`,
+  `property()`, `annotation()`) and answer it; what the reader builds
+  from them is unchanged, since a document is read as JSON decodes it.
+- **The examples.** `NewsletterResource` (the first page's budget is
+  now a resource, an operation, a storage and `addSchema()`) and
+  `RegistrationStep1Resource` are written with `addSchema()`;
+  `CateringResource` stays in Surface's attributes. A test module's
+  structure spells keys with the package's attributes beside a Typed
+  Data twin, and both emit the same documents
+  (`SchemaAttributesTest`).
+- **Cost.** `addSchema()` reads each key through the schema reader:
+  about 30 µs a key against 1 µs for `add()`, so the two examples build
+  and emit 36 to 39 percent slower. It is paid on a build cache miss
+  alone, since the static build is cached per language.
+- **Later.** The emitter writes a type of the library as its `$ref`,
+  once clients resolve one: the React client and the OpenAPI document
+  follow only local `$ref`s, the nullable spelling (`anyOf` of the
+  `$ref` and null, or a `type` array) is open, and the reader infers a
+  leaf type from `type` and `format`. A shape stated as a `Schema`. One
+  spelling in the docs. The generator writes `addSchema()`. A
+  constraint's accepted types are not declared, so neither `add()` nor
+  `addSchema()` can refuse a check that does not fit the key's type
+  (`drupal:Count` on a string) at build time. A default of the wrong
+  type is refused by neither verb. `addMap()` keys named by digits alone
+  are served as a list.
+
+(`BlueprintAdditionsInterface::addSchema()`, `SchemaReader::authored()`,
+`SchemaReader::$authored`, `SchemaReader::$accepted`,
+`SchemaReader::besideKeywords()`, `SchemaReader::withNull()`,
+`PropertyDeclaration`, `EntrySchemasInterface`, `SiteList`,
+`ChoiceOptions`, `Validating::choices()`, `ConfigSchemaDocument`,
+`ComponentSlots`, `ComponentProps`, `AddSchemaTest`,
+`SchemaAttributesTest`, `FirstResourceTest`, `LibraryTypesReaderTest`,
+`PublicSurfaceTest`)
 
 ### An OpenAPI document is one more door
 

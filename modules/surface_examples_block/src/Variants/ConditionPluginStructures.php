@@ -145,7 +145,7 @@ final class ConditionPluginStructures implements SiteListInterface {
         continue;
       }
       $schema = $this->schemas->object('condition.plugin.' . $id, self::BASE, $this->defaults($id));
-      $schema['properties'] = (array) $schema['properties'] + ['context_mapping' => $mapping];
+      $schema = $schema->property('context_mapping', $mapping);
       $list->add($id, $label, schema: $schema);
     }
     return $this->list = $list;

@@ -198,8 +198,10 @@ from example 2's resource.
 
 `/surface-examples/1`
 
-Three settings, each on one line: its name, its type, its label, and
-what it allows. The operation at the top, `configure`, is how the
+Three settings, each one schema: its type, its label, and what it
+allows, read into the definitions the module checks values against
+(`addSchema()`, [Authoring takes a Schema](../../docs/decisions.md#authoring-takes-a-schema)).
+The operation at the top, `configure`, is how the
 resource is asked for: it needs nothing, only an account that may
 administer site configuration may ask, and its description is what a
 tool's caller reads first. It needs no method: an operation is a method
@@ -224,13 +226,18 @@ final class RegistrationStep1Resource implements ResourceInterface {
    * {@inheritdoc}
    */
   public static function defineInputs(BlueprintInterface $inputs): void {
-    $inputs->add(self::TITLE, 'string', t('Event title'))
-      ->setRequired(TRUE);
+    $inputs->addSchema(self::TITLE, Schema::string()
+      ->title(t('Event title')));
 
-    $inputs->add(self::CAPACITY, 'integer', t('Capacity'), default: 50)
-      ->addConstraint('Range', ['min' => 1, 'max' => 1000]);
+    $inputs->addSchema(self::CAPACITY, Schema::integer()
+      ->title(t('Capacity'))
+      ->minimum(1)
+      ->maximum(1000)
+      ->default(50));
 
-    $inputs->add(self::OPEN, 'boolean', t('Registration open'), default: TRUE);
+    $inputs->addSchema(self::OPEN, Schema::bool()
+      ->title(t('Registration open'))
+      ->default(TRUE));
   }
 
 }
@@ -307,7 +314,7 @@ of code, counted without blank lines or comments:
 
 | File | What it is | Lines |
 | --- | --- | --- |
-| [`modules/surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 18 |
+| [`modules/surface_examples/src/Resource/RegistrationStep1Resource.php`](src/Resource/RegistrationStep1Resource.php) | the resource: three keys, each with what it allows, and the operation that asks for them | 23 |
 | [`modules/surface_examples/src/Storage/RegistrationStep1Storage.php`](src/Storage/RegistrationStep1Storage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step1` | the route: the generic operation form, serving the resource | 8 |
 | [`modules/surface_examples/config/schema/surface_examples.schema.yml`](config/schema/surface_examples.schema.yml), entry `surface_examples.registration_step1` | the config schema, generated from the class | 21 |
@@ -2299,7 +2306,7 @@ final class ComponentProps implements EntrySchemasInterface, ContainerInjectionI
   /**
    * {@inheritdoc}
    */
-  public function entrySchema(string $id): array {
+  public function entrySchema(string $id): Schema {
     return self::props($this->components->all()[$id]['props'] ?? []);
   }
 
@@ -2320,26 +2327,28 @@ final class ComponentProps implements EntrySchemasInterface, ContainerInjectionI
    * @param array $props
    *   The props as the component declares them.
    *
-   * @return array
+   * @return \PortableSchema\Builder\Schema
    *   The schema.
    */
-  public static function props(array $props): array {
-    $props += ['type' => 'object', 'properties' => []];
-    foreach ($props['properties'] as $name => $prop) {
-      $types = (array) ($prop['type'] ?? []);
+  public static function props(array $props): Schema {
+    $schema = Schema::from($props + ['type' => 'object', 'properties' => []]);
+    $properties = $schema->get('properties');
+    foreach (is_array($properties) ? $properties : [] as $name => $prop) {
+      $types = $prop instanceof Schema ? (array) ($prop->get('type') ?? []) : [];
       $json = array_values(array_intersect($types, self::JSON_TYPES));
       if (count($json) === count($types)) {
         continue;
       }
       if ($json === []) {
-        unset($props['properties'][$name]);
-        $props['required'] = array_values(array_diff($props['required'] ?? [], [$name]));
+        unset($properties[$name]);
+        $required = $schema->get('required');
+        $schema = $schema->with('properties', $properties)->with('required', array_values(array_diff(is_array($required) ? $required : [], [$name])));
         continue;
       }
-      $props['properties'][$name]['type'] = $json;
+      $properties[$name] = $prop->with('type', $json);
+      $schema = $schema->with('properties', $properties);
     }
-    $props['additionalProperties'] = FALSE;
-    return $props;
+    return $schema->with('additionalProperties', FALSE);
   }
 
 }
@@ -2610,8 +2619,8 @@ of code, counted without blank lines or comments:
 | File | What it is | Lines |
 | --- | --- | --- |
 | [`modules/surface_examples/src/Resource/SpotlightResource.php`](src/Resource/SpotlightResource.php) | the resource: a component, and its props and slots as variants the component chooses | 14 |
-| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 40 |
-| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 229 |
+| [`src/Variants/ComponentProps.php`](../../src/Variants/ComponentProps.php) | the provider of the props: one variant per component, read from its props schema; the main module's | 42 |
+| [`src/Variants/ComponentSlots.php`](../../src/Variants/ComponentSlots.php) | the provider of the slots: one variant per component, read from its metadata; the main module's | 220 |
 | [`src/Variants/ComponentsOffered.php`](../../src/Variants/ComponentsOffered.php) | the components both providers offer: every one, or those surface.settings:components_offered allows; the main module's | 31 |
 | [`modules/surface_examples/src/Storage/SpotlightStorage.php`](src/Storage/SpotlightStorage.php) | the storage: names the config object | 3 |
 | [`modules/surface_examples/surface_examples.routing.yml`](surface_examples.routing.yml), entry `surface_examples.step12` | the route | 8 |

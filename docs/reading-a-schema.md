@@ -135,15 +135,19 @@ these keywords through it:
   `portable:timestamp`) is a key of that leaf type: `float` for
   `number`, `datetime_iso8601` for `date-time`, and `timestamp`, which
   JSON Schema tells from an integer by the id alone. What the type's
-  document says beyond the row's `type` and `format` is kept as a
-  JsonSchema constraint, so the key is no wider than the type:
-  `maxLength: 254` for `portable:email`, the range of 2^53 - 1 either
-  side of zero for `portable:integer` and `portable:timestamp`. What the
-  site says beside the `$ref` (`title`, `maxLength`) is the key's own,
-  and narrows it, but for a `type` or a `format` that says otherwise
-  than the row: that is noted ("Not read: format uri beside
-  portable:email, which states email.") and the row stands. A `format`
-  the row states none of is kept beside the type. The same type is read
+  document says beyond the row's `type` and `format` is read as the
+  constraint the table reads it as, so the key is no wider than the type
+  and the document served for it says that rule as keywords:
+  `maxLength: 254` for `portable:email` a Length, the range of
+  2^53 - 1 either side of zero for `portable:integer` and
+  `portable:timestamp` a Range. A keyword no row reads, or one the site
+  states too, is kept as a JsonSchema constraint. What the site says
+  beside the `$ref` (`title`, `maxLength`) is the key's own, and narrows
+  it, but for a `type` or a `format` that says otherwise than the row:
+  that is noted ("Not read: format uri beside portable:email, which
+  states email.") and the row stands. A `format` the row states none of
+  is kept beside the type. An absolute URI the registry holds, a schema
+  a site added to it, is read as an id of the library is. The same type is read
   in a list's items, through a def that is only that `$ref` (the def's
   own keywords under the site's), and as `anyOf` of the `$ref` and
   `{"type": "null"}`, in either order, which is the type, nullable. The
@@ -214,6 +218,33 @@ The rest says what is true of one moment (`refined`, `stale`,
 answer (`readOnly` on a whole), or follows from what is read
 (`dependsOn`, `enumerated`): read for nothing. `refine` and `live` say a
 rule or an access answer only the server knows: not read, noted.
+
+### An author's schema
+
+A key an author states as a Schema (`addSchema()`, or the package's
+attributes on a property) is read the same way, as one property of a
+closed object, with two differences, since the schema is the host's own
+([decision](decisions.md#authoring-takes-a-schema)):
+
+- Every `drupal:<plugin id>` check of a plugin the site has, whose
+  options the plugin takes, is that constraint with those options, and
+  its text under `check.drupal:<plugin id>` in `x-portable-messages` the
+  constraint's `message`. Any other check is noted and kept in the key's
+  JsonSchema constraint, which the server answers as `unchecked`. A
+  check naming a constraint a keyword reads too is merged with it (a
+  Range, a Length, a Count, the stricter bound kept) or read as its
+  constraint with the keyword kept in the JsonSchema constraint, so
+  both hold.
+- An optional key with a default is one null clears, as `add()`
+  declares it, and the document allows `null` for it; a document from
+  elsewhere reads such a key as one its storage always holds.
+- An `anyOf` or `oneOf` of one schema and null is that schema, null
+  allowed.
+- What is noted and is none of a link dropped, a check kept or merged,
+  a value held whole to its schema or a def or type of the library read
+  in place is refused:
+  `addSchema()` throws, naming each part by its pointer. A message under
+  any other code but `pattern` and `not` is one such part.
 
 ## What is kept
 

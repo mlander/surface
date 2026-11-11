@@ -103,6 +103,12 @@ An owner may write its keys as properties carrying attributes instead of
 `defineInputs()`: the same blueprint in a second spelling, chosen per
 class ([Declared as properties](declaring-a-resource.md#declared-as-properties)).
 
+A key may also be stated as a Portable Schema, beside the Typed Data
+spelling: `$inputs->addSchema('capacity', Schema::integer()->title(t('Capacity'))->minimum(1)->default(50))`
+is read into the same definition `add()` and a Range declare, and the
+document served for it is the same
+([Declared as a Schema](declaring-a-resource.md#declared-as-a-schema)).
+
 The example block's configuration, `ExampleBlockStructure` in the example module,
 is the first one written this way. It is a structure: the block holds
 it, and the block's host stores it.

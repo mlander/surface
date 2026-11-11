@@ -130,8 +130,16 @@ the record of the rework that brought the module to the pattern.
   (`ResourceBuild\PropertyDeclaration`, which reads no value): a second
   spelling, never a second contract, either per class, never both
   (example 18,
-  `docs/decisions.md#a-class-may-declare-its-keys-as-properties`). A key holds one value of a type in the
-  one table the blueprint, the emitter and the reader read
+  `docs/decisions.md#a-class-may-declare-its-keys-as-properties`). A key
+  may also be stated as a Portable Schema, `addSchema(key, Schema,
+  required:)`, read by the schema reader as the author's own
+  (`SchemaReader::authored()`: a `drupal:` check the constraint it names,
+  an optional key with a default clearable), or, on a property, with the
+  package's `#[Of]`, `#[Schema]`, `#[Check]`, `#[Ui]`, `#[Required]`,
+  never beside Surface's spelling of the same key (examples 1 and the
+  first page, `docs/decisions.md#authoring-takes-a-schema`); a part of
+  the schema not read as written is refused. A key holds one value of a
+  type in the one table the blueprint, the emitter and the reader read
   (`Contract\LeafTypes`: `string`, `email`, `uri`, `datetime_iso8601`,
   `integer`, `timestamp`, `float`, `boolean`, or a shape or config
   schema type of one); any other type is refused at the blueprint, at
@@ -206,7 +214,8 @@ the record of the rework that brought the module to the pattern.
   `SiteListInterface` (one listing for several owners a
   `BoundSiteListInterface`, handed `arguments:` and asked `listFor()`),
   whose `list()` answers a `SiteList` (per value,
-  its label and the JSON Schema of what it chooses, `schema:`, or a
+  its label and the JSON Schema of what it chooses, `schema:`, a
+  `PortableSchema\Builder\Schema`, or a
   structure class, `structure:`; a start or a lock refused), asked at
   every build and refused uncacheable or varying by the account. Each variant is a structure read
   from its schema, id `<owner>.<key>.<value>`; a `#[Variant]` wins for a
@@ -225,7 +234,8 @@ the record of the rework that brought the module to the pattern.
   is attached (`Resources::buildRead()`), so variants nest: a component's
   slots, each holding a component with its own props and slots. A
   provider implementing `EntrySchemasInterface` lists values and labels
-  alone and answers `entrySchema($id)` and `entryDefs()` when a door
+  alone and answers `entrySchema($id)` and `entryDefs()`, `Schema`
+  values, when a door
   reads a variant (`SiteEntries`), as `ComponentProps` and
   `ComponentSlots` do; the pipeline asks an unsettled variant's document,
   not the variant, whether it holds a secret
@@ -976,7 +986,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2346, Assertions: 57213, Errors: 0, Failures: 0, Skipped: 3. Classes: 328 of 328, 8 at a time, browser classes 4.
+phpunit: Tests: 2367, Assertions: 57467, Errors: 0, Failures: 0, Skipped: 3. Classes: 330 of 330, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -1000,8 +1010,9 @@ from the Portable Schema package's subclasses of Opis classes
 Opis itself, about four in each class that loads the package; none is
 the module's.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2232, Assertions: 52659, Deprecations: 679, Skipped: 3. Classes:
-275, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2253, Assertions: 52913, Deprecations: 683, Skipped: 3. Classes:
+277, 8 at a time.`; its deprecation count is per process, so it is
+higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the

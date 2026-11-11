@@ -13,6 +13,7 @@ use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\LeafTypes;
+use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resolve;
@@ -21,6 +22,7 @@ use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
 use Drupal\surface\Resource\ComputesValueInterface;
 use Drupal\surface\Resource\DefinesInputsInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * What every blueprint does: add, over the engine's builder.
@@ -371,6 +373,17 @@ abstract class BlueprintAdapterBase implements BlueprintAdditionsInterface {
       ));
     }
     return $this->addKey($key, $definition, $default);
+  }
+
+  /**
+   * {@inheritdoc}
+   *
+   * Read by the schema reader, which declares the key through this
+   * blueprint's own verbs: what they refuse is refused the same way.
+   */
+  public function addSchema(string $key, Schema $schema, ?bool $required = NULL): static {
+    SchemaReader::authored($this, $key, $schema, $required);
+    return $this;
   }
 
   /**
