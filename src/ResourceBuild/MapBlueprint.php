@@ -14,7 +14,7 @@ use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\Compute;
-use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceBuilder;
 
 /**
  * What addMap() hands its callable first: keys that land in a plain map.
@@ -52,7 +52,7 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
    *   The map's key in its owner, for messages.
    * @param \Drupal\surface\ResourceBuild\BlueprintAdapterBase $owner
    *   The blueprint the map is declared through.
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The owner's builder, which this blueprint declares nothing into.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typedDataManager
    *   The typed data manager.
@@ -66,7 +66,7 @@ final class MapBlueprint extends BlueprintAdapterBase implements BlueprintInterf
     protected readonly MapDataDefinition $map,
     protected readonly string $path,
     protected readonly BlueprintAdapterBase $owner,
-    SurfaceBuilderInterface $builder,
+    SurfaceBuilder $builder,
     TypedDataManagerInterface $typedDataManager,
     bool $outputs = FALSE,
     protected readonly ?string $unframed = NULL,

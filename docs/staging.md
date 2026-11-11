@@ -95,6 +95,23 @@ Apply's own `changes` is `['']`: a structure with no keys has no document to
 compare, so the pipeline answers the whole call as the one change, as a
 delete does. `apply` declares `destructive` and is not idempotent.
 
+### The stage's own paths
+
+The six operations declare no permission; the stage's own access
+(`StageAccess`) decides who may use one. Their refusals are told to
+every account, as the stage a call goes through is
+([The `X-Surface-Stage` header](#the-x-surface-stage-header)): a stage
+id is a random UUID, so an account can only ask about one it was
+handed, and a client needs to know its stage expired to open another.
+An id that names no stage is `not_found` at every door: the tool's
+input to correct, a 404 naming the id over HTTP (`GET`, `PATCH`,
+`DELETE /surface-api/surface.stage/{id}`, `:changes`, `:apply`), a page
+not found at the form. Another account's stage is `access`, with the
+stage access's reason, "The stage is another account's.": the tool's
+access failure, a 403 over HTTP, at the route's check and at the
+controller alike, and the form's error
+(why: [decision](decisions.md#one-runner-runs-an-operation)).
+
 ## Naming a stage
 
 ### The `stage` input
@@ -136,14 +153,16 @@ drush tool:run surface:entity.content:node.page:update --uid=1 --json \
   `stage`.
 - A narrowing tool narrows over the staged view.
 
-An id that names no stage is the caller's input to correct, code
-`not_found`. A call refuses another account's stage, code `access`,
-before the thing the parameters name is asked about or anything is
-built, and the message names the stage. The Tool API runner (`drush
-tool:run`, MCP) asks the tool's access check before the call, and that
-check builds without a stage the account may not use: where the thing
-would refuse without it, as `id: -1` does, the runner answers its fixed
-refusal, `access_denied`, which does not name the stage.
+The stage is asked after the operation's permission and before the
+thing the parameters name, through the runner, and nothing is built
+for a stage the call may not use. An id that names no stage is the
+caller's input to correct, code `not_found`. Another account's stage is
+refused, code `access`, with the stage access's reason, "The stage is
+another account's.". A stage on a call it does not apply to is
+`does_not_apply`. The tool's access check, which the Tool API's runner
+(`drush tool:run`, MCP) asks before the call, lets each of these through
+for the call alone, so the call answers it in the result shape with its
+code, whatever the thing would answer without the stage.
 
 ### The `X-Surface-Stage` header
 
@@ -190,21 +209,26 @@ X-Surface-Stage: 90330186-6d51-43bf-a4cd-d7f144e63c1e
   ignores the header at a stored id: the full schema reads nothing
   stored. At a local id (`-1`) it reads the header, since only the
   stage names that id, and answers the create's full schema; without
-  the header it is 404. A lookup (`:lookup`) does the same.
+  the header the id names nothing: 404 for an account that holds the
+  operation's permission, and the one withheld refusal, 403, for any
+  other, an account a content type's operations declare no permission
+  for among them. A lookup (`:lookup`) does the same.
 - Every answer stays `Cache-Control: no-store, private`.
 
-The route's access check (`ServedOperationAccessCheck`) reads the
-header's stage before the controller runs, so the answers come in this
-order. Another account's stage is 403 on any call, answered before the
-thing the path names is asked about or anything is built. The header on
-a path of the stage itself is 400: a stage is not staged. The header on
-any other call a stage does not apply to, a read included (a resource
-kept in State, the venues' listing or reorder), is 422 with one
-violation at no path, code `does_not_apply`: "A stage does not apply to
-this operation.", whether or not the stage exists. The controller
-answers both (`ResourceApiController::served()`), before it reads the
-stage the header names. A header that names no stage is 404 only on a
-call a stage applies to.
+The route's access check (`ServedOperationAccessCheck`) and the
+controller both ask the runner, which asks after the operation's
+permission, and before the thing the path names is asked about or
+anything is built: whether a stage applies, whether the stage exists,
+and whether it is the account's. So the answers come in this order. The
+header on a path of the stage itself is 400: a stage is not staged. The
+header on any other call a stage does not apply to, a read included (a
+resource kept in State, the venues' listing or reorder), is 422 with
+one violation at no path, code `does_not_apply`: "A stage does not
+apply to this operation.", whatever stage it names, another account's
+or none. On a call a stage applies to, a header that names no stage is
+404, its detail naming the id, and another account's stage is 403, "The
+stage is another account's.". The controller answers the 400 itself and
+the rest from the runner's refusal (`ResourceApiController::problem()`).
 
 The OpenAPI document describes the header once, as the parameter
 `SurfaceStage`, and references it from the envelope, the narrowing and
@@ -742,10 +766,12 @@ drush tool:run surface:entity.content:node.page:create --uid=1 --json \
   taken out of it; nothing was created or removed." After that, `-1`
   names nothing, as without the stage: the stage holds no create at it,
   so its context is built as with no stage, and the owner finds no node
-  `-1`. The tool's call answers `not_found` ("Not found: …"); the Tool
-  API runner answers its fixed `access_denied` and HTTP its fixed 403,
-  since the entity resources declare no operation permission (an
-  account holding a resource's permission hears not found). Only a
+  `-1`. Every door answers the fixed refusal, since the entity
+  resources declare no operation permission, so no account may hear
+  that an id names nothing: the tool's call answers `access` ("You do
+  not have permission to do this."), the Tool API runner its fixed
+  access denied, and HTTP its fixed 403 (an account holding a resource's
+  permission, where one is declared, hears not found). Only a
   write whose context was built before the drop and prepared after it
   is refused by the stage, code `not_found`: "The stage no longer
   creates this thing: its create was taken out of the stage."
@@ -1293,7 +1319,8 @@ delete of many things, chosen on a listing.
   as for core's. The list has one row per translation and hands the
   action each row's translation, so two rows of one node are one node.
   The action asks the delete access of each node through
-  `entity.content:node`, leaving a refused one out with a message; opens
+  `entity.content:node` with the runner's `gate()`, leaving a refused
+  one out with a message; opens
   a stage as the current user, labeled with the count of the nodes
   allowed, "Delete 2 items"; stages one delete per node; and keeps
   `['stage' => <id>, 'ids' => [...]]` in the private temp store
@@ -1312,12 +1339,12 @@ delete of many things, chosen on a listing.
   stored, since each is there until the stage is applied, names the
   stage by its label, asks "Delete 2 items?", and is never cached. The
   label is read by running the stage's `read`, which the module resolves
-  to the update's context, through the pipeline with no values, a run
+  to the update's context, through the runner with no values, a run
   that writes nothing and answers what is stored in `$result->values`
   ([From PHP](#from-php)); the read tool and the HTTP door read stored
   values through the storage's `load()` instead. Before it asks, it
-  runs the stage's `changes` the same way and reads `total` through the
-  pipeline's `outputs()`: with `total` 0 (the stage was applied through
+  runs the stage's `changes` the same way and reads `total` from the
+  run's outputs: with `total` 0 (the stage was applied through
   another door, or holds no write) it clears the selection and goes back
   to the content list, "The stage of this selection holds nothing to
   apply: it was applied or emptied. Select the content again to stage
@@ -1325,7 +1352,7 @@ delete of many things, chosen on a listing.
   discarded, it goes back to the content list with a message, the
   selection cleared; with a stage the account may not read, it goes
   back with the selection kept.
-- **Delete** runs the stage's `apply` through the pipeline for the
+- **Delete** runs the stage's `apply` through the runner for the
   current user, the stage's owner ([Apply](#apply)): each delete is
   checked again, its delete access and its token, and all are made in
   one transaction. Committed, the page says "Deleted 2 items.", the
@@ -1591,14 +1618,13 @@ access meets core's own refusal, an exception from its predelete hook,
   to rehearse it, so a write staged between the two is applied with the
   rest; the check between the rehearsal and the commit (a stage written
   after it was rehearsed refuses the apply) closes the rest.
-- **An id that names nothing on the stage's own paths.** The stage's
-  operations declare no permission, so at the tool door's access check
-  (`drush tool:run`, MCP) and the HTTP route's, an id that names no
-  stage gets the door's one fixed refusal, as for any operation that
-  declares none; a tool called from PHP, which runs no access check,
-  answers `not_found`. A stage named through the `stage` input that
-  names nothing is not found; one named through the header is 404 on a
-  call a stage applies to, and 422 on any other
+- **A stage named by a value that is not a string.** The Tool API lets
+  any value through a string input to a PHP caller that calls
+  `execute()`; the runner takes an id, so the tool asks the runner
+  without the stage and answers such a value itself, `not_found`. A
+  stage named through the `stage` input that names nothing is not
+  found; one named through the header is 404 on a call a stage applies
+  to, and 422 on any other
   ([The `X-Surface-Stage` header](#the-x-surface-stage-header)).
 - **A required key after a staged delete.** The pipeline validates a
   write before the storage sees it, and a load through the stage

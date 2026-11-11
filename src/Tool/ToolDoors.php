@@ -8,7 +8,6 @@ use Drupal\Component\Plugin\Discovery\DiscoveryInterface;
 use Drupal\surface\ResourceBuild\CatalogDoorsInterface;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
-use Drupal\surface\ResourceBuild\SiteCatalog;
 
 /**
  * The tool and the narrowing tool derived for an operation.
@@ -18,6 +17,18 @@ use Drupal\surface\ResourceBuild\SiteCatalog;
  * rule says should.
  */
 final class ToolDoors implements CatalogDoorsInterface {
+
+  /**
+   * The door's name: the tool derived for the operation.
+   */
+  public const TOOL = 'tool';
+
+  /**
+   * The door's name: the narrowing tool derived beside it.
+   *
+   * Derived where the operation's listing states a key open.
+   */
+  public const SCHEMA_TOOL = 'schema tool';
 
   /**
    * Constructs a ToolDoors.
@@ -35,8 +46,8 @@ final class ToolDoors implements CatalogDoorsInterface {
   public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     $id = 'surface:' . $resource->id . ':' . $operation->id;
     return array_filter([
-      SiteCatalog::TOOL => $this->tools->hasDefinition($id) ? $id : NULL,
-      SiteCatalog::SCHEMA_TOOL => $this->tools->hasDefinition($id . ':schema') ? $id . ':schema' : NULL,
+      self::TOOL => $this->tools->hasDefinition($id) ? $id : NULL,
+      self::SCHEMA_TOOL => $this->tools->hasDefinition($id . ':schema') ? $id . ':schema' : NULL,
     ]);
   }
 

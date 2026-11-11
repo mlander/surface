@@ -62,9 +62,9 @@ contract panel's JSON, the commands and their answers, and each file
 shown whole, by its extension. The core, the JSON, YAML, PHP, Twig and
 Bash languages and the default theme come from cdnjs, each pinned and
 held to its integrity hash (`surface.libraries.yml`), as the OpenAPI
-document's page loads Swagger UI. The React page bundles Prism
-for its JSON and takes the same theme. When the CDN cannot be reached,
-the blocks show as plain text.
+document's page, `surface_openapi`'s, loads Swagger UI. The React page
+bundles Prism for its JSON and takes the same theme. When the CDN
+cannot be reached, the blocks show as plain text.
 
 To take the examples again from the start, follow **Reset to defaults**
 on the landing page (`/surface-examples/reset`). It puts every config
@@ -1199,7 +1199,7 @@ example 3.
 ## In React
 
 Examples 1 to 3 again, with no Form API: the same operation served as a
-JSON contract by the base module's HTTP door and rendered by a React
+JSON contract by the HTTP door, `surface_http`, and rendered by a React
 app, from the experimental example `surface_examples_react`.
 
 ```bash

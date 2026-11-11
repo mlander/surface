@@ -97,6 +97,7 @@ class ReadToolTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples_node_type',
     'surface_examples_field',
     'surface_examples',

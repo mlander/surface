@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Traits;
 
-use Drupal\surface\Http\ResourceApiController;
-use Drupal\surface\Http\ProblemDetails;
+use Drupal\surface_http\Controller\ResourceApiController;
+use Drupal\surface_http\ProblemDetails;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;

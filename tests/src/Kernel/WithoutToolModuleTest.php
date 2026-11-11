@@ -8,11 +8,11 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Form\ContractPanel;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\ResourceBuild\OperationRoute;
-use Drupal\surface\ResourceBuild\SiteCatalog;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
+use Drupal\surface\ResourceBuild\FormRouteDoors;
 
 /**
  * Tests the module on a site without the tool module.
@@ -134,9 +134,11 @@ class WithoutToolModuleTest extends SurfaceKernelTestBase {
         $doors += array_fill_keys(array_keys($operation['doors'] ?? []), TRUE);
       }
     }
-    $this->assertArrayHasKey(SiteCatalog::FORM, $doors);
-    $this->assertArrayNotHasKey(SiteCatalog::TOOL, $doors);
-    $this->assertArrayNotHasKey(SiteCatalog::SCHEMA_TOOL, $doors);
+    $this->assertArrayHasKey(FormRouteDoors::DOOR, $doors);
+    // ToolDoors::TOOL and ToolDoors::SCHEMA_TOOL, written out: no class
+    // of the door may be loaded.
+    $this->assertArrayNotHasKey('tool', $doors);
+    $this->assertArrayNotHasKey('schema tool', $doors);
     $this->assertNoToolClassLoaded();
   }
 

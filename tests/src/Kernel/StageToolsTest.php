@@ -57,6 +57,7 @@ class StageToolsTest extends SurfaceKernelTestBase {
     ...self::ENTITY_MODULES,
     'surface_stage_test',
     'surface_tool_test',
+    'surface_http',
     'surface_examples',
     'my_module',
   ];
@@ -258,7 +259,7 @@ class StageToolsTest extends SurfaceKernelTestBase {
     $theirs->execute();
     $result = $theirs->getResult();
     $this->assertFalse($result->isSuccess());
-    $this->assertSame('You do not have permission to use the stage ' . $stage . '.', (string) $result->getMessage());
+    $this->assertSame("The stage is another account's.", (string) $result->getMessage());
     $this->assertSame('access', $result->getContextValues()[OperationInputs::VIOLATIONS][0]['code']);
 
     $missing = $this->tool(['id' => -1, OperationInputs::STAGE => self::NONE] + $edit);

@@ -125,7 +125,7 @@ if [ "$FAST" = "1" ]; then
 cd /var/www/html/web || exit 1
 CACHE=/tmp/surface-phpunit-cache
 OUT="$(mktemp -d)"
-find modules/custom/surface/tests/src/Unit modules/custom/surface/tests/src/Kernel -name '*Test.php' | php -r '
+find modules/custom/surface -path '*/node_modules' -prune -o \( -path '*/tests/src/Unit/*' -o -path '*/tests/src/Kernel/*' \) -name '*Test.php' -print | php -r '
   $rows = [];
   while (($file = fgets(STDIN)) !== FALSE) {
     $file = trim($file);
@@ -349,7 +349,7 @@ $config['globRoot'] = $module;
 // and an allowance in one names the path it accepted as it was, in the
 // old spelling when the change was a rename. The OpenAPI 3.1 schema is the
 // OpenAPI Initiative's file, copied unchanged.
-$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/surface_examples_react/dist/**', '**/package-lock.json', 'docs/reviews-*/**', 'tests/fixtures/contracts/**', 'tests/fixtures/openapi/oas-*.json'];
+$config['ignorePaths'] = ['.git/**', '**/node_modules/**', '.cspell-project-words.txt', 'modules/surface_examples_react/dist/**', '**/package-lock.json', 'docs/reviews-*/**', 'tests/fixtures/contracts/**', 'modules/surface_openapi/tests/fixtures/openapi/oas-*.json'];
 foreach ($config['dictionaryDefinitions'] as &$dictionary) {
   $dictionary['path'] = $core . '/' . ltrim($dictionary['path'], './');
 }

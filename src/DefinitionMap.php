@@ -83,7 +83,7 @@ final class DefinitionMap implements \IteratorAggregate, \ArrayAccess, \Countabl
    * refinement edge names a key that exists.
    *
    * The refinement map is checked for cycles by
-   * SurfaceBuilderInterface::seal(), which is the moment the map is
+   * SurfaceBuilder::seal(), which is the moment the map is
    * whole, and not again here.
    *
    * @param \Drupal\surface\Entry[] $entries

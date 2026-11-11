@@ -73,7 +73,7 @@ class RouteCatalogTest extends SurfaceKernelTestBase {
   protected function formDoors(): array {
     $doors = [];
     foreach ($this->catalog()->describe()['route_test.card']['operations'] as $operation) {
-      $doors[$operation['id']] = $operation['doors'][SiteCatalog::FORM] ?? '';
+      $doors[$operation['id']] = $operation['doors'][FormRouteDoors::DOOR] ?? '';
     }
     return $doors;
   }
@@ -181,8 +181,8 @@ class RouteCatalogTest extends SurfaceKernelTestBase {
       $provider = $this->createMock(RouteProviderInterface::class);
       $provider->method('getAllRoutes')->willReturn(new \ArrayIterator([$name => $routes->getRouteByName($name)]));
       $doors = new FormRouteDoors($provider);
-      $this->assertStringContainsString('(' . $name . ')', $doors->doors($card, $create, TRUE)[SiteCatalog::FORM], 'Listed.');
-      $link = $doors->links($card, $create, TRUE)[SiteCatalog::FORM] ?? NULL;
+      $this->assertStringContainsString('(' . $name . ')', $doors->doors($card, $create, TRUE)[FormRouteDoors::DOOR], 'Listed.');
+      $link = $doors->links($card, $create, TRUE)[FormRouteDoors::DOOR] ?? NULL;
       return $link === NULL ? [] : [$link->getRouteName(), $link->toString()];
     };
     $this->assertSame(['surface_route_test.add', '/surface-test/card/add'], $linked('surface_route_test.add'));
@@ -191,7 +191,7 @@ class RouteCatalogTest extends SurfaceKernelTestBase {
     // A variable nothing fills: listed, not linked.
     $this->assertSame([], $linked('surface_route_test.add_colored'));
     // Every route of the card's create, the first that can be linked.
-    $this->assertSame('surface_route_test.add', $this->catalog()->links('route_test.card', 'create')[SiteCatalog::FORM]->getRouteName());
+    $this->assertSame('surface_route_test.add', $this->catalog()->links('route_test.card', 'create')[FormRouteDoors::DOOR]->getRouteName());
   }
 
 }

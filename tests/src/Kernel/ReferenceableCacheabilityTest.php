@@ -37,7 +37,7 @@ class ReferenceableCacheabilityTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http'];
 
   /**
    * {@inheritdoc}

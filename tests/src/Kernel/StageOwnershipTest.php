@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\Access\AccessResultInterface;
 use Drupal\Core\Access\AccessResultReasonInterface;
+use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\Core\Session\AnonymousUserSession;
-use Drupal\surface\Http\ServedOperationAccessCheck;
-use Drupal\surface\Http\ServedPaths;
+use Drupal\surface_http\Access\ServedOperationAccessCheck;
+use Drupal\surface_http\ServedPaths;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
@@ -24,8 +26,9 @@ use Symfony\Component\Routing\Route;
  *
  * Another account is refused every operation on a stage it did not open,
  * and writing into it or reading through it from another resource's tools
- * and paths alike; an id that names no stage names nothing; an anonymous
- * account may not open one.
+ * and paths alike, told with the stage access's reason; an id that names
+ * no stage names nothing, a 404 over HTTP as the tool's `not_found`; an
+ * anonymous account may not open one.
  *
  * @see \Drupal\surface\Access\StageAccess
  */
@@ -45,7 +48,15 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = ['system', 'user', 'serialization', 'tool', 'surface', 'surface_stage_test'];
+  protected static $modules = [
+    'system',
+    'user',
+    'serialization',
+    'tool',
+    'surface',
+    'surface_http',
+    'surface_stage_test',
+  ];
 
   /**
    * {@inheritdoc}
@@ -71,6 +82,23 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
    *   Whether the route lets the current account in.
    */
   protected function routeAllows(string $method, string $path, array $headers = []): bool {
+    return $this->routeAnswer($method, $path, $headers)->isAllowed();
+  }
+
+  /**
+   * Answers the API route's access check for a request, in full.
+   *
+   * @param string $method
+   *   The method.
+   * @param string $path
+   *   The path after `/surface-api/`, split into its segments.
+   * @param array<string, string> $headers
+   *   More headers, by name.
+   *
+   * @return \Drupal\Core\Access\AccessResultInterface
+   *   The route's answer for the current account.
+   */
+  protected function routeAnswer(string $method, string $path, array $headers = []): AccessResultInterface {
     $check = $this->container->get('surface.served_access');
     assert($check instanceof ServedOperationAccessCheck);
     $segments = explode('/', $path);
@@ -84,7 +112,20 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
       $server['HTTP_' . strtoupper(str_replace('-', '_', $name))] = $value;
     }
     $request = Request::create('/surface-api/' . $path, $method, [], [], [], $server);
-    return $check->access($route_match, $this->container->get('current_user'), $request)->isAllowed();
+    return $check->access($route_match, $this->container->get('current_user'), $request);
+  }
+
+  /**
+   * Reads the reason an access answer gives.
+   *
+   * @param \Drupal\Core\Access\AccessResultInterface $answer
+   *   The answer.
+   *
+   * @return string
+   *   Its reason, or '' for none.
+   */
+  protected static function reason(AccessResultInterface $answer): string {
+    return $answer instanceof AccessResultReasonInterface ? (string) $answer->getReason() : '';
   }
 
   /**
@@ -116,10 +157,24 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
     }
     $this->assertSame('Mine', $this->stages()->read($id)['label']);
 
-    $answer = $this->servedJson('PATCH', '/surface-api/surface.stage/' . $id, ['label' => 'Theirs']);
-    $this->assertSame(403, $answer['status']);
-    $this->assertSame(403, $this->served('PATCH', '/surface-api/surface.stage/' . $id . ':apply', [])->getStatusCode());
-    $this->assertSame(403, $this->served('DELETE', '/surface-api/surface.stage/' . $id)->getStatusCode());
+    // Over HTTP the stage's own paths agree with the tool: 403, with the
+    // stage access's reason, at the route's check and at the controller.
+    $reason = "The stage is another account's.";
+    foreach ([
+      ['GET', $id, NULL],
+      ['PATCH', $id, ['label' => 'Theirs']],
+      ['PATCH', $id . ':apply', []],
+      ['POST', $id . ':changes', []],
+      ['DELETE', $id, NULL],
+    ] as [$method, $path, $body]) {
+      $answer = $this->servedJson($method, '/surface-api/surface.stage/' . $path, $body);
+      $this->assertSame(403, $answer['status'], $method . ' ' . $path);
+      $this->assertSame('Access refused: ' . $reason, $answer['detail'], $method . ' ' . $path);
+      $this->assertSame([['path' => '', 'code' => Violation::ACCESS, 'message' => 'Access refused: ' . $reason]], $answer['errors'], $method . ' ' . $path);
+      $route = $this->routeAnswer($method, 'surface.stage/' . $path);
+      $this->assertTrue($route->isForbidden(), $method . ' ' . $path);
+      $this->assertSame($reason, static::reason($route), $method . ' ' . $path);
+    }
     $this->assertNotNull($this->stages()->read($id));
   }
 
@@ -144,7 +199,7 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
     $this->assertFalse($answer['success']);
     $this->assertSame(FailureCategory::Access, $answer['category']);
     $this->assertSame(['' => Violation::ACCESS], static::toolCodes($answer));
-    $this->assertSame('You do not have permission to use the stage ' . $id . '.', $answer['message']);
+    $this->assertSame("The stage is another account's.", $answer['message']);
     $read = $this->runTool('surface:stage_test.ledger:read', ['id' => 'a', OperationInputs::STAGE => $id]);
     $this->assertFalse($read['success']);
     $this->assertSame(['' => Violation::ACCESS], static::toolCodes($read));
@@ -164,8 +219,16 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
     // anything is built; one that names nothing is let through, and the
     // controller answers 404.
     $this->assertTrue($this->routeAllows('PATCH', 'stage_test.ledger/a'));
-    $this->assertFalse($this->routeAllows('PATCH', 'stage_test.ledger/a', [ServedPaths::STAGE_HEADER => $id]));
-    $this->assertFalse($this->routeAllows('GET', 'stage_test.ledger/a', [ServedPaths::STAGE_HEADER => $id]));
+    foreach (['PATCH', 'GET'] as $method) {
+      $route = $this->routeAnswer($method, 'stage_test.ledger/a', [ServedPaths::STAGE_HEADER => $id]);
+      $this->assertTrue($route->isForbidden(), $method);
+      $this->assertSame("The stage is another account's.", static::reason($route), $method . ': the stage access\'s own reason.');
+      $this->assertSame(0, CacheableMetadata::createFromObject($route)->getCacheMaxAge(), $method);
+      $this->assertContains('user.permissions', CacheableMetadata::createFromObject($route)->getCacheContexts(), $method);
+      $answer = $this->servedJson($method, '/surface-api/stage_test.ledger/a', $method === 'PATCH' ? ['title' => 'Theirs'] : NULL, [ServedPaths::STAGE_HEADER => $id]);
+      $this->assertSame(403, $answer['status'], $method);
+      $this->assertSame("Access refused: The stage is another account's.", $answer['detail'], $method);
+    }
     $this->assertTrue($this->routeAllows('PATCH', 'stage_test.ledger/a', [ServedPaths::STAGE_HEADER => self::NONE]));
     $this->assertSame(404, $this->served('PATCH', '/surface-api/stage_test.ledger/a', ['title' => 'Theirs'], [ServedPaths::STAGE_HEADER => self::NONE])->getStatusCode());
     $this->assertSame(404, $this->served('GET', '/surface-api/stage_test.ledger/a', NULL, [ServedPaths::STAGE_HEADER => self::NONE])->getStatusCode());
@@ -204,8 +267,23 @@ class StageOwnershipTest extends SurfaceKernelTestBase {
       $this->assertFalse($answer['success'], $operation);
       $this->assertSame(['' => Violation::NOT_FOUND], static::toolCodes($answer), $operation);
     }
-    $this->assertSame(404, $this->served('GET', '/surface-api/surface.stage/' . self::NONE)->getStatusCode());
-    $this->assertSame(404, $this->served('PATCH', '/surface-api/surface.stage/' . self::NONE . ':apply', [])->getStatusCode());
+    // Over HTTP the same: the route lets the request through, for this
+    // request alone, and the controller answers 404 naming the id. The
+    // stage's operations declare no permission, and their refusals are
+    // told to every account: the id is a random UUID.
+    foreach ([
+      ['GET', self::NONE, NULL],
+      ['PATCH', self::NONE . ':apply', []],
+      ['POST', self::NONE . ':changes', []],
+      ['DELETE', self::NONE, NULL],
+    ] as [$method, $path, $body]) {
+      $route = $this->routeAnswer($method, 'surface.stage/' . $path);
+      $this->assertTrue($route->isAllowed(), $method . ' ' . $path);
+      $this->assertSame(0, CacheableMetadata::createFromObject($route)->getCacheMaxAge(), $method . ' ' . $path);
+      $answer = $this->servedJson($method, '/surface-api/surface.stage/' . $path, $body);
+      $this->assertSame(404, $answer['status'], $method . ' ' . $path);
+      $this->assertStringContainsString(self::NONE, $answer['detail'], $method . ' ' . $path);
+    }
   }
 
   /**

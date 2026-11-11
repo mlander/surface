@@ -1,8 +1,10 @@
 services:
   # The React pages an operation reaches, its own and those modules serve
-  # it at, for the site catalog.
+  # it at, for the site catalog. The HTTP door's listing is optional so the
+  # container still builds on a site updated to the code that moved it to
+  # surface_http before the update that installs it has run.
   surface_examples_react.react_doors:
     class: Drupal\surface_examples_react\ReactDoors
-    arguments: ['@surface.http_doors', '@surface.form_route_doors']
+    arguments: ['@?surface.http_doors', '@surface.form_route_doors']
     tags:
-      - { name: surface.catalog_doors, priority: 25 }
+      - { name: surface.catalog_doors, priority: 5 }

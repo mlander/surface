@@ -21,7 +21,7 @@ use Drupal\surface\Storage\StorageLayoutInterface;
  * values are written: StorageLayoutInterface says why.
  *
  * @see \Drupal\surface\ResourceBuild\StorageAdapter
- * @see \Drupal\surface\SurfaceBuilderInterface::setThirdPartyLayout()
+ * @see \Drupal\surface\SurfaceBuilder::setThirdPartyLayout()
  */
 interface AltersStorageLayoutInterface {
 

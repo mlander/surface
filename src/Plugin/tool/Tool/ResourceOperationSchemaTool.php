@@ -6,7 +6,9 @@ namespace Drupal\surface\Plugin\tool\Tool;
 
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
+use Drupal\surface\Operation\OperationRun;
 use Drupal\surface\Tool\OperationInputs;
+use Drupal\surface\Tool\ToolDoors;
 use Drupal\tool\ExecutableResult;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -18,8 +20,9 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * such as a component's props, whatever their count, and a map of keys
  * from the site past the budget,
  * `surface:<resource>:<operation>:schema`: the tool door's
- * `POST /surface-api/{resource}/schema`. An agent chooses the deciding
- * key, sends what it has so far, and reads the chosen variant's keys.
+ * `POST /surface-api/{resource}/schema`, which surface_http serves. An
+ * agent chooses the deciding key, sends what it has so far, and reads
+ * the chosen variant's keys.
  * It carries no #[Tool] of its own: ResourceOperationToolDeriver derives
  * it under the write tool's base plugin id and names this class on the
  * derivative.
@@ -27,11 +30,13 @@ use Symfony\Component\DependencyInjection\ContainerInterface;
  * - **Inputs**: the operation's parameters, exactly as the write tool
  *   declares them, `values`, optional and open: what the caller has so
  *   far, and `stage` where a stage applies to the operation.
- * - **Access**: the write tool's, for the same context.
- * - **Execution**: as the HTTP narrowing runs it. The resource is built
- *   for the calling account; the values sent, narrowed to its keys, are
- *   laid over what it opens with (its defaults, and what is stored, or
- *   what the stage named holds); an
+ * - **Access**: the write tool's, for the same context, through the
+ *   runner as the door `schema tool` (ToolDoors::SCHEMA_TOOL).
+ * - **Execution**: as the HTTP narrowing runs it. The runner prepares
+ *   the operation for the calling account, building the resource and
+ *   composing its storage with the stage; the values sent, narrowed to
+ *   its keys, are laid over what it opens with (its defaults, and what
+ *   is stored, or what the stage named holds); an
  *   answer the new choices orphan is dropped as the form drops it
  *   (refinementOverlay()); and the schema for these answers is emitted
  *   from that, with no widget hints.
@@ -49,6 +54,11 @@ final class ResourceOperationSchemaTool extends ResourceOperationToolBase {
    * {@inheritdoc}
    */
   public const SUFFIX = ':' . OperationInputs::SCHEMA;
+
+  /**
+   * {@inheritdoc}
+   */
+  public const DOOR = ToolDoors::SCHEMA_TOOL;
 
   /**
    * The emitter of both documents.
@@ -74,24 +84,16 @@ final class ResourceOperationSchemaTool extends ResourceOperationToolBase {
    * {@inheritdoc}
    */
   protected function doExecute(array $values): ExecutableResult {
-    try {
-      $staged = $this->staged($values);
+    $run = $this->run($values);
+    if (!$run instanceof OperationRun) {
+      return $run;
     }
-    catch (\InvalidArgumentException $e) {
-      return $this->notFound($e);
-    }
-    if ($staged instanceof ExecutableResult) {
-      return $staged;
-    }
-    [$resource, $operation, $context, $stage] = $staged;
-    // Asked again here, as the write tool does: execute() is callable from
-    // PHP without an access check.
-    if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
-      return $this->accessRefused($resource, $operation, $context);
-    }
-    $built = $this->resources->build($resource->name(), $context);
+    $resource = $run->definition();
+    $operation = $run->operation();
+    $built = $run->surface();
     $keys = $built->getDefinitions()->toArray();
-    $stored = $resource->storage === NULL ? [] : array_intersect_key($this->resources->storage($resource->name(), $context, $built, stage: $stage)->load($built), $keys);
+    // A resource its host or its parent stores is prepared with no storage.
+    $stored = $run->hasStorage() ? array_intersect_key($run->storage()->load($built), $keys) : [];
     $current = $built->withDefaults($stored);
     $sent = $values[OperationInputs::VALUES] ?? NULL;
     // Keys the resource does not declare are no edit of it, left out as

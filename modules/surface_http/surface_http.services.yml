@@ -1,0 +1,42 @@
+services:
+  # The HTTP door: an operation served at /surface-api, the path the
+  # resource and the method the operation (contract 3).
+  #
+  # Runs the operation a resource id, an operation id and its parameters
+  # name through the runner, and reads what the door serves off the run:
+  # the current values, the fingerprint, where a created thing lives.
+  surface.served_operations:
+    class: Drupal\surface_http\ServedOperations
+    arguments: ['@surface.resource_registry', '@surface.resources', '@surface.stages', '@surface.runner']
+  # Reads which operation a path and a method name, and writes the path of
+  # an operation: contract 3's paths.
+  surface.served_paths:
+    class: Drupal\surface_http\ServedPaths
+    arguments: ['@surface.resource_registry', '@string_translation']
+  # Gates the API, and a page that names an operation by its ids, by the
+  # operation they serve, through the runner's gate.
+  surface.served_access:
+    class: Drupal\surface_http\Access\ServedOperationAccessCheck
+    arguments: ['@surface.served_operations', '@surface.served_paths', '@request_stack', '@surface.operation_gate', '@logger.channel.surface']
+    tags:
+      - { name: access_check, applies_to: _surface_served_access }
+  # Answers every HTTP error of the API as problem details.
+  surface.problem_details:
+    class: Drupal\surface_http\EventSubscriber\ProblemDetailsSubscriber
+    tags:
+      - { name: event_subscriber }
+  # Tags the full schema by its bytes, and answers 304 to a tag that holds.
+  surface.schema_tag:
+    class: Drupal\surface_http\EventSubscriber\SchemaTagSubscriber
+    tags:
+      - { name: event_subscriber }
+  # The method and path that run an operation, for the site catalog.
+  surface.http_doors:
+    class: Drupal\surface_http\HttpDoors
+    arguments: ['@surface.served_paths']
+    tags:
+      - { name: surface.catalog_doors, priority: 30 }
+  # The paths the main module's other doors name: the tool's schema and
+  # lookup URLs, the contract panel's note. Without this module the
+  # container has no such service, and they name no path.
+  Drupal\surface\ResourceBuild\ServedPathsInterface: '@surface.served_paths'

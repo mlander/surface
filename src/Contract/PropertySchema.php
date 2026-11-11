@@ -9,7 +9,6 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\StringTranslation\TranslationInterface;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
-use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\Validation\ConstraintManager;
@@ -71,12 +70,28 @@ final class PropertySchema {
   protected const SHAPED = self::EXTENSION . '-shape';
 
   /**
-   * Constraints the schema states in a keyword of its own, or not at all.
+   * The constraints a list of values is read from, by the options resolvers.
    *
-   * NotNull is `required`; PrimitiveType, ComplexData and ValidReference
-   * are the data type's own, which `type` states; the three list
-   * constraints are `oneOf`; UniqueItems is `uniqueItems`. Anything not
-   * here and not stated by a keyword is named under
+   * Written as the `oneOf` of the list (optionSet()) where the key's own
+   * list is written; one no resolver reads a list from (AllowedValues,
+   * whose values a callback gives when it validates, or a Choice with
+   * `match` FALSE), one on a list definition and one with `multiple` are
+   * named under `x-surface.checkedOnServer`.
+   */
+  protected const LISTED = [
+    'Choice',
+    'LabeledChoice',
+    'AllowedValues',
+  ];
+
+  /**
+   * Constraints the schema states with no keyword of the constraint table.
+   *
+   * The constraints the table maps to keywords are its own
+   * (ConstraintKeywords); the ones here are said otherwise. NotNull is
+   * `required`. PrimitiveType, ComplexData and ValidReference are the
+   * data type's own, which `type` states. The lists of values are LISTED.
+   * Anything else no keyword states is named under
    * `x-surface.checkedOnServer`, so a client knows the schema is not the
    * whole story for that key, unless the resolver reading it says its
    * list is the whole of it, which is its `oneOf`
@@ -87,15 +102,7 @@ final class PropertySchema {
     'PrimitiveType',
     'ComplexData',
     'ValidReference',
-    'Choice',
-    'LabeledChoice',
-    'AllowedValues',
-    'Range',
-    'Length',
-    'Count',
-    'UniqueItems',
-    'Email',
-    'NotBlank',
+    ...self::LISTED,
   ];
 
   /**
@@ -354,7 +361,7 @@ final class PropertySchema {
       if (isset($type['type'])) {
         $type['type'] = $this->nullable($type['type'], $definition);
       }
-      $schema += $type + $this->keywords($definition, $type['type'] ?? NULL);
+      $schema += $this->keywords($definition, $type['type'] ?? NULL, $type, $listed);
       $radios = $listed && RadiosWidget::drawsOne($definition);
       $fixed = $listed && OptionsWidget::drawsFixed($definition, $set, $value);
       // A reference with too many candidates to list is looked up.
@@ -817,10 +824,20 @@ final class PropertySchema {
   /**
    * States a definition's constraints as JSON Schema keywords.
    *
+   * The table of constraints and keywords writes what it maps
+   * (ConstraintKeywords::state()); what is left is named under
+   * `x-surface.checkedOnServer`, but for the constraints STATED names.
+   *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
    * @param string|array|null $type
    *   The JSON type it was given.
+   * @param array $given
+   *   What the key says already, its `type` and `format`, which the
+   *   constraints' keywords are merged into and which come first.
+   * @param bool $listed
+   *   Whether the key's `oneOf` is written from its own constraints'
+   *   list: never for a list, whose `oneOf` is its items'.
    *
    * @return array
    *   The keywords; under `x-surface-pattern-message` a Regex's own
@@ -828,112 +845,36 @@ final class PropertySchema {
    *   and under `x-surface-checked` each constraint no keyword states, as
    *   checked(), which property() moves into `x-surface.checkedOnServer`.
    */
-  protected function keywords(DataDefinitionInterface $definition, string|array|null $type): array {
-    $keywords = [];
+  protected function keywords(DataDefinitionInterface $definition, string|array|null $type, array $given = [], bool $listed = FALSE): array {
+    $stated = ConstraintKeywords::state($definition->getConstraints(), (array) $type, $given);
+    $keywords = $stated['keywords'];
     $unstated = [];
-    $unique = FALSE;
-    $types = (array) $type;
-    $numeric = array_intersect($types, ['integer', 'number']) !== [];
-    foreach ($definition->getConstraints() as $name => $options) {
-      switch ($name) {
-        case 'Range':
-          // A bound is a number on the wire, though a definition may hold
-          // it as a string (core's timestamp field does).
-          if ($numeric && isset($options['min']) && is_numeric($options['min'])) {
-            $keywords['minimum'] = $options['min'] + 0;
-          }
-          if ($numeric && isset($options['max']) && is_numeric($options['max'])) {
-            $keywords['maximum'] = $options['max'] + 0;
-          }
-          break;
-
-        case 'Length':
-          if (isset($options['min'])) {
-            $keywords['minLength'] = (int) $options['min'];
-          }
-          if (isset($options['max'])) {
-            $keywords['maxLength'] = (int) $options['max'];
-          }
-          break;
-
-        case 'Count':
-          if (isset($options['min'])) {
-            $keywords['minItems'] = (int) $options['min'];
-          }
-          if (isset($options['max'])) {
-            $keywords['maxItems'] = (int) $options['max'];
-          }
-          break;
-
-        case 'UniqueItems':
-          // Written last, after the bounds, as the reader reads it, so a
-          // list reads back to itself whatever order its constraints
-          // were added in.
-          $unique = in_array('array', $types, TRUE);
-          if (!$unique) {
-            $unstated[] = $this->checked((string) $name, $options);
-          }
-          break;
-
-        case 'Email':
-          $keywords['format'] = 'idn-email';
-          break;
-
-        case 'NotBlank':
-          $keywords['minLength'] = max(1, $keywords['minLength'] ?? 1);
-          break;
-
-        case 'Regex':
-          $pattern = $this->pattern($options);
-          if ($pattern === NULL) {
-            $unstated[] = $this->checked((string) $name, $options);
-          }
-          elseif (($options['match'] ?? TRUE) === FALSE) {
-            $keywords['not'] = ['pattern' => $pattern];
-          }
-          else {
-            $keywords['pattern'] = $pattern;
-          }
-          // A pattern is for machines; a person is told the message, in
-          // the document's language: the source core's validator
-          // translates when it refuses a value, read as plain text.
-          $message = $options['message'] ?? NULL;
-          if (is_string($message) && $message !== '') {
-            // A message naming the value it refuses (core's `machine_name`
-            // says "The %value machine name is not valid.") is a refusal's
-            // sentence, with no value to name ahead of one: none is stated.
-            // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
-            $message = preg_match('/%value|@value|\{\{ ?value ?\}\}/', $message) === 1 ? NULL : $this->t($message);
-          }
-          if ($message instanceof TranslatableMarkup) {
-            $keywords[self::EXTENSION . '-pattern-message'] = PlainText::of($message);
-          }
-          break;
-
-        // Core's two composites: every part, in order, or at least one.
-        // Decision: see docs/decisions.md#a-composite-is-its-parts.
-        case 'Sequentially':
-        case 'AtLeastOneOf':
-          $parts = $this->parts($options, $type);
-          $combinator = $name === 'AtLeastOneOf' ? 'anyOf' : 'allOf';
-          if ($parts === NULL) {
-            $unstated[] = $this->checked((string) $name, $options);
-          }
-          else {
-            $keywords[$combinator] = [...($keywords[$combinator] ?? []), ...$parts];
-          }
-          break;
-
-        default:
-          // A constraint whose resolver says it is its list is the `oneOf`
-          // the list is written as.
-          if (!in_array($name, self::STATED, TRUE) && !$this->options->isStatedByList((string) $name)) {
-            $unstated[] = $this->checked((string) $name, $options);
-          }
+    foreach ($stated['left'] as [$name, $options, $mapped]) {
+      $said = !$mapped && match (TRUE) {
+        // A list of values is the `oneOf` the options resolvers read, where
+        // that `oneOf` is written for this key and one reads it. One
+        // resolved only when it is validated (a callback), one that names
+        // the values it refuses (`match` FALSE), one on a list, and one
+        // of several values (`multiple`, an array checked against the list
+        // with its own `min` and `max`, written on no array here) are the
+        // server's.
+        in_array($name, self::LISTED, TRUE) => $listed && empty($options['multiple']) && $this->options->readsAsList($name, $options),
+        // A constraint whose resolver says it is its list is the `oneOf`
+        // the list is written as.
+        default => in_array($name, self::STATED, TRUE) || $this->options->isStatedByList($name),
+      };
+      if (!$said) {
+        $unstated[] = $this->checked($name, $options);
       }
     }
-    if ($unique) {
-      $keywords['uniqueItems'] = TRUE;
+    // A pattern is for machines; a person is told the message, in the
+    // document's language: the source core's validator translates when it
+    // refuses a value, read as plain text.
+    $message = $stated['extras']['patternMessage'] ?? NULL;
+    // phpcs:ignore Drupal.Semantics.FunctionT.NotLiteralString
+    $message = is_string($message) ? $this->t($message) : $message;
+    if ($message instanceof TranslatableMarkup) {
+      $keywords[self::EXTENSION . '-pattern-message'] = PlainText::of($message);
     }
     if ($unstated !== []) {
       $keywords[self::EXTENSION . '-checked'] = $unstated;
@@ -980,64 +921,6 @@ final class PropertySchema {
       $message = $label instanceof \Stringable || (is_string($label) && $label !== '') ? $label : $name;
     }
     return ['constraint' => $name, 'message' => PlainText::of($message)];
-  }
-
-  /**
-   * States the parts of a composite constraint, each as its own schema.
-   *
-   * Each part is translated as a constraint on its own is, by keywords().
-   * A part no keyword states (one checked on the server, a Regex no
-   * pattern carries, a Range on a string, a list of allowed values the
-   * options resolver never reads inside a composite) leaves the whole
-   * composite unstated: an `anyOf` short of a part would refuse what that
-   * part allows, and an `allOf` is kept whole or not at all, so what is
-   * stated is what is checked. A part's message is the server's to say.
-   *
-   * @param mixed $options
-   *   The composite's options, its parts under `constraints`, each a
-   *   constraint's name and options.
-   * @param string|array|null $type
-   *   The JSON type the key was given.
-   *
-   * @return array[]|null
-   *   One schema per part, in order; NULL when any part cannot be stated.
-   */
-  protected function parts(mixed $options, string|array|null $type): ?array {
-    $constraints = is_array($options) ? ($options['constraints'] ?? NULL) : NULL;
-    if (!is_array($constraints) || $constraints === []) {
-      return NULL;
-    }
-    $parts = [];
-    foreach ($constraints as $constraint) {
-      if (!is_array($constraint) || count($constraint) !== 1) {
-        return NULL;
-      }
-      $name = (string) array_key_first($constraint);
-      $part = $this->keywords((new DataDefinition())->addConstraint($name, $constraint[$name]), $type);
-      unset($part[self::EXTENSION . '-pattern-message']);
-      if ($part === [] || isset($part[self::EXTENSION . '-checked'])) {
-        return NULL;
-      }
-      $parts[] = $part;
-    }
-    return $parts;
-  }
-
-  /**
-   * Turns a PHP regular expression into an ECMA one, when it can be.
-   *
-   * @param array $options
-   *   The Regex constraint's options.
-   *
-   * @return string|null
-   *   The pattern without its delimiters, or NULL when it uses anything
-   *   the two engines do not read alike.
-   *
-   * @see \Drupal\surface\Contract\PatternTranslation
-   */
-  protected function pattern(array $options): ?string {
-    $regex = $options['pattern'] ?? $options['value'] ?? NULL;
-    return is_string($regex) ? PatternTranslation::ecma($regex) : NULL;
   }
 
   /**
@@ -1136,10 +1019,11 @@ final class PropertySchema {
         $properties[$name] = $this->signature($property);
       }
     }
+    $type = $this->type($definition);
     return serialize([
       $definition->getDataType(),
       $definition->isRequired(),
-      $this->keywords($definition, $this->type($definition)['type'] ?? NULL),
+      $this->keywords($definition, $type['type'] ?? NULL, $type, $set !== NULL && !$definition instanceof ListDataDefinitionInterface),
       $set === NULL ? NULL : array_keys($set->options),
       $properties,
     ]);

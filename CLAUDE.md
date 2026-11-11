@@ -243,7 +243,16 @@ the record of the rework that brought the module to the pattern.
   keyword says is a **foreign constraint**: the part left over, a
   `JsonSchema` constraint on the key, or on the frame
   (`DefinitionMap::frameConstraints()`), checked with opis and named
-  under `checkedOnServer` with its schema. The full schema of a
+  under `checkedOnServer` with its schema. A constraint and its keywords
+  are one table, read both ways (`Contract\ConstraintKeywords`, a row per
+  constraint in `Contract\Keywords\`: `Range`, `Length`, `Count`,
+  `UniqueItems`, `NotBlank`, `Email`, `Regex`, `Uuid`, `Sequentially`,
+  `AtLeastOneOf`; `@internal`, closed), whose one type guard,
+  `appliesTo()`, holds both ways: a row that does not apply, or cannot
+  state its options, is `checkedOnServer` on write and kept in the
+  `JsonSchema` constraint on read
+  (`docs/decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways`).
+  The full schema of a
   declaration reads back to itself (`SchemaRoundTripTest`)
   (`docs/reading-a-schema.md`,
   `docs/decisions.md#a-schema-can-be-read-back-into-a-structure`).
@@ -408,16 +417,20 @@ the record of the rework that brought the module to the pattern.
   The doors name one only where a stage applies: the **stage input**,
   `stage` (`OperationInputs::STAGE`), last on every write tool (after
   `dry_run`), read tool and narrowing tool, default `''` so the `values`
-  refiner still fires, resolved by `ResourceOperationToolBase::stage()`
-  (a missing id `notFound()`, another account's `accessRefused()`),
-  asked before the thing's context, which is built through it
-  (`ResourceOperationToolBase::staged()`); and
+  refiner still fires, handed to the runner, which asks it before the
+  thing's context and builds the context through it (a missing id
+  `not_found`, another account's `access` with its reason, answered by
+  `execute()`; a value that is not a string the tool's own `not_found`);
+  and
   the **stage header**, `X-Surface-Stage` (`ServedPaths::STAGE_HEADER`),
-  read in `target()` into `ServedTarget::$stage`, resolved in
-  `ServedOperations::fromTarget()` (404 naming nothing), another
-  account's 403 at `ServedOperationAccessCheck`, before the thing's
-  context, 400 on the stage's own
-  paths, 422 on a call a stage does not apply to, ignored by `GET
+  read in `target()` into `ServedTarget::$stage`, asked by the runner
+  in the route check and the controller alike, before the thing's
+  context: 422 on a call a stage does not apply to (whatever stage it
+  names), then 404 naming nothing, then another account's 403 "The
+  stage is another account's."; 400 on the stage's own
+  paths, from the controller, whose own refusals (an id naming no stage
+  404, another account's 403 with its reason) every account hears;
+  ignored by `GET
   .../schema`, OpenAPI's `SurfaceStage`; a read,
   a narrowing and a write's `contract` and `ETag` are the staged view;
   the `ETag` of the stage's own `apply` also covers its writes
@@ -562,6 +575,73 @@ the record of the rework that brought the module to the pattern.
   (`OperationDefinition::staticPermission()`); narrowing a key's values
   by account is a runtime refiner, not access
   (`docs/decisions.md#access-is-static-or-runtime-read-from-its-cacheability`).
+- **Runner**: the one service that runs an operation,
+  `Operation\OperationRunner` (`surface.runner`, typed
+  `OperationRunnerInterface`), modeled on the Tool API's `ToolRunner`:
+  the resource and operation known, the permission from the two ids, the
+  stage (`Stageable`, it exists, the account may write into it), the
+  context, the access class made decisive and ANDed with the stage's,
+  then the build and the storage with the stage, the pipeline's
+  `submit()`, and the outputs, the stage resource's held to the surface
+  (`conformOutput()`; a mismatch logged, never thrown after a commit,
+  `OperationRun::conformed()`), every `NotEmitted` key stripped whether
+  or not they conform. `gate()` stops
+  after the access and builds nothing itself, `run(values: NULL)` after
+  the build (a resource with no storage of its own is built with none,
+  `hasStorage()` FALSE, and refused when run with values), and the
+  runner's `submit($prepared, $values, $dryRun)` runs the rest on that
+  prepare, its surface and storage, as the account it was prepared for
+  (`OperationRun::account()`), so a door that reads the storage first
+  builds once; `run()` with values is a prepare, then `submit()`. A
+  prepare is written through once: after a submit that committed, a
+  second `submit()` to it throws (a `\WeakMap` of spent prepares); a dry
+  run or a refused submit leaves it usable. No account, or the current
+  user's own (same id and roles), is the current user, never checked
+  for being blocked: core vouches for it; another, by id or by roles, is
+  run as through core's account switcher, switched back in a `finally`,
+  a blocked or missing user refused first, by the one wrapper `gate()`,
+  `run()` and `submit()` go through (`asAccount()`). What a caller can cause is a `Refusal` on the
+  `OperationRun`, never an exception; only a `StageRaceException`, a
+  `\BadMethodCallException` from `submit()` handed what it cannot
+  submit to, and a bug are thrown. A `Refusal`'s fields (`category`,
+  `code`, `reason`, `cacheability`, `access`) are what the account may
+  hear: what the two ids decide is told to anyone; a refusal that had
+  to read an argument, a `%key` permission's among them, is withheld
+  from an account without the permission, which hears one refusal,
+  `Refusal::WITHHELD`, whatever refused; the stage a call goes through
+  is told to every account past the permission (category `Stage`:
+  `does_not_apply`, gone `not_found`, another account's `access` with
+  its reason), and so is every refusal of the stage resource's own
+  operations (a stage id is a random UUID); `actual()`, a
+  `RefusalDetail`, keeps the truth for the server, never shown. A
+  caller names itself with a `Door` (an id and enum capabilities, none
+  defined yet, read nowhere yet): `php` by default, `drush` for `drush
+  surface:run <resource> <operation>` (`--arguments`, `--values`,
+  `--stage`, `--dry-run`, `--uid`, anonymous by default, `--json`),
+  which prints the `ResultDocument` with `outputs`, prepares only
+  without `--values`, and confirms a destructive run (`--yes`). On it
+  so far: the HTTP door (its route check calls `gate()`, door `http`, or
+  the route's `_surface_door` default, `react` for the React page; the
+  controller gates the full schema, prepares every other action and
+  submits a write to its prepare; a committed write whose re-read the
+  runner refuses answers `contract: null` and no `ETag`, never a 403 or
+  404 after the commit), the tool door (the access hook calls `gate()`
+  with the account it is handed, door `tool`, `schema tool` for the
+  narrowing tool, and answers from the refusal's public fields,
+  `ResourceOperationToolBase::answer()`, a refusal the caller can
+  correct or one about its stage let through for `execute()` to answer
+  with its code; the write tool's `execute()` is one `run()` with the
+  values and the dry run, the read and narrowing tools and the `values`
+  refiner prepare; `ResourceOperationToolBase::refusal()` turns a
+  refusal into the result; a committed write is never answered as a
+  refusal: outputs the Tool API's own check would refuse are left out
+  and logged, and only a refusal of the inputs is rewritten into a
+  document that says nothing was committed), the form's runs of the stage's own
+  operations (`stageRun()`) and the examples that ran one by hand for an
+  account; an install hook acts for none and calls the pipeline; the
+  form door keeps its own sequence until it moves
+  (`docs/resources.md#running-an-operation-from-php`,
+  `docs/decisions.md#one-runner-runs-an-operation`).
 
 "Data surface" names the project, and the sealed object the build step
 makes (`SurfaceInterface`); it is not a third kind. "Shape" is the
@@ -797,7 +877,8 @@ test errored or failed and every gate passed.
   `SURFACE_CHECK_FAST=1`): unit and kernel tests through phpunit,
   one process per class, `SURFACE_CHECK_CONCURRENCY` at once (one
   process for all of them takes 15 minutes, since every kernel test
-  installs its modules). Each class has its own result cache in the
+  installs its modules), the base module's and those of `surface_http`
+  and `surface_openapi`. Each class has its own result cache in the
   container's `/tmp/surface-phpunit-cache` and runs with
   `--order-by=defects`, so what failed last runs first; classes with a
   defect last time start first, then the slowest. A class's output is
@@ -848,7 +929,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2137, Assertions: 53122, Errors: 0, Failures: 0, Skipped: 3. Classes: 296 of 296, 8 at a time, browser classes 4.
+phpunit: Tests: 2218, Assertions: 54878, Errors: 0, Failures: 0, Skipped: 3. Classes: 309 of 309, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -868,8 +949,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2023, Assertions: 48577, Deprecations: 134, Skipped: 3. Classes:
-243, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2104, Assertions: 50329, Skipped: 3, Deprecations: 139. Classes:
+256, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -950,8 +1031,9 @@ It names no widget unless asked
 (`emit(..., widgets: TRUE)`); the contract panel (`Form\ContractPanel`)
 shows it without, beside what the Tool API can advertise where the tool
 module is installed (which flattens
-variants, and is what `tool:info` prints). The base module's HTTP door
-(`src/Http/`, route `surface.api`) serves it with the widget hints on
+variants, and is what `tool:info` prints). The HTTP door, the submodule
+`surface_http` (`modules/surface_http/`, route `surface.api`, namespace
+`Drupal\surface_http`), serves it with the widget hints on
 an API where the path is the resource and the method the operation
 (contract 3's paths, `ServedPaths`, both documents in contract 4's
 keywords): `GET /surface-api/{resource}[/{id}]` the read's
@@ -965,9 +1047,26 @@ listed `stale`); `PATCH` the default update, `POST` on the collection
 the default create (201 with `Location`), `:{operation}` any other,
 `?dryRun=true` a run that writes nothing, `If-Match` a 412 when storage
 changed since, a refusal 422 problem details, every path a JSON Pointer
-and every contract 2 path a 410. `src/OpenApi/` describes that API as
-an OpenAPI 3.1 document at `/surface-api/openapi.json`, with Swagger UI
-and Redoc over it (`docs/served-contract.md#an-openapi-document`).
+and every contract 2 path a 410. The submodule `surface_openapi`
+(`modules/surface_openapi/`, routes `surface.openapi.*`, namespace
+`Drupal\surface_openapi`, depends on `surface_http`) describes that API
+as an OpenAPI 3.1 document at `/surface-api/openapi.json`, with Swagger
+UI and Redoc over it (`docs/served-contract.md#an-openapi-document`).
+Neither is installed with the base module, which works at the form and
+tool doors without them (`WithoutHttpModuleTest`) and reaches a served
+path only through `ResourceBuild\ServedPathsInterface`, the service of
+that name `surface_http` provides: the tool's schema and lookup URLs and
+the contract panel's note. A site that had the API gets both from
+`surface_post_update_install_http_and_openapi()`
+(`docs/decisions.md#the-http-door-and-the-openapi-document-are-their-own-modules`).
+Their tests are in each module's `tests/src/`; a test of another
+subject that calls the API stays in the base module and lists
+`surface_http` in its `$modules`. A kernel test resolves no
+dependency, so one that enables `surface_examples` or the React example
+lists `surface_http` too; `KernelTestModulesTest` fails a kernel test
+that lists a module without a `surface*` module it depends on, unless
+the class sets `MODULES_WITHOUT_DEPENDENCIES` to TRUE
+(`ReactWithoutHttpModuleTest`, the state before the update has run).
 The example `surface_examples_react` is a JavaScript client of the door:
 `/surface-react/{resource}/{operation}` renders it with a React app,
 which answers a URL that names nothing as the form's route does; a
@@ -1087,7 +1186,11 @@ so the rule is this sentence. `npm test` is not part of
   16's under `tests/fixtures/references/` by `ReferenceKeysTest` with
   `SURFACE_REFERENCES_WRITE=1`, and example 17's under
   `tests/fixtures/retitle/` by `RetitleExampleTest` with
-  `SURFACE_RETITLE_WRITE=1`. Never edit any of them by hand.
+  `SURFACE_RETITLE_WRITE=1`, and the OpenAPI document's request examples,
+  `modules/surface_openapi/tests/fixtures/openapi/examples.json`, by
+  `OpenApiDocumentTest` with `SURFACE_OPENAPI_EXAMPLES_WRITE=1` (the
+  official OpenAPI 3.1 schema beside it is vendored, not generated).
+  Never edit any of them by hand.
 - Commit messages are one line.
 
 ## Naming
@@ -1158,10 +1261,17 @@ src/Staging/             The store contract (StageStoreInterface, and
 src/Contract/            The served contract's emitter (JSON Schema): ContractEmitter
                          walks the frames, PropertySchema writes each key,
                          Conditionals the if/then, DocumentHead the top;
-                         the contract diff.
+                         the contract diff; the schema reader; the two
+                         tables both read, LeafTypes and ConstraintKeywords,
+                         whose rows are in Keywords/.
 src/Drush/               Drush commands (the site's catalog, the contract diff, the
-                         config schema) and the resource generator, drush
-                         generate surface:resource.
+                         config schema, surface:run) and the resource
+                         generator, drush generate surface:resource.
+src/Operation/           The runner: OperationRunnerInterface and
+                         OperationRunner, the OperationRun it answers,
+                         Refusal (what the account may hear) with
+                         RefusalCategory and RefusalDetail (the truth,
+                         for the server), and Door.
 src/Flow/                A flow written as a class: the interfaces a flow
                          class implements and declares into
                          (FlowInterface, StepsInterface, StepInterface,
@@ -1175,33 +1285,47 @@ src/Form/                Form builder, host traits, the operation form
                          The form builder is SurfaceFormBuilder.php,
                          the service and its Form API callbacks, over
                          Drawing.php, Extracting.php and Refreshing.php.
-src/Http/                The HTTP door: the /surface-api routes' controller,
-                         ServedPaths and ServedOperations, the access check,
-                         problem details, and its catalog door.
-src/OpenApi/             The HTTP door's OpenAPI document, its controller
-                         and its catalog door.
 src/Tool/                The Tool API door: what a tool takes and answers
                          (OperationInputs, InputDefinitions), its catalog
                          doors and the invalidator, registered by
                          SurfaceServiceProvider only with the tool module.
 src/Plugin/tool/ src/Plugin/Derivative/
-                         The tool plugins and their deriver, found only by
-                         the tool module's plugin manager.
+                         The tool plugins, which run an operation through
+                         the runner, and their deriver, found only by the
+                         tool module's plugin manager.
 src/Widget/ src/Plugin/  Definition to form element; resolvers, hosts, constraints.
 src/Options/             Option sets, the resolver plugin base and manager.
 src/Variants/            Variants from the site: ComponentProps and ComponentSlots;
                          ConfigSchemaTypes, a config schema type's.
 src/Refinement/          Narrowing and choice sets.
-modules/                 Nineteen example submodules, each with its own README,
-                         in two groups (below).
+modules/surface_http/     The HTTP door, Drupal\surface_http: ServedPaths
+                         (which implements ResourceBuild\ServedPathsInterface)
+                         and ServedOperations, which asks the runner, its
+                         ServedOperation and RefusedException,
+                         Controller\ResourceApiController,
+                         Access\ServedOperationAccessCheck, the two
+                         EventSubscriber\ classes (problem details, the
+                         schema's tag), problem details, and its catalog
+                         door, HttpDoors; route surface.api; its tests.
+modules/surface_openapi/  The OpenAPI document, Drupal\surface_openapi:
+                         OpenApiDocument, SchemaComponents,
+                         Controller\OpenApiController, its catalog door,
+                         OpenApiDoors; the surface.openapi.* routes, the
+                         Swagger UI and Redoc libraries and js/, the
+                         permission access surface api docs; its tests
+                         and modules/surface_openapi/tests/fixtures/openapi/.
+modules/                 Besides those two, nineteen example submodules,
+                         each with its own README, in two groups (below).
 tests/src/               Unit, Kernel, Functional, FunctionalJavascript.
 docs/ scripts/           Published documentation; check.sh and the generators.
 ```
 
-The base module is the project and the only thing meant to ship: the
+The base module is the project and the only thing meant to ship, with
+`surface_http` and `surface_openapi` (package `Surface API`): the
 framework and its doors, the form, the Tool API tool and with it the
-command line (where the tool module is installed), and HTTP with its
-OpenAPI document. Every submodule is an example, in the package
+command line (where the tool module is installed), and in the two
+submodules HTTP and its OpenAPI document. Every other submodule is an
+example, in the package
 `Surface API examples` and `lifecycle: experimental`, in one of two
 groups, which
 `surface_examples`' `ExampleModules` (the landing page's list),

@@ -1,7 +1,7 @@
 # The page an operation's React form mounts on. It names the resource and
 # the operation by id: /surface-react/registration.step3/configure, its
-# parameters in the query string. The app it mounts calls the base
-# module's HTTP door, /surface-api.
+# parameters in the query string. The app it mounts calls the HTTP door
+# surface_http serves, /surface-api.
 #
 # Its requirement is the API's, the operation's: its permission, then the
 # resource's access class, and no opinion is a refusal.
@@ -13,5 +13,8 @@ surface_examples_react.page:
   defaults:
     _controller: '\Drupal\surface_examples_react\Controller\ResourceReactPage::page'
     _title_callback: '\Drupal\surface_examples_react\Controller\ResourceReactPage::title'
+    # The door the runner is told the page is: the React door's catalog
+    # key (ReactDoors::DOOR), read by the access check.
+    _surface_door: react
   requirements:
     _surface_served_access: 'TRUE'

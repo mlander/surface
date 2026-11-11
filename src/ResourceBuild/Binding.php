@@ -9,7 +9,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Surface;
-use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\ChoiceSet;
 use Drupal\surface\Refinement\Condition;
@@ -93,14 +93,14 @@ final class Binding {
    * A plain scalar or list key only: a map holds its keys, which say for
    * themselves, and a secret keeps what it holds when sent nothing.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The builder holding the keys.
    * @param string[] $keys
    *   The plain input keys.
    * @param array|null $held
    *   What heldBy() answered.
    */
-  public function markAlwaysHeld(SurfaceBuilderInterface $builder, array $keys, ?array $held): void {
+  public function markAlwaysHeld(SurfaceBuilder $builder, array $keys, ?array $held): void {
     if ($held === NULL) {
       return;
     }

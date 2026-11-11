@@ -54,7 +54,7 @@ use Drupal\surface\Storage\StorageLayoutInterface;
  * how long, and under which conditions, that rendering holds. The rules
  * for reading it are in docs/refinement.md.
  *
- * @see \Drupal\surface\SurfaceBuilderInterface::seal()
+ * @see \Drupal\surface\SurfaceBuilder::seal()
  * @see \Drupal\surface\Pipeline\SurfacePipelineInterface
  * @see docs/refinement.md
  * @see docs/outputs.md
@@ -278,7 +278,7 @@ interface SurfaceInterface extends CacheableDependencyInterface {
    *   The layout the provider declared at build time, or NULL when its
    *   settings are stored exactly as the data surface describes them.
    *
-   * @see \Drupal\surface\SurfaceBuilderInterface::setThirdPartyLayout()
+   * @see \Drupal\surface\SurfaceBuilder::setThirdPartyLayout()
    */
   public function getThirdPartyLayout(string $provider): ?StorageLayoutInterface;
 

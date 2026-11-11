@@ -11,10 +11,12 @@ use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
+use Drupal\surface\Contract\Keywords\ReadBack;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\ResourceBuild\NeedsFrame;
 use Drupal\surface\Refinement\Condition;
+use Drupal\surface\Refinement\Rule;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
@@ -246,19 +248,11 @@ final class SchemaReader {
   ];
 
   /**
-   * The constraint each keyword of a value is read into.
-   */
-  protected const BOUNDS = [
-    'minimum' => ['Range', 'min'],
-    'maximum' => ['Range', 'max'],
-    'minLength' => ['Length', 'min'],
-    'maxLength' => ['Length', 'max'],
-    'minItems' => ['Count', 'min'],
-    'maxItems' => ['Count', 'max'],
-  ];
-
-  /**
-   * The keywords read for a value, beside the type and what bounds it.
+   * The keywords read for a value, beside its constraints.
+   *
+   * The constraints' keywords are the table's (ConstraintKeywords); a
+   * `format` is read as a leaf type (LeafTypes), a Regex of
+   * FORMAT_PATTERNS, or a row's constraint.
    */
   protected const VALUE = [
     'type',
@@ -270,15 +264,9 @@ final class SchemaReader {
     'oneOf',
     'enum',
     'const',
-    'pattern',
-    'not',
-    'allOf',
-    'anyOf',
     'readOnly',
     'writeOnly',
     'meta:enum',
-    'exclusiveMinimum',
-    'exclusiveMaximum',
     ContractEmitter::EXTENSION,
   ];
 
@@ -1798,17 +1786,20 @@ final class SchemaReader {
     if (array_key_exists('default', $site) && $site['default'] !== NULL) {
       DefinitionMetadata::setDefaultValue($definition, $site['default']);
     }
-    $types = isset($site['type']) ? array_values(array_diff((array) $site['type'], ['null'])) : [];
     $narrowing = $site + ['type' => $def['type'] ?? NULL];
+    // A site that states no type is of its shape's.
+    $types = array_values(array_diff((array) ($narrowing['type'] ?? []), ['null']));
     foreach ($this->constraints($narrowing, $pointer, $types, $foreign) as [$constraint, $options]) {
       // What the site narrows of a bound the shape holds is that bound,
       // tightened: the rest of it stays the shape's.
       $held = $definition->getConstraints()[$constraint] ?? [];
+      if ($constraint === 'JsonSchema') {
+        static::holdTo($definition, $options['schema']);
+        continue;
+      }
       $definition->addConstraint($constraint, in_array($constraint, ['Range', 'Length', 'Count'], TRUE) ? array_replace($held, $options) : $options);
     }
-    if ($foreign !== []) {
-      $definition->addConstraint('JsonSchema', ['schema' => $foreign]);
-    }
+    static::holdTo($definition, $foreign);
     $this->settings($definition, is_array($property[ContractEmitter::EXTENSION] ?? NULL) ? $property[ContractEmitter::EXTENSION] : []);
   }
 
@@ -1838,10 +1829,30 @@ final class SchemaReader {
     else {
       $child = $this->structureAt($inputs, $inputs->ownerId() . '.' . $name, $root, static::below($pointer, 'items'));
     }
-    $min = is_int($property['minItems'] ?? NULL) ? $property['minItems'] : NULL;
-    $max = is_int($property['maxItems'] ?? NULL) ? $property['maxItems'] : NULL;
-    $list = $inputs->attachList($name, $child, static::title($property), $min, $max);
-    if (($property['uniqueItems'] ?? FALSE) === TRUE) {
+    // How many items, and whether they differ: the table's Count and
+    // UniqueItems rows, on an array. A collection holds no JsonSchema
+    // constraint, so what they keep, and a bound that is no whole number,
+    // is noted and not read.
+    $bounds = [];
+    $unread = [];
+    $unique = FALSE;
+    foreach (ConstraintKeywords::read(array_intersect_key($property, array_flip(['minItems', 'maxItems', 'uniqueItems'])), ['array']) as $back) {
+      foreach ($back->constraint === 'Count' ? $back->options : [] as $option => $value) {
+        if (is_int($value)) {
+          $bounds[$option] = $value;
+        }
+        else {
+          $unread[] = $option === 'min' ? 'minItems' : 'maxItems';
+        }
+      }
+      $unique = $unique || $back->constraint === 'UniqueItems';
+      $unread = [...$unread, ...array_map('strval', array_keys($back->kept))];
+    }
+    foreach ($unread as $keyword) {
+      $this->note(static::below($pointer, $keyword), 'Not read: a collection holds a whole number of items, and they differ or not.');
+    }
+    $list = $inputs->attachList($name, $child, static::title($property), $bounds['min'] ?? NULL, $bounds['max'] ?? NULL);
+    if ($unique) {
       $list->addConstraint('UniqueItems', []);
     }
     if (is_string($property['description'] ?? NULL)) {
@@ -2092,9 +2103,7 @@ final class SchemaReader {
       foreach ($this->constraints($bounds, $pointer, ['array'], $foreign) as [$constraint, $options]) {
         $list->addConstraint($constraint, $options);
       }
-      if ($foreign !== []) {
-        $list->addConstraint('JsonSchema', ['schema' => $this->withDefs($foreign, $root)]);
-      }
+      static::holdTo($list, $this->withDefs($foreign, $root));
       $this->settings($list, is_array($property[ContractEmitter::EXTENSION] ?? NULL) ? $property[ContractEmitter::EXTENSION] : []);
       $this->examples($list, $property);
       return [$list, $default];
@@ -2114,7 +2123,7 @@ final class SchemaReader {
           $this->note(static::below($pointer, 'format'), 'Read as an email address, which Drupal holds to RFC 6531: written back as idn-email.');
         }
       }
-      elseif (!isset(self::FORMAT_PATTERNS[$format]) && $format !== 'uuid') {
+      elseif (!isset(self::FORMAT_PATTERNS[$format]) && !ConstraintKeywords::readsFormat($format)) {
         $this->note(static::below($pointer, 'format'), sprintf('Dropped: no constraint checks the "%s" format, an annotation.', $format));
       }
     }
@@ -2124,19 +2133,23 @@ final class SchemaReader {
       $definition->addConstraint($constraint, $options);
     }
     if ($type === 'string' && $format !== NULL && isset(self::FORMAT_PATTERNS[$format]) && !isset($property['pattern'])) {
-      $definition->addConstraint('Regex', ['pattern' => self::FORMAT_PATTERNS[$format]]);
-    }
-    if ($type === 'string' && $format === 'uuid') {
-      $definition->addConstraint('Uuid', []);
+      if (isset($definition->getConstraints()['Regex'])) {
+        // A definition holds one Regex, and the table read one (a `not`):
+        // the format's pattern is kept, as a `pattern`, which the
+        // JsonSchema constraint checks where it checks no format.
+        $foreign['pattern'] = PatternTranslation::ecma(self::FORMAT_PATTERNS[$format]);
+        $this->note(static::below($pointer, 'format'), sprintf('Kept as a JsonSchema constraint, as the pattern of a "%s": a definition holds one Regex, and the pattern it must not match is that one.', $format));
+      }
+      else {
+        $definition->addConstraint('Regex', ['pattern' => self::FORMAT_PATTERNS[$format]]);
+      }
     }
     if ($type === 'string' && $format === 'date' && !isset($property['oneOf']) && !isset($property['enum'])) {
       // A date is drawn as a date input, which is what the emitter states
       // the format for; an `x-surface.widget` read below still decides.
       $definition->setSetting('widget', 'date');
     }
-    if ($foreign !== []) {
-      $definition->addConstraint('JsonSchema', ['schema' => $this->withDefs($foreign, $root)]);
-    }
+    static::holdTo($definition, $this->withDefs($foreign, $root));
     $this->settings($definition, is_array($property[ContractEmitter::EXTENSION] ?? NULL) ? $property[ContractEmitter::EXTENSION] : []);
     $this->examples($definition, $property);
     return [$definition, $default];
@@ -2227,6 +2240,11 @@ final class SchemaReader {
   /**
    * Reads the constraints a value's keywords say.
    *
+   * The table of constraints and keywords reads what it maps
+   * (ConstraintKeywords::read()); a list of values and what a schema kept
+   * are read here, and every other keyword that checks a value is kept in
+   * the JsonSchema constraint.
+   *
    * @param array $property
    *   The value's schema.
    * @param string $pointer
@@ -2240,70 +2258,31 @@ final class SchemaReader {
    * @param-out array $foreign
    *
    * @return array<int, array{0: string, 1: array}>
-   *   Each constraint and its options, in the order the keywords stand.
+   *   Each constraint and its options, in the order the reader declares
+   *   them (ConstraintKeywords::READ_ORDER).
    */
   protected function constraints(array $property, string $pointer, array $types, ?array &$foreign = []): array {
     $foreign = [];
-    $constraints = [];
-    $numeric = array_intersect($types, ['integer', 'number']) !== [];
-    $integer = $types === ['integer'];
-    $bounds = [];
-    $unique = FALSE;
-    $message = is_string($property[ContractEmitter::EXTENSION]['patternMessage'] ?? NULL) ? $property[ContractEmitter::EXTENSION]['patternMessage'] : NULL;
+    $read = ConstraintKeywords::read($property, $types);
+    $taken = [];
+    foreach ($read as $back) {
+      foreach ($back->consumed as $keyword) {
+        $taken[$keyword] = TRUE;
+      }
+      foreach ($back->kept as $keyword => $value) {
+        $taken[$keyword] = TRUE;
+        $foreign[$keyword] = static::plain($value);
+        if ($back->note !== NULL) {
+          $this->note(static::below($pointer, (string) $keyword), $back->note);
+        }
+      }
+    }
     foreach ($property as $keyword => $value) {
       $at = static::below($pointer, (string) $keyword);
-      if (isset(self::BOUNDS[$keyword]) && (is_int($value) || is_float($value))) {
-        [$constraint, $option] = self::BOUNDS[$keyword];
-        if ($constraint === 'Range' && !$numeric) {
-          $foreign[$keyword] = $value;
-          continue;
-        }
-        $bounds[$constraint][$option] = $value;
+      if (isset($taken[$keyword])) {
         continue;
       }
       switch ($keyword) {
-        case 'uniqueItems':
-          // Read after the bounds, where the emitter writes it. False is
-          // what an array says with no keyword at all.
-          if ($types === ['array'] && is_bool($value)) {
-            $unique = $value;
-          }
-          else {
-            $foreign[$keyword] = static::plain($value);
-            $this->note($at, 'Kept as a JsonSchema constraint: no constraint of the vocabulary says it.');
-          }
-          break;
-
-        case 'exclusiveMinimum':
-        case 'exclusiveMaximum':
-          if ($integer && (is_int($value) || is_float($value))) {
-            // Exact for an integer: the next whole number in.
-            $bounds['Range'][$keyword === 'exclusiveMinimum' ? 'min' : 'max'] = $keyword === 'exclusiveMinimum' ? (int) floor($value) + 1 : (int) ceil($value) - 1;
-          }
-          else {
-            $foreign[$keyword] = $value;
-          }
-          break;
-
-        case 'pattern':
-          $regex = is_string($value) ? static::regex($value) : NULL;
-          if ($regex === NULL) {
-            $foreign[$keyword] = $value;
-            break;
-          }
-          $constraints[] = ['Regex', ['pattern' => $regex] + ($message === NULL ? [] : ['message' => $message])];
-          break;
-
-        case 'not':
-          $regex = is_array($value) && array_keys($value) === ['pattern'] && is_string($value['pattern']) ? static::regex($value['pattern']) : NULL;
-          if ($regex === NULL) {
-            $foreign[$keyword] = static::plain($value);
-            break;
-          }
-          $options = ['pattern' => $regex, 'match' => FALSE];
-          $constraints[] = ['Regex', $options + ($message === NULL ? [] : ['message' => $message])];
-          break;
-
         case 'oneOf':
         case 'enum':
         case 'const':
@@ -2315,24 +2294,14 @@ final class SchemaReader {
             break;
           }
           if ($choice !== []) {
-            $constraints[] = $choice;
+            $read[] = new ReadBack($choice[0], $choice[1], [$keyword]);
           }
-          break;
-
-        case 'allOf':
-        case 'anyOf':
-          $parts = is_array($value) ? $this->parts($value, $types) : NULL;
-          if ($parts === NULL) {
-            $foreign[$keyword] = static::plain($value);
-            break;
-          }
-          $constraints[] = [$keyword === 'allOf' ? 'Sequentially' : 'AtLeastOneOf', ['constraints' => $parts]];
           break;
 
         case ContractEmitter::EXTENSION:
           foreach (is_array($value['checkedOnServer'] ?? NULL) ? $value['checkedOnServer'] : [] as $i => $checked) {
             if (is_array($checked) && ($checked['constraint'] ?? NULL) === 'JsonSchema' && is_array($checked['schema'] ?? NULL)) {
-              $constraints[] = ['JsonSchema', ['schema' => $checked['schema']]];
+              $read[] = new ReadBack('JsonSchema', ['schema' => $checked['schema']], [$keyword]);
             }
             else {
               $this->note(static::below($at, 'checkedOnServer', $i), 'Not read: a constraint the server checks is known by its plugin alone.');
@@ -2341,7 +2310,7 @@ final class SchemaReader {
           break;
 
         default:
-          if (in_array($keyword, self::VALUE, TRUE) || in_array($keyword, ['items', '$ref', 'minItems', 'maxItems'], TRUE)) {
+          if (in_array($keyword, self::VALUE, TRUE) || in_array($keyword, ['items', '$ref'], TRUE)) {
             break;
           }
           if (in_array($keyword, self::ANNOTATIONS, TRUE) || str_starts_with((string) $keyword, 'x-')) {
@@ -2352,46 +2321,13 @@ final class SchemaReader {
           $this->note($at, 'Kept as a JsonSchema constraint: no constraint of the vocabulary says it.');
       }
     }
-    foreach ($bounds as $constraint => $options) {
-      $constraints[] = [$constraint, $options];
-    }
-    if ($unique) {
-      $constraints[] = ['UniqueItems', []];
+    $constraints = [];
+    foreach (ConstraintKeywords::ordered($read, $property) as $back) {
+      if ($back->constraint !== NULL) {
+        $constraints[] = [$back->constraint, $back->options];
+      }
     }
     return $constraints;
-  }
-
-  /**
-   * Reads the parts of a composite, each as one constraint.
-   *
-   * @param array $parts
-   *   The `allOf` or `anyOf`.
-   * @param string[] $types
-   *   The value's types.
-   *
-   * @return array|null
-   *   Each part as `[name => options]`, or NULL when one cannot be read as
-   *   exactly one constraint.
-   */
-  protected function parts(array $parts, array $types): ?array {
-    if ($parts === [] || !array_is_list($parts)) {
-      return NULL;
-    }
-    $read = [];
-    foreach ($parts as $part) {
-      if (!is_array($part)) {
-        return NULL;
-      }
-      $saved = $this->notes;
-      $constraints = $this->constraints($part, '', $types, $foreign);
-      $this->notes = $saved;
-      if ($foreign !== [] || count($constraints) !== 1) {
-        return NULL;
-      }
-      [$name, $options] = $constraints[0];
-      $read[] = [$name => $options];
-    }
-    return $read;
   }
 
   /**
@@ -2469,38 +2405,6 @@ final class SchemaReader {
       $options['descriptions'] = $described;
     }
     return ['LabeledChoice', $options];
-  }
-
-  /**
-   * Writes a pattern as the PHP expression the emitter carries it from.
-   *
-   * PatternTranslation run backwards: a pattern inside the subset both
-   * engines read alike is the body of a Regex, delimited by a character
-   * it does not hold, with `D`, so a `$` is the very end in PHP as it is
-   * in ECMA, and `u` where it holds a character outside ASCII. A pattern
-   * outside the subset has no Regex both read alike, and is kept whole.
-   *
-   * Decision: see docs/decisions.md#a-pattern-both-engines-read-alike.
-   *
-   * @param string $pattern
-   *   The `pattern`.
-   *
-   * @return string|null
-   *   The PHP expression, or NULL when the pattern is outside the subset.
-   */
-  public static function regex(string $pattern): ?string {
-    $modifiers = 'D' . (preg_match('/[\x80-\xFF]/', $pattern) ? 'u' : '');
-    foreach (['/', '#', '~', '@', '%', '!', ';', ','] as $delimiter) {
-      $unescaped = preg_match('/(?<!\\\\)(\\\\\\\\)*' . preg_quote($delimiter, '/') . '/', $pattern);
-      if ($unescaped) {
-        continue;
-      }
-      $regex = $delimiter . $pattern . $delimiter . $modifiers;
-      if (@preg_match($regex, '') !== FALSE && PatternTranslation::ecma($regex) === $pattern) {
-        return $regex;
-      }
-    }
-    return NULL;
   }
 
   /**
@@ -2655,10 +2559,29 @@ final class SchemaReader {
     $effects = [];
     $bounds = [];
     $declared_types = (array) ($declared['type'] ?? []);
+    // A rule's bound is `minimum`, `maxLength` and the like, never an
+    // exclusive one, which the table also reads on an integer.
+    if (array_intersect_key($narrowing, ['exclusiveMinimum' => TRUE, 'exclusiveMaximum' => TRUE]) !== []) {
+      return NULL;
+    }
+    // The table reads the constraints; a rule takes those of
+    // Rule::CONSTRAINTS, with their options. A key that states no type
+    // here (a shape's site, by `$ref`) is read as of any type a row
+    // applies to: the build refuses a rule its key cannot take.
+    $types = array_values(array_diff($declared_types, ['null'])) ?: ['integer', 'number', 'string', 'array'];
+    $taken = [];
+    foreach (ConstraintKeywords::read($narrowing, $types) as $back) {
+      $options = Rule::CONSTRAINTS[$back->constraint ?? ''] ?? NULL;
+      if ($back->kept !== [] || $options === NULL || array_diff_key($back->options, array_flip($options)) !== []) {
+        return NULL;
+      }
+      foreach ($back->consumed as $keyword) {
+        $taken[$keyword] = $back;
+      }
+    }
     foreach ($narrowing as $keyword => $value) {
-      if (isset(self::BOUNDS[$keyword]) && (is_int($value) || is_float($value))) {
-        [$constraint, $option] = self::BOUNDS[$keyword];
-        $bounds[$constraint][$option] = $value;
+      if (isset($taken[$keyword])) {
+        $bounds[$taken[$keyword]->constraint] ??= $taken[$keyword]->options;
         continue;
       }
       switch ($keyword) {
@@ -2711,15 +2634,6 @@ final class SchemaReader {
           $bounds['Choice']['choices'] = $values;
           break;
 
-        case 'pattern':
-          $regex = is_string($value) ? static::regex($value) : NULL;
-          if ($regex === NULL) {
-            return NULL;
-          }
-          $message = $narrowing[ContractEmitter::EXTENSION]['patternMessage'] ?? NULL;
-          $bounds['Regex'] = ['pattern' => $regex] + (is_string($message) ? ['message' => $message] : []);
-          break;
-
         case ContractEmitter::EXTENSION:
           break;
 
@@ -2734,6 +2648,32 @@ final class SchemaReader {
       array_unshift($effects, ['require']);
     }
     return $effects;
+  }
+
+  /**
+   * Holds a definition to a schema, beside a schema it is held to already.
+   *
+   * A definition holds one JsonSchema constraint. One read from
+   * `x-surface.checkedOnServer`, or a shape's, and the keywords kept for
+   * the value are both checked: one constraint whose schema is the
+   * `allOf` of the two, their defs beside it.
+   *
+   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
+   *   The definition.
+   * @param array $schema
+   *   The schema; nothing is added for an empty one.
+   */
+  protected static function holdTo(DataDefinitionInterface $definition, array $schema): void {
+    if ($schema === []) {
+      return;
+    }
+    $held = $definition->getConstraints()['JsonSchema']['schema'] ?? NULL;
+    if (is_array($held) && $held !== [] && $held !== $schema) {
+      $defs = (is_array($held['$defs'] ?? NULL) ? $held['$defs'] : []) + (is_array($schema['$defs'] ?? NULL) ? $schema['$defs'] : []);
+      unset($held['$defs'], $schema['$defs']);
+      $schema = ['allOf' => [$held, $schema]] + ($defs === [] ? [] : ['$defs' => $defs]);
+    }
+    $definition->addConstraint('JsonSchema', ['schema' => $schema]);
   }
 
   /**

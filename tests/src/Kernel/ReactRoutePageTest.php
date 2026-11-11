@@ -9,7 +9,6 @@ use Drupal\Core\Url;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationRoute;
-use Drupal\surface\ResourceBuild\SiteCatalog;
 use Drupal\surface_examples_react\Controller\ResourceReactPage;
 use Drupal\surface_route_test\Storage\CardStorage;
 use Drupal\Tests\HttpKernelUiHelperTrait;
@@ -19,6 +18,8 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Route;
+use Drupal\surface_examples_react\ReactDoors;
+use Drupal\surface\ResourceBuild\FormRouteDoors;
 
 /**
  * The React page a module serves an operation at, at a route of its own.
@@ -51,6 +52,7 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
     'system',
     'user',
     'surface',
+    'surface_http',
     'surface_examples_react',
     'surface_route_test',
   ];
@@ -359,12 +361,12 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
     }
     // Beside the operation's own page, named as the form door names a
     // route: what it fills, and the keys a link may start.
-    $this->assertSame('/surface-react/route_test.card/create, /surface-test/card/react/{copies} (surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]', $doors['create'][SiteCatalog::REACT]);
-    $this->assertStringNotContainsString('surface_route_test.react_add', $doors['create'][SiteCatalog::FORM]);
+    $this->assertSame('/surface-react/route_test.card/create, /surface-test/card/react/{copies} (surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]', $doors['create'][ReactDoors::DOOR]);
+    $this->assertStringNotContainsString('surface_route_test.react_add', $doors['create'][FormRouteDoors::DOOR]);
     // An operation no module serves a page for has its own alone.
-    $this->assertSame('/surface-react/route_test.card/update', $doors['update'][SiteCatalog::REACT]);
+    $this->assertSame('/surface-react/route_test.card/update', $doors['update'][ReactDoors::DOOR]);
     // The operation's own page is the door's link.
-    $this->assertSame('surface_examples_react.page', $catalog->links('route_test.card', 'create')[SiteCatalog::REACT]->getRouteName());
+    $this->assertSame('surface_examples_react.page', $catalog->links('route_test.card', 'create')[ReactDoors::DOOR]->getRouteName());
 
     // An operation that cannot be asked on its own has no page of its own:
     // the pages modules serve it at are its React door, and one a URL needs
@@ -373,7 +375,7 @@ class ReactRoutePageTest extends SurfaceKernelTestBase {
     $card = $registry->getDefinition('route_test.card');
     $create = $registry->getOperation($card->name(), 'create');
     $served = $this->container->get('surface_examples_react.react_doors');
-    $this->assertSame([SiteCatalog::REACT => '/surface-test/card/react/{copies} (surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]'], $served->doors($card, $create, FALSE));
+    $this->assertSame([ReactDoors::DOOR => '/surface-test/card/react/{copies} (surface_route_test.react_add) [fills title: Dear you, copies: {copies}; starts occasion from ?occasion, envelope.stamps from ?stamps, greeting.value from ?greeting]'], $served->doors($card, $create, FALSE));
     $this->assertSame([], $served->links($card, $create, FALSE), 'Its one page needs the copies.');
   }
 

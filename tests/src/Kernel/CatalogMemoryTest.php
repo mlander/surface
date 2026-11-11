@@ -38,6 +38,7 @@ class CatalogMemoryTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples',
     'surface_examples_component_block',
     'surface_examples_block',

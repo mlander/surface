@@ -123,16 +123,21 @@ description and never call `getConstraints()`: a string with `Length:
 {max: 50}` is advertised as `{"type": "string"}`, so a client learns the
 limit from the refusal.
 
-**Here today.** The emitter maps `Range`, `Length`, `Count`,
-`UniqueItems` (1.5), `Email`, `NotBlank`, `Regex`, `Sequentially` and
-`AtLeastOneOf` to keywords, a
-`Choice` to its values, and names every other constraint under
-`x-surface.checkedOnServer`, with what it checks, so a client knows a
-server-side rule exists
-(`PropertySchema::keywords()` in `src/Contract/PropertySchema.php`). A
+**Here today.** One table maps `Range`, `Length`, `Count`,
+`UniqueItems` (1.5), `NotBlank`, `Email`, `Regex`, `Uuid`,
+`Sequentially` and `AtLeastOneOf` to keywords and the keywords back,
+read by the emitter, the config schema document and the schema reader
+(`src/Contract/ConstraintKeywords.php`, a row per constraint in
+`src/Contract/Keywords/`; why: [decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)).
+A `Choice` is written as its values, by the options resolvers. Every
+other constraint, and one whose row does not apply to the value's type
+or cannot state its options, is named under `x-surface.checkedOnServer`
+with what it checks, so a client knows a server-side rule exists. A
 `Regex` is written only when every construct in its pattern is on an
 allowlist of those PHP and JavaScript read alike, and is otherwise left
 to the server (`src/Contract/PatternTranslation.php`; why: [decision](decisions.md#a-pattern-both-engines-read-alike)).
+The table is closed: a module cannot add a row. Still open: a plugin
+type or service tag for rows, or the interface below.
 
 **The core change.** The normalizer reads `getConstraints()` and asks
 each constraint for its keywords through an optional interface on the

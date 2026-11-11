@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface_examples_react;
 
 use Drupal\Core\Url;
-use Drupal\surface\Http\HttpDoors;
+use Drupal\surface_http\HttpDoors;
 use Drupal\surface\ResourceBuild\CatalogDoorLinksInterface;
 use Drupal\surface\ResourceBuild\FormRouteDoors;
 use Drupal\surface\ResourceBuild\OperationDefinition;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
-use Drupal\surface\ResourceBuild\SiteCatalog;
 
 /**
  * The React pages an operation's form mounts on.
@@ -27,17 +26,25 @@ use Drupal\surface\ResourceBuild\SiteCatalog;
 final class ReactDoors implements CatalogDoorLinksInterface {
 
   /**
+   * The door's name: the React page its form mounts on.
+   *
+   * And each page a module serves the operation at.
+   */
+  public const DOOR = 'react';
+
+  /**
    * Constructs a ReactDoors.
    *
-   * @param \Drupal\surface\Http\HttpDoors $http
+   * @param \Drupal\surface_http\HttpDoors|null $http
    *   The HTTP door's listing, which says whether the API serves the
-   *   operation the page's app calls.
+   *   operation the page's app calls; NULL before surface_http is
+   *   installed, when no operation has a page of its own.
    * @param \Drupal\surface\ResourceBuild\FormRouteDoors $routes
    *   The routes modules declare for an operation, the React pages among
    *   them.
    */
   public function __construct(
-    protected readonly HttpDoors $http,
+    protected readonly ?HttpDoors $http,
     protected readonly FormRouteDoors $routes,
   ) {}
 
@@ -49,10 +56,10 @@ final class ReactDoors implements CatalogDoorLinksInterface {
     // route says of the keys.
     $pages = $this->routes->reactPages($resource, $operation);
     if (!$this->served($resource, $operation, $standalone)) {
-      return $pages === [] ? [] : [SiteCatalog::REACT => implode(', ', $pages)];
+      return $pages === [] ? [] : [self::DOOR => implode(', ', $pages)];
     }
     $own = str_ireplace('%3A', ':', $this->page($resource, $operation)->toString());
-    return [SiteCatalog::REACT => implode(', ', [$own, ...$pages])];
+    return [self::DOOR => implode(', ', [$own, ...$pages])];
   }
 
   /**
@@ -61,9 +68,9 @@ final class ReactDoors implements CatalogDoorLinksInterface {
   public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     if (!$this->served($resource, $operation, $standalone)) {
       $page = $this->routes->reactPageLink($resource, $operation);
-      return $page === NULL ? [] : [SiteCatalog::REACT => $page];
+      return $page === NULL ? [] : [self::DOOR => $page];
     }
-    return [SiteCatalog::REACT => $this->page($resource, $operation)];
+    return [self::DOOR => $this->page($resource, $operation)];
   }
 
   /**
@@ -85,7 +92,7 @@ final class ReactDoors implements CatalogDoorLinksInterface {
    *   for, so the catalog leaves this door out with that one.
    */
   protected function served(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): bool {
-    return !$operation->readsOne() && $this->http->doors($resource, $operation, $standalone) !== [];
+    return $this->http !== NULL && !$operation->readsOne() && $this->http->doors($resource, $operation, $standalone) !== [];
   }
 
   /**

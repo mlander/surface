@@ -77,3 +77,10 @@ parameters:
     -
       identifier: method.alreadyNarrowedType
       path: tests/*
+    # The same, for the tests of surface_http and surface_openapi.
+    -
+      identifier: staticMethod.alreadyNarrowedType
+      path: modules/*/tests/*
+    -
+      identifier: method.alreadyNarrowedType
+      path: modules/*/tests/*

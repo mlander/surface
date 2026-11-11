@@ -14,7 +14,6 @@ use Drupal\Core\Session\AccountProxyInterface;
 use Drupal\Core\Session\PermissionsHashGeneratorInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Reference\References;
 use Drupal\surface\Pipeline\PipelineGuard;
@@ -150,7 +149,7 @@ final class Gating {
    * as a child's is, and every key is marked, since any of them may be
    * found locked once the subject is known.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The builder, which the answer's cacheability reaches.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource.
@@ -160,7 +159,7 @@ final class Gating {
    * @return string|null
    *   Why it is locked, or NULL when it is not.
    */
-  public function lockedAtTheTop(SurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context): ?string {
+  public function lockedAtTheTop(SurfaceBuilder $builder, ResourceDefinition $definition, OperationContext $context): ?string {
     // A gate asked about the thing the context knows refuses rather than
     // locks, and access() asks it; built for the account alone or for no
     // account, one the subject decides marks every key.

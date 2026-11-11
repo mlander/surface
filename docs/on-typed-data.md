@@ -121,7 +121,7 @@ $inputs->narrow('limit')
 
 ### The seal: what every door reads
 
-`SurfaceBuilderInterface::seal()` returns a `SurfaceInterface`: a
+`SurfaceBuilder::seal()` returns a `SurfaceInterface`: a
 `DefinitionMap` of `Entry` objects, each holding a core definition with
 who added it, whether it is locked and the sibling keys it depends on,
 plus the refiners the build bound (`src/DefinitionMap.php`,

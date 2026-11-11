@@ -41,6 +41,8 @@ class PerformanceSurfaceTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
+    'surface_openapi',
     'surface_examples_performance',
   ];
 

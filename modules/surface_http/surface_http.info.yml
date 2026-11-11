@@ -1,0 +1,7 @@
+name: 'Surface API: HTTP'
+type: module
+description: 'Serves every resource operation over HTTP under /surface-api: the read, the full schema, the schema for values in progress, and the writes, with problem details for every refusal.'
+package: 'Surface API'
+core_version_requirement: ^11.3 || ^12
+dependencies:
+  - surface:surface

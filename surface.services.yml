@@ -31,10 +31,11 @@ services:
   # A read-only panel an operation route can name in _surface_panel:
   # the contract the form's data surface emits, rebuilt with the form, and
   # what the derived tool can advertise of it where the tool module is
-  # installed (the two optional arguments).
+  # installed (the two optional arguments after the emitter), and where
+  # surface_http serves the API, that it is served there (the last).
   surface.contract_panel:
     class: Drupal\surface\Form\ContractPanel
-    arguments: ['@surface.resource_registry', '@surface.options', '@surface.contract_emitter', '@?plugin.manager.tool', '@?tool.definition_serializer', '@string_translation', '@surface.resources']
+    arguments: ['@surface.resource_registry', '@surface.options', '@surface.contract_emitter', '@?plugin.manager.tool', '@?tool.definition_serializer', '@string_translation', '@surface.resources', '@?Drupal\surface\ResourceBuild\ServedPathsInterface']
   logger.channel.surface:
     parent: logger.channel_base
     arguments: ['surface']
@@ -69,6 +70,13 @@ services:
     factory: ['@cache_factory', 'get']
     arguments: [surface_build]
   Drupal\surface\ResourceBuild\ResourcesInterface: '@surface.resources'
+  # The one service that runs an operation: the permission, the stage, the
+  # context, the access, the build and the storage, the pipeline and the
+  # outputs, in one order, under one identity.
+  surface.runner:
+    class: Drupal\surface\Operation\OperationRunner
+    arguments: ['@surface.resource_registry', '@surface.resources', '@surface.pipeline', '@surface.stages', '@surface.operation_arguments', '@account_switcher', '@current_user', '@entity_type.manager', '@logger.channel.surface']
+  Drupal\surface\Operation\OperationRunnerInterface: '@surface.runner'
   # The stages: one record per stage in the expirable key-value collection
   # surface.stage, each write under a lock named for the stage, kept for the
   # record's own lifetime (keep) after the last, or the temp store expiry. A
@@ -188,8 +196,9 @@ services:
     arguments: ['@surface.resource_registry', '@surface.resource_plugins']
   # The live map of the site (drush surface:catalog): the static layer,
   # the doors each operation reaches as the modules tagged
-  # surface.catalog_doors name them, every build refusal, and every
-  # route written wrong for the operation it serves.
+  # surface.catalog_doors name them, in the order CatalogDoorsInterface
+  # states, every build refusal, and every route written wrong for the
+  # operation it serves.
   surface.site_catalog:
     class: Drupal\surface\ResourceBuild\SiteCatalog
     arguments:
@@ -202,7 +211,6 @@ services:
       - '%app.root%'
       - '@surface.site_list_budget'
       - '@plugin.manager.surface_widget'
-      - '@surface.form_route_doors'
       - '@surface.operation_arguments'
       - '@surface.key_paths'
   # The form routes a module declares for an operation.
@@ -222,65 +230,3 @@ services:
         condition: '@plugin.manager.condition'
         action: '@plugin.manager.action'
         field_type: '@plugin.manager.field.field_type'
-  # The HTTP door: an operation served at /surface-api, the path the
-  # resource and the method the operation (contract 3).
-  #
-  # Resolves a resource id, an operation id and its parameters into the
-  # context, the built resource and its storage, and answers access.
-  surface.served_operations:
-    class: Drupal\surface\Http\ServedOperations
-    arguments: ['@surface.resource_registry', '@surface.resources', '@surface.stages']
-  # Reads which operation a path and a method name, and writes the path of
-  # an operation: contract 3's paths.
-  surface.served_paths:
-    class: Drupal\surface\Http\ServedPaths
-    arguments: ['@surface.resource_registry', '@string_translation']
-  # Gates the API, and a page that names an operation by its ids, by the
-  # operation they serve: its permission, then the resource's access class.
-  surface.served_access:
-    class: Drupal\surface\Http\ServedOperationAccessCheck
-    arguments: ['@surface.served_operations', '@surface.served_paths', '@request_stack', '@surface.operation_gate', '@logger.channel.surface']
-    tags:
-      - { name: access_check, applies_to: _surface_served_access }
-  # Answers every HTTP error of the API as problem details.
-  surface.problem_details:
-    class: Drupal\surface\Http\ProblemDetailsSubscriber
-    tags:
-      - { name: event_subscriber }
-  # Tags the full schema by its bytes, and answers 304 to a tag that holds.
-  surface.schema_tag:
-    class: Drupal\surface\Http\SchemaTagSubscriber
-    tags:
-      - { name: event_subscriber }
-  # The method and path that run an operation, for the site catalog.
-  surface.http_doors:
-    class: Drupal\surface\Http\HttpDoors
-    arguments: ['@surface.served_paths']
-    tags:
-      - { name: surface.catalog_doors, priority: 30 }
-  # The HTTP door's description: the OpenAPI document of every resource
-  # operation that can be asked on its own, its paths on the API, and its
-  # full schema, built for no account, as components.
-  surface.openapi_document:
-    class: Drupal\surface\OpenApi\OpenApiDocument
-    arguments:
-      - '@surface.resource_registry'
-      - '@surface.resources'
-      - '@surface.resource_plugins'
-      - '@surface.contract_emitter'
-      - '@surface.pipeline'
-      - '@surface.served_paths'
-      - '@config.factory'
-      - '@module_handler'
-      - '@session_configuration'
-      - '@account_switcher'
-      - '@logger.channel.surface'
-      - '@string_translation'
-      - '@cache.surface_build'
-      - '@cache_contexts_manager'
-  # The OpenAPI operation that runs an operation, for the site catalog.
-  surface.openapi_doors:
-    class: Drupal\surface\OpenApi\OpenApiDoors
-    arguments: ['@surface.served_paths']
-    tags:
-      - { name: surface.catalog_doors, priority: 10 }

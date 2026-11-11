@@ -63,6 +63,7 @@ class IntroductionExcerptsTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples_block',
     'surface_intro_test',
     'my_module',

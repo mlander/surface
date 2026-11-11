@@ -38,48 +38,6 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
 final class SiteCatalog {
 
   /**
-   * The form route a module declares for the operation.
-   */
-  public const FORM = 'form';
-
-  /**
-   * The HTTP path the operation is run at, under contract 3.
-   */
-  public const HTTP = 'http';
-
-  /**
-   * The tool derived for the operation.
-   */
-  public const TOOL = 'tool';
-
-  /**
-   * The narrowing tool derived beside it, where its listing states a key open.
-   */
-  public const SCHEMA_TOOL = 'schema tool';
-
-  /**
-   * The OpenAPI operation that runs it.
-   */
-  public const OPENAPI = 'openapi';
-
-  /**
-   * The React page its form mounts on, and each one a module serves it at.
-   */
-  public const REACT = 'react';
-
-  /**
-   * Every door, in the order the catalog lists them.
-   */
-  public const DOORS = [
-    self::FORM,
-    self::HTTP,
-    self::TOOL,
-    self::SCHEMA_TOOL,
-    self::OPENAPI,
-    self::REACT,
-  ];
-
-  /**
    * A refusal discovery raised, before any one resource could be read.
    */
   public const DISCOVERY = 'discovery';
@@ -122,7 +80,11 @@ final class SiteCatalog {
    * @param \Drupal\Core\Session\AccountSwitcherInterface $switcher
    *   The account switcher, so every build is the anonymous account's.
    * @param iterable<\Drupal\surface\ResourceBuild\CatalogDoorsInterface> $doors
-   *   What names the doors, one per module that opens some.
+   *   What names the doors, one per module that opens some, in the order
+   *   the catalog lists them. The form door among them, FormRouteDoors,
+   *   also gives the routes modules serve operations at, an operation
+   *   form's or a React page's; with the two arguments below, each is
+   *   judged for the operation it serves.
    * @param string $root
    *   The Drupal root, which a refusal's file is named from.
    * @param \Drupal\surface\Contract\SiteListBudget|null $budget
@@ -131,12 +93,9 @@ final class SiteCatalog {
    * @param \Drupal\surface\Widget\SurfaceWidgetManager|null $widgets
    *   The widget manager, which names the widget each key is drawn by;
    *   without it, none is named.
-   * @param \Drupal\surface\ResourceBuild\FormRouteDoors|null $forms
-   *   The routes modules serve operations at, an operation form's or a
-   *   React page's; with the two below, each is judged for the operation
-   *   it serves. Without them, none is.
    * @param \Drupal\surface\ResourceBuild\OperationArguments|null $arguments
-   *   What maps a route's parameters onto the operation's.
+   *   What maps a route's parameters onto the operation's; without it and
+   *   the one below, no route is judged.
    * @param \Drupal\surface\ResourceBuild\KeyPaths|null $keyPaths
    *   What finds the key a path names on a built resource.
    */
@@ -150,7 +109,6 @@ final class SiteCatalog {
     protected readonly string $root,
     protected readonly ?SiteListBudget $budget = NULL,
     protected readonly ?SurfaceWidgetManager $widgets = NULL,
-    protected readonly ?FormRouteDoors $forms = NULL,
     protected readonly ?OperationArguments $arguments = NULL,
     protected readonly ?KeyPaths $keyPaths = NULL,
   ) {}
@@ -161,9 +119,10 @@ final class SiteCatalog {
    * @return array<string, array>
    *   What ResourceCatalog::describe() answers, each with `read` NULL and
    *   each operation with `doors` beside: what each door is, by its name,
-   *   in DOORS order. After them, by the name each is built by, every
-   *   structure a build read from a schema document (a variant a provider
-   *   lists, a def), `read` that name and `class` NULL. Empty when
+   *   in the order the door providers are tagged. After them, by the name
+   *   each is built by, every structure a build read from a schema
+   *   document (a variant a provider lists, a def), `read` that name and
+   *   `class` NULL. Empty when
    *   discovery itself was refused (refused() says why).
    */
   public function describe(): array {
@@ -318,13 +277,23 @@ final class SiteCatalog {
    * @return list<\Throwable>
    *   What refused each route written wrong, one per route, its message
    *   naming the route.
+   *
+   * @throws \LogicException
+   *   When no service tagged surface.catalog_doors is the form door.
    */
   protected function routeRefusals(ResourceDefinition $definition, OperationDefinition $operation, OperationContext $context, SurfaceInterface $built): array {
-    if ($this->forms === NULL || $this->arguments === NULL || $this->keyPaths === NULL) {
+    if ($this->arguments === NULL || $this->keyPaths === NULL) {
       return [];
     }
+    $forms = NULL;
+    foreach ($this->doors as $doors) {
+      $forms ??= $doors instanceof FormRouteDoors ? $doors : NULL;
+    }
+    // The routes are the form door's to give: without it the catalog
+    // would judge none and say nothing of the ones written wrong.
+    $forms ?? throw new \LogicException(sprintf('The site catalog judges the routes modules serve operations at, and the form door gives them: no service tagged surface.catalog_doors is a %s. The base module tags surface.form_route_doors; keep that tag on it.', FormRouteDoors::class));
     $refusals = [];
-    foreach ($this->forms->served($definition, $operation) as $name => [$route]) {
+    foreach ($forms->served($definition, $operation) as $name => [$route]) {
       $plain = array_filter($route->getDefaults(), static fn (string|int $default): bool => !str_starts_with((string) $default, '_'), ARRAY_FILTER_USE_KEY);
       try {
         $served = NULL;
@@ -472,7 +441,7 @@ final class SiteCatalog {
    *   The operation's id.
    *
    * @return array<string, \Drupal\Core\Url>
-   *   By door name, in DOORS order.
+   *   By door name, in the order the providers are tagged.
    */
   public function links(string $resource, string $operation): array {
     $entry = $this->describe()[$resource] ?? NULL;
@@ -497,7 +466,7 @@ final class SiteCatalog {
         }
       }
     }
-    return array_intersect_key(array_replace(array_flip(self::DOORS), $linked), $linked);
+    return $linked;
   }
 
   /**
@@ -521,7 +490,8 @@ final class SiteCatalog {
    *   Whether it can be asked on its own.
    *
    * @return array<string, string>
-   *   What each door is, by name, in DOORS order.
+   *   What each door is, by name, in the order the providers are tagged
+   *   and each names its own.
    */
   protected function doorsOf(ResourceDefinition $definition, OperationDefinition $operation, bool $standalone): array {
     $named = [];
@@ -534,7 +504,7 @@ final class SiteCatalog {
         // refusal, if a build raised one, is listed by refused().
       }
     }
-    return array_intersect_key(array_replace(array_flip(self::DOORS), $named), $named);
+    return $named;
   }
 
   /**

@@ -56,7 +56,9 @@ the emitter wrote reads back as what it was written from
 | a property | a key; `title` its label, `description` its description (a property with no title has no label) |
 | `type` `string`, `integer`, `number`, `boolean` | the data type `string`, `integer`, `float`, `boolean`: the type table the emitter writes from (`Contract\LeafTypes`), read backwards, so every value a declaration holds is written with a `type` and read back to it ([decision](decisions.md#one-table-of-leaf-types-read-by-the-blueprint-the-emitter-and-the-reader)) |
 | `format` `idn-email` or `email`, `uri`, `date-time` | the data type `email`, `uri`, `datetime_iso8601`; `email` is written back as `idn-email`, which Drupal's validator holds to |
-| `format` `date`, `time`, `uuid` | a `Regex` of RFC 3339's date or full time (none beside a `pattern`, which is the rule), a `Uuid` constraint; a `date` is drawn as a date input |
+| `format` `date`, `time` | a `Regex` of RFC 3339's date or full time (none beside a `pattern`, which is the rule); a `date` is drawn as a date input |
+| `format` `uuid` | a `Uuid` constraint, written back as `format: uuid`; core's check is strict and refuses the nil UUID, which the format allows ([decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)) |
+| `format` on a type other than string | dropped, with no note: an annotation, which checks nothing |
 | any other `format` | dropped, noted: an annotation, which no constraint checks |
 | `null` beside the type (`["string", "null"]`) | a key null clears |
 | `required` | the key required |
@@ -66,14 +68,15 @@ the emitter wrote reads back as what it was written from
 | `oneOf` of `const` with `title` and `description` | a `LabeledChoice`, its labels and descriptions; an untitled `{"const": null}` the key null clears |
 | `const` | a `Choice` of one value; with `readOnly`, the key locked at it |
 | a list of values with no `type` | the type of its values |
-| `minimum`, `maximum` | `Range` |
+| `minimum`, `maximum` on an integer or a number | `Range` |
 | `exclusiveMinimum`, `exclusiveMaximum` | on an integer, `Range` to the next whole number in; on a number, kept ([below](#what-is-kept)) |
-| `minLength`, `maxLength` | `Length` |
-| `minItems`, `maxItems` | `Count` |
+| `minLength`, `maxLength` on a string | `Length`, `min` and `max`; two equal bounds as `min` and `max`, not `exactly`; `minLength: 1` as `Length`, not `NotBlank` |
+| `minItems`, `maxItems` on an array | `Count`, `min` and `max`; on a collection, its bounds, a bound that is no whole number noted and not read |
 | `uniqueItems: true` on an array | `UniqueItems`; `false` is what an array says without it, and reads as nothing |
-| `pattern` | a `Regex`, when it is inside the subset PHP and an ECMA engine read alike: the body, delimited, with `D` and, for a character outside ASCII, `u` (why: [decision](decisions.md#a-pattern-both-engines-read-alike)); `x-surface.patternMessage` its message; outside the subset, kept |
-| `not: {pattern}` | a `Regex` that must not match |
-| `allOf`, `anyOf` of parts each one constraint | `Sequentially`, `AtLeastOneOf` of them (why: [decision](decisions.md#a-composite-is-its-parts)) |
+| `pattern` on a string | a `Regex`, when it is inside the subset PHP and an ECMA engine read alike: the body, delimited, with `D` and, for a character outside ASCII, `u` (why: [decision](decisions.md#a-pattern-both-engines-read-alike)); `x-surface.patternMessage` its message; outside the subset, kept |
+| `not: {pattern}` on a string | a `Regex` that must not match; beside a `pattern`, both are kept, since a definition holds one `Regex`; beside a `format` read as a `Regex` (`date`, `time`), the format's pattern is kept as a `pattern` |
+| `allOf`, `anyOf` of parts each one constraint of the table | `Sequentially`, `AtLeastOneOf` of them (why: [decision](decisions.md#a-composite-is-its-parts)); otherwise kept |
+| any of these on a type it does not say anything of (`minLength` on an integer) | kept ([below](#what-is-kept)) |
 | `readOnly` | the key locked, at its `const` |
 | `writeOnly` | a secret |
 | an object with properties | a map, each property a definition of its own; where it holds more than a map can (a reference, a rule or variants its `allOf` states), an anonymous map with a frame of its own, `addMap()`, written inline again; closed otherwise, or saying what a map does not write, a structure attached at the key, `<owner>.<key>` |
@@ -108,7 +111,7 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | `patternMessage` | the `Regex`'s message |
 | `widget` `radios`, `time`, `date`, `checkboxes`; `textarea` | the widget it asks for; a multiline string |
 | `group`, `after` | a map that only groups, a map placed after a key |
-| `checkedOnServer` of a `JsonSchema` constraint | that constraint, from the schema beside its message |
+| `checkedOnServer` of a `JsonSchema` constraint | that constraint, from the schema beside its message; with keywords the value keeps besides, one constraint, the `allOf` of both. Any other entry is noted and not read: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
 | `rules`, `within` | where the emitter moved its markers, put back first (`SchemaResolver::restored()`) |
 
 The rest says what is true of one moment (`refined`, `stale`,
@@ -226,7 +229,7 @@ The full schema the emitter writes for a resource or structure, read
 back, builds a structure whose own full schema is that document again,
 byte for byte. `SchemaRoundTripTest` holds it for every resource and
 structure of the examples, the first resource and the test fixtures,
-each in every operation that needs no subject: 43 documents read back
+each in every operation that needs no subject: 73 documents read back
 to themselves. A declaration a runtime refiner narrows is left out (3):
 its rule is a lookup no document states. What does not round-trip is
 listed there, each with its kind, and the test fails when one starts
