@@ -30,8 +30,10 @@
                 "items": {
                     "$ref": "#/$defs/ai.retitle.item"
                 },
+                "x-portable-ui": {
+                    "widget": "list"
+                },
                 "x-surface": {
-                    "widget": "list",
                     "collection": true
                 }
             },
@@ -60,11 +62,13 @@
                     }
                 ],
                 "default": "title",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select",
-                    "emptyOption": {
-                        "show": true,
-                        "label": "- None -"
+                    "options": {
+                        "emptyOption": {
+                            "show": true,
+                            "label": "- None -"
+                        }
                     }
                 }
             }
@@ -102,14 +106,18 @@
                         "x-portable-messages": {
                             "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                         },
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- Select -"
+                                }
+                            }
+                        },
+                        "x-surface": {
                             "reference": {
                                 "entityType": "node"
-                            },
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- Select -"
                             }
                         }
                     },
@@ -121,7 +129,7 @@
                             "null"
                         ],
                         "maxLength": 255,
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     }

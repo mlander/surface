@@ -27,7 +27,7 @@
             "title": {
                 "title": "Title",
                 "type": "string",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "text"
                 }
             },
@@ -45,21 +45,25 @@
                     }
                 ],
                 "default": "staff",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select"
                 }
             },
             "owner": {
+                "x-portable-ui": {
+                    "widget": "text"
+                },
                 "x-surface": {
-                    "widget": "text",
                     "dependsOn": [
                         "visibility"
                     ]
                 }
             },
             "shared": {
+                "x-portable-ui": {
+                    "widget": "checkbox"
+                },
                 "x-surface": {
-                    "widget": "checkbox",
                     "dependsOn": [
                         "visibility"
                     ],
@@ -67,8 +71,10 @@
                 }
             },
             "created": {
+                "x-portable-ui": {
+                    "widget": "number"
+                },
                 "x-surface": {
-                    "widget": "number",
                     "dependsOn": [
                         "published"
                     ]
@@ -83,8 +89,10 @@
                 ],
                 "minimum": 1,
                 "default": 1,
+                "x-portable-ui": {
+                    "widget": "number"
+                },
                 "x-surface": {
-                    "widget": "number",
                     "dependsOn": [
                         "created"
                     ]
@@ -97,14 +105,14 @@
                     "null"
                 ],
                 "default": false,
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "checkbox"
                 }
             },
             "archive": {
                 "title": "Archive",
                 "$ref": "#/$defs/resource_test.archive",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "fieldset"
                 }
             }
@@ -217,7 +225,7 @@
                             "null"
                         ],
                         "minimum": 0,
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "number"
                         }
                     },
@@ -228,8 +236,10 @@
                             "null"
                         ],
                         "minimum": 0,
+                        "x-portable-ui": {
+                            "widget": "number"
+                        },
                         "x-surface": {
-                            "widget": "number",
                             "dependsOn": [
                                 "created"
                             ],
@@ -277,8 +287,10 @@
                     "owner": {
                         "title": "Owner",
                         "type": "string",
+                        "x-portable-ui": {
+                            "widget": "text"
+                        },
                         "x-surface": {
-                            "widget": "text",
                             "dependsOn": [
                                 "audience"
                             ]
@@ -291,8 +303,10 @@
                             "null"
                         ],
                         "default": false,
+                        "x-portable-ui": {
+                            "widget": "checkbox"
+                        },
                         "x-surface": {
-                            "widget": "checkbox",
                             "dependsOn": [
                                 "audience"
                             ]
@@ -318,7 +332,7 @@
                     "shelf": {
                         "title": "Shelf",
                         "type": "string",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "text"
                         }
                     },
@@ -336,21 +350,25 @@
                             }
                         ],
                         "default": "staff",
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select"
                         }
                     },
                     "owner": {
+                        "x-portable-ui": {
+                            "widget": "text"
+                        },
                         "x-surface": {
-                            "widget": "text",
                             "dependsOn": [
                                 "circle"
                             ]
                         }
                     },
                     "shared": {
+                        "x-portable-ui": {
+                            "widget": "checkbox"
+                        },
                         "x-surface": {
-                            "widget": "checkbox",
                             "dependsOn": [
                                 "circle"
                             ],
@@ -361,7 +379,7 @@
                         "title": "Archive stamps",
                         "$ref": "#/$defs/resource_test.timestamps",
                         "unevaluatedProperties": false,
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "fieldset"
                         }
                     }
@@ -449,7 +467,7 @@
                 "title": {
                     "title": "Title",
                     "type": "string",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "text"
                     }
                 },
@@ -467,19 +485,23 @@
                         }
                     ],
                     "default": "staff",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "select",
-                        "emptyOption": {
-                            "show": false,
-                            "label": "- Select -"
+                        "options": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
                         }
                     }
                 },
                 "owner": {
                     "description": "Up to 32 characters for a staff audience.",
                     "maxLength": 32,
+                    "x-portable-ui": {
+                        "widget": "text"
+                    },
                     "x-surface": {
-                        "widget": "text",
                         "dependsOn": [
                             "visibility"
                         ],
@@ -487,8 +509,10 @@
                     }
                 },
                 "shared": {
+                    "x-portable-ui": {
+                        "widget": "checkbox"
+                    },
                     "x-surface": {
-                        "widget": "checkbox",
                         "dependsOn": [
                             "visibility"
                         ]
@@ -497,8 +521,10 @@
                 "created": {
                     "description": "A published journal says when it was created.",
                     "type": "integer",
+                    "x-portable-ui": {
+                        "widget": "number"
+                    },
                     "x-surface": {
-                        "widget": "number",
                         "dependsOn": [
                             "published"
                         ],
@@ -509,8 +535,10 @@
                     "description": "Required once the created time is set.",
                     "type": "integer",
                     "minimum": 1700000000,
+                    "x-portable-ui": {
+                        "widget": "number"
+                    },
                     "x-surface": {
-                        "widget": "number",
                         "dependsOn": [
                             "created"
                         ],
@@ -525,8 +553,10 @@
                     ],
                     "minimum": 1,
                     "default": 1,
+                    "x-portable-ui": {
+                        "widget": "number"
+                    },
                     "x-surface": {
-                        "widget": "number",
                         "dependsOn": [
                             "created"
                         ]
@@ -539,7 +569,7 @@
                         "null"
                     ],
                     "default": false,
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "checkbox"
                     }
                 },
@@ -555,7 +585,15 @@
                                 "owner": {
                                     "type": "string",
                                     "description": "Up to 32 characters for a staff audience.",
-                                    "maxLength": 32
+                                    "maxLength": 32,
+                                    "x-portable-ui": {
+                                        "widget": "text"
+                                    }
+                                },
+                                "shared": {
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    }
                                 },
                                 "stamps": {
                                     "allOf": [
@@ -568,41 +606,45 @@
                                                 "changed": {
                                                     "description": "Required once the created time is set.",
                                                     "type": "integer",
-                                                    "minimum": 1690000000
+                                                    "minimum": 1690000000,
+                                                    "x-portable-ui": {
+                                                        "widget": "number"
+                                                    }
                                                 }
                                             },
                                             "required": [
                                                 "changed"
                                             ]
                                         }
-                                    ]
+                                    ],
+                                    "x-portable-ui": {
+                                        "widget": "fieldset"
+                                    }
                                 }
                             }
                         }
                     ],
+                    "x-portable-ui": {
+                        "widget": "fieldset"
+                    },
                     "x-surface": {
-                        "widget": "fieldset",
                         "refined": true,
                         "within": {
                             "/allOf/1/properties/owner": {
-                                "widget": "text",
                                 "dependsOn": [
                                     "circle"
                                 ],
                                 "refined": true
                             },
                             "/allOf/1/properties/shared": {
-                                "widget": "checkbox",
                                 "dependsOn": [
                                     "circle"
                                 ]
                             },
                             "/allOf/1/properties/stamps": {
-                                "widget": "fieldset",
                                 "refined": true
                             },
                             "/allOf/1/properties/stamps/allOf/1/properties/changed": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "created"
                                 ],
@@ -640,7 +682,7 @@
                                 "null"
                             ],
                             "minimum": 0,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "number"
                             }
                         },
@@ -651,8 +693,10 @@
                                 "null"
                             ],
                             "minimum": 0,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "created"
                                 ],
@@ -700,8 +744,10 @@
                         "owner": {
                             "title": "Owner",
                             "type": "string",
+                            "x-portable-ui": {
+                                "widget": "text"
+                            },
                             "x-surface": {
-                                "widget": "text",
                                 "dependsOn": [
                                     "audience"
                                 ]
@@ -714,8 +760,10 @@
                                 "null"
                             ],
                             "default": false,
+                            "x-portable-ui": {
+                                "widget": "checkbox"
+                            },
                             "x-surface": {
-                                "widget": "checkbox",
                                 "dependsOn": [
                                     "audience"
                                 ]
@@ -741,7 +789,7 @@
                         "shelf": {
                             "title": "Shelf",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -759,25 +807,31 @@
                                 }
                             ],
                             "default": "staff",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
                         "owner": {
+                            "x-portable-ui": {
+                                "widget": "text"
+                            },
                             "x-surface": {
-                                "widget": "text",
                                 "dependsOn": [
                                     "circle"
                                 ]
                             }
                         },
                         "shared": {
+                            "x-portable-ui": {
+                                "widget": "checkbox"
+                            },
                             "x-surface": {
-                                "widget": "checkbox",
                                 "dependsOn": [
                                     "circle"
                                 ],
@@ -788,7 +842,7 @@
                             "title": "Archive stamps",
                             "$ref": "#/$defs/resource_test.timestamps",
                             "unevaluatedProperties": false,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "fieldset"
                             }
                         }
@@ -935,7 +989,7 @@
                         "title": {
                             "title": "Title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -953,17 +1007,21 @@
                                 }
                             ],
                             "default": "staff",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
                         "owner": {
+                            "x-portable-ui": {
+                                "widget": "text"
+                            },
                             "x-surface": {
-                                "widget": "text",
                                 "dependsOn": [
                                     "visibility"
                                 ]
@@ -973,8 +1031,10 @@
                         "created": {
                             "description": "A published journal says when it was created.",
                             "type": "integer",
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "published"
                                 ],
@@ -985,8 +1045,10 @@
                             "description": "Required once the created time is set.",
                             "type": "integer",
                             "minimum": 1700000000,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "created"
                                 ],
@@ -1001,8 +1063,10 @@
                             ],
                             "minimum": 1,
                             "default": 1,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "created"
                                 ]
@@ -1015,7 +1079,7 @@
                                 "null"
                             ],
                             "default": false,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -1031,7 +1095,15 @@
                                         "owner": {
                                             "type": "string",
                                             "description": "Up to 32 characters for a staff audience.",
-                                            "maxLength": 32
+                                            "maxLength": 32,
+                                            "x-portable-ui": {
+                                                "widget": "text"
+                                            }
+                                        },
+                                        "shared": {
+                                            "x-portable-ui": {
+                                                "widget": "checkbox"
+                                            }
                                         },
                                         "stamps": {
                                             "allOf": [
@@ -1044,41 +1116,45 @@
                                                         "changed": {
                                                             "description": "Required once the created time is set.",
                                                             "type": "integer",
-                                                            "minimum": 1690000000
+                                                            "minimum": 1690000000,
+                                                            "x-portable-ui": {
+                                                                "widget": "number"
+                                                            }
                                                         }
                                                     },
                                                     "required": [
                                                         "changed"
                                                     ]
                                                 }
-                                            ]
+                                            ],
+                                            "x-portable-ui": {
+                                                "widget": "fieldset"
+                                            }
                                         }
                                     }
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "refined": true,
                                 "within": {
                                     "/allOf/1/properties/owner": {
-                                        "widget": "text",
                                         "dependsOn": [
                                             "circle"
                                         ],
                                         "refined": true
                                     },
                                     "/allOf/1/properties/shared": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "circle"
                                         ]
                                     },
                                     "/allOf/1/properties/stamps": {
-                                        "widget": "fieldset",
                                         "refined": true
                                     },
                                     "/allOf/1/properties/stamps/allOf/1/properties/changed": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "created"
                                         ],
@@ -1116,7 +1192,7 @@
                                         "null"
                                     ],
                                     "minimum": 0,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -1127,8 +1203,10 @@
                                         "null"
                                     ],
                                     "minimum": 0,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "created"
                                         ],
@@ -1176,8 +1254,10 @@
                                 "owner": {
                                     "title": "Owner",
                                     "type": "string",
+                                    "x-portable-ui": {
+                                        "widget": "text"
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
                                         "dependsOn": [
                                             "audience"
                                         ]
@@ -1190,8 +1270,10 @@
                                         "null"
                                     ],
                                     "default": false,
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "audience"
                                         ]
@@ -1217,7 +1299,7 @@
                                 "shelf": {
                                     "title": "Shelf",
                                     "type": "string",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 },
@@ -1235,25 +1317,31 @@
                                         }
                                     ],
                                     "default": "staff",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 },
                                 "owner": {
+                                    "x-portable-ui": {
+                                        "widget": "text"
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
                                         "dependsOn": [
                                             "circle"
                                         ]
                                     }
                                 },
                                 "shared": {
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "circle"
                                         ],
@@ -1264,7 +1352,7 @@
                                     "title": "Archive stamps",
                                     "$ref": "#/$defs/resource_test.timestamps",
                                     "unevaluatedProperties": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 }
@@ -1405,7 +1493,7 @@
                         "title": {
                             "title": "Title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -1423,19 +1511,23 @@
                                 }
                             ],
                             "default": "staff",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
                         "owner": {
                             "description": "Up to 32 characters for a staff audience.",
                             "maxLength": 32,
+                            "x-portable-ui": {
+                                "widget": "text"
+                            },
                             "x-surface": {
-                                "widget": "text",
                                 "dependsOn": [
                                     "visibility"
                                 ],
@@ -1443,8 +1535,10 @@
                             }
                         },
                         "shared": {
+                            "x-portable-ui": {
+                                "widget": "checkbox"
+                            },
                             "x-surface": {
-                                "widget": "checkbox",
                                 "dependsOn": [
                                     "visibility"
                                 ]
@@ -1453,8 +1547,10 @@
                         "created": {
                             "description": "A published journal says when it was created.",
                             "type": "integer",
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "published"
                                 ],
@@ -1465,8 +1561,10 @@
                             "description": "Required once the created time is set.",
                             "type": "integer",
                             "minimum": 1700000000,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "created"
                                 ],
@@ -1481,8 +1579,10 @@
                             ],
                             "minimum": 1,
                             "default": 1,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "created"
                                 ]
@@ -1495,7 +1595,7 @@
                                 "null"
                             ],
                             "default": false,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -1511,7 +1611,15 @@
                                         "owner": {
                                             "type": "string",
                                             "description": "Up to 32 characters for a staff audience.",
-                                            "maxLength": 32
+                                            "maxLength": 32,
+                                            "x-portable-ui": {
+                                                "widget": "text"
+                                            }
+                                        },
+                                        "shared": {
+                                            "x-portable-ui": {
+                                                "widget": "checkbox"
+                                            }
                                         },
                                         "stamps": {
                                             "allOf": [
@@ -1524,41 +1632,45 @@
                                                         "changed": {
                                                             "description": "Required once the created time is set.",
                                                             "type": "integer",
-                                                            "minimum": 1690000000
+                                                            "minimum": 1690000000,
+                                                            "x-portable-ui": {
+                                                                "widget": "number"
+                                                            }
                                                         }
                                                     },
                                                     "required": [
                                                         "changed"
                                                     ]
                                                 }
-                                            ]
+                                            ],
+                                            "x-portable-ui": {
+                                                "widget": "fieldset"
+                                            }
                                         }
                                     }
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "refined": true,
                                 "within": {
                                     "/allOf/1/properties/owner": {
-                                        "widget": "text",
                                         "dependsOn": [
                                             "circle"
                                         ],
                                         "refined": true
                                     },
                                     "/allOf/1/properties/shared": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "circle"
                                         ]
                                     },
                                     "/allOf/1/properties/stamps": {
-                                        "widget": "fieldset",
                                         "refined": true
                                     },
                                     "/allOf/1/properties/stamps/allOf/1/properties/changed": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "created"
                                         ],
@@ -1596,7 +1708,7 @@
                                         "null"
                                     ],
                                     "minimum": 0,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -1607,8 +1719,10 @@
                                         "null"
                                     ],
                                     "minimum": 0,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "created"
                                         ],
@@ -1656,8 +1770,10 @@
                                 "owner": {
                                     "title": "Owner",
                                     "type": "string",
+                                    "x-portable-ui": {
+                                        "widget": "text"
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
                                         "dependsOn": [
                                             "audience"
                                         ]
@@ -1670,8 +1786,10 @@
                                         "null"
                                     ],
                                     "default": false,
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "audience"
                                         ]
@@ -1697,7 +1815,7 @@
                                 "shelf": {
                                     "title": "Shelf",
                                     "type": "string",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 },
@@ -1715,25 +1833,31 @@
                                         }
                                     ],
                                     "default": "staff",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 },
                                 "owner": {
+                                    "x-portable-ui": {
+                                        "widget": "text"
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
                                         "dependsOn": [
                                             "circle"
                                         ]
                                     }
                                 },
                                 "shared": {
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "circle"
                                         ],
@@ -1744,7 +1868,7 @@
                                     "title": "Archive stamps",
                                     "$ref": "#/$defs/resource_test.timestamps",
                                     "unevaluatedProperties": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 }
@@ -1887,7 +2011,7 @@
                         "title": {
                             "title": "Title",
                             "type": "string",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "text"
                             }
                         },
@@ -1905,19 +2029,23 @@
                                 }
                             ],
                             "default": "staff",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
                         "owner": {
                             "description": "Up to 32 characters for a staff audience.",
                             "maxLength": 32,
+                            "x-portable-ui": {
+                                "widget": "text"
+                            },
                             "x-surface": {
-                                "widget": "text",
                                 "dependsOn": [
                                     "visibility"
                                 ],
@@ -1925,8 +2053,10 @@
                             }
                         },
                         "shared": {
+                            "x-portable-ui": {
+                                "widget": "checkbox"
+                            },
                             "x-surface": {
-                                "widget": "checkbox",
                                 "dependsOn": [
                                     "visibility"
                                 ]
@@ -1935,8 +2065,10 @@
                         "created": {
                             "description": "A published journal says when it was created.",
                             "type": "integer",
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "published"
                                 ],
@@ -1947,8 +2079,10 @@
                             "description": "Required once the created time is set.",
                             "type": "integer",
                             "minimum": 1800000000,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "created"
                                 ],
@@ -1963,8 +2097,10 @@
                             ],
                             "minimum": 1,
                             "default": 1,
+                            "x-portable-ui": {
+                                "widget": "number"
+                            },
                             "x-surface": {
-                                "widget": "number",
                                 "dependsOn": [
                                     "created"
                                 ]
@@ -1977,7 +2113,7 @@
                                 "null"
                             ],
                             "default": false,
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "checkbox"
                             }
                         },
@@ -1993,7 +2129,15 @@
                                         "owner": {
                                             "type": "string",
                                             "description": "Up to 32 characters for a staff audience.",
-                                            "maxLength": 32
+                                            "maxLength": 32,
+                                            "x-portable-ui": {
+                                                "widget": "text"
+                                            }
+                                        },
+                                        "shared": {
+                                            "x-portable-ui": {
+                                                "widget": "checkbox"
+                                            }
                                         },
                                         "stamps": {
                                             "allOf": [
@@ -2006,41 +2150,45 @@
                                                         "changed": {
                                                             "description": "Required once the created time is set.",
                                                             "type": "integer",
-                                                            "minimum": 1690000000
+                                                            "minimum": 1690000000,
+                                                            "x-portable-ui": {
+                                                                "widget": "number"
+                                                            }
                                                         }
                                                     },
                                                     "required": [
                                                         "changed"
                                                     ]
                                                 }
-                                            ]
+                                            ],
+                                            "x-portable-ui": {
+                                                "widget": "fieldset"
+                                            }
                                         }
                                     }
                                 }
                             ],
+                            "x-portable-ui": {
+                                "widget": "fieldset"
+                            },
                             "x-surface": {
-                                "widget": "fieldset",
                                 "refined": true,
                                 "within": {
                                     "/allOf/1/properties/owner": {
-                                        "widget": "text",
                                         "dependsOn": [
                                             "circle"
                                         ],
                                         "refined": true
                                     },
                                     "/allOf/1/properties/shared": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "circle"
                                         ]
                                     },
                                     "/allOf/1/properties/stamps": {
-                                        "widget": "fieldset",
                                         "refined": true
                                     },
                                     "/allOf/1/properties/stamps/allOf/1/properties/changed": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "created"
                                         ],
@@ -2078,7 +2226,7 @@
                                         "null"
                                     ],
                                     "minimum": 0,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "number"
                                     }
                                 },
@@ -2089,8 +2237,10 @@
                                         "null"
                                     ],
                                     "minimum": 0,
+                                    "x-portable-ui": {
+                                        "widget": "number"
+                                    },
                                     "x-surface": {
-                                        "widget": "number",
                                         "dependsOn": [
                                             "created"
                                         ],
@@ -2138,8 +2288,10 @@
                                 "owner": {
                                     "title": "Owner",
                                     "type": "string",
+                                    "x-portable-ui": {
+                                        "widget": "text"
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
                                         "dependsOn": [
                                             "audience"
                                         ]
@@ -2152,8 +2304,10 @@
                                         "null"
                                     ],
                                     "default": false,
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "audience"
                                         ]
@@ -2179,7 +2333,7 @@
                                 "shelf": {
                                     "title": "Shelf",
                                     "type": "string",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "text"
                                     }
                                 },
@@ -2197,25 +2351,31 @@
                                         }
                                     ],
                                     "default": "staff",
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "select",
-                                        "emptyOption": {
-                                            "show": false,
-                                            "label": "- Select -"
+                                        "options": {
+                                            "emptyOption": {
+                                                "show": false,
+                                                "label": "- Select -"
+                                            }
                                         }
                                     }
                                 },
                                 "owner": {
+                                    "x-portable-ui": {
+                                        "widget": "text"
+                                    },
                                     "x-surface": {
-                                        "widget": "text",
                                         "dependsOn": [
                                             "circle"
                                         ]
                                     }
                                 },
                                 "shared": {
+                                    "x-portable-ui": {
+                                        "widget": "checkbox"
+                                    },
                                     "x-surface": {
-                                        "widget": "checkbox",
                                         "dependsOn": [
                                             "circle"
                                         ],
@@ -2226,7 +2386,7 @@
                                     "title": "Archive stamps",
                                     "$ref": "#/$defs/resource_test.timestamps",
                                     "unevaluatedProperties": false,
-                                    "x-surface": {
+                                    "x-portable-ui": {
                                         "widget": "fieldset"
                                     }
                                 }

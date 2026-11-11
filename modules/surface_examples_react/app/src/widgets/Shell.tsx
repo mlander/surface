@@ -65,7 +65,7 @@ export function RequiredMarker(): JSX.Element {
 function notesOf(props: FieldProps): string[] {
   const computed = props.schema['x-surface']?.computed;
   const fixed = computed !== undefined && !props.disabled ? COMPUTED_NOTES[computed.when] : isLocked(props) ? LOCKED_NOTE : undefined;
-  return [props.schema.description, props.schema['x-surface']?.arrangement?.help, fixed, props.schema.writeOnly ? SECRET_NOTE : undefined]
+  return [props.schema.description, props.schema['x-portable-ui']?.options?.help, fixed, props.schema.writeOnly ? SECRET_NOTE : undefined]
     .filter((note): note is string => typeof note === 'string' && note !== '');
 }
 
@@ -130,7 +130,7 @@ export function Item({
   const id = fieldId(props.path);
   const hasError = (props.errors[props.path] ?? []).length > 0;
   return (
-    <div className={`dsr-item dsr-item--${props.schema['x-surface']?.widget ?? 'none'}${hasError ? ' dsr-item--error' : ''}`}>
+    <div className={`dsr-item dsr-item--${props.schema['x-portable-ui']?.widget ?? 'none'}${hasError ? ' dsr-item--error' : ''}`}>
       {label ? (
         <label className="dsr-label" htmlFor={id}>
           {props.schema.title ?? props.name}

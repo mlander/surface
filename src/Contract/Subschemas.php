@@ -64,18 +64,23 @@ final class Subschemas {
    *   Whether the document is the full schema (emitFull()).
    * @param string[] $transient
    *   The `x-surface` keywords the document strips once it is written:
-   *   what is only true of a moment, in the full schema, and the widget
-   *   hints, when they were not asked for. A reference site differing
-   *   from its def in nothing but these differs in nothing.
+   *   what is only true of a moment, in the full schema. A reference site
+   *   differing from its def in nothing but these, and $ui, differs in
+   *   nothing.
    * @param string[] $open
    *   The ids of the structures the document mixes in somewhere: each
    *   one's def is written open, so an owner can compose it with keys of
    *   its own, and every other place it is used closes it.
+   * @param string[] $ui
+   *   The `x-portable-ui` members and options the document strips once it
+   *   is written: the empty option, in the full schema, and the widget
+   *   hints, when they were not asked for (PortableUi::without()).
    */
   public function __construct(
     public readonly bool $full,
     public readonly array $transient,
     protected array $open = [],
+    public readonly array $ui = [],
   ) {
     $this->keys = new \SplObjectStorage();
     $this->writing = new \SplObjectStorage();

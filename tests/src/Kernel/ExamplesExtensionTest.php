@@ -711,9 +711,9 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     $source = $this->now('event.mailer')['properties']['source'];
     $this->assertSame('pasted', $source['const']);
     $this->assertArrayNotHasKey('oneOf', $source);
-    $this->assertSame('fixed', $source['x-surface']['widget']);
+    $this->assertSame('fixed', $source['x-portable-ui']['widget']);
     $this->assertSame('Pasted here', $source['x-surface']['fixed']);
-    $this->assertArrayNotHasKey('emptyOption', $source['x-surface']);
+    $this->assertArrayNotHasKey('emptyOption', $source['x-surface'] ?? []);
     $element = $this->formAt('surface_examples.step14')['source'];
     $this->assertSame('item', $element['#type']);
     $this->assertSame('Pasted here', $element['#plain_text']);
@@ -725,7 +725,7 @@ class ExamplesExtensionTest extends SurfaceKernelTestBase {
     $source = $this->now('event.mailer')['properties']['source'];
     $this->assertArrayNotHasKey('const', $source);
     $this->assertSame(['pasted', 'managed'], array_column($source['oneOf'], 'const'));
-    $this->assertSame('select', $source['x-surface']['widget']);
+    $this->assertSame('select', $source['x-portable-ui']['widget']);
     $element = $this->formAt('surface_examples.step14')['source'];
     $this->assertSame('select', $element['#type']);
     $this->assertSame(['pasted' => 'Pasted here', 'managed' => 'A managed key'], array_map('strval', $element['#options']));

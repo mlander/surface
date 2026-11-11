@@ -22,7 +22,8 @@ namespace Drupal\surface\Contract;
  * - BREAKS: neither (a key removed or renamed, a type replaced, a
  *   reference to another def, a required port);
  * - NOTE: nothing a validator reads (a label, a description, a default,
- *   a marker under `x-surface`), and one thing it does: a required key
+ *   a marker under `x-surface`, the widget hints under `x-portable-ui`),
+ *   and one thing it does: a required key
  *   added to the inputs of an operation that acts on what is stored (an
  *   update or a read), which no document stored or sent before held, so
  *   a write supplies it where nothing is stored, a key left out keeps
@@ -392,6 +393,8 @@ final class ContractDiff {
       'x-surface' => $this->extension((array) $a, (array) $b, $path, $owner, $reading),
       PortableKeywords::CHECK => $this->checks((array) $a, (array) $b, $path, $owner, $reading),
       PortableKeywords::MESSAGES => $one('the messages changed', self::NOTE),
+      // The widget hints: how a key is drawn, never what it accepts.
+      PortableKeywords::UI => $one(PortableKeywords::UI . ' changed', self::NOTE),
       'readOnly' => $one($b === TRUE ? 'read only now' : 'no longer read only', $b === TRUE ? self::NARROWS : self::WIDENS),
       'type' => $this->type($in_old ? (array) $a : NULL, $in_new ? (array) $b : NULL, $one),
       'enum' => $this->choices(array_map(static fn ($value): array => ['const' => $value], (array) $a), array_map(static fn ($value): array => ['const' => $value], (array) $b), $path, $owner, $reading),

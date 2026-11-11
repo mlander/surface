@@ -543,14 +543,20 @@ the record of the rework that brought the module to the pattern.
   (`ContractEmitter::DIALECT`): JSON Schema 2020-12 with a profile, fixed
   rules where the standard leaves a choice, and a vocabulary of its own,
   the package `fago/portable-schema` (`PortableSchema\`, required by the
-  module). Two of its keywords are written beside the standard ones,
-  before `x-surface`, by `Contract\PortableKeywords`: **`portable-check`**,
-  what only the server checks, a map from `drupal:<constraint plugin id>`
-  to its options (`{}`, or `{"schema": ...}` for `drupal:JsonSchema`);
-  and **`x-portable-messages`**, a message per error code, a Regex's
-  under `pattern` (or `not`), then each check's under
-  `check.drupal:<id>`. They stay on their node below an applicator,
-  where `x-surface` moves to `within`. `format: email`, not `idn-email`,
+  module). Three of its keywords are written beside the standard ones,
+  in this order, before `x-surface` (`Contract\PortableKeywords`):
+  **`portable-check`**, what only the server checks, a map from
+  `drupal:<constraint plugin id>` to its options (`{}`, or
+  `{"schema": ...}` for `drupal:JsonSchema`); **`x-portable-messages`**,
+  a message per error code, a Regex's under `pattern` (or `not`), then
+  each check's under `check.drupal:<id>`; and **`x-portable-ui`**, the
+  widget hints (`Contract\PortableUi`): `widget`, `options`
+  (`multiple`, the arrangement's texts, `emptyOption`), `group` by id,
+  `weight`, and each group declared once on its frame under `groups`,
+  all but `options.emptyOption` written only when a renderer asks for
+  the hints (`docs/decisions.md#the-ui-hints-are-x-portable-ui`). They
+  stay on their node below an applicator, where `x-surface` moves to
+  `within`. `format: email`, not `idn-email`,
   which the profile refuses
   (`docs/decisions.md#the-served-document-is-a-portable-schema-document`).
 - **Markers**: what a key's `x-surface` says of how far the schema holds
@@ -947,7 +953,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2226, Assertions: 55247, Errors: 0, Failures: 0, Skipped: 3. Classes: 311 of 311, 8 at a time, browser classes 4.
+phpunit: Tests: 2238, Assertions: 55376, Errors: 0, Failures: 0, Skipped: 3. Classes: 313 of 313, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -967,8 +973,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2112, Assertions: 50698, Skipped: 3, Deprecations: 151. Classes:
-258, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2124, Assertions: 50826, Skipped: 3, Deprecations: 155. Classes:
+260, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1288,7 +1294,8 @@ src/Contract/            The served contract's emitter (a Portable Schema
                          walks the frames, PropertySchema writes each key,
                          Conditionals the if/then, DocumentHead the top,
                          PortableKeywords the dialect's portable-check and
-                         x-portable-messages; ServedContract, the
+                         x-portable-messages, PortableUi its
+                         x-portable-ui; ServedContract, the
                          document, whose schema() and outputs() answer
                          it as a PortableSchema\Builder\Schema;
                          the contract diff; the schema reader; the two

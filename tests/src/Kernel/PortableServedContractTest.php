@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\surface\Contract\ServedContract;
+use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface_examples\Resource\CateringByMethodResource;
 use Drupal\surface_examples\Resource\DoorsResource;
 use Drupal\surface_examples\Resource\SpotlightResource;
 use Drupal\surface_examples\Resource\VenueResource;
@@ -69,6 +71,7 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
     $asked = [
       [DoorsResource::class, 'event.doors', 'configure', TRUE],
       [VenueResource::class, 'event.venue', 'create', FALSE],
+      [CateringByMethodResource::class, 'event.catering.method', 'configure', TRUE],
     ];
     foreach ($asked as [$class, $id, $operation_id, $widgets]) {
       $operation = $registry->getOperation($class, $operation_id);
@@ -85,7 +88,13 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
     // What each is checked by, in the dialect's keywords.
     $doors = $contracts['event.doors full']->document['schema']['properties']['opens'];
     $this->assertSame('pattern', array_key_first($doors['x-portable-messages']), 'The pattern\'s message, under its code.');
-    $this->assertArrayHasKey('widget', $doors['x-surface'], 'Emitted with the widget hints.');
+    $this->assertSame(['widget' => 'time'], $doors['x-portable-ui'], 'Emitted with the widget hints.');
+    // A group its frame declares, which the dialect's `groups` holds.
+    foreach (['emit', 'full'] as $which) {
+      $catering = $contracts['event.catering.method ' . $which]->document['schema'];
+      $this->assertSame(['details' => ['label' => 'Details', 'widget' => 'fieldset']], $catering['x-portable-ui']['groups'], $which);
+      $this->assertSame('details', $catering['properties']['notes']['x-portable-ui']['group'], $which);
+    }
     $venue = $contracts['event.venue full']->document['schema']['properties'];
     $this->assertArrayHasKey('drupal:SurfaceUnique', $venue['id']['portable-check']);
     $this->assertTrue($venue['rooms']['x-surface']['collection']);
@@ -99,6 +108,32 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
     $this->assertSame($outputs, $listing->outputs(), 'Read once.');
     $this->assertSame(json_encode($listing->document['outputs']), json_encode($outputs->toDocument()));
     $this->assertInstanceOf(Validator::class, new Validator(Registry::withTypes()->add($outputs->toDocument(), 'surface:event.venue/list/outputs')));
+  }
+
+  /**
+   * Tests no served document can declare a group with no label.
+   *
+   * The dialect refuses a group whose label is empty; ArrangementGroup
+   * refuses such a group when it is declared, so no document carries one.
+   */
+  public function testNoDocumentDeclaresGroupWithNoLabel(): void {
+    $resources = $this->container->get('surface.resources');
+    $registry = $this->container->get('surface.resource_registry');
+    $context = $resources->operation(CateringByMethodResource::class, 'configure');
+    $contract = $this->container->get('surface.contract_emitter')->emitFull($resources->buildStatic(CateringByMethodResource::class, $context), 'event.catering.method', 'configure', $registry->getOperation(CateringByMethodResource::class, 'configure')->label, TRUE);
+    $this->assertPortable($contract, 'event.catering.method full');
+    $document = $contract->schema()->toDocument();
+    $document->{'x-portable-ui'}->groups->details->label = '';
+    try {
+      new Validator(Registry::withTypes()->add($document, 'surface:event.catering.method/no-label'));
+      $this->fail('The dialect refuses a group with no label.');
+    }
+    catch (\InvalidArgumentException $e) {
+      $this->assertStringContainsString('x-portable-ui/groups/details/label', $e->getMessage());
+    }
+    $this->expectException(\InvalidArgumentException::class);
+    $this->expectExceptionMessage('The group "details" has no label');
+    ArrangementGroup::fieldset('details', '');
   }
 
   /**

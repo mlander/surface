@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Drupal\surface\Contract;
 
 /**
- * Writes and reads the two keywords of the dialect both documents carry.
+ * Writes and reads the dialect's own keywords both documents carry.
  *
  * Every document is a Portable Schema document (ContractEmitter::DIALECT),
- * and two things Surface once said under `x-surface` the dialect has words
- * for:
+ * and three things Surface once said under `x-surface` the dialect has
+ * words for:
  *
  * - `portable-check`, a constraint only the server checks: a map from
  *   `drupal:<plugin id>` to its options, an empty object, since the
@@ -19,11 +19,13 @@ namespace Drupal\surface\Contract;
  * - `x-portable-messages`, a message for an error code: a Regex's under
  *   the code of the keyword it goes with (`pattern`, or `not` for
  *   `not: {pattern}`), first, then each check's under
- *   `check.drupal:<plugin id>`.
+ *   `check.drupal:<plugin id>`;
+ * - `x-portable-ui`, the widget hints: how a key is drawn, never what it
+ *   accepts (PortableUi writes it).
  *
- * On a node they come after the standard keywords and before `x-surface`
- * (before()). They are standard keywords of the dialect: they stay on
- * their node where `x-surface` moves to `within`
+ * On a node they come after the standard keywords, in that order, and
+ * before `x-surface` (before()). They are keywords of the dialect: they
+ * stay on their node where `x-surface` moves to `within`
  * (DocumentHead::owning()).
  *
  * Decision: see
@@ -44,6 +46,11 @@ final class PortableKeywords {
   public const MESSAGES = 'x-portable-messages';
 
   /**
+   * The keyword holding the widget hints.
+   */
+  public const UI = 'x-portable-ui';
+
+  /**
    * The namespace of a check Drupal provides: a constraint plugin's id.
    */
   public const PROVIDER = 'drupal:';
@@ -54,9 +61,9 @@ final class PortableKeywords {
   public const CHECK_CODE = 'check.';
 
   /**
-   * The two keywords, in the order a node carries them.
+   * The three keywords, in the order a node carries them.
    */
-  public const KEYWORDS = [self::CHECK, self::MESSAGES];
+  public const KEYWORDS = [self::CHECK, self::MESSAGES, self::UI];
 
   /**
    * Writes the constraints only the server checks, and the messages.
@@ -97,24 +104,34 @@ final class PortableKeywords {
   }
 
   /**
-   * Places the two keywords on a node: after its standard keywords.
+   * Places the dialect's keywords on a node: after its standard keywords.
    *
    * @param array $node
    *   The node.
    * @param array $keywords
-   *   What write() answered.
+   *   What write() answered, or `x-portable-ui` (PortableUi::set()).
    *
    * @return array
-   *   The node, the keywords right before its `x-surface`, or last where
-   *   it has none.
+   *   The node, its dialect's keywords in their order right before its
+   *   `x-surface`, or last where it has none; one it carries and
+   *   $keywords does not name stays.
    */
   public static function before(array $node, array $keywords): array {
     if ($keywords === []) {
       return $node;
     }
     $extension = array_key_exists(ContractEmitter::EXTENSION, $node) ? [ContractEmitter::EXTENSION => $node[ContractEmitter::EXTENSION]] : [];
-    unset($node[ContractEmitter::EXTENSION], $node[self::CHECK], $node[self::MESSAGES]);
-    return $node + $keywords + $extension;
+    $said = [];
+    foreach (self::KEYWORDS as $keyword) {
+      if (array_key_exists($keyword, $keywords)) {
+        $said[$keyword] = $keywords[$keyword];
+      }
+      elseif (array_key_exists($keyword, $node)) {
+        $said[$keyword] = $node[$keyword];
+      }
+    }
+    unset($node[ContractEmitter::EXTENSION], $node[self::CHECK], $node[self::MESSAGES], $node[self::UI]);
+    return $node + $said + $extension;
   }
 
   /**

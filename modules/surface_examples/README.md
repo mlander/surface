@@ -4645,7 +4645,7 @@ While the site has at most 50 candidates, the setting
 `surface.settings:reference_list_limit`, the key lists them: a
 select on the form, a `oneOf` with their labels in both documents, an
 enum in the tool listing. Past it, the key is an id: core's
-`entity_autocomplete` element on the form, `x-surface.widget:
+`entity_autocomplete` element on the form, `x-portable-ui.widget:
 autocomplete` and the constraint under `portable-check` in both
 documents, and a sentence in the tool listing naming where to look one
 up: the resource's lookup, `GET

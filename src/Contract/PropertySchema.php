@@ -34,11 +34,11 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
  * ContractEmitter walks a document's frames and asks this class for each
  * key that is not a child (property()): its type and the keywords its
  * constraints state, its allowed values as `oneOf` with their labels,
- * read from the options service, its widget hint, its `x-surface`, and
- * what only the server checks. A key declared with a shape is written
- * whole, and named() files the shape's def once and turns the key into a
- * reference to it. A child's site is a reference to its def with only
- * what differs from it (reference(), narrowing()).
+ * read from the options service, its widget hints (`x-portable-ui`), its
+ * `x-surface`, and what only the server checks. A key declared with a
+ * shape is written whole, and named() files the shape's def once and
+ * turns the key into a reference to it. A child's site is a reference to
+ * its def with only what differs from it (reference(), narrowing()).
  *
  * It holds no state of a document: what a description reads of one comes
  * in the Emission it is handed.
@@ -180,7 +180,7 @@ final class PropertySchema {
       // The site closes it: the narrowing says only what differs.
       unset($instance['additionalProperties'], $instance['unevaluatedProperties']);
     }
-    $narrowing = $this->narrowing($instance, $def, $subschemas->transient);
+    $narrowing = $this->narrowing($instance, $def, $subschemas->transient, $subschemas->ui);
     return ($narrowing === [] ? $reference : ['allOf' => [$reference, $narrowing]]) + $closed;
   }
 
@@ -190,10 +190,10 @@ final class PropertySchema {
    * The same reading as Conditionals::narrowed(), for a whole frame: a
    * frame's
    * properties are compared one by one; its conditionals keep only those
-   * the def does not already state; and a property's `x-surface`, which
-   * a renderer reads whole, is written whole wherever it differs, less
-   * what the document strips anyway, with its `portable-check` and
-   * `x-portable-messages`.
+   * the def does not already state; and a property's `x-surface` and
+   * `x-portable-ui`, which a renderer reads whole, are written whole
+   * wherever either differs, less what the document strips anyway, with
+   * its `portable-check` and `x-portable-messages`.
    *
    * @param array $instance
    *   The instance.
@@ -201,16 +201,23 @@ final class PropertySchema {
    *   The def.
    * @param string[] $transient
    *   The `x-surface` keywords not compared.
+   * @param string[] $ui
+   *   The `x-portable-ui` members and options not compared.
    *
    * @return array
    *   The keywords that differ; empty when none do.
    */
-  public function narrowing(array $instance, array $def, array $transient): array {
+  public function narrowing(array $instance, array $def, array $transient, array $ui = []): array {
     $narrowing = [];
-    // A property's `x-surface`, and what it names only the server checks
-    // and the messages it gives, are one: written whole where any differs.
+    // A property's `x-surface`, its hints, and what it names only the
+    // server checks and the messages it gives, are one: written whole
+    // where any differs.
     $said = array_merge(PortableKeywords::KEYWORDS, [self::EXTENSION]);
-    $whole = static fn (array $schema): array => array_intersect_key($schema, array_flip(PortableKeywords::KEYWORDS)) + [self::EXTENSION => array_diff_key((array) ($schema[self::EXTENSION] ?? []), array_flip($transient))];
+    $checked = array_flip([PortableKeywords::CHECK, PortableKeywords::MESSAGES]);
+    $whole = static fn (array $schema): array => array_intersect_key($schema, $checked) + [
+      PortableUi::KEYWORD => PortableUi::without((array) ($schema[PortableUi::KEYWORD] ?? []), $ui),
+      self::EXTENSION => array_diff_key((array) ($schema[self::EXTENSION] ?? []), array_flip($transient)),
+    ];
     $differs = !Subschemas::same($whole($instance), $whole($def));
     foreach ($instance as $keyword => $value) {
       if (in_array($keyword, $said, TRUE)) {
@@ -237,7 +244,7 @@ final class PropertySchema {
             }
             continue;
           }
-          $changed = $this->narrowing($value[$name], $def['properties'][$name] ?? [], $transient);
+          $changed = $this->narrowing($value[$name], $def['properties'][$name] ?? [], $transient, $ui);
           if ($changed !== []) {
             $properties[$name] = $changed;
           }
@@ -310,10 +317,11 @@ final class PropertySchema {
       $schema += ['type' => $this->nullable('array', $definition), 'items' => static::neverNull($items)] + $this->keywords($definition, 'array');
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
       $checkboxes = $set !== NULL && CheckboxesWidget::drawsList($definition, $set);
-      $extension = match (TRUE) {
-        $checkboxes => $this->extension('checkboxes', $depends, $refined),
-        $listed => $this->extension('select', $depends, $refined) + ['multiple' => TRUE],
-        default => $this->extension('list', $depends, $refined),
+      $extension = $this->extension($depends, $refined);
+      $ui = match (TRUE) {
+        $checkboxes => PortableUi::write('checkboxes'),
+        $listed => PortableUi::write('select', ['multiple' => TRUE]),
+        default => PortableUi::write('list'),
       };
       $shown = is_array($value) ? array_values($value) : $value;
     }
@@ -342,7 +350,8 @@ final class PropertySchema {
       if ($required !== []) {
         $schema['required'] = $required;
       }
-      $extension = $this->extension($this->asked($definition) ?? 'fieldset', $depends, $refined || $this->anyRefined($schema));
+      $extension = $this->extension($depends, $refined || $this->anyRefined($schema));
+      $ui = PortableUi::write($this->asked($definition) ?? 'fieldset');
       if (DefinitionMetadata::isGrouping($definition)) {
         // Only groups the fieldsets inside it, as on the form: no title
         // and no description to draw, and `group` says to draw none.
@@ -386,7 +395,8 @@ final class PropertySchema {
         AutocompleteWidget::draws($definition), $definition->getSetting(References::TARGETS) !== NULL => 'autocomplete',
         default => $this->widget($definition),
       };
-      $extension = $this->extension($widget, $depends, $refined);
+      $extension = $this->extension($depends, $refined);
+      $ui = PortableUi::write($widget);
       $reference = static::referenceMarker($definition);
       if ($reference !== NULL) {
         $extension['reference'] = $reference;
@@ -414,7 +424,7 @@ final class PropertySchema {
         // nothing is an answer.
         // A select standing for a stale value says it keeps it, as the
         // form's does; ContractEmitter::frame() words an orphan's as it was.
-        $extension['emptyOption'] = [
+        $ui['options']['emptyOption'] = [
           'show' => $radios ? !$holds : !($chosen && $holds),
           'label' => (string) match (TRUE) {
             !$radios && $configured && !$chosen => OptionsWidget::keepLabel($value),
@@ -471,12 +481,18 @@ final class PropertySchema {
     $checks = PortableKeywords::write($schema[self::EXTENSION . '-checked'] ?? [], $schema[self::EXTENSION . '-pattern-message'] ?? []);
     unset($schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message']);
     $schema += $checks;
+    // The widget hints, how the key is drawn and never what it accepts,
+    // in the dialect's keyword, before `x-surface`: its widget, its
+    // arrangement and its empty option. Decision: see
+    // docs/decisions.md#the-ui-hints-are-x-portable-ui.
     $arranged = $this->arrangement($definition);
-    if ($arranged !== []) {
-      // A widget hint: how the key is drawn, never what it accepts.
-      // Decision: see docs/decisions.md#arrangement-is-declared-once.
-      $extension['arrangement'] = $arranged;
+    if (isset($arranged['options'])) {
+      $ui['options'] = ($ui['options'] ?? []) + $arranged['options'];
+      unset($arranged['options']);
     }
+    $schema = PortableUi::set($schema, $ui + $arranged);
+    // Written where nothing is said, so it stands where it did before the
+    // hints moved; PortableUi::settled() leaves an empty one out.
     $schema[self::EXTENSION] = $extension;
     $shape = DefinitionMetadata::shapeDefinition($definition);
     if ($shape !== NULL && !isset($schema['properties']) && !isset($schema['items'])) {
@@ -498,8 +514,9 @@ final class PropertySchema {
    * since whether a key may hold nothing is the key's; a required key's
    * site says `type` without it. What the shape checks stays: the
    * message of its pattern and what only the server checks
-   * (`x-portable-messages` and `portable-check`). Its `x-surface` goes:
-   * the widget, the lock and what a key depends on are each key's.
+   * (`x-portable-messages` and `portable-check`). Its `x-surface` and
+   * `x-portable-ui` go: the widget, the lock and what a key depends on are
+   * each key's.
    *
    * @param array $schema
    *   The shape, described as a key.
@@ -508,7 +525,7 @@ final class PropertySchema {
    *   Its def.
    */
   protected function shapeDef(array $schema): array {
-    unset($schema[self::EXTENSION]);
+    unset($schema[self::EXTENSION], $schema[PortableUi::KEYWORD]);
     return $schema;
   }
 
@@ -592,11 +609,12 @@ final class PropertySchema {
    * of a part leaves it out: no `dependsOn: []`, no `refined: false`, and
    * `stale` only where it is stale (ContractEmitter::frame(), property()).
    *
+   * The widget a key is drawn with is a hint, in `x-portable-ui`
+   * (PortableUi::write()).
+   *
    * Decision: see
    * docs/decisions.md#contract-4-fewer-keywords-nothing-new-on-the-wire.
    *
-   * @param string|null $widget
-   *   The widget hint, or NULL when no widget would claim the key.
    * @param string[] $depends
    *   The sibling keys its refiners watch; a mounted one by its dotted
    *   path in the frame.
@@ -606,8 +624,8 @@ final class PropertySchema {
    * @return array
    *   The keyword.
    */
-  public function extension(?string $widget, array $depends, bool $refined): array {
-    $extension = ['widget' => $widget];
+  public function extension(array $depends, bool $refined): array {
+    $extension = [];
     if ($depends !== []) {
       $extension['dependsOn'] = array_values($depends);
     }
@@ -935,7 +953,8 @@ final class PropertySchema {
    *
    * A key that may be cleared allows null besides, as its own entry with
    * no title: the empty option is a presentation, said under
-   * `x-surface.emptyOption`, and never an option with a label.
+   * `x-portable-ui.options.emptyOption`, and never an option with a
+   * label.
    *
    * @param \Drupal\surface\Options\OptionSet $set
    *   The values the key allows.
@@ -1065,27 +1084,29 @@ final class PropertySchema {
    *   The key's definition.
    *
    * @return array
-   *   Its arrangement as Arrangement::toArray() states it, the group's
-   *   label and every text read as plain text; empty for none.
+   *   Its arrangement as `x-portable-ui` members: `options` with each
+   *   text not empty as plain text, `group` (PortableUi::declaration()) and
+   *   `weight`, each only where it is set; the group's label and every
+   *   text read as plain text; empty for none.
    */
   protected function arrangement(DataDefinitionInterface $definition): array {
     $arrangement = DefinitionMetadata::arrangementOf($definition);
     if ($arrangement === NULL) {
       return [];
     }
-    $arranged = $arrangement->toArray();
-    if ($arrangement->group !== NULL) {
-      $arranged['group']['label'] = PlainText::of($arrangement->group->label);
-      if (isset($arranged['group']['description'])) {
-        $arranged['group']['description'] = PlainText::of((string) $arrangement->group->description);
-      }
-    }
+    $options = [];
     foreach (Arrangement::TEXTS as $text) {
-      if (isset($arranged[$text])) {
-        $arranged[$text] = PlainText::of((string) $arrangement->{$text});
+      // Only a text that is not empty as plain text: markup alone says
+      // nothing to a client that renders none.
+      $plain = $arrangement->{$text} === NULL ? '' : PlainText::of((string) $arrangement->{$text});
+      if ($plain !== '') {
+        $options[$text] = $plain;
       }
     }
-    return $arranged;
+    $group = $arrangement->group;
+    return ($options === [] ? [] : ['options' => $options])
+      + ($group === NULL ? [] : ['group' => PortableUi::declaration($group->id, PlainText::of($group->label), $group->as, $group->collapsed, $group->weight, $group->description === NULL || (string) $group->description === '' ? NULL : PlainText::of((string) $group->description))])
+      + ($arrangement->weight === NULL ? [] : ['weight' => $arrangement->weight]);
   }
 
   /**
@@ -1099,17 +1120,20 @@ final class PropertySchema {
    *   A schema this emitter wrote.
    *
    * @return array
-   *   The schema, its `x-surface` keywords without `widget`, `multiple`
-   *   and `arrangement`, and with no `x-surface` where nothing else was
-   *   said; a subschema left with nothing is `{}`, a \stdClass.
+   *   The schema, its `x-portable-ui` without the hints (PortableUi::HINTS:
+   *   all but `options.emptyOption`), and with no
+   *   `x-portable-ui` and no `x-surface` where nothing else was said; a
+   *   subschema left with nothing is `{}`, a \stdClass.
    */
   public function withoutWidgets(array $schema): array {
     foreach ($schema as $key => $value) {
       if (!is_array($value)) {
         continue;
       }
-      if ($key === self::EXTENSION) {
-        unset($value['widget'], $value['multiple'], $value['arrangement']);
+      if ($key === self::EXTENSION || $key === PortableUi::KEYWORD) {
+        if ($key === PortableUi::KEYWORD) {
+          $value = PortableUi::without($value, PortableUi::HINTS);
+        }
         if ($value === []) {
           unset($schema[$key]);
           continue;
@@ -1130,9 +1154,10 @@ final class PropertySchema {
   /**
    * Strips what a schema says beside what a value must hold, at every depth.
    *
-   * `x-surface`, and the dialect's `portable-check` and
-   * `x-portable-messages`: what a conditional, an output and a narrowing
-   * compared through this say only of the keys themselves.
+   * `x-surface`, and the dialect's `portable-check`,
+   * `x-portable-messages` and `x-portable-ui`: what a conditional, an
+   * output and a narrowing compared through this say only of the keys
+   * themselves.
    *
    * @param array $schema
    *   The schema.
@@ -1141,7 +1166,7 @@ final class PropertySchema {
    *   The schema in plain JSON Schema.
    */
   public function withoutExtension(array $schema): array {
-    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message'], $schema[self::SHAPED], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES]);
+    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message'], $schema[self::SHAPED], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES], $schema[PortableKeywords::UI]);
     foreach ($schema as $key => $value) {
       if (is_array($value)) {
         $schema[$key] = $this->withoutExtension($value);

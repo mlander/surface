@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
@@ -725,13 +726,128 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests the hints said under `x-surface` read as `x-portable-ui` does.
+   *
+   * A document served before the hints moved said each key's widget,
+   * `multiple`, its arrangement with the whole group, and its empty
+   * option under `x-surface`. Read, it is the document that says them in
+   * `x-portable-ui`, each group declared once on its frame.
+   */
+  public function testTheHintsUnderTheExtensionReadAsTheDialects(): void {
+    $old = static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "rate": {"type": ["integer", "null"], "x-surface": {"widget": "number", "dependsOn": ["deposit"],
+          "arrangement": {"group": {"id": "pricing", "label": "Pricing", "as": "details", "collapsed": true, "weight": 3, "description": "Fees."}, "placeholder": "40", "prefix": "$", "suffix": "an hour", "help": "Whole dollars."}}},
+        "deposit": {"type": "boolean", "x-surface": {"widget": "checkbox", "arrangement": {"group": {"id": "pricing", "label": "Pricing", "as": "details", "collapsed": true, "weight": 3, "description": "Fees."}, "weight": -1}}},
+        "opens": {"type": "string", "x-surface": {"widget": "time", "arrangement": {"group": {"id": "hours", "label": "Hours", "as": "fieldset"}, "weight": 2}}},
+        "size": {"type": "string", "oneOf": [{"const": "s", "title": "Small"}, {"const": "m", "title": "Medium"}], "x-surface": {"widget": "radios", "emptyOption": {"show": false, "label": "- None -"}}},
+        "notes": {"type": ["string", "null"], "x-surface": {"widget": "textarea"}}
+      }}
+      JSON);
+    $new = static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "rate": {"type": ["integer", "null"], "x-portable-ui": {"widget": "number", "options": {"placeholder": "40", "prefix": "$", "suffix": "an hour", "help": "Whole dollars."}, "group": "pricing"}, "x-surface": {"dependsOn": ["deposit"]}},
+        "deposit": {"type": "boolean", "x-portable-ui": {"widget": "checkbox", "group": "pricing", "weight": -1}},
+        "opens": {"type": "string", "x-portable-ui": {"widget": "time", "group": "hours", "weight": 2}},
+        "size": {"type": "string", "oneOf": [{"const": "s", "title": "Small"}, {"const": "m", "title": "Medium"}], "x-portable-ui": {"widget": "radios", "options": {"emptyOption": {"show": false, "label": "- None -"}}}},
+        "notes": {"type": ["string", "null"], "x-portable-ui": {"widget": "textarea"}}
+      },
+      "x-portable-ui": {"groups": {
+        "pricing": {"label": "Pricing", "description": "Fees.", "widget": "details", "options": {"open": false}, "weight": 3},
+        "hours": {"label": "Hours", "widget": "fieldset"}
+      }}}
+      JSON);
+    $this->assertSame(SchemaReader::prepared($new), SchemaReader::prepared($old), 'Prepared, the old spelling is the new one.');
+    $read = [$this->read($old, 'test.old'), $this->read($new, 'test.new')];
+    $said = static fn (SurfaceInterface $surface): array => array_map(static fn (string $key): array => [
+      DefinitionMetadata::arrangementOf($surface->getDefinition($key))?->toArray(),
+      $surface->getDefinition($key)->getSetting('widget'),
+      $surface->getDefinition($key)->getSetting('multiline'),
+    ], ['rate', 'deposit', 'opens', 'size', 'notes']);
+    $this->assertSame($said($read[1]), $said($read[0]));
+    $this->assertSame([
+      'group' => [
+        'id' => 'pricing',
+        'label' => 'Pricing',
+        'as' => 'details',
+        'collapsed' => TRUE,
+        'weight' => 3,
+        'description' => 'Fees.',
+      ],
+      'placeholder' => '40',
+      'prefix' => '$',
+      'suffix' => 'an hour',
+      'help' => 'Whole dollars.',
+    ], DefinitionMetadata::arrangementOf($read[1]->getDefinition('rate'))->toArray());
+    $this->assertSame(['group' => ['id' => 'hours', 'label' => 'Hours', 'as' => 'fieldset'], 'weight' => 2], DefinitionMetadata::arrangementOf($read[1]->getDefinition('opens'))->toArray());
+    $this->assertSame('radios', $read[1]->getDefinition('size')->getSetting('widget'));
+    $notes = $this->reader()->notes($new);
+    $this->assertSame('Not read: the options resolver decides it from the key\'s list of values.', $notes['/properties/size/x-portable-ui/options/emptyOption'] ?? NULL);
+  }
+
+  /**
+   * Tests the keys of an object a key holds read their arrangement too.
+   *
+   * The object is a plain map; its own `x-portable-ui` declares the groups
+   * its keys name.
+   */
+  public function testTheKeysOfNestedObjectAreArranged(): void {
+    $read = $this->read(static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false, "properties": {
+        "address": {"type": "object", "additionalProperties": false,
+          "x-portable-ui": {"groups": {"street": {"label": "Street", "widget": "details", "options": {"open": false}}}},
+          "properties": {
+            "line": {"type": "string", "x-portable-ui": {"widget": "text", "options": {"placeholder": "1 Main St"}, "group": "street", "weight": 2.0}},
+            "city": {"type": "string", "x-portable-ui": {"weight": -1}}
+          }}
+      }}
+      JSON));
+    $address = $read->getDefinition('address');
+    $this->assertInstanceOf(ComplexDataDefinitionInterface::class, $address);
+    $address = $address->getPropertyDefinitions();
+    $this->assertSame([
+      'group' => ['id' => 'street', 'label' => 'Street', 'as' => 'details', 'collapsed' => TRUE],
+      'weight' => 2,
+      'placeholder' => '1 Main St',
+    ], DefinitionMetadata::arrangementOf($address['line'])->toArray());
+    $this->assertSame(['weight' => -1], DefinitionMetadata::arrangementOf($address['city'])->toArray());
+  }
+
+  /**
+   * Tests what of the hints cannot be read is noted.
+   */
+  public function testUnreadableHintsAreNoted(): void {
+    $document = static::json(<<<'JSON'
+      {"type": "object", "additionalProperties": false,
+        "x-portable-ui": {"groups": {
+          "blank": {"label": "", "widget": "details"},
+          "odd": {"label": "Odd", "widget": "tabs", "weight": 1.5}
+        }},
+        "properties": {
+          "rate": {"type": "integer", "x-portable-ui": {"weight": 2.5, "options": {"help": 3}, "group": "blank"}},
+          "deposit": {"type": "boolean", "x-portable-ui": {"group": "odd", "weight": 2.0}}
+      }}
+      JSON);
+    $read = $this->read($document);
+    $this->assertNull(DefinitionMetadata::arrangementOf($read->getDefinition('rate')), 'Nothing of it is read.');
+    $this->assertSame(['group' => ['id' => 'odd', 'label' => 'Odd', 'as' => 'fieldset'], 'weight' => 2], DefinitionMetadata::arrangementOf($read->getDefinition('deposit'))->toArray());
+    $notes = $this->reader()->notes($document);
+    $this->assertSame('Not read: a weight is a whole number.', $notes['/properties/rate/x-portable-ui/weight'] ?? NULL);
+    $this->assertSame('Not read: a text is a string.', $notes['/properties/rate/x-portable-ui/options/help'] ?? NULL);
+    $this->assertSame('Not read: a group with no label is not read.', $notes['/x-portable-ui/groups/blank'] ?? NULL);
+    $this->assertSame('Read ungrouped: its group has no label.', $notes['/properties/rate/x-portable-ui/group'] ?? NULL);
+    $this->assertSame('Read as a fieldset: a group is drawn as a fieldset or a details.', $notes['/x-portable-ui/groups/odd/widget'] ?? NULL);
+    $this->assertSame('Not read: a weight is a whole number.', $notes['/x-portable-ui/groups/odd/weight'] ?? NULL);
+  }
+
+  /**
    * Tests a date: `format: date` and the marker are one key, one Regex.
    */
   public function testDate(): void {
     $read = $this->read(static::json(<<<'JSON'
       {"type": "object", "additionalProperties": false, "properties": {
-        "marked": {"type": "string", "format": "date", "x-surface": {"widget": "date"}},
-        "patterned": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "x-surface": {"widget": "date"}},
+        "marked": {"type": "string", "format": "date", "x-portable-ui": {"widget": "date"}},
+        "patterned": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}$", "x-portable-ui": {"widget": "date"}},
         "bare": {"type": "string", "format": "date"}
       }}
       JSON));
@@ -752,8 +868,8 @@ class SchemaReaderTest extends SurfaceKernelTestBase {
       {"type": "object", "additionalProperties": false, "properties": {
         "listed": {"type": "boolean", "title": "Listed", "default": false},
         "contact": {"title": "Contact", "$ref": "#/$defs/person", "x-surface": {"reads": {"shown": "listed"}}},
-        "badge": {"type": "string", "enum": ["a", "b"], "default": "a", "x-surface": {"widget": "radios"}},
-        "notes": {"type": ["string", "null"], "x-surface": {"widget": "textarea"}},
+        "badge": {"type": "string", "enum": ["a", "b"], "default": "a", "x-portable-ui": {"widget": "radios"}},
+        "notes": {"type": ["string", "null"], "x-portable-ui": {"widget": "textarea"}},
         "kept": {"type": ["array", "null"], "items": {"type": "string"},
           "portable-check": {"drupal:JsonSchema": {"schema": {"uniqueItems": true}}}}
       },

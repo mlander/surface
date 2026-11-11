@@ -46,14 +46,18 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select",
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
+                    }
+                },
+                "x-surface": {
                     "reference": {
                         "entityType": "event_venue"
-                    },
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
                     }
                 }
             },
@@ -87,14 +91,18 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select",
+                    "options": {
+                        "emptyOption": {
+                            "show": true,
+                            "label": "- None -"
+                        }
+                    }
+                },
+                "x-surface": {
                     "reference": {
                         "entityType": "user"
-                    },
-                    "emptyOption": {
-                        "show": true,
-                        "label": "- None -"
                     }
                 }
             },
@@ -124,17 +132,21 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select",
+                    "options": {
+                        "emptyOption": {
+                            "show": true,
+                            "label": "- None -"
+                        }
+                    }
+                },
+                "x-surface": {
                     "reference": {
                         "entityType": "node",
                         "bundles": [
                             "article"
                         ]
-                    },
-                    "emptyOption": {
-                        "show": true,
-                        "label": "- None -"
                     }
                 }
             },
@@ -152,8 +164,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -179,8 +193,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -206,8 +222,10 @@
                         }
                     }
                 ],
+                "x-portable-ui": {
+                    "widget": "fieldset"
+                },
                 "x-surface": {
-                    "widget": "fieldset",
                     "within": {
                         "/allOf/1": {
                             "doesNotApply": {
@@ -248,11 +266,13 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -263,8 +283,10 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],
@@ -429,11 +451,13 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -444,8 +468,10 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],
@@ -606,11 +632,13 @@
                                 "const": null
                             }
                         ],
-                        "x-surface": {
+                        "x-portable-ui": {
                             "widget": "select",
-                            "emptyOption": {
-                                "show": true,
-                                "label": "- None -"
+                            "options": {
+                                "emptyOption": {
+                                    "show": true,
+                                    "label": "- None -"
+                                }
                             }
                         }
                     },
@@ -621,8 +649,10 @@
                             "string",
                             "null"
                         ],
+                        "x-portable-ui": {
+                            "widget": "autocomplete"
+                        },
                         "x-surface": {
-                            "widget": "autocomplete",
                             "dependsOn": [
                                 "entity_type"
                             ],

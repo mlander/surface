@@ -1,4 +1,4 @@
-import type { Arrangement, ArrangementGroup, Schema, Values, Widget } from '../contract';
+import type { PortableUi, Schema, UiGroup, Values, Widget } from '../contract';
 import { fieldId, isObject, jsonType, resolveVariants } from '../contract';
 import {
   AutocompleteField,
@@ -16,7 +16,7 @@ import {
 import { Description, Errors, isLocked, RequiredMarker, type FieldProps } from './Shell';
 
 /**
- * One component per `x-surface.widget`, as the Form API maps each
+ * One component per `x-portable-ui.widget`, as the Form API maps each
  * definition to an element: options to a select or radios, a list of
  * them to checkboxes or a multiple select, a map to a fieldset, a string
  * to a text input, a time or date input or a textarea, a number to a number
@@ -24,10 +24,10 @@ import { Description, Errors, isLocked, RequiredMarker, type FieldProps } from '
  * one the Form API has no element for, variants (the widget hint `variants`).
  */
 export function Field(props: FieldProps): JSX.Element | null {
-  const extension = props.schema['x-surface'];
-  switch (extension?.widget) {
+  const ui = props.schema['x-portable-ui'];
+  switch (ui?.widget) {
     case 'select':
-      return extension.multiple ? <MultipleSelectField {...props} /> : <SelectField {...props} />;
+      return ui.options?.multiple ? <MultipleSelectField {...props} /> : <SelectField {...props} />;
     case 'radios':
       return <RadiosField {...props} />;
     case 'checkboxes':
@@ -57,12 +57,12 @@ export function Field(props: FieldProps): JSX.Element | null {
       // A module's widget claimed the key, and this page has no field of
       // its own for it: the stock field for the key's type.
       // Decision: see docs/decisions.md#a-widget-is-chosen-from-the-definition.
-      const stock = extension?.widget === null || extension?.widget === undefined ? null : stockWidget(props.schema);
+      const stock = ui?.widget === undefined ? null : stockWidget(props.schema);
       if (stock === null) {
         return <UnsupportedField {...props} />;
       }
       const multiple = stock === 'select' && jsonType(props.schema) === 'array';
-      return <Field {...props} schema={{ ...props.schema, 'x-surface': { ...extension, widget: stock, ...(multiple ? { multiple: true } : {}) } }} />;
+      return <Field {...props} schema={{ ...props.schema, 'x-portable-ui': { ...ui, widget: stock, ...(multiple ? { options: { ...ui?.options, multiple: true } } : {}) } }} />;
     }
   }
 }
@@ -188,7 +188,7 @@ export function Properties({
     const drawn = property['x-surface']?.group ? withoutPlaced(property, name, placed) : property;
     const empty = drawn !== property && Object.keys(drawn.properties ?? {}).length === 0;
     return {
-      arrangement: property['x-surface']?.arrangement,
+      ui: property['x-portable-ui'],
       elements: [
         empty ? null : field(name, drawn, schema, values, prefix + name, disabled),
         ...(placed[name] ?? []).map((entry) => {
@@ -206,12 +206,12 @@ export function Properties({
       ],
     };
   });
-  return <>{arranged(drawnAll, prefix)}</>;
+  return <>{arranged(drawnAll, schema['x-portable-ui']?.groups ?? {}, prefix)}</>;
 }
 
-/** One property's elements, and how its arrangement says to draw them. */
+/** One property's elements, and the hints that say how to arrange them. */
 interface Arranged {
-  arrangement?: Arrangement;
+  ui?: PortableUi;
   elements: (JSX.Element | null)[];
 }
 
@@ -221,26 +221,29 @@ function byWeight<T>(entries: T[], weight: (entry: T) => number): T[] {
 }
 
 /**
- * Draws a frame's properties as their arrangements say, as the form
- * builder does: each group where its first key is declared, a fieldset or
+ * Draws a frame's properties as their hints say, as the form builder
+ * does: each group a key names, declared once under the frame's
+ * `x-portable-ui.groups`, where its first key is declared, a fieldset or
  * a details holding its keys, ordered among the frame's keys by its own
  * weight; each key by its weight within its group, or within the frame.
+ * A key naming a group the frame does not declare is drawn ungrouped.
  * Only drawing: every key keeps its path.
  */
-function arranged(entries: Arranged[], prefix: string): (JSX.Element | null)[] {
-  type Top = { weight: number; group: ArrangementGroup; members: Arranged[] } | { weight: number; group: null; entry: Arranged };
+function arranged(entries: Arranged[], declared: Record<string, UiGroup>, prefix: string): (JSX.Element | null)[] {
+  type Top = { weight: number; id: string; group: UiGroup; members: Arranged[] } | { weight: number; group: null; entry: Arranged };
   const top: Top[] = [];
-  const groups = new Map<string, Top & { group: ArrangementGroup }>();
+  const groups = new Map<string, Top & { group: UiGroup }>();
   for (const entry of entries) {
-    const group = entry.arrangement?.group;
-    if (group === undefined) {
-      top.push({ weight: entry.arrangement?.weight ?? 0, group: null, entry });
+    const id = entry.ui?.group;
+    const group = id === undefined ? undefined : declared[id];
+    if (id === undefined || group === undefined) {
+      top.push({ weight: entry.ui?.weight ?? 0, group: null, entry });
       continue;
     }
-    let drawn = groups.get(group.id);
+    let drawn = groups.get(id);
     if (drawn === undefined) {
-      drawn = { weight: group.weight ?? 0, group, members: [] };
-      groups.set(group.id, drawn);
+      drawn = { weight: group.weight ?? 0, id, group, members: [] };
+      groups.set(id, drawn);
       top.push(drawn);
     }
     drawn.members.push(entry);
@@ -249,16 +252,16 @@ function arranged(entries: Arranged[], prefix: string): (JSX.Element | null)[] {
     if (entry.group === null) {
       return entry.entry.elements;
     }
-    const members = byWeight(entry.members, (member) => member.arrangement?.weight ?? 0).flatMap((member) => member.elements);
-    return [<ArrangedGroup key={`${prefix}@group.${entry.group.id}`} group={entry.group} id={fieldId(`${prefix}@group.${entry.group.id}`)}>{members}</ArrangedGroup>];
+    const members = byWeight(entry.members, (member) => member.ui?.weight ?? 0).flatMap((member) => member.elements);
+    return [<ArrangedGroup key={`${prefix}@group.${entry.id}`} group={entry.group} id={fieldId(`${prefix}@group.${entry.id}`)}>{members}</ArrangedGroup>];
   });
 }
 
-/** A group a frame's arrangement names: a fieldset, or a details a person may close. */
-function ArrangedGroup({ group, id, children }: { group: ArrangementGroup; id: string; children: (JSX.Element | null)[] }): JSX.Element {
-  if (group.as === 'details') {
+/** A group a frame declares: a fieldset, or a details a person may close. */
+function ArrangedGroup({ group, id, children }: { group: UiGroup; id: string; children: (JSX.Element | null)[] }): JSX.Element {
+  if (group.widget === 'details') {
     return (
-      <details className="dsr-details" id={id} open={!group.collapsed}>
+      <details className="dsr-details" id={id} open={group.options?.open !== false}>
         <summary className="dsr-summary">{group.label}</summary>
         {group.description ? <div className="dsr-description">{group.description}</div> : null}
         {children}

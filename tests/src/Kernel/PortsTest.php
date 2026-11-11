@@ -344,8 +344,8 @@ class PortsTest extends SurfaceKernelTestBase {
     $this->assertArrayNotHasKey('allOf', $def, 'Nothing that depends on a port is stated in the def.');
     $this->assertSame(['rows'], $def['required'], 'The aisle may not apply, so the def does not require it.');
     $this->assertSame(['layout'], $def['properties']['aisle']['x-surface']['dependsOn'], 'In the def, a key reading a port names the port.');
-    $this->assertArrayNotHasKey('enumerated', $def['properties']['aisle']['x-surface']);
-    $this->assertArrayNotHasKey('refine', $def['properties']['aisle']['x-surface']);
+    $this->assertArrayNotHasKey('enumerated', $def['properties']['aisle']['x-surface'] ?? []);
+    $this->assertArrayNotHasKey('refine', $def['properties']['aisle']['x-surface'] ?? []);
 
     $site = $full['properties']['seating'];
     $this->assertSame('#/$defs/resource_test.seating', $site['$ref']);
@@ -354,7 +354,7 @@ class PortsTest extends SurfaceKernelTestBase {
     $this->assertTrue($site['x-surface']['enumerated']);
     // Its rules' conditionals are the frame's to name (below); the site
     // carries no marker.
-    $this->assertArrayNotHasKey('declared', $site['x-surface']);
+    $this->assertArrayNotHasKey('declared', $site['x-surface'] ?? []);
     $expected = [
       'no aisle for a standing room, on the venue\'s allOf' => <<<'JSON'
         {"if": {"properties": {"layout": {"const": "standing"}}, "required": ["layout"]},

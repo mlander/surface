@@ -9,6 +9,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Render\Element;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\ContractEmitter;
+use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Flow\Staged;
 use Drupal\surface\Form\SurfaceFormBuilder;
@@ -447,7 +448,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
    */
   public function testElevenDrawsEveryStockWidget(): void {
     $now = $this->now(DoorsResource::class, TRUE);
-    $widgets = array_map(static fn (array $property): ?string => $property[ContractEmitter::EXTENSION]['widget'] ?? NULL, $now['properties']);
+    $widgets = array_map(static fn (array $property): ?string => $property[PortableKeywords::UI]['widget'] ?? NULL, $now['properties']);
     $this->assertSame([
       'opens' => 'time',
       'days' => 'checkboxes',

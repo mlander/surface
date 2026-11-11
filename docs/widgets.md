@@ -151,7 +151,7 @@ the stock widgets have a rule (why: [decision](decisions.md#a-widget-is-chosen-f
   element's hints, and a refusal of one is shown on its row.
 
 A definition asks for an element with core's own setting, in the words
-the served contract's `x-surface.widget` uses:
+the served contract's `x-portable-ui.widget` uses:
 
 ```php
 $inputs->add('handling', 'string', t('Handling'))
@@ -171,7 +171,7 @@ $inputs->add('reviewed_on', 'string', t('Reviewed on'))
 `checkboxes`, `radios`, `select`, `time` and `date` are the words the stock
 widgets answer to (`SurfaceWidgetBase::answersTo()`): each is the
 widget's plugin ID, as `fieldset` and `checkbox` are, and the word
-`x-surface.widget` says. *Renamed 2026-10-24:* the select, fieldset and
+`x-portable-ui.widget` says. *Renamed 2026-10-24:* the select, fieldset and
 checkbox widgets were the plugins `options`, `map` and `boolean`; a
 `hook_surface_widget_info_alter()` keyed by an old ID finds
 nothing. A word the
@@ -374,7 +374,7 @@ How the manager chooses (`SurfaceWidgetManager::claimed()`):
    its `isApplicable()` answers for the keys it claims alone, and its
    weight matters only when a key asks for it by name.
 
-`x-surface.widget` says the chosen widget's word, the first word it
+`x-portable-ui.widget` says the chosen widget's word, the first word it
 answers to (its plugin ID), in both documents, and the catalog's view
 of one resource (`drush surface:catalog --resource=<id>`) names each
 key's widget among its notes. The React page draws the stock widgets

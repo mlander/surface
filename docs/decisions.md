@@ -372,7 +372,8 @@ What changed, old → new, to grep:
 - **A5.** The stock widget plugins `options`, `map`, `boolean` →
   `select`, `fieldset`, `checkbox`, the words `x-surface.widget` and the
   `widget` setting say; a `hook_surface_widget_info_alter()` keyed
-  by an old id finds nothing.
+  by an old id finds nothing. *Superseded 2026-11-10:* the hint is
+  `x-portable-ui.widget` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)).
 - **A6.** The tool's `committed` output labeled "Written" → "Committed";
   `drush surface:contract-diff --dir` → `--baselines`, `--dir` still
   read.
@@ -7685,7 +7686,8 @@ its empty option: `- None -` is a radio only where choosing nothing is
 an answer, a key that may be cleared, and a key that holds a value shows
 no checked radio while it holds no valid choice, a stale value behind it
 on the stash. The served contract says the same in `emptyOption`, for
-radios as for a select, and the React app follows it.
+radios as for a select, and the React app follows it. *Superseded
+2026-11-10:* it is `x-portable-ui.options.emptyOption` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)).
 
 The placeholder option this replaced ("Previous value X is no longer
 available", posting a sentinel from the select) told the person what
@@ -7760,7 +7762,8 @@ free strings and a time picker):
 The served contract's `x-surface.widget` mirrors each choice by asking
 the same rule (`CheckboxesWidget::drawsList()`,
 `RadiosWidget::drawsOne()`, `TimeWidget::draws()`), and is still written
-only when asked for. (`SurfaceWidgetManager::asked()`,
+only when asked for. *Superseded 2026-11-10:* the hint is
+`x-portable-ui.widget` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)). (`SurfaceWidgetManager::asked()`,
 `SurfaceWidgetBase::answersTo()`, `SurfaceWidgetBase::checked()`,
 `ListWidget`, `StockWidgetsTest`)
 
@@ -7962,6 +7965,9 @@ page never saw the content type's groups, and a block had none to give.
   `x-surface.arrangement` only when a renderer asks for the widget hints,
   as `x-surface.widget` is written: additive in contract 2, no version
   raised, and the baselines, emitted without the hints, do not move.
+  *Superseded 2026-11-10:* it is `x-portable-ui` (`group` by id, each
+  group declared once on its frame under `groups`, `weight`, the texts
+  as `options`), and the reader reads it back ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)).
 - **The placeholder is only ever declared.** The string and number
   widgets drew a key's first example as its placeholder, so an author
   could not give the contract an example without giving the form a
@@ -8016,7 +8022,8 @@ Declined, each in a line:
 `ArrangementGroup::details(..., description:)` (or `fieldset()`), drawn
 under its summary or legend on the form and the React page, and stated
 as plain text in `x-surface.arrangement.group.description`, only when
-declared. Core's performance form says one sentence of its bandwidth
+declared. *Superseded 2026-11-10:* the description is the group's in
+its frame's `x-portable-ui.groups` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)). Core's performance form says one sentence of its bandwidth
 settings, which `surface_examples_performance` declares once.
 
 ### The form builder draws, extracts and refreshes
@@ -9515,6 +9522,7 @@ Decided 2026-10-23, with example 16, the sponsorship
   with labels in both documents, an enum in the tool listing, narrowed
   by a client locally. Past it the key is an id: core's
   `entity_autocomplete` on the form, `x-surface.widget: autocomplete`
+  (`x-portable-ui.widget` since 2026-11-10, [The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui))
   and the constraint under `checkedOnServer` in both documents, and a
   sentence in the tool listing naming the lookup. Why a setting and not
   the enumeration cap: the cap counts conditionals a document can
@@ -9758,6 +9766,8 @@ of `x-surface` (locked, dependsOn, refined, stale, emptyOption, fixed, by,
 variants and chosen, rules, within, checkedOnServer, enumerated,
 refine, live) is the
 data surface's own reading of a key, not a widget, and is always written.
+*Superseded 2026-11-10:* the widget, `multiple` and the empty option
+are `x-portable-ui` ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)).
 The hints are stripped after the schema is built rather than threaded
 through it, so the widget a key gets is still read in the same pass as
 its shape. (`Contract\ContractEmitter::emit()`)
@@ -11286,7 +11296,9 @@ nothing else moves, and no path.
   (`contract`, `version`, `operation`), and the markers and hints a
   later slice moves or keeps (`widget`, `multiple`, `arrangement`,
   `reference`, `refine`, `live`, `enumerated`, `deferred`, `computed`,
-  `fixed`, `collection`, `dependsOn`). Composition and ownership are
+  `fixed`, `collection`, `dependsOn`). *Superseded 2026-11-10:*
+  `widget`, `multiple`, `arrangement` and `emptyOption` moved
+  ([The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)). Composition and ownership are
   Surface's: the dialect is a value with no author, and the alter and
   extend rules stay in this module.
 - **An email address is `format: email`.** The profile refuses
@@ -11335,7 +11347,8 @@ nothing else moves, and no path.
   Schema Object's own `$schema` takes precedence over
   `jsonSchemaDialect`, so that default applies to no component the
   module writes; it stays for any schema a site adds without one.
-- **Later.** The widget hints become `x-portable-ui`; a reference
+- **Later.** The widget hints become `x-portable-ui` (done 2026-11-10,
+  [The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)); a reference
   `portable-check` with `x-portable-links`; variants `portable-typeBy`;
   `refine` `portable-refine`; a shape a `portable:` type; the emitter
   builds through `Schema`, the reader reads through `Schema::from()`,
@@ -11350,6 +11363,110 @@ nothing else moves, and no path.
 `ContractDiff::checks()`, `ServedContract::schema()`,
 `OpenApiDocument::JSON_SCHEMA_DIALECT`, `app/src/contract.ts`,
 `ContractBaselineTest`, `PortableDocumentTest`)
+
+### The UI hints are `x-portable-ui`
+
+Decided 2026-11-10. The widget hints a renderer asks for are the
+dialect's `x-portable-ui`, on the node they are about, after
+`portable-check` and `x-portable-messages` and before `x-surface`.
+Contract 5 stays 5: one number for the series, and the baselines carry
+no hints, so none of them moved.
+
+- **What moved, and where.** `x-surface.widget` is
+  `x-portable-ui.widget`, left out where no widget claims the key
+  (`null` before). `multiple: true` is `options.multiple`. The
+  arrangement's texts, `placeholder`, `prefix`, `suffix` and `help`,
+  are `options` of the same names, each only where it is set; its
+  `weight` is `weight`. A text is written only where it is not empty
+  as plain text, so a text of markup alone is left out. `emptyOption`
+  is `options.emptyOption`. The
+  members are written in the order `widget`, `options`, `group`,
+  `weight`, `groups` (`PortableUi`). The vocabulary allows `fallback`
+  too; nothing here writes it.
+- **A group is declared once, on its frame.** The maintainer's decision. The
+  whole group was written on every key that named it, so a frame of
+  three keys in one group said its label three times. Each key now
+  names it, `group: "<id>"`, and the object whose `properties` the keys
+  are (the top, a structure's def, a module's mount, a map) declares it
+  under `x-portable-ui.groups`: `{label, description?, widget, options?,
+  weight?}`, `widget` `fieldset` or `details`, `options: {"open":
+  false}` for a details that starts collapsed (open is the default and
+  is not written), in the order the frame's keys first name them, after
+  the frame's own members. A group named by keys of two frames is
+  declared on each; `SurfaceBuilder::assertGroupsAgree()` already holds
+  the keys of one frame to one group. While a document is written a
+  key's `group` holds the whole group, so a site compares it with its
+  def as any part of the keyword; `PortableUi::settled()` declares it
+  on its frame at the end. The dialect requires a group's label, so
+  `ArrangementGroup` refuses a label that is empty as plain text when
+  the group is declared. A narrowing declares the groups its own keys
+  name, not the others its def declares; a merger joins the two, the
+  site's word standing for a group both declare
+  (`SchemaResolver::merge()`, `merge()` in the app). A structure mixed
+  in declares its groups on its def, and `mixIn()` joins them with the
+  frame's, the frame's word standing.
+- **What the flag strips.** With the hints off (`emit()`'s `$widgets`),
+  `x-portable-ui` loses everything but `options.emptyOption`, which the
+  schema for these answers carries whatever is asked, as it did; an
+  `options` or an `x-portable-ui` left empty is left out
+  (`PropertySchema::withoutWidgets()`, `ContractEmitter::WIDGET_HINTS`).
+  The full schema leaves out `options.emptyOption`
+  (`Conditionals::withoutPresent()`, `ContractEmitter::PRESENT_OPTIONS`).
+  An `x-surface` that said nothing but the widget is left out. A site
+  whose widget is `null` over a def that has one can no longer say so:
+  no `widget` is written for `null`. No shipped resource has such a site.
+- **Below an applicator, and at a site.** `x-portable-ui` is data
+  (`DocumentHead::DATA`): it stays on its node where `x-surface` moves
+  to `within`, so a site's narrowing whose key said nothing else than
+  its hints and what moved to `within` is that key with its
+  `x-portable-ui`, no longer left out. Such a key is now present in the
+  narrowing, and nothing it accepts changes, since `x-portable-ui`
+  checks nothing. A site's narrowing writes it
+  whole, with `x-surface` and the other two keywords, wherever any of
+  the four differs from the def, the parts the document strips not
+  compared (`PropertySchema::narrowing()`, `Subschemas::$ui`). A key
+  declared with a shape keeps it beside its reference; the shape's def
+  carries none. A conditional's `then` and an output leave it out.
+- **The reader.** `SchemaReader` reads the widget from
+  `x-portable-ui.widget` as it read it from `x-surface`, and now reads
+  the arrangement back too: `group` with its frame's `groups`, `weight`
+  and the four texts, described through the blueprint as an author
+  describes them (`SchemaReader::arranged()`), so a served document
+  reads back with its arrangement. `options.emptyOption` and
+  `options.multiple` are noted and not read: the options resolver
+  decides them. What cannot be read is noted: a weight that is no whole
+  number (`2.0` reads as `2`), a text that is no string, a group widget
+  other than `fieldset` or `details` (read as a fieldset), and a group
+  with no label, whose keys are read ungrouped. The keys of a map and of
+  a module's mount are read with the map's own `groups`. A document served before this change, the hints under
+  `x-surface` and the whole group on each key, is read as the emitter
+  writes it now (`SchemaReader::hinted()`); the reader never writes the
+  old spelling.
+- **The lint.** `ContractDiff` compares `x-portable-ui` as one keyword:
+  changed is a note, never a break. The lint against the baselines
+  pinned before this change reported nothing.
+- **React.** The app reads the hints from `x-portable-ui`, draws a
+  frame's groups from its `groups`, and writes the empty option into
+  `x-portable-ui.options` when it narrows locally. Its `merge()`
+  replaces a key's hints whole, and joins a frame's `groups`: a site's
+  widget laid over a def keeps the groups the def declares, as
+  `doesNotApply` is kept.
+- **What stays in `x-surface`, and why.** `group: true` and `after`:
+  placement of a module's fieldset, kept there as
+  [the served document is a Portable Schema document](#the-served-document-is-a-portable-schema-document)
+  keeps composition and placement, which are Surface's. The rest of `x-surface` is as before.
+- **Later.** A widget the host does not have, under `fallback`; the
+  form door reading the hints from the document instead of the
+  definitions, if a host other than this one draws from it.
+
+(`PortableUi`, `PortableKeywords::UI`, `PropertySchema::property()`,
+`PropertySchema::arrangement()`, `PropertySchema::narrowing()`,
+`PropertySchema::withoutWidgets()`, `Conditionals::withoutPresent()`,
+`ContractEmitter::WIDGET_HINTS`, `DocumentHead::DATA`,
+`SchemaReader::arranged()`, `SchemaReader::hinted()`,
+`SchemaResolver::merge()`, `SchemaResolver::mixIn()`,
+`ContractDiff::keyword()`, `app/src/contract.ts`,
+`app/src/widgets/Field.tsx`, `UiKeywordTest`)
 
 ### The emitter is one walk and three writers
 

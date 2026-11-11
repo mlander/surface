@@ -33,7 +33,7 @@
                     }
                 ],
                 "default": "weekly",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select"
                 }
             },
@@ -55,8 +55,10 @@
                     }
                 ],
                 "default": "monday",
+                "x-portable-ui": {
+                    "widget": "select"
+                },
                 "x-surface": {
-                    "widget": "select",
                     "dependsOn": [
                         "frequency"
                     ],
@@ -143,11 +145,13 @@
                         }
                     ],
                     "default": "weekly",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "select",
-                        "emptyOption": {
-                            "show": false,
-                            "label": "- Select -"
+                        "options": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
                         }
                     }
                 },
@@ -169,15 +173,19 @@
                         }
                     ],
                     "default": "monday",
-                    "x-surface": {
+                    "x-portable-ui": {
                         "widget": "select",
+                        "options": {
+                            "emptyOption": {
+                                "show": false,
+                                "label": "- Select -"
+                            }
+                        }
+                    },
+                    "x-surface": {
                         "dependsOn": [
                             "frequency"
-                        ],
-                        "emptyOption": {
-                            "show": false,
-                            "label": "- Select -"
-                        }
+                        ]
                     }
                 }
             },
@@ -252,11 +260,13 @@
                                 }
                             ],
                             "default": "weekly",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         }
@@ -325,11 +335,13 @@
                                 }
                             ],
                             "default": "weekly",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -351,15 +363,19 @@
                                 }
                             ],
                             "default": "monday",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "frequency"
-                                ],
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                }
+                                ]
                             }
                         }
                     },
@@ -439,11 +455,13 @@
                                 }
                             ],
                             "default": "weekly",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         }
@@ -512,11 +530,13 @@
                                 }
                             ],
                             "default": "weekly",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
                                 }
                             }
                         },
@@ -538,15 +558,19 @@
                                 }
                             ],
                             "default": "monday",
-                            "x-surface": {
+                            "x-portable-ui": {
                                 "widget": "select",
+                                "options": {
+                                    "emptyOption": {
+                                        "show": false,
+                                        "label": "- Select -"
+                                    }
+                                }
+                            },
+                            "x-surface": {
                                 "dependsOn": [
                                     "frequency"
-                                ],
-                                "emptyOption": {
-                                    "show": false,
-                                    "label": "- Select -"
-                                }
+                                ]
                             }
                         }
                     },

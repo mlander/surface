@@ -25,7 +25,7 @@
             "title": {
                 "title": "Event title",
                 "type": "string",
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "text"
                 }
             },
@@ -36,7 +36,7 @@
                     "null"
                 ],
                 "default": true,
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "checkbox"
                 }
             },
@@ -63,14 +63,18 @@
                 "x-portable-messages": {
                     "check.drupal:SurfaceValidReference": "Refers to an entity the account may reference"
                 },
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select",
+                    "options": {
+                        "emptyOption": {
+                            "show": false,
+                            "label": "- Select -"
+                        }
+                    }
+                },
+                "x-surface": {
                     "reference": {
                         "entityType": "event_venue"
-                    },
-                    "emptyOption": {
-                        "show": false,
-                        "label": "- Select -"
                     }
                 }
             },
@@ -87,16 +91,20 @@
                         "title": "Garden room"
                     }
                 ],
-                "x-surface": {
+                "x-portable-ui": {
                     "widget": "select",
+                    "options": {
+                        "emptyOption": {
+                            "show": true,
+                            "label": "- Select -"
+                        }
+                    }
+                },
+                "x-surface": {
                     "dependsOn": [
                         "venue"
                     ],
                     "refined": true,
-                    "emptyOption": {
-                        "show": true,
-                        "label": "- Select -"
-                    },
                     "stale": true
                 }
             },
@@ -108,8 +116,10 @@
                 ],
                 "minimum": 1,
                 "default": 50,
+                "x-portable-ui": {
+                    "widget": "number"
+                },
                 "x-surface": {
-                    "widget": "number",
                     "dependsOn": [
                         "room"
                     ],

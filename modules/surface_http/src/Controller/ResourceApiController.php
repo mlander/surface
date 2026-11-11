@@ -753,7 +753,7 @@ final class ResourceApiController implements ContainerInjectionInterface {
    * Emits the contract of a served operation for some values.
    *
    * With the widget hints: the app draws each key from its
-   * `x-surface.widget`, which the canonical contract leaves out.
+   * `x-portable-ui.widget`, which the canonical contract leaves out.
    *
    * @param \Drupal\surface_http\ServedOperation $served
    *   The operation.

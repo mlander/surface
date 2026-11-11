@@ -103,11 +103,11 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
  * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
  *
  * The contract carries no widget vocabulary unless a renderer asks for
- * it (emit()'s $widgets). Then `x-surface.widget` mirrors
+ * it (emit()'s $widgets). Then `x-portable-ui.widget` mirrors
  * SurfaceWidgetManager's selection in its weight order, so a
  * renderer such as surface_examples_react's app draws what the operation
  * form would: a non-empty option list is a select (a list of them, a
- * multiple select, said by `multiple`); a map with properties is a
+ * multiple select, said by `options.multiple`); a map with properties is a
  * fieldset; a string is a textarea when its definition says multiline,
  * a time input when it asks for one, an email input for the email type,
  * a text input otherwise; a number is a number input; a boolean a
@@ -119,18 +119,22 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
  * word, ahead of the stock rule, unless its owner asked for one with the
  * `widget` setting. One hint has no
  * Form API counterpart here: `variants`, for a key with variants, whose
- * shape a sibling chooses.
+ * shape a sibling chooses. Beside the widget, `x-portable-ui` carries a
+ * key's arrangement (`group`, `weight`, its texts as `options`, each
+ * group declared once under its frame's `groups`) and, whatever is
+ * asked, a select's `options.emptyOption` (PortableUi).
  *
  * Both documents are written in one version of the wire format, the
  * contract's own (CONTRACT, stated as `x-surface.contract`), distinct
  * from a resource's version. In contract 2 no `x-surface` sits below an
- * applicator (`allOf`, `anyOf`, `oneOf`, `if`, `then`, `else`, `not`), so
- * a tool that merges `allOf` meets plain JSON Schema there: the object
- * owning the applicator says which of its conditionals are declared
- * rules (`x-surface.rules`) and what a narrowing says of a key inside it
- * (`x-surface.within`, by JSON pointer), and every narrowing states the
- * declared `type` beside a keyword only one type reads
- * (DocumentHead::settled()).
+ * applicator (`allOf`, `anyOf`, `oneOf`, `if`, `then`, `else`, `not`):
+ * below an applicator a node keeps the dialect's three keywords
+ * (`portable-check`, `x-portable-messages`, `x-portable-ui`), which a
+ * plain validator ignores. The object owning the applicator says which
+ * of its conditionals are declared rules (`x-surface.rules`) and what a
+ * narrowing says of a key inside it (`x-surface.within`, by JSON
+ * pointer), and every narrowing states the declared `type` beside a
+ * keyword only one type reads (DocumentHead::settled()).
  * Decision: see docs/decisions.md#contract-2.
  *
  * This class is the walk: it visits every frame, key, child, variant,
@@ -196,14 +200,29 @@ final class ContractEmitter {
   /**
    * The `x-surface` keywords only true of one moment, for one set of values.
    *
-   * The full schema leaves them out (Conditionals::withoutPresent()).
+   * The full schema leaves them out, and PRESENT_OPTIONS
+   * (Conditionals::withoutPresent()).
    */
-  protected const PRESENT = ['refined', 'stale', 'emptyOption', 'chosen'];
+  protected const PRESENT = ['refined', 'stale', 'chosen'];
 
   /**
-   * The `x-surface` keywords that are widget hints, written when asked for.
+   * The `x-portable-ui` options only true of one moment: the empty option.
+   *
+   * The full schema leaves them out (Conditionals::withoutPresent()); the
+   * schema for these answers carries them whether or not the widget hints
+   * (PortableUi::HINTS) are asked for.
    */
-  protected const WIDGET_HINTS = ['widget', 'multiple', 'arrangement'];
+  protected const PRESENT_OPTIONS = ['emptyOption'];
+
+  /**
+   * The `x-portable-ui` members and options that are widget hints.
+   *
+   * Written when asked for (emit()'s $widgets): `widget`, `group`,
+   * `weight`, `groups`, and the options `multiple`, `placeholder`,
+   * `prefix`, `suffix` and `help`; PropertySchema::withoutWidgets() strips
+   * them otherwise.
+   */
+  protected const WIDGET_HINTS = PortableUi::HINTS;
 
   /**
    * Where every subschema a document defines is, as a JSON pointer.
@@ -301,8 +320,8 @@ final class ContractEmitter {
    * @param string|\Stringable|null $label
    *   The operation's label, which titles the schema.
    * @param bool $widgets
-   *   Whether to add the renderer's widget hints, `x-surface.widget` and,
-   *   on a list of allowed values, `x-surface.multiple`. Off by default:
+   *   Whether to add the renderer's widget hints, `x-portable-ui` but for
+   *   `options.emptyOption` (WIDGET_HINTS). Off by default:
    *   the contract itself names no widget, and a renderer that draws
    *   from it, as the HTTP door does for the React example, asks for
    *   them.
@@ -335,11 +354,11 @@ final class ContractEmitter {
       $cacheability = new CacheableMetadata();
       $standing = $values[SurfaceFormBuilderInterface::STANDING_KEY] ?? [];
       unset($values[SurfaceFormBuilderInterface::STANDING_KEY]);
-      $subschemas = new Subschemas(FALSE, $widgets ? [] : self::WIDGET_HINTS, $this->mixedIn($surface));
+      $subschemas = new Subschemas(FALSE, [], $this->mixedIn($surface), $widgets ? [] : self::WIDGET_HINTS);
       $emission = new Emission($subschemas, $cacheability, new \ArrayObject(), $resource_id, standing: is_array($standing) ? $standing : []);
       [$schema, $shown] = $this->frame($surface, $values, $emission);
       $schema += $this->definitions($subschemas);
-      $schema = $this->propertySchema->named($schema);
+      $schema = PortableUi::settled($this->propertySchema->named($schema));
       if (!$widgets) {
         $schema = $this->propertySchema->withoutWidgets($schema);
       }
@@ -399,12 +418,12 @@ final class ContractEmitter {
    *   entry is still left out;
    * - `x-surface` carries only what holds for any values: `dependsOn`,
    *   `enumerated`, `deferred`, `refine`, `live`, the variants' `by` and
-   *   `variants`, `group`, `after`, and the widget hints when asked for,
-   *   each only where it says something; `portable-check` and
-   *   `x-portable-messages` beside it hold for any values too. What is
-   *   only true of a moment (`refined`, `stale`, `emptyOption`, the
-   *   variants' `chosen`) is not written, and there is no `values` and no
-   *   `stale` beside the schema.
+   *   `variants`, `group`, `after`, each only where it says something;
+   *   `portable-check`, `x-portable-messages` and, when asked for, the
+   *   widget hints in `x-portable-ui` beside it hold for any values too.
+   *   What is only true of a moment (`refined`, `stale`, the variants'
+   *   `chosen`, and `x-portable-ui.options.emptyOption`) is not written,
+   *   and there is no `values` and no `stale` beside the schema.
    *
    * Decision: see
    * docs/decisions.md#two-documents-never-stricter-than-the-runtime.
@@ -448,11 +467,12 @@ final class ContractEmitter {
     $this->site = ['pointer' => '', 'steps' => []];
     try {
       $cacheability = new CacheableMetadata();
-      $subschemas = new Subschemas(TRUE, [...self::PRESENT, ...($widgets ? [] : self::WIDGET_HINTS)], $this->mixedIn($surface));
+      $ui = [...self::PRESENT_OPTIONS, ...($widgets ? [] : self::WIDGET_HINTS)];
+      $subschemas = new Subschemas(TRUE, self::PRESENT, $this->mixedIn($surface), $ui);
       $emission = new Emission($subschemas, $cacheability, new \ArrayObject(), $resource_id);
       [$schema] = $this->frame($surface, $this->known($surface), $emission);
       $schema += $this->definitions($subschemas);
-      $schema = $this->propertySchema->named($schema);
+      $schema = PortableUi::settled($this->propertySchema->named($schema));
       $schema = $this->conditionals->withoutPresent($schema);
       if (!$widgets) {
         $schema = $this->propertySchema->withoutWidgets($schema);
@@ -641,7 +661,8 @@ final class ContractEmitter {
         foreach ($entry->attachment->child->getDefinitions()->entries() as $id => $each) {
           $entries[] = ['id' => (string) $id, 'label' => (string) $each->definition->getLabel()];
         }
-        $properties[$name][self::EXTENSION] = $this->propertySchema->extension('fieldset', $depends, FALSE) + [
+        $properties[$name] = PortableUi::set($properties[$name], PortableUi::write('fieldset'));
+        $properties[$name][self::EXTENSION] = $this->propertySchema->extension($depends, FALSE) + [
           'deferred' => [
             'fetch' => $this->fetch($pointer),
             'entries' => $entries,
@@ -675,7 +696,8 @@ final class ContractEmitter {
         if ($locked) {
           $properties[$name]['readOnly'] = TRUE;
         }
-        $properties[$name][self::EXTENSION] = ($instance[self::EXTENSION] ?? []) + $this->propertySchema->extension($this->propertySchema->asked($current->definition) ?? 'fieldset', $depends, $this->propertySchema->anyRefined($instance));
+        $properties[$name] = PortableUi::set($properties[$name], PortableUi::write($this->propertySchema->asked($current->definition) ?? 'fieldset'));
+        $properties[$name][self::EXTENSION] = ($instance[self::EXTENSION] ?? []) + $this->propertySchema->extension($depends, $this->propertySchema->anyRefined($instance));
         if ($ahead_of_time) {
           $enumerated = $this->conditionals->enumerate($declared, $static, $entry, $values, $properties[$name], $emission, TRUE);
         }
@@ -710,7 +732,8 @@ final class ContractEmitter {
         if ($locked) {
           $properties[$name]['readOnly'] = TRUE;
         }
-        $properties[$name][self::EXTENSION] = $this->propertySchema->extension($this->propertySchema->asked($current->definition) ?? 'fieldset', $depends, $this->propertySchema->anyRefined($instance));
+        $properties[$name] = PortableUi::set($properties[$name], PortableUi::write($this->propertySchema->asked($current->definition) ?? 'fieldset'));
+        $properties[$name][self::EXTENSION] = $this->propertySchema->extension($depends, $this->propertySchema->anyRefined($instance));
         if ($ahead_of_time) {
           // A parent's refiner of an attached key says only whether it
           // applies.
@@ -770,11 +793,11 @@ final class ContractEmitter {
             $properties[$name][self::EXTENSION]['stale'] = TRUE;
             $emission->markStale($prefix . $name);
           }
-          if (isset($properties[$name][self::EXTENSION]['emptyOption']) && ($properties[$name][self::EXTENSION]['widget'] ?? NULL) !== 'radios') {
+          if (isset($properties[$name][PortableUi::KEYWORD]['options']['emptyOption']) && ($properties[$name][PortableUi::KEYWORD]['widget'] ?? NULL) !== 'radios') {
             // Refused by the save that moved what it refines against, not
             // kept: its empty option does not say "keep".
             // Decision: see docs/decisions.md#the-empty-option-rule.
-            $properties[$name][self::EXTENSION]['emptyOption']['label'] = (string) (DefinitionMetadata::holdsValue($current->definition) ? $this->t('- Select -') : $this->t('- None -'));
+            $properties[$name][PortableUi::KEYWORD]['options']['emptyOption']['label'] = (string) (DefinitionMetadata::holdsValue($current->definition) ? $this->t('- Select -') : $this->t('- None -'));
           }
           $shown[$name] = NULL;
         }
@@ -963,7 +986,7 @@ final class ContractEmitter {
         $properties[$name] = TRUE;
         continue;
       }
-      $narrowing = is_array($flat[$name]) ? $this->propertySchema->narrowing($flat[$name], $members[$name], $subschemas->transient) : $flat[$name];
+      $narrowing = is_array($flat[$name]) ? $this->propertySchema->narrowing($flat[$name], $members[$name], $subschemas->transient, $subschemas->ui) : $flat[$name];
       $properties[$name] = $narrowing === [] ? TRUE : $narrowing;
     }
     $composed = [
@@ -1384,6 +1407,7 @@ final class ContractEmitter {
       if (isset($inline['readOnly'])) {
         $site['readOnly'] = $inline['readOnly'];
       }
+      $site = PortableUi::set($site, is_array($inline[PortableUi::KEYWORD] ?? NULL) ? $inline[PortableUi::KEYWORD] : []);
       $site[self::EXTENSION] = (is_array($inline[self::EXTENSION] ?? NULL) ? $inline[self::EXTENSION] : []) + ['reads' => $attachment->reads] + $markers;
       $property['properties'][$module] = $site;
     }
@@ -1487,7 +1511,8 @@ final class ContractEmitter {
       $schema['readOnly'] = TRUE;
     }
     $schema += $checks;
-    $schema[self::EXTENSION] = $this->propertySchema->extension('list', $depends, $this->propertySchema->signature($entry->definition) !== $this->propertySchema->signature($definition)) + ['collection' => TRUE];
+    $schema = PortableUi::set($schema, PortableUi::write('list'));
+    $schema[self::EXTENSION] = $this->propertySchema->extension($depends, $this->propertySchema->signature($entry->definition) !== $this->propertySchema->signature($definition)) + ['collection' => TRUE];
 
     $shown = NULL;
     $held = $values[$entry->name] ?? $declared->getDefault($entry->name);
@@ -1807,7 +1832,8 @@ final class ContractEmitter {
     if ($locked) {
       $property['readOnly'] = TRUE;
     }
-    $property[self::EXTENSION] = $this->propertySchema->extension('variants', $depends, $chosen !== NULL) + [
+    $property = PortableUi::set($property, PortableUi::write('variants'));
+    $property[self::EXTENSION] = $this->propertySchema->extension($depends, $chosen !== NULL) + [
       'by' => $variants->by,
       'variants' => [],
     ];
@@ -1904,9 +1930,9 @@ final class ContractEmitter {
       // The union says the type: each variant's def is an object, and
       // null is its own member. A `type` beside it would only be
       // intersected with it by a type generator.
-      $extension = $property[self::EXTENSION];
-      unset($property[self::EXTENSION], $property['type']);
-      $property += ['anyOf' => $union, self::EXTENSION => $extension];
+      $said = array_intersect_key($property, [PortableUi::KEYWORD => TRUE, self::EXTENSION => TRUE]);
+      unset($property[PortableUi::KEYWORD], $property[self::EXTENSION], $property['type']);
+      $property += ['anyOf' => $union] + $said;
     }
     if ($property[self::EXTENSION]['variants'] === []) {
       // No variant to name: absent says the same as empty.

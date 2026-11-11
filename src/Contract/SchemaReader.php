@@ -17,6 +17,8 @@ use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\ResourceBuild\NeedsFrame;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\Rule;
+use Drupal\surface\Resource\Arrangement;
+use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\BlueprintInterface;
 use Drupal\surface\Resource\ResourceCallable;
 use Drupal\surface\ResourceBuild\ResourceBlueprint;
@@ -201,6 +203,7 @@ final class SchemaReader {
     ContractEmitter::EXTENSION,
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
+    PortableKeywords::UI,
     'readOnly',
   ];
 
@@ -224,6 +227,7 @@ final class SchemaReader {
     ContractEmitter::EXTENSION,
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
+    PortableKeywords::UI,
   ];
 
   /**
@@ -241,6 +245,7 @@ final class SchemaReader {
     ContractEmitter::EXTENSION,
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
+    PortableKeywords::UI,
   ];
 
   /**
@@ -258,6 +263,7 @@ final class SchemaReader {
     ContractEmitter::EXTENSION,
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
+    PortableKeywords::UI,
   ];
 
   /**
@@ -295,6 +301,7 @@ final class SchemaReader {
     'meta:enum',
     ContractEmitter::EXTENSION,
     PortableKeywords::MESSAGES,
+    PortableKeywords::UI,
   ];
 
   /**
@@ -741,7 +748,9 @@ final class SchemaReader {
    * `x-portable-messages` say them now (PortableKeywords::write()), the
    * pattern's message under the code of the keyword it goes with, so such
    * a document is checked as it was. Applied at every depth, after the
-   * markers are back in place (SchemaResolver::restored()).
+   * markers are back in place (SchemaResolver::restored()). The widget
+   * hints a document served before them said under `x-surface` are read
+   * as `x-portable-ui` says them now (hinted()).
    *
    * Decision: see
    * docs/decisions.md#the-served-document-is-a-portable-schema-document.
@@ -753,6 +762,7 @@ final class SchemaReader {
    *   The same, in contract 5's spelling.
    */
   protected static function respelled(array $schema): array {
+    $schema = static::hinted($schema);
     $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;
     if (is_array($extension) && (array_key_exists('checkedOnServer', $extension) || array_key_exists('patternMessage', $extension))) {
       $entries = [];
@@ -785,6 +795,64 @@ final class SchemaReader {
       $schema = PortableKeywords::before($schema, $said);
     }
     return static::eachSubschema($schema, static::respelled(...));
+  }
+
+  /**
+   * Reads the widget hints said under `x-surface` as `x-portable-ui`.
+   *
+   * A document served before the hints moved said a key's `widget`,
+   * `multiple`, `arrangement` and `emptyOption` under its `x-surface`, the
+   * whole group on each key that names it. They are read as the emitter
+   * writes them now: `widget`, the options (`multiple`, each text,
+   * `emptyOption`), `group` by its id and `weight`, and each group
+   * declared once under `groups` on the object whose keys name it.
+   *
+   * Decision: see docs/decisions.md#the-ui-hints-are-x-portable-ui.
+   *
+   * @param array $schema
+   *   A subschema, its keys not read yet.
+   *
+   * @return array
+   *   The same, its hints and its keys' groups in `x-portable-ui`.
+   */
+  protected static function hinted(array $schema): array {
+    $ui = [];
+    $extension = $schema[ContractEmitter::EXTENSION] ?? NULL;
+    $moved = array_flip(['widget', 'multiple', 'arrangement', 'emptyOption']);
+    if (is_array($extension) && array_intersect_key($extension, $moved) !== []) {
+      $options = ($extension['multiple'] ?? NULL) === TRUE ? ['multiple' => TRUE] : [];
+      $arrangement = is_array($extension['arrangement'] ?? NULL) ? $extension['arrangement'] : [];
+      foreach (Arrangement::TEXTS as $text) {
+        if (is_string($arrangement[$text] ?? NULL) && $arrangement[$text] !== '') {
+          $options[$text] = $arrangement[$text];
+        }
+      }
+      if (is_array($extension['emptyOption'] ?? NULL)) {
+        $options['emptyOption'] = $extension['emptyOption'];
+      }
+      $ui = (is_string($extension['widget'] ?? NULL) ? ['widget' => $extension['widget']] : [])
+        + ($options === [] ? [] : ['options' => $options])
+        + (is_string($arrangement['group']['id'] ?? NULL) ? ['group' => $arrangement['group']['id']] : [])
+        + (is_int($arrangement['weight'] ?? NULL) ? ['weight' => $arrangement['weight']] : []);
+      unset($extension['widget'], $extension['multiple'], $extension['arrangement'], $extension['emptyOption']);
+      $schema[ContractEmitter::EXTENSION] = $extension;
+      if ($extension === []) {
+        unset($schema[ContractEmitter::EXTENSION]);
+      }
+    }
+    $groups = [];
+    foreach (is_array($schema['properties'] ?? NULL) ? $schema['properties'] : [] as $member) {
+      $group = is_array($member) ? ($member[ContractEmitter::EXTENSION]['arrangement']['group'] ?? NULL) : NULL;
+      if (is_array($group) && is_string($group['id'] ?? NULL) && is_string($group['label'] ?? NULL)) {
+        $declared = PortableUi::declaration($group['id'], $group['label'], is_string($group['as'] ?? NULL) ? $group['as'] : ArrangementGroup::FIELDSET, ($group['collapsed'] ?? FALSE) === TRUE, is_int($group['weight'] ?? NULL) ? $group['weight'] : NULL, is_string($group['description'] ?? NULL) ? $group['description'] : NULL);
+        unset($declared['id']);
+        $groups[$group['id']] ??= $declared;
+      }
+    }
+    if ($groups !== []) {
+      $ui['groups'] = $groups;
+    }
+    return PortableUi::set($schema, $ui);
   }
 
   /**
@@ -1169,6 +1237,7 @@ final class SchemaReader {
       $this->note(static::below($pointer, 'additionalProperties'), 'Read closed: a structure holds the keys it declares, and a key the schema leaves open is refused.');
     }
     $this->frameExtension($extension, $pointer, $inputs);
+    $groups = is_array($schema[PortableKeywords::UI]['groups'] ?? NULL) ? $schema[PortableKeywords::UI]['groups'] : [];
     foreach (PortableKeywords::checks($schema) as $check) {
       if ($check['constraint'] === 'JsonSchema' && is_array($check['options']['schema'] ?? NULL)) {
         $inputs->constrainFrame($this->kept($check['options']['schema'], static::below($pointer, PortableKeywords::CHECK, PortableKeywords::PROVIDER . 'JsonSchema', 'schema')));
@@ -1250,9 +1319,14 @@ final class SchemaReader {
       }
       if (isset($variants[$name])) {
         $this->variantsKey($name, $property, $variants[$name], in_array($name, $required, TRUE), $at, $inputs, $root, $properties);
-        continue;
       }
-      $this->key($name, $property, in_array($name, $required, TRUE), $at, $inputs, $root, array_map('strval', array_keys($properties)));
+      else {
+        $this->key($name, $property, in_array($name, $required, TRUE), $at, $inputs, $root, array_map('strval', array_keys($properties)));
+      }
+      $arrangement = $this->arranged($property, $groups, $at, $pointer);
+      if ($arrangement !== NULL) {
+        $inputs->describe($name, group: $arrangement->group, weight: $arrangement->weight, placeholder: $arrangement->placeholder, prefix: $arrangement->prefix, suffix: $arrangement->suffix, help: $arrangement->help);
+      }
     }
     foreach (array_diff($required, array_map('strval', array_keys($properties))) as $name) {
       if (!isset($members[$name])) {
@@ -1292,6 +1366,126 @@ final class SchemaReader {
     if ($left !== []) {
       $inputs->constrainFrame($this->withDefs($left, $root));
     }
+  }
+
+  /**
+   * Reads how a key is arranged where it is drawn, from its hints.
+   *
+   * Its `x-portable-ui`: `group`, with the group its frame declares under
+   * `groups`; `weight`; and the options `placeholder`, `prefix`, `suffix`
+   * and `help`, described as an author describes them. The options
+   * `emptyOption` and `multiple` are the options resolver's to decide, and
+   * not read. What cannot be read is noted: a weight that is no whole
+   * number, a text that is no string, a group widget other than `fieldset`
+   * or `details` (read as a fieldset), and a group with no label, whose
+   * keys are read ungrouped.
+   *
+   * Decision: see docs/decisions.md#the-ui-hints-are-x-portable-ui.
+   *
+   * @param array $property
+   *   The key's schema.
+   * @param array $groups
+   *   The groups its frame declares, by id.
+   * @param string $pointer
+   *   The key's pointer.
+   * @param string $frame
+   *   The pointer of its frame, the object schema that declares the groups.
+   *
+   * @return \Drupal\surface\Resource\Arrangement|null
+   *   The arrangement, or NULL where the hints say none.
+   */
+  protected function arranged(array $property, array $groups, string $pointer, string $frame): ?Arrangement {
+    $ui = is_array($property[PortableKeywords::UI] ?? NULL) ? $property[PortableKeywords::UI] : [];
+    if ($ui === []) {
+      return NULL;
+    }
+    $at = static::below($pointer, PortableKeywords::UI);
+    $options = is_array($ui['options'] ?? NULL) ? $ui['options'] : [];
+    foreach (['emptyOption', 'multiple'] as $option) {
+      if (array_key_exists($option, $options)) {
+        $this->note(static::below($at, 'options', $option), 'Not read: the options resolver decides it from the key\'s list of values.');
+      }
+    }
+    $texts = [];
+    foreach (Arrangement::TEXTS as $text) {
+      if (!array_key_exists($text, $options)) {
+        continue;
+      }
+      if (!is_string($options[$text])) {
+        $this->note(static::below($at, 'options', $text), 'Not read: a text is a string.');
+      }
+      elseif ($options[$text] !== '') {
+        $texts[$text] = $options[$text];
+      }
+    }
+    $weight = $this->weight($ui, $at);
+    $group = NULL;
+    if (is_string($ui['group'] ?? NULL)) {
+      $id = $ui['group'];
+      $declared = $groups[$id] ?? NULL;
+      $declared_at = static::below($frame, PortableKeywords::UI, 'groups', $id);
+      if (!is_array($declared) || $id === '' || strpbrk($id, '.:') !== FALSE) {
+        $this->note(static::below($at, 'group'), 'Not read: the group is declared nowhere in the frame, or cannot be named so.');
+      }
+      elseif (!is_string($declared['label'] ?? NULL) || PlainText::of($declared['label']) === '') {
+        $this->note($declared_at, 'Not read: a group with no label is not read.');
+        $this->note(static::below($at, 'group'), 'Read ungrouped: its group has no label.');
+      }
+      else {
+        $widget = $declared['widget'] ?? NULL;
+        if ($widget !== NULL && $widget !== ArrangementGroup::DETAILS && $widget !== ArrangementGroup::FIELDSET) {
+          $this->note(static::below($declared_at, 'widget'), 'Read as a fieldset: a group is drawn as a fieldset or a details.');
+        }
+        $description = is_string($declared['description'] ?? NULL) && $declared['description'] !== '' ? $declared['description'] : NULL;
+        $group_weight = $this->weight($declared, $declared_at);
+        $group = $widget === ArrangementGroup::DETAILS
+          ? ArrangementGroup::details($id, $declared['label'], ($declared['options']['open'] ?? TRUE) === FALSE, $group_weight, $description)
+          : ArrangementGroup::fieldset($id, $declared['label'], $group_weight, $description);
+      }
+    }
+    if ($group === NULL && $weight === NULL && $texts === []) {
+      return NULL;
+    }
+    return new Arrangement($group, $weight, $texts['placeholder'] ?? NULL, $texts['prefix'] ?? NULL, $texts['suffix'] ?? NULL, $texts['help'] ?? NULL);
+  }
+
+  /**
+   * Reads the weight of a key or a group, noting one that is no whole number.
+   *
+   * @param array $hints
+   *   The key's `x-portable-ui`, or the group as its frame declares it.
+   * @param string $pointer
+   *   Its pointer.
+   *
+   * @return int|null
+   *   The weight, or NULL for none.
+   */
+  protected function weight(array $hints, string $pointer): ?int {
+    if (!array_key_exists('weight', $hints)) {
+      return NULL;
+    }
+    $weight = static::integral($hints['weight']);
+    if ($weight === NULL) {
+      $this->note(static::below($pointer, 'weight'), 'Not read: a weight is a whole number.');
+    }
+    return $weight;
+  }
+
+  /**
+   * Reads a whole number, as JSON may decode one.
+   *
+   * @param mixed $number
+   *   The value.
+   *
+   * @return int|null
+   *   The number, or NULL for anything else.
+   */
+  protected static function integral(mixed $number): ?int {
+    return match (TRUE) {
+      is_int($number) => $number,
+      is_float($number) && floor($number) === $number && abs($number) < PHP_INT_MAX => (int) $number,
+      default => NULL,
+    };
   }
 
   /**
@@ -1903,7 +2097,7 @@ final class SchemaReader {
       $definition->addConstraint($constraint, in_array($constraint, ['Range', 'Length', 'Count'], TRUE) ? array_replace($held, $options) : $options);
     }
     static::holdTo($definition, $foreign);
-    $this->settings($definition, is_array($property[ContractEmitter::EXTENSION] ?? NULL) ? $property[ContractEmitter::EXTENSION] : []);
+    $this->settings($definition, is_array($property[PortableKeywords::UI] ?? NULL) ? $property[PortableKeywords::UI] : []);
   }
 
   /**
@@ -2029,6 +2223,7 @@ final class SchemaReader {
     if (is_string($extension['after'] ?? NULL)) {
       DefinitionMetadata::setPlacedAfter($map, $extension['after']);
     }
+    $groups = is_array($schema[PortableKeywords::UI]['groups'] ?? NULL) ? $schema[PortableKeywords::UI]['groups'] : [];
     $required = array_map('strval', is_array($schema['required'] ?? NULL) ? $schema['required'] : []);
     foreach ($schema['properties'] as $name => $property) {
       $name = (string) $name;
@@ -2044,6 +2239,11 @@ final class SchemaReader {
         }
       }
       $this->droppedExtension(is_array($property[ContractEmitter::EXTENSION] ?? NULL) ? $property[ContractEmitter::EXTENSION] : [], static::below($at, ContractEmitter::EXTENSION));
+      // Each key of the map is arranged in it, among the map's groups.
+      $arrangement = $this->arranged($property, $groups, $at, $pointer);
+      if ($arrangement !== NULL) {
+        DefinitionMetadata::setArrangement($inner, $arrangement);
+      }
       $map->setPropertyDefinition($name, $this->finished($inner, $property, in_array($name, $required, TRUE), in_array('null', $types, TRUE)));
     }
     return $map;
@@ -2207,7 +2407,7 @@ final class SchemaReader {
         $list->addConstraint($constraint, $options);
       }
       static::holdTo($list, $this->withDefs($foreign, $root));
-      $this->settings($list, is_array($property[ContractEmitter::EXTENSION] ?? NULL) ? $property[ContractEmitter::EXTENSION] : []);
+      $this->settings($list, is_array($property[PortableKeywords::UI] ?? NULL) ? $property[PortableKeywords::UI] : []);
       $this->examples($list, $property);
       return [$list, $default];
     }
@@ -2249,11 +2449,11 @@ final class SchemaReader {
     }
     if ($type === 'string' && $format === 'date' && !isset($property['oneOf']) && !isset($property['enum'])) {
       // A date is drawn as a date input, which is what the emitter states
-      // the format for; an `x-surface.widget` read below still decides.
+      // the format for; an `x-portable-ui.widget` read below still decides.
       $definition->setSetting('widget', 'date');
     }
     static::holdTo($definition, $this->withDefs($foreign, $root));
-    $this->settings($definition, is_array($property[ContractEmitter::EXTENSION] ?? NULL) ? $property[ContractEmitter::EXTENSION] : []);
+    $this->settings($definition, is_array($property[PortableKeywords::UI] ?? NULL) ? $property[PortableKeywords::UI] : []);
     $this->examples($definition, $property);
     return [$definition, $default];
   }
@@ -2320,18 +2520,18 @@ final class SchemaReader {
   }
 
   /**
-   * Reads what a key's `x-surface` asks of how it is drawn.
+   * Reads the widget a key's `x-portable-ui` asks for.
    *
    * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
    *   The definition.
-   * @param array $extension
-   *   The key's `x-surface`.
+   * @param array $ui
+   *   The key's `x-portable-ui`.
    */
-  protected function settings(DataDefinitionInterface $definition, array $extension): void {
+  protected function settings(DataDefinitionInterface $definition, array $ui): void {
     if (!$definition instanceof DataDefinition) {
       return;
     }
-    $widget = $extension['widget'] ?? NULL;
+    $widget = $ui['widget'] ?? NULL;
     if (in_array($widget, ['radios', 'time', 'date', 'checkboxes'], TRUE)) {
       $definition->setSetting('widget', $widget);
     }
@@ -2858,13 +3058,13 @@ final class SchemaReader {
    *
    * @return mixed
    *   The same, with no `x-surface`, `portable-check`,
-   *   `x-portable-messages` or identifier at any depth.
+   *   `x-portable-messages`, `x-portable-ui` or identifier at any depth.
    */
   protected static function plain(mixed $schema, ?array &$dropped = NULL, string $pointer = ''): mixed {
     if (!is_array($schema)) {
       return $schema;
     }
-    unset($schema[ContractEmitter::EXTENSION], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES]);
+    unset($schema[ContractEmitter::EXTENSION], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES], $schema[PortableKeywords::UI]);
     foreach (self::IDENTIFIERS as $identifier) {
       if (is_string($schema[$identifier] ?? NULL)) {
         unset($schema[$identifier]);

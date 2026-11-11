@@ -76,40 +76,51 @@ export interface EmptyOption {
   label: string;
 }
 
-/** A named group a key is drawn in: a fieldset, or a details a person may close. */
-export interface ArrangementGroup {
-  id: string;
+/**
+ * A group a frame declares once, under `x-portable-ui.groups`, by its id:
+ * a fieldset, or a details a person may close.
+ */
+export interface UiGroup {
   label: string;
-  as: 'fieldset' | 'details';
-  collapsed?: boolean;
-  weight?: number;
   /** What the group's keys are for, drawn under its legend or summary. */
   description?: string;
+  widget?: 'fieldset' | 'details' | (string & {});
+  /** `open: false` for a details that starts closed; open otherwise. */
+  options?: { open?: boolean };
+  weight?: number;
 }
 
 /**
- * How a key is arranged where it is drawn (`x-surface.arrangement`, with
- * the widget hints): its group, its weight among its frame's keys (or its
- * group's), and the texts beside its input. Never what it accepts.
+ * The widget hints, the dialect's `x-portable-ui`: how a key is drawn,
+ * never what it accepts. Each member only where it says something.
  */
-export interface Arrangement {
-  group?: ArrangementGroup;
-  weight?: number;
-  placeholder?: string;
-  prefix?: string;
-  suffix?: string;
-  help?: string;
-}
-
-export interface Extension {
+export interface PortableUi {
   /**
    * How the key is drawn: a stock word, or the word of a module's widget
    * that claims the key, which this page draws as the stock field for the
-   * key's type (stockWidget()). Null when no widget draws the key.
+   * key's type (stockWidget()). Absent when no widget draws the key.
    */
-  widget: Widget | (string & {}) | null;
-  /** With the widget hints: how the key is arranged where it is drawn. */
-  arrangement?: Arrangement;
+  widget?: Widget | (string & {});
+  options?: {
+    /** On a list of allowed values drawn as one select. */
+    multiple?: boolean;
+    placeholder?: string;
+    prefix?: string;
+    suffix?: string;
+    /** Drawn after the key's description. */
+    help?: string;
+    /** In the schema for these answers, on a select or radios of one value. */
+    emptyOption?: EmptyOption;
+  };
+  /** The id of the group the key is drawn in, which its frame declares. */
+  group?: string;
+  /** Its weight among its frame's keys (or its group's); lower first. */
+  weight?: number;
+  /** On an object: each group its keys name, by id. */
+  groups?: Record<string, UiGroup>;
+}
+
+export interface Extension {
   /**
    * The sibling keys its refiners watch, a mounted one by its dotted path
    * in the frame; absent where it watches none. A locked key says so with
@@ -120,8 +131,6 @@ export interface Extension {
   refined?: boolean;
   /** In the schema for these answers: stands for a stored value no longer offered. Absent where it does not. */
   stale?: boolean;
-  emptyOption?: EmptyOption;
-  multiple?: boolean;
   by?: string;
   /** On a key with variants: the def each value of the deciding key chooses, by that value. */
   variants?: Record<string, string>;
@@ -280,6 +289,8 @@ export interface Schema {
    * check's under `check.<name>`.
    */
   'x-portable-messages'?: Record<string, string>;
+  /** The dialect's: the widget hints. */
+  'x-portable-ui'?: PortableUi;
   'x-surface'?: Extension;
 }
 
@@ -455,6 +466,15 @@ function merge(base: Json, over: Json): Json {
       // key: the site's word stands, with which keys of the child do not
       // apply here.
       merged[keyword] = { doesNotApply: value.doesNotApply, ...before };
+    }
+    else if (keyword === 'x-portable-ui' && isObject(before) && isObject(value)) {
+      // A key's hints are replaced whole, and a frame's groups joined: a
+      // narrowing declares only the groups its own keys name, so the def's
+      // others stay, and the site's word stands for a group both declare.
+      const { groups: groupsBefore, ...keyBefore } = before;
+      const { groups: groupsValue, ...keyValue } = value;
+      const groups = isObject(groupsBefore) && isObject(groupsValue) ? { ...groupsBefore, ...groupsValue } : groupsValue ?? groupsBefore;
+      merged[keyword] = { ...(Object.keys(keyValue).length > 0 ? keyValue : keyBefore), ...(groups === undefined ? {} : { groups }) };
     }
     else {
       merged[keyword] = value;
@@ -656,9 +676,10 @@ function resolveAt(schema: Json, root: Json, ancestors: string[]): [Json, string
  * `false`, not applying here, leaves it out, as a flat frame does); the
  * def's `required` joins the frame's, in the frame's order, and its
  * conditionals come first, as its rules and refiners run before the
- * owner's. What the def says of itself as a whole (the ports it reads) is
- * the structure's, not the frame's. PHP's twin is
- * `SchemaResolver::mixIn()`.
+ * owner's. The groups the def declares for its keys join the frame's, the
+ * frame's word standing for a group both declare. What else the def says
+ * of itself as a whole (the ports it reads) is the structure's, not the
+ * frame's. PHP's twin is `SchemaResolver::mixIn()`.
  */
 function mixIn(frame: Json, def: Json): Json {
   const theirs = isObject(def.properties) ? def.properties : {};
@@ -691,6 +712,12 @@ function mixIn(frame: Json, def: Json): Json {
   const conditions = [...(Array.isArray(def.allOf) ? def.allOf : []), ...(Array.isArray(frame.allOf) ? frame.allOf : [])];
   if (conditions.length > 0) {
     mixed.allOf = conditions;
+  }
+  const theirGroups = isObject(def['x-portable-ui']) && isObject(def['x-portable-ui'].groups) ? def['x-portable-ui'].groups : {};
+  if (Object.keys(theirGroups).length > 0) {
+    const ui = isObject(frame['x-portable-ui']) ? frame['x-portable-ui'] : {};
+    const ownGroups = isObject(ui.groups) ? ui.groups : {};
+    mixed['x-portable-ui'] = { ...ui, groups: { ...ownGroups, ...Object.fromEntries(Object.entries(theirGroups).filter(([id]) => !(id in ownGroups))) } };
   }
   return mixed;
 }
@@ -1152,7 +1179,7 @@ export function watchedPaths(schema: Schema, values: Values, prefix = ''): Set<s
       continue;
     }
     const nestedValues = isObject(nested) ? nested : {};
-    const widget = property['x-surface']?.widget;
+    const widget = property['x-portable-ui']?.widget;
     const inner = widget === 'variants' ? resolveVariants(schema, name, values) : widget === 'fieldset' ? property : null;
     if (inner !== null) {
       watchedPaths(inner, nestedValues, `${prefix}${name}.`).forEach((path) => watched.add(path));
@@ -1391,7 +1418,7 @@ export function dependents(full: Schema, values: Values, path: string): { frame:
     if (property === undefined || i === segments.length - 1) {
       break;
     }
-    if (property['x-surface']?.widget === 'variants') {
+    if (property['x-portable-ui']?.widget === 'variants') {
       frame = resolveVariants(frame, name, held);
       held = asValues(held[name]);
       prefix += `${name}.`;
@@ -1598,7 +1625,7 @@ function conditionalKey(condition: Conditional): string | undefined {
 }
 
 function isVariants(schema: Schema): boolean {
-  return schema['x-surface']?.widget === 'variants';
+  return schema['x-portable-ui']?.widget === 'variants';
 }
 
 function isCollection(schema: Schema): boolean {
@@ -1701,9 +1728,10 @@ function keptLabels(node: Schema, prefix: string, kept: Map<string, string>): Ma
     if (!isObject(property)) {
       continue;
     }
-    const extension = property['x-surface'] as Extension | undefined;
-    if (extension?.stale && extension.emptyOption !== undefined && extension.widget === 'select') {
-      kept.set(prefix + name, extension.emptyOption.label);
+    const ui = (property as Schema)['x-portable-ui'];
+    const option = ui?.options?.emptyOption;
+    if ((property as Schema)['x-surface']?.stale && option !== undefined && ui?.widget === 'select') {
+      kept.set(prefix + name, option.label);
     }
     if (isObject(property.properties)) {
       keptLabels(property, `${prefix}${name}.`, kept);
@@ -1730,9 +1758,10 @@ function labels(schema: Schema): Labels {
       const required = Array.isArray(node.required) ? (node.required as string[]) : [];
       for (const [name, property] of Object.entries(node.properties)) {
         const extension = isObject(property) ? (property['x-surface'] as Extension | undefined) : undefined;
-        const option = extension?.emptyOption;
+        const ui = isObject(property) ? (property['x-portable-ui'] as PortableUi | undefined) : undefined;
+        const option = ui?.options?.emptyOption;
         // A stale select says it keeps its value, in words of its own.
-        if (option !== undefined && !extension?.stale && isObject(property) && property.oneOf !== undefined && extension?.widget === 'select') {
+        if (option !== undefined && !extension?.stale && isObject(property) && property.oneOf !== undefined && ui?.widget === 'select') {
           found[holdsValue(property as Schema, required.includes(name)) ? 'required' : 'optional'] ??= option.label;
         }
       }
@@ -2281,33 +2310,35 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
           ? context.standing.get(at)
           : map ? norm(held) : held ?? property.default ?? null;
     const own: Extension = { ...extension, stale: undefined };
-    delete own.emptyOption;
+    const ui: PortableUi = property['x-portable-ui'] ?? {};
+    const widget = ui.widget;
+    let emptyOption: EmptyOption | undefined;
     let out: unknown = jsonType(property) === 'array' && Array.isArray(value) ? [...value] : value;
-    if ((extension.widget === 'select' || extension.widget === 'radios') && !extension.multiple && jsonType(property) !== 'array' && property.oneOf !== undefined) {
+    if ((widget === 'select' || widget === 'radios') && !ui.options?.multiple && jsonType(property) !== 'array' && property.oneOf !== undefined) {
       const list = offered(property) ?? [];
       const configured = !isEmpty(value);
       const chosen = configured && allows(list, value);
       // OptionsWidget::singleSelect() and RadiosWidget::buildElement():
       // radios show nothing checked where a select shows its empty option.
       const holds = holdsValue(property, (schema.required ?? []).includes(name));
-      own.emptyOption = extension.widget === 'radios'
+      emptyOption = widget === 'radios'
         ? { show: !holds, label: context.labels.optional }
         : { show: !(chosen && holds), label: holds ? context.labels.required : context.labels.optional };
       if (configured && !chosen) {
         own.stale = true;
         stale.push(at);
         out = null;
-        if (extension.widget === 'select') {
+        if (widget === 'select') {
           // A save that leaves it keeps the stored value, and it says so.
-          own.emptyOption = { ...own.emptyOption, label: keepLabel(context.labels, at, value) };
+          emptyOption = { ...emptyOption, label: keepLabel(context.labels, at, value) };
         }
       }
     }
     if (context.unknown.has(at) && isEmpty(held) && !own.stale) {
       // Stale when the page was handed it: the server holds what it stands for.
       own.stale = true;
-      if (own.emptyOption !== undefined) {
-        own.emptyOption = { ...own.emptyOption, show: true, label: extension.widget === 'select' ? context.labels.kept.get(at) ?? own.emptyOption.label : own.emptyOption.label };
+      if (emptyOption !== undefined) {
+        emptyOption = { ...emptyOption, show: true, label: widget === 'select' ? context.labels.kept.get(at) ?? emptyOption.label : emptyOption.label };
       }
       stale.push(at);
       out = null;
@@ -2317,14 +2348,17 @@ function present(schema: Schema, full: Schema, values: Values, path: string, map
         own.stale = true;
         stale.push(at);
       }
-      if (own.emptyOption !== undefined && extension.widget === 'select') {
+      if (emptyOption !== undefined && widget === 'select') {
         // Refused by the save that moved what it refines against, not
         // kept: frame()'s orphan, worded as before.
-        own.emptyOption = { ...own.emptyOption, label: holdsValue(property, (schema.required ?? []).includes(name)) ? context.labels.required : context.labels.optional };
+        emptyOption = { ...emptyOption, label: holdsValue(property, (schema.required ?? []).includes(name)) ? context.labels.required : context.labels.optional };
       }
       out = null;
     }
-    properties[name] = { ...property, 'x-surface': own };
+    // The empty option is the one hint true of one moment, written into
+    // `x-portable-ui.options` as the server writes it.
+    const { emptyOption: _was, ...options } = ui.options ?? {};
+    properties[name] = { ...property, 'x-portable-ui': { ...ui, options: emptyOption === undefined ? options : { ...options, emptyOption } }, 'x-surface': own };
     shown[name] = out;
   }
   const answered: Schema = { ...schema, properties };
@@ -2349,7 +2383,7 @@ export function variantId(extension: Extension | undefined, deciding: unknown): 
  * Each `x-surface` as the server writes it: a part only where it says
  * something, no `refined` or `stale` that is false, no `chosen` while
  * nothing is, no `dependsOn` that names nothing, and no `x-surface` that
- * is left empty.
+ * is left empty; no `x-portable-ui` and no `options` in it left empty.
  */
 function compacted(node: unknown): unknown {
   if (Array.isArray(node)) {
@@ -2368,6 +2402,18 @@ function compacted(node: unknown): unknown {
           || (said === false && (name === 'refined' || name === 'stale'))
           || (Array.isArray(said) && said.length === 0 && name === 'dependsOn');
         if (!nothing) {
+          own[name] = said;
+        }
+      }
+      if (Object.keys(own).length > 0) {
+        out[key] = own;
+      }
+      continue;
+    }
+    if (key === 'x-portable-ui' && isObject(value)) {
+      const own: Record<string, unknown> = {};
+      for (const [name, said] of Object.entries(value)) {
+        if (said !== undefined && !(name === 'options' && isObject(said) && Object.keys(said).length === 0)) {
           own[name] = said;
         }
       }
