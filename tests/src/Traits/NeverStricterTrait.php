@@ -6,12 +6,14 @@ namespace Drupal\Tests\surface\Traits;
 
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Pipeline\TypeMismatchException;
 use Drupal\surface\Pipeline\UnknownKeysException;
 use Drupal\surface\Pipeline\VariantMismatchException;
 use Drupal\surface\Pipeline\Violation;
+use PortableSchema\Builder\Schema;
 
 /**
  * Holds both documents to the pipeline, on the accepted document.
@@ -135,7 +137,7 @@ trait NeverStricterTrait {
    *   TRUE when a refused key, or the frame, carries one of the marks.
    */
   protected function inexactAt(array|\stdClass $schema, array $violations): bool {
-    $schema = SchemaResolver::inline(SchemaResolver::restored(json_decode((string) json_encode($schema), TRUE)));
+    $schema = Schemas::decoded(SchemaResolver::inline(SchemaResolver::restored(Schema::from(json_decode((string) json_encode($schema), TRUE)))));
     foreach ($violations as $violation) {
       if ($violation->stale) {
         return TRUE;

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Unit;
 
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests a frame's groups survive what SchemaResolver lays over them.
@@ -54,7 +56,7 @@ class SchemaResolverGroupsTest extends UnitTestCase {
       ],
       '$defs' => ['contact' => self::CONTACT],
     ];
-    $inline = SchemaResolver::inline($root);
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($root)));
     $this->assertSame(self::CONTACT['x-portable-ui'], $inline['properties']['first']['x-portable-ui']);
     $this->assertSame([
       'groups' => [
@@ -66,7 +68,7 @@ class SchemaResolverGroupsTest extends UnitTestCase {
 
     // A site's own hints replace the def's whole, its groups apart.
     $root['properties']['second']['x-portable-ui']['widget'] = 'fieldset';
-    $second = SchemaResolver::inline($root)['properties']['second']['x-portable-ui'];
+    $second = Schemas::decoded(SchemaResolver::inline(Schema::from($root)))['properties']['second']['x-portable-ui'];
     $this->assertSame(['widget', 'groups'], array_keys($second));
     $this->assertSame(['reach', 'call'], array_keys($second['groups']));
   }
@@ -86,7 +88,7 @@ class SchemaResolverGroupsTest extends UnitTestCase {
       'x-portable-ui' => ['groups' => ['call' => ['label' => 'Ring', 'widget' => 'fieldset']]],
       '$defs' => ['contact' => self::CONTACT],
     ];
-    $inline = SchemaResolver::inline($root);
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($root)));
     $this->assertSame([
       'groups' => [
         'call' => ['label' => 'Ring', 'widget' => 'fieldset'],

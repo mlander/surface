@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Refinement\DoesNotApply;
 use Drupal\surface\Resource\BlueprintAdditionsInterface;
@@ -34,6 +35,7 @@ use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Mixins: a structure's members merged into its owner's keys, flat.
@@ -402,7 +404,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertSame(['contract' => 5, 'version' => 1, 'rules' => [2, 4, 5]], $full['x-surface'], 'Asked for in no operation: the contract and the version, and which conditionals are rules.');
     // Each marker where the emitter's pass wrote it, as the rest reads it.
     // Decision: see docs/decisions.md#contract-2.
-    $full = SchemaResolver::restored($full);
+    $full = Schemas::decoded(SchemaResolver::restored(Schema::from($full)));
     $this->assertSame(['resource_test.timestamps', 'resource_test.ownership', 'resource_test.archive'], array_keys($full['$defs']), 'The archive\'s stamps first, then what it mixes in.');
     $this->assertSame(self::KEYS, array_keys($full['properties']), 'Every member keeps its place among the owner\'s keys.');
     $this->assertTrue($full['properties']['changed'], 'The def says all there is.');
@@ -424,7 +426,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertSame(['$ref' => '#/$defs/resource_test.ownership'], $archive['allOf'][0]);
 
     // Nested by the ledger: one def, closed, the keys under its key.
-    $ledger = SchemaResolver::restored($this->schema(LedgerResource::class));
+    $ledger = Schemas::decoded(SchemaResolver::restored(Schema::from($this->schema(LedgerResource::class))));
     $def = $ledger['$defs']['resource_test.timestamps'];
     $this->assertFalse($def['additionalProperties']);
     unset($def['additionalProperties']);
@@ -488,7 +490,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $this->assertTrue($this->validates($full, $first + self::JOURNAL), 'Unpublished, never created, the first revision.');
 
     // Inlined, the frame is flat: what a client without references reads.
-    $inline = SchemaResolver::inline($full);
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($full)));
     $this->assertSame(self::KEYS, array_keys($inline['properties']));
     $this->assertFalse($inline['additionalProperties']);
     $this->assertArrayNotHasKey('unevaluatedProperties', $inline);
@@ -532,7 +534,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $record = $full['$defs']['resource_test.record'];
     $this->assertSame(['$ref' => '#/$defs/resource_test.timestamps'], $record['allOf'][0], 'The record\'s def composes the timestamps\' in turn.');
     $this->assertArrayNotHasKey('unevaluatedProperties', $record, 'Mixed in, so open.');
-    $this->assertSame(['line', 'reference', 'created', 'changed'], array_keys(SchemaResolver::inline($full)['properties']));
+    $this->assertSame(['line', 'reference', 'created', 'changed'], array_keys(Schemas::decoded(SchemaResolver::inline(Schema::from($full)))['properties']));
     $this->assertTrue($this->validates($full, ['line' => 'l', 'reference' => 'r', 'created' => 5, 'changed' => 6]));
     $this->assertFalse($this->validates($full, ['created' => 5, 'changed' => NULL]), 'The timestamps\' rule holds, two levels down.');
     $this->assertFalse($this->validates($full, ['fax' => 1]));
@@ -576,7 +578,7 @@ class MixinsTest extends SurfaceKernelTestBase {
     $harness = $full['$defs']['resource_test.harness'];
     $this->assertSame(['title' => 'Hip belt', '$ref' => '#/$defs/resource_test.pack.belt'], $harness['properties']['belt']);
     $this->assertSame(['$ref' => '#/$defs/resource_test.pack.pocket'], $harness['properties']['pockets']['items']);
-    $this->assertSame(['name', 'straps', 'belt', 'pockets', 'cover', 'notes'], array_keys(SchemaResolver::inline($full)['properties']));
+    $this->assertSame(['name', 'straps', 'belt', 'pockets', 'cover', 'notes'], array_keys(Schemas::decoded(SchemaResolver::inline(Schema::from($full)))['properties']));
     $this->assertTrue($this->validates($full, $value));
     $this->assertFalse($this->validates($full, ['belt' => ['width' => 0]] + $value));
     $this->assertFalse($this->validates($full, ['cover' => ['pouch' => ['name' => NULL]]] + $value));

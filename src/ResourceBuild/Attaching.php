@@ -222,7 +222,7 @@ final class Attaching {
       return FALSE;
     }
     $hash = is_string($hash) ? $hash : ResourceBlueprint::documentHash($root);
-    return $this->noSecret[$hash] ??= SchemaReader::holdsNoSecret($root, fn (string $id): bool => $this->registry->hasShape($id));
+    return $this->noSecret[$hash] ??= SchemaReader::holdsNoSecret($root, fn (string $id): bool => $this->registry->hasShape($id), $hash);
   }
 
   /**

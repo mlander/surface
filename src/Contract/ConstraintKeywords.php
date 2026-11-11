@@ -136,6 +136,29 @@ final class ConstraintKeywords {
   }
 
   /**
+   * Names the keywords read() reads of a schema.
+   *
+   * Each row's own (ConstraintRowInterface::keywords()), the `format` a
+   * row reads as a constraint (readsFormat()), and `x-portable-messages`,
+   * where a Regex's message stands. A reader hands read() these alone.
+   *
+   * @return array<string, true>
+   *   The keywords, as the keys.
+   */
+  public static function keywords(): array {
+    static $keywords = NULL;
+    if ($keywords === NULL) {
+      $keywords = ['format' => TRUE, PortableKeywords::MESSAGES => TRUE];
+      foreach (self::rows() as $row) {
+        foreach ($row->keywords() as $keyword) {
+          $keywords[$keyword] = TRUE;
+        }
+      }
+    }
+    return $keywords;
+  }
+
+  /**
    * Names the constraints a row maps.
    *
    * @return string[]

@@ -11,6 +11,7 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Flow\Staged;
 use Drupal\surface\Form\SurfaceFormBuilder;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
@@ -46,6 +47,7 @@ use Drupal\tool\Tool\ToolOperation;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests examples 7 to 13: one small resource per concept, then a block.
@@ -327,15 +329,15 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
    */
   public function testNineTakesItsKeysFromTheSite(): void {
     $full = $this->full(TicketSalesResource::class);
-    $on_sale = SchemaResolver::resolve($full['properties']['on_sale'], $full);
+    $on_sale = Schemas::decoded(SchemaResolver::resolve(Schema::from($full['properties']['on_sale']), Schema::from($full)));
     $this->assertSame(['standard', 'student', 'speaker'], array_keys($on_sale['properties']));
     $this->assertTrue($on_sale['properties']['speaker']['readOnly']);
     $this->assertArrayNotHasKey('locked', $on_sale['properties']['speaker'][ContractEmitter::EXTENSION] ?? [], '`readOnly` says it.');
     $this->assertArrayNotHasKey('readOnly', $on_sale['properties']['standard']);
-    $limits = SchemaResolver::resolve($full['properties']['limits'], $full);
+    $limits = Schemas::decoded(SchemaResolver::resolve(Schema::from($full['properties']['limits']), Schema::from($full)));
     $this->assertTrue($limits['properties']['speaker']['readOnly']);
     $now = $this->now(TicketSalesResource::class);
-    $this->assertFalse(SchemaResolver::resolve($now['properties']['on_sale'], $now)['properties']['speaker']['const']);
+    $this->assertFalse(Schemas::decoded(SchemaResolver::resolve(Schema::from($now['properties']['on_sale']), Schema::from($now)))['properties']['speaker']['const']);
 
     $form = $this->formAt('surface_examples.step9');
     $this->assertTrue($form['on_sale']['speaker']['#disabled']);
@@ -347,7 +349,7 @@ class ExamplesConceptsTest extends SurfaceKernelTestBase {
     $this->assertContains('config:surface_examples.ticket_types', $built->getCacheTags());
     $this->config('surface_examples.ticket_types')->set('types.vip', ['label' => 'VIP', 'locked' => FALSE])->save();
     $full = $this->full(TicketSalesResource::class);
-    $this->assertSame(['standard', 'student', 'speaker', 'vip'], array_keys(SchemaResolver::resolve($full['properties']['on_sale'], $full)['properties']));
+    $this->assertSame(['standard', 'student', 'speaker', 'vip'], array_keys(Schemas::decoded(SchemaResolver::resolve(Schema::from($full['properties']['on_sale']), Schema::from($full)))['properties']));
 
     // A save keeps the locked type as stored, whatever is posted for it.
     $this->formAt('surface_examples.step9');

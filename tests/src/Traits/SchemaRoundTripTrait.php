@@ -7,12 +7,14 @@ namespace Drupal\Tests\surface\Traits;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaReader;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Resource\OperationContext;
 use Drupal\surface\ResourceBuild\AlterDefinition;
 use Drupal\surface\ResourceBuild\ResourceDefinition;
 use Drupal\surface\ResourceBuild\ResourceRegistry;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Reads a full schema back into a structure, and names why one differs.
@@ -145,9 +147,9 @@ trait SchemaRoundTripTrait {
    */
   protected static function kindOf(array $original, ?array $again, ResourceDefinition $definition): ?string {
     $marks = [];
-    static::marks(SchemaResolver::restored(json_decode((string) json_encode($original), TRUE)), $marks);
+    static::marks(Schemas::decoded(SchemaResolver::restored(Schema::from(json_decode((string) json_encode($original), TRUE)))), $marks);
     $added = [];
-    static::marks($again === NULL ? [] : SchemaResolver::restored(json_decode((string) json_encode($again), TRUE)), $added);
+    static::marks($again === NULL ? [] : Schemas::decoded(SchemaResolver::restored(Schema::from(json_decode((string) json_encode($again), TRUE)))), $added);
     $added = array_diff_key($added, $marks);
     $registry = \Drupal::service('surface.resource_registry');
     assert($registry instanceof ResourceRegistry);

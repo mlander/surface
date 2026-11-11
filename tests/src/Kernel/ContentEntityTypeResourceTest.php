@@ -10,6 +10,7 @@ use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
 use Drupal\surface\Contract\Choices;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\Pipeline\SurfaceStorageInterface;
 use Drupal\surface\ResourceBuild\NamesNothingException;
@@ -23,6 +24,7 @@ use Drupal\user\UserInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the resource per entity type against the resources per bundle.
@@ -526,7 +528,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
    */
   protected function rootFields(array $schema, string $resource, string $operation): array {
     $links = [];
-    $schema = static::withoutLookups(SchemaResolver::restored($schema), '', $links);
+    $schema = static::withoutLookups(Schemas::decoded(SchemaResolver::restored(Schema::from($schema))), '', $links);
     $path = $this->container->get('Drupal\surface\ResourceBuild\ServedPathsInterface')->lookupPath($resource, $operation);
     foreach ($links as $at => $href) {
       $this->assertTrue($path !== NULL && !str_contains($path, '{'), $resource . ' ' . $operation . ' ' . $at . ': a link only where the lookup\'s path is whole.');
@@ -569,7 +571,7 @@ class ContentEntityTypeResourceTest extends SurfaceKernelTestBase {
    *   the defs, those the bundle's root names, from the whole document.
    */
   protected function variantAtSite(array $schema, string $entity_type_id, string $bundle): array {
-    $schema = SchemaResolver::restored($schema);
+    $schema = Schemas::decoded(SchemaResolver::restored(Schema::from($schema)));
     $name = $entity_type_id . '.' . $bundle . ContentEntityResources::FIELDS_SUFFIX;
     $def = $schema['$defs'][ContentEntityResources::BASE . ':' . $name] ?? NULL;
     \assert(is_array($def), $name);

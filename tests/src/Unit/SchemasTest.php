@@ -213,4 +213,48 @@ final class SchemasTest extends UnitTestCase {
     $this->assertSame($false, Schemas::map($false, static fn (Schema $node): Schema => Schema::any()), 'A boolean schema is left as it is.');
   }
 
+  /**
+   * Tests at() steps by the shape of each keyword.
+   */
+  public function testAtStepsByTheKeywordsShape(): void {
+    $schema = Schema::from(json_decode(<<<'JSON'
+      {"type": "object", "properties": {"a/b": {"type": "string"}, "~x": true, "0": {"type": "integer"}},
+       "allOf": [{"if": {"required": ["a/b"]}, "then": {"properties": {"0": false}}}],
+       "x-surface": {"by": "kind", "variants": {"k": "#/$defs/k"}},
+       "default": {"properties": {"x": 1}}}
+      JSON));
+    $this->assertSame($schema, Schemas::at($schema, ''), 'The empty pointer is the schema.');
+    $this->assertSame('string', Schemas::at($schema, '/properties/a~1b')->get('type'), 'A map step is a name, ~1 a slash.');
+    $this->assertTrue(Schemas::boolean(Schemas::at($schema, '/properties/~0x')), 'A name with a tilde, a boolean schema.');
+    $this->assertSame('integer', Schemas::at($schema, '/properties/0')->get('type'), 'A name that looks like an index.');
+    $this->assertFalse(Schemas::boolean(Schemas::at($schema, '/allOf/0/then/properties/0')), 'A list step is an index.');
+    $this->assertSame(['a/b'], Schemas::at($schema, '/allOf/0/if/required'), 'A value is the value.');
+    $this->assertSame('#/$defs/k', Schemas::at($schema, '/x-surface/variants/k'), 'A step into a value reads its members.');
+    $this->assertSame(1, Schemas::at($schema, '/default/properties/x'), 'Data shaped like a schema stays data.');
+    $this->assertNotInstanceOf(Schema::class, Schemas::at($schema, '/default'));
+    foreach (['/properties/missing', '/allOf/1', '/allOf/first', '/x-surface/none', '/type/0', 'properties'] as $missing) {
+      $this->assertNull(Schemas::at($schema, $missing), $missing . ': nothing is there.');
+    }
+    $this->assertNull(Schemas::at(Schema::boolean(TRUE), '/type'), 'A boolean schema holds no keyword.');
+  }
+
+  /**
+   * Tests decoded() writes what JSON decodes, and the two schema answers.
+   */
+  public function testDecodedAndTheBooleans(): void {
+    $document = json_decode('{"type": "object", "properties": {}, "items": {}, "x-surface": {"variants": {"0": "#/a"}}, "default": {}, "allOf": [true, {"const": 1.0}]}');
+    $schema = Schema::from($document);
+    $decoded = Schemas::decoded($schema);
+    $this->assertSame(json_decode((string) json_encode($document, JSON_PRESERVE_ZERO_FRACTION), TRUE), $decoded, 'What json_decode() gives, objects as arrays.');
+    $this->assertSame(1.0, $decoded['allOf'][1]['const'], 'A float stays a float.');
+    $this->assertFalse(Schemas::decoded(Schema::boolean(FALSE)));
+    $this->assertTrue(Schemas::boolean(Schema::boolean(TRUE)));
+    $this->assertNull(Schemas::boolean(Schema::any()), 'An object schema is no boolean.');
+    $this->assertNull(Schemas::boolean(TRUE), 'Nor is a value that is no schema.');
+    $this->assertTrue(Schemas::isObjectSchema(Schema::any()), 'An empty object schema holds keywords.');
+    $this->assertFalse(Schemas::isObjectSchema(Schema::boolean(TRUE)));
+    $this->assertTrue(Schemas::same(Schema::from(['not' => ['type' => 'null']]), ['not' => ['type' => 'null']]), 'A schema and the array it is say the same.');
+    $this->assertFalse(Schemas::same(Schema::from(['not' => ['type' => 'null']]), ['not' => ['type' => 'string']]));
+  }
+
 }

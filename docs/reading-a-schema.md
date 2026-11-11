@@ -107,7 +107,7 @@ has: `present`, `absent`, `equals`, `in`, the four bounds, `not`,
 | `ports` | `reads()`, each port's type, or its shape where the site has one |
 | `reads` | the wiring of a child's ports, where the wired key is a key of the object holding the child |
 | `by`, `variants` | variants, and the def each value chooses; `by` beside `deferred` with no union and no `variants`, a list the site decides past its budget (why: [decision](decisions.md#a-list-left-out-for-size-is-deferred-not-refined)), is an object like any other, the marker noted: no variant is in the document to read |
-| `collection` | a collection (`list` in contract 3) |
+| `collection` | a collection (`list` in contract 3), which an array of structures is read as; on a key whose items are no object, noted and not read |
 | `group`, `after` | a map that only groups, a map placed after a key |
 | `rules`, `within` | where the emitter moved its markers, put back first (`SchemaResolver::restored()`) |
 
@@ -121,6 +121,70 @@ Four keywords of the dialect are read too ([The dialect's own keywords](served-c
 | `portable-check` `drupal:JsonSchema` | that constraint, from its `schema`; with keywords the value keeps besides, one constraint, the `allOf` of both |
 | `portable-check` `drupal:SurfaceValidReference` with `entityTypeId` | a key that refers to an entity, as its author declares it, the check's options the plugin's own: `addConstraint('SurfaceValidReference', ['entityTypeId' => 'node', 'bundles' => ['article']])` on a key of the id's type ([Options](options.md#a-key-that-refers-to-an-entity)); its `oneOf` is not read, noted: the site lists its candidates, under the limit, and the widget follows as for a declared key. An entity type the site does not have, or `bundles` that is no list of names, is noted and not read: the key is read as a value of its type, the check known by its plugin alone. Any other check is noted and not read: what the emitter names there, and why, is in [What the keywords leave to the server](served-contract.md#what-the-keywords-leave-to-the-server) |
 | `x-portable-links` | not read, each link noted: a link names where a client asks, and the server writes its own; an entry with no `rel` and `href`, or a keyword that is no list, is noted as no link. The id of a key of any entity type, known only by its `lookup` link's `source`, is read as a value of its type alone (why: [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)) |
+
+### The type library and the rest of the dialect
+
+The reader holds a Portable Schema registry, the service
+`surface.portable_registry`: the type library (`Registry::withTypes()`),
+built once per container, to which a site adds its own schemas. It reads
+these keywords through it:
+
+- A `$ref` to a type `LeafTypes::LIBRARY` names (`portable:string`,
+  `portable:integer`, `portable:number`, `portable:boolean`,
+  `portable:email`, `portable:uri`, `portable:date-time`,
+  `portable:timestamp`) is a key of that leaf type: `float` for
+  `number`, `datetime_iso8601` for `date-time`, and `timestamp`, which
+  JSON Schema tells from an integer by the id alone. What the type's
+  document says beyond the row's `type` and `format` is kept as a
+  JsonSchema constraint, so the key is no wider than the type:
+  `maxLength: 254` for `portable:email`, the range of 2^53 - 1 either
+  side of zero for `portable:integer` and `portable:timestamp`. What the
+  site says beside the `$ref` (`title`, `maxLength`) is the key's own,
+  and narrows it, but for a `type` or a `format` that says otherwise
+  than the row: that is noted ("Not read: format uri beside
+  portable:email, which states email.") and the row stands. A `format`
+  the row states none of is kept beside the type. The same type is read
+  in a list's items, through a def that is only that `$ref` (the def's
+  own keywords under the site's), and as `anyOf` of the `$ref` and
+  `{"type": "null"}`, in either order, which is the type, nullable. The
+  emitter writes the row's `type` and `format`.
+- Any other type of the library is read from its document, each
+  reference into the library followed: an object type (`portable:link`,
+  `portable:image`) as a structure attached at the key, its id the
+  type's, read as the library states it, the site's keywords beside the
+  `$ref` noted and not read; any other where the key stands, noted
+  ("Read in place"), the site's keywords laid over it, and a `format` no
+  string reads (`int32` for `portable:weight`) kept as a JsonSchema
+  constraint. The type's title, description and annotations are the
+  library's, not the key's; what it says of the value (`writeOnly`,
+  `readOnly`, `default`) is the key's, so `portable:secret` is a secret.
+- A `$ref` to the library inside a schema kept for a JsonSchema
+  constraint (under `allOf`, `additionalProperties`, an `anyOf` other
+  than the nullable one) is replaced there by what the type says, so the
+  server's check reads the kept schema on its own. A `$ref` inside a
+  keyword outside the vocabulary, or inside data, is not followed, and
+  its def is not bundled.
+- A `portable:` id the registry does not hold is noted ("Not read: the
+  library has no ...") and kept as a reference to another document is.
+- `portable-typeBy` on a key of a frame is read as variants the sibling
+  it reads chooses, where all of these hold: its `source` reads one
+  value, a sibling's (`1/<key>`); the sibling lists the values it may
+  hold (`enum`, or a `oneOf` of `const`), each a string; its `href` is a
+  template of that one `{variable}`; and each value's expansion is the id of an
+  object schema the registry holds. Each schema is a variant, the
+  structure its document is, labeled by the sibling's titles; a value
+  with no schema of its own takes the `fallback`, which must be an
+  object schema the registry holds, and a `fallback` no value needs is
+  noted. The key is written again as Surface writes variants, a def
+  each. An object holding such a key, at any depth, is read as a frame,
+  not as a plain map. Where any condition fails, the keyword is noted
+  with the reason, and the key read as a value held whole, the keyword
+  kept in its JsonSchema constraint for the server's validator.
+- `portable-refine` and `portable-compare` are kept in the JsonSchema
+  constraint and noted: the server's validator checks them.
+- `x-portable-type`, `x-portable-translatable`, `x-portable-provider`
+  and `x-portable-unchecked` are noted and dropped: what they say is the
+  library's, or, for `x-portable-unchecked`, the validator's to decide.
 
 A document contract 4 wrote said both under `x-surface`: its
 `checkedOnServer`, a list of `{constraint, message, schema}`, is read as
@@ -218,6 +282,12 @@ Dropped, each noted: `$comment`, `deprecated`, `contentMediaType`,
 `contentEncoding`, `contentSchema`, `$anchor`, another vendor's `x-`
 keywords, a `default` or `examples` of a whole object, a `portable-check`
 check other than `drupal:JsonSchema` and a reference's (known by its plugin alone), the links, and what a site narrows of a child (a lock its context made).
+Noted as well: a reference to an id of the library the registry does not
+hold, a `type` or a `format` beside a type of the library that says
+otherwise, a site's keyword beside an object type of the library, a
+`portable-typeBy` not read as variants and why, a
+`portable-refine` or `portable-compare` kept, the library's annotations
+dropped, and `x-surface.collection` on a key that is no collection.
 
 ## What is refused
 
@@ -225,6 +295,9 @@ What cannot be read at all, naming its pointer:
 
 - an object at the root, a def or a variant that is no object
   (`/: what is read into a structure is an object; this is string.`);
+- a member of a keyword that holds schemas that is no object and no
+  boolean, at any depth (`/properties/b: a property is a schema, an
+  object or a boolean.`), and a schema keyword named by a number;
 - a property whose name holds a dot, which a key cannot;
 - a local reference to a def the document does not hold;
 - a type JSON Schema does not have (a single-directory component may

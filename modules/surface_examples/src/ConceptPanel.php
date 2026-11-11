@@ -19,7 +19,6 @@ use Drupal\Core\Theme\ComponentPluginManager;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\PortableKeywords;
 use Drupal\surface\Contract\SchemaReader;
-use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Contract\Choices;
 use Drupal\surface\Contract\SiteListBudget;
 use Drupal\surface\SurfaceInterface;
@@ -65,6 +64,7 @@ use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
  */
 final class ConceptPanel {
 
+  use ResolvesSchemas;
   use StringTranslationTrait;
 
   /**
@@ -462,7 +462,7 @@ final class ConceptPanel {
           $excerpt[$key] = $property;
           continue;
         }
-        $def = SchemaResolver::resolve($property, $full);
+        $def = static::resolved($property, $full);
         $excerpt[$key] = ['properties' => $def['properties'] ?? []] + array_filter([
           'allOf' => array_values(array_filter($def['allOf'] ?? [], static fn (array $condition): bool => ($condition['if']['properties']['entity_type']['const'] ?? NULL) === 'node')),
         ]);
@@ -475,7 +475,7 @@ final class ConceptPanel {
     $resource = $this->registry->getDefinition($served->resource);
     foreach ($keys as $key) {
       $property = $now['properties'][$key] ?? [];
-      $def = isset($property['$ref']) ? SchemaResolver::resolve($property, $now) : $property;
+      $def = isset($property['$ref']) ? static::resolved($property, $now) : $property;
       $rows[] = [
         $key,
         ['data' => ['#markup' => '<code>' . htmlspecialchars(self::SPELLINGS[$key]) . '</code>']],
@@ -838,8 +838,8 @@ final class ConceptPanel {
     $lock = [];
     foreach (['on_sale', 'limits'] as $map) {
       foreach ($locked as $id) {
-        $lock['full'][$map][$id] = SchemaResolver::resolve($full['properties'][$map] ?? [], $full)['properties'][$id] ?? NULL;
-        $lock['now'][$map][$id] = SchemaResolver::resolve($now['properties'][$map] ?? [], $now)['properties'][$id] ?? NULL;
+        $lock['full'][$map][$id] = static::resolved($full['properties'][$map] ?? [], $full)['properties'][$id] ?? NULL;
+        $lock['now'][$map][$id] = static::resolved($now['properties'][$map] ?? [], $now)['properties'][$id] ?? NULL;
       }
     }
     return [
@@ -873,7 +873,7 @@ final class ConceptPanel {
   protected function accessAndFacts(OperationRoute $served): array {
     $fees = static fn (array $full): array => [
       'property' => $full['properties']['fees'] ?? NULL,
-      'def' => SchemaResolver::resolve($full['properties']['fees'] ?? [], $full),
+      'def' => static::resolved($full['properties']['fees'] ?? [], $full),
     ];
     $yours = $fees($this->full($served));
     // An account with no role but the authenticated one, which has no
