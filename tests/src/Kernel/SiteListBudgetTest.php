@@ -39,8 +39,8 @@ use Symfony\Component\HttpKernel\HttpKernelInterface;
  * is spelled out in the full schema while it has at most
  * `surface.settings:site_list_limit` entries (20), and so is a map
  * of keys from the site in the tool listing. Past it the
- * full schema states the key open and `deferred`, an object holding a
- * `fetch` template, the deciding key keeps its options, and the keys from
+ * full schema states the key open and `deferred`, its `choose` link a
+ * template, the deciding key keeps its options, and the keys from
  * the site are named under `x-surface.deferred.entries`;
  * `GET .../schema?choose=<pointer>=<value>`
  * answers the full schema with that choice stated as the full schema under
@@ -204,10 +204,13 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     $this->assertSame([
       'title' => 'Panels',
       'type' => ['object', 'null'],
+      'x-portable-links' => [
+        ['rel' => 'choose', 'href' => '?choose=/panels={value}', 'source' => ['value' => '1/layout']],
+      ],
       'x-surface' => [
         'dependsOn' => ['layout'],
         'by' => 'layout',
-        'deferred' => ['fetch' => '?choose=/panels={value}'],
+        'deferred' => TRUE,
       ],
     ], $panels);
     $this->assertArrayNotHasKey('$defs', $full);
@@ -240,7 +243,7 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     $this->layouts(20);
     $this->assertArrayHasKey('anyOf', $this->full(PosterResource::class, 'resource_test.poster')['properties']['panels']);
     $this->config(SiteListBudget::SETTINGS)->set(SiteListBudget::LIMIT, 10)->save();
-    $this->assertArrayHasKey('fetch', $this->full(PosterResource::class, 'resource_test.poster')['properties']['panels']['x-surface']['deferred']);
+    $this->assertTrue($this->full(PosterResource::class, 'resource_test.poster')['properties']['panels']['x-surface']['deferred']);
   }
 
   /**
@@ -265,7 +268,8 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
 
     // Nothing chosen: open and `deferred`, as in the full schema.
     $none = $this->these(PosterResource::class, 'resource_test.poster', ['layout' => '']);
-    $this->assertArrayHasKey('fetch', $none['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertTrue($none['schema']['properties']['panels']['x-surface']['deferred']);
+    $this->assertSame('choose', $none['schema']['properties']['panels']['x-portable-links'][0]['rel']);
     $this->assertArrayNotHasKey('refine', $none['schema']['properties']['panels']['x-surface'] ?? []);
     $this->assertArrayNotHasKey('anyOf', $none['schema']['properties']['panels']);
 
@@ -287,9 +291,9 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
       $map = $full['properties'][$key];
       $this->assertSame(['object', 'null'], $map['type'], $key);
       $this->assertArrayNotHasKey('$ref', $map, $key);
-      $this->assertArrayHasKey('fetch', $map['x-surface']['deferred'], $key);
+      $this->assertSame(['entries'], array_keys($map['x-surface']['deferred']), $key);
       $this->assertArrayNotHasKey('refine', $map['x-surface'] ?? [], $key);
-      $this->assertSame('?choose=/' . $key . '={value}', $map['x-surface']['deferred']['fetch'], $key);
+      $this->assertSame([['rel' => 'choose', 'href' => '?choose=/' . $key . '={value}']], $map['x-portable-links'], $key . ': `{value}` an entry\'s id, so no source.');
       $this->assertCount(25, $map['x-surface']['deferred']['entries'], $key);
       $this->assertSame(['id' => 'bench_7', 'label' => 'Bench 7'], $map['x-surface']['deferred']['entries'][6], $key);
       $this->assertArrayNotHasKey('resource_test.workshop.' . $key, $full['$defs'] ?? []);
@@ -312,15 +316,22 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
    * A layout whose panels hold a detail of twenty-five kinds, read from its
    * own schema as variants a sibling chooses: four layouts are spelled
    * out, and inside the one, the detail is `deferred`, its fetch naming the
-   * layout chosen on the way; at nineteen kinds it is spelled out too.
+   * layout chosen on the way, a link written at the variant's site and
+   * never in its def; at nineteen kinds it is spelled out too.
    */
   public function testNestedVariantsCountAtTheirLevel(): void {
     $this->layouts(4, ['nested' => ['label' => 'Nested', 'schema' => static::nested(25)]]);
     $full = $this->full(PosterResource::class, 'resource_test.poster');
     $this->assertCount(5, $full['properties']['panels']['anyOf']);
     $detail = $full['$defs']['resource_test.poster.panels.nested']['properties']['detail'];
-    $this->assertArrayHasKey('fetch', $detail['x-surface']['deferred']);
-    $this->assertSame('?choose=/panels=nested&choose=/panels/detail={value}', $detail['x-surface']['deferred']['fetch']);
+    $this->assertTrue($detail['x-surface']['deferred']);
+    $choose = [
+      'rel' => 'choose',
+      'href' => '?choose=/panels=nested&choose=/panels/detail={value}',
+      'source' => ['value' => '1/kind'],
+    ];
+    $this->assertArrayNotHasKey('x-portable-links', $detail, 'A def holds no link.');
+    $this->assertSame(['x-portable-links' => [$choose]], static::nestedSite($full)['properties']['detail'], 'The variant\'s site carries it.');
     $this->assertSame('kind', $detail['x-surface']['by']);
     $this->assertArrayNotHasKey('anyOf', $detail);
     $this->assertCount(25, array_filter($full['$defs']['resource_test.poster.panels.nested']['properties']['kind']['oneOf'], static fn (array $choice): bool => isset($choice['const'])));
@@ -488,8 +499,8 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     $panels = $chosen['properties']['panels'];
     $this->assertSame(['object', 'null'], $panels['type']);
     $this->assertArrayNotHasKey('anyOf', $panels);
-    $this->assertArrayHasKey('fetch', $panels['x-surface']['deferred']);
-    $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels={value}', $panels['x-surface']['deferred']['fetch']);
+    $this->assertTrue($panels['x-surface']['deferred']);
+    $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels={value}', $panels['x-portable-links'][0]['href']);
     $this->assertSame(['extra_5' => '#/$defs/resource_test.poster.panels.extra_5'], $panels['x-surface']['variants']);
     $this->assertSame(['resource_test.poster.panels.extra_5'], array_keys($chosen['$defs']));
     $this->assertCount(1, $chosen['allOf']);
@@ -567,8 +578,9 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
       $nested = $chosen['$defs']['resource_test.poster.panels.nested'] ?? NULL;
       $this->assertIsArray($nested, $query . ': ' . json_encode($chosen));
       $detail = $nested['properties']['detail'];
-      $this->assertArrayHasKey('fetch', $detail['x-surface']['deferred'], $query);
-      $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels=nested&choose=/panels/detail={value}', $detail['x-surface']['deferred']['fetch'], $query);
+      $this->assertTrue($detail['x-surface']['deferred'], $query);
+      $this->assertArrayNotHasKey('x-portable-links', $detail, $query . ': a def holds no link.');
+      $this->assertSame('http://localhost/surface-api/resource_test.poster/schema?choose=/panels=nested&choose=/panels/detail={value}', static::nestedSite($chosen)['properties']['detail']['x-portable-links'][0]['href'] ?? NULL, $query);
       $this->assertSame(['kind_7'], array_keys($detail['x-surface']['variants']), $query);
       $kinds = array_values(array_filter($nested['allOf'] ?? [], static fn (array $condition): bool => isset($condition['if']['properties']['kind'])));
       $this->assertCount(1, $kinds, $query);
@@ -624,7 +636,7 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
     $lights = $chosen['properties']['lights'];
     $this->assertSame(['bench_7'], array_keys($lights['properties']));
     $this->assertSame($listed['$defs']['resource_test.workshop.lights']['properties']['bench_7'], $lights['properties']['bench_7']);
-    $this->assertArrayHasKey('fetch', $lights['x-surface']['deferred']);
+    $this->assertSame('choose', $lights['x-portable-links'][0]['rel']);
     $this->assertCount(25, $lights['x-surface']['deferred']['entries']);
     $this->assertArrayNotHasKey('additionalProperties', $lights);
     $benches = $chosen['properties']['benches'];
@@ -700,6 +712,24 @@ class SiteListBudgetTest extends SurfaceKernelTestBase {
       return $node;
     };
     return $strip($schema);
+  }
+
+  /**
+   * Reads the nested layout's site: the narrowing its conditional states.
+   *
+   * @param array $schema
+   *   The poster's full schema.
+   *
+   * @return array
+   *   The narrowing of `panels` where `layout` is `nested`.
+   */
+  protected static function nestedSite(array $schema): array {
+    foreach ($schema['allOf'] ?? [] as $condition) {
+      if (($condition['if']['properties']['layout']['const'] ?? NULL) === 'nested') {
+        return $condition['then']['properties']['panels']['allOf'][1] ?? [];
+      }
+    }
+    return [];
   }
 
 }

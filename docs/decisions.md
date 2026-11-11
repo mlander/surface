@@ -9549,6 +9549,8 @@ Decided 2026-10-23, with example 16, the sponsorship
   `{by: "entity_type"}` on a bare key's id: the reference keyword the
   Portable Schema notes argued for, as an `x-surface` keyword, so a
   client that does not read it reads an id of the key's type.
+  *Superseded 2026-11-10:* it is the check's options and a `lookup`
+  link ([A reference and a deferred list are the dialect's check options and links](#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)).
 
 *Open:* a multi-value reference, a list of
 references (`addList()` of an entity type); a lookup tool for an agent with no
@@ -10134,7 +10136,9 @@ key is counted, is unchanged.
   A client fills `{value}` with the deciding key's value, or an entry's
   id. In a document no route serves (a baseline, the contract panel, the
   tool's answer) the template is its query alone, read against the full
-  schema's URL.
+  schema's URL. *Superseded 2026-11-10:* the template is the key's
+  `choose` link, and `deferred` is `true` or its entries
+  ([A reference and a deferred list are the dialect's check options and links](#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)).
 - **What the fetch answers.** `GET .../schema?choose=<pointer>=<value>`,
   once or more, answers the full schema with each choice stated as the
   full schema under the limit states it: a variant's def in `$defs` and
@@ -11349,7 +11353,8 @@ nothing else moves, and no path.
   module writes; it stays for any schema a site adds without one.
 - **Later.** The widget hints become `x-portable-ui` (done 2026-11-10,
   [The UI hints are `x-portable-ui`](#the-ui-hints-are-x-portable-ui)); a reference
-  `portable-check` with `x-portable-links`; variants `portable-typeBy`;
+  `portable-check` with `x-portable-links` (done 2026-11-10,
+  [A reference and a deferred list are the dialect's check options and links](#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)); variants `portable-typeBy`;
   `refine` `portable-refine`; a shape a `portable:` type; the emitter
   builds through `Schema`, the reader reads through `Schema::from()`,
   and the pipeline validates through the dialect's validator. Each is
@@ -11467,6 +11472,134 @@ no hints, so none of them moved.
 `SchemaResolver::merge()`, `SchemaResolver::mixIn()`,
 `ContractDiff::keyword()`, `app/src/contract.ts`,
 `app/src/widgets/Field.tsx`, `UiKeywordTest`)
+
+### A reference and a deferred list are the dialect's check options and links
+
+Decided 2026-11-10. What a key that refers to an entity refers to is the
+options of its check, and where a client asks the server for what a
+document leaves out is a link of the dialect's `x-portable-links`.
+Contract 5 stays 5: the lint reports each moved node as a note, and
+nothing a value may be changed.
+
+- **A reference is its check's options.** The check already sat on every
+  key that names its entity type, `{"drupal:SurfaceValidReference": {}}`.
+  Its options now say what it holds a value to, in the plugin's own
+  option names, `{"entityTypeId": "node", "bundles": ["article"]}`,
+  `bundles` only where the key names any; the message is unchanged. The
+  options are exactly the plugin's, so a check provider passes them to
+  the plugin as they are.
+  `x-surface.reference` is not written. A reader reads the key back
+  from the check as its author declares it,
+  `addConstraint('SurfaceValidReference', ['entityTypeId' => ...])` on a
+  key of the id's type, and reads no `oneOf` for it: the site lists the
+  candidates under the limit, and the widget follows from the site.
+- **The lookup is a link.** On every key that refers to one entity
+  type, listed or not, `{"rel": "lookup", "href":
+  "<lookup URL>?key=<pointer>{&q,limit}"}`, the pointer the key's JSON
+  Pointer, which the lookup takes as `key`; `{&q,limit}` is RFC 6570's
+  query continuation for the two optional parameters. The id of a key of
+  any entity type that is not refined to one has no check, and its link
+  reads `type` from its sibling; refined to one entity type, it carries
+  the check with its options and the same link: `&type={type}` before the braces and `"source": {"type":
+  "1/entity_type"}`, a Relative JSON Pointer from the id's value, up to
+  the object that holds it, then `References::TYPE_KEY`. The
+  `References::TARGETS` setting names the bundles per entity type, not
+  the sibling, so the sibling is that constant.
+- **The href is concrete.** The lookup URL is built as the schema URL
+  is: in a document the HTTP door serves, from the request's parameters
+  (`ResourceApiController` passes it to `emit()` and `emitFull()`, as it
+  passes the schema URL), so an identity segment is the request's id.
+  A document no route serves (a baseline, the contract panel, the
+  OpenAPI document's component) names
+  `ServedPathsInterface::lookupPath()` where the path takes no
+  parameter, and no link where it does: a template variable the document
+  does not explain is never written. The variables are the ones `source`
+  names, and `q` and `limit`; a client fills nothing else.
+- **No link where the lookup does not answer.** The lookup answers for
+  the operation `GET` serves at the path, so an operation served at its
+  own custom method gets no link: `ServedPathsInterface::lookupPath()`
+  is NULL for it, and the emitter, the tool door's sentence and the
+  OpenAPI document agree.
+- **A link is a site's, never a def's.** The pointer in a lookup link,
+  and whether the lookup reaches the key, depend on where the structure
+  is used, and several sites share one def. So a link is written only at
+  a site: the frame's own key, or the site's narrowing for a key inside
+  a def, `properties.<site>.allOf[1].properties.<key>`; the full schema
+  describes such a child at its site, not as its def alone. Where the
+  def's key and the site's differ in links alone, the narrowing carries
+  `x-portable-links` alone: the check and its messages are written whole
+  with the hints and `x-surface` for a client of contract 2, and a link
+  has no such reason. A `choose` link follows the same rule. A def is
+  never split by its sites (no `@2`).
+- **Where no link is written.** Without the HTTP door
+  (`surface_http`), the emitter has no lookup path, so no link: the
+  check keeps its options. A document for no operation (a structure's
+  baseline, a document read back) has none. A key the lookup does not
+  find has none: the lookup walks attached children
+  (`References::definitionAt()`), never into a collection's item, a
+  module's mount or a variant, so a link there would name a 404; the
+  tool door's sentence and the OpenAPI document's key list follow the
+  same walk; the OpenAPI document reads the keys from the data surface,
+  so a link withheld does not drop a key from its list.
+- **A deferred list's fetch is a link.** `x-surface.deferred` keeps the
+  marker and the entries and loses the template: `true` on a key with
+  variants, `{"entries": [...]}` on a map of keys from the site. The
+  template, as `ContractEmitter::fetch()` writes it, is a `choose` link.
+  On variants `{value}` is the deciding key's value, so the link says
+  where to read it, `"source": {"value": "1/<by>"}`, the sibling `by`
+  names; on a map it is an entry's id, which the entries list gives, so
+  the link has no `source`.
+- **Link relations.** `lookup` and `choose` are Surface's rel names: the
+  vocabulary shapes a link as a JSON Hyper-Schema Link Description
+  Object and registers no rel. A node carries `lookup` before `choose`.
+- **Where the keyword stands.** After `x-portable-ui` and before
+  `x-surface` (`PortableKeywords::LINKS`, `PortableLinks`). A link is
+  never a widget hint: a document without the hints keeps it, and so
+  does the full schema. It is data below an applicator
+  (`DocumentHead::DATA`), and is left out of a conditional's `then`.
+- **The lint.** `ContractDiff` compares `x-portable-links` as one
+  keyword: changed, added or removed is a note. The check's options
+  changed was a note already. The lint against the baselines pinned
+  before this change reported a note on each of the 12 reference nodes
+  and on each new link, and nothing that breaks.
+- **The reader.** A link is noted and not read: the server writes its
+  own; an entry with no `rel` and `href`, or a keyword that is no list,
+  is noted as no link. A check that names an entity type the site does
+  not have, or bundles that are no list of names, is not read as a
+  reference: noted, the key read as a value of its type. The id of a key of any entity type, known only by its link's
+  `source`, is read as a value of its type, as before. A document served
+  before this change is read as the emitter writes it now
+  (`SchemaReader::linked()`): `x-surface.reference {entityType,
+  bundles?}` into the check's options, `{entityTypeId, bundles?}`, `deferred.fetch` into a `choose`
+  link; the bare id's `{by}` is left out, since its lookup link names a
+  path the document does not give.
+- **React.** The autocomplete looks an id up at the key's `lookup`
+  link, its template expanded with `q` and each `source` variable, and
+  sends nothing while a `source` variable is empty; the page names no
+  lookup of its own any more. The expander refuses an RFC 6570 operator
+  or modifier it does not support rather than write a wrong URL. A
+  deferred key's fetch is its `choose` link, `{value}` read where its
+  `source` says. A key with no link takes an id typed alone.
+- **OpenAPI.** The `:lookup` path and its `key` enum list the keys the
+  lookup answers for, read from the data surface (`References`); they
+  are as before.
+- **Later.** A lookup inside a collection's item, a mount or a
+  variant, and the link for it. An `?operation=` parameter on `:lookup`,
+  so an operation `GET` does not serve at its path (a create form) gets
+  a working lookup and its link. Once validation runs through the checks,
+  the lint can judge a check's options by meaning: a bundle added widens,
+  a bundle removed or another entity type narrows.
+
+(`PortableLinks`, `PortableKeywords::LINKS`, `PortableKeywords::write()`,
+`PropertySchema::checked()`, `ContractEmitter::linked()`,
+`ContractEmitter::lookup()`, `ContractEmitter::linksBelow()`,
+`ContractEmitter::fetch()`, `PropertySchema::narrowing()`,
+`ServedPaths::lookupPath()`, `ResourceApiController::lookupAt()`,
+`References::targetOf()`, `References::TYPE_KEY`,
+`SchemaReader::linked()`, `SchemaReader::droppedLinks()`,
+`SchemaReader::referenceOptions()`,
+`ContractDiff::keyword()`, `OpenApiDocument::references()`,
+`app/src/contract.ts`, `app/src/widgets/Inputs.tsx`, `LinksKeywordTest`)
 
 ### The emitter is one walk and three writers
 

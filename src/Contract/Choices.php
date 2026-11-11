@@ -43,7 +43,7 @@ final class Choices {
   public const PARAMETER = 'choose';
 
   /**
-   * The expression a `fetch` template names the value by (RFC 6570).
+   * The expression a `choose` link's template names the value by (RFC 6570).
    */
   public const VALUE = '{value}';
 

@@ -1356,7 +1356,8 @@ renames sit in A because they are cheapest before new code exists.
     autocomplete` in both documents and the resource's lookup, `GET
     .../{x}:lookup`, which the tool listing names, the React app calls
     and the OpenAPI document describes; `x-surface.reference` on every
-    reference key. Open: a uuid representation; a multi-value reference,
+    reference key at the time, since 2026-11-10 the check's options and a
+    `lookup` link. Open: a uuid representation; a multi-value reference,
     a list of references; a
     lookup tool for an agent with no HTTP; a custom method's own lookup;
     a stored id the account may no longer reference. (The entity side's

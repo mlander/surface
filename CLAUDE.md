@@ -319,8 +319,9 @@ the record of the rework that brought the module to the pattern.
   selection handler's for the account (`Reference\References`), listed
   up to `surface.settings:reference_list_limit` and looked up past
   it, with core's entity autocomplete on the form and `GET
-  .../{x}:lookup` over HTTP; `x-surface.reference` marks it in both
-  documents (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
+  .../{x}:lookup` over HTTP; both documents state what it refers to as
+  its check's options and name the lookup as its `lookup` link under
+  `x-portable-links` (example 16, `docs/options.md#a-key-that-refers-to-an-entity`,
   `docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up`).
   A content entity's reference field's `target_id` is one, answered by
   the field's own selection handler and settings
@@ -543,18 +544,30 @@ the record of the rework that brought the module to the pattern.
   (`ContractEmitter::DIALECT`): JSON Schema 2020-12 with a profile, fixed
   rules where the standard leaves a choice, and a vocabulary of its own,
   the package `fago/portable-schema` (`PortableSchema\`, required by the
-  module). Three of its keywords are written beside the standard ones,
+  module). Four of its keywords are written beside the standard ones,
   in this order, before `x-surface` (`Contract\PortableKeywords`):
   **`portable-check`**, what only the server checks, a map from
-  `drupal:<constraint plugin id>` to its options (`{}`, or
-  `{"schema": ...}` for `drupal:JsonSchema`); **`x-portable-messages`**,
+  `drupal:<constraint plugin id>` to its options (`{}`,
+  `{"schema": ...}` for `drupal:JsonSchema`, or what a reference refers
+  to, the plugin's own options `{"entityTypeId": ..., "bundles"?: [...]}`, for
+  `drupal:SurfaceValidReference`); **`x-portable-messages`**,
   a message per error code, a Regex's under `pattern` (or `not`), then
   each check's under `check.drupal:<id>`; and **`x-portable-ui`**, the
   widget hints (`Contract\PortableUi`): `widget`, `options`
   (`multiple`, the arrangement's texts, `emptyOption`), `group` by id,
   `weight`, and each group declared once on its frame under `groups`,
   all but `options.emptyOption` written only when a renderer asks for
-  the hints (`docs/decisions.md#the-ui-hints-are-x-portable-ui`). They
+  the hints (`docs/decisions.md#the-ui-hints-are-x-portable-ui`); and
+  **`x-portable-links`** (`Contract\PortableLinks`), where a client asks
+  the server for what a document leaves out, never a hint: a `lookup`
+  link on a reference key the lookup finds, where the HTTP door is
+  installed and `GET` serves the operation at its path,
+  `<lookup URL>?key=<pointer>{&q,limit}`, the URL concrete as the schema
+  URL is (a bare id's with `&type={type}` and `source: {type:
+  "1/entity_type"}`), and a `choose` link on a deferred list, the full
+  schema with one entry stated; a link is a site's, written at a key of
+  the frame or at a site's narrowing, never in a def
+  (`docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links`). They
   stay on their node below an applicator, where `x-surface` moves to
   `within`. `format: email`, not `idn-email`,
   which the profile refuses
@@ -563,7 +576,7 @@ the record of the rework that brought the module to the pattern.
   it, and what an invoker does: `enumerated`, stated in full, narrow
   locally; `deferred`, a list the site decides left out for its size,
   fetch per choice (`GET .../schema?choose=<pointer>=<value>`, the
-  key's `deferred.fetch` template filled) and cache, or ask the narrowing;
+  key's `choose` link expanded) and cache, or ask the narrowing;
   `refine`, a static rule that cannot be written out, ask the narrowing
   with values; `live`, a runtime rule or a runtime access answer, ask
   per request and never cache; beside them, the dialect's
@@ -953,7 +966,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2238, Assertions: 55376, Errors: 0, Failures: 0, Skipped: 3. Classes: 313 of 313, 8 at a time, browser classes 4.
+phpunit: Tests: 2248, Assertions: 55722, Errors: 0, Failures: 0, Skipped: 3. Classes: 314 of 314, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -973,8 +986,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2124, Assertions: 50826, Skipped: 3, Deprecations: 155. Classes:
-260, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2134, Assertions: 51168, Skipped: 3, Deprecations: 155. Classes:
+261, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1295,7 +1308,8 @@ src/Contract/            The served contract's emitter (a Portable Schema
                          Conditionals the if/then, DocumentHead the top,
                          PortableKeywords the dialect's portable-check and
                          x-portable-messages, PortableUi its
-                         x-portable-ui; ServedContract, the
+                         x-portable-ui, PortableLinks its
+                         x-portable-links; ServedContract, the
                          document, whose schema() and outputs() answer
                          it as a PortableSchema\Builder\Schema;
                          the contract diff; the schema reader; the two

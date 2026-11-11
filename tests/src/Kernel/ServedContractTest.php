@@ -278,7 +278,9 @@ class ServedContractTest extends SurfaceKernelTestBase {
       'library' => 'Old Library',
       'riverside' => 'Riverside Hall',
     ], $this->titles($venue));
-    $this->assertSame(['entityType' => 'event_venue'], $venue['x-surface']['reference']);
+    $this->assertSame(['entityTypeId' => 'event_venue'], $venue['portable-check']['drupal:SurfaceValidReference']);
+    $this->assertSame('lookup', $venue['x-portable-links'][0]['rel']);
+    $this->assertStringEndsWith('/surface-api/registration.step2:lookup?key=/venue{&q,limit}', $venue['x-portable-links'][0]['href']);
     $this->assertArrayNotHasKey('enum', $venue);
     $this->assertSame('select', $venue['x-portable-ui']['widget']);
     // Required, and a valid choice is stored: no empty option.

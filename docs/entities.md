@@ -472,7 +472,9 @@ done about it.
     (why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects));
     past that the key takes an id, the lookup (`GET .../{x}:lookup`)
     finds one and the constraint's validator asks the handler. Both
-    documents mark it `x-surface.reference`. A form display that draws
+    documents state it as the options of its check under
+    `portable-check` and, with the HTTP door, name the lookup as its
+    `lookup` link. A form display that draws
     the field with `entity_reference_autocomplete` asks for the
     autocomplete widget, its `match_operator` and `match_limit` handed
     to core's autocomplete route

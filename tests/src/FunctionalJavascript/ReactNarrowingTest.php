@@ -141,7 +141,7 @@ class ReactNarrowingTest extends ExamplesWebDriverTestBase {
    *
    * With the limit at two, the four components are more than it: the full
    * schema states the props and slots open, `deferred`, each with a
-   * `fetch` template, so choosing the hero fetches the full schema with
+   * `choose` link, so choosing the hero fetches the full schema with
    * the hero's props, then its props and slots, chosen, and narrows from
    * it with no narrowing asked; a component chosen again is not fetched
    * again.

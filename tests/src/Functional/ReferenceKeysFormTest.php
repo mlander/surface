@@ -142,7 +142,7 @@ class ReferenceKeysFormTest extends BrowserTestBase {
     $this->drupalGet('surface-react/event.sponsorship/configure');
     $this->assertSession()->statusCodeEquals(200);
     $settings = $this->getDrupalSettings()['surfaceReact']['endpoints'];
-    $this->assertStringEndsWith('/surface-api/event.sponsorship:lookup', $settings['lookup']);
+    $this->assertArrayNotHasKey('lookup', $settings, 'Each reference key names its lookup as a link.');
 
     $schema = $this->decoded($this->send('GET', 'surface-api/event.sponsorship/schema'), 200, 'application/schema+json');
     $thing = $schema['$defs']['event.sponsorship.thing'];
@@ -153,7 +153,13 @@ class ReferenceKeysFormTest extends BrowserTestBase {
     $this->assertContains($article, array_column($node[0]['then']['properties']['id']['oneOf'], 'const'), 'The candidates of a node, for this account: what the page draws once node is chosen.');
     $this->assertNotContains((string) $this->nodes()['draft'], array_column($node[0]['then']['properties']['id']['oneOf'], 'const'));
     $this->assertSame('select', $schema['properties']['venue']['x-portable-ui']['widget']);
-    $this->assertSame(['entityType' => 'event_venue'], $schema['properties']['venue']['x-surface']['reference']);
+    $this->assertSame(['entityTypeId' => 'event_venue'], $schema['properties']['venue']['portable-check']['drupal:SurfaceValidReference']);
+    $this->assertStringEndsWith('/surface-api/event.sponsorship:lookup?key=/venue{&q,limit}', $schema['properties']['venue']['x-portable-links'][0]['href']);
+    // The bare id's link is the site's, at its narrowing, never in the def.
+    $this->assertArrayNotHasKey('x-portable-links', $thing['properties']['id']);
+    $id = $schema['properties']['thing']['allOf'][1]['properties']['id'];
+    $this->assertSame(['type' => '1/entity_type'], $id['x-portable-links'][0]['source']);
+    $this->assertStringEndsWith('/surface-api/event.sponsorship:lookup?key=/thing/id&type={type}{&q,limit}', $id['x-portable-links'][0]['href']);
   }
 
 }

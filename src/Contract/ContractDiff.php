@@ -395,6 +395,9 @@ final class ContractDiff {
       PortableKeywords::MESSAGES => $one('the messages changed', self::NOTE),
       // The widget hints: how a key is drawn, never what it accepts.
       PortableKeywords::UI => $one(PortableKeywords::UI . ' changed', self::NOTE),
+      // Where a client asks for what the document leaves out, never what
+      // a key accepts.
+      PortableKeywords::LINKS => $one(PortableKeywords::LINKS . ' changed', self::NOTE),
       'readOnly' => $one($b === TRUE ? 'read only now' : 'no longer read only', $b === TRUE ? self::NARROWS : self::WIDENS),
       'type' => $this->type($in_old ? (array) $a : NULL, $in_new ? (array) $b : NULL, $one),
       'enum' => $this->choices(array_map(static fn ($value): array => ['const' => $value], (array) $a), array_map(static fn ($value): array => ['const' => $value], (array) $b), $path, $owner, $reading),

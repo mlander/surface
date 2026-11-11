@@ -1,4 +1,4 @@
-import { choices, fieldId, isEmpty, jsonType, sameValue } from '../contract';
+import { choices, fieldId, isEmpty, jsonType, linkOf, relativeValue, sameValue } from '../contract';
 import { useContext, useEffect, useState } from 'react';
 import { describedBy, Description, Errors, isLocked, Item, LookupContext, RequiredMarker, type FieldProps } from './Shell';
 
@@ -337,21 +337,25 @@ export function UnsupportedField(props: FieldProps): JSX.Element {
 
 /**
  * A key that refers to an entity: listed, a select; past the site's limit,
- * a text input whose suggestions the resource's lookup answers.
+ * a text input whose suggestions the key's `lookup` link answers.
  *
  * While the schema lists the candidates (`oneOf`, a bare reference's id
  * narrowed by its entity type), it is drawn as the select the form draws.
- * Otherwise the text typed is looked up, for the account, by label, and a
- * suggestion chosen sets its id; an id typed alone is taken as it is, as
- * the form's entity autocomplete takes it, and the server checks either.
+ * Otherwise the text typed is looked up, for the account, by label, at the
+ * key's `lookup` link, its `q` the text and each variable its `source`
+ * names read from the values (a bare reference's `type`, its sibling's),
+ * and a suggestion chosen sets its id; an id typed alone is taken as it
+ * is, as the form's entity autocomplete takes it, and the server checks
+ * either. A key with no link (no HTTP door, or a key the lookup does not
+ * reach) takes an id typed alone.
  */
 export function AutocompleteField(props: FieldProps): JSX.Element {
   const lookup = useContext(LookupContext);
   const [text, setText] = useState<string>(isEmpty(props.value) ? '' : String(props.value));
   const [found, setFound] = useState<{ id: string | number; label: string }[]>([]);
-  const reference = props.schema['x-surface']?.reference;
-  const by = reference?.by;
-  const type = by === undefined ? undefined : props.parentValues?.[by];
+  const link = linkOf(props.schema, 'lookup');
+  // Each variable the link reads, from the object the key sits in.
+  const sourced = Object.fromEntries(Object.entries(link?.source ?? {}).map(([name, pointer]) => [name, relativeValue(pointer, props.parentValues ?? { [props.name]: props.value }, props.name)]));
   useEffect(() => {
     setText(isEmpty(props.value) ? '' : String(props.value));
   }, [props.value]);
@@ -362,11 +366,11 @@ export function AutocompleteField(props: FieldProps): JSX.Element {
   const ask = (typed: string) => {
     setText(typed);
     props.onChange(props.path, typed === '' ? null : typed);
-    if (lookup === null || typed === '' || (by !== undefined && typeof type !== 'string')) {
+    if (lookup === null || link === undefined || typed === '' || Object.values(sourced).some(isEmpty)) {
       setFound([]);
       return;
     }
-    lookup(props.path, typed, typeof type === 'string' ? type : undefined).then(setFound, () => setFound([]));
+    lookup(link.href, { ...sourced, q: typed }).then(setFound, () => setFound([]));
   };
   return (
     <Item props={props} marker={props.required}>

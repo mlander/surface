@@ -35,7 +35,9 @@ use Drupal\surface\Widget\SurfaceWidgetManager;
  * key that is not a child (property()): its type and the keywords its
  * constraints state, its allowed values as `oneOf` with their labels,
  * read from the options service, its widget hints (`x-portable-ui`), its
- * `x-surface`, and what only the server checks. A key declared with a
+ * `x-surface`, and what only the server checks, a reference's check with
+ * what it refers to as its options (checked()); ContractEmitter adds its
+ * `lookup` link (`x-portable-links`). A key declared with a
  * shape is written whole, and named() files the shape's def once and
  * turns the key into a reference to it. A child's site is a reference to
  * its def with only what differs from it (reference(), narrowing()).
@@ -193,7 +195,9 @@ final class PropertySchema {
    * the def does not already state; and a property's `x-surface` and
    * `x-portable-ui`, which a renderer reads whole, are written whole
    * wherever either differs, less what the document strips anyway, with
-   * its `portable-check` and `x-portable-messages`.
+   * its `portable-check` and `x-portable-messages`. Its
+   * `x-portable-links` are compared on their own and written where they
+   * differ: a def holds none, a site's key its own.
    *
    * @param array $instance
    *   The instance.
@@ -219,7 +223,17 @@ final class PropertySchema {
       self::EXTENSION => array_diff_key((array) ($schema[self::EXTENSION] ?? []), array_flip($transient)),
     ];
     $differs = !Subschemas::same($whole($instance), $whole($def));
+    // A link names a site, so it is the site's alone: no BC reason ties it
+    // to the rest. Decision: see
+    // docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
+    $linked = !Subschemas::same($instance[PortableKeywords::LINKS] ?? NULL, $def[PortableKeywords::LINKS] ?? NULL);
     foreach ($instance as $keyword => $value) {
+      if ($keyword === PortableKeywords::LINKS) {
+        if ($linked) {
+          $narrowing[$keyword] = $value;
+        }
+        continue;
+      }
       if (in_array($keyword, $said, TRUE)) {
         if ($differs) {
           $narrowing[$keyword] = $value;
@@ -397,10 +411,6 @@ final class PropertySchema {
       };
       $extension = $this->extension($depends, $refined);
       $ui = PortableUi::write($widget);
-      $reference = static::referenceMarker($definition);
-      if ($reference !== NULL) {
-        $extension['reference'] = $reference;
-      }
       if ($fixed) {
         // A deciding key whose variants offer one value, or a key its
         // context fixed to one: that value, and the label it is offered
@@ -525,7 +535,7 @@ final class PropertySchema {
    *   Its def.
    */
   protected function shapeDef(array $schema): array {
-    unset($schema[self::EXTENSION], $schema[PortableUi::KEYWORD]);
+    unset($schema[self::EXTENSION], $schema[PortableUi::KEYWORD], $schema[PortableKeywords::LINKS]);
     return $schema;
   }
 
@@ -654,32 +664,6 @@ final class PropertySchema {
   public function asked(DataDefinitionInterface $definition): ?string {
     $asked = $definition->getSetting('widget');
     return is_string($asked) && $asked !== '' ? $asked : NULL;
-  }
-
-  /**
-   * Says what a key that refers to an entity refers to.
-   *
-   * `{entityType, bundles?}` for a key that names one entity type, as
-   * `entity:<type>[:<bundle>]` builds it and a bare `entity` key's id is
-   * once its entity type is chosen; `{by: "entity_type"}` for that id
-   * before it is, its entity type its sibling's value. The id is the value
-   * either way.
-   *
-   * Decision: see
-   * docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
-   *
-   * @param \Drupal\Core\TypedData\DataDefinitionInterface $definition
-   *   The key.
-   *
-   * @return array|null
-   *   The marker, or NULL for a key that refers to nothing.
-   */
-  protected static function referenceMarker(DataDefinitionInterface $definition): ?array {
-    $target = References::target($definition);
-    if ($target !== NULL) {
-      return $target['bundles'] === [] ? ['entityType' => $target['entityType']] : $target;
-    }
-    return $definition->getSetting(References::TARGETS) !== NULL ? ['by' => 'entity_type'] : NULL;
   }
 
   /**
@@ -914,15 +898,19 @@ final class PropertySchema {
    * entry carries a sentence: the constraint's own reason where it was
    * given one (SurfaceUnique's), else its own message (a Regex's is
    * how a person is told what it allows), else the label its plugin
-   * declares, else the id again.
-   * Decision: see docs/decisions.md#contract-2.
+   * declares, else the id again. A reference's check states what it
+   * refers to as its options, `{entityTypeId, bundles?}`, the plugin's own
+   * option names, the bundles only where it names any: the one fact a
+   * client needs of it, and what a reader reads the key back from.
+   * Decision: see docs/decisions.md#contract-2,
+   * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
    *
    * @param string $name
    *   The constraint's plugin id.
    * @param mixed $options
    *   Its options.
    *
-   * @return array{constraint: string, message: string}
+   * @return array{constraint: string, message: string, options?: array}
    *   The entry.
    */
   protected function checked(string $name, mixed $options): array {
@@ -945,7 +933,12 @@ final class PropertySchema {
       $label = $this->constraints?->getDefinitions()[$name]['label'] ?? NULL;
       $message = $label instanceof \Stringable || (is_string($label) && $label !== '') ? $label : $name;
     }
-    return ['constraint' => $name, 'message' => PlainText::of($message)];
+    $entry = ['constraint' => $name, 'message' => PlainText::of($message)];
+    $target = $name === References::CONSTRAINT && is_array($options) ? References::targetOf($options) : NULL;
+    if ($target !== NULL) {
+      $entry['options'] = ['entityTypeId' => $target['entityType']] + ($target['bundles'] === [] ? [] : ['bundles' => $target['bundles']]);
+    }
+    return $entry;
   }
 
   /**
@@ -1166,7 +1159,7 @@ final class PropertySchema {
    *   The schema in plain JSON Schema.
    */
   public function withoutExtension(array $schema): array {
-    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message'], $schema[self::SHAPED], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES], $schema[PortableKeywords::UI]);
+    unset($schema[self::EXTENSION], $schema[self::EXTENSION . '-checked'], $schema[self::EXTENSION . '-pattern-message'], $schema[self::SHAPED], $schema[PortableKeywords::CHECK], $schema[PortableKeywords::MESSAGES], $schema[PortableKeywords::UI], $schema[PortableKeywords::LINKS]);
     foreach ($schema as $key => $value) {
       if (is_array($value)) {
         $schema[$key] = $this->withoutExtension($value);

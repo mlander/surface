@@ -353,8 +353,8 @@ rooms as a `oneOf` and name nothing under `portable-check`.
 constraint of its own, a `Choice` subclass, a validator that read the
 enabled venues and a resolver that listed them. It is now
 a string with `SurfaceValidReference` naming `event_venue`, step 2 with no code:
-its candidates are core's selection handler's, and both documents mark
-it `x-surface.reference`. The room keeps what no stock constraint
+its candidates are core's selection handler's, and both documents state
+it as its check's options, `{"entityTypeId": "event_venue"}`. The room keeps what no stock constraint
 says, a room of one of the site's venues: one constraint with its
 validator and its resolver, and a narrower one its refiner adds for the
 venue chosen
@@ -460,6 +460,17 @@ constraint's validator holds to the handler, drawn by core's
 `entity_autocomplete` element ([Widgets](widgets.md#the-stock-widgets)),
 `x-portable-ui.widget: autocomplete` in both documents, and looked up with
 the resource's lookup ([The served contract](served-contract.md#a-lookup)).
+Listed or not, both documents state what the key refers to as the
+options of its check, `"portable-check": {"drupal:SurfaceValidReference":
+{"entityTypeId": "node", "bundles": ["article"]}}`, the plugin's own
+options, and, where the HTTP door serves the operation's lookup, name it
+as the key's `lookup` link,
+`{"rel": "lookup", "href": "/surface-api/event.sponsorship:lookup?key=/page{&q,limit}"}`;
+the id of a key of any entity type has no check and a link that reads
+its entity type from its sibling, written where the structure is used;
+refined to one entity type, it carries the check with its options and
+that link
+(why: [decision](decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)).
 The list's cacheability is what the handler read: the entity type's list
 tags, the contexts `References::CONTEXTS` names for it
 (`user.permissions`, and `user.node_grants:view` for a node), and the
@@ -487,7 +498,7 @@ of the variant the stored values choose, if any
 Where a reference key past its limit is looked up by label, such a key
 is fetched per choice: choose the deciding key, then fetch the full
 schema with that choice stated, `GET .../schema?choose=/props=<value>`,
-the key's `x-surface.deferred.fetch` filled, once per value, and keep it until
+the key's `choose` link expanded, once per value, and keep it until
 the site's list changes
 ([the fetch per choice](served-contract.md#the-fetch-per-choice)). Or
 ask with values, `POST .../schema` over HTTP or the narrowing tool,

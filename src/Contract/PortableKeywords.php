@@ -8,20 +8,25 @@ namespace Drupal\surface\Contract;
  * Writes and reads the dialect's own keywords both documents carry.
  *
  * Every document is a Portable Schema document (ContractEmitter::DIALECT),
- * and three things Surface once said under `x-surface` the dialect has
+ * and four things Surface once said under `x-surface` the dialect has
  * words for:
  *
  * - `portable-check`, a constraint only the server checks: a map from
  *   `drupal:<plugin id>` to its options, an empty object, since the
  *   document says which plugin checks and not how it is configured; a
  *   JsonSchema constraint's options are the schema it holds a value to,
- *   `{"schema": ...}`, so a reader reads the same constraint back;
+ *   `{"schema": ...}`, and a reference's what it refers to,
+ *   `{"entityTypeId": ..., "bundles": [...]}`, so a reader reads the same
+ *   constraint back;
  * - `x-portable-messages`, a message for an error code: a Regex's under
  *   the code of the keyword it goes with (`pattern`, or `not` for
  *   `not: {pattern}`), first, then each check's under
  *   `check.drupal:<plugin id>`;
  * - `x-portable-ui`, the widget hints: how a key is drawn, never what it
- *   accepts (PortableUi writes it).
+ *   accepts (PortableUi writes it);
+ * - `x-portable-links`, where a client asks for what the document leaves
+ *   out: a reference key's candidates, a deferred list's entry
+ *   (PortableLinks writes it).
  *
  * On a node they come after the standard keywords, in that order, and
  * before `x-surface` (before()). They are keywords of the dialect: they
@@ -29,7 +34,8 @@ namespace Drupal\surface\Contract;
  * (DocumentHead::owning()).
  *
  * Decision: see
- * docs/decisions.md#the-served-document-is-a-portable-schema-document.
+ * docs/decisions.md#the-served-document-is-a-portable-schema-document,
+ * docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
  *
  * @internal
  */
@@ -51,6 +57,11 @@ final class PortableKeywords {
   public const UI = 'x-portable-ui';
 
   /**
+   * The keyword holding the links a client follows.
+   */
+  public const LINKS = 'x-portable-links';
+
+  /**
    * The namespace of a check Drupal provides: a constraint plugin's id.
    */
   public const PROVIDER = 'drupal:';
@@ -61,9 +72,9 @@ final class PortableKeywords {
   public const CHECK_CODE = 'check.';
 
   /**
-   * The three keywords, in the order a node carries them.
+   * The four keywords, in the order a node carries them.
    */
-  public const KEYWORDS = [self::CHECK, self::MESSAGES, self::UI];
+  public const KEYWORDS = [self::CHECK, self::MESSAGES, self::UI, self::LINKS];
 
   /**
    * Writes the constraints only the server checks, and the messages.
@@ -72,9 +83,10 @@ final class PortableKeywords {
    * message stand, but for JsonSchema, whose schemas are held together as
    * an `allOf`. A message that is empty is left out.
    *
-   * @param list<array{constraint: string, message?: string, schema?: array|\stdClass}> $entries
+   * @param list<array{constraint: string, message?: string, schema?: array|\stdClass, options?: array}> $entries
    *   Each constraint only the server checks, in order: its plugin id, what
-   *   it checks, and for JsonSchema the schema.
+   *   it checks, and for JsonSchema the schema; for one whose options the
+   *   document states, those options.
    * @param array<string, string> $messages
    *   Messages for the node's own keywords, by error code (`pattern`,
    *   `not`), written before the checks' messages.
@@ -87,11 +99,15 @@ final class PortableKeywords {
     $checks = [];
     foreach ($entries as $entry) {
       $id = self::PROVIDER . $entry['constraint'];
-      $options = array_key_exists('schema', $entry) ? ['schema' => $entry['schema']] : new \stdClass();
+      $options = match (TRUE) {
+        array_key_exists('schema', $entry) => ['schema' => $entry['schema']],
+        ($entry['options'] ?? []) !== [] => $entry['options'],
+        default => new \stdClass(),
+      };
       if (!isset($checks[$id])) {
         $checks[$id] = $options;
       }
-      elseif (is_array($options) && is_array($checks[$id])) {
+      elseif (array_key_exists('schema', $entry) && is_array($checks[$id]) && isset($checks[$id]['schema'])) {
         $checks[$id]['schema'] = ['allOf' => [$checks[$id]['schema'], $options['schema']]];
       }
       $message = (string) ($entry['message'] ?? '');
@@ -130,7 +146,7 @@ final class PortableKeywords {
         $said[$keyword] = $node[$keyword];
       }
     }
-    unset($node[ContractEmitter::EXTENSION], $node[self::CHECK], $node[self::MESSAGES], $node[self::UI]);
+    unset($node[ContractEmitter::EXTENSION], $node[self::CHECK], $node[self::MESSAGES], $node[self::UI], $node[self::LINKS]);
     return $node + $said + $extension;
   }
 

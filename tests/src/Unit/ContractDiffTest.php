@@ -165,6 +165,48 @@ class ContractDiffTest extends UnitTestCase {
   }
 
   /**
+   * Tests the links and a check's options changed are noted.
+   *
+   * A link says where a client asks for what the document leaves out, and a
+   * check's options what the server holds a value to by name: neither
+   * changes what a value may be.
+   */
+  public function testTheLinksAndTheCheckOptionsChangedAreNoted(): void {
+    $venue = ['properties', 'venue'];
+    $baseline = self::BASELINE;
+    $baseline['schema'] = self::patched($baseline['schema'], [...$venue, 'portable-check'], ['drupal:SurfaceValidReference' => []]);
+    $current = $baseline;
+    $current['schema'] = self::patched($current['schema'], [...$venue, 'portable-check'], ['drupal:SurfaceValidReference' => ['entityTypeId' => 'event_venue']]);
+    $link = ['rel' => 'lookup', 'href' => '/surface-api/event:lookup?key=/venue{&q,limit}'];
+    $current['schema'] = self::patched($current['schema'], [...$venue, 'x-portable-links'], [$link]);
+    $said = static fn (ContractChange $change): array => [
+      $change->path,
+      $change->change,
+      $change->effect,
+      $change->status,
+    ];
+    $linked = [
+      'configure#/properties/venue/x-portable-links',
+      'x-portable-links changed',
+      ContractDiff::NOTE,
+      ContractChange::COMPATIBLE,
+    ];
+    $this->assertSame([
+      [
+        'configure#/properties/venue/portable-check/drupal:SurfaceValidReference',
+        'the options of the check drupal:SurfaceValidReference changed',
+        ContractDiff::NOTE,
+        ContractChange::COMPATIBLE,
+      ],
+      $linked,
+    ], array_map($said, (new ContractDiff())->compare($baseline, $current)));
+    // Taken away again, and a link changed: notes too.
+    $this->assertSame([ContractDiff::NOTE, ContractDiff::NOTE], array_map(static fn (ContractChange $change): string => $change->effect, (new ContractDiff())->compare($current, $baseline)));
+    $moved = self::patched($current['schema'], [...$venue, 'x-portable-links'], [['href' => '/surface-api/event/{id}:lookup?key=/venue{&q,limit}'] + $link]);
+    $this->assertSame([$linked], array_map($said, (new ContractDiff())->compare($current, ['schema' => $moved] + $current)));
+  }
+
+  /**
    * Sets or removes one value at a path.
    *
    * @param array $schema

@@ -471,7 +471,7 @@ final class OpenApiDocument {
             'name' => Choices::PARAMETER,
             'in' => 'query',
             'required' => FALSE,
-            'description' => (string) $this->t("A choice of a key marked deferred, its list too long to write out: the key's JSON Pointer, =, then a value of its deciding key or an entry's id, choose=/props=card. The answer is the full schema with that variant or entry stated in full, the rest as without it. Once per choice; a key inside a variant is named with the variant's choice beside it, choose=/settings=surface_component&choose=/settings/props=card. The key's x-surface.deferred.fetch is this URL as an RFC 6570 template. A choice of no such key or value is a 404 naming the pointer."),
+            'description' => (string) $this->t("A choice of a key marked deferred, its list too long to write out: the key's JSON Pointer, =, then a value of its deciding key or an entry's id, choose=/props=card. The answer is the full schema with that variant or entry stated in full, the rest as without it. Once per choice; a key inside a variant is named with the variant's choice beside it, choose=/settings=surface_component&choose=/settings/props=card. The key's choose link (x-portable-links, rel choose) is this URL as an RFC 6570 template. A choice of no such key or value is a 404 naming the pointer."),
             'style' => 'form',
             'explode' => TRUE,
             'schema' => ['type' => 'array', 'items' => ['type' => 'string', 'pattern' => '^/?[^=]+=.+$']],
@@ -622,7 +622,7 @@ final class OpenApiDocument {
     // serves this operation at.
     // Decision: see
     // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
-    $references = static::references($full->document['schema']);
+    $references = static::references($built);
     if (!$readNamed && !$standsFor && $references !== []) {
       [$path, $names, $url] = $this->paths->lookupTemplate($definition, $operation);
       $cacheability->addCacheableDependency($url);
@@ -716,37 +716,41 @@ final class OpenApiDocument {
   }
 
   /**
-   * Finds the keys of a full schema that refer to an entity.
+   * Finds the keys of a data surface the lookup answers for.
    *
-   * @param array $schema
-   *   The full schema.
-   * @param array|null $frame
-   *   The object being read; NULL for the top.
+   * Read from the data surface, not the document, whose links a key the
+   * lookup does not answer for leaves out: each key that refers to an
+   * entity, as References::definitionAt() finds it, through attached
+   * children alone, never into a collection's item, a variant or a mount.
+   *
+   * @param \Drupal\surface\SurfaceInterface $surface
+   *   The data surface, or a child of it.
    * @param string $prefix
    *   Its JSON Pointer.
    *
    * @return string[]
-   *   The JSON Pointer of each key `x-surface.reference` marks, and of the
-   *   object a bare reference's id is in, which names it too.
+   *   The JSON Pointer of each key that names its entity type, and of
+   *   each id whose entity type its sibling names, and of the object such
+   *   an id is in, which names it too.
    */
-  protected static function references(array $schema, ?array $frame = NULL, string $prefix = ''): array {
-    $frame ??= $schema;
+  protected static function references(SurfaceInterface $surface, string $prefix = ''): array {
     $found = [];
-    foreach (is_array($frame['properties'] ?? NULL) ? $frame['properties'] : [] as $name => $property) {
-      if (!is_array($property)) {
+    foreach ($surface->getDefinitions()->entries() as $name => $entry) {
+      if ($entry->variants !== NULL || $entry->list !== NULL) {
         continue;
       }
       $at = $prefix . '/' . str_replace(['~', '/'], ['~0', '~1'], (string) $name);
-      if (isset($property['$ref']) && is_string($property['$ref']) && str_starts_with($property['$ref'], ContractEmitter::DEFS)) {
-        $def = $schema['$defs'][substr($property['$ref'], strlen(ContractEmitter::DEFS))] ?? NULL;
-        $inside = is_array($def) ? static::references($schema, $def, $at) : [];
-        if (in_array($at . '/id', $inside, TRUE) && (($def['properties']['id'][ContractEmitter::EXTENSION]['reference']['by'] ?? NULL) !== NULL)) {
+      $child = $entry->attachment?->child;
+      if ($child !== NULL) {
+        $inside = static::references($child, $at);
+        $id = $child->getDefinitions()->entry('id');
+        if ($id !== NULL && in_array($at . '/id', $inside, TRUE) && $id->definition->getSetting(References::TARGETS) !== NULL) {
           $found[] = $at;
         }
         array_push($found, ...$inside);
         continue;
       }
-      if (isset($property[ContractEmitter::EXTENSION]['reference'])) {
+      if (References::target($entry->definition) !== NULL || $entry->definition->getSetting(References::TARGETS) !== NULL) {
         $found[] = $at;
       }
     }

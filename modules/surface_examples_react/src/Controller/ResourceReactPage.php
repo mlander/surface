@@ -305,11 +305,6 @@ final class ResourceReactPage implements ContainerInjectionInterface {
       'schema' => $this->servedPaths->url($definition, $operation, $parameters, $read, TRUE),
       'write' => $this->servedPaths->url($definition, $operation, $parameters, $named),
     ];
-    // The lookup answers for the operation GET serves at the path, so a
-    // page of another operation has none.
-    // Decision: see
-    // docs/decisions.md#a-reference-is-an-id-with-a-list-the-site-decides-listed-or-looked-up.
-    $lookup = $read ? NULL : $this->servedPaths->lookupUrl($definition, $operation, $parameters)->getGeneratedUrl();
     $build = [
       '#type' => 'html_tag',
       '#tag' => 'div',
@@ -330,12 +325,14 @@ final class ResourceReactPage implements ContainerInjectionInterface {
             'resource' => $definition->id,
             'operation' => $operation->id,
             'parameters' => $parameters,
-            // Where the API answers this operation: contract 3's paths.
+            // Where the API answers this operation: contract 3's paths. A
+            // reference key names its lookup itself, as a link.
+            // Decision: see
+            // docs/decisions.md#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links.
             'endpoints' => [
               'read' => $urls['read']->getGeneratedUrl(),
               'schema' => $urls['schema']->getGeneratedUrl(),
               'write' => ['method' => $method, 'url' => $urls['write']->getGeneratedUrl()],
-              'lookup' => $lookup,
             ],
             'tokenUrl' => $token->getGeneratedUrl(),
           ] + ($stage === NULL ? [] : array_filter(['stage' => $stage->id, 'stageLabel' => $stage->label], 'is_string')) + $more,

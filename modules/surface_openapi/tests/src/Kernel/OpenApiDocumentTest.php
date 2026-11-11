@@ -450,8 +450,8 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
    *
    * With the limit at two, a placed block's settings, a variant per block
    * plugin, are stated open and `deferred` in its component, the full
-   * schema, with the `fetch` template of one plugin's; the schema path's
-   * GET describes `choose`, the parameter that template fills, and the
+   * schema, with the `choose` link of one plugin's; the schema path's
+   * GET describes `choose`, the parameter that link fills, and the
    * 304 and the `ETag` of a fetched schema; a client may still ask
    * `POST .../schema` with the plugin chosen. The narrowing tool beside the
    * write tool is the tool door's, not a path: no path names `:schema`.
@@ -463,7 +463,8 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
     $this->config('surface.settings')->set('site_list_limit', 2)->save();
     $document = $this->decoded();
     $settings = $document['components']['schemas']['block.placement.create']['properties']['settings'];
-    $this->assertSame(['fetch' => '?choose=/settings={value}'], $settings['x-surface']['deferred']);
+    $this->assertTrue($settings['x-surface']['deferred']);
+    $this->assertSame([['rel' => 'choose', 'href' => '?choose=/settings={value}', 'source' => ['value' => '1/plugin']]], $settings['x-portable-links']);
     $this->assertArrayNotHasKey('refine', $settings['x-surface'] ?? []);
     $this->assertSame('plugin', $settings['x-surface']['by']);
     $this->assertArrayNotHasKey('anyOf', $settings);

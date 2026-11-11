@@ -52,6 +52,7 @@ final class DocumentHead {
     PortableKeywords::CHECK,
     PortableKeywords::MESSAGES,
     PortableKeywords::UI,
+    PortableKeywords::LINKS,
   ];
 
   /**

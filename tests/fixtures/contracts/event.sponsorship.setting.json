@@ -50,9 +50,6 @@
                             "dependsOn": [
                                 "entity_type"
                             ],
-                            "reference": {
-                                "by": "entity_type"
-                            },
                             "enumerated": true
                         }
                     }
