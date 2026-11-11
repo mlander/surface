@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Contract;
 
+use PortableSchema\Builder\Schema;
+
 /**
  * Writes and reads the dialect's `x-portable-links`.
  *
@@ -113,15 +115,19 @@ final class PortableLinks {
   /**
    * Adds a link to a node, its links in their order before its `x-surface`.
    *
-   * @param array $node
-   *   The node.
+   * @param array|\PortableSchema\Builder\Schema $node
+   *   The node: the emitter's `Schema`, or the schema reader's array.
    * @param array $link
    *   What lookup() or choose() wrote; one of the same rel is replaced.
    *
-   * @return array
-   *   The node.
+   * @return array|\PortableSchema\Builder\Schema
+   *   The node, in the form given.
+   *
+   * @phpstan-template T of array|\PortableSchema\Builder\Schema
+   * @phpstan-param T $node
+   * @phpstan-return T
    */
-  public static function set(array $node, array $link): array {
+  public static function set(array|Schema $node, array $link): array|Schema {
     $links = array_values(array_filter(self::all($node), static fn (array $had): bool => $had['rel'] !== $link['rel']));
     $links[] = $link;
     $rank = array_flip(self::RELATIONS);
@@ -132,15 +138,16 @@ final class PortableLinks {
   /**
    * Reads every link a node carries.
    *
-   * @param array $node
+   * @param array|\PortableSchema\Builder\Schema $node
    *   The node.
    *
    * @return list<array{rel: string, href: string, source?: array}>
    *   Each link with a `rel` and an `href`, in order.
    */
-  public static function all(array $node): array {
+  public static function all(array|Schema $node): array {
     $links = [];
-    foreach (is_array($node[self::KEYWORD] ?? NULL) ? $node[self::KEYWORD] : [] as $link) {
+    $had = $node instanceof Schema ? $node->get(self::KEYWORD) : $node[self::KEYWORD] ?? NULL;
+    foreach (is_array($had) ? $had : [] as $link) {
       $link = $link instanceof \stdClass ? (array) $link : $link;
       if (is_array($link) && is_string($link['rel'] ?? NULL) && is_string($link['href'] ?? NULL)) {
         if (isset($link['source']) && $link['source'] instanceof \stdClass) {
@@ -155,7 +162,7 @@ final class PortableLinks {
   /**
    * Reads a node's first link of a rel.
    *
-   * @param array $node
+   * @param array|\PortableSchema\Builder\Schema $node
    *   The node.
    * @param string $rel
    *   The rel: LOOKUP, CHOOSE.
@@ -163,7 +170,7 @@ final class PortableLinks {
    * @return array{rel: string, href: string, source?: array}|null
    *   The link, or NULL.
    */
-  public static function of(array $node, string $rel): ?array {
+  public static function of(array|Schema $node, string $rel): ?array {
     foreach (self::all($node) as $link) {
       if ($link['rel'] === $rel) {
         return $link;

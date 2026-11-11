@@ -1134,7 +1134,7 @@ final class SchemaReader {
       }
       unset($inside['type']);
       $localized = [
-        'if' => static::renamed($condition, $site['ports'])->schema(),
+        'if' => Schemas::arrayed(static::renamed($condition, $site['ports'])->schema()),
         'then' => $inside,
       ];
       if (isset($conditional[ContractEmitter::EXTENSION])) {

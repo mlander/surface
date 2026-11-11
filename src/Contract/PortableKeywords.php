@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Drupal\surface\Contract;
 
+use PortableSchema\Builder\Schema;
+
 /**
  * Writes and reads the dialect's own keywords both documents carry.
  *
@@ -122,20 +124,48 @@ final class PortableKeywords {
   /**
    * Places the dialect's keywords on a node: after its standard keywords.
    *
-   * @param array $node
+   * The node is the emitter's `Schema`, or the array the schema reader
+   * writes, and is answered in the same form.
+   *
+   * @param array|\PortableSchema\Builder\Schema $node
    *   The node.
    * @param array $keywords
    *   What write() answered, or `x-portable-ui` (PortableUi::set()).
    *
-   * @return array
+   * @return array|\PortableSchema\Builder\Schema
    *   The node, its dialect's keywords in their order right before its
    *   `x-surface`, or last where it has none; one it carries and
    *   $keywords does not name stays.
+   *
+   * @phpstan-template T of array|\PortableSchema\Builder\Schema
+   * @phpstan-param T $node
+   * @phpstan-return T
    */
-  public static function before(array $node, array $keywords): array {
+  public static function before(array|Schema $node, array $keywords): array|Schema {
     if ($keywords === []) {
       return $node;
     }
+    if ($node instanceof Schema && $node->isBoolean()) {
+      throw new \InvalidArgumentException('PortableKeywords::before() places keywords on an object schema, not a boolean one.');
+    }
+    $placed = self::placed($node instanceof Schema ? $node->all() : $node, $keywords);
+    // from() keeps a keyword outside the vocabulary the node carries.
+    return $node instanceof Schema ? Schema::from($placed) : $placed;
+  }
+
+  /**
+   * Orders a node's keywords as before() places them.
+   *
+   * @param array $node
+   *   The node's keywords.
+   * @param array $keywords
+   *   The dialect's keywords to place.
+   *
+   * @return array
+   *   The node's standard keywords, then the dialect's in KEYWORDS order,
+   *   then `x-surface`.
+   */
+  protected static function placed(array $node, array $keywords): array {
     $extension = array_key_exists(ContractEmitter::EXTENSION, $node) ? [ContractEmitter::EXTENSION => $node[ContractEmitter::EXTENSION]] : [];
     $said = [];
     foreach (self::KEYWORDS as $keyword) {

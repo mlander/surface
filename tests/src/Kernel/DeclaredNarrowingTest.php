@@ -6,6 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinitionInterface;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Refinement\Condition;
 use Drupal\surface\Refinement\DeclaredRefiner;
@@ -449,10 +450,10 @@ class DeclaredNarrowingTest extends SurfaceKernelTestBase {
       '{"anyOf": [{"properties": {"k": {"type": "null"}}}]}' => Condition::anyOf(Condition::absent('k')),
     ];
     foreach ($cases as $json => $condition) {
-      $this->assertSame(self::json($json), $condition->schema(), $json);
+      $this->assertSame(self::json($json), Schemas::arrayed($condition->schema()), $json);
     }
     $mounted = '{"properties": {"m": {"properties": {"k": {"const": 1}}, "required": ["k"]}}, "required": ["m"]}';
-    $this->assertSame(self::json($mounted), Condition::equals('k', 1)->schema(['k' => ['m', 'k']]), 'A key inside a map.');
+    $this->assertSame(self::json($mounted), Schemas::arrayed(Condition::equals('k', 1)->schema(['k' => ['m', 'k']])), 'A key inside a map.');
   }
 
   /**

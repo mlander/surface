@@ -11336,9 +11336,10 @@ nothing else moves, and no path.
   contract changes. The contract 4 baselines were reported once,
   "contract version 4 to 5", and re-pinned with no allowance.
 - **The document as the dialect's value.** `ServedContract::schema()`
-  and `outputs()` answer a `PortableSchema\Builder\Schema`, each read
-  once with `Schema::from()` from the arrays, which stay arrays: the
-  lint, the OpenAPI components and the tool result read arrays. Every
+  and `outputs()` answer a `PortableSchema\Builder\Schema`, the value
+  the emitter built; the document holds each in the array form, which
+  the lint, the OpenAPI components and the tool result read
+  ([The emitter builds through the builder](#the-emitter-builds-through-the-builder)). Every
   pinned document, the module's 73 and the React app's 59, loads in the
   dialect's registry and validator and writes back byte for byte from a
   `Schema` (`PortableDocumentTest`, `PortableServedContractTest`).
@@ -11356,7 +11357,8 @@ nothing else moves, and no path.
   `portable-check` with `x-portable-links` (done 2026-11-10,
   [A reference and a deferred list are the dialect's check options and links](#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)); variants `portable-typeBy`;
   `refine` `portable-refine`; a shape a `portable:` type; the emitter
-  builds through `Schema`, the reader reads through `Schema::from()`,
+  builds through `Schema`
+  ([The emitter builds through the builder](#the-emitter-builds-through-the-builder)), the reader reads through `Schema::from()`,
   and the pipeline validates through the dialect's validator. Each is
   its own change, under contract 5 until it ships.
 
@@ -11640,6 +11642,112 @@ documents and tool definitions are byte for byte what they were, and
 the contract baselines did not move. (`ContractEmitter`,
 `Contract\PropertySchema`, `Contract\Conditionals`,
 `Contract\DocumentHead`, `ContractBaselineTest`)
+
+### The emitter builds through the builder
+
+The emitter builds each served document as
+`PortableSchema\Builder\Schema` values, the dialect's own, not as PHP
+arrays. Contract 5 stays 5.
+
+- **The boundary.** `ServedContract::$document` stays an array for the
+  code that reads it: the controller, the tool door, the contract
+  panel, the OpenAPI components, the examples panels and the tests. The
+  emitter builds `schema` and `outputs` as `Schema` values and writes
+  each into the document once, with `Schemas::arrayed()`;
+  `ServedContract::schema()` and `outputs()` answer the values it built.
+- **The array form.** `Schemas::arrayed()` is `toDocument()` with each
+  JSON object an associative array or a `\stdClass`, chosen by the
+  shape of the keyword that holds it, so `json_encode()` of the array
+  form is `json_encode()` of the schema:
+  - A schema is an associative array, and a `\stdClass` when empty.
+  - A map of schemas (`properties`, `$defs`, `patternProperties`,
+    `dependentSchemas`) is an associative array, and a `\stdClass` when
+    empty or when its names are exactly 0 to n - 1, which a PHP array
+    would encode as a list. A map with a member named "0" is therefore
+    a `\stdClass`, which a reader that checks `is_array()` skips.
+  - A data object (the value of any other keyword, such as
+    `x-surface`, `x-portable-ui`, `default`, `const`, `examples` or
+    `portable-check`, and every object inside one) is a `\stdClass`
+    when empty or when every name is a numeric string, and an
+    associative array otherwise. `x-surface.variants` named by numeric
+    ids is a `\stdClass`, and by any other ids an associative array.
+  - A list stays a list.
+- **Order is insertion order.** The builder never sorts: `with()` on a
+  keyword a schema has keeps its place, and a new keyword goes last. The
+  emitter adds keywords in the order the document carries them.
+  `Schemas::first()` puts keywords first (`$schema` and the heading,
+  `readOnly` at the top, `x-surface` led by how the operation behaves, a
+  def's title, a site's title before its reference, the `type` a
+  narrowing needs); `Schemas::defaults()` adds only the keywords a schema
+  does not state; `PortableKeywords::before()` places `portable-check`,
+  `x-portable-messages`, `x-portable-ui` and `x-portable-links`, in that
+  order, before `x-surface`. All three build with `Schema::from()`, so
+  a keyword outside the vocabulary that a schema carries stays, and
+  each refuses a boolean schema, which holds no keywords.
+- **Empty values.** `properties` and `$defs` are given as `[]`, which
+  the builder writes as `{}`. An empty `x-surface` is left out.
+- **An empty subschema stays `{}`.** Below an applicator, a schema that
+  said nothing but its `x-surface` (directly or in the properties it
+  holds) is written `true` once its `x-surface` moves to the owning
+  object; a schema empty from the start (`then: {}`, `items: {}`,
+  `not: {}`, `allOf: [{}]`) is written `{}`.
+- **A walk reaches schemas only.** `Schemas::map()` descends into the
+  keywords whose value is a schema, a map of schemas or a list of them
+  (`Keywords::shape()`), and into `x-surface-shape.def`, the one
+  transient keyword that holds a schema; never into `default`, `const`,
+  `examples`, `enum`, `portable-check`'s options, `x-portable-messages`,
+  `x-portable-ui` or `x-surface`. `PropertySchema::named()`,
+  `withoutWidgets()` and `withoutExtension()`, `PortableUi::settled()`
+  and `Conditionals::withoutPresent()` walk with it. So a hint or an
+  `x-surface` member inside a JSON Schema fragment a structure keeps
+  under `portable-check` is served as given, with the widget hints or
+  without, in both documents (`PortableServedContractTest`).
+- **Transients.** `x-surface-shape`, `x-surface-checked` and
+  `x-surface-pattern-message` are `x-` keywords on a node while a key is
+  described; each is removed when the key's description ends.
+- **Comparison is by JSON.** Two schemas, or two keyword values that
+  hold schemas, say the same when their JSON is the same
+  (`Schemas::same()`), encoded with the fixture flags, among them
+  `JSON_PRESERVE_ZERO_FRACTION` and `JSON_THROW_ON_ERROR`: `1` and `1.0`
+  differ, two empty objects are the same whatever their PHP form, and a
+  value that cannot be encoded (NAN, INF, invalid UTF-8) is an error,
+  never the same as another. A narrowing restates a keyword only when
+  its JSON differs, and `Subschemas` files a second declaration under
+  `<id>@2` by the same test.
+- **Variants stay a union of references.** Each variant is a local def,
+  `#/$defs/...`, never a registry schema, so a key with variants is an
+  `anyOf` of references with a conditional per variant, and carries no
+  `portable-typeBy`.
+- **An OpenAPI correction.** `SchemaComponents` rewrites every pointer
+  in `x-surface.variants`, in either PHP form, to the lifted component,
+  so no component points into a `$defs` it no longer has. Its pointers
+  used to stay `#/$defs/...`, because the map reached it as a
+  `\stdClass` and only arrays were rewritten. This is the one output
+  that changed: the components of every OpenAPI document with variants
+  (`OpenApiDocumentTest`, `SchemaComponentsTest`).
+- **What reads arrays.** `SchemaResolver` reads the array form: where a
+  frame mixes a structure in, the emitter hands it the def and the
+  document's defs in the array form (`Subschemas::arrayed()` writes each
+  def once). The schema reader, `ConfigSchemaDocument`,
+  `ComponentSlots` and `ComponentProps` read and write arrays, so
+  `PortableKeywords::before()`, `PortableUi::set()` and
+  `PortableLinks::set()` take either form and answer in the form given.
+- **Later.** The code that reads the document moves to the `Schema` as
+  it is touched: the controller, the tool door, the contract panel, the
+  OpenAPI components, the examples panels and the tests. Then the
+  document array goes, so a `ServedContract` stops holding both the
+  `Schema` and its array form. The schema reader reads through
+  `Schema::from()`. The builder could hold what Surface writes here:
+  `first()`, `defaults()`, an `equals()`, and a walk keyed on
+  `Keywords::shape()`.
+
+(`Contract\Schemas`, `ServedContract`, `ContractEmitter`,
+`PropertySchema`, `Conditionals`, `DocumentHead`, `Subschemas`,
+`PortableKeywords::before()`, `PortableUi::set()`, `PortableUi::settled()`,
+`PortableLinks::set()`, `Refinement\Condition::schema()`,
+`SchemaComponents`, `SchemasTest`, `DocumentHeadSettledTest`,
+`NarrowingComparedByJsonTest`, `PortableDocumentTest`,
+`PortableServedContractTest`, `OpenApiDocumentTest`)
 
 ### An OpenAPI document is one more door
 

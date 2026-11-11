@@ -103,6 +103,28 @@ class SchemaComponentsTest extends UnitTestCase {
   }
 
   /**
+   * Tests a variants map named by numeric ids follows its defs too.
+   *
+   * Schemas::arrayed() keeps such a map a \stdClass; it is rewritten in that
+   * form, so it still encodes as an object.
+   */
+  public function testVariantsNamedByIndexesFollowTheirDefs(): void {
+    $schema = self::schema();
+    $schema['properties']['ticket']['x-surface']['variants'] = (object) [
+      '0' => '#/$defs/test.ticket.free',
+      '1' => '#/$defs/test.contact',
+    ];
+    $components = new SchemaComponents();
+    $root = $components->add($schema, 'test.thing:configure');
+    $variants = $components->all()[$root]['properties']['ticket']['x-surface']['variants'];
+    $expected = (object) [
+      '0' => '#/components/schemas/test.ticket.free',
+      '1' => '#/components/schemas/test.contact',
+    ];
+    $this->assertEquals($expected, $variants);
+  }
+
+  /**
    * Tests a def described the same way is shared, and one that differs not.
    */
   public function testTheSameDefIsSharedAndAnotherKeepsItsOwn(): void {

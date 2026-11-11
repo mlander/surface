@@ -4,15 +4,21 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Kernel;
 
+use Drupal\Core\TypedData\DataDefinition;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Contract\ServedContract;
+use Drupal\surface\DefinitionMetadata;
+use Drupal\surface\Entry;
 use Drupal\surface\Resource\ArrangementGroup;
 use Drupal\surface\Resource\OperationContext;
+use Drupal\surface\SurfaceInterface;
 use Drupal\surface_examples\Resource\CateringByMethodResource;
 use Drupal\surface_examples\Resource\DoorsResource;
 use Drupal\surface_examples\Resource\SpotlightResource;
 use Drupal\surface_examples\Resource\VenueResource;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 use PortableSchema\Registry;
 use PortableSchema\Validator;
 
@@ -23,7 +29,8 @@ use PortableSchema\Validator;
  * Regex with its message, emitted with the widget hints; and a new venue,
  * whose rooms are a collection and whose id the server alone holds unique.
  * Both documents of each give a ServedContract whose schema(), the
- * dialect's own value, writes the same JSON the array does, and whose
+ * dialect's own value the emitter built, writes the same JSON as the
+ * document's array form, and whose
  * document loads in the dialect's registry and validator; the listing's
  * outputs too. And two documents the fixtures do not pin: the
  * spotlight with a component whose prop is a list of anything, and a
@@ -35,6 +42,11 @@ use PortableSchema\Validator;
 #[Group('surface')]
 #[RunTestsInSeparateProcesses]
 class PortableServedContractTest extends SurfaceKernelTestBase {
+
+  /**
+   * The flags the fixtures are written with.
+   */
+  protected const FLAGS = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR;
 
   /**
    * {@inheritdoc}
@@ -105,8 +117,7 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
     $listing = $emitter->emitFull($resources->buildStatic(VenueResource::class, $context), 'event.venue', 'list');
     $outputs = $listing->outputs();
     $this->assertNotNull($outputs);
-    $this->assertSame($outputs, $listing->outputs(), 'Read once.');
-    $this->assertSame(json_encode($listing->document['outputs']), json_encode($outputs->toDocument()));
+    $this->assertPortable($listing, 'event.venue list');
     $this->assertInstanceOf(Validator::class, new Validator(Registry::withTypes()->add($outputs->toDocument(), 'surface:event.venue/list/outputs')));
   }
 
@@ -177,7 +188,60 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests a hint inside a kept JSON Schema fragment is served as given.
+   *
+   * A walk of the emitter reaches schemas only, never data, and a fragment
+   * kept under `portable-check` is data: an `x-portable-ui` and an
+   * `x-surface` inside it stay, emitted with the widget hints or without,
+   * the full schema or the present one.
+   */
+  public function testKeptFragmentIsServedAsGiven(): void {
+    $document = json_decode('{"type": "object", "additionalProperties": false, "properties": {"odd": {"type": "integer", "not": {"multipleOf": 2}}}}', TRUE, 512, JSON_THROW_ON_ERROR);
+    $resources = $this->container->get('surface.resources');
+    $emitter = $this->container->get('surface.contract_emitter');
+    $structure = $this->container->get('surface.schema_reader')->structure($document, 'test.hinted');
+    $context = new OperationContext('configure');
+    $fragment = [
+      'not' => [
+        'multipleOf' => 2,
+        'x-portable-ui' => ['widget' => 'number'],
+        'x-surface' => ['note' => 'kept'],
+      ],
+    ];
+    $expected = ['drupal:JsonSchema' => ['schema' => $fragment]];
+    // The reader keeps no hint in a fragment; one a structure states is
+    // served as stated.
+    $hinted = static function (SurfaceInterface $surface) use ($fragment): SurfaceInterface {
+      $surface->getDefinitions()->entry('odd')->definition->addConstraint('JsonSchema', ['schema' => $fragment]);
+      return $surface;
+    };
+    $read = $hinted($resources->buildStatic($structure, $context));
+    $built = $hinted($resources->build($structure, $context));
+    foreach ([TRUE, FALSE] as $widgets) {
+      $which = $widgets ? ' with the widget hints' : ' without them';
+      $full = $emitter->emitFull($read, 'test.hinted', NULL, NULL, $widgets);
+      $this->assertSame($expected, $full->document['schema']['properties']['odd']['portable-check'], 'The full schema' . $which . '.');
+      $emitted = $emitter->emit($built, [], 'test.hinted', 'configure', NULL, $widgets);
+      $this->assertSame($expected, $emitted->document['schema']['properties']['odd']['portable-check'], 'The schema' . $which . '.');
+    }
+  }
+
+  /**
+   * Tests a key nothing describes is described by the empty schema.
+   */
+  public function testKeyNothingDescribesIsEmpty(): void {
+    $emitter = $this->container->get('surface.contract_emitter');
+    // An `any` a schema read holds whole, with no label: no type, no title.
+    $anything = DataDefinition::create('any');
+    DefinitionMetadata::setHeldWhole($anything);
+    $this->assertSame([], $emitter->describeKey(new Entry('anything', $anything)));
+  }
+
+  /**
    * Holds one contract's schema to the dialect.
+   *
+   * The document a client receives reads back through Schema::from() and
+   * writes the same JSON, and it loads in the dialect's validator.
    *
    * @param \Drupal\surface\Contract\ServedContract $contract
    *   The contract.
@@ -185,11 +249,17 @@ class PortableServedContractTest extends SurfaceKernelTestBase {
    *   Which it is, for the message.
    */
   protected function assertPortable(ServedContract $contract, string $which): void {
-    $schema = $contract->schema();
-    $this->assertSame($schema, $contract->schema(), $which . ': read once.');
     $this->assertSame('https://portable-schema.dev/v1/schema', $contract->document['schema']['$schema'], $which);
-    $this->assertSame(json_encode($contract->document['schema']), json_encode($schema->toDocument()), $which . ': the Schema writes what the array says.');
-    $document = $schema->toDocument();
+    foreach (['schema' => $contract->schema(), 'outputs' => $contract->outputs()] as $part => $built) {
+      if ($built === NULL) {
+        continue;
+      }
+      $served = json_encode($contract->document[$part], self::FLAGS);
+      $this->assertSame($served, json_encode($built->toDocument(), self::FLAGS), $which . ': the ' . $part . ' served is the one built.');
+      $this->assertSame($served, json_encode(Schema::from(json_decode($served))->toDocument(), self::FLAGS), $which . ': the ' . $part . ' served reads back and writes the same.');
+      $this->assertSame($served, json_encode(Schema::from(Schemas::arrayed($built))->toDocument(), self::FLAGS), $which . ': the ' . $part . '\'s array form reads back and writes the same.');
+    }
+    $document = $contract->schema()->toDocument();
     $this->assertInstanceOf(\stdClass::class, $document);
     $id = 'surface:' . str_replace(' ', '/', $which);
     $this->assertInstanceOf(Validator::class, new Validator(Registry::withTypes()->add($document, $id)), $which . ': loads in the dialect.');

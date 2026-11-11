@@ -713,7 +713,9 @@ key declared with it refers to.
    applicator carries `x-surface`, its `x-portable-ui` where it is. The narrowing states
    the declared `type` beside a keyword only one type reads
    (`{"type": "object", "properties": {...}}`), and its `required` lists
-   only the keys it adds to its def's. Where nothing differs, the
+   only the keys it adds to its def's. A keyword differs when its JSON
+   does: two empty `properties` or two empty `default` objects are the
+   same, and `1` and `1.0` are not. Where nothing differs, the
    reference is bare. Refinement only
    narrows, so a validator applying the def and the narrowing accepts
    exactly what the child at that site accepts; `ServedContractTest`

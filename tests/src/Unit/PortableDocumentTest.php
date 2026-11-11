@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\surface\Unit;
 
+use Drupal\surface\Contract\Schemas;
 use Drupal\Tests\UnitTestCase;
 use PHPUnit\Framework\Attributes\Group;
 use PortableSchema\Builder\Schema;
@@ -19,7 +20,9 @@ use PortableSchema\Validator;
  * it against the dialect's meta-schema and profile, which refuse a
  * `$schema` other than the dialect's, a format outside the profile (such as
  * `idn-email`) or a keyword the dialect does not know. And the dialect's
- * own value, read with Schema::from(), writes it back byte for byte.
+ * own value, read with Schema::from(), writes it back byte for byte, as
+ * does its array form (Schemas::arrayed()), which is what a served
+ * document holds.
  *
  * Decision: see
  * docs/decisions.md#the-served-document-is-a-portable-schema-document.
@@ -83,6 +86,7 @@ final class PortableDocumentTest extends UnitTestCase {
           $registry = Registry::withTypes()->add($registered, 'surface:' . $name . '/' . $index);
           $this->assertInstanceOf(Validator::class, new Validator($registry), $at . ' loads in the dialect.');
           $this->assertSame(json_encode($document, $flags), json_encode(Schema::from($document)->toDocument(), $flags), $at . ' reads into a Schema and writes back the same.');
+          $this->assertSame(json_encode($document, $flags), json_encode(Schemas::arrayed(Schema::from($document)), $flags), $at . ' in the array form writes the same.');
           $found++;
         }
       }

@@ -177,7 +177,7 @@ class VariantsFromSiteTest extends SurfaceKernelTestBase {
     $again = $this->poster();
     $this->assertSame(['banner', 'grid', 'strip', 'column'], array_keys($again->getDefinitions()->entry('panels')->variants->variants));
     $full = $emitter->emitFull($again, 'resource_test.poster')->document['schema'];
-    $this->assertSame('#/$defs/resource_test.poster.panels.column', $full['properties']['panels']['x-surface']['variants']->column);
+    $this->assertSame('#/$defs/resource_test.poster.panels.column', $full['properties']['panels']['x-surface']['variants']['column']);
   }
 
   /**

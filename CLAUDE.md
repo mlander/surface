@@ -966,7 +966,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2248, Assertions: 55722, Errors: 0, Failures: 0, Skipped: 3. Classes: 314 of 314, 8 at a time, browser classes 4.
+phpunit: Tests: 2276, Assertions: 56253, Errors: 0, Failures: 0, Skipped: 3. Classes: 317 of 317, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -986,8 +986,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2134, Assertions: 51168, Skipped: 3, Deprecations: 155. Classes:
-261, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2162, Assertions: 51699, Skipped: 3, Deprecations: 155. Classes:
+264, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1309,9 +1309,13 @@ src/Contract/            The served contract's emitter (a Portable Schema
                          PortableKeywords the dialect's portable-check and
                          x-portable-messages, PortableUi its
                          x-portable-ui, PortableLinks its
-                         x-portable-links; ServedContract, the
-                         document, whose schema() and outputs() answer
-                         it as a PortableSchema\Builder\Schema;
+                         x-portable-links; Schemas holds what the emitter
+                         needs of a PortableSchema\Builder\Schema that
+                         the builder lacks (the array form, first(),
+                         defaults(), same(), map()), since every writer
+                         builds Schema values; ServedContract, the
+                         document in the array form, whose schema() and
+                         outputs() answer the Schema values built;
                          the contract diff; the schema reader; the two
                          tables both read, LeafTypes and ConstraintKeywords,
                          whose rows are in Keywords/.

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\surface\Contract;
 
 use Drupal\surface\SurfaceInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * The subschemas one emission writes under `$defs`, as it writes them.
@@ -28,9 +29,18 @@ final class Subschemas {
   /**
    * The defs written so far, by key, in the order they were finished.
    *
-   * @var array<string, array>
+   * @var array<string, \PortableSchema\Builder\Schema>
    */
   protected array $defs = [];
+
+  /**
+   * Each def in the array form, once asked for (arrayed()).
+   *
+   * A def never changes once filed, so its array form is written once.
+   *
+   * @var array<string, array|\stdClass|bool>
+   */
+  protected array $arrayed = [];
 
   /**
    * What each def's structure is called and is for, by key.
@@ -129,7 +139,7 @@ final class Subschemas {
    *
    * @param string $id
    *   The child's id.
-   * @param array $def
+   * @param \PortableSchema\Builder\Schema $def
    *   Its declaration, as its own frame describes it for no values.
    * @param \Drupal\surface\SurfaceInterface $child
    *   The child it was written from.
@@ -143,10 +153,10 @@ final class Subschemas {
    *   The key it is filed under: the id, unless the id holds a different
    *   declaration already.
    */
-  public function add(string $id, array $def, SurfaceInterface $child, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL): string {
+  public function add(string $id, Schema $def, SurfaceInterface $child, string|\Stringable|null $label = NULL, string|\Stringable|null $description = NULL): string {
     $this->writing->detach($child);
     $key = $id;
-    for ($n = 2; isset($this->defs[$key]) && !self::same($this->defs[$key], $def); $n++) {
+    for ($n = 2; isset($this->defs[$key]) && !Schemas::same($this->defs[$key], $def); $n++) {
       $key = $id . '@' . $n;
     }
     $this->defs[$key] ??= $def;
@@ -170,10 +180,10 @@ final class Subschemas {
    * @param string $key
    *   Its key.
    *
-   * @return array|null
+   * @return \PortableSchema\Builder\Schema|null
    *   The def, or NULL while it is being written.
    */
-  public function get(string $key): ?array {
+  public function get(string $key): ?Schema {
     return $this->defs[$key] ?? NULL;
   }
 
@@ -212,11 +222,24 @@ final class Subschemas {
   /**
    * Gets every def, for the document's `$defs`.
    *
-   * @return array<string, array>
+   * @return array<string, \PortableSchema\Builder\Schema>
    *   The defs, by key.
    */
   public function all(): array {
     return $this->defs;
+  }
+
+  /**
+   * Gets every def in the array form, for SchemaResolver to read.
+   *
+   * @return array<string, array|\stdClass|bool>
+   *   The defs, by key, each as Schemas::arrayed() writes it.
+   */
+  public function arrayed(): array {
+    foreach ($this->defs as $key => $def) {
+      $this->arrayed[$key] ??= Schemas::arrayed($def);
+    }
+    return $this->arrayed;
   }
 
   /**
@@ -229,13 +252,13 @@ final class Subschemas {
    * Decision: see
    * docs/decisions.md#a-resource-and-a-structure-may-say-what-they-are-called-and-what-they-are-for.
    *
-   * @return array<string, array>
+   * @return array<string, \PortableSchema\Builder\Schema>
    *   The defs, by key.
    */
   public function named(): array {
     $defs = [];
     foreach ($this->defs as $key => $def) {
-      $defs[$key] = ($this->names[$key] ?? []) + $def;
+      $defs[$key] = Schemas::first($def, $this->names[$key] ?? []);
     }
     return $defs;
   }
@@ -243,8 +266,9 @@ final class Subschemas {
   /**
    * Answers whether two pieces of a schema say the same.
    *
-   * By their JSON: an empty object is written as an `\stdClass`, which
-   * PHP compares by identity.
+   * By their JSON (Schemas::same()), for the schema reader's arrays: an
+   * empty object is written as an `\stdClass`, which PHP compares by
+   * identity.
    *
    * @param mixed $a
    *   One.
@@ -255,7 +279,7 @@ final class Subschemas {
    *   TRUE when they encode the same.
    */
   public static function same(mixed $a, mixed $b): bool {
-    return $a === $b || json_encode($a) === json_encode($b);
+    return Schemas::same($a, $b);
   }
 
 }

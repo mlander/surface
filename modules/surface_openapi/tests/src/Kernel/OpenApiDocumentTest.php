@@ -193,6 +193,35 @@ class OpenApiDocumentTest extends SurfaceKernelTestBase {
   }
 
   /**
+   * Tests every variants pointer in the components names a component.
+   *
+   * The block placement's create attaches its visibility conditions as
+   * variants, so `x-surface.variants` maps an id to a def pointer; each one
+   * is rewritten to the def's component, and no `#/$defs/` pointer is left.
+   */
+  public function testEveryVariantsPointerNamesComponent(): void {
+    $schemas = $this->decoded()['components']['schemas'];
+    $pointers = [];
+    $walk = static function (mixed $node) use (&$walk, &$pointers): void {
+      if (!is_array($node)) {
+        return;
+      }
+      if (is_array($node['x-surface']['variants'] ?? NULL)) {
+        array_push($pointers, ...array_values($node['x-surface']['variants']));
+      }
+      array_map($walk, $node);
+    };
+    $walk($schemas);
+    $this->assertNotEmpty($pointers, 'The block placement carries variants.');
+    foreach ($pointers as $pointer) {
+      $this->assertIsString($pointer);
+      $this->assertStringStartsWith(SchemaComponents::POINTER, $pointer);
+      $this->assertArrayHasKey(explode('/', substr($pointer, strlen(SchemaComponents::POINTER)))[0], $schemas, $pointer . ' names a component.');
+    }
+    $this->assertStringNotContainsString('#/$defs/', (string) json_encode($schemas, JSON_UNESCAPED_SLASHES), 'No def pointer is left.');
+  }
+
+  /**
    * Tests each operation's components are its full schema, byte for byte.
    *
    * The values component, with the defs it reaches put back under `$defs`
