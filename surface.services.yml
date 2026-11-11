@@ -165,8 +165,15 @@ services:
   # caller with a document of its own registers it here to build it.
   surface.schema_reader:
     class: Drupal\surface\Contract\SchemaReader
-    arguments: ['@surface.resource_registry', '@typed_data_manager', '@entity_type.manager']
+    arguments: ['@surface.resource_registry', '@typed_data_manager', '@entity_type.manager', '@surface.portable_registry']
   Drupal\surface\Contract\SchemaReader: '@surface.schema_reader'
+  # The Portable Schema registry the schema reader reads a `$ref` to a
+  # library type and a `portable-typeBy` through: the type library, built
+  # once per container. A site adds its own schemas to it (Registry::add())
+  # or decorates the service.
+  surface.portable_registry:
+    class: PortableSchema\Registry
+    factory: ['PortableSchema\Registry', 'withTypes']
   # Writes a config schema type as JSON Schema, for the schema reader: a
   # plugin's settings (surface_examples_block), a config object a resource is
   # first written from (drush generate surface:resource).

@@ -9,6 +9,7 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\surface\Contract\ContractChange;
 use Drupal\surface\Contract\ContractDiff;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\VariantMismatchException;
@@ -29,6 +30,7 @@ use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
+use PortableSchema\Builder\Schema;
 
 /**
  * Variants that hold children, and variants that hold variants.
@@ -250,7 +252,7 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
     $this->assertTrue($this->validates($full, $day_pack));
     $this->assertFalse($this->validates($full, ['load' => ['belt' => ['width' => 6]] + $day_pack['load']] + $day_pack), 'The frame pack\'s belt under the daypack.');
     $this->assertFalse($this->validates($full, ['load' => ['capacity' => 20, 'cover' => ['pouch' => ['name' => NULL]]]] + $day_pack), 'The pouch\'s def holds.');
-    $inline = SchemaResolver::inline($full);
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($full)));
     $this->assertSame(self::PACK_KEYS, array_keys($inline['properties']));
     $this->assertTrue($this->validates($inline, $day_pack));
     $this->assertFalse($this->validates($inline, ['load' => ['belt' => ['width' => 6]] + $day_pack['load']] + $day_pack));
@@ -411,7 +413,7 @@ class VariantsHoldTest extends SurfaceKernelTestBase {
     $tarp = ['title' => 'Fly', 'kind' => 'tarp', 'shelter' => ['size' => 4], 'notes' => ''];
     $this->assertTrue($this->validates($full, $tarp));
     $this->assertFalse($this->validates($full, ['shelter' => ['size' => 4, 'covering' => ['depth' => 3]]] + $tarp), 'The hut\'s covering under the tarp.');
-    $inline = SchemaResolver::inline($full);
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($full)));
     $this->assertSame(self::SHELTER_KEYS, array_keys($inline['properties']));
     $this->assertTrue($this->validates($inline, self::SHELTER));
     $this->assertFalse($this->validates($inline, ['shelter' => ['size' => 4, 'covering' => ['depth' => 3]]] + $tarp));

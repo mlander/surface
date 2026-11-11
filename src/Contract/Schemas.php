@@ -8,16 +8,19 @@ use PortableSchema\Builder\Keywords;
 use PortableSchema\Builder\Schema;
 
 /**
- * What the emitter needs of a Portable Schema value that the builder lacks.
+ * What the emitter and the reader need of a Schema the builder lacks.
  *
- * The emitter builds each document as `Schema` values, which never change
- * once made: an edit is a new value. Keyword order is insertion order
- * (`with()` on a keyword the schema has keeps its place, a new one goes
- * last), so where a keyword must lead or follow, it is placed with
- * first() or defaults(). map() walks the subschemas of a schema, and only
- * those: it never enters a keyword that holds data.
+ * The emitter builds each document as `Schema` values, and the schema
+ * reader walks one, which never change once made: an edit is a new
+ * value. at() finds a subschema by JSON pointer, decoded() writes a
+ * schema as JSON decodes it, for a reader of arrays. Keyword order is
+ * insertion order (`with()` on a keyword the schema has keeps its place,
+ * a new one goes last), so where a keyword must lead or follow, it is
+ * placed with first() or defaults(). map() walks the subschemas of a
+ * schema, and only those: it never enters a keyword that holds data.
  *
- * Decision: see docs/decisions.md#the-emitter-builds-through-the-builder.
+ * Decision: see docs/decisions.md#the-emitter-builds-through-the-builder
+ * and docs/decisions.md#the-reader-reads-a-schema.
  *
  * @internal
  */
@@ -161,6 +164,201 @@ final class Schemas {
    */
   public static function same(mixed $a, mixed $b): bool {
     return json_encode($a, self::SAME_FLAGS) === json_encode($b, self::SAME_FLAGS);
+  }
+
+  /**
+   * Answers whether a value is a schema that holds keywords.
+   *
+   * An object schema, even an empty one; not a boolean schema, and not a
+   * value a keyword holds that is no schema.
+   *
+   * @param mixed $value
+   *   The value.
+   *
+   * @return bool
+   *   TRUE for a Schema that is no boolean schema.
+   *
+   * @phpstan-assert-if-true \PortableSchema\Builder\Schema $value
+   */
+  public static function isObjectSchema(mixed $value): bool {
+    return $value instanceof Schema && !$value->isBoolean();
+  }
+
+  /**
+   * Reads the data a keyword holds as an array, in either form.
+   *
+   * A Schema holds a JSON object of data (the value of `x-surface`,
+   * `x-portable-ui`, a check's options, and each object inside one) as
+   * an array where it was read from arrays, and as a \stdClass where it
+   * was read from objects, as json_decode() without its flag answers.
+   * One level is read: a member that is an object is read through this
+   * again where it is read.
+   *
+   * @param mixed $value
+   *   The value.
+   *
+   * @return array|null
+   *   Its members, by name; NULL for a value that is no object or list.
+   */
+  public static function data(mixed $value): ?array {
+    return match (TRUE) {
+      is_array($value) => $value,
+      $value instanceof \stdClass => (array) $value,
+      default => NULL,
+    };
+  }
+
+  /**
+   * Writes data read through data() back in the array form.
+   *
+   * As arrayed() writes a data object: an associative array, and a
+   * \stdClass when it is empty or every name is a number, which an array
+   * would write as a list.
+   *
+   * @param array $members
+   *   The object's members, by name.
+   *
+   * @return array|\stdClass
+   *   The object in the array form.
+   */
+  public static function dataObject(array $members): array|\stdClass {
+    return array_filter(array_keys($members), 'is_string') === [] ? (object) $members : $members;
+  }
+
+  /**
+   * Reads the boolean a boolean schema is.
+   *
+   * @param mixed $value
+   *   The value.
+   *
+   * @return bool|null
+   *   TRUE for the schema `true`, FALSE for `false`, NULL for anything
+   *   else, an object schema among them.
+   */
+  public static function boolean(mixed $value): ?bool {
+    if (!$value instanceof Schema || !$value->isBoolean()) {
+      return NULL;
+    }
+    $allows = $value->toDocument();
+    assert(is_bool($allows));
+    return $allows;
+  }
+
+  /**
+   * Finds what a JSON Pointer names inside a schema.
+   *
+   * Each step is read by the shape of the keyword it stands in
+   * (Keywords::shape()): the step after a keyword holding a map of
+   * schemas is a name, after one holding a list of them an index, and
+   * either leads to a schema again; a step into any other keyword's value
+   * leads into that value, a JSON value, and every step after it reads
+   * that value's members. `~1` is `/` and `~0` is `~` in a step.
+   *
+   * @param \PortableSchema\Builder\Schema $schema
+   *   The schema the pointer starts from.
+   * @param string $pointer
+   *   The pointer: '' for the schema itself, else steps each led by `/`.
+   *
+   * @return mixed
+   *   A Schema where the pointer names a schema, the value where it names
+   *   a value or a member of one; NULL where nothing is there (and where a
+   *   JSON null is).
+   */
+  public static function at(Schema $schema, string $pointer): mixed {
+    if ($pointer === '') {
+      return $schema;
+    }
+    if (!str_starts_with($pointer, '/')) {
+      return NULL;
+    }
+    $steps = array_map(static fn (string $step): string => str_replace(['~1', '~0'], ['/', '~'], $step), explode('/', substr($pointer, 1)));
+    $node = $schema;
+    // What the node is: a schema, a map or a list of schemas, or a value.
+    $holds = Keywords::SCHEMA;
+    foreach ($steps as $step) {
+      if ($holds === Keywords::SCHEMA) {
+        if (!$node instanceof Schema || !$node->has($step)) {
+          return NULL;
+        }
+        $holds = Keywords::shape($step) ?? Keywords::VALUE;
+        $node = $node->get($step);
+        if (($holds === Keywords::SCHEMA_MAP || $holds === Keywords::SCHEMA_LIST) && !is_array($node)) {
+          $holds = Keywords::VALUE;
+        }
+        continue;
+      }
+      if ($holds === Keywords::SCHEMA_MAP || $holds === Keywords::SCHEMA_LIST) {
+        if ($holds === Keywords::SCHEMA_LIST && !ctype_digit($step)) {
+          return NULL;
+        }
+        if (!is_array($node) || !array_key_exists($step, $node)) {
+          return NULL;
+        }
+        $node = $node[$step];
+        $holds = $node instanceof Schema ? Keywords::SCHEMA : Keywords::VALUE;
+        continue;
+      }
+      if ($node instanceof \stdClass && property_exists($node, $step)) {
+        $node = $node->{$step};
+      }
+      elseif (is_array($node) && array_key_exists($step, $node)) {
+        $node = $node[$step];
+      }
+      else {
+        return NULL;
+      }
+    }
+    return $node;
+  }
+
+  /**
+   * Writes a schema as JSON decodes it, every object an array.
+   *
+   * What json_decode(json_encode($schema), TRUE) answers, without the
+   * round trip: an empty object is an empty array, and a map whose names
+   * are 0 to n - 1 a list. For a reader of arrays, not for the wire:
+   * json_encode() of the result writes `{}` as `[]`.
+   *
+   * @param \PortableSchema\Builder\Schema|\stdClass|array|bool $schema
+   *   The schema, or what toDocument() wrote.
+   *
+   * @return array|bool
+   *   The schema decoded; a boolean schema is its boolean.
+   */
+  public static function decoded(Schema|\stdClass|array|bool $schema): array|bool {
+    $decoded = self::decodedValue($schema instanceof Schema ? $schema->toDocument() : $schema);
+    assert(is_array($decoded) || is_bool($decoded));
+    return $decoded;
+  }
+
+  /**
+   * Writes a written value as JSON decodes it, as decoded() says.
+   *
+   * @param mixed $value
+   *   The value.
+   *
+   * @return mixed
+   *   The same, every object an array.
+   */
+  private static function decodedValue(mixed $value): mixed {
+    if ($value instanceof Schema) {
+      $value = $value->toDocument();
+    }
+    if ($value instanceof \Stringable) {
+      return (string) $value;
+    }
+    if ($value instanceof \stdClass) {
+      $value = (array) $value;
+    }
+    if (!is_array($value)) {
+      return $value;
+    }
+    foreach ($value as $name => $member) {
+      if (is_object($member) || is_array($member)) {
+        $value[$name] = self::decodedValue($member);
+      }
+    }
+    return $value;
   }
 
   /**

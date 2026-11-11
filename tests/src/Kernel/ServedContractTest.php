@@ -7,6 +7,7 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Tests\surface\Traits\ServedControllerTrait;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
@@ -28,6 +29,7 @@ use PortableSchema\Validator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the served contract the main module emits, over five builds.
@@ -181,7 +183,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
    *   The variant's effective schema, its references resolved.
    */
   protected function variant(array $schema, string $by, string $value, string $key, ?array $root = NULL): array {
-    return SchemaResolver::inline($this->conditional($schema, $by, $value, $key), $root ?? $schema);
+    return Schemas::decoded(SchemaResolver::inline(Schema::from($this->conditional($schema, $by, $value, $key)), Schema::from($root ?? $schema)));
   }
 
   /**
@@ -411,7 +413,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     // The contact is its own structure: a reference to its def, beside the
     // label the parent gives it.
     $this->assertSame('#/$defs/registration.contact', $schema['properties']['contact']['$ref']);
-    $contact = SchemaResolver::inline($schema['properties']['contact'], $schema);
+    $contact = Schemas::decoded(SchemaResolver::inline(Schema::from($schema['properties']['contact']), Schema::from($schema)));
     $this->assertSame('Contact', $contact['title']);
     $this->assertSame('fieldset', $contact['x-portable-ui']['widget']);
     $this->assertSame(['email'], $contact['required']);
@@ -1073,7 +1075,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $pantry = $this->container->get('surface.resources')->build(PantryResource::class, PantryResource::create());
     $emitter = $this->container->get('surface.contract_emitter');
     $document = json_decode((string) json_encode($emitter->emitFull($pantry, 'resource_test.pantry')->document['schema']), TRUE);
-    $shelf = SchemaResolver::inline($document['properties']['shelf'], $document);
+    $shelf = Schemas::decoded(SchemaResolver::inline(Schema::from($document['properties']['shelf']), Schema::from($document)));
     $this->assertSame(['dependsOn' => ['unit'], 'enumerated' => TRUE], $shelf['properties']['height']['x-surface']);
     $this->assertArrayNotHasKey('maximum', $shelf['properties']['height']);
     $ceilings = [];
@@ -1088,7 +1090,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
     $document = json_decode((string) json_encode($emitter->emit($pantry, $pantry->getDefaultValues(), 'resource_test.pantry')->document['schema']), TRUE);
     $this->assertSame('#/$defs/resource_test.pantry.shelf', $document['properties']['shelf']['allOf'][0]['$ref']);
     $this->assertSame(200, $document['properties']['shelf']['allOf'][1]['properties']['height']['maximum']);
-    $now = SchemaResolver::inline($document['properties']['shelf'], $document);
+    $now = Schemas::decoded(SchemaResolver::inline(Schema::from($document['properties']['shelf']), Schema::from($document)));
     $this->assertSame(200, $now['properties']['height']['maximum']);
     $this->assertTrue($now['properties']['height']['x-surface']['refined']);
   }
@@ -1387,12 +1389,12 @@ class ServedContractTest extends SurfaceKernelTestBase {
     foreach ($cases as $i => [$over, $verdict]) {
       $answers = array_replace($values, $over);
       $this->assertSame($verdict, $this->validates($full, $answers), 'The full schema, case ' . $i);
-      $this->assertSame($verdict, $this->validates(SchemaResolver::inline($full), $answers), 'The full schema inline, case ' . $i);
+      $this->assertSame($verdict, $this->validates(Schemas::arrayed(SchemaResolver::inline(Schema::from($full))), $answers), 'The full schema inline, case ' . $i);
       // The schema for the answers it was emitted for: the shelf's unit as
       // given, the ceiling it chose with it.
       $emitted = json_decode((string) json_encode($emitter->emit($cupboard, $answers, 'resource_test.cupboard')->document['schema']), TRUE);
       $this->assertSame($verdict, $this->validates($emitted, $answers), 'The schema for these answers, case ' . $i);
-      $this->assertSame($verdict, $this->validates(SchemaResolver::inline($emitted), $answers), 'The schema for these answers inline, case ' . $i);
+      $this->assertSame($verdict, $this->validates(Schemas::arrayed(SchemaResolver::inline(Schema::from($emitted))), $answers), 'The schema for these answers inline, case ' . $i);
       if ($i !== 5) {
         // A value sent for a locked key is not refused by the pipeline but
         // replaced by what the context knows; the schema says the one
@@ -1436,7 +1438,7 @@ class ServedContractTest extends SurfaceKernelTestBase {
       $this->assertSame('#/$defs/loop.node@2', $schema['properties']['first']['$ref']);
       $this->assertTrue($this->validates($schema, ['first' => ['name' => 'a', 'next' => ['depth' => 1]]]));
       $this->assertFalse($this->validates($schema, ['first' => ['name' => 'a', 'next' => ['name' => 'b']]]));
-      $inline = SchemaResolver::inline($schema);
+      $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($schema)));
       $this->assertArrayNotHasKey('$defs', $inline);
       $this->assertSame(['depth'], array_keys($inline['properties']['first']['properties']['next']['properties']));
     }

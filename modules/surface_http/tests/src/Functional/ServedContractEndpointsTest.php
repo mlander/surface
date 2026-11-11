@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface_http\Functional;
 
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\Tests\BrowserTestBase;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Drupal\Tests\surface\Traits\ServedApiTrait;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the React page and the API's reads over HTTP: contract 3.
@@ -305,7 +307,7 @@ class ServedContractEndpointsTest extends BrowserTestBase {
     $this->assertSame('EV-2048', $refined['values']['third_party_settings']['surface_examples_compliance']['license']);
     // The license is the compliance structure's, defined once.
     $site = $refined['schema']['properties']['third_party_settings']['properties']['surface_examples_compliance'];
-    $schema = SchemaResolver::inline($site, $refined['schema'])['properties']['license'];
+    $schema = Schemas::decoded(SchemaResolver::inline(Schema::from($site), Schema::from($refined['schema'])))['properties']['license'];
     $this->assertSame('^\\d{4}$', $schema['pattern']);
     $this->assertSame('A license number is four digits, such as 2048.', $schema['x-portable-messages']['pattern']);
   }

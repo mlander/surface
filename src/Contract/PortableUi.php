@@ -127,36 +127,25 @@ final class PortableUi {
   /**
    * Adds hints to a node's `x-portable-ui`, placed before its `x-surface`.
    *
-   * @param array|\PortableSchema\Builder\Schema $node
-   *   The node: the emitter's `Schema`, or the schema reader's array.
+   * @param \PortableSchema\Builder\Schema $node
+   *   The node.
    * @param array $ui
    *   The hints: members, and options merged into the node's own.
    *
-   * @return array|\PortableSchema\Builder\Schema
-   *   The node, in the form given.
-   *
-   * @phpstan-template T of array|\PortableSchema\Builder\Schema
-   * @phpstan-param T $node
-   * @phpstan-return T
+   * @return \PortableSchema\Builder\Schema
+   *   The node, its hints merged.
    */
-  public static function set(array|Schema $node, array $ui): array|Schema {
+  public static function set(Schema $node, array $ui): Schema {
     if ($ui === []) {
       return $node;
     }
-    $had = $node instanceof Schema ? $node->get(self::KEYWORD) : $node[self::KEYWORD] ?? NULL;
+    $had = $node->get(self::KEYWORD);
     $had = is_array($had) ? $had : [];
     if (is_array($had['options'] ?? NULL) && is_array($ui['options'] ?? NULL)) {
       $ui['options'] = $ui['options'] + $had['options'];
     }
     $merged = self::ordered($ui + $had);
-    if ($node instanceof Schema) {
-      return $node->has(self::KEYWORD) ? $node->with(self::KEYWORD, $merged) : PortableKeywords::before($node, [self::KEYWORD => $merged]);
-    }
-    if (array_key_exists(self::KEYWORD, $node)) {
-      $node[self::KEYWORD] = $merged;
-      return $node;
-    }
-    return PortableKeywords::before($node, [self::KEYWORD => $merged]);
+    return $node->has(self::KEYWORD) ? $node->with(self::KEYWORD, $merged) : PortableKeywords::before($node, [self::KEYWORD => $merged]);
   }
 
   /**

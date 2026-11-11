@@ -10,6 +10,7 @@ use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\TypeMismatchException;
@@ -35,6 +36,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\InputBag;
 use Symfony\Component\HttpFoundation\Request;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests a collection: a key whose value is a list of child instances.
@@ -472,7 +474,7 @@ class CollectionTest extends SurfaceKernelTestBase {
     foreach ([FALSE, TRUE] as $is_full) {
       $schema = $this->contract($add, $is_full, 'create')['schema'];
       $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $schema['properties']['racks']['items']);
-      $inline = SchemaResolver::inline($schema['properties']['racks'], $schema);
+      $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($schema['properties']['racks']), Schema::from($schema)));
       $this->assertSame(10, $inline['items']['properties']['spices']['maximum']);
     }
 
@@ -485,7 +487,7 @@ class CollectionTest extends SurfaceKernelTestBase {
       // Every item differs from its def, the def being the rack as
       // declared: the items narrow it by composition.
       $this->assertSame(['$ref' => '#/$defs/resource_test.larder.rack'], $schema['properties']['racks']['items']['allOf'][0]);
-      $inline = SchemaResolver::inline($schema['properties']['racks'], $schema);
+      $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($schema['properties']['racks']), Schema::from($schema)));
       $this->assertTrue($inline['items']['properties']['spices']['readOnly']);
     }
     // Omitted: not there.

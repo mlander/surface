@@ -994,16 +994,14 @@ final class ContractEmitter {
     foreach ($advertised->mixins() as $mixin) {
       $key = $this->define($mixin->structure, $owner . '.' . $mixin->structure->source, $emission);
       // Read flat: a structure it mixes in itself says its members there.
-      // SchemaResolver reads the array form.
-      $def = $subschemas->get($key);
-      $def = SchemaResolver::inline($def === NULL ? [] : (array) Schemas::arrayed($def), ['$defs' => $subschemas->arrayed()]);
+      $def = SchemaResolver::inline($subschemas->get($key) ?? Schema::any(), Schema::any()->with('$defs', $subschemas->all()));
       $references[] = Schema::any()->with('$ref', self::DEFS . self::pointer($key));
-      $declared = is_array($def['properties'] ?? NULL) ? $def['properties'] : [];
+      $declared = is_array($def->get('properties')) ? $def->get('properties') : [];
       foreach ($mixin->keys as $name) {
-        $members[$name] = $declared[$name] ?? [];
+        $members[$name] = $declared[$name] ?? Schema::any();
       }
-      $required = array_values(array_diff($required, $def['required'] ?? []));
-      $stated = is_array($def['allOf'] ?? NULL) ? $def['allOf'] : [];
+      $required = array_values(array_diff($required, $def->get('required') ?? []));
+      $stated = is_array($def->get('allOf')) ? $def->get('allOf') : [];
       $conditions = array_values(array_filter($conditions, static fn (Schema $condition): bool => array_filter($stated, static fn (mixed $said): bool => Schemas::same($said, $condition)) === []));
     }
     $properties = [];
@@ -1024,7 +1022,7 @@ final class ContractEmitter {
         $properties[$name] = TRUE;
         continue;
       }
-      $narrowing = $flat[$name]->isBoolean() ? $flat[$name] : $this->propertySchema->narrowing($flat[$name], Schema::from($members[$name]), $subschemas->transient, $subschemas->ui);
+      $narrowing = $flat[$name]->isBoolean() ? $flat[$name] : $this->propertySchema->narrowing($flat[$name], $members[$name], $subschemas->transient, $subschemas->ui);
       $properties[$name] = $narrowing->all() === [] && !$narrowing->isBoolean() ? TRUE : $narrowing;
     }
     $composed = Schema::object()->with('properties', $properties)->with('unevaluatedProperties', FALSE);
@@ -1055,8 +1053,8 @@ final class ContractEmitter {
    *   The member.
    * @param \PortableSchema\Builder\Schema $property
    *   What the frame, described flat, says of it.
-   * @param array|\stdClass|bool $def
-   *   What the def says of it, read flat, in the array form.
+   * @param \PortableSchema\Builder\Schema $def
+   *   What the def says of it, read flat.
    * @param \Drupal\surface\Contract\Subschemas $subschemas
    *   The defs written so far, the child's among them.
    *
@@ -1064,15 +1062,15 @@ final class ContractEmitter {
    *   TRUE for a member holding a child or variants that the frame states
    *   as its def does; FALSE otherwise, a plain member among them.
    */
-  protected static function childAsDeclared(DefinitionMap $advertised, string $name, Schema $property, array|\stdClass|bool $def, Subschemas $subschemas): bool {
+  protected static function childAsDeclared(DefinitionMap $advertised, string $name, Schema $property, Schema $def, Subschemas $subschemas): bool {
     $entry = $advertised->entry($name);
-    if ($property->isBoolean() || !is_array($def) || ($entry?->attachment === NULL && $entry?->list === NULL && $entry?->variants === NULL)) {
+    if ($property->isBoolean() || $def->isBoolean() || ($entry?->attachment === NULL && $entry?->list === NULL && $entry?->variants === NULL)) {
       return FALSE;
     }
     // Followed as a property, as the def's is: a union of variants is
     // what the conditionals state, and read flat it is not said.
-    $followed = SchemaResolver::inline(['properties' => [$name => Schemas::arrayed($property)]], ['$defs' => $subschemas->arrayed()])['properties'][$name] ?? NULL;
-    return is_array($followed) && Schemas::same($followed, $def);
+    $followed = SchemaResolver::inline(Schema::any()->with('properties', [$name => $property]), Schema::any()->with('$defs', $subschemas->all()))->get('properties')[$name] ?? NULL;
+    return Schemas::isObjectSchema($followed) && Schemas::same($followed, $def);
   }
 
   /**

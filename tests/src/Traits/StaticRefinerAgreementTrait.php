@@ -10,11 +10,13 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinitionInterface;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Options\SurfaceOptions;
 use Drupal\surface\Refinement\DoesNotApply;
 use Opis\JsonSchema\CompliantValidator;
+use PortableSchema\Builder\Schema;
 
 /**
  * Holds what the served contract enumerated to what refinement answers.
@@ -73,12 +75,12 @@ trait StaticRefinerAgreementTrait {
     $served = $values === NULL ? $emitter->emitFull($surface, $label) : $emitter->emit($surface, $values, $label);
     // Each marker where the emitter's pass wrote it: a declared rule's on
     // its conditional. Decision: see docs/decisions.md#contract-2.
-    $schema = SchemaResolver::restored(self::decoded($served->document['schema']));
+    $schema = Schemas::decoded(SchemaResolver::restored(Schema::from(self::decoded($served->document['schema']))));
     if (isset($schema['unevaluatedProperties'])) {
       // A frame that mixes structures in, read flat: their members are its
       // keys, and what their defs state, the frame's.
       // Decision: see docs/decisions.md#a-mixin-is-merged-flat.
-      $schema = SchemaResolver::inline($schema);
+      $schema = Schemas::decoded(SchemaResolver::inline(Schema::from($schema)));
     }
     $definitions = $surface->getDefinitions();
     // What the full schema itself is refined against: the locked keys,

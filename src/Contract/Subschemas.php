@@ -34,15 +34,6 @@ final class Subschemas {
   protected array $defs = [];
 
   /**
-   * Each def in the array form, once asked for (arrayed()).
-   *
-   * A def never changes once filed, so its array form is written once.
-   *
-   * @var array<string, array|\stdClass|bool>
-   */
-  protected array $arrayed = [];
-
-  /**
    * What each def's structure is called and is for, by key.
    *
    * Kept beside the defs rather than in them, so a site compares with its
@@ -230,19 +221,6 @@ final class Subschemas {
   }
 
   /**
-   * Gets every def in the array form, for SchemaResolver to read.
-   *
-   * @return array<string, array|\stdClass|bool>
-   *   The defs, by key, each as Schemas::arrayed() writes it.
-   */
-  public function arrayed(): array {
-    foreach ($this->defs as $key => $def) {
-      $this->arrayed[$key] ??= Schemas::arrayed($def);
-    }
-    return $this->arrayed;
-  }
-
-  /**
    * Gets every def as the document states it: titled and described.
    *
    * Each def that its structure names leads with that structure's label
@@ -261,25 +239,6 @@ final class Subschemas {
       $defs[$key] = Schemas::first($def, $this->names[$key] ?? []);
     }
     return $defs;
-  }
-
-  /**
-   * Answers whether two pieces of a schema say the same.
-   *
-   * By their JSON (Schemas::same()), for the schema reader's arrays: an
-   * empty object is written as an `\stdClass`, which PHP compares by
-   * identity.
-   *
-   * @param mixed $a
-   *   One.
-   * @param mixed $b
-   *   The other.
-   *
-   * @return bool
-   *   TRUE when they encode the same.
-   */
-  public static function same(mixed $a, mixed $b): bool {
-    return Schemas::same($a, $b);
   }
 
 }

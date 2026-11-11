@@ -12,6 +12,7 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\Core\TypedData\ComplexDataDefinitionInterface;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
@@ -31,6 +32,7 @@ use Drupal\user\RoleInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
+use PortableSchema\Builder\Schema;
 
 /**
  * Tests the examples' steps 1 to 3, and the contract panel under them.
@@ -391,7 +393,7 @@ class ExamplesStepsTest extends SurfaceKernelTestBase {
       $this->assertSame(['pricing'], $branch['if']['required']);
       // Each refers to its variant's def, read here as one schema.
       $this->assertStringStartsWith('#/$defs/registration.step3.ticket.', $branch['then']['properties']['ticket']['$ref']);
-      $branches[$branch['if']['properties']['pricing']['const']] = SchemaResolver::inline($branch['then']['properties']['ticket'], $contract);
+      $branches[$branch['if']['properties']['pricing']['const']] = Schemas::decoded(SchemaResolver::inline(Schema::from($branch['then']['properties']['ticket']), Schema::from($contract)));
     }
     $this->assertSame(['free', 'paid'], array_keys($branches));
     $this->assertSame(['note'], array_keys($branches['free']['properties']));

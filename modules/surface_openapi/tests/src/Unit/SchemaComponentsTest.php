@@ -125,6 +125,35 @@ class SchemaComponentsTest extends UnitTestCase {
   }
 
   /**
+   * Tests a map named by indexes is followed and loosened in its form.
+   *
+   * A `properties` map named 0 to n - 1 is a \stdClass in the array form
+   * (Schemas::arrayed()): its pointers follow their defs, its members'
+   * pointers lead to the patches, and it stays an object.
+   */
+  public function testMapsNamedByIndexesFollowTheirDefs(): void {
+    $schema = self::schema();
+    $schema['properties'] = (object) [
+      '0' => ['$ref' => '#/$defs/test.contact', 'title' => 'First'],
+      '1' => ['type' => 'string'],
+    ];
+    $schema['required'] = ['0'];
+    $schema['allOf'] = [];
+    $components = new SchemaComponents();
+    $root = $components->add($schema, 'indexed');
+    $properties = $components->all()[$root]['properties'];
+    $this->assertInstanceOf(\stdClass::class, $properties, 'The map stays an object.');
+    $this->assertSame('#/components/schemas/test.contact', ((array) $properties)[0]['$ref'], 'Its pointer follows its def.');
+
+    $patch = $components->patch($root);
+    $loosened = $components->all()[$patch]['properties'];
+    $this->assertInstanceOf(\stdClass::class, $loosened, 'The patch\'s map stays an object.');
+    $pointer = ((array) $loosened)[0]['$ref'];
+    $this->assertSame('#/components/schemas/' . $components->patch('test.contact'), $pointer, 'Its member points at the def\'s patch, which drops what the def requires.');
+    $this->assertArrayNotHasKey('required', $components->all()[$components->patch('test.contact')]);
+  }
+
+  /**
    * Tests a def described the same way is shared, and one that differs not.
    */
   public function testTheSameDefIsSharedAndAnotherKeepsItsOwn(): void {

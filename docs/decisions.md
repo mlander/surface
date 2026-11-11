@@ -11358,7 +11358,8 @@ nothing else moves, and no path.
   [A reference and a deferred list are the dialect's check options and links](#a-reference-and-a-deferred-list-are-the-dialects-check-options-and-links)); variants `portable-typeBy`;
   `refine` `portable-refine`; a shape a `portable:` type; the emitter
   builds through `Schema`
-  ([The emitter builds through the builder](#the-emitter-builds-through-the-builder)), the reader reads through `Schema::from()`,
+  ([The emitter builds through the builder](#the-emitter-builds-through-the-builder)), the reader reads through `Schema::from()`
+  ([The reader reads a Schema](#the-reader-reads-a-schema)),
   and the pipeline validates through the dialect's validator. Each is
   its own change, under contract 5 until it ships.
 
@@ -11725,19 +11726,15 @@ arrays. Contract 5 stays 5.
   `\stdClass` and only arrays were rewritten. This is the one output
   that changed: the components of every OpenAPI document with variants
   (`OpenApiDocumentTest`, `SchemaComponentsTest`).
-- **What reads arrays.** `SchemaResolver` reads the array form: where a
-  frame mixes a structure in, the emitter hands it the def and the
-  document's defs in the array form (`Subschemas::arrayed()` writes each
-  def once). The schema reader, `ConfigSchemaDocument`,
-  `ComponentSlots` and `ComponentProps` read and write arrays, so
-  `PortableKeywords::before()`, `PortableUi::set()` and
-  `PortableLinks::set()` take either form and answer in the form given.
+- **What reads arrays.** `ConfigSchemaDocument`, `ComponentSlots` and
+  `ComponentProps` write the reader's input as arrays; the reader and
+  `SchemaResolver` read `Schema` values
+  ([The reader reads a Schema](#the-reader-reads-a-schema)).
 - **Later.** The code that reads the document moves to the `Schema` as
   it is touched: the controller, the tool door, the contract panel, the
   OpenAPI components, the examples panels and the tests. Then the
   document array goes, so a `ServedContract` stops holding both the
-  `Schema` and its array form. The schema reader reads through
-  `Schema::from()`. The builder could hold what Surface writes here:
+  `Schema` and its array form. The builder could hold what Surface writes here:
   `first()`, `defaults()`, an `equals()`, and a walk keyed on
   `Keywords::shape()`.
 
@@ -11748,6 +11745,120 @@ arrays. Contract 5 stays 5.
 `SchemaComponents`, `SchemasTest`, `DocumentHeadSettledTest`,
 `NarrowingComparedByJsonTest`, `PortableDocumentTest`,
 `PortableServedContractTest`, `OpenApiDocumentTest`)
+
+### The reader reads a Schema
+
+The schema reader walks a document as `PortableSchema\Builder\Schema`
+values, as the emitter builds one.
+
+- **The boundary.** The reader's entries (`read()`, `fill()`,
+  `names()`, `structure()`, `notes()`, `prepared()`, `upconvert()`,
+  `holdsNoSecret()`, `condition()`, `statedTypes()`) take arrays: a
+  document arrives as JSON, and a structure read from it is registered,
+  cached and hashed by the document's array and a JSON pointer into it,
+  as the provider contracts (`EntrySchemasInterface`, `SiteList::add()`)
+  hand it over. Inside, the reader converts once: `upconvert()` on the
+  array, since a draft's spellings are no keywords of the dialect, then
+  `Schema::from()`, then the markers put back
+  (`SchemaResolver::restored()`), the draft spellings read
+  (`respelled()`) and the rules a container states for a child moved
+  (`localized()`), on the `Schema`. `prepared()` answers the result as
+  JSON decodes it (`Schemas::decoded()`), the array the build registers,
+  and where the conversion changes nothing the array it was given. A
+  document is converted once per preparing: `read()` and `notes()` read
+  the `Schema` they prepared; `prepared()` keeps the `Schema` of the
+  array it answered last, below the size from which a prepared document
+  is shared, and `fill()` and `holdsNoSecret()` read it when handed the
+  same array; where a hash is given, the `Schema` is shared by it.
+- **What is no schema is refused.** Before it is read, `prepared()`
+  walks every keyword that holds a schema, a map or a list of them, at
+  every depth: each member is an object or a boolean, and a schema's
+  keywords are names, or the document is refused, naming the member's
+  pointer. A marker a document places inside a value leaves the value
+  as it is.
+- **The walk reads keywords.** Every frame, key, value, constraint,
+  variant, rule and kept schema is read with `get()`, `has()`, `all()`
+  and `isBoolean()`; a subschema is found by JSON pointer with
+  `Schemas::at()`, which steps by the shape of each keyword; schemas are
+  compared with `Schemas::same()` and edited as copies with `with()` and
+  `without()`. `get()` answers NULL for an absent keyword and for a JSON
+  null, so `has()` decides where the two differ (`const: null`,
+  `default: null`). A walk over a whole document reaches schemas only
+  (`Schemas::map()`), never data. `names()` alone reads the array: it
+  reads a def's `title` and `description` at `/$defs/<id>`, one step
+  in, so a structure is named without converting its document.
+- **Data in either form.** A `Schema` may carry its data (`x-surface`,
+  `x-portable-ui`, its groups and options) as arrays or as `\stdClass`
+  objects, as `Schema::from()` of either kind of decoded JSON gives it;
+  the reader and `SchemaResolver` read data through `Schemas::data()`
+  and write it back in the array form.
+- **What leaves the reader is an array.** A schema kept for a
+  JsonSchema constraint is written in the array form
+  (`Schemas::arrayed()`) where it becomes the constraint's options: a
+  kept schema keeps `{}` as `{}`. The table of constraints reads a
+  value's own keywords as JSON decodes them, and only those
+  (`ConstraintKeywords::keywords()`).
+- **One form per helper.** `SchemaResolver` (`restored()`, `inline()`,
+  `resolve()`, `refersTo()`, `merge()`), `PortableKeywords::before()`,
+  `PortableUi::set()` and `PortableLinks::set()`, `all()` and `of()`
+  take and answer `Schema` values. Inside, `SchemaResolver` merges
+  schemas as keyword arrays and builds them again with `Schema::from()`,
+  which keeps a keyword outside the vocabulary, so every keyword
+  survives a merge. A caller holding the document array (the examples
+  panels, the tests) reads it in with `Schema::from()` and the result
+  back with `get()`, `Schemas::arrayed()` or `Schemas::decoded()`.
+- **Types of the library.** The reader holds a `PortableSchema\Registry`,
+  the service `surface.portable_registry` (`Registry::withTypes()`, built
+  once per container; a site adds its own schemas to it). A `$ref` to an
+  id `LeafTypes::LIBRARY` names reads as that leaf type, at a key, in a
+  list's items and through a def that is that `$ref`; what the type's
+  document says beyond the row is kept as a JsonSchema constraint, so
+  the key is no wider than the type. The site's keywords beside the
+  `$ref` narrow it, but for a `type` or a `format` that says otherwise
+  than the row, which is noted and not read; a `format` the row states
+  none of is kept beside the type. `anyOf` of the `$ref` and `{"type":
+  "null"}`, in either order, is the type, nullable. Any other id of the
+  library is read from its document: an object type as a structure,
+  read as the library states it, the site's keywords beside the `$ref`
+  noted and not read; any other where the key stands, a `format` no
+  string reads kept for the server's check. A `$ref` to the library in
+  a schema kept for a JsonSchema constraint is replaced by what the type
+  says, so the kept schema refers to nothing outside it. A type that
+  says `writeOnly: true` makes the key a secret, and
+  `holdsNoSecret()` answers FALSE for a document that refers to one. An
+  id the registry does not hold is noted and kept. The emitter writes
+  the row's `type` and `format`.
+- **`portable-typeBy`.** Read as variants a sibling chooses where its
+  `source` reads one sibling, the sibling lists its values, each a
+  string, the `href` is a template of that one variable, and each
+  value's expansion, or else the `fallback`, is an object schema the
+  registry holds; each is a variant read from its own document, written
+  again as Surface writes variants. An object holding such a key is
+  read as a frame, never as a plain map. Otherwise the keyword is noted,
+  with the reason, and kept in the key's JsonSchema constraint.
+- **The rest of the dialect.** `portable-refine` and `portable-compare`
+  are kept in the JsonSchema constraint and noted. `x-portable-type`,
+  `x-portable-translatable`, `x-portable-provider` and
+  `x-portable-unchecked` are noted and dropped.
+- **`x-surface.collection`.** The emitter writes it on a collection; it
+  is accepted there, and noted on a key whose items are no object.
+- **OpenAPI.** `SchemaComponents` follows and loosens a map of schemas
+  in either PHP form, a `\stdClass` when its names are 0 to n - 1, so
+  every pointer in a component and in its patch leads to a component.
+- **Later.** The provider contracts and the writers of the reader's
+  input (`ConfigSchemaDocument`, `ComponentSlots`, `ComponentProps`)
+  move to `Schema`; the emitter may write a type of the library as its
+  `$ref`; the site's keywords beside a `$ref` to an object type of the
+  library narrow it, once a `$ref` to a local def is narrowed the same
+  way; the server's validator enforces `portable-refine`,
+  `portable-compare` and `portable-typeBy`.
+
+(`SchemaReader`, `SchemaResolver`, `Schemas::at()`,
+`Schemas::decoded()`, `Schemas::data()`, `Schemas::boolean()`,
+`Schemas::isObjectSchema()`, `ConstraintKeywords::keywords()`,
+`LeafTypes::LIBRARY`, `SchemaComponents`, `LibraryTypesReaderTest`,
+`TypeByReaderTest`, `MalformedDocumentsReaderTest`, `SchemasTest`,
+`SchemaResolverDataFormsTest`, `SchemaComponentsTest`)
 
 ### An OpenAPI document is one more door
 

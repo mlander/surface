@@ -7,8 +7,10 @@ namespace Drupal\Tests\surface\Traits;
 use Drupal\surface\Computed;
 use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\ResourceBuild\ResourcesInterface;
+use PortableSchema\Builder\Schema;
 
 /**
  * Holds what the full schema states about access to what the build applies.
@@ -67,7 +69,7 @@ trait StaticAccessAgreementTrait {
       $context = $resources->operation($resource, $operation, $arguments);
       $alone = $resources->buildStatic($resource, $context);
       $full = json_decode((string) json_encode($emitter->emitFull($alone, $resource, $operation)->document['schema']), TRUE);
-      $compared += $this->assertSchemaStatesAccess($alone, SchemaResolver::inline($full), $who);
+      $compared += $this->assertSchemaStatesAccess($alone, Schemas::decoded(SchemaResolver::inline(Schema::from($full))), $who);
       foreach ($situations as $situation => $set) {
         $set();
         $built = $resources->build($resource, $context);

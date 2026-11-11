@@ -8,6 +8,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\Routing\RouteObjectInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\Form\SurfaceFormBuilderInterface;
 use Drupal\surface\Form\SurfaceOperationForm;
 use Drupal\surface\Pipeline\VariantMismatchException;
@@ -36,6 +37,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Route;
+use PortableSchema\Builder\Schema;
 
 /**
  * Variants stored flat: asked for under their key, stored beside its sibling.
@@ -466,13 +468,13 @@ class FlatVariantsLayoutTest extends SurfaceKernelTestBase {
    * Tests the inline reading states each variant under the gear.
    */
   public function testInlineReadsEachVariantUnderTheGear(): void {
-    $inline = SchemaResolver::inline($this->schema());
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($this->schema())));
     $this->assertSame(self::KEYS, array_keys($inline['properties']), 'The gear is one key.');
     $this->assertFalse($inline['additionalProperties']);
     $this->assertSame(['dependsOn', 'by', 'variants'], array_keys($inline['properties']['gear']['x-surface']));
     $this->assertSame(['weight', 'fuel'], array_keys($inline['allOf'][0]['then']['properties']['gear']['properties']), 'The stove, in place of its def.');
     $this->assertSame(['weight', 'poles', 'fly'], array_keys($inline['allOf'][1]['then']['properties']['gear']['properties']), 'The tent, in place of its def.');
-    $this->assertSame(SchemaResolver::inline($inline), $inline, 'Read inline twice, the same.');
+    $this->assertSame(Schemas::decoded(SchemaResolver::inline(Schema::from($inline))), $inline, 'Read inline twice, the same.');
     $this->assertTrue($this->validates($inline, self::READ));
     $this->assertFalse($this->validates($inline, self::KIT));
     $this->assertFalse($this->validates($inline, ['kind' => 'stove'] + self::READ));

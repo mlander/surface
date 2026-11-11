@@ -76,6 +76,27 @@ final class LeafTypes {
   ];
 
   /**
+   * The types of the Portable Schema library read as a row, by id.
+   *
+   * A `$ref` to one of these ids is read as the row's type; what the
+   * library's document says beyond the row's `type` and `format` (the
+   * length of an email, the range of an integer) the reader keeps, so a
+   * key read from one is no wider than the library's type. A
+   * `portable:timestamp` is an integer to JSON Schema, and only its id
+   * tells it from one. The emitter writes each row as ROWS says.
+   */
+  public const LIBRARY = [
+    'portable:string' => 'string',
+    'portable:integer' => 'integer',
+    'portable:number' => 'float',
+    'portable:boolean' => 'boolean',
+    'portable:email' => 'email',
+    'portable:uri' => 'uri',
+    'portable:date-time' => 'datetime_iso8601',
+    'portable:timestamp' => 'timestamp',
+  ];
+
+  /**
    * The type that is held only where the module makes it.
    */
   public const ANY = 'any';

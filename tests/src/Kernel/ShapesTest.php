@@ -8,6 +8,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\Condition;
@@ -42,6 +43,7 @@ use Drupal\tool\TypedData\InputDefinitionInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * Shapes: one scalar definition, named, used at many keys.
@@ -445,7 +447,7 @@ class ShapesTest extends SurfaceKernelTestBase {
     $this->assertSame('#/$defs/resource_test.sku', $these['properties']['spare']['$ref']);
 
     // Read inline, each key is the def with the key laid over it.
-    $inline = SchemaResolver::inline($full);
+    $inline = Schemas::decoded(SchemaResolver::inline(Schema::from($full)));
     $this->assertSame([
       'title' => 'Stock code',
       'description' => self::DEF['description'],

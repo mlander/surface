@@ -235,8 +235,12 @@ the record of the rework that brought the module to the pattern.
 - **Reading a schema**: `Contract\SchemaReader`
   (`surface.schema_reader`), the emitter's mapping run backwards: a
   JSON Schema document (2020-12; draft-04 to -07 converted first,
-  `upconvert()`) read into a blueprint, for a variant from the site, or
-  registered as a structure, `structure($document, $id)`. A def is one
+  `upconvert()`), taken as an array and walked as `Schema` values, read
+  into a blueprint, for a variant from the site, or registered as a
+  structure, `structure($document, $id)`. A `$ref` to a type of the
+  Portable Schema library and a `portable-typeBy` are read through the
+  registry `surface.portable_registry` (the type library, a site's
+  schemas added). A def is one
   structure (a read structure, registered by
   `ResourceRegistry::defineRead()` as `schema:<id>:<hash>` and listed by
   nothing), a conditional of the vocabulary a declared rule. What no
@@ -966,7 +970,7 @@ ddev exec bash -c 'cd /var/www/html/web && SIMPLETEST_DB=mysql://db:db@db/db \
 The full lane's phpunit line reads, as of this writing:
 
 ```
-phpunit: Tests: 2276, Assertions: 56253, Errors: 0, Failures: 0, Skipped: 3. Classes: 317 of 317, 8 at a time, browser classes 4.
+phpunit: Tests: 2298, Assertions: 56526, Errors: 0, Failures: 0, Skipped: 3. Classes: 321 of 321, 8 at a time, browser classes 4.
 ```
 
 the same counts a plain phpunit run of the tree gives. The skipped
@@ -986,8 +990,8 @@ fail the gate, in either lane: plain phpunit counts them (42 as of this
 writing) and passes, and the full lane passes `--suppress-deprecations`,
 without which `run-tests.sh` adds `--fail-on-deprecation` to every class.
 The fast lane's line sums phpunit's own lines, one per class:
-`Tests: 2162, Assertions: 51699, Skipped: 3, Deprecations: 155. Classes:
-264, 8 at a time.`; its deprecation count is per process, so it is higher than one
+`Tests: 2184, Assertions: 51972, Skipped: 3, Deprecations: 159. Classes:
+268, 8 at a time.`; its deprecation count is per process, so it is higher than one
 run's.
 
 The test and assertion counts drift upward as work lands and are not the
@@ -1310,10 +1314,12 @@ src/Contract/            The served contract's emitter (a Portable Schema
                          x-portable-messages, PortableUi its
                          x-portable-ui, PortableLinks its
                          x-portable-links; Schemas holds what the emitter
-                         needs of a PortableSchema\Builder\Schema that
-                         the builder lacks (the array form, first(),
-                         defaults(), same(), map()), since every writer
-                         builds Schema values; ServedContract, the
+                         and the reader need of a
+                         PortableSchema\Builder\Schema that the builder
+                         lacks (the array form, first(), defaults(),
+                         same(), map(), at(), decoded()), since every
+                         writer builds Schema values and the reader and
+                         SchemaResolver read them; ServedContract, the
                          document in the array form, whose schema() and
                          outputs() answer the Schema values built;
                          the contract diff; the schema reader; the two

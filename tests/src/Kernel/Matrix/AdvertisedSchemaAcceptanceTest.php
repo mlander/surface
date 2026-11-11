@@ -9,6 +9,7 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\Contract\SchemaResolver;
+use Drupal\surface\Contract\Schemas;
 use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
@@ -34,6 +35,7 @@ use PHPUnit\Framework\Attributes\IgnoreDeprecations;
 use Drupal\surface_examples_references\Sponsorship;
 use Drupal\surface_examples_retitle\Retitle;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PortableSchema\Builder\Schema;
 
 /**
  * The schema is never stricter than the runtime, on the accepted document.
@@ -1224,7 +1226,7 @@ class AdvertisedSchemaAcceptanceTest extends SurfaceKernelTestBase {
     $document = $this->decoded($this->container->get('surface.contract_emitter')->emit($cellar, array_replace($cellar->getDefaultValues(), self::CELLAR), 'resource_test.cellar')->document);
     $racks = $document['schema']['properties']['racks'];
     $this->assertTrue($racks['readOnly']);
-    $items = SchemaResolver::inline($racks, $document['schema'])['items'];
+    $items = Schemas::decoded(SchemaResolver::inline(Schema::from($racks), Schema::from($document['schema'])))['items'];
     foreach (['shelf', 'spices', 'label'] as $key) {
       $this->assertTrue($items['properties'][$key]['readOnly'], $key);
       $this->assertArrayNotHasKey('const', $items['properties'][$key], $key);
