@@ -15,13 +15,14 @@ example module turns operations into it.
 | The command line | `drush tool:run <tool id>`, the Tool module's Drush command, runs a tool from a shell with its input as JSON. | this module, with the Tool module and its Drush command |
 | MCP | The Model Context Protocol, which an AI agent outside the site uses to list and call tools. An MCP server module such as MCP Server Tool Bridge (`mcp_server_tool_bridge`) offers the Tool API tools over it. | this module, with the Tool module and an MCP server module |
 | ECA | Events, Conditions, Actions: automation a site builder configures. The ECA Tool module (`eca_tool`) makes one ECA action per tool, so an ECA model can run an operation. | this module, with the Tool module and `eca_tool` |
-| HTTP with an OpenAPI document | A JSON endpoint per resource at `/surface-api/{resource}`, where the HTTP method picks the operation: `GET` reads, `PATCH` updates, `POST` creates, `DELETE` removes. The OpenAPI 3.1 document lists every operation's paths for any OpenAPI client or code generator. | this module |
+| HTTP with an OpenAPI document | A JSON endpoint per resource at `/surface-api/{resource}`, where the HTTP method picks the operation: `GET` reads, `PATCH` updates, `POST` creates, `DELETE` removes. The OpenAPI 3.1 document lists every operation's paths for any OpenAPI client or code generator. | `surface_http`, and `surface_openapi` for the document |
 | A React page | A React app that draws the form from the JSON Schema the HTTP door serves: an example client of that door. | the `surface_examples_react` example |
 
 The command line, MCP and ECA run the tool, so they ask for the same
 values the tool does. The React page reads and writes through the HTTP
-door, which this module opens with its OpenAPI document; the page is an
-example of a JavaScript client of it. None of these modules is needed
+door, which the submodule `surface_http` opens, `surface_openapi`
+adding its OpenAPI document; the page is an example of a JavaScript
+client of it. None of these modules is needed
 to read this series. To open the tool door and the React page on a
 site:
 

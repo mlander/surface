@@ -8,7 +8,7 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\ListDataDefinition;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
-use Drupal\surface\SurfaceBuilderInterface;
+use Drupal\surface\SurfaceBuilder;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Resource\ArrangementGroup;
 
@@ -27,7 +27,7 @@ use Drupal\surface\Resource\ArrangementGroup;
  *
  * An alter may attach a structure, and only at its own mount: the
  * mount's keys are then the structure's, which the build step builds in
- * its own frame and fixes there (SurfaceBuilderInterface::
+ * its own frame and fixes there (SurfaceBuilder::
  * mountStructure()). The alter is then an adapter: it wires the
  * structure's ports to the owner's keys, and adds no key of its own.
  *
@@ -38,7 +38,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
   /**
    * Constructs an alter's blueprint.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The engine's builder the blueprint fills.
    * @param \Drupal\Core\TypedData\TypedDataManagerInterface $typed_data_manager
    *   The typed data manager.
@@ -55,7 +55,7 @@ final class ResourceBlueprintAdditions extends BlueprintAdapterBase {
    *   fact one set already is refused (describe()). NULL checks nothing.
    */
   public function __construct(
-    SurfaceBuilderInterface $builder,
+    SurfaceBuilder $builder,
     TypedDataManagerInterface $typed_data_manager,
     protected readonly string $provider,
     protected readonly ?array $mixedIn = NULL,

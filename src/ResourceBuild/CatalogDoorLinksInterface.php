@@ -28,7 +28,7 @@ interface CatalogDoorLinksInterface extends CatalogDoorsInterface {
    *   Whether it can be asked on its own (ResourceCatalog::standalone()).
    *
    * @return array<string, \Drupal\Core\Url>
-   *   By the door's name (one of SiteCatalog::DOORS), each door with a
+   *   By the door's name (the key doors() gives it), each door with a
    *   URL; a door whose path holds a parameter nothing fills is left out,
    *   since no one URL is it.
    */

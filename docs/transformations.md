@@ -255,7 +255,7 @@ Over HTTP, an update's body is the values document itself, with RFC
 stored, `null` clears it), so `PATCH` takes a merge patch as well as
 plain JSON:
 
-<!-- excerpt: src/Http/ResourceApiController.php -->
+<!-- excerpt: modules/surface_http/src/Controller/ResourceApiController.php -->
 
 ```php
 $this->assertMediaType($request, $method === 'PATCH' ? [self::MERGE_PATCH, 'application/json'] : ['application/json']);

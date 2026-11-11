@@ -37,7 +37,7 @@ use Drupal\surface_examples\Entity\EventVenue;
 use Drupal\surface_examples\Keys\TicketTypes;
 use Drupal\surface_examples\Resource\SpotlightResource;
 use Drupal\surface_examples\Resource\VenueResource;
-use Drupal\surface\Http\ResourceApiController;
+use Drupal\surface_http\Controller\ResourceApiController;
 use Drupal\surface\Tool\OperationInputs;
 use Drupal\tool\Tool\ToolDefinition;
 use Drupal\tool\Tool\ToolManager;
@@ -585,10 +585,20 @@ final class ConceptPanel {
   /**
    * Example 16: the lookups, made now through the API.
    *
+   * The API is surface_http's. Until that module is installed, as on a
+   * site updated to the code before its update has run, the panel says
+   * so instead of resolving the controller.
+   *
    * @return array
    *   A render array: each path and its answer.
    */
   protected function lookups(): array {
+    if (!$this->moduleHandler->moduleExists('surface_http')) {
+      return [
+        '#markup' => $this->t('The lookups go through the HTTP door, which the surface_http module serves; install it to see them.'),
+        '#cache' => ['tags' => ['config:core.extension']],
+      ];
+    }
     $answers = [];
     $controller = $this->classResolver->getInstanceFromDefinition(ResourceApiController::class);
     foreach (self::LOOKUPS as $path) {

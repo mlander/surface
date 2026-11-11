@@ -50,6 +50,7 @@ class BuildCacheTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples_field',
     'surface_examples',
     'surface_examples_compliance',

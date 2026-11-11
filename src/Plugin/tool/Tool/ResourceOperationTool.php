@@ -8,12 +8,9 @@ use Drupal\Core\StringTranslation\TranslatableMarkup;
 use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\TypedDataInterface;
 use Drupal\Core\Validation\Plugin\Validation\Constraint\PrimitiveTypeConstraint;
-use Drupal\surface\Pipeline\NotEmitted;
+use Drupal\surface\Operation\OperationRun;
 use Drupal\surface\Pipeline\SurfacePipelineInterface;
-use Drupal\surface\Pipeline\ViolationSummary;
-use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Staging\StagedStorage;
-use Drupal\surface\SurfaceInterface;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\OperationDefinition;
@@ -49,16 +46,19 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  *   anyone calls, and one that needs a subject is refined to it as soon
  *   as the subject arrives, through the Tool API's own
  *   input_definition_refiners.
- * - **Access**: the operation's permission, then the resource's access
- *   class, for the context the parameters build: the answer a route
- *   served by the same operation gives. No host stands behind the
- *   operation, so an answer with no opinion is a refusal.
- * - **Execution**: the operation builds the context, the resource is
- *   built in it, and the pipeline submits `values` to the resource's
- *   composed storage, or stops after prepare for a dry run. Prepare is
- *   where storage's own checks run, so a dry run is refused for what a
- *   write would be refused for. With a stage, the storage is handed it,
- *   and the write is kept in the stage.
+ * - **Access**: the runner's gate (OperationRunnerInterface::gate()): the
+ *   operation's permission, the stage, then the resource's access class,
+ *   for the context the parameters build, the answer a route served by
+ *   the same operation gives. No host stands behind the operation, so an
+ *   answer with no opinion is a refusal.
+ * - **Execution**: one run of the runner, with `values` and `dry_run`,
+ *   as the current user: the sequence again, so execute() called without
+ *   access() refuses what access() refuses, then the build, and the
+ *   pipeline submits `values` to the resource's composed storage, or
+ *   stops after prepare for a dry run. Prepare is where storage's own
+ *   checks run, so a dry run is refused for what a write would be refused
+ *   for. With a stage, the storage is handed it, and the write is kept in
+ *   the stage.
  * - **Outputs**: the accepted values, projected as the read tool
  *   projects them (no key left out for the caller, no secret), whether
  *   they were written, and the resource's own outputs as its storage
@@ -98,6 +98,16 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * The pipeline that accepts, validates, prepares and commits values.
    */
   protected SurfacePipelineInterface $pipeline;
+
+  /**
+   * Whether doExecute() was called since execute() last read it.
+   */
+  protected bool $ran = FALSE;
+
+  /**
+   * What doExecute() answered, before the Tool API checked the outputs.
+   */
+  protected ?ExecutableResult $answered = NULL;
 
   /**
    * {@inheritdoc}
@@ -143,8 +153,9 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
   /**
    * Answers whether the listing may read what is stored, for the account.
    *
-   * Nothing is loaded for an account the operation is not open to, as
-   * refineInputDefinition() loads nothing for one.
+   * The runner's gate, with no arguments: nothing is loaded for an
+   * account the operation is not open to, as refineInputDefinition()
+   * loads nothing for one.
    *
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $resource
    *   The resource.
@@ -159,12 +170,7 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     if (!$operation->needsNothing() || !$this->operationInputs->changesWhatExists($resource, $operation)) {
       return FALSE;
     }
-    $permission = $this->permissionAccess($this->currentUser);
-    if ($permission !== NULL && !$permission->isAllowed()) {
-      return FALSE;
-    }
-    [, , $context] = $this->operation([]);
-    return $this->operationAccess($resource, $context, $this->currentUser)->isAllowed();
+    return !$this->gate([])->isRefused();
   }
 
   /**
@@ -176,34 +182,28 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * identity keys the operation knows are left out, and, for an operation
    * that changes a thing that exists, each property defaults to what is
    * stored for it now, or, with a stage, to what the stage holds for it.
-   * Parameters that name nothing, and a stage that names nothing or is
-   * another account's, leave the declared definition standing; executing
-   * refuses them.
+   * The runner prepares the operation, so nothing is built or loaded for
+   * an account it is not open to. Any refusal (the permission, the stage,
+   * parameters that name nothing, the access class) leaves the declared
+   * definition standing; executing refuses it.
+   *
+   * Decision: see
+   * docs/decisions.md#every-door-projects-what-the-read-tool-projects.
    */
   public function refineInputDefinition(string $name, InputDefinitionInterface $definition, array $values): InputDefinitionInterface {
     if ($name !== OperationInputs::VALUES) {
       return $definition;
     }
-    // Nothing is built or loaded for an account the operation is not
-    // open to: what is stored is defaulted into the refined values.
-    // Decision: see
-    // docs/decisions.md#every-door-projects-what-the-read-tool-projects.
-    $permission = $this->permissionAccess($this->currentUser);
-    if ($permission !== NULL && !$permission->isAllowed()) {
-      return $definition;
-    }
+    // The load is inside the try too, so nothing a storage throws while it
+    // loads leaves the Tool API's runner while the inputs are set.
     try {
-      $staged = $this->staged($values);
-      if ($staged instanceof ExecutableResult) {
+      $run = $this->run($values);
+      if (!$run instanceof OperationRun) {
         return $definition;
       }
-      [$resource, , $context, $stage] = $staged;
-      if (!$this->operationAccess($resource, $context, $this->currentUser)->isAllowed()) {
-        return $definition;
-      }
-      return $this->operationInputs->values($resource, $this->resources->build($resource->name(), $context), $context, $stage);
+      return $this->operationInputs->values($run->definition(), $run->surface(), $run->context(), $run->storage());
     }
-    catch (\InvalidArgumentException) {
+    catch (\InvalidArgumentException | \LogicException) {
       return $definition;
     }
   }
@@ -275,11 +275,29 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
    * and answers such a refusal itself, as `{success, error, error_type}`:
    * the one place the shape cannot be given.
    *
-   * Decision: see docs/decisions.md#one-result-at-every-door.
+   * Only a refusal of the inputs, before doExecute() ran, is answered so:
+   * a document that says nothing was accepted or committed. A failure
+   * after doExecute() answered, the Tool API's own check of the outputs,
+   * is never rewritten into a refusal: it carries the document doExecute()
+   * answered, so a committed write says `committed: true`.
+   *
+   * Decision: see docs/decisions.md#one-result-at-every-door, and
+   * docs/decisions.md#one-runner-runs-an-operation.
    */
   public function execute(): static {
     parent::execute();
+    // What doExecute() left for this call, cleared for the next.
+    $ran = $this->ran;
+    $answered = $this->answered;
+    $this->ran = FALSE;
+    $this->answered = NULL;
     $result = $this->result;
+    if ($ran) {
+      if ($result !== NULL && !$result->isSuccess() && $answered !== NULL && $answered->isSuccess()) {
+        $this->result = ExecutableResult::failure($result->getMessage(), $answered->getContextValues(), $result->getFailureCategory() ?? FailureCategory::Runtime, $result->getViolations());
+      }
+      return $this;
+    }
     if ($result === NULL || $result->isSuccess() || $result->getContextValues() !== [] || $result->getViolations()->count() === 0) {
       return $this;
     }
@@ -343,38 +361,42 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
 
   /**
    * {@inheritdoc}
+   *
+   * One run of the runner with the values and the dry run, as the current
+   * user. Nothing after it refuses or throws for a write it committed:
+   * the outputs are the run's, read through the pipeline and, for the
+   * stage resource, held to its declaration there. When they were not
+   * held, or do not conform, only those the Tool API's own check of the
+   * outputs takes are answered (declared()), and the rest are logged.
+   *
+   * Decision: see docs/decisions.md#one-runner-runs-an-operation.
    */
   protected function doExecute(array $values): ExecutableResult {
-    // A stage is its owner's: another account's is refused before the
-    // thing is asked about, or anything is built.
-    try {
-      $staged = $this->staged($values);
-    }
-    catch (\InvalidArgumentException $e) {
-      return $this->notFound($e);
-    }
-    if ($staged instanceof ExecutableResult) {
-      return $staged;
-    }
-    [$resource, $operation, $context, $stage] = $staged;
-    // Asked again here, not only in checkAccess(): execute() is callable
-    // from PHP without an access check, and this is the method that
-    // writes. The same answer travels into the pipeline, which stops
-    // before reading storage when it is a refusal.
-    $access = $this->operationAccess($resource, $context, $this->currentUser);
-    if (!$access->isAllowed()) {
-      return $this->accessRefused($resource, $operation, $context);
-    }
-    $built = $this->resources->build($resource->name(), $context);
-    $storage = $this->resources->storage($resource->name(), $context, $built, stage: $stage);
+    $this->ran = TRUE;
+    return $this->answered = $this->written($values);
+  }
+
+  /**
+   * Runs the operation and answers it: doExecute()'s body.
+   *
+   * @param array $values
+   *   The tool's input values.
+   *
+   * @return \Drupal\tool\ExecutableResult
+   *   The answer.
+   */
+  protected function written(array $values): ExecutableResult {
     $input = $values[OperationInputs::VALUES] ?? [];
-    $result = $this->pipeline->submit(
-      $built,
-      is_array($input) ? $input : [],
-      $storage,
-      dry_run: (bool) ($values[OperationInputs::DRY_RUN] ?? FALSE),
-      access: $access,
-    );
+    $run = $this->run($values, is_array($input) ? $input : [], (bool) ($values[OperationInputs::DRY_RUN] ?? FALSE));
+    if (!$run instanceof OperationRun) {
+      return $run;
+    }
+    $built = $run->surface();
+    $storage = $run->storage();
+    $result = $run->result();
+    $operation = $run->operation();
+    $context = $run->context();
+    $stage = $run->stage();
     // One shape at every door, refused or not: what the read tool would
     // answer of the values, never more, and every violation, note and
     // stale reference with its path and its code.
@@ -390,16 +412,18 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
     }
     // The resource's own outputs, beside the shape and never over it: read
     // back once committed, and for an operation that changes nothing or a
-    // dry run, what its prepare answered.
+    // dry run, what its prepare answered; the runner's, which holds the
+    // stage's to its declaration.
     // Decision: see docs/decisions.md#who-produces-outputs.
-    $outputs = $this->pipeline->outputs($built, $storage, $result);
-    if ($resource->id === StageResource::ID) {
-      $outputs = $this->conformed($built, $outputs);
+    $outputs = array_diff_key($run->outputs(), $answer);
+    $left = [];
+    if (!$run->conformed()) {
+      [$outputs, $left] = $this->declared($outputs);
     }
     $answer += $outputs;
     // Decision: see docs/decisions.md#locked-at-the-top.
     return ExecutableResult::success(
-      $this->withNotes(match (TRUE) {
+      $this->withLeftOut($this->withNotes(match (TRUE) {
         // A thing the stage creates and the call removes was never stored:
         // its create is gone from the stage, and nothing else is.
         $operation->kind() === OperationDefinition::DELETE && $result->committed && $stage !== NULL && array_key_exists(StagedStorage::POSITION, $context->known) => $this->t('@label: the create staged in @stage was taken out of it; nothing was created or removed.', [
@@ -435,36 +459,100 @@ final class ResourceOperationTool extends ResourceOperationToolBase implements I
         // Decision: see docs/decisions.md#an-operation-states-how-it-behaves.
         $built->changesNothing() => $this->t('@label changes nothing: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
         default => $this->t('Dry run of @label: the values were accepted and prepared, and nothing was written.', ['@label' => (string) $operation->label]),
-      }, $result->notes),
+      }, $result->notes), $left),
       $answer,
     );
   }
 
   /**
-   * Holds the stage's own outputs to what its structures declare.
+   * Keeps the outputs the Tool API's own check of the outputs takes.
    *
-   * The stage's `changes` and `apply` answer lists of maps, and a dry run
-   * of apply marks the id it cannot know NotEmitted: what the declaration
-   * does not hold is a fault of the stage, and what is not emitted is left
-   * out, before the Tool API checks them.
+   * Each is declared by the tool and of the declared type, as
+   * ToolBase::execute() checks them after doExecute(): a storage that
+   * answered another shape (a bug in it, found after its write) would
+   * otherwise turn a committed write into a failure. The rest are left
+   * out and logged.
    *
-   * @param \Drupal\surface\SurfaceInterface $built
-   *   The operation's data surface.
    * @param array $outputs
-   *   The outputs the storage read back.
+   *   The resource's own outputs, by name.
    *
-   * @return array
-   *   The outputs, every key not emitted left out.
-   *
-   * @throws \LogicException
-   *   When they do not hold to the declaration.
+   * @return array{0: array, 1: string[]}
+   *   The outputs kept, and the names of those left out.
    */
-  protected function conformed(SurfaceInterface $built, array $outputs): array {
-    $violations = $this->pipeline->conformOutput($built, $outputs);
-    if (!$violations->isEmpty()) {
-      throw new \LogicException('The stage answered outputs its structure does not declare: ' . ViolationSummary::fromViolations($violations));
+  protected function declared(array $outputs): array {
+    $definitions = $this->getOutputDefinitions();
+    $kept = [];
+    $left = [];
+    foreach ($outputs as $name => $value) {
+      $name = (string) $name;
+      if (isset($definitions[$name]) && $this->holds($name, $value)) {
+        $kept[$name] = $value;
+        continue;
+      }
+      $left[] = $name;
     }
-    return NotEmitted::strip($outputs);
+    if ($left !== []) {
+      $this->logger->error('The @tool tool left out outputs its storage answered that the tool does not declare, or not of the declared type: @names', [
+        '@tool' => $this->getPluginId(),
+        '@names' => implode(', ', $left),
+      ]);
+    }
+    return [$kept, $left];
+  }
+
+  /**
+   * Answers whether the Tool API's own check takes one output.
+   *
+   * @param string $name
+   *   The output's name, which the tool declares.
+   * @param mixed $value
+   *   Its value.
+   *
+   * @return bool
+   *   TRUE when the check finds nothing wrong with it.
+   */
+  protected function holds(string $name, mixed $value): bool {
+    try {
+      $this->outputs = [];
+      $this->setOutputValue($name, $value);
+      foreach ($this->validateOutputs() as $violation) {
+        $path = (string) $violation->getPropertyPath();
+        if ($path === $name || str_starts_with($path, $name . '.') || str_starts_with($path, $name . '[')) {
+          return FALSE;
+        }
+      }
+      return TRUE;
+    }
+    catch (\Throwable) {
+      // Nothing may throw after a write: a value typed data cannot hold is
+      // one the check does not take.
+      return FALSE;
+    }
+    finally {
+      // ToolBase::execute() sets the outputs it takes after doExecute().
+      $this->outputs = [];
+    }
+  }
+
+  /**
+   * Says after a result's message that outputs were left out.
+   *
+   * @param \Drupal\Core\StringTranslation\TranslatableMarkup $message
+   *   The message.
+   * @param string[] $left
+   *   The names of the outputs left out.
+   *
+   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   *   The message, with one line naming them when there are any.
+   */
+  protected function withLeftOut(TranslatableMarkup $message, array $left): TranslatableMarkup {
+    if ($left === []) {
+      return $message;
+    }
+    return $this->t("@message\nOutputs left out, since the tool does not declare them in that shape; they were logged: @names.", [
+      '@message' => $message,
+      '@names' => implode(', ', $left),
+    ]);
   }
 
 }

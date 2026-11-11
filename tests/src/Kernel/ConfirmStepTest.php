@@ -7,7 +7,12 @@ namespace Drupal\Tests\surface\Kernel;
 use Drupal\Core\Form\FormState;
 use Drupal\Core\Url;
 use Drupal\surface\Form\SurfaceOperationForm;
+use Drupal\surface\Pipeline\SurfaceResult;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Resource\StageResource;
+use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\Storage\StageStorage;
+use Drupal\surface\SurfaceAccess;
 use Drupal\surface_stage_test\Storage\ItineraryStorage;
 use Drupal\Tests\user\Traits\UserCreationTrait;
 use PHPUnit\Framework\Attributes\Group;
@@ -212,6 +217,101 @@ class ConfirmStepTest extends SurfaceKernelTestBase {
   protected function confirmPage(): array {
     $this->visit('/surface-test/itinerary/trip/flow?stage=' . $this->stage . '&step=confirm');
     return $this->container->get('form_builder')->getForm(SurfaceOperationForm::class);
+  }
+
+  /**
+   * Tests the form's runs of the stage answer as before the runner.
+   *
+   * SurfaceOperationForm::stageRun() runs through the runner and reads
+   * Refusal::actual() to tell a stage that is gone from one refused. For a
+   * stage that is gone, another account's, rehearsed, applied, and asked
+   * again once applied, it answers what the form's own sequence answered
+   * before: the same result, the same messages.
+   */
+  public function testTheFormsStageRunsAnswerAsBefore(): void {
+    $other = $this->createUser(['keep the ledger']);
+    $theirs = $this->container->get('surface.runner')->run('surface.stage', 'create', values: ['label' => 'Theirs'], account: $other)->outputs()['id'];
+    $cases = [
+      'gone' => ['apply', 'ghost', FALSE],
+      'refused' => ['changes', $theirs, FALSE],
+      'rehearsed' => ['apply', $this->stage, TRUE],
+      'applied' => ['apply', $this->stage, FALSE],
+      'applied again' => ['apply', $this->stage, FALSE],
+    ];
+    $form = SurfaceOperationForm::create($this->container);
+    $stageRun = new \ReflectionMethod($form, 'stageRun');
+    foreach ($cases as $case => [$operation, $id, $dry]) {
+      [$result, $outputs] = $stageRun->invoke($form, $operation, $id, $dry);
+      $this->assertSame(...self::answered($result, $outputs, $case === 'applied' ? NULL : $this->before($operation, $id, $dry), $case));
+    }
+    $this->assertSame(StageStorage::APPLIED, $this->stages()->read($this->stage)['status']);
+  }
+
+  /**
+   * Runs one of the stage's operations as the form did before the runner.
+   *
+   * @param string $operation
+   *   The operation.
+   * @param string $id
+   *   The stage's id.
+   * @param bool $dry
+   *   Whether to rehearse only.
+   *
+   * @return array{0: \Drupal\surface\Pipeline\SurfaceResult|null, 1: array}
+   *   The result, and what it reports; no result when the stage is gone.
+   */
+  protected function before(string $operation, string $id, bool $dry): array {
+    $resources = $this->container->get('surface.resources');
+    try {
+      $context = $resources->operation(StageResource::ID, $operation, ['id' => $id]);
+    }
+    catch (NamesNothingException) {
+      return [NULL, []];
+    }
+    $access = SurfaceAccess::decisive($resources->access(StageResource::ID, $context), 'This stage may not be used by this account.');
+    $built = $resources->build(StageResource::ID, $context);
+    $storage = $resources->storage(StageResource::ID, $context, $built);
+    $result = $this->container->get('surface.pipeline')->submit($built, [], $storage, $dry, $access);
+    $outputs = $result->isValid() ? $this->container->get('surface.pipeline')->outputs($built, $storage, $result) : [];
+    return [$result, $outputs];
+  }
+
+  /**
+   * Reads what a person sees of a run of the stage, beside the old one.
+   *
+   * @param \Drupal\surface\Pipeline\SurfaceResult|null $result
+   *   The result through the runner.
+   * @param array $outputs
+   *   Its outputs.
+   * @param array|null $before
+   *   The result and outputs the form's old sequence answered, or NULL
+   *   when it cannot be asked again (an apply that was just made).
+   * @param string $case
+   *   The case.
+   *
+   * @return array{0: array, 1: array, 2: string}
+   *   What the old sequence answered, what the runner answered, and the
+   *   case, for assertSame().
+   */
+  protected static function answered(?SurfaceResult $result, array $outputs, ?array $before, string $case): array {
+    $read = static fn (?SurfaceResult $result, array $outputs): array => [
+      'result' => $result !== NULL,
+      'committed' => $result?->committed,
+      'messages' => $result === NULL ? [] : array_map(
+        static fn (Violation $violation): array => [$violation->path, $violation->code, (string) $violation->message],
+        iterator_to_array($result->violations, FALSE),
+      ),
+      'applied' => array_map(static fn (array $applied): mixed => $applied['id'] ?? NULL, is_array($outputs['applied'] ?? NULL) ? $outputs['applied'] : []),
+    ];
+    $now = $read($result, $outputs);
+    if ($before === NULL) {
+      // Applied for real, which the old sequence cannot be asked again.
+      return [['result' => TRUE, 'committed' => TRUE, 'messages' => [], 'applied' => ['trip', 'other']], $now, $case];
+    }
+    $then = $read(...$before);
+    // A rehearsal's ids are not emitted: the runner leaves them out.
+    $then['applied'] = $case === 'rehearsed' ? array_fill(0, count($then['applied']), NULL) : $then['applied'];
+    return [$then, $now, $case];
   }
 
   /**

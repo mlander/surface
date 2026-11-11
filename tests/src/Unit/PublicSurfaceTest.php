@@ -93,6 +93,26 @@ use PHPUnit\Framework\Attributes\Group;
  * 28 attributes, 114 arguments. The interfaces of `src/Flow/` are pinned
  * by name and method from this date.
  *
+ * Grown on 2026-11-09 by the runner, `src/Operation/`: the interface
+ * OperationRunnerInterface and its class OperationRunner, gate() and
+ * run(); the value it answers, OperationRun; Refusal and its
+ * RefusalCategory; and Door, the value a caller names itself with
+ * (docs/decisions.md#one-runner-runs-an-operation). The four counts above
+ * are unchanged; the classes of `src/Operation/` are pinned by name,
+ * public method, public property and public constant (an enum by its
+ * cases) from this date. A method marked `@internal` is the runner's and
+ * is not pinned. The same day, RefusalDetail, the refusal as it was,
+ * which Refusal::actual() keeps for the server, and
+ * OperationRun::conformed().
+ *
+ * Grown on 2026-11-10 by three methods of the runner, for the HTTP door
+ * moved onto it (docs/decisions.md#one-runner-runs-an-operation):
+ * OperationRunnerInterface::submit() and its class's, which submits
+ * values to a prepared run, so a door that reads the prepared storage
+ * before it writes builds once; OperationRun::hasStorage(), a prepare of
+ * a resource that names no storage of its own; and OperationRun::account(),
+ * the account submit() runs as. The four counts above are unchanged.
+ *
  * @see docs/decisions.md#the-surface-was-counted-and-cut
  */
 #[Group('surface')]
@@ -137,6 +157,32 @@ class PublicSurfaceTest extends UnitTestCase {
     'StagedInterface' => ['value'],
     'StepInterface' => ['description', 'group', 'keys', 'label', 'when'],
     'StepsInterface' => ['step'],
+  ];
+
+  /**
+   * The classes of the runner in `src/Operation/`, with their public members.
+   *
+   * Public methods but those marked `@internal`, public properties (`$`)
+   * and public constants (`const`); an enum by its cases.
+   */
+  protected const OPERATION = [
+    'Door' => ['$id', '__construct', '__toString', 'from', 'has'],
+    'OperationRun' => [
+      'access', 'account', 'conformed', 'context', 'definition', 'door',
+      'hasBuilt', 'hasRun', 'hasStorage', 'isRefused', 'operation',
+      'outputs', 'refusal', 'result', 'stage', 'storage', 'surface',
+    ],
+    'OperationRunner' => ['__construct', 'const NOT_ALLOWED', 'gate', 'run', 'submit'],
+    'OperationRunnerInterface' => ['gate', 'run', 'submit'],
+    'Refusal' => [
+      '$access', '$cacheability', '$category', '$code', '$reason', 'actual',
+      'const WITHHELD', 'violation',
+    ],
+    'RefusalCategory' => ['case Access', 'case NamesNothing', 'case Stage'],
+    'RefusalDetail' => [
+      '$access', '$cacheability', '$category', '$code', '$reason',
+      '__construct', 'violation',
+    ],
   ];
 
   /**
@@ -223,6 +269,47 @@ class PublicSurfaceTest extends UnitTestCase {
     }
     ksort($found);
     $this->assertSame(self::FLOW, $found, 'Say why an interface of a flow class changed, and pin it here and in docs/decisions.md#the-surface-was-counted-and-cut.');
+  }
+
+  /**
+   * Tests the classes of the runner are the ones pinned.
+   *
+   * What a door or a module calls to run an operation, and what it reads
+   * back: one class added or removed, or one public method, property,
+   * constant or case, fails here until this test says why.
+   */
+  public function testTheRunnerIsPinned(): void {
+    $found = [];
+    foreach (glob(__DIR__ . '/../../../src/Operation/*.php') ?: [] as $file) {
+      $name = basename($file, '.php');
+      $class = 'Drupal\\surface\\Operation\\' . $name;
+      if (enum_exists($class)) {
+        $members = array_map(static fn (\ReflectionEnumUnitCase $case): string => 'case ' . $case->getName(), (new \ReflectionEnum($class))->getCases());
+      }
+      else {
+        $reflection = new \ReflectionClass($class);
+        $members = [];
+        foreach ($reflection->getMethods(\ReflectionMethod::IS_PUBLIC) as $method) {
+          if ($method->getDeclaringClass()->getName() === $reflection->getName() && !str_contains((string) $method->getDocComment(), '@internal')) {
+            $members[] = $method->getName();
+          }
+        }
+        foreach ($reflection->getProperties(\ReflectionProperty::IS_PUBLIC) as $property) {
+          if ($property->getDeclaringClass()->getName() === $reflection->getName()) {
+            $members[] = '$' . $property->getName();
+          }
+        }
+        foreach ($reflection->getReflectionConstants(\ReflectionClassConstant::IS_PUBLIC) as $constant) {
+          if ($constant->getDeclaringClass()->getName() === $reflection->getName()) {
+            $members[] = 'const ' . $constant->getName();
+          }
+        }
+      }
+      sort($members);
+      $found[$name] = $members;
+    }
+    ksort($found);
+    $this->assertSame(self::OPERATION, $found, 'Say why a class of the runner changed, and pin it here and in docs/decisions.md#the-surface-was-counted-and-cut.');
   }
 
 }

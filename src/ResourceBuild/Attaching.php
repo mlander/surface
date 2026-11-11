@@ -10,7 +10,6 @@ use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Refinement\ChoiceSet;
@@ -840,7 +839,7 @@ final class Attaching {
   /**
    * Gets the container's key each port is wired to, as declared.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The container's builder.
    * @param array<string, string> $reads
    *   The wiring.
@@ -848,7 +847,7 @@ final class Attaching {
    * @return array<string, \Drupal\Core\TypedData\DataDefinitionInterface>
    *   Each wired key's definition, by port.
    */
-  protected static function wiredKeys(SurfaceBuilderInterface $builder, array $reads): array {
+  protected static function wiredKeys(SurfaceBuilder $builder, array $reads): array {
     $wired = [];
     foreach ($reads as $port => $key) {
       $definition = $builder->getDefinition($key);
@@ -909,7 +908,7 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#a-port-is-a-live-sibling-value.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The container's builder.
    * @param string $prefix
    *   The child's path in the container's frame, with its trailing dot.
@@ -920,7 +919,7 @@ final class Attaching {
    * @param string $container
    *   The container, in words, for a cycle's refusal.
    */
-  protected function wirePorts(SurfaceBuilderInterface $builder, string $prefix, Attachment $attachment, bool $internal, string $container): void {
+  protected function wirePorts(SurfaceBuilder $builder, string $prefix, Attachment $attachment, bool $internal, string $container): void {
     $map = $attachment->child->getDefinitions();
     $ports = $map->ports();
     $kinds = [
@@ -957,7 +956,7 @@ final class Attaching {
    *   The owner's input blueprint.
    * @param string[] $input_keys
    *   The owner's plain input keys.
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The owner's builder, which what a provider of variants read reaches.
    *
    * @return array<string, array{by: string, children: array<string, string>, labels: array<string, string|\Stringable>, site: array<string, true>}>
@@ -972,7 +971,7 @@ final class Attaching {
    *   When a deciding key is not a plain input of the owner, or a provider
    *   of variants answers what cannot be kept.
    */
-  public function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys, SurfaceBuilderInterface $builder): array {
+  public function variantKeysOf(ResourceDefinition $definition, ResourceBlueprint $inputs, array $input_keys, SurfaceBuilder $builder): array {
     $variantKeys = [];
     foreach ($inputs->variants() as $key => $by) {
       if (!in_array($by, $input_keys, TRUE)) {
@@ -1008,7 +1007,7 @@ final class Attaching {
    *   one's starts with.
    * @param \Drupal\surface\ResourceBuild\ResourceBlueprint $inputs
    *   The owner's input blueprint, which registers what is read.
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The owner's builder, which what a provider read reaches.
    * @param string $key
    *   The key the variants sit at, which a #[Variant] names with `at`.
@@ -1027,7 +1026,7 @@ final class Attaching {
    * @throws \LogicException
    *   When a provider of variants answers what cannot be kept.
    */
-  public function findVariants(ResourceDefinition $definition, ResourceBlueprint $inputs, SurfaceBuilderInterface $builder, string $key, array $read, ?string $from, array $arguments): array {
+  public function findVariants(ResourceDefinition $definition, ResourceBlueprint $inputs, SurfaceBuilder $builder, string $key, array $read, ?string $from, array $arguments): array {
     // Every structure whose #[Variant] names this class and key is
     // one of the variants; the parent names none.
     // Decision: see docs/decisions.md#variants-nothing-declares.
@@ -1165,7 +1164,7 @@ final class Attaching {
   /**
    * Answers whether the variants at a key are stored flat.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The owner's builder, which holds the key's map.
    * @param string $key
    *   The key.
@@ -1173,7 +1172,7 @@ final class Attaching {
    * @return bool
    *   TRUE when its map says Variants::STORED_AS FLAT.
    */
-  protected static function storedFlat(SurfaceBuilderInterface $builder, string $key): bool {
+  protected static function storedFlat(SurfaceBuilder $builder, string $key): bool {
     return $builder->getDefinition($key)?->getSetting(Variants::STORED_AS) === Variants::FLAT;
   }
 
@@ -1415,7 +1414,7 @@ final class Attaching {
    *
    * Decision: see docs/decisions.md#variants-not-slots.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The builder, holding the deciding key as declared and extended.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure being built.
@@ -1430,7 +1429,7 @@ final class Attaching {
    * @throws \LogicException
    *   Naming the key and each value no variant is for.
    */
-  public static function assertListNarrowsVariants(SurfaceBuilderInterface $builder, ResourceDefinition $definition, string $where, string $by, array $values): void {
+  public static function assertListNarrowsVariants(SurfaceBuilder $builder, ResourceDefinition $definition, string $where, string $by, array $values): void {
     $deciding = $builder->getDefinition($by);
     $set = $deciding === NULL ? NULL : ChoiceSet::of($deciding);
     if ($set === NULL) {

@@ -65,6 +65,8 @@ class ReferenceKeysTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
+    'surface_openapi',
     'surface_examples',
     'surface_examples_references',
   ];

@@ -31,11 +31,12 @@ use Drupal\surface\ResourceBuild\ResourceDefinition;
  * refuses its route):
  *
  * - the tool's input, `stage` (OperationInputs);
- * - the OpenAPI document, which references the `SurfaceStage` header;
- * - the HTTP door, which honors the header (ResourceApiController);
+ * - the OpenAPI document, which references the `SurfaceStage` header
+ *   (surface_openapi);
+ * - the HTTP door, which honors the header (surface_http);
  * - the operation form and a React page served at a module's route,
  *   which read `?stage` in their query (OperationRoute::stageRequested());
- * - the React page's access check (ServedOperations::stageable());
+ * - the React page's access check, the HTTP door's (surface_http);
  * - the flow's own check (CompiledFlow::refusal());
  * - the staged storage's prepare, through storage() and namesThing().
  *

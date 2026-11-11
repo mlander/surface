@@ -42,6 +42,7 @@ class ComponentsOfferedTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples',
     'surface_widget_test',
   ];

@@ -62,14 +62,6 @@ final class LeafRules {
   public const OF_THE_MAPPING = ['FullyValidatable', 'LangcodeRequiredIfTranslatableValues', 'ValidKeys'];
 
   /**
-   * The constraints the JSON Schema route carries (ConfigSchemaDocument).
-   *
-   * Every other one it leaves to the schema, and the contract never
-   * states it.
-   */
-  public const JSON_CARRIED = ['Choice', 'Range', 'Length', 'Count', 'NotBlank', 'Regex'];
-
-  /**
    * Names the blueprint's type a data type class is.
    *
    * @param string $class

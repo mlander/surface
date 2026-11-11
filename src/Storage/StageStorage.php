@@ -195,7 +195,7 @@ final class StageStorage implements DeletableStorageInterface, ContainerInjectio
    * An xxh128 hash of the writes and the position the next one takes, so
    * it moves with every write staged, changed or taken out. The confirm
    * page posts it back with Apply, and the HTTP door's `ETag` of `apply`
-   * carries it (ServedOperations::fingerprint()), so an Apply sent after
+   * carries it (surface_http), so an Apply sent after
    * the stage changed is refused at both doors.
    *
    * Decision: see

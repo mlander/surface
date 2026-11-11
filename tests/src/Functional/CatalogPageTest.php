@@ -32,6 +32,7 @@ class CatalogPageTest extends BrowserTestBase {
     'surface_examples_first',
     'tool',
     'surface_examples_react',
+    'surface_openapi',
   ];
 
   /**

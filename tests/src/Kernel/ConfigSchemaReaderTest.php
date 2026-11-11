@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\Core\Config\TypedConfigManagerInterface;
+use Drupal\surface\Contract\ContractEmitter;
 use Drupal\surface\Contract\SchemaResolver;
 use Drupal\surface\Pipeline\TypeMismatchException;
 use Drupal\surface\Pipeline\UnknownKeysException;
@@ -626,7 +627,13 @@ class ConfigSchemaReaderTest extends SurfaceKernelTestBase {
     $this->assertFalse($this->validates($full, ['stray' => 1] + $stored));
     $schema = $this->container->get('surface.contract_emitter')->emitFull($built, $name)->document['schema'];
     $back = $this->readBack($schema, $name, 'surface', 'configure', NULL, NULL, []);
-    $this->assertSame('same', $back['verdict'], (string) ($back['error'] ?? json_encode($back['again'])));
+    // The langcode's Choice takes its values from a callback, which no
+    // resolver reads: named under checkedOnServer, which a reader cannot
+    // read back (the `server` kind). The rest reads back to itself.
+    $this->assertSame([['constraint' => 'Choice', 'message' => 'Choice']], $schema['properties']['langcode'][ContractEmitter::EXTENSION]['checkedOnServer']);
+    unset($schema['properties']['langcode'][ContractEmitter::EXTENSION]);
+    $this->assertSame('differs', $back['verdict'], (string) ($back['error'] ?? ''));
+    $this->assertSame($schema, $back['again']);
   }
 
   /**

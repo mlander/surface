@@ -23,9 +23,12 @@ use Drupal\surface\Flow\ChecksBeforeApplyInterface;
 use Drupal\surface\Flow\FlowRegistry;
 use Drupal\surface\Flow\Staged;
 use Drupal\surface\Flow\StagedInterface;
+use Drupal\surface\Operation\OperationRunnerInterface;
+use Drupal\surface\Operation\RefusalCategory;
 use Drupal\surface\Pipeline\ResultDocument;
 use Drupal\surface\Pipeline\SurfaceResult;
 use Drupal\surface\Pipeline\Violation;
+use Drupal\surface\Pipeline\ViolationSet;
 use Drupal\surface\Resource\StageResource;
 use Drupal\surface\Staging\ListsStagesInterface;
 use Drupal\surface\Staging\Stage;
@@ -261,6 +264,8 @@ class SurfaceOperationForm extends FormBase {
    *   The date formatter, which says how long ago a stage was applied.
    * @param \Drupal\surface\Flow\FlowRegistry $flows
    *   The flow classes, for a route that names one.
+   * @param \Drupal\surface\Operation\OperationRunnerInterface $runner
+   *   The runner, which runs the stage's own operations.
    */
   public function __construct(
     protected readonly ClassResolverInterface $classResolver,
@@ -272,6 +277,7 @@ class SurfaceOperationForm extends FormBase {
     protected readonly RouteProviderInterface $routeProvider,
     protected readonly DateFormatterInterface $dateFormatter,
     protected readonly FlowRegistry $flows,
+    protected readonly OperationRunnerInterface $runner,
   ) {
   }
 
@@ -293,6 +299,7 @@ class SurfaceOperationForm extends FormBase {
       $container->get('router.route_provider'),
       $container->get('date.formatter'),
       $container->get('surface.flows'),
+      $container->get('surface.runner'),
     );
   }
 
@@ -1356,10 +1363,10 @@ class SurfaceOperationForm extends FormBase {
   }
 
   /**
-   * Runs one of the stage's operations through the pipeline.
+   * Runs one of the stage's operations through the runner.
    *
-   * For the current user, who owns it: the stage's own access is asked
-   * first, and the run is handed that answer.
+   * For the current user, who owns it, through the runner, which asks
+   * the stage's own access first and hands the run that answer.
    *
    * @param string $operation
    *   The operation: `changes`, `apply` or `delete`.
@@ -1375,17 +1382,21 @@ class SurfaceOperationForm extends FormBase {
    *   When the stage changed while it was applied.
    */
   protected function stageRun(string $operation, string $id, bool $dry = FALSE): array {
-    try {
-      $context = $this->resources->operation(StageResource::ID, $operation, ['id' => $id]);
+    $run = $this->runner->run(StageResource::ID, $operation, ['id' => $id], values: [], dryRun: $dry);
+    $refusal = $run->refusal();
+    if ($refusal === NULL) {
+      return [$run->result(), $run->outputs()];
     }
-    catch (NamesNothingException) {
+    // A stage that is gone has no page left. The runner tells every
+    // refusal of the stage's own operations, so the public fields tell a
+    // gone stage from a refused one.
+    if ($refusal->category === RefusalCategory::NamesNothing) {
       return [NULL, []];
     }
-    $access = SurfaceAccess::decisive($this->resources->access(StageResource::ID, $context), 'This stage may not be used by this account.');
-    $built = $this->resources->build(StageResource::ID, $context);
-    $storage = $this->resources->storage(StageResource::ID, $context, $built);
-    $result = $this->surfacePipeline()->submit($built, [], $storage, $dry, $access);
-    return [$result, $result->isValid() ? $this->surfacePipeline()->outputs($built, $storage, $result) : []];
+    // Refused by access before the run: answered as the pipeline answers a
+    // run it is handed a refusal for, one violation of the whole call, with
+    // the stage's own reason, as this form showed it before the runner.
+    return [new SurfaceResult([], new ViolationSet([$refusal->violation()]), access: $refusal->access), []];
   }
 
   /**

@@ -47,6 +47,7 @@ class ResultCodesTest extends SurfaceKernelTestBase {
     'serialization',
     'tool',
     'surface',
+    'surface_http',
     'surface_examples_node_type',
     'surface_examples',
     'surface_examples_workflow',
@@ -241,12 +242,22 @@ class ResultCodesTest extends SurfaceKernelTestBase {
       'surface:node.type:update' => [OperationInputs::VALUES => []],
       'surface:node.type:read' => [],
     ];
+    // The operation's permission is asked first: an account without it
+    // hears the permission, an account holding it that the id names
+    // nothing.
+    $account = $this->container->get('current_user')->getAccount();
+    foreach ($tools as $tool => $inputs) {
+      $refused = $this->runTool($tool, ['type' => 'nowhere'] + $inputs);
+      $this->assertSame(['' => Violation::PERMISSION], static::codes($refused['outputs']['violations']), $tool);
+    }
+    $this->setUpCurrentUser([], ['administer surface examples content types']);
     foreach ($tools as $tool => $inputs) {
       $missing = $this->runTool($tool, ['type' => 'nowhere'] + $inputs);
       $this->assertFalse($missing['success'], $tool);
       $this->assertShape($missing['outputs']);
       $this->assertSame(['' => Violation::NOT_FOUND], static::codes($missing['outputs']['violations']), $tool);
     }
+    $this->setCurrentUser($account);
 
     // The resource's access answer, handed to the pipeline.
     $resources = $this->container->get('surface.resources');

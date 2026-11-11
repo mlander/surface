@@ -6,7 +6,7 @@ namespace Drupal\Tests\surface\Kernel;
 
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
-use Drupal\surface\Http\ServedPaths;
+use Drupal\surface_http\ServedPaths;
 use Drupal\surface\Pipeline\Fingerprint;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\Tool\OperationInputs;
@@ -63,7 +63,7 @@ class StagedDeleteTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_stage_test'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_stage_test'];
 
   /**
    * The account that owns the stages.

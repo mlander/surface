@@ -11,10 +11,12 @@ form.
 A resource built in one of its operations, served as a JSON document a
 client with no PHP can render a form from, re-narrow as answers change,
 rehearse a write against before anything is written, and then write
-through. The emitter and the API, where the path is the resource and
-the method the operation, are the base module's; a React app that
-renders from it is an example client, the experimental submodule
-`surface_examples_react`.
+through. The emitter is the base module's. The API, where the path is
+the resource and the method the operation, is the submodule
+`surface_http`, and the OpenAPI document that describes it is
+`surface_openapi` ([Installation](installation.md#the-http-door-and-the-openapi-document)).
+A React app that renders from it is an example client, the experimental
+submodule `surface_examples_react`.
 
 This is the roadmap's "served contract": one operation at a time, read,
 rehearsed and written.
@@ -422,15 +424,17 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | `string`, `email`, `uri`, `integer`, `float`, `boolean` | `type` (`format: idn-email` / `uri` for those types, `date` for a string drawn as a date, advisory); an optional key also allows `null`, which clears it (a secret does not, nor a key its storage always holds, one a fully validatable config schema does not mark `nullable: true`; why: [decision](decisions.md#a-key-its-storage-always-holds)) |
 | `setRequired(TRUE)` | the key in `required`: present and not null, nothing about size. The contract's `values` always carry every key, so presence is never the question. |
 | a declared default, examples | `default`, `examples` |
-| `Range` | `minimum`, `maximum`, always numbers (core's timestamp field holds its bounds as strings) |
-| `Length` | `minLength`, `maxLength` |
-| `Count` | `minItems`, `maxItems` |
-| `UniqueItems` | `uniqueItems: true`, after the bounds |
-| `Regex` | `pattern` (`not: {pattern}` for `match: false`), carried only when its body stays inside the subset both engines read alike and its modifiers are `u` and `D`; otherwise left to the server (why: [decision](decisions.md#a-pattern-both-engines-read-alike)) |
-| `Email` | `format: idn-email`, advisory |
-| `NotBlank` | `minLength: 1` |
+| `Range`, on an integer or a number | `minimum`, `maximum`, always numbers (core's timestamp field holds its bounds as strings); a bound that is no number, or one read from another property, is also left to the server |
+| `Length`, on a string | `minLength`, `maxLength`; `exactly` as both, equal, where neither `min` nor `max` is given |
+| `Count`, on an array | `minItems`, `maxItems`; `exactly` as both, equal, where neither `min` nor `max` is given |
+| `UniqueItems`, on an array | `uniqueItems: true`, after every other keyword |
+| `Regex`, on a string | `pattern` (`not: {pattern}` for `match: false`), carried only when its body stays inside the subset both engines read alike and its modifiers are `u` and `D`; otherwise left to the server (why: [decision](decisions.md#a-pattern-both-engines-read-alike)) |
+| `Email`, on a string | `format: idn-email`, advisory |
+| `NotBlank`, on a string | `minLength: 1`, the larger of it and a `Length`'s `min` |
+| `Uuid`, on a string | `format: uuid`, advisory |
 | `Sequentially`, `AtLeastOneOf` | `allOf`, `anyOf` of its parts, each stated as the constraint alone would be; when any part is not, the composite is left to the server (why: [decision](decisions.md#a-composite-is-its-parts)) |
-| any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. An optional key that may be cleared adds an untitled `{const: null}` (not one its storage always holds), and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
+| one of the constraints above on a type it does not apply to, or with options its keywords cannot state | left to the server, under `x-surface.checkedOnServer`, whole or in part ([below](#what-the-keywords-leave-to-the-server); why: [decision](decisions.md#one-table-maps-a-constraint-to-its-keywords-both-ways)) |
+| any list of allowed values | `oneOf: [{const, title, description?}]`, read from the options service, so the labels travel; never `enum`. A `Choice` the `oneOf` does not state is left to the server ([below](#what-the-keywords-leave-to-the-server)). An optional key that may be cleared adds an untitled `{const: null}` (not one its storage always holds), and so does a list of no values, which a required key's type then refuses too: nothing is allowed. |
 | a map | a nested object |
 | an attached part | a reference to its def under `$defs`, beside its label ([reusable subschemas](#reusable-subschemas)) |
 | an anonymous map, `addMap()` | inline, as a map's: `type: object`, its properties, `additionalProperties: false`, and no def; a structure it holds a reference to that structure's def ([An anonymous map](declaring-a-resource.md#an-anonymous-map)) |
@@ -448,6 +452,33 @@ under `$defs`, and referred to ([reusable subschemas](#reusable-subschemas)).
 | a secret | `writeOnly: true`, its declared type, never in `required` (left out or `null`, the stored secret stands), no default, `null` in `values` (why: [decision](decisions.md#a-secret-is-optional-never-nullable)) |
 | a key a refiner answers [does not apply](refinement.md#when-a-key-does-not-apply) for these values | no property, not in `required`, not in `values`; the frame's own `x-surface.doesNotApply` names it with what it depends on. In the full schema, `false` under each conditional that rules it out, and `required` under each where it applies and is required (why: [decision](decisions.md#a-key-that-does-not-apply)) |
 | any other constraint | named in `x-surface.checkedOnServer` with what it checks: the schema is not the whole story, ask with `?dryRun=true`; not one whose resolver says its list is the whole of it (`exact: TRUE`), which is the `oneOf` ([Options](options.md#writing-a-resolver)) |
+
+### What the keywords leave to the server
+
+A constraint the keywords state in part is written as far as they go and
+named under `x-surface.checkedOnServer` besides; one they do not state
+at all is only named there. Each row of the table of constraints and
+keywords (`Contract\ConstraintKeywords`) says which; this list is
+written from them by hand, and [Reading a schema](reading-a-schema.md)
+refers to it.
+
+| Constraint, with | Stated |
+| --- | --- |
+| any of the table's on a type it does not apply to (`Length` on an integer), or on a key with no JSON type (`any`, a map with no properties) | no |
+| `Range` with a bound that is no number (a date), or `minPropertyPath`, `maxPropertyPath` | in part: the numeric bounds |
+| `Length` with `normalizer`, a `countUnit` other than code points, a `charset` other than UTF-8 | no: it counts otherwise than `minLength` does |
+| `Length`, `Count` with `exactly` beside `min` or `max` | `min` and `max`, as Symfony reads it: it ignores `exactly` beside a bound |
+| `Count` with `divisibleBy` | in part: `minItems`, `maxItems` |
+| `NotBlank` with `normalizer` | in part: `minLength: 1` |
+| `Uuid` with `strict: false` or `normalizer` | no |
+| `Uuid` with `versions` | in part: `format: uuid` |
+| `Uuid` or `Email` on a key whose type writes another `format` (a string drawn as a date), or both on one key | the one the type or the table's order writes first; the other no |
+| `Regex` with `normalizer`, or a pattern outside the subset both engines read alike | no; its message is still `x-surface.patternMessage` |
+| `Regex` whose message names the value (`%value`, `@value`, `{{ value }}`) | the pattern; the message is not said |
+| `Sequentially`, `AtLeastOneOf` with any part not stated whole | no |
+| `Choice` with `match: false` | no: it refuses its values, so no `oneOf`, no form options, no list in a refusal |
+| `Choice` from a callback (`AllowedValues`) | no |
+| `Choice` on a list definition, or with `multiple` (its `min` and `max` count an array) | no |
 
 ### `x-surface`
 
@@ -1300,18 +1331,33 @@ is `POST /surface-api/field.instance/node/page/body:reuse`; example
 `entity.content:node.page`, is read whole first. A default may be named
 the same way.
 
-Every path is gated by `_surface_served_access`: the operation's
-permission, then the access class the resource or structure names,
-through `Resources::access()`, with no opinion read as a refusal. The
+Every path is gated by `_surface_served_access`, which asks the
+runner (`surface.runner`,
+[Running an operation from PHP](resources.md#running-an-operation-from-php)): the operation's
+permission, then the stage the `X-Surface-Stage` header names, then the
+access class the resource or structure names, through
+`Resources::access()`, with no opinion read as a refusal. The
 permission is asked first, from the two ids alone, before a parameter
-is read or the subject loaded; a refusal past it (an access class
-refusing what the parameters name, or an id that names nothing for an
-account without the operation's permission) gives one fixed reason,
-"The operation cannot be served to this account with these
-parameters.", so it never says whether an id exists, and only an
-account holding the operation's permission hears the access class's
-own, and that an id names nothing (404)
-(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects)).
+is read or the subject loaded. What the two ids alone decide is told to
+anyone: a permission as written names itself. A refusal that had to
+read a parameter is withheld from an account without the operation's
+permission: an access class refusing what the parameters name, an id
+that names nothing, and a permission with a `%key` the parameters fill
+(`administer %entity_type fields`) give one fixed reason, "The
+operation cannot be run by this account with these parameters.", so it
+never says whether an id exists. Only an account holding the
+operation's permission hears the access class's own (or "The
+operation's permission and the resource's own access both have to
+allow this." when it gives none), and that an id names nothing (404).
+The stage's own paths, `/surface-api/surface.stage/{id}`, whose
+operations declare no permission, tell every account, since a stage id
+is a random UUID only an account handed it can name: an id that names
+no stage is 404, and another account's stage 403, "The stage is
+another account's." ([Staging](staging.md#the-stages-own-paths)).
+The controller asks the runner too, so a request the check would refuse
+is refused with the same status however it reaches the controller
+(why: [decision](decisions.md#every-door-projects-what-the-read-tool-projects),
+[decision](decisions.md#one-runner-runs-an-operation)).
 A `POST`, a `PATCH` or a `DELETE` carrying the session cookie requires
 `X-CSRF-Token` from `/session/token` (`_csrf_request_header_token`).
 
@@ -1565,7 +1611,7 @@ present, then three keys of its own:
 | `notes` | Each value sent for a locked key that the key did not take, `{path, code, message}`, code `locked`, once per key: "Machine name is locked and kept as stored; the value sent was not taken." The key keeps what it holds and nothing is refused (why: [decision](decisions.md#locked-at-the-top)); a value sent as it is held says nothing. |
 | `stale` | Each stale reference kept, `{path, code, message, stored}`, code `stale`, with the stored value it keeps: the operation form's warning, said out loud. |
 | `outputs` | The declared outputs as storage reads them back after the write (`StorageAdapter::outputs()`), the tool's same answer; on a dry run, and for an operation that changes nothing, what its `prepare()` answered under an output's name; `{}` when none are declared or none was answered. |
-| `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. |
+| `contract` | On a write, the envelope rebuilt from what is stored now, its `$id` the read's, so a client re-renders without a second request; `null` otherwise. Its fingerprint is the answer's `ETag`. `null` too, with no `ETag`, when the write committed and reading it back is refused: the write closed the account's access (an access class that reads a status or an owner the write changed), or changed what the path names. The write stands; read it again to know what the account may see now (why: [decision](decisions.md#one-runner-runs-an-operation)). |
 | `created` | On a write by an operation that creates, where the created thing now lives: `{resource, operation, parameters}` ([below](#where-a-created-thing-lives)); for a create staged under `X-Surface-Stage`, where it lives in that stage, its parameters its local id (`{id: -1}`); otherwise `null`. |
 | `x-surface-dry-run` | `true`, on a dry run only. |
 
@@ -1580,11 +1626,11 @@ same at both doors, so a program calling the API branches on them
 
 | Status | When |
 | --- | --- |
-| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`. A create staged under `X-Surface-Stage`, its `outputs.id` the local id, `created` naming it in the stage and no `Location` ([Staging](staging.md#a-staged-create)). |
+| 200 | A run that wrote an update, checked a read, or was dry; with the update's new `ETag`, unless reading it back is refused (`contract` `null`). A create staged under `X-Surface-Stage`, its `outputs.id` the local id, `created` naming it in the stage and no `Location` ([Staging](staging.md#a-staged-create)). |
 | 201 | A create written, with `Location`, the created thing's read (`/surface-api/node.type/recipe`); no `Location` when no operation addresses it (a field added to a bundle), and none under `X-Surface-Stage`, which answers 200. |
 | 400 | A body that is not a JSON object, or a parameter the operation needs given nowhere. |
-| 403 | Access refused, at the route or by the pipeline for the whole call (code `access` or `permission`); the session's token missing. |
-| 404 | A resource, an operation or an id that names nothing. |
+| 403 | Access refused, at the route or by the pipeline for the whole call (code `access` or `permission`); another account's stage under `X-Surface-Stage`, or at its own path, "The stage is another account's."; the session's token missing. Never after a write committed. |
+| 404 | A resource, an operation or an id that names nothing, for an account that may hear it; a stage `X-Surface-Stage` names that is gone, on a call a stage applies to; a stage id at the stage's own path that names no stage, for any account. Never after a write committed. |
 | 405 | A method the path does not answer, with `Allow`: a `POST` on a singleton, a `PATCH` on a collection, a `DELETE` where no delete is, a write to a resource with no storage. |
 | 410 | A contract 2 path ([gone](#gone)). |
 | 412 | `If-Match` no longer names what is stored ([conflict](#conflict)). |
@@ -1808,8 +1854,9 @@ another account's labels
 (and `/surface-api/openapi.yaml`, `application/yaml`) answers an
 OpenAPI 3.1 document of the API above, for every operation that can be
 asked on its own, so an OpenAPI client, a code generator or a UI drives
-a resource from it. It is the base module's own, on a route of its own,
-not the contributed `openapi` module's, and needs nothing contributed
+a resource from it. It is the submodule `surface_openapi`'s, on a route
+of its own, not the contributed `openapi` module's, and needs nothing
+contributed
 (why: [decision](decisions.md#an-openapi-document-is-one-more-door)).
 OpenAPI 3.1, because its schema objects are JSON Schema 2020-12, the
 dialect both documents are written in. `GET /surface-api/docs` renders
@@ -1820,7 +1867,8 @@ for the path, so a write after someone else's is refused (412);
 `GET /surface-api/redoc` renders Redoc, to read. Both pages need the
 permission `access surface api docs`: each runs a script from a CDN
 on the site (Swagger UI 5.29.1 from cdnjs, Redoc 2.5.1 from jsDelivr,
-each pinned and held to its integrity hash in `surface.libraries.yml`),
+each pinned and held to its integrity hash in
+`surface_openapi.libraries.yml`),
 so a site grants them to the roles it chooses. The document is open.
 
 - **Paths.** One path item per resource path, the methods on it as
@@ -1903,9 +1951,10 @@ so a site grants them to the roles it chooses. The document is open.
 that runs it (`<resource>:<operation>:write`, a listing's `:list`),
 beside its other doors ([The site's catalog](catalog-command.md)).
 `OpenApiDocumentTest` holds the document to the official OpenAPI 3.1
-schema in `tests/fixtures/openapi/`, every reference resolving, the
-components byte for byte the full schemas and outputs, and the examples
-pinned in `tests/fixtures/openapi/examples.json`; `SchemaComponentsTest`
+schema in `modules/surface_openapi/tests/fixtures/openapi/`, every
+reference resolving, the components byte for byte the full schemas and
+outputs, and the examples pinned in
+`modules/surface_openapi/tests/fixtures/openapi/examples.json`; `SchemaComponentsTest`
 the components, their sharing and patches; `OpenApiEndpointTest` the
 same document for an account and for anonymous, as JSON and as YAML,
 and the two pages under their permission, each script pinned with its

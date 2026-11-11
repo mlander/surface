@@ -11,7 +11,6 @@ use Drupal\Core\TypedData\DataDefinition;
 use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\MapDataDefinition;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface_test\AnyToIntegerRefiner;
@@ -67,10 +66,10 @@ class SurfaceContributionTest extends SurfaceKernelTestBase {
   /**
    * Builds the unsealed builder the tests start from.
    *
-   * @return \Drupal\surface\SurfaceBuilderInterface
+   * @return \Drupal\surface\SurfaceBuilder
    *   The builder, with one contributed value on 'variant'.
    */
-  protected function builder(): SurfaceBuilderInterface {
+  protected function builder(): SurfaceBuilder {
     $builder = new SurfaceBuilder(
       definitions: [
         'casing' => DataDefinition::create('string')->setLabel('Casing'),

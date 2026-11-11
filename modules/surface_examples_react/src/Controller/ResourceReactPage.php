@@ -12,8 +12,11 @@ use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\Core\Url;
 use Drupal\surface\Form\CompiledFlow;
-use Drupal\surface\Http\ServedOperations;
-use Drupal\surface\Http\ServedPaths;
+use Drupal\surface\Pipeline\Violation;
+use Drupal\surface_examples_react\ReactDoors;
+use Drupal\surface_http\RefusedException;
+use Drupal\surface_http\ServedOperations;
+use Drupal\surface_http\ServedPaths;
 use Drupal\surface\ResourceBuild\KeyPaths;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\ResourceBuild\OperationArguments;
@@ -90,11 +93,11 @@ final class ResourceReactPage implements ContainerInjectionInterface {
   /**
    * Constructs a ResourceReactPage.
    *
-   * @param \Drupal\surface\Http\ServedOperations $servedOperations
+   * @param \Drupal\surface_http\ServedOperations $servedOperations
    *   What reads an operation off a request.
    * @param \Drupal\surface\ResourceBuild\ResourceRegistry $registry
    *   What discovery found, for the title.
-   * @param \Drupal\surface\Http\ServedPaths $servedPaths
+   * @param \Drupal\surface_http\ServedPaths $servedPaths
    *   What writes the operation's paths on the API.
    * @param \Drupal\surface\ResourceBuild\OperationArguments $arguments
    *   What maps a module's route's parameters onto the operation's.
@@ -118,8 +121,15 @@ final class ResourceReactPage implements ContainerInjectionInterface {
 
   /**
    * {@inheritdoc}
+   *
+   * @throws \Symfony\Component\HttpKernel\Exception\NotFoundHttpException
+   *   When surface_http is not installed, so a module's route this page
+   *   serves answers 404 rather than failing on a missing service.
    */
   public static function create(ContainerInterface $container): static {
+    if (!$container->get('module_handler')->moduleExists('surface_http')) {
+      throw new NotFoundHttpException('The React page needs the HTTP door, which the surface_http module serves and this site has not installed.');
+    }
     $instance = new static(
       $container->get('surface.served_operations'),
       $container->get('surface.resource_registry'),
@@ -152,7 +162,8 @@ final class ResourceReactPage implements ContainerInjectionInterface {
    *   nothing.
    * @throws \Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException
    *   When the query names a stage for an operation a stage does not
-   *   apply to, which the route's access check refuses first.
+   *   apply to, or the runner refuses the operation, each of which the
+   *   route's access check refuses first.
    */
   public function page(Request $request, string $resource, string $operation): array {
     $queried = $request->query->all()[CompiledFlow::STAGE] ?? NULL;
@@ -165,10 +176,15 @@ final class ResourceReactPage implements ContainerInjectionInterface {
         }
         $stage = $this->servedOperations->stage($queried, $parameters);
       }
-      $served = $this->servedOperations->resolve($resource, $operation, $parameters, $stage);
+      $served = $this->servedOperations->resolve($resource, $operation, $parameters, $stage, ReactDoors::DOOR);
     }
     catch (\InvalidArgumentException $e) {
       throw new NotFoundHttpException($e->getMessage(), $e);
+    }
+    catch (RefusedException $e) {
+      // The runner's refusal, which the route's access check answers
+      // first: what names nothing is not found, the rest refused.
+      throw $e->refusal->code === Violation::NOT_FOUND ? new NotFoundHttpException($e->getMessage(), $e) : new AccessDeniedHttpException($e->getMessage(), $e);
     }
     [$build, $cacheability] = $this->mounted($request, $served->definition, $served->operation, array_filter($served->parameters, 'is_scalar'), [], $stage);
     // The operation's parameters are the page's query string.

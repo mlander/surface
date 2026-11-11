@@ -8,8 +8,8 @@ use Drupal\Core\Entity\Entity\EntityFormDisplay;
 use Drupal\Core\Routing\RouteMatch;
 use Drupal\node\Entity\Node;
 use Drupal\node\NodeInterface;
-use Drupal\surface\Http\ServedOperationAccessCheck;
-use Drupal\surface\Http\ServedPaths;
+use Drupal\surface_http\Access\ServedOperationAccessCheck;
+use Drupal\surface_http\ServedPaths;
 use Drupal\surface\Pipeline\Violation;
 use Drupal\surface\ResourceBuild\NamesNothingException;
 use Drupal\surface\Staging\StagedStorage;
@@ -72,7 +72,7 @@ class StagedLocalIdTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_stage_test'];
+  protected static $modules = [...self::ENTITY_MODULES, 'surface_http', 'surface_stage_test'];
 
   /**
    * The account that owns the stages.
@@ -337,9 +337,12 @@ class StagedLocalIdTest extends SurfaceKernelTestBase {
     $changes = $this->stageTool('changes', $id);
     $this->assertSame([[['name' => 'id', 'value' => '-2']]], array_column($changes['outputs']['items'], 'parameters'));
 
+    // The local id names nothing now. A content entity's operations
+    // declare no permission, so the runner withholds why from every
+    // account, as the tool's access check already did.
     $gone = $this->page('update', $id, ['id' => -1, OperationInputs::VALUES => ['title' => ['value' => 'Late']]]);
     $this->assertFalse($gone['success']);
-    $this->assertSame(['' => Violation::NOT_FOUND], static::toolCodes($gone));
+    $this->assertSame(['' => Violation::ACCESS], static::toolCodes($gone));
 
     // Built before the delete, prepared after it: whole, since what the
     // stage no longer holds is validated before storage is asked.
@@ -377,7 +380,7 @@ class StagedLocalIdTest extends SurfaceKernelTestBase {
     $this->setCurrentUser($this->owner);
     $theirs = $this->page('read', $mine, ['id' => -1]);
     $this->assertFalse($theirs['success']);
-    $this->assertSame('You do not have permission to use the stage ' . $mine . '.', $theirs['message']);
+    $this->assertSame("The stage is another account's.", $theirs['message']);
   }
 
   /**

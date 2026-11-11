@@ -31,6 +31,11 @@ use Symfony\Component\Routing\Route;
 final class FormRouteDoors implements CatalogDoorLinksInterface {
 
   /**
+   * The door's name: the form route a module declares for the operation.
+   */
+  public const DOOR = 'form';
+
+  /**
    * The routes, by the resource default as written, then operation id.
    *
    * @var array<string, array<string, array<string, \Symfony\Component\Routing\Route>>>|null
@@ -52,7 +57,7 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
    */
   public function doors(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     $found = $this->lines($resource, $operation, FALSE);
-    return $found === [] ? [] : [SiteCatalog::FORM => implode(', ', $found)];
+    return $found === [] ? [] : [self::DOOR => implode(', ', $found)];
   }
 
   /**
@@ -60,7 +65,7 @@ final class FormRouteDoors implements CatalogDoorLinksInterface {
    */
   public function links(ResourceDefinition $resource, OperationDefinition $operation, bool $standalone): array {
     $link = $this->linked($resource, $operation, FALSE);
-    return $link === NULL ? [] : [SiteCatalog::FORM => $link];
+    return $link === NULL ? [] : [self::DOOR => $link];
   }
 
   /**

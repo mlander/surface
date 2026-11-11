@@ -199,9 +199,10 @@ class ExamplesRoutesTest extends BrowserTestBase {
     $assert->linkByHrefExists(Series::url('docs/concepts.md', Series::BRANCH));
 
     // Below the examples, every example module in its group, enabled or
-    // not, with its install command; the groups hold every directory
-    // under modules/ once.
-    $directories = array_map(static fn (string $info): string => basename(dirname($info)), glob(__DIR__ . '/../../../modules/*/*.info.yml') ?: []);
+    // not, with its install command; the groups hold every example
+    // directory under modules/ once. surface_http and surface_openapi are
+    // part of the project, not examples.
+    $directories = array_map(static fn (string $info): string => basename(dirname($info)), glob(__DIR__ . '/../../../modules/surface_examples*/*.info.yml') ?: []);
     $listed = array_merge(ExampleModules::LEARN, ExampleModules::OWN_THINGS);
     sort($directories);
     $sorted = $listed;

@@ -142,6 +142,7 @@ class ContentEntityDeleteTest extends SurfaceKernelTestBase {
     $this->assertFalse($rehearsed->committed);
     $this->assertSame([''], $rehearsed->changes, 'The whole thing goes: the empty pointer.');
     $this->assertSame(['entity_type' => 'node', 'bundle' => 'page', 'id' => (string) $node->id()], array_map('strval', (array) $rehearsed->prepared?->artifact), 'What delete() is handed.');
+    $this->assertSame((int) $node->id(), $rehearsed->prepared?->artifact['id'] ?? NULL, 'The id is an integer, as the output declares it.');
     $this->assertNotNull($this->stored($node->id()));
 
     $sent = $this->submitted($built, $storage, ['title' => ['value' => 'Ignored']]);
@@ -233,10 +234,19 @@ class ContentEntityDeleteTest extends SurfaceKernelTestBase {
     $this->assertSame(['value' => 'Going'], $removed['outputs'][OperationInputs::VALUES]['title']);
     $this->assertNull($this->stored($node->id()));
 
+    // The id names nothing now. The delete declares no permission, so the
+    // runner withholds why from every account, as the tool's access check
+    // already did: refused, never "not found".
     $gone = $this->runTool($tool, ['id' => (int) $node->id()]);
     $this->assertFalse($gone['success']);
-    $this->assertSame(FailureCategory::Input, $gone['category']);
-    $this->assertSame(['' => Violation::NOT_FOUND], array_column($gone['outputs'][OperationInputs::VIOLATIONS], 'code', 'path'));
+    $this->assertSame(FailureCategory::Access, $gone['category']);
+    $this->assertSame(['' => Violation::ACCESS], array_column($gone['outputs'][OperationInputs::VIOLATIONS], 'code', 'path'));
+    // The read tool answers the same, by the same rule.
+    $read = $this->runTool('surface:' . self::PAGE . ':read', ['id' => (string) $node->id()]);
+    $this->assertFalse($read['success']);
+    $this->assertSame(FailureCategory::Access, $read['category']);
+    $this->assertSame('You do not have permission to do this.', $read['message']);
+    $this->assertSame(['' => Violation::ACCESS], array_column($read['outputs'][OperationInputs::VIOLATIONS], 'code', 'path'));
   }
 
   /**

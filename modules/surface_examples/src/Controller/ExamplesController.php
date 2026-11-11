@@ -105,6 +105,11 @@ final class ExamplesController extends ControllerBase {
   public const REACT = 'surface_examples_react';
 
   /**
+   * The module serving the OpenAPI document and its pages.
+   */
+  public const OPENAPI = 'surface_openapi';
+
+  /**
    * The module the component block of example 13 lives in.
    */
   public const COMPONENT_BLOCK = SpotlightBlockHooks::MODULE;
@@ -244,6 +249,10 @@ final class ExamplesController extends ControllerBase {
     }
     $branch = Series::branch();
     return [
+      // Which modules are installed decides the OpenAPI and React items
+      // and each module's status; installing a module invalidates this
+      // tag.
+      '#cache' => ['tags' => ['config:core.extension']],
       'intro' => [
         '#markup' => '<p>' . $this->t('One resource that grows, one idea per example: the settings of an event registration. Under each example\'s form, collapsed as "Behind the scenes: the contract, as it stands", is the contract the form is built from. Below it, collapsed as "Without a resource: what config schema can say", is what a client could be told about the same settings today, from config schema alone.') . '</p>'
         . '<p>' . $this->t('Start at <a href=":first">Your first resource</a>: one settings page from a resource, an operation, a storage and add(), and nothing else. Then read the examples in order, each adding one idea to what the last showed; under each heading is the idea it introduces, the page that explains it, the decision that says why, and how many files it is made of, and on its page open those files before the contract. Keep <a href=":concepts">Concepts</a> open beside them as the map: one row per idea, the question that makes you need it, and the example that shows it.', [
@@ -945,10 +954,14 @@ final class ExamplesController extends ControllerBase {
    *
    * Every example's paths, described for any OpenAPI client.
    *
-   * @return array
-   *   A link render array.
+   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
+   *   A link render array, or where surface_openapi is not enabled, the
+   *   path it serves the document at.
    */
-  protected function openApi(): array {
+  protected function openApi(): array|TranslatableMarkup {
+    if (!$this->moduleHandler()->moduleExists(self::OPENAPI)) {
+      return $this->t('As OpenAPI at /surface-api/openapi.json, once @module is enabled.', ['@module' => self::OPENAPI]);
+    }
     $url = Url::fromRoute('surface.openapi.json');
     return Link::fromTextAndUrl($this->t('As OpenAPI: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }
@@ -958,10 +971,14 @@ final class ExamplesController extends ControllerBase {
    *
    * Each example's calls, to try with the logged-in session.
    *
-   * @return array
-   *   A link render array.
+   * @return array|\Drupal\Core\StringTranslation\TranslatableMarkup
+   *   A link render array, or where surface_openapi is not enabled, the
+   *   path it serves the page at.
    */
-  protected function openApiDocs(): array {
+  protected function openApiDocs(): array|TranslatableMarkup {
+    if (!$this->moduleHandler()->moduleExists(self::OPENAPI)) {
+      return $this->t('To try out at /surface-api/docs, once @module is enabled.', ['@module' => self::OPENAPI]);
+    }
     $url = Url::fromRoute('surface.openapi.docs');
     return Link::fromTextAndUrl($this->t('To try out: @path', ['@path' => $url->toString()]), $url)->toRenderable();
   }

@@ -10,7 +10,6 @@ use Drupal\Core\TypedData\DataDefinitionInterface;
 use Drupal\Core\TypedData\TypedDataManagerInterface;
 use Drupal\surface\Surface;
 use Drupal\surface\SurfaceBuilder;
-use Drupal\surface\SurfaceBuilderInterface;
 use Drupal\surface\SurfaceInterface;
 use Drupal\surface\DefinitionMetadata;
 use Drupal\surface\Reference\References;
@@ -437,7 +436,7 @@ final class Declaring {
    *
    * Decision: see docs/decisions.md#a-site-sets-a-default-in-configuration.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The builder, its keys and its alters' declared.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   What is being built.
@@ -451,7 +450,7 @@ final class Declaring {
    * @return array<string, array{resource: string, at: string, values: array<string, mixed>}>
    *   The defaults for each child attached at a fixed key, by its key.
    */
-  public function writeSiteDefaults(SurfaceBuilderInterface $builder, ResourceDefinition $definition, ResourceBlueprint $inputs, bool $top, ?array $siteDefaults): array {
+  public function writeSiteDefaults(SurfaceBuilder $builder, ResourceDefinition $definition, ResourceBlueprint $inputs, bool $top, ?array $siteDefaults): array {
     if ($this->siteDefaults === NULL || !$this->holdsToSchema) {
       return [];
     }
@@ -520,7 +519,7 @@ final class Declaring {
    * Decision: see
    * docs/decisions.md#a-route-may-fill-or-fix-what-an-operation-asks-for.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The builder, its keys and its alters' declared, the site's defaults
    *   written.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
@@ -536,7 +535,7 @@ final class Declaring {
    *   When the context does not create, or a path names no key a default
    *   reaches, or a value does not fit its key.
    */
-  public function writeContextDefaults(SurfaceBuilderInterface $builder, ResourceDefinition $definition, OperationContext $context, array $kinds, array $ancestry): void {
+  public function writeContextDefaults(SurfaceBuilder $builder, ResourceDefinition $definition, OperationContext $context, array $kinds, array $ancestry): void {
     $defaults = $context->defaults();
     if ($defaults === []) {
       return;
@@ -775,7 +774,7 @@ final class Declaring {
   /**
    * Makes the blueprint a resource or structure declares into.
    *
-   * @param \Drupal\surface\SurfaceBuilderInterface $builder
+   * @param \Drupal\surface\SurfaceBuilder $builder
    *   The builder it fills.
    * @param \Drupal\surface\ResourceBuild\ResourceDefinition $definition
    *   The resource or structure.
@@ -785,7 +784,7 @@ final class Declaring {
    * @return \Drupal\surface\ResourceBuild\ResourceBlueprint
    *   The blueprint, which names a structure mixed in by discovery's id.
    */
-  public function blueprint(SurfaceBuilderInterface $builder, ResourceDefinition $definition, bool $outputs = FALSE): ResourceBlueprint {
+  public function blueprint(SurfaceBuilder $builder, ResourceDefinition $definition, bool $outputs = FALSE): ResourceBlueprint {
     return (new ResourceBlueprint($builder, $this->typedDataManager, $outputs, $this->registry, $definition->name()))->useShapes($this->shapes());
   }
 

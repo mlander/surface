@@ -37,7 +37,13 @@ class StagedFormTest extends SurfaceKernelTestBase {
   /**
    * {@inheritdoc}
    */
-  protected static $modules = [...self::ENTITY_MODULES, 'surface_stage_test', 'surface_examples', 'surface_route_test'];
+  protected static $modules = [
+    ...self::ENTITY_MODULES,
+    'surface_http',
+    'surface_stage_test',
+    'surface_examples',
+    'surface_route_test',
+  ];
 
   /**
    * {@inheritdoc}
